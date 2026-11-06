@@ -1,7 +1,7 @@
-import { chmodSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { failureLine } from '../command/failure-line';
-import { replaceFile } from '../app/replace-file';
+import { replaceFileIfChanged } from '../app/replace-file';
 
 // What the app puts under ~/.claude for Claude Code to find, written at every launch so an upgrade
 // reaches it with no step of its own. Today that is one skill: /create-task and the program it runs.
@@ -75,19 +75,6 @@ When the script prints its line, repeat that line and stop.
 `;
 }
 
-// Through replaceFile, so a create-task.js that claude-pr-loop starts mid-launch is the old file or
-// the new one, never half of one.
-function writeIfChanged(file: string, contents: string, mode?: number): void {
-  let current: string | null = null;
-  try {
-    current = readFileSync(file, 'utf8');
-  } catch {
-    // Not there yet.
-  }
-  if (current !== contents) replaceFile(file, contents, mode);
-  else if (mode !== undefined && (statSync(file).mode & 0o777) !== mode) chmodSync(file, mode);
-}
-
 const EXECUTABLE = 0o755;
 const SHEBANG = '#!/usr/bin/env node\n';
 
@@ -97,11 +84,11 @@ const SHEBANG = '#!/usr/bin/env node\n';
 export function installCreateTask(home: string, builtScript: string): string | null {
   try {
     const script = createTaskScript(home);
-    writeIfChanged(script, SHEBANG + readFileSync(builtScript, 'utf8'), EXECUTABLE);
-    writeIfChanged(path.join(createTaskFolder(home), 'SKILL.md'), createTaskSkill(script));
+    replaceFileIfChanged(script, SHEBANG + readFileSync(builtScript, 'utf8'), EXECUTABLE);
+    replaceFileIfChanged(path.join(createTaskFolder(home), 'SKILL.md'), createTaskSkill(script));
     // Node reads a .js as ESM when the nearest package.json above it says "type": "module", and one
     // in ~/.claude or ~ would make the CommonJS program fail with `require is not defined`.
-    writeIfChanged(path.join(createTaskFolder(home), 'package.json'), '{"type":"commonjs"}\n');
+    replaceFileIfChanged(path.join(createTaskFolder(home), 'package.json'), '{"type":"commonjs"}\n');
     return null;
   } catch (error: unknown) {
     return `create-task not installed: ${failureLine(error)}`;

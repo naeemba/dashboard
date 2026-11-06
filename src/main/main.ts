@@ -30,8 +30,8 @@ import { environmentForPanes, paneCommands } from './command/pane-environment';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
 import { makeThrowawayWorktree } from './ship/branch-worktree';
-import { installCreateTask } from './board/create-task-install';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
+import { installSkills } from './skills/install-skills';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
 import { readMarket } from './markets/markets-fetch';
@@ -888,12 +888,12 @@ app.on('ready', () => {
   app.setAboutPanelOptions({ applicationVersion: __BUILD_VERSION__ });
   logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
   createWindow();
-  // After the window, since nothing on screen needs it: /create-task and its program under ~/.claude,
-  // refreshed from this build (create-task-install.ts). The installed app only: every Claude session
-  // on the machine runs that copy, and a dev run from a half-done branch would hand them its program.
+  // After the window, since nothing on screen needs it: /create-task with its program, and
+  // /adopt-docs, under ~/.claude, refreshed from this build (install-skills.ts). The installed app
+  // only: every Claude session on the machine runs that copy, and a dev run from a half-done branch
+  // would hand them its program.
   if (app.isPackaged) {
-    const notInstalled = installCreateTask(app.getPath('home'), path.join(buildFolder, 'create-task-cli-entry.js'));
-    if (notInstalled !== null) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
+    for (const notInstalled of installSkills(app.getPath('home'), buildFolder)) logStore.log({ level: 'warn', kind: 'app', message: notInstalled });
   }
 });
 app.on('will-quit', () => {

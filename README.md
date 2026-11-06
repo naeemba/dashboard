@@ -31,11 +31,12 @@ It packages the app and installs it to `/Applications/Dashboard.app` on a mac or
 
 On a mac, building signs the app with a self-signed certificate named `Dashboard Local` in the login keychain, and fails without it. Create it once in Keychain Access → Certificate Assistant → Create a Certificate…, Identity Type *Self Signed Root*, Certificate Type *Code Signing*. Recreating it makes macOS ask for folder access once more.
 
-Every launch of the installed app also installs the `/create-task` skill for Claude Code, rewriting a file only when this build's copy differs:
+Every launch of the installed app also installs the `/create-task` and `/adopt-docs` skills for Claude Code, rewriting a file only when this build's copy differs:
 
 - `~/.claude/skills/create-task/SKILL.md`: the `/create-task` command
 - `~/.claude/skills/create-task/create-task.js`: the program it runs, at a path that does not move. Point `PR_LOOP_CARD_SCRIPT` at it; it takes `--title`, `--notes`, `--priority` and, for a board on a remote other than `origin`, `--remote <name>`. It works outside a Dashboard pane. [Board](docs/board/README.md#create-task) has the rest.
 - `~/.claude/skills/create-task/package.json`: `{"type":"commonjs"}`, so a `"type": "module"` package.json above it cannot make node read the program as ESM
+- `~/.claude/skills/adopt-docs/SKILL.md`: the `/adopt-docs` command, which moves a repository's docs into the `docs/<feature>/` pattern and opens one pull request. [Skills](docs/skills/README.md) has the rest.
 
 The installed app reads `$XDG_CONFIG_HOME/dashboard/.env` (falling back to `~/.config/dashboard/.env`) instead of the repo `.env`.
 
