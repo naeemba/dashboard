@@ -21,6 +21,7 @@ import {
   type Selection,
 } from '../../shared/board/board';
 import { columnEntry } from '../../shared/board/column-entry';
+import { readFlagList } from '../command/flags';
 import { USAGE } from './board-usage';
 
 // Every decision the command line makes. The board it is handed and the board it answers with are
@@ -60,27 +61,10 @@ export function brokenFilesRefusal(brokenFiles: readonly string[]): string {
   return `board files do not parse, nothing was written; fix them first: ${brokenFiles.join(', ')}`;
 }
 
-// `--name value` and `--name=value` both, because an agent writing the command will use either and
-// refusing one of them is a refusal nobody can see coming. A flag repeated takes its last value.
+// A flag repeated takes its last value.
 function readFlags(flagArguments: readonly string[], allowed: readonly string[]): { flags: Map<string, string> } | { message: string } {
-  const flags = new Map<string, string>();
-  for (let at = 0; at < flagArguments.length; at += 1) {
-    const argument = flagArguments[at];
-    if (!argument.startsWith('--')) return { message: `not a flag: ${argument}` };
-    const equals = argument.indexOf('=');
-    const name = equals === -1 ? argument.slice(2) : argument.slice(2, equals);
-    if (!allowed.includes(name)) return { message: `no --${name} here; this command takes ${allowed.map((flag) => `--${flag}`).join(', ')}` };
-    if (equals !== -1) {
-      flags.set(name, argument.slice(equals + 1));
-      continue;
-    }
-    // A missing value is refused rather than read as an empty string: `--branch --notes x` would
-    // otherwise clear the branch and say nothing, and the notes would go missing with it.
-    at += 1;
-    if (at >= flagArguments.length) return { message: `--${name} needs a value` };
-    flags.set(name, flagArguments[at]);
-  }
-  return { flags };
+  const read = readFlagList(flagArguments, allowed);
+  return 'message' in read ? read : { flags: new Map(read.flags) };
 }
 
 function noSuchColumn(board: Board, name: string): string {
