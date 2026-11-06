@@ -1,11 +1,9 @@
 import type { HookCallbackMatcher, Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
-import net from 'node:net';
 import { randomUUID } from 'node:crypto';
 import { failureText } from '../../shared/errors/failure';
 import { isRecord } from '../../shared/app/is-record';
 import { inputQueue, type InputQueue } from '../chat/input-queue';
-import { lineReader } from '../panes/pane-host-protocol';
-import { screenLine, type AskCallback, type FromScreenHost, type HostedStart, type ToScreenHost } from './screen-host-protocol';
+import { type AskCallback, type FromScreenHost, type HostedParams, type HostedStart, type ToScreenHost } from './screen-host-protocol';
 
 // The screen host's half: worker screens' Agent SDK sessions, kept running whether or not an app is
 // connected, so a worker's turn goes on through an app restart the way a terminal worker's does in the
@@ -16,7 +14,7 @@ import { screenLine, type AskCallback, type FromScreenHost, type HostedStart, ty
 // question waits until an app answers it. Every hook the app gives is told, never asked: the host
 // answers it before the app hears it, so a hook's answer cannot change what the session does.
 
-export type StartSession = (params: { prompt: AsyncIterable<SDKUserMessage>; options: Options }) => Query;
+export type StartSession = (params: HostedParams) => Query;
 
 type Ask = { message: FromScreenHost; resolve(value: unknown): void };
 type Hosted = {
@@ -59,10 +57,13 @@ export function screenHostServer(start: StartSession, idle: () => void) {
     });
   }
 
+  // A hook held for an app that is away keeps only its name, Stop's input excepted: the app reads
+  // nothing else of any other, and a PostToolUse's carries the tool's whole output.
   function hooksFor(key: string, hosted: Hosted, events: string[]): Options['hooks'] {
     const told = (event: string): HookCallbackMatcher[] => [{ hooks: [async (input) => {
       if (event === 'UserPromptSubmit') hosted.busy = true;
-      tell(hosted, { type: 'hook', key, event, input }, true);
+      const away = send === null || !hosted.attached;
+      tell(hosted, { type: 'hook', key, event, input: away && event !== 'Stop' ? { hook_event_name: event } : input }, true);
       return {};
     }] }];
     // UserPromptSubmit is always heard here, since it is what says a turn began.
@@ -153,27 +154,5 @@ export function screenHostServer(start: StartSession, idle: () => void) {
         hosted.query?.close();
       }
     },
-  };
-}
-
-// What the host's socket does with each app that connects, as pane-host-server.ts's acceptApps: one
-// app at a time, nothing told before its hello, and a second one turned away with `busy`.
-export function acceptScreenApps(server: ReturnType<typeof screenHostServer>): (socket: net.Socket) => void {
-  let current: net.Socket | null = null;
-  return (socket) => {
-    socket.on('error', () => undefined);
-    socket.setEncoding('utf8');
-    socket.on('data', lineReader<ToScreenHost>((message) => {
-      if (socket === current) return server.receive(message);
-      if (message.type !== 'hello') return void socket.destroy();
-      if (current !== null) return void socket.end(screenLine({ type: 'busy' }));
-      current = socket;
-      server.connect((answer) => socket.write(screenLine(answer)));
-    }));
-    socket.on('close', () => {
-      if (current !== socket) return;
-      current = null;
-      server.disconnect();
-    });
   };
 }

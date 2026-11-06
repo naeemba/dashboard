@@ -7,8 +7,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { inputQueue } from '../chat/input-queue';
 import { prepareHostSocket } from '../panes/pane-host-protocol';
 import { screenHost } from './screen-host-client';
-import { screenHostSocket } from './screen-host-protocol';
-import { acceptScreenApps, screenHostServer, type StartSession } from './screen-host-server';
+import { acceptApps } from '../panes/host-socket';
+import { screenHostServer, type StartSession } from './screen-host-server';
+import { screenHostSocket, type ToScreenHost } from './screen-host-protocol';
 
 const KEY = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const signal = new AbortController().signal;
@@ -46,7 +47,7 @@ async function host(start: StartSession, idle = (): void => undefined): Promise<
   folder = mkdtempSync(path.join(os.tmpdir(), 'screen-host-'));
   const socketPath = screenHostSocket(process.platform, folder) ?? '';
   prepareHostSocket(process.platform, socketPath);
-  const accept = acceptScreenApps(screenHostServer(start, idle));
+  const accept = acceptApps<ToScreenHost>(screenHostServer(start, idle));
   listener = net.createServer((socket) => { accepted.push(socket); accept(socket); });
   await new Promise<void>((resolve) => listener?.listen(socketPath, resolve));
   return socketPath;
@@ -128,9 +129,10 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   it('answers null when no host can be reached, so the session runs in the app', async () => {
     folder = mkdtempSync(path.join(os.tmpdir(), 'screen-host-'));
     let launched = 0;
-    const app = screenHost({ socket: path.join(folder, 'none.sock'), launch: () => { launched += 1; }, connect: async () => null });
+    const app = screenHost({ socket: path.join(folder, 'none.sock'), launch: () => { launched += 1; } });
     await app.ready;
     expect(app.kept(KEY)).toBeUndefined();
+    expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(launched).toBe(1);
   }, 10_000);

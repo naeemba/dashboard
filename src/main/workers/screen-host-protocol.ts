@@ -17,6 +17,9 @@ export function screenHostSocket(platform: string, userData: string): string | n
   return path.join(userData, 'screen-host', `screens-${PROTOCOL_VERSION}.sock`);
 }
 
+// What a session starts on, on either side of the socket: chat-sessions.ts's prompts and options.
+export type HostedParams = { prompt: AsyncIterable<SDKUserMessage>; options: Options };
+
 // The callbacks a session can ask the app for and wait on the answer.
 export type AskCallback = 'canUseTool' | 'onElicitation';
 
@@ -49,7 +52,3 @@ export type FromScreenHost =
   | { type: 'hook'; key: string; event: string; input: unknown }
   | { type: 'reply'; key: string; id: number; value?: unknown; error?: string }
   | { type: 'ended'; key: string; error: string | null };
-
-export function screenLine(message: ToScreenHost | FromScreenHost): string {
-  return `${JSON.stringify(message)}\n`;
-}

@@ -225,6 +225,11 @@ host.** Card 461bb646, the first of workers-decision-5's blockers. A page's main
 is resumed on its conversation at every launch, and nothing waits on it mid-turn the way main waits on
 a worker.
 
+Why a process of its own rather than the pane host: the SDK and every session's traffic would then
+live in the process holding every terminal of every project, and a session that crashes it or grows
+in it takes them all down. The two share their socket code instead: `reachHost`, `attempt`, `line`
+and `acceptApps` from `src/main/panes/host-socket.ts`.
+
 How it is built:
 
 - `chat-sessions.ts` still drives every session. For a worker it asks the screen host first and gets
@@ -237,10 +242,12 @@ How it is built:
   waits for its answer, through a restart if it has to; the app that takes the session up is sent the
   questions still waiting. A hook is answered by the host at once and told to the app, held while no
   app has the session: a Stop hook that ran while the app was away reports done to main when the
-  project opens again. Every hook the app has today returns nothing, so none needs its answer heard.
+  project opens again. A held hook keeps only its name, Stop's input excepted. Every hook the app has today returns nothing, so none needs its answer heard.
 - Messages are not held: a screen opening reads its conversation back from the transcript, as it does
   after any restart. The host counts a turn running from UserPromptSubmit to the result, so a worker
   taken back mid-turn is counted working for the review sweep, and one whose turn ended is not.
+- An option that is a callback, other than those, is refused rather than dropped by the line.
+- The app tries to reach or launch the host once per run, shared by every worker starting together.
 - The host answers one app at a time, as the pane host does; a second Dashboard on the same user data
   runs its worker screens itself. It exits once no app is connected and no session runs.
 - It is run by the `node` a login shell finds, as the pane host is, so the Agent SDK is bundled into

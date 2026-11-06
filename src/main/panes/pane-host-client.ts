@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import net from 'node:net';
 import { hostProof, line, lineReader, paneOfKey, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
 import { spawnShell, type PaneShell } from './pane-shell';
+import { reachHost } from './host-socket';
 import { posixQuoted, taskArguments } from '../../shared/panes/shell';
 
 // The app's half of the pane host: the shells main asks for, run in the host when there is one and in
@@ -18,9 +19,6 @@ export type PaneHost = {
 
 type HostShell = PaneShell & { hear(message: FromHost): void; lose(): void };
 
-// A first launch starts the host through a login shell, which takes most of a second.
-const CONNECT_TRIES = 50;
-const CONNECT_PAUSE_MS = 100;
 // What a pane shows for a shell lost with the host, which has no exit code of its own to give.
 const LOST_EXIT = 1;
 // How long the first answer may take. A real host answers on connect, even with megabytes of screens.
@@ -44,25 +42,13 @@ export function paneHost(options: {
   const shells = new Map<string, HostShell>();
   const send = (message: ToHost): void => { connection?.write(line(message)); };
 
-  // The host's socket, starting the host when nothing answers on it.
-  async function reachHost(socketPath: string): Promise<net.Socket | null> {
-    let socket = await attempt(socketPath);
-    if (socket !== null) return socket;
-    options.launch();
-    for (let tries = 0; socket === null && tries < CONNECT_TRIES; tries += 1) {
-      await new Promise((resolve) => setTimeout(resolve, CONNECT_PAUSE_MS));
-      socket = await attempt(socketPath);
-    }
-    return socket;
-  }
-
   async function connect(): Promise<void> {
     const socketPath = options.socket;
     if (socketPath === null) {
       options.lost('The pane host\'s pipe token could not be read or made; shells die with the app this run');
       return;
     }
-    const open = await reachHost(socketPath);
+    const open = await reachHost(socketPath, options.launch);
     if (open === null) {
       options.lost(`No pane host answered at ${socketPath}; shells die with the app this run`);
       return;
@@ -149,14 +135,6 @@ export function paneHost(options: {
       return taken.map((survivor) => ({ survivor, shell: track(survivor.key, hostShell(survivor.key, survivor, survivor.screen, send)) }));
     },
   };
-}
-
-function attempt(socketPath: string): Promise<net.Socket | null> {
-  return new Promise((resolve) => {
-    const socket = net.connect(socketPath);
-    socket.once('connect', () => resolve(socket));
-    socket.on('error', () => resolve(null));
-  });
 }
 
 // A shell the host runs, as main sees it. What arrives before main has listened is held, and handed

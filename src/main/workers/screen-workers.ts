@@ -180,8 +180,11 @@ export function screenWorkers(ports: ScreenPorts) {
     comeBack(slot: number, projectPath: string): Saved[] {
       const back = waiting.filter((saved) => saved.projectPath === projectPath);
       waiting = waiting.filter((saved) => saved.projectPath !== projectPath);
-      for (const saved of back) add(terminalId(slot, saved.index), saved, true);
-      for (const saved of back) if (ports.host.kept(saved.session)) ports.start(screenKey(terminalId(slot, saved.index)));
+      for (const saved of back) {
+        const id = terminalId(slot, saved.index);
+        add(id, saved, true);
+        if (ports.host.kept(saved.session)) ports.start(screenKey(id));
+      }
       if (back.length > 0) save();
       return back;
     },

@@ -1,17 +1,16 @@
-import type { Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
-import net from 'node:net';
+import type { Query } from '@anthropic-ai/claude-agent-sdk';
+import type net from 'node:net';
 import path from 'node:path';
 import { inputQueue } from '../chat/input-queue';
 import { launchPaneHost } from '../panes/pane-host-client';
-import { lineReader } from '../panes/pane-host-protocol';
-import { screenHostSocket, screenLine, type AskCallback, type FromScreenHost, type KeptSession, type ToScreenHost } from './screen-host-protocol';
+import { attempt, reachHost } from '../panes/host-socket';
+import { line, lineReader } from '../panes/pane-host-protocol';
+import { screenHostSocket, type AskCallback, type FromScreenHost, type HostedParams, type KeptSession, type ToScreenHost } from './screen-host-protocol';
 
 // The app's half of the screen host: a worker screen's session run there, behind a Query that passes
 // every call over the socket, so chat-sessions.ts drives it as it drives one of its own. With no host
 // (Windows, a socket that will not open, another Dashboard holding it) a worker screen runs in the app
 // as it did before, and dies with it. workers-decision-6 says why.
-
-export type HostedParams = { prompt: AsyncIterable<SDKUserMessage>; options: Options };
 
 export type ScreenHost = {
   // Settled once a host already running has said which sessions it kept, or once there is none.
@@ -25,18 +24,17 @@ export type ScreenHost = {
 
 type Listener = (message: FromScreenHost) => void;
 
-// A first launch starts the host through a login shell, which takes most of a second.
-const CONNECT_TRIES = 50;
-const CONNECT_PAUSE_MS = 100;
 const ANSWER_WAIT_MS = 5000;
 const HOST_STOPPED = 'The screen host stopped';
 
-export function screenHost(options: { socket: string | null; launch(): void; connect?(socket: string): Promise<net.Socket | null> }): ScreenHost {
-  const connectTo = options.connect ?? attempt;
+export function screenHost(options: { socket: string | null; launch(): void }): ScreenHost {
   let connection: net.Socket | null = null;
   let kept = new Map<string, KeptSession>();
   const listeners = new Map<string, Listener>();
-  const send = (message: ToScreenHost): void => { connection?.write(screenLine(message)); };
+  // One try at the host per run, shared by every worker starting at once: two would each launch a host,
+  // and the second would take the socket from the first. Tried again only once a host it had went.
+  let reaching: Promise<boolean> | null = null;
+  const send = (message: ToScreenHost): void => { connection?.write(line(message)); };
 
   // Hello and the host's first answer: the sessions it runs, or busy. Null for no host this time.
   function greet(socket: net.Socket): Promise<boolean> {
@@ -65,34 +63,29 @@ export function screenHost(options: { socket: string | null; launch(): void; con
         settle(false);
         if (connection !== socket) return;
         connection = null;
+        reaching = null;
         kept = new Map();
         for (const [key, listener] of [...listeners]) listener({ type: 'ended', key, error: HOST_STOPPED });
         listeners.clear();
       });
-      socket.write(screenLine({ type: 'hello' }));
+      socket.write(line({ type: 'hello' }));
     });
   }
 
   // The host already running, if one answers: what it kept is known before any project opens.
   async function join(): Promise<void> {
     if (options.socket === null) return;
-    const socket = await connectTo(options.socket);
+    const socket = await attempt(options.socket);
     if (socket !== null) await greet(socket);
   }
 
   // The host, started when nothing answers.
-  async function reach(): Promise<boolean> {
-    if (connection !== null) return true;
-    if (options.socket === null) return false;
-    let socket = await connectTo(options.socket);
-    if (socket === null) {
-      options.launch();
-      for (let tries = 0; socket === null && tries < CONNECT_TRIES; tries += 1) {
-        await new Promise((resolve) => setTimeout(resolve, CONNECT_PAUSE_MS));
-        socket = await connectTo(options.socket);
-      }
-    }
-    return socket !== null && greet(socket);
+  function reach(): Promise<boolean> {
+    if (connection !== null) return Promise.resolve(true);
+    const socketPath = options.socket;
+    if (socketPath === null) return Promise.resolve(false);
+    reaching ??= reachHost(socketPath, options.launch).then((socket) => socket !== null && greet(socket));
+    return reaching;
   }
 
   const ready = join();
@@ -111,18 +104,13 @@ export function screenHost(options: { socket: string | null; launch(): void; con
   };
 }
 
-function attempt(socketPath: string): Promise<net.Socket | null> {
-  return new Promise((resolve) => {
-    const socket = net.connect(socketPath);
-    socket.once('connect', () => resolve(socket));
-    socket.on('error', () => resolve(null));
-  });
-}
-
 // A session in the host as chat-sessions.ts sees it. Its messages arrive as they come; a question or a
 // hook calls the app's own callback; any other method is a call over the socket.
 export function hostedQuery(key: string, params: HostedParams, send: (message: ToScreenHost) => void, listen: (listener: Listener | null) => void): Query {
   const { canUseTool, onElicitation, hooks, ...rest } = params.options;
+  // Anything else a callback would be dropped by the line without a word, and never called.
+  const callback = Object.entries(rest).find(([, value]) => typeof value === 'function');
+  if (callback) throw new Error(`The screen host cannot call a worker screen's ${callback[0]} back`);
   const messages = inputQueue<unknown>();
   let failure: string | null = null;
   let nextCall = 0;

@@ -29,7 +29,7 @@ import { isRecord } from '../../shared/app/is-record';
 import { unpacked } from '../app/unpacked';
 import { nameMemoryFiles } from '../drawer/measured-memory';
 import { inputQueue, type InputQueue } from './input-queue';
-import type { HostedParams } from '../workers/screen-host-client';
+import type { HostedParams } from '../workers/screen-host-protocol';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started the first time the page's Claude screen is shown (its measure asks), on the
