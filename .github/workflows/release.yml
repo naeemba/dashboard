@@ -22,6 +22,9 @@ concurrency: release
 permissions:
   contents: write
 
+env:
+  GH_TOKEN: ${{ github.token }}
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -30,16 +33,12 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       notes: ${{ steps.notes.outputs.notes }}
     env:
-      GH_TOKEN: ${{ github.token }}
       BUMP: ${{ inputs.bump }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Every tag, to find the last release.
           fetch-depth: 0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
       - id: version
         name: Work out the version
         run: |
@@ -54,21 +53,18 @@ jobs:
             tag=$(npm version "$BUMP" --no-git-tag-version)
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
       - id: notes
         name: Write the notes
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
         run: |
           # The last release that is not a pre-release, so a release's notes cover every pull request
           # since the one before it, rc tags included.
-          previous=$(git tag --list 'v*' --sort=-v:refname | grep -v -- - | grep -vxF "$TAG" | head -n 1 || true)
+          previous=$(git tag --list 'v*' --sort=-v:refname | grep -v -- - | head -n 1 || true)
           gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
             ${previous:+-f previous_tag_name="$previous"} --jq .body > "$RUNNER_TEMP/notes.md"
           { echo 'notes<<END_OF_NOTES'; cat "$RUNNER_TEMP/notes.md"; echo END_OF_NOTES; } >> "$GITHUB_OUTPUT"
       - name: Commit and tag the release
         if: github.event_name == 'workflow_dispatch'
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
         run: |
           node scripts/release-notes-step.mjs changelog "$TAG" "$(date -u +%F)" "$RUNNER_TEMP/notes.md"
           git config user.name 'github-actions[bot]'
@@ -79,12 +75,9 @@ jobs:
           git push --atomic origin HEAD:main "$TAG"
       - name: Create the draft release
         env:
-          TAG: ${{ steps.version.outputs.tag }}
           PRERELEASE: ${{ github.event_name == 'push' }}
-        run: |
-          # The body until the publish job adds the downloads.
-          node scripts/release-notes-step.mjs body "$GITHUB_REPOSITORY" "$TAG" "$RUNNER_TEMP/notes.md" > "$RUNNER_TEMP/body.md"
-          gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/body.md" --prerelease="$PRERELEASE"
+        # The notes alone until the publish job writes the whole body.
+        run: gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --prerelease="$PRERELEASE"
 
   build:
     needs: prepare
@@ -117,7 +110,6 @@ jobs:
       run:
         shell: bash
     env:
-      GH_TOKEN: ${{ github.token }}
       TAG: ${{ needs.prepare.outputs.tag }}
       # An ad hoc signature on a mac; see forge.config.ts.
       DASHBOARD_SIGNING_IDENTITY: '-'
@@ -131,16 +123,16 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      # Electron's zip, which packaging downloads into this folder and finds there next time.
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ${{ matrix.electron-cache }}
-          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: electron-${{ runner.os }}-
       - name: Install rpmbuild
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y rpm
       - run: pnpm install --frozen-lockfile
+      # Electron's zip, which packaging downloads into this folder and finds there next time. Keyed on
+      # the installed Electron, so a bump of any other package keeps the same cache.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ matrix.electron-cache }}
+          key: electron-${{ runner.os }}-${{ hashFiles('node_modules/electron/package.json') }}
       - run: pnpm run make ${{ matrix.targets }}
       - name: Make the disk image
         if: runner.os == 'macOS'
@@ -165,7 +157,6 @@ jobs:
       # To read which build legs failed.
       actions: read
     env:
-      GH_TOKEN: ${{ github.token }}
       TAG: ${{ needs.prepare.outputs.tag }}
       NOTES: ${{ needs.prepare.outputs.notes }}
     steps:
@@ -181,9 +172,7 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.tag }}
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
+      # The runner's own node runs release-notes-step.mjs, which needs no packages.
       - name: List the downloads and publish
         run: |
           printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
