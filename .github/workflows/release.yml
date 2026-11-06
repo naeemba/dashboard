@@ -1,0 +1,181 @@
+name: Release
+
+# A release is cut by hand from the Actions tab: Release → Run workflow on main, with the bump. That
+# bumps package.json, adds the CHANGELOG.md section, commits both to main and tags it. Pushing a
+# pre-release tag (v2.42.0-rc.1) whose commit already carries that version builds the same release
+# without touching main, which is how the workflow is tried out (workflow-decision-4).
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the version moves
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+  push:
+    tags: ['v*-*']
+
+# One release at a time: two would both bump from the same version.
+concurrency: release
+
+permissions:
+  contents: write
+  # The publish job reads which build legs failed.
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      notes: ${{ steps.notes.outputs.notes }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BUMP: ${{ inputs.bump }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Every tag, to find the last release.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: version
+        name: Work out the version
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            tag="$GITHUB_REF_NAME"
+            version=$(node -p 'require("./package.json").version')
+            if [ "v$version" != "$tag" ]; then
+              echo "::error::Tag $tag points at a commit whose package.json says $version. Bump it to ${tag#v} in that commit first."
+              exit 1
+            fi
+          else
+            tag=$(npm version "$BUMP" --no-git-tag-version)
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - id: notes
+        name: Write the notes
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          # The last release that is not a pre-release, so a release's notes cover every pull request
+          # since the one before it, rc tags included.
+          previous=$(git tag --list 'v*' --sort=-v:refname | grep -v -- - | grep -vxF "$TAG" | head -n 1 || true)
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
+            ${previous:+-f previous_tag_name="$previous"} --jq .body > "$RUNNER_TEMP/notes.md"
+          { echo 'notes<<END_OF_NOTES'; cat "$RUNNER_TEMP/notes.md"; echo END_OF_NOTES; } >> "$GITHUB_OUTPUT"
+      - name: Commit and tag the release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          node scripts/release-notes-step.mjs changelog "$TAG" "$(date -u +%F)" "$RUNNER_TEMP/notes.md"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json CHANGELOG.md
+          git commit -m "Release $TAG"
+          git tag "$TAG"
+          git push --atomic origin HEAD:main "$TAG"
+      - name: Create the draft release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          PRERELEASE: ${{ github.event_name == 'push' }}
+        run: |
+          # The body until the publish job adds the downloads.
+          node scripts/release-notes-step.mjs body "$GITHUB_REPOSITORY" "$TAG" "$RUNNER_TEMP/notes.md" > "$RUNNER_TEMP/body.md"
+          gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/body.md" --prerelease="$PRERELEASE"
+
+  build:
+    needs: prepare
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      # Every leg runs to the end, so one run says which platforms failed and which uploaded.
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-latest
+            electron-cache: ~/.cache/electron
+          - name: windows
+            os: windows-latest
+            electron-cache: ~/AppData/Local/electron/Cache
+            # Squirrel only, as in CI: the other makers are for a mac or Linux.
+            targets: --targets @electron-forge/maker-squirrel
+          - name: macos
+            os: macos-14
+            electron-cache: ~/Library/Caches/electron
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      # An ad hoc signature on a mac; see forge.config.ts.
+      DASHBOARD_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      # Electron's zip, which packaging downloads into this folder and finds there next time.
+      - uses: actions/cache@v4
+        with:
+          path: ${{ matrix.electron-cache }}
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: electron-${{ runner.os }}-
+      - name: Install rpmbuild
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run make ${{ matrix.targets }}
+      - name: Make the disk image
+        if: runner.os == 'macOS'
+        run: |
+          hdiutil create -volname Dashboard -srcfolder out/Dashboard-darwin-arm64/Dashboard.app -ov -format UDZO \
+            "out/make/Dashboard-${TAG#v}-arm64.dmg"
+      - name: Upload to the release
+        run: |
+          shopt -s globstar nullglob
+          files=()
+          for file in out/make/**/*; do [ -f "$file" ] && files+=("$file"); done
+          printf '%s\n' "${files[@]}"
+          gh release upload "$TAG" "${files[@]}" --clobber
+
+  publish:
+    needs: [prepare, build]
+    # Runs after a failed leg too, only to say which one; the release then stays a draft.
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      NOTES: ${{ needs.prepare.outputs.notes }}
+    steps:
+      - name: Stop if a build leg failed
+        if: needs.build.result != 'success'
+        run: |
+          failed=$(gh run view "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --json jobs \
+            --jq '[.jobs[] | select(.name | startswith("build (")) | select(.conclusion != "success" and .conclusion != null) | .name] | join(", ")')
+          echo "::error::$TAG stays a draft: ${failed:-a build leg} did not upload. Re-run the failed jobs to finish it."
+          echo "$TAG stays a draft: ${failed:-a build leg} did not upload." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: List the downloads and publish
+        run: |
+          printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
+          mapfile -t assets < <(gh release view "$TAG" --json assets --jq '.assets[].name')
+          node scripts/release-notes-step.mjs body "$GITHUB_REPOSITORY" "$TAG" "$RUNNER_TEMP/notes.md" "${assets[@]}" > "$RUNNER_TEMP/body.md"
+          gh release edit "$TAG" --notes-file "$RUNNER_TEMP/body.md" --draft=false

@@ -65,9 +65,12 @@ const config: ForgeConfig = {
     // continueOnError off: the packager otherwise turns any signing failure (certificate missing,
     // keychain locked, two certificates with this name) into one warning line and ships the
     // prebuilt binary's signature, and scripts/rebuild.sh installs it over the working app.
+    // DASHBOARD_SIGNING_IDENTITY replaces the certificate's name. The release workflow sets it to `-`,
+    // an ad hoc signature: a runner has no Dashboard Local, and Apple silicon runs no app without some
+    // signature (workflow-decision-4).
     osxSign: {
       continueOnError: false,
-      identity: 'Dashboard Local',
+      identity: process.env.DASHBOARD_SIGNING_IDENTITY || 'Dashboard Local',
       identityValidation: false,
       optionsForFile: () => ({ hardenedRuntime: false, timestamp: 'none' }),
     },
@@ -85,7 +88,8 @@ const config: ForgeConfig = {
   rebuildConfig: process.platform === 'win32' ? { onlyModules: [] } : {},
   makers: [
     new MakerSquirrel({}),
-    new MakerZIP({}, ['darwin']),
+    // A zip on Linux too: the release offers one beside the .deb and .rpm.
+    new MakerZIP({}, ['darwin', 'linux']),
     new MakerRpm({}),
     new MakerDeb({}),
   ],
