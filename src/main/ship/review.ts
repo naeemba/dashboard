@@ -15,9 +15,9 @@ import { posixQuoted } from '../../shared/panes/shell';
 // because its one caller, the review start in review-flow.ts (`review`), asks awaitsReview first and
 // refuses on false — the refusal is up the call, not here, and a second caller has to ask too.
 //
-// A card the board does not mention answers null. The sweep cannot reach here with one: awaitsReview
-// says null for it and sweepOne returns on that before the move is asked for. The only way this sees
-// a missing card is the board changing between those reads.
+// A card the board does not mention answers null. Neither caller reaches here with one: awaitsReview
+// says null for it, and sweepOne returns on that before the move is asked for while `review` refuses.
+// The only way this sees a missing card is the board changing between those reads.
 export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
 }

@@ -280,15 +280,23 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       await review(entry.cardId);
       return;
     }
-    await ports.arrived(entry);
+    arriving.add(entry.cardId);
+    try {
+      await ports.arrived(entry);
+    } finally {
+      arriving.delete(entry.cardId);
+    }
   }
 
   // Cards a review is being started for right now. Every guard below runs before the first await and
   // so does this, so two starts of one card — the sweep's and a keystroke's — cannot both get through.
   const starting = new Set<string>();
-  // Cards whose review was asked for by `review` itself and stopped on a dirty worktree, so the sweep
-  // retries that same start rather than its own move once the mark comes off.
+  // Cards whose review was started by a person or the command, not by the sweep's own move, and
+  // stopped on a dirty worktree, so the sweep retries that same start rather than its own move once the
+  // mark comes off. A start the sweep's move made comes back through that move, which asks the setting.
   const byHand = new Set<string>();
+  // Cards the sweep's own move is under way for right now: card.move awaits the start it makes.
+  const arriving = new Set<string>();
 
   async function review(id: string): Promise<{ output: string } | Refused> {
     const entry = entryForCard(ports.worktrees(), id);
@@ -302,8 +310,12 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
     // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a
     // pull request that merged.
+    // Null is refused as well, as sweepOne leaves it alone: a card the project's board does not show,
+    // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
     const board = projectBoard(entry.projectPath);
-    if (board !== null && awaitsReview(board, id) === false) return { refused: `"${entry.title}" is past Review; its review has run` };
+    const awaits = board === null ? null : awaitsReview(board, id);
+    if (awaits === false) return { refused: `"${entry.title}" is past Review; its review has run` };
+    if (awaits === null) return { refused: `"${entry.title}" is not on the project's board, or the board could not be read` };
     reviewed.add(id);
     starting.add(id);
     try {
@@ -321,7 +333,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       // the card carries the line saying so until somebody acts on it.
       if (swap.again) {
         reviewed.delete(id);
-        byHand.add(id);
+        if (!arriving.has(id)) byHand.add(id);
       }
       if (swap.message === '') return { output: `review started for "${entry.title}", pull request #${pullRequest}` };
       // On the card as well as in the answer. A review the sweep started has nobody waiting on the

@@ -41,15 +41,16 @@ Backlog is where a card waits until somebody picks it; Todo holds only what has
 been picked. Every board gets Backlog in front of Todo, and the board command
 puts a card there when it is not told a column.
 
-There is a Ship column, just right of Todo. Moving a card into it — Shift+Right,
-a drop from either side, or `dashboard board move <id> Ship` — hands it to an
-agent, and `dashboard board ship <id>` does the same without the move. Shift+Left
-into Ship is a card being put back and starts nothing. The app refuses if the
-project has anything uncommitted outside .dashboard/, fetches and branches off the project's base
-branch, makes a worktree in a folder beside the project, and starts an agent in
-a worker that is sitting at a prompt with nothing running in it, or in a new
-worker when none is. Main is never taken. A pane still standing in an earlier
-card's worktree is taken last, since its transcript is still on screen.
+There is a Ship column, just right of Todo. Moving a card into it —
+Shift+Right, a drop from either side, or `dashboard board move <id> Ship`
+— hands it to an agent, and `dashboard board ship <id>` does the same
+without the move. Shift+Left into Ship is a card being put back and starts
+nothing. The app refuses if the project has anything uncommitted outside
+.dashboard/, fetches and branches off the project's base branch, makes a
+worktree in a folder beside the project, and starts an agent in a worker
+that is sitting at a prompt with nothing running in it, or in a new worker
+when none is. Main is never taken. A pane still standing in an earlier card's
+worktree is taken last, since its transcript is still on screen.
 
 Only what is in the foreground counts as running, and the pane it takes is
 restarted in the worktree: a line you typed but never submitted goes with it,
@@ -93,18 +94,19 @@ worktree waits for you on the worktree list. A card already past Review is never
 reviewed again.
 
 With the settings screen's Review row off (`review.autoLoop` in settings.json),
-a card whose pull request opens is moved into Review and waits there. Moving a
-card into Review yourself, with Shift+Right, a drop or `dashboard board move <id>
-Review`, starts its review loop whatever the setting, and so does `dashboard
-board review <id>`; a card with no worktree, no pull request yet, an agent still
-working, or a card already past Review is refused, and the status bar or the command says why. What
+a card whose pull request opens is moved into Review and waits there. Moving
+a card into Review yourself, with Shift+Right, a drop or `dashboard board
+move <id> Review`, starts its review loop whatever the setting, and so does
+`dashboard board review <id>`; a card with no worktree, no pull request
+yet, an agent still working, a card gone from the board, or a card already
+past Review is refused, and the status bar or the command says why. What
 entering a column starts is one table for the board, the command and the app
-(docs/actions). The card lands in Review either way, and carries a comment
-when the worktree could not be swapped, since nothing was waiting on screen to
-be told. Something left uncommitted in it is the one of those that mends itself:
-git will not give up a worktree with a change in it, so the app asks again every
-few seconds and the review starts on its own the moment that change is
-committed. Every other reason is asked once and the comment is the end of it.
+(docs/actions). The card lands in Review either way, and carries a comment when
+the worktree could not be swapped, since nothing was waiting on screen to be
+told. Something left uncommitted in it is the one of those that mends itself:
+git will not give up a worktree with a change in it, so the app asks again
+every few seconds and the review starts on its own the moment that change
+is committed. Every other reason is asked once and the comment is the end of it.
 
 A board too long to read is searched rather than walked: / opens a box over it,
 typing narrows the list to the cards whose titles match and then the cards with

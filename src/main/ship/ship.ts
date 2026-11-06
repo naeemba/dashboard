@@ -74,7 +74,6 @@ export function notOpenRefusal(title: string): string {
 // What the agent shipping a card is asked to do: the one command, and the card it is aimed at. A
 // function rather than the string spelled out at each call site, because a ship writes it twice — once
 // when it starts and once when it is finished after stopping part way — and two copies drift.
-
 export function workPrompt(cardId: string): string {
   return `/work-card ${cardId}`;
 }

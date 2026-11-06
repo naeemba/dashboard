@@ -464,6 +464,37 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Review');
   });
 
+  // The loop on when the sweep's start met the dirty worktree, then turned off before the commit: the
+  // retry is the sweep's move again, which now leaves the card waiting in Review.
+  it('retries a sweep start that met a dirty worktree through the move, not as a start by hand', async () => {
+    const { entry } = flight(12);
+    let committed = false;
+    let loopOn = true;
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async () => (committed
+        ? { ok: true, message: '', dirty: [] }
+        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+    });
+    const sweep: ReviewSweep = reviewSweep({
+      ...made,
+      arrived: async (arrived) => (loopOn ? sweep.review(arrived.cardId) : undefined),
+    });
+    await sweep.run();
+    loopOn = false;
+    committed = true;
+    await sweep.run();
+    expect(log.started).toEqual([]);
+  });
+
+  it('refuses a review by hand for a card the project board does not show', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, boardWithCard(null, 'another-card'));
+    const { ports: made, log } = ports(entry);
+    await expect(reviewSweep(made).review(CARD))
+      .resolves.toEqual({ refused: '"Ship it" is not on the project\'s board, or the board could not be read' });
+    expect(log.removed).toEqual([]);
+  });
+
   it('refuses a review by hand for a card past Review', async () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
