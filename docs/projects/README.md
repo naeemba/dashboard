@@ -1,8 +1,8 @@
 # Projects
 
 `~/.dashboard/projects.yaml`: every project the manager can be asked about, by
-name or by another name, written by hand. `dashboard project` reads it, and
-opens and closes the projects it names.
+name or by another name. `dashboard project` reads it, changes it, and opens and
+closes the projects it names; you can also edit it by hand.
 
     - name: new-crm
       aka: [crm]
@@ -22,6 +22,9 @@ deploy needs all of `name`, `role` and `address`.
 | `project list` | every project, `open` under each the app had open at its last save, then open projects the file does not list |
 | `project find <word>` | the projects whose name or aka match the word, best first, then those whose about contains it |
 | `project init` | writes a first `projects.yaml` from the open and recent projects, name and path each; never over a file that is there |
+| `project add <path> [--name <n>] [--aka a,b] [--site <url>] [--about "<line>"]` | `added <name> in <file>`: a new entry at the end, the name from the folder unless given |
+| `project set <name> [--aka a,b] [--site <url>] [--about "<line>"] [--deploy name=<n>,role=<r>,address=<a>]... [--clear <field>]...` | `changed <name> in <file>` |
+| `project remove <name>` | `removed <name> in <file>` |
 | `project open <name>` | `opened <name>`: the app opens its folder the way the project picker does |
 | `project close <name>` | `closed <name>`, or the close key's own refusal naming the panes still running something |
 | `project focus <name>` | `switched to <name>`: the window comes to the front on that project's page, at its main pane |
@@ -45,6 +48,41 @@ still there, writes a path under home from `~`, and names a second folder with
 the same name `-2`. Before the app has ever run there is no such folder, and it
 refuses and writes nothing, so a later run is not blocked by an empty file.
 `list` reads the same `session.json` for what is open and never starts the app.
+
+`add`, `set` and `remove` edit the file in place: comments, blank lines and the
+order of the entries stay as they were, and the new text is read back by the
+same reader as every other verb before it replaces the file, atomically. A
+change that reader would refuse — a name or aka another project has, a deploy
+with no address, a line break in an about — is refused with its message and
+nothing is written, and a file that does not read is never edited. `add`
+refuses a folder the file lists already, compared by real path, so a folder
+reached through a symlink is the same one; a relative path is read from the
+folder the command runs in, and a path under home is written from `~`. With no
+`--name`, `add` takes the folder's name, with `-2`, `-3` after it when another
+project has it. `add` leaves every byte already in the file as it was and puts
+the new entry after it, unless that text would not read (a list indented from
+the left edge, a `...` end marker, a `[...]` list), when it reprints the file
+with the entry in it; an empty `[]` is written as a `- name:` list again. `set`
+and `remove` reprint the file, never folding a long line. The comment above an
+entry `remove` takes out stays where it was in the file, moved onto the entry
+after it, or above the file's closing comment when it was the last. With no
+file, `add` writes the first one.
+
+On `set`, `--aka` adds names beside the ones there, `--deploy` adds a deploy or
+changes the one with that name, in any case (only the fields given; the other deploys stay),
+and `--site` and `--about` replace. `--clear` takes `aka`, `site`, `about` or
+`deploy` away, and runs first, so `--clear deploy --deploy name=...` replaces
+the list. `--deploy` and `--clear` can be given more than once. A comma inside
+a `--deploy` address is kept unless a word and `=` follow it.
+
+The app adds a project to the file whenever it opens one the file does not list
+— from the picker, `project open`, `pane claim --project` or a restored page —
+name and path only, the name made unique with `-2`, `-3`. It never rewrites,
+reorders or removes an entry, writes nothing while there is no file (that is
+`init`'s) or while the file does not read, and a failed write never fails the
+open. A launch reopens the pages it was left on the same way, so a project
+removed while its page is open comes back, name and path only, at the next
+launch: close its page first to keep it out.
 
 ## On screen
 
@@ -115,6 +153,7 @@ Folders: `src/main/projects/`.
 - The file: `projects-file.ts` (also reads it from disk), `projects-file.test.ts`
 - The project a word names: `project-named.ts`, `project-named.test.ts`
 - The first file `init` writes: `projects-first.ts`, `projects-first.test.ts`
+- Every later write — add, set, remove and the app's append: `projects-write.ts`, `projects-write.test.ts`
 - The `project` command: `project-cli.ts`, `project-cli.test.ts`, `project-program.ts`
   (run as `dashboard project`, see [command](../command/README.md))
 - Open and close in main: `project-requests.ts`, `project-requests.test.ts`
@@ -135,6 +174,14 @@ Folders: `src/main/projects/`.
 - Given new-crm open on another tab, when `dashboard project focus crm` runs, then the window comes forward on new-crm's page and it prints `switched to new-crm`; a project not open is refused.
 - Given new-crm open and listed, and notes open but not listed, when `dashboard project list` runs, then new-crm reads `open` and notes is listed after the file's projects as `open, not in` the file.
 - Given `dashboard project close cr`, when no project is named or aka'd `cr`, then it is refused naming the near matches and nothing closes.
+- Given a commented projects.yaml, when `dashboard project add ~/api --aka backend` runs, then `- name: api` with `aka: [backend]` and `path: ~/api` is the last entry and every comment is still there.
+- Given a file written by `init`, when `dashboard project remove` takes out its first project, then the header comment is still at the top.
+- Given api listed at ~/x/api, when `dashboard project add ~/y/api` runs, then it is added as api-2.
+- Given new-crm listed, when `dashboard project add ~/ws/new-crm` runs and `ws` links to `Workspace`, then it is refused as already listed, as new-crm.
+- Given new-crm with a `new-raxel` test deploy, when `dashboard project set crm --deploy name=new-raxel,address=https://staging.example.com` runs, then new-raxel's address changes, its role stays test, and every other deploy stays.
+- Given `dashboard project set crm --aka screensaver`, when screensaver is another project, then it is refused naming that project and the file is left as it was.
+- Given a projects.yaml that does not list ~/forks/crm, when the app opens that folder, then the file ends with `- name: crm-2` and `path: ~/forks/crm` (crm being taken).
+- Given no projects.yaml, when the app opens a project, then no file is written.
 
 ## Open questions
 

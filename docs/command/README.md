@@ -11,7 +11,7 @@ its own verbs; this feature only picks the program.
 |---|---|---|
 | `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment; any of them with `--project <name>` |
 | `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, notify |
-| `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, open, close, focus |
+| `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
 
 `session` is another name for `pane`. `dashboard` with no words opens the app,
 or brings it to the front; a first word that is a flag (`--remote`) goes to the
@@ -37,7 +37,8 @@ userData folder (`DASHBOARD_USER_DATA`, set in a copy run with
 writes `session-socket` where the command waits for it. Bare `dashboard` with a
 `DASHBOARD_APP` that is gone says so and exits 1.
 
-Every other `board` verb and move, `project list`, `find` and `init` work on
+Every other `board` verb and move, `project list`, `find`, `init`, `add`, `set`
+and `remove` work on
 files and never start it:
 the app already watches each project's `.dashboard` folder. Quitting,
 restarting or replacing the app is never the command's.
@@ -62,7 +63,11 @@ and no world-readable path. On Windows it is the named pipe, as before.
 The app does not edit your files. Copy this into your global `CLAUDE.md`:
 
     `dashboard --help` drives the Dashboard app from any terminal: open and
-    switch projects, dispatch worker panes, move board cards.
+    switch projects, dispatch worker panes, move board cards. When you find
+    something about a project that `dashboard project find <name>` does not
+    show — a deployment and its address, the site, another name for it —
+    record it: `dashboard project set <name> --deploy
+    name=<n>,role=<r>,address=<a>`, `--site <url>`, `--aka <name>`.
 
 ## On screen
 

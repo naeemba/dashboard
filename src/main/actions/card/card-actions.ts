@@ -5,7 +5,7 @@ import { shipEntry } from '../../../shared/app/log-entry';
 import { REVIEW_COLUMN, type Board } from '../../../shared/board/board';
 import type { BoardChanges } from '../../board/board-changes';
 import { readBoard, writeBoard } from '../../board/board-store';
-import { realPath } from '../../ship/worktree-scan';
+import { realPath } from '../../app/real-path';
 import { isProjectBoard } from './project-board';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';

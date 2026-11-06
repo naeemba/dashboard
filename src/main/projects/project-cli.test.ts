@@ -60,7 +60,7 @@ describe('project open, close and focus', () => {
 
 describe('project init', () => {
   posixPathsOnly('writes from the known folders, and never over a file that is there', () => {
-    expect(init(null, () => ({ open: ['/home/me/crm'], recent: ['/home/me/crm'] }))).toEqual({ ok: true, file: expect.stringContaining('path: ~/crm'), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy by hand' });
+    expect(init(null, () => ({ open: ['/home/me/crm'], recent: ['/home/me/crm'] }))).toEqual({ ok: true, file: expect.stringContaining('path: ~/crm'), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy with "dashboard project set" or by hand' });
     expect(init('', NO_FOLDERS)).toEqual({ ok: false, message: 'projects.yaml already exists; init never overwrites it' });
     expect(init(null, NO_FOLDERS, ['now'])).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });
   });
@@ -71,6 +71,41 @@ describe('project init', () => {
 
   it('lists the open folders before the recent ones', () => {
     expect(initialPaths({ open: ['/open'], recent: ['/recent'] })).toEqual(['/open', '/recent']);
+  });
+});
+
+describe('project add, set and remove', () => {
+  const edit = (words: string[], text: string | null = FILE) => runProjectCommand(words, text, 'projects.yaml', NO_FOLDERS, '/home/me', (folder) => folder);
+  const written = (words: string[], text: string | null = FILE) => {
+    const answer = edit(words, text);
+    if (!answer.ok || !('file' in answer) || answer.file === undefined) throw new Error(JSON.stringify(answer));
+    const read = readProjects(answer.file);
+    return read.ok ? read.projects.find((project) => project.name === 'screensaver') : read;
+  };
+
+  posixPathsOnly('adds a folder with its flags, the name from the folder unless given', () => {
+    expect(edit(['add', '~/api', '--aka', 'backend, server', '--about=The API'])).toMatchObject({ ok: true, output: 'added api in projects.yaml', file: expect.stringContaining('- name: api\n  aka: [backend, server]\n  path: ~/api\n  about: The API\n') });
+    expect(edit(['add', '/work/x', '--name', 'thing'])).toMatchObject({ ok: true, output: 'added thing in projects.yaml' });
+    expect(edit(['add', '/crm'])).toEqual({ ok: false, message: '/crm is already listed, as new-crm' });
+  });
+
+  it('reads every set flag, each --deploy and --clear on its own', () => {
+    const changed = written(['set', 'mandala', '--aka', 'saver', '--site', 'https://s.example.com', '--deploy', 'name=box,role=test,address=http://box?a=b', '--deploy', 'name=live,role=production,address=https://live?tags=a,b']);
+    expect(changed).toMatchObject({ name: 'screensaver', aka: ['mandala', 'saver'], site: 'https://s.example.com', deploy: [{ name: 'box', address: 'http://box?a=b' }, { name: 'live', address: 'https://live?tags=a,b' }] });
+    expect(written(['set', 'screensaver', '--clear', 'aka', '--clear', 'site'], '- name: screensaver\n  aka: [m]\n  path: /s\n  site: x\n')).toMatchObject({ aka: [], site: '' });
+  });
+
+  it('refuses a set with nothing to set and flags it does not take', () => {
+    expect(edit(['set', 'crm'])).toEqual({ ok: false, message: `set takes at least one of --aka, --site, --about, --deploy, --clear\n\n${PROJECT_USAGE}` });
+    expect(edit(['set', 'crm', '--clear', 'path'])).toEqual({ ok: false, message: '--clear takes aka, site, about, deploy; name and path are required' });
+    expect(edit(['set', 'crm', '--deploy', 'role=test'])).toEqual({ ok: false, message: '--deploy needs name=<n>, the deploy to add or change' });
+    expect(edit(['set', 'crm', '--deploy', 'name=a,where=b'])).toEqual({ ok: false, message: '--deploy takes name=<n>,role=<r>,address=<a>, not where=b' });
+    expect(edit(['set', '--site', 'x'])).toEqual({ ok: false, message: `set takes a name first\n\n${PROJECT_USAGE}` });
+    expect(edit(['remove', 'crm', '--name', 'x'])).toEqual({ ok: false, message: `remove takes one name and no flags\n\n${PROJECT_USAGE}` });
+  });
+
+  it('removes a project by name or aka', () => {
+    expect(edit(['remove', 'Mandala'])).toEqual({ ok: true, file: '- name: new-crm\n  aka: [crm]\n  path: /crm\n', output: 'removed screensaver in projects.yaml' });
   });
 });
 

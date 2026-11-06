@@ -6,7 +6,7 @@ import path from 'node:path';
 import { existingProjects, pickedFolder, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
-import { realPath } from './ship/worktree-scan';
+import { realPath } from './app/real-path';
 import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
@@ -24,6 +24,7 @@ import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
 import { projectNamedInFile } from './projects/project-named';
+import { listOpenedProject } from './projects/projects-write';
 import { MANAGER_SLOT } from '../shared/manager/manager';
 import { announceSocket, clearSocketPointer } from './command/app-address';
 import { environmentForPanes, paneCommands } from './command/pane-environment';
@@ -495,9 +496,10 @@ function openProject(projectPath: string): { index: number; open: OpenProjects }
     spawnProject(picked, index);
     watchProjectBoard(boards, boardLog, picked.path);
   }
-  // rememberRecentPath swallows its own failures: the shells are already running, so losing the history
-  // entry must not fail the open and strand them on a slot the renderer has no page for.
-  if (!picked.missing) rememberRecentPath(recentsFile, picked.path);
+  // rememberRecentPath and listOpenedProject swallow their own failures: the shells are already running,
+  // so losing the history entry or the projects.yaml one must not fail the open and strand them on a
+  // slot the renderer has no page for.
+  if (!picked.missing) { rememberRecentPath(recentsFile, picked.path); listOpenedProject(picked.path); }
   const open = openProjects();
   sendToRenderer('projects:change', open);
   return { index, open };
