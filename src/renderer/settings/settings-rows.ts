@@ -13,6 +13,7 @@ export type SettingsRow =
   | { kind: 'weather-place'; label: string; value: string }
   | { kind: 'host-port'; label: string; value: string }
   | { kind: 'host-token'; label: string; value: string }
+  | { kind: 'review-auto-loop'; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
 
@@ -66,6 +67,10 @@ export function settingsRows(settings: Settings): SettingsRow[] {
     kind: 'host-port', label: 'Port (next launch)', value: settings.host.port === null ? '' : String(settings.host.port),
   });
   rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
+  rows.push({ kind: 'heading', label: 'Review' });
+  rows.push({
+    kind: 'review-auto-loop', label: 'Start the review loop when a pull request opens', value: settings.review.autoLoop ? 'on' : 'off',
+  });
   rows.push({ kind: 'heading', label: 'Reset' });
   rows.push({ kind: 'reset-keys', label: 'Reset every key to its default' });
   rows.push({ kind: 'reset-all', label: 'Reset everything to defaults' });
