@@ -24,9 +24,9 @@ requests, and writes the pattern this repository uses:
 
 It moves existing docs into the right feature without dropping any text, never deletes a doc it
 cannot place, and lists those docs (and any source file no feature claims) in the pull request.
-It works in a worktree of `origin/<default branch>` on a `docs/adopt-docs` branch, at a fixed path
-inside the repository's git folder that every later command names in full, so the checkout it
-starts in is left as it was, and changes only Markdown. A repository whose default branch is already
+It works in a worktree of `origin/<default branch>` on a `docs/adopt-docs` branch, at
+`<repository root>/.adopt-docs`, a fixed path every later command names in full and that is
+excluded from the starting checkout's `git status`, so the checkout it starts in is left as it was, and changes only Markdown. A repository whose default branch is already
 in the pattern (an index of feature folders and the docs rule in `CLAUDE.md`), or that already has
 a `docs/adopt-docs` branch from an earlier run, is skipped with no pull request. It never merges
 (skills-decision-1).

@@ -68,12 +68,17 @@ fixed path, written out in full every time. Run:
 and call that path followed by \`/.adopt-docs\` \`<worktree>\`
 (\`/home/me/app/.adopt-docs\`, say). It sits inside the working directory, so
 writing there asks no permission, and outside \`.git\`, which is guarded more
-strictly than any other path. The starting checkout's \`git status\` shows it as
-untracked until step 8 removes it; that is the only mark this run leaves there.
-Print it once, then write the literal path wherever \`<worktree>\` appears
-below, never a shell variable:
+strictly than any other path. Print it once, then write the literal path
+wherever \`<worktree>\` appears below, never a shell variable:
 
     git worktree add --no-track -b docs/adopt-docs <worktree> origin/<default branch>
+    echo /.adopt-docs/ >> "$(git rev-parse --git-path info/exclude)"
+
+Both run in the checkout you started in. The second line hides the folder from
+that checkout: without it, a \`git add .\` there commits the worktree as an
+embedded repository on someone's branch. Write the line with that one shell
+command, never by editing a file under \`.git\`. It is the only mark this run
+leaves in that checkout, and it stays after step 8.
 
 \`--no-track\`, so no later push can land on the default branch. Everything
 below happens in that worktree: every git command is \`git -C <worktree> ...\`,
@@ -242,7 +247,7 @@ the docs hold the why.
   file left unclaimed, and every code comment or card still naming a moved doc.
   Do not merge.
 - Remove your worktree with \`git worktree remove <worktree>\`, run from
-  outside it; the branch stays.
+  outside it; the branch stays, and so does the \`/.adopt-docs/\` exclude line.
 
 Print the pull request's URL and stop.
 `;
