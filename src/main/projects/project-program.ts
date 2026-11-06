@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { existingProjects, readRecentPaths, RECENTS_FILE } from '../app/projects';
+import { replaceFile } from '../app/replace-file';
 import { readSession, SESSION_FILE } from '../app/session';
 import { appUserDataFolder } from '../command/app-address';
 import { failureLine } from '../command/failure-line';
@@ -23,14 +24,15 @@ function knownFolders(): KnownFolders {
 }
 
 // The whole of the `project` program outside project-cli.ts: read ~/.dashboard/projects.yaml, write
-// it for init, print the answer, or hand open, close and focus to the app over the socket the `pane`
+// it for init, add, set and remove, print the answer, or hand open, close and focus to the app over the socket the `pane`
 // noun uses. `dashboard project` is its one door.
 export async function runProjectProgram(commandArguments: readonly string[]): Promise<number> {
   try {
     const { text, filePath } = readProjectsFile();
     const answer = runProjectCommand(commandArguments, text, filePath, knownFolders, homedir());
     if ('ask' in answer) return await askRunningApp(answer.ask);
-    if (answer.ok && answer.file !== undefined) {
+    if (answer.ok && answer.file !== undefined && answer.overwrite) replaceFile(filePath, answer.file);
+    else if (answer.ok && answer.file !== undefined) {
       mkdirSync(dirname(filePath), { recursive: true });
       // wx: a file written between the read above and now is still never overwritten.
       writeFileSync(filePath, answer.file, { flag: 'wx' });
