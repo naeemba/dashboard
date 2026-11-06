@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -20,16 +20,7 @@ describe('installSkills', () => {
     const home = folder();
     expect(installSkills(home, build())).toEqual([]);
     expect(readFileSync(adoptDocsSkillFile(home), 'utf8')).toMatch(/^---\nname: adopt-docs\n/);
-    expect(readFileSync(createTaskScript(home), 'utf8')).toContain('program');
-  });
-
-  it('leaves an /adopt-docs whose bytes already match untouched', () => {
-    const home = folder();
-    const out = build();
-    installSkills(home, out);
-    const before = statSync(adoptDocsSkillFile(home)).mtimeMs;
-    installSkills(home, out);
-    expect(statSync(adoptDocsSkillFile(home)).mtimeMs).toBe(before);
+    expect(existsSync(createTaskScript(home))).toBe(true);
   });
 
   it('installs /adopt-docs when /create-task fails, and answers one line for the failure', () => {

@@ -3,9 +3,10 @@ import { replaceFileIfChanged } from '../app/replace-file';
 import { installCreateTask } from '../board/create-task-install';
 import { failureLine } from '../command/failure-line';
 import { ADOPT_DOCS_SKILL } from './adopt-docs-skill';
+import { skillFolder } from './skill-folder';
 
 export function adoptDocsSkillFile(home: string): string {
-  return path.join(home, '.claude', 'skills', 'adopt-docs', 'SKILL.md');
+  return path.join(skillFolder(home, 'adopt-docs'), 'SKILL.md');
 }
 
 // Every skill the app puts under ~/.claude/skills, refreshed from this build at each launch. Answers

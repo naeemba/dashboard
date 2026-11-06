@@ -51,6 +51,7 @@ Folders: `src/main/skills/`.
 
 - Which skills are installed, and the warning lines: `install-skills.ts`, `install-skills.test.ts`
 - The text of `/adopt-docs`: `adopt-docs-skill.ts`
+- Where a skill's folder is: `skill-folder.ts`
 - Wired in `main.ts` at `ready`, after the window opens, in the packaged app only
 
 ## Scenarios

@@ -2,9 +2,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { failureLine } from '../command/failure-line';
 import { replaceFileIfChanged } from '../app/replace-file';
+import { skillFolder } from '../skills/skill-folder';
 
-// What the app puts under ~/.claude for Claude Code to find, written at every launch so an upgrade
-// reaches it with no step of its own. Today that is one skill: /create-task and the program it runs.
+// /create-task and the program it runs, which install-skills.ts writes under ~/.claude at every
+// launch so an upgrade reaches it with no step of its own.
 //
 // A skill, not a file in ~/.claude/commands: commands/ is often a link into a dotfiles repo, and
 // writing there would edit somebody's dotfiles. skills/<name>/ is a folder of its own, and it keeps
@@ -20,7 +21,7 @@ import { replaceFileIfChanged } from '../app/replace-file';
 // rewritten.
 
 function createTaskFolder(home: string): string {
-  return path.join(home, '.claude', 'skills', 'create-task');
+  return skillFolder(home, 'create-task');
 }
 
 export function createTaskScript(home: string): string {
