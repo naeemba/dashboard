@@ -13,6 +13,7 @@ import './drawer/drawer.css';
 import './usage/usage.css';
 import './manager/manager.css';
 import { openHelp } from './keys/help';
+import { preloadFont } from './app/font-preload';
 import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
 import { createDrawer } from './drawer/drawer-view';
 import { matchesBinding } from '../shared/keys/binding';
@@ -945,18 +946,8 @@ async function start(): Promise<void> {
   shellCommand = loaded.shellCommand;
   // Read before anything is on screen, because the first page to open starts saving over it.
   const session = await bridge.getSession();
-  // xterm measures cell size when a pane opens, so both weights must be in before openProject()
-  // builds one, or the glyphs misalign. A font name the browser cannot parse — anything typed into
-  // the settings screen, which does not check — rejects here instead of resolving; xterm falls back
-  // to Menlo on its own, so losing the preload must cost only that fallback, not the whole session.
-  try {
-    await Promise.all([
-      document.fonts.load(`${settings.font.size}px "${settings.font.name}"`),
-      document.fonts.load(`bold ${settings.font.size}px "${settings.font.name}"`),
-    ]);
-  } catch {
-    // Fallen through to whatever xterm renders instead.
-  }
+  // xterm measures cell size when a pane opens, so the font must be in before openProject() builds one.
+  await preloadFont(settings.font);
   applyAppearance();
   // Said whether or not the restore threw: a launch with `--remote` joins its host only after this.
   await restore(session).finally(() => bridge.sessionRestored());
