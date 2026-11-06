@@ -145,6 +145,13 @@ describe('removeProject', () => {
     expect(text(removeProject(sections, 'p.yaml', 'a'))).toBe('# header line\n\n# side projects\n- name: b\n  path: /b\n');
     expect(text(removeProject('# header line\n- name: a\n  path: /a\n', 'p.yaml', 'a'))).toBe('# header line\n\n[]\n');
   });
+
+  it('keeps the blank line that set a section apart when its comment moves', () => {
+    const nextSection = '- name: a\n  path: /a\n# about b\n- name: b\n  path: /b\n\n- name: c\n  path: /c\n';
+    expect(text(removeProject(nextSection, 'p.yaml', 'b'))).toBe('- name: a\n  path: /a\n\n# about b\n- name: c\n  path: /c\n');
+    const lastSection = '- name: a\n  path: /a\n\n# about b\n- name: b\n  path: /b\n# footer\n';
+    expect(text(removeProject(lastSection, 'p.yaml', 'b'))).toBe('- name: a\n  path: /a\n\n# about b\n# footer\n');
+  });
 });
 
 describe('withOpenedProject', () => {

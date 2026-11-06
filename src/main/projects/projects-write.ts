@@ -190,14 +190,20 @@ export function removeProject(text: string | null, filePath: string, word: strin
     const next = items[index];
     if (next !== undefined) {
       // The blank line that stood between the two comments stays between them, not above both.
-      const gap = next.spaceBefore ? '\n' : '';
-      next.commentBefore = next.commentBefore ? `${removed.commentBefore}\n${gap}${next.commentBefore}` : removed.commentBefore;
-      next.spaceBefore = removed.spaceBefore;
+      if (next.commentBefore) {
+        const gap = next.spaceBefore ? '\n' : '';
+        next.commentBefore = `${removed.commentBefore}\n${gap}${next.commentBefore}`;
+        next.spaceBefore = removed.spaceBefore;
+      } else {
+        next.commentBefore = removed.commentBefore;
+        next.spaceBefore = next.spaceBefore || removed.spaceBefore;
+      }
     } else if (index === 0) document.commentBefore = joined(document.commentBefore, removed.commentBefore) ?? null;
     else {
       // Above the file's closing comment, which is printed after a blank line of its own when it is
       // the document's, so both go on the list's end.
-      list.comment = joined(joined(list.comment, removed.commentBefore), document.comment) ?? null;
+      const moved = removed.spaceBefore ? `\n${removed.commentBefore}` : removed.commentBefore;
+      list.comment = joined(joined(list.comment, moved), document.comment) ?? null;
       document.comment = null;
     }
   }
