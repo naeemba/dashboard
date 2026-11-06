@@ -9,6 +9,7 @@ import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { replaceFile } from '../app/replace-file';
 import type { ScreenSession } from '../chat/chat-sessions';
 import { stopWaiting } from './session-cli';
+import type { ScreenHost } from './screen-host-client';
 
 // Worker panes run as Claude screens: `pane run --screen`. The pane keeps its shell, hidden, and the
 // renderer draws a Claude screen over it, run by chat-sessions.ts under the pane's screen key the way a
@@ -38,6 +39,10 @@ export type ScreenPorts = {
   // A message into the session under the key, which starts it: the worker's first prompt.
   tell(key: number, text: string): void;
   stop(key: number): void;
+  // Starts the session under the key, which takes up one the screen host kept.
+  start(key: number): void;
+  // Where the sessions run, and which ones it kept through the restart (screen-host-client.ts).
+  host: ScreenHost;
   notify(id: string, state: WorkerState, waiting?: StopWaiting): void;
 };
 
@@ -109,15 +114,18 @@ export function screenWorkers(ports: ScreenPorts) {
     };
   }
 
-  // One brought back after a restart had its turn ended by the restart.
+  // One brought back after a restart had its turn ended by the restart, unless the screen host kept it
+  // in the middle of one.
   function add(id: string, saved: Saved, back: boolean): void {
     const resume = back && saved.started !== false;
-    const worker = { session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done: back };
+    const done = back && ports.host.kept(saved.session)?.busy !== true;
+    const worker = { session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done };
     live.set(id, worker);
     byKey.set(screenKey(id), worker);
   }
 
   return {
+    host: ports.host,
     start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string): void {
       const { index } = paneFromId(id);
       add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: false }, false);
@@ -167,11 +175,13 @@ export function screenWorkers(ports: ScreenPorts) {
       save();
     },
     // The project opened in `slot`: the workers saved for it, back under this slot's pane ids, each to
-    // be opened as main's worker again. Their sessions start when shown or told something.
+    // be opened as main's worker again. Their sessions start when shown or told something, except one
+    // the screen host kept, taken up at once so what it did while the app was away is heard.
     comeBack(slot: number, projectPath: string): Saved[] {
       const back = waiting.filter((saved) => saved.projectPath === projectPath);
       waiting = waiting.filter((saved) => saved.projectPath !== projectPath);
       for (const saved of back) add(terminalId(slot, saved.index), saved, true);
+      for (const saved of back) if (ports.host.kept(saved.session)) ports.start(screenKey(terminalId(slot, saved.index)));
       if (back.length > 0) save();
       return back;
     },

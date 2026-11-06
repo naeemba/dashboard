@@ -19,6 +19,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - What each main dispatched, as its status line and workers popup read it: `worker-roster.ts`, `pane-link.ts`
 - The app's index of every Claude it started: `session-index.ts`, `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
 - A worker run as a Claude screen (`pane run --screen`): `screen-workers.ts`, `../../shared/workers/screen-key.ts`; the session is the [chat](../chat/README.md)'s `chat-sessions.ts`, the pane `src/renderer/app/page.ts` (workers-decision-5)
+- The screen host a worker screen's session runs in, so it outlives the app: `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`, `screen-host-protocol.ts`, `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios
 
@@ -51,7 +52,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a worker on a Claude screen, when a ship, the review sweep, the command screen or a project close picks or checks a pane, then that pane reads as running an agent, and the drawer and main's /resume refuse its conversation as running in that pane.
 - Given a worker on a Claude screen, when /clear, /resume, /branch or /rewind is typed in it, then each is refused with a notice that the worker stays on the conversation it was started on; /rename and Ctrl+R act on the worker's own conversation, not main's.
 - Given a worker on a Claude screen, when `pane send` names its pane, then the text goes in as its next prompt rather than into the hidden shell; `pane release` closes the pane and ends the session.
-- Given a worker on a Claude screen, when the app restarts, then its pane comes back as a Claude screen on the same conversation once its project opens (the manager's once the pane host is back), as main's worker and, for a card's worker, named on the card's record again; the conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
+- Given a worker on a Claude screen, when the app restarts, then its pane comes back as a Claude screen on the same conversation once its project opens (the manager's once the pane host is back), as main's worker and, for a card's worker, named on the card's record again.
+- Given a worker on a Claude screen in the middle of a turn, when the app quits or restarts, then its Claude keeps working in the screen host, as a terminal worker's does in the pane host; once its project opens again the screen takes the session back up, counted working while the turn goes on, any question it asked meanwhile is shown, and a turn that ended while the app was away reports done to main then (workers-decision-6).
+- Given the screen host is not running (Windows, a machine restart, a socket that would not open, another Dashboard holding it), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
 
 ## Open questions
 

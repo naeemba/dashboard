@@ -184,7 +184,7 @@ How it is built, so the chat code does not fork:
   `stop-notices.ts` rules (workers-decision-1). UserPromptSubmit and PostToolUse report running. A
   permission question is the screen's own ask, which marks the pane blocked. Stop does not run for an
   interrupted turn or a session that dies, so the SDK's `result` and the session's end also end the turn
-  for the review sweep, without a report to main. A worker back from a restart starts with its turn over.
+  for the review sweep, without a report to main. A worker back from a restart starts with its turn over, unless the screen host kept it mid-turn (workers-decision-6).
 - Pane readings carry `screen`, so `paneIsBusy` and every picker and refusal built on it count the pane
   as an agent's; its hidden shell sits at a prompt and its command runs nothing.
 - The pane keeps its plain shell, hidden under the screen, so everything that counts panes, releases
@@ -205,8 +205,8 @@ throwaway clone on a second instance; it opened draft PR #216, left unmerged):
 
 What blocks making it the default, each a Backlog card:
 
-- A worker screen's Claude is the app's child, so a restart ends the turn it was in; a terminal
-  worker's keeps running in the pane host.
+- ~~A worker screen's Claude is the app's child, so a restart ends the turn it was in.~~ It runs in the
+  screen host now, off Windows (workers-decision-6).
 - Auto mode refused `gh pr create` on the screen with nobody to ask; it went on only once told the
   user approved. A terminal worker was not run on the same prompt to compare.
 - The working line once kept counting after the turn ended, and the real card's screen once showed no
@@ -216,3 +216,49 @@ What blocks making it the default, each a Backlog card:
   Stop hook says done rather than by its spinner.
 - A screen started fresh in the project folder (no `--worktree` or `--card`) shares its folder with main;
   its /resume list shows main's conversations.
+
+## workers-decision-6: A worker screen's session runs in the screen host, outside the app
+
+**A worker screen's Agent SDK session runs in the screen host, a detached `node` process beside the
+pane host, so a quit or restart leaves its turn going the way a terminal worker's goes on in the pane
+host.** Card 461bb646, the first of workers-decision-5's blockers. A page's main stays in the app: it
+is resumed on its conversation at every launch, and nothing waits on it mid-turn the way main waits on
+a worker.
+
+How it is built:
+
+- `chat-sessions.ts` still drives every session. For a worker it asks the screen host first and gets
+  back a Query whose methods all go over the socket (`hostedQuery` in `screen-host-client.ts`); with no
+  host it runs the SDK in the app as before. Nothing else in the chat code knows the difference.
+- The host keys a session by its conversation id, which stays the same across a restart where its pane
+  id does not. The app's `start` for a key the host already runs takes that session up instead of
+  starting another.
+- The callbacks stay in the app. A question (`canUseTool`, `onElicitation`) is sent to the app and
+  waits for its answer, through a restart if it has to; the app that takes the session up is sent the
+  questions still waiting. A hook is answered by the host at once and told to the app, held while no
+  app has the session: a Stop hook that ran while the app was away reports done to main when the
+  project opens again. Every hook the app has today returns nothing, so none needs its answer heard.
+- Messages are not held: a screen opening reads its conversation back from the transcript, as it does
+  after any restart. The host counts a turn running from UserPromptSubmit to the result, so a worker
+  taken back mid-turn is counted working for the review sweep, and one whose turn ended is not.
+- The host answers one app at a time, as the pane host does; a second Dashboard on the same user data
+  runs its worker screens itself. It exits once no app is connected and no session runs.
+- It is run by the `node` a login shell finds, as the pane host is, so the Agent SDK is bundled into
+  `screen-host-entry.mjs` (node cannot read it inside the asar) as an ES module, since the SDK reads
+  `import.meta.url` as it loads. The CLI binary is the app's unpacked one, named in the options.
+
+Checked by hand with the bundled host and the real CLI (Haiku), a stand-in app on the socket: a turn
+running `sleep 15` went on after the app quit 1.5s in and wrote its file 14s later; a second app saw it
+`busy` while running and heard its reply, result and Stop hook live, or, arriving after it ended, saw
+it idle and heard the held Stop hook. Stopping every session let the host exit.
+
+Watch for:
+
+- Windows has none: a named pipe needs the proof the pane host does (`paneHostAddress`), not built yet.
+  Worker screens there still die with the app.
+- A protocol bump, or an app update that changes the socket's name, leaves the old host's sessions
+  running unseen; a worker brought back then resumes its conversation in a second process. Bump only for
+  a change an older host would misread.
+- A session that dies while no app is connected and is the last one running takes the host and what it
+  held with it; that worker comes back with its turn over and main is not told, as before.
+- A session in the host runs the build that started it until it ends, as a terminal worker's Claude does.
