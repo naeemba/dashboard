@@ -208,6 +208,8 @@ directives go.
 ## Open questions
 
 - `main.ts` is at the 600-line ceiling, at 599 code lines, and `renderer.ts` is
-  already past it at 610, even after the close flow moved into `close-project.ts` and the which-key
-  strip's tracking into `which-key-tracking.ts`. A feature that adds code to
-  `main.ts` or `renderer.ts` needs a seam split out first (workflow-decision-1).
+  at 583, after the pane listeners moved into `pane-output-wiring.ts`, the
+  board's file listener into `board-wiring.ts` and the notes' into
+  `notes-wiring.ts`. A feature that adds code to `main.ts` or `renderer.ts`
+  needs a seam split out first (workflow-decision-1); the next one in
+  `renderer.ts` is the session save and restore.

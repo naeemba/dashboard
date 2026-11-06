@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-06T14:34:37.219Z",
-  "updatedAt": "2026-11-06T14:37:12.000Z",
-  "column": "Doing",
-  "order": 1
+  "updatedAt": "2026-11-06T14:49:45.540Z",
+  "branch": "work-board-card-2639b165-d4bd-44f3-bd6c-8a7",
+  "pullRequest": 222,
+  "comments": [
+    {
+      "at": "2026-11-06T14:49:45.540Z",
+      "body": "Shipped in PR #222: pane output, exit and working-report listeners to panes/pane-output-wiring.ts; board file listener to board/board-wiring.ts; notes and ink listeners to notes/notes-wiring.ts, each with a test. renderer.ts 610 -> 583 code lines; main.ts left at 599. No behaviour change. Hand check in the app not yet done."
+    }
+  ],
+  "column": "Done",
+  "order": 180
 }

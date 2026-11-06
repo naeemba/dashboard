@@ -93,6 +93,7 @@ Folders: `src/main/notes/`, `src/renderer/notes/`.
 - `ink-geometry.ts`: a stroke's outline and whether the eraser touches it
 - `ink-history.ts`: strokes and the undo steps
 - `ink-pointer.ts`: what a press of a pointer means — draw, erase or nothing
+- `notes-wiring.ts`: either page's file written elsewhere, re-read on the page showing
 - `saved-page.ts`: the wait, the flush and the read and write rules both pages share
 
 ## Scenarios
