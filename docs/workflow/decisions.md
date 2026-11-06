@@ -65,3 +65,25 @@ two npm copies of the same packages were 1.4 GB.
   that the import resolved `@typescript/old` (`@typescript/typescript6`'s alias of `typescript@^6`) to
   6.0.2 where npm had locked 6.0.3; the lock was set back to 6.0.3 by hand. npm's `overrides` moved to
   `overrides` in `pnpm-workspace.yaml`, which pnpm reads with the same selectors.
+
+## workflow-decision-4: Releases build on GitHub Actions, unsigned, with no new dependency
+
+`.github/workflows/release.yml` is the only place a version moves (workflow-rule-3). Agreed on 2026-11-06:
+
+- Unsigned. There is no Apple Developer ID or Windows code-signing certificate, so each system warns once
+  before the first launch; README.md says what to click and the release body links to it. A mac build still gets an
+  ad hoc signature (`DASHBOARD_SIGNING_IDENTITY=-`, read by `forge.config.ts`): Apple silicon refuses to
+  run an app with none, and a runner has no `Dashboard Local` certificate.
+- No Forge publisher and no DMG maker. Each leg runs `pnpm run make` and `gh release upload`; the `.dmg`
+  is `hdiutil create` from the packaged app. Both tools are already on the runners.
+- Draft first, published last. The prepare job creates a draft, each matrix leg uploads to it, and only
+  the publish job, when every leg succeeded, writes the download links from the uploaded asset names and
+  publishes. A failed leg leaves a draft nobody downloads from half-filled.
+- A pre-release tag push is a second trigger. `workflow_dispatch` runs only once the file is on the
+  default branch, and it commits to main, so neither can be tried from a pull request. A `v*-*` tag on a
+  commit that carries the version (bumped on a throwaway branch, only the tag pushed) runs the same build
+  and publish jobs against the branch's own workflow file, without a commit to main. The
+  bump-and-commit step is the one part that runs only for real.
+- The changelog is GitHub's generated notes, the same text the release shows: every merged pull request
+  since the last stable tag, with its number, title and link, grouped as `.github/release.yml` would group
+  them (one list while there is none).

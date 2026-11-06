@@ -25,6 +25,13 @@ development copy beside it.
 
 ## Install
 
+Download the build for your system from [Releases](https://github.com/naeemba/dashboard/releases): a `.dmg` or `.zip` for a mac with Apple silicon, the `Setup.exe` for Windows, a `.deb`, `.rpm` or `.zip` for Linux. The builds are not signed, so each system warns once before the first launch:
+
+- macOS: Control-click Dashboard.app in Applications and choose Open, then Open again. On macOS 15 and later, open it once, then go to System Settings → Privacy & Security and click Open Anyway.
+- Windows: SmartScreen says "Windows protected your PC". Click More info, then Run anyway.
+
+To build and install from this checkout instead:
+
     scripts/rebuild.sh
 
 It packages the app and installs it to `/Applications/Dashboard.app` on a mac or `~/.local/opt/dashboard` on Linux, leaving any running copy alone. On Linux nothing adds a launcher: run `~/.local/opt/dashboard/Dashboard`, or point a desktop entry of your own at it.
