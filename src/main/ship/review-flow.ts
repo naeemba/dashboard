@@ -3,7 +3,9 @@ import { isCardSetAside } from '../board/board-files';
 import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
-import type { ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
+import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
+import { entryForCard } from './worktree-store';
+import { notOpenRefusal } from './ship';
 
 // The second half of a ship, in the order it happens. An agent that has put a pull request number on
 // its card is finished, so the card lands in Review, the worktree the work was written in is thrown
@@ -45,6 +47,9 @@ export type ReviewPorts = {
   queue: <T>(key: string, run: () => Promise<T>) => Promise<T>;
   // Write the project's board. Main's watcher is not told, so the screen still redraws from it.
   writeBoard: (projectPath: string, board: Board) => void;
+  // A finished card noticed: card.move into Review with source 'automatic', which starts the loop
+  // through `review` below only when settings review.autoLoop is on (column-entry.ts).
+  arrived: (entry: WorktreeEntry) => Promise<unknown>;
 };
 
 // The pull request on a worktree's own board, or null when the agent has not opened one yet. That
@@ -174,6 +179,9 @@ export type ReviewSweep = {
   run: () => Promise<void>;
   // This card is being shipped again, so whatever its last review was is over.
   forget: (cardId: string) => void;
+  // The review loop for one shipped card, started now: card.review's whole job. Refused, with why,
+  // for a card with no worktree, no pull request yet, an agent still working, or a review running.
+  review: (cardId: string) => Promise<{ output: string } | Refused>;
 };
 
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
@@ -260,24 +268,80 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // still seen above and its worktree cleared. There is no waiting for a pane: a review that finds
     // every worker busy opens a new one.
     if (entry.reviewing) return;
+    // Marked whatever the move goes on to do. With review.autoLoop off the card waits in Review, and
+    // unmarked the sweep would move it there again every five seconds; `review` takes the mark off
+    // again for a card that was only early.
+    //
+    // A card a person started by hand that was only early goes back to `review` directly: through
+    // card.move it is the sweep's move, and with the loop off that starts nothing, so the review the
+    // person asked for would say "waiting for the commit" and never come.
     reviewed.add(entry.cardId);
-    // Before the swap, and whether or not the swap works: the card is finished and nothing has checked
-    // it, which is the whole of what the column says.
-    editProjectBoard(ports, entry.projectPath, (board) => intoReview(board, entry.cardId));
-    const swap = await ports
-      .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
-      .catch((error: unknown) => ({
-        message: `review failed: ${failureText(error)}`,
-        again: false,
-      }));
-    // The mark comes back off for a card that was only early. Everything else keeps it: a locked
-    // repository, a pane that went, a git step that threw — none of those pass by themselves, and
-    // the card carries the line saying so until somebody acts on it.
-    if (swap.again) reviewed.delete(entry.cardId);
-    // The card is the only place this can be said. A review starts on a timer rather than a keystroke,
-    // so there is no status bar waiting on an answer and nothing on screen it belongs to.
-    if (swap.message !== '') {
-      editProjectBoard(ports, entry.projectPath, (board) => reviewRefused(board, entry.cardId, swap.message));
+    if (byHand.delete(entry.cardId)) {
+      await review(entry.cardId);
+      return;
+    }
+    arriving.add(entry.cardId);
+    try {
+      await ports.arrived(entry);
+    } finally {
+      arriving.delete(entry.cardId);
+    }
+  }
+
+  // Cards a review is being started for right now. Every guard below runs before the first await and
+  // so does this, so two starts of one card — the sweep's and a keystroke's — cannot both get through.
+  const starting = new Set<string>();
+  // Cards whose review was started by a person or the command, not by the sweep's own move, and
+  // stopped on a dirty worktree, so the sweep retries that same start rather than its own move once the
+  // mark comes off. A start the sweep's move made comes back through that move, which asks the setting.
+  const byHand = new Set<string>();
+  // Cards the sweep's own move is under way for right now: card.move awaits the start it makes.
+  const arriving = new Set<string>();
+
+  async function review(id: string): Promise<{ output: string } | Refused> {
+    const entry = entryForCard(ports.worktrees(), id);
+    if (entry === undefined) return { refused: `card ${id} has no worktree to review; ship it first` };
+    if (entry.reviewing || starting.has(id)) return { refused: `"${entry.title}" is already being reviewed` };
+    const slot = ports.slotOf(entry.projectPath);
+    if (slot === -1) return { refused: notOpenRefusal(entry.title) };
+    if (ports.agentWorksIn(slot, entry.pane)) return { refused: `the agent on "${entry.title}" is still working` };
+    const pullRequest = finishedIn(entry);
+    if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };
+    // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
+    // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a
+    // pull request that merged.
+    // Null is refused as well, as sweepOne leaves it alone: a card the project's board does not show,
+    // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
+    const board = projectBoard(entry.projectPath);
+    const awaits = board === null ? null : awaitsReview(board, id);
+    if (awaits === false) return { refused: `"${entry.title}" is past Review; its review has run` };
+    if (awaits === null) return { refused: `"${entry.title}" is not on the project's board, or the board could not be read` };
+    reviewed.add(id);
+    starting.add(id);
+    try {
+      // Before the swap, and whether or not the swap works: the card is finished and nothing has
+      // checked it, which is the whole of what the column says. Already there when card.move ran this.
+      editProjectBoard(ports, entry.projectPath, (board) => intoReview(board, id));
+      const swap = await ports
+        .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
+        .catch((error: unknown) => ({
+          message: `review failed: ${failureText(error)}`,
+          again: false,
+        }));
+      // The mark comes back off for a card that was only early. Everything else keeps it: a locked
+      // repository, a pane that went, a git step that threw — none of those pass by themselves, and
+      // the card carries the line saying so until somebody acts on it.
+      if (swap.again) {
+        reviewed.delete(id);
+        if (!arriving.has(id)) byHand.add(id);
+      }
+      if (swap.message === '') return { output: `review started for "${entry.title}", pull request #${pullRequest}` };
+      // On the card as well as in the answer. A review the sweep started has nobody waiting on the
+      // answer and no status bar it belongs to, so the card is the only place it can be said.
+      editProjectBoard(ports, entry.projectPath, (board) => reviewRefused(board, id, swap.message));
+      return { refused: swap.message };
+    } finally {
+      starting.delete(id);
     }
   }
 
@@ -289,5 +353,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     await Promise.all(ports.worktrees().map((entry) => sweepOne(entry)));
   }
 
-  return { run, forget: (cardId) => reviewed.delete(cardId) };
+  function forget(cardId: string): void {
+    reviewed.delete(cardId);
+    byHand.delete(cardId);
+  }
+
+  return { run, forget, review };
 }

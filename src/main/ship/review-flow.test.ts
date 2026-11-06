@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY, BOARD_FOLDER_PATH, readBoard, writeBoard } from '../board/board-store';
 import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
-import { reviewSweep, type ReviewPorts } from './review-flow';
+import { reviewSweep, type ReviewPorts, type ReviewSweep } from './review-flow';
+import { intoReview } from './review';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
@@ -70,9 +71,20 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       },
       queue: (_key, run) => run(),
       writeBoard: (projectPath, board) => { writeBoard(projectPath, board); },
+      arrived: async () => undefined,
       ...over,
     },
   };
+}
+
+// The sweep as main wires it with settings review.autoLoop on: a card noticed goes through card.move,
+// whose table starts the review. card.move itself is tested in actions/card/move.test.ts.
+function sweepWith(made: ReviewPorts): ReviewSweep {
+  const sweep: ReviewSweep = reviewSweep({
+    ...made,
+    arrived: (entry) => sweep.review(entry.cardId),
+  });
+  return sweep;
 }
 
 function columnOfCard(projectPath: string): string {
@@ -90,7 +102,7 @@ describe('reviewSweep', () => {
   it('moves the card into Review and swaps the worktree for one that reviews it', async () => {
     const { entry, projectPath } = flight(12);
     const { ports: made, log } = ports(entry);
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(columnOfCard(projectPath)).toBe('Review');
     expect(log.removed).toEqual([entry.worktreePath]);
     expect(log.added).toEqual(['ship-it']);
@@ -102,7 +114,7 @@ describe('reviewSweep', () => {
   it('leaves a card whose agent has not opened a pull request alone', async () => {
     const { entry, projectPath } = flight(null);
     const { ports: made, log } = ports(entry);
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(columnOfCard(projectPath)).toBe('Backlog');
     expect(log.removed).toEqual([]);
   });
@@ -110,7 +122,7 @@ describe('reviewSweep', () => {
   it('does not start a second review for a worktree that is already reviewing', async () => {
     const { entry } = flight(12);
     const { ports: made, log } = ports({ ...entry, reviewing: true });
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(log.removed).toEqual([]);
   });
 
@@ -121,7 +133,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(12);
     let working = true;
     const { ports: made, log } = ports(entry, { agentWorksIn: () => working });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     expect(log.removed).toEqual([]);
     expect(columnOfCard(projectPath)).toBe('Backlog');
@@ -138,7 +150,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     const { ports: made, log } = ports({ ...entry, reviewing: true });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     await sweep.run();
     expect(log.removed).toEqual([entry.worktreePath]);
@@ -153,7 +165,7 @@ describe('reviewSweep', () => {
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     let working = true;
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { agentWorksIn: () => working });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     expect(log.removed).toEqual([]);
     working = false;
@@ -169,7 +181,7 @@ describe('reviewSweep', () => {
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     let open = true;
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: async () => open });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     await sweep.run();
     expect(log.removed).toEqual([]);
@@ -187,7 +199,7 @@ describe('reviewSweep', () => {
     let answer: (lives: boolean) => void = () => undefined;
     const asked = new Promise<boolean>((resolve) => { answer = resolve; });
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: () => asked });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     const first = sweep.run();
     const second = sweep.run();
     answer(false);
@@ -201,7 +213,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(null);
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
     const { ports: made, log } = ports(entry);
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(log.removed).toEqual([]);
   });
 
@@ -216,7 +228,7 @@ describe('reviewSweep', () => {
         return { ok: false, message: '', dirty: ['draft.md'] };
       },
     });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     await sweep.run();
     expect(log.removed).toEqual([entry.worktreePath]);
@@ -232,7 +244,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 4) ?? boardWithCard(null));
     const { ports: made, log } = ports(entry);
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(log.removed).toEqual([entry.worktreePath]);
     expect(columnOfCard(projectPath)).toBe('Review');
   });
@@ -246,7 +258,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, emptyBoard());
     const { ports: made, log } = ports(entry);
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(log.removed).toEqual([]);
     expect(log.started).toEqual([]);
   });
@@ -257,7 +269,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, boardWithCard(null, 'b0a1'));
     const { ports: made, log } = ports(entry);
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     // Put the card back and it stays marked: that id is gone, and a ship of a new card calls forget.
     writeBoard(projectPath, boardWithCard(null));
@@ -271,7 +283,7 @@ describe('reviewSweep', () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, emptyBoard());
     const { ports: made, log } = ports(entry);
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     writeBoard(projectPath, boardWithCard(null));
     await sweep.run();
@@ -286,7 +298,7 @@ describe('reviewSweep', () => {
     writeBoard(projectPath, { columns: [{ ...first, cards: [...first.cards, { ...first.cards[0], id: 'b0a1' }] }, ...rest] });
     writeFileSync(join(projectPath, BOARD_FOLDER_PATH, 'cards', `${CARD}.json`), '{ "id": ');
     const { ports: made, log } = ports(entry);
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     writeBoard(projectPath, boardWithCard(null));
     await sweep.run();
@@ -297,7 +309,7 @@ describe('reviewSweep', () => {
   it('waits for a closed project rather than refusing the card', async () => {
     const { entry, projectPath } = flight(12);
     const { ports: made, log } = ports(entry, { slotOf: () => -1 });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     expect(log.removed).toEqual([]);
     expect(columnOfCard(projectPath)).toBe('Backlog');
@@ -309,7 +321,7 @@ describe('reviewSweep', () => {
     const { ports: made, log } = ports(entry, {
       removeWorktree: async () => ({ ok: false, message: '', dirty: ['src/a.ts', 'src/b.ts'] }),
     });
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(columnOfCard(projectPath)).toBe('Review');
     expect(log.added).toEqual([]);
     expect(commentsOnCard(projectPath))
@@ -328,7 +340,7 @@ describe('reviewSweep', () => {
         ? { ok: true, message: '', dirty: [] }
         : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
     });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     expect(log.added).toEqual([]);
     committed = true;
@@ -351,7 +363,7 @@ describe('reviewSweep', () => {
     const { ports: made } = ports(entry, {
       removeWorktree: async () => ({ ok: false, message: '', dirty: dirtying.shift() ?? ['src/a.ts'] }),
     });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     await sweep.run();
     await sweep.run();
@@ -367,7 +379,7 @@ describe('reviewSweep', () => {
     const { ports: made, log } = ports(entry, {
       removeWorktree: async () => ({ ok: false, message: 'not removed: locked', dirty: [] }),
     });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     await sweep.run();
     expect(log.removed).toEqual([]);
@@ -384,7 +396,7 @@ describe('reviewSweep', () => {
         return { ok: false, message: 'not removed: locked', dirty: [] };
       },
     });
-    const sweep = reviewSweep(made);
+    const sweep = sweepWith(made);
     await sweep.run();
     await sweep.run();
     expect(attempts).toBe(1);
@@ -399,7 +411,7 @@ describe('reviewSweep', () => {
     const { ports: made } = ports(entry, {
       startReview: () => ({ ok: false, message: 'api was closed mid-ship' }),
     });
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(commentsOnCard(projectPath)).toEqual(['No review worktree: api was closed mid-ship']);
   });
 
@@ -409,8 +421,102 @@ describe('reviewSweep', () => {
     const { ports: made } = ports(entry, {
       addWorktree: async () => { throw new Error('fatal: ship-it is already checked out'); },
     });
-    await reviewSweep(made).run();
+    await sweepWith(made).run();
     expect(commentsOnCard(projectPath))
       .toEqual(['No review worktree: review failed: fatal: ship-it is already checked out']);
+  });
+
+  // settings review.autoLoop off: card.move puts the card in Review and starts nothing, once.
+  it('with the loop off, notices a finished card once and leaves the review to a person', async () => {
+    const { entry, projectPath } = flight(12);
+    let arrivals = 0;
+    const { ports: made, log } = ports(entry, {
+      arrived: async (arrived) => {
+        arrivals += 1;
+        writeBoard(arrived.projectPath, intoReview(readBoard(arrived.projectPath).board, arrived.cardId) ?? readBoard(arrived.projectPath).board);
+      },
+    });
+    const sweep = reviewSweep(made);
+    await sweep.run();
+    await sweep.run();
+    expect(arrivals).toBe(1);
+    expect(columnOfCard(projectPath)).toBe('Review');
+    expect(log.started).toEqual([]);
+    await expect(sweep.review(CARD)).resolves.toEqual({ output: 'review started for "Ship it", pull request #12' });
+    expect(log.started).toHaveLength(1);
+  });
+
+  // The loop off, a review started by hand a moment before the agent's commit: the sweep's own retry
+  // goes through card.move, which starts nothing with the loop off, so the start by hand is retried.
+  it('with the loop off, retries a review started by hand that met a dirty worktree', async () => {
+    const { entry, projectPath } = flight(12);
+    let committed = false;
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async () => (committed
+        ? { ok: true, message: '', dirty: [] }
+        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+    });
+    const sweep = reviewSweep(made);
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
+    committed = true;
+    await sweep.run();
+    expect(log.started).toHaveLength(1);
+    expect(columnOfCard(projectPath)).toBe('Review');
+  });
+
+  // The loop on when the sweep's start met the dirty worktree, then turned off before the commit: the
+  // retry is the sweep's move again, which now leaves the card waiting in Review.
+  it('retries a sweep start that met a dirty worktree through the move, not as a start by hand', async () => {
+    const { entry } = flight(12);
+    let committed = false;
+    let loopOn = true;
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async () => (committed
+        ? { ok: true, message: '', dirty: [] }
+        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+    });
+    const sweep: ReviewSweep = reviewSweep({
+      ...made,
+      arrived: async (arrived) => (loopOn ? sweep.review(arrived.cardId) : undefined),
+    });
+    await sweep.run();
+    loopOn = false;
+    committed = true;
+    await sweep.run();
+    expect(log.started).toEqual([]);
+  });
+
+  it('refuses a review by hand for a card the project board does not show', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, boardWithCard(null, 'another-card'));
+    const { ports: made, log } = ports(entry);
+    await expect(reviewSweep(made).review(CARD))
+      .resolves.toEqual({ refused: '"Ship it" is not on the project\'s board, or the board could not be read' });
+    expect(log.removed).toEqual([]);
+  });
+
+  it('refuses a review by hand for a card past Review', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    const { ports: made, log } = ports(entry);
+    await expect(reviewSweep(made).review(CARD)).resolves.toEqual({ refused: '"Ship it" is past Review; its review has run' });
+    expect(log.removed).toEqual([]);
+    expect(columnOfCard(projectPath)).toBe('Done');
+  });
+
+  it('refuses a review by hand while the agent works, before it has a pull request, and twice', async () => {
+    const working = flight(12);
+    await expect(reviewSweep(ports(working.entry, { agentWorksIn: () => true }).ports).review(CARD))
+      .resolves.toEqual({ refused: 'the agent on "Ship it" is still working' });
+    const early = flight(null);
+    await expect(reviewSweep(ports(early.entry).ports).review(CARD))
+      .resolves.toEqual({ refused: '"Ship it" has no pull request on ship-it yet' });
+    await expect(reviewSweep(ports(early.entry).ports).review('other'))
+      .resolves.toEqual({ refused: 'card other has no worktree to review; ship it first' });
+    const twice = flight(12);
+    const sweep = reviewSweep(ports(twice.entry).ports);
+    const first = sweep.review(CARD);
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: '"Ship it" is already being reviewed' });
+    await first;
   });
 });

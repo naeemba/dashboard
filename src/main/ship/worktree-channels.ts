@@ -1,25 +1,17 @@
 import type { Channels } from '../app/channels';
-import type { ShipRequest, ShipResult } from '../../shared/app/bridge';
 import type { LogDraft } from '../../shared/app/log-entry';
-import { removalEntry, shipEntry } from '../../shared/app/log-entry';
+import { removalEntry } from '../../shared/app/log-entry';
 import { scanWorktrees, worktreeState } from './worktree-scan';
 import type { worktreeKeeper } from './worktree-keeper';
 
-// The worktree dialog's and the manager's channels: a ship, the record, git's state of each worktree,
-// the scan and a removal. Main-process wiring only, out of main.ts at its 600-line ceiling; main hands
-// over the record and the ship it holds.
+// The worktree dialog's and the manager's channels: the record, git's state of each worktree, the scan
+// and a removal. Main-process wiring only, out of main.ts at its 600-line ceiling; main hands over the
+// record it holds. A ship is the card.ship action's (actions/card/).
 export function registerWorktreeChannels(table: Channels, main: {
   worktrees: ReturnType<typeof worktreeKeeper>;
-  shipCard(request: ShipRequest): Promise<ShipResult>;
   log(draft: LogDraft): void;
 }): void {
   const { worktrees } = main;
-  table.handle('worktree:create', async (_screen, request: ShipRequest) => {
-    const result = await main.shipCard(request);
-    main.log(shipEntry(request, result));
-    return result;
-  });
-
   // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
   // a sweep run right now rather than on the next tick. Everything else arrives on worktree:change.
   table.handle('worktree:list', () => {

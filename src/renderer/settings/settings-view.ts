@@ -132,7 +132,8 @@ export function openSettings(
     // Enter commits too: unlike a card description there is never a newline to type here.
     function startEditing(row: SettingsRow): void {
       if (row.kind === 'heading' || row.kind === 'key'
-        || row.kind === 'reset-keys' || row.kind === 'reset-all' || row.kind === 'host-token') return;
+        || row.kind === 'reset-keys' || row.kind === 'reset-all' || row.kind === 'host-token'
+        || row.kind === 'review-auto-loop') return;
       const input = document.createElement('input');
       input.className = 'settings-edit';
       input.value = row.value;
@@ -204,6 +205,8 @@ export function openSettings(
       if (row.kind === 'reset-keys') return commit(resetKeys(settings, isMac));
       if (row.kind === 'reset-all') return commit(resetAll(settings, isMac));
       if (row.kind === 'heading') return;
+      // On or off, so Enter turns it over rather than opening a box.
+      if (row.kind === 'review-auto-loop') return commit({ ...settings, review: { autoLoop: !settings.review.autoLoop } });
       if (row.kind === 'host-token') {
         void navigator.clipboard.writeText(row.value);
         return say('Token copied');

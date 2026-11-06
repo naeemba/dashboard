@@ -33,7 +33,7 @@ import { makeThrowawayWorktree } from './ship/branch-worktree';
 import { installCreateTask } from './board/create-task-install';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { boardChanges } from './board/board-changes';
-import { peekBoard, writeBoard } from './board/board-store';
+import { peekBoard } from './board/board-store';
 import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
@@ -77,9 +77,9 @@ import {
   withoutPanes,
 } from './ship/worktree-store';
 import type { Settings } from '../shared/settings/settings';
-import { reviewSweep } from './ship/review-flow';
+import { cardActions } from './actions/card/card-actions';
+import { actionRequests } from './actions/action';
 import { worktreeKeeper } from './ship/worktree-keeper';
-import { shipFlow } from './ship/ship-flow';
 import type { OpenProjects, ProjectOpen, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
 import { worktreeRecordAtLaunch } from './ship/worktree-record-at-launch';
@@ -736,35 +736,28 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
 // that project is queued behind them too: it runs `git worktree` twice in the same repository.
 const shipInProject = oneAtATime();
 
-// The other half of a ship, which runs on the tick above rather than on a keystroke. Every decision in
-// it is review-flow.ts's; what is handed over here is only what this file knows — the records, the
-// pages, the panes — and the two steps, which are the ones a ship already takes.
-const reviews = reviewSweep({
+// A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
+// card actions in actions/card/, bound here to their channels and, below, to the session socket.
+// What is handed over is only what this file knows — the records, the pages, the panes, the setting.
+const { reviews, actions: cardActionList } = cardActions({
+  table,
   worktrees: worktrees.entries,
   slotOf: slotOfProject,
+  agentRunsIn,
   agentWorksIn,
   shellLivesIn,
+  recordWorktree,
+  attachPane,
+  dropDeadWorktrees: worktrees.dropDead,
   removeWorktree: worktrees.remove,
   addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
   startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
   queue: shipInProject,
-  // Through the move log, so the watcher's read-back finds the board it already holds and does not
-  // log the sweep's own move as the `board` command's.
-  writeBoard: (projectPath, board) => boardLog.wrote(projectPath, board, () => writeBoard(projectPath, board)),
+  boardLog,
+  autoLoop: () => settings.review.autoLoop,
+  log: (draft) => logStore.log(draft),
 });
-
-// A card moved into Ship. Every step of it is ship-flow.ts's; what is handed over here is the records
-// and the panes, which only this file holds.
-const shipCard = shipFlow({
-  worktrees: worktrees.entries,
-  recordWorktree,
-  attachPane,
-  agentRunsIn,
-  dropDeadWorktrees: worktrees.dropDead,
-  forgetReview: (cardId) => reviews.forget(cardId),
-  queue: shipInProject,
-});
-registerWorktreeChannels(table, { worktrees, shipCard, log: (draft) => logStore.log(draft) });
+registerWorktreeChannels(table, { worktrees, log: (draft) => logStore.log(draft) });
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
@@ -843,7 +836,7 @@ const answerSession = projectRequests({
   close: closeProjectSlot,
   // A notification click's landing, on the project's main pane.
   focus: (slot) => landOnPane(liveWindow(), terminalId(slot, MAIN_INDEX)),
-}, workerAnswers);
+}, actionRequests(cardActionList, workerAnswers));
 // Every answer waits for the pane host, for the reason projects:open does: `project open` and
 // `pane claim --project` open projects too.
 const sessions = listenForSessions(

@@ -8,6 +8,7 @@ import type { ChatMeasure } from '../chat/chat-status';
 import type { ChatEvent, ImageType } from '../chat/chat-transcript';
 import type { ScannedWorktree } from '../ship/git-worktrees';
 import type { Board } from '../board/board';
+import type { ColumnEntry } from '../board/column-entry';
 import type { MarketName, MarketsSnapshot } from '../markets/markets';
 import type { PaneUse } from '../panes/pane-reading';
 import type { LogDraft, LogEntry, LogRead } from './log-entry';
@@ -84,6 +85,18 @@ export type OpenProjects = { projects: (Project | null)[]; panes: number[][]; ma
 // what says whose workers are candidates for the agent.
 export type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number };
 export type ShipResult = { ok: true; entry: WorktreeEntry } | { ok: false; message: string };
+
+// An action's refusal, answered as a value (errors-rule-2). docs/actions/README.md says what an action is.
+export type Refused = { refused: string };
+
+// A card moved on the board, asked of main's card.move action: the move written, then whatever
+// entering that column starts. `ran` is which one ran, so the board can walk a shipped card home.
+// `started` is what the entry's action answered, empty when it ran none. CardInput is what every
+// card action starts from: the project's folder and the card's id.
+export type CardInput = { projectPath: string; id: string };
+export type CardMoveRequest = CardInput & { column: string };
+export type CardMoveResult = { output: string; ran: ColumnEntry; started: string };
+export type CardMoveAnswer = CardMoveResult | Refused;
 
 // What a removal answers. `dirty` is the files in the way when the answer is no, so the dialog can ask
 // a second time naming them rather than deciding on its own what "dirty enough" means. Named here
@@ -208,9 +221,9 @@ export type DashboardBridge = {
   // Answers with the shell main resolved from the new settings, which is the one a dropped path is
   // quoted for.
   saveSettings(settings: Settings): Promise<string>;
-  // Moving a card into Ship: the worktree, the branch, the pane and the agent. Answers with the
-  // record it wrote, or with the message saying which step refused and why.
-  shipCard(request: ShipRequest): Promise<ShipResult>;
+  // A card that changed column, handed to main's card.move: the move and what entering the column
+  // starts — a ship, a review loop, or nothing.
+  moveCard(request: CardMoveRequest): Promise<CardMoveAnswer>;
   // The renderer's first read, with the dead records already dropped. The worktree dialog calls it on
   // the way open for that sweep rather than for the answer — what the sweep drops comes back through
   // onWorktreeChange, which is how every change after the first one arrives.

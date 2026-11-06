@@ -1,5 +1,4 @@
 import { clampIndex } from '../app/clamp-index';
-import { isManagerPath } from '../manager/manager';
 import type { Direction } from '../panes/terminals';
 
 // Highest first: this is the order `p` cycles through, and the order a sorted column ends up in.
@@ -121,7 +120,12 @@ function replaceColumn(board: Board, index: number, cards: Card[]): Board {
 // written by hand with "ship" is not a board the feature quietly refuses to work on, and `board move
 // <id> done` is what anyone types.
 export function columnNamed(board: Board, name: string): number {
-  return board.columns.findIndex((column) => column.name.toLowerCase() === name.toLowerCase().trim());
+  return board.columns.findIndex((column) => isColumnNamed(column.name, name));
+}
+
+// The match columnNamed makes, for a caller holding a column's name rather than the board.
+export function isColumnNamed(columnName: string, name: string): boolean {
+  return columnName.toLowerCase() === name.toLowerCase().trim();
 }
 
 export function shipColumnIndex(board: Board): number {
@@ -130,44 +134,6 @@ export function shipColumnIndex(board: Board): number {
 
 export function reviewColumnIndex(board: Board): number {
   return columnNamed(board, REVIEW_COLUMN);
-}
-
-// What moved a card: one of the four arrow steps, or the pointer letting go of it. Named here, where
-// the value is read, because the view writes the same union on the function that hands it over — two
-// spellings of one idea, and the union is one somebody will add to.
-export type MoveGesture = Direction | 'drop';
-
-// Whether a move that has just happened is the gesture that ships a card. Asked of the board the move
-// produced, the selection it left behind, and `from`, the column the card was in a keystroke earlier.
-//
-// Rightward only, for a keystroke. Ship sits just right of Todo, so without the direction a card
-// walked leftward out of Doing would silently make a worktree, take a pane and start an agent — from a
-// keystroke that looks like putting something back.
-//
-// `drop` is the pointer, and it is allowed from either side. Shift+Left is one step of a walk and says
-// nothing about where the walk was going; a card let go of on top of the Ship column was aimed there,
-// which is the only thing the direction was ever standing in for.
-//
-// And it has to have come from somewhere else. A card already in Ship that is merely reordered has not
-// landed in it again, and neither has one pushed against the right-hand edge of a board somebody wrote
-// with Ship as its last column, where rightward moves nothing at all.
-// Written as the two gestures that ship rather than the one that does not, so a tag added to that union
-// later ships nothing until somebody says it should. `!== 'left'` reads the same today and fails the
-// other way: add a key that sends a card straight to a column, point it at Ship by mistake, and it
-// silently makes a worktree, takes a pane and starts an agent, with no test to fail over it.
-export function landsInShip(board: Board, from: number, moved: Selection, gesture: MoveGesture): boolean {
-  const aimed = gesture === 'right' || gesture === 'drop';
-  return aimed && from !== moved.column && moved.column === shipColumnIndex(board);
-}
-
-// Whether a move starts a ship: it lands in Ship, and the board is one a card can be shipped from.
-// The manager's board is not. It reads without a Ship column, but one written into its file by hand is
-// kept with its cards, and a card moved into it stays there as it would in any column: there is no
-// repository behind the manager to make a worktree in.
-export function startsShip(
-  projectPath: string, board: Board, from: number, moved: Selection, gesture: MoveGesture,
-): boolean {
-  return !isManagerPath(projectPath) && landsInShip(board, from, moved, gesture);
 }
 
 // One column the board is missing, put in at `at`. The same board back when it already has one, so

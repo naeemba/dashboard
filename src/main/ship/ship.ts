@@ -65,6 +65,12 @@ export function worktreePathFor(projectPath: string, branch: string): string {
   return join(worktreesRoot(projectPath), branch);
 }
 
+// Why a ship or a review is refused for a card on a project with no page in the app: an agent's pane
+// belongs to an open project. card.ship and the review start both say it.
+export function notOpenRefusal(title: string): string {
+  return `"${title}" is on a project the app does not have open; open it first`;
+}
+
 // What the agent shipping a card is asked to do: the one command, and the card it is aimed at. A
 // function rather than the string spelled out at each call site, because a ship writes it twice — once
 // when it starts and once when it is finished after stopping part way — and two copies drift.

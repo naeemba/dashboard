@@ -15,6 +15,9 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
   `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
   `worktree-removal.ts`, `worktrees.css`
 
+Started by the card.ship and card.review actions (docs/actions), which are what
+a move into Ship or Review, and `dashboard board ship` and `review`, call.
+
 ## Scenarios
 
 - Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane.

@@ -11,7 +11,6 @@ import {
   dropCard,
   hasSubtasks,
   isWaitingColumn,
-  startsShip,
   moveCard,
   flightParts,
   moveSelection,
@@ -22,7 +21,6 @@ import {
   sortColumn,
   type Card,
   type Change,
-  type MoveGesture,
   type Selection,
   type ShipHome,
 } from '../../shared/board/board';
@@ -51,6 +49,9 @@ import { createBoardSaves } from './board-saves';
 import { cardEditor, MULTILINE, type EditableField } from './card-editor';
 import { putEditBack, takeEdit } from '../app/carried-edit';
 import { bringHome, shipsAway } from '../ship/ships-away';
+import { failureText } from '../../shared/errors/failure';
+import { screenMoveEntry } from '../../shared/board/column-entry';
+import { keyboardMoveRefusal } from '../../shared/board/done-lock';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -534,20 +535,28 @@ export function createBoardView(options: BoardOptions): BoardView {
     render();
   }
 
-  // A move, and the ship it may be. Both gestures that move a card come through here so the second half
-  // cannot be taught to one of them alone: teach the keystroke that a failed ship puts the card back and
-  // the drag would still be running the old version, with nothing failing until somebody drags a card
-  // onto Ship instead of pressing Shift+Right.
+  // A move, and what main makes of it. Both gestures that move a card come through here, so a column
+  // means the same to the drag as to the keystroke. The board writes its own move, as it writes every
+  // change, and once that has landed asks card.move for the rest: main's table says what entering the
+  // column starts (column-entry.ts), never this view.
   //
   // `from` is where the card was a gesture ago, which is not always the selection — a drag is let go of
   // on a card the keyboard is not on.
-  function moveThenShip(from: Selection, next: Change, gesture: MoveGesture): void {
+  function moveThenAsk(from: Selection, next: Change): void {
     const moving = cardAt(state.board, from);
     const home = shipHome(state.board, from, shipsAway.away(options.projectPath));
-    change(next);
+    const written = apply(applyChange(state, next));
     const landed = cardAt(state.board, state.selection);
     if (!moving || !landed) return;
-    if (startsShip(options.projectPath, state.board, from.column, state.selection, gesture)) ship(moving, landed, home);
+    const column = state.board.columns[state.selection.column].name;
+    // Which moves ask main at all, and what the screen does while main works: the notice and the home
+    // a shipped card walks back to. Main still says no for a worktree's board.
+    const entry = screenMoveEntry(options.projectPath, column, from.column, state.selection.column);
+    if (entry === 'nothing') return;
+    const shipping = entry === 'ship';
+    void written.then((saved) => {
+      if (saved) askMove(moving, landed, home, column, shipping);
+    });
   }
 
   // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an
@@ -568,7 +577,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const at = selectionOf(state.board, id);
     if (!at) return options.onNotice('That card belongs to another project — a card stays on the board it was made on');
     const row = realRow(visible, columnIndex, dropMarker.rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length);
-    moveThenShip(at, dropCard(state.board, at, columnIndex, row), 'drop');
+    moveThenAsk(at, dropCard(state.board, at, columnIndex, row));
   }
 
   // The mouse half of `s`: the selection moves to the column, then `s` runs there. On the manager, the
@@ -731,21 +740,18 @@ export function createBoardView(options: BoardOptions): BoardView {
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
 
-  function ship(before: Card, landed: Card, home: ShipHome): void {
-    options.onNotice(`shipping "${before.title}"…`);
-    const forgetHome = shipsAway.leave(options.projectPath, home);
-    options.bridge.shipCard({
-      projectPath: options.projectPath,
-      cardId: before.id,
-      title: before.title,
-      slot: options.slot,
-    }).then(
-      async (result) => {
+  function askMove(before: Card, landed: Card, home: ShipHome, column: string, shipping: boolean): void {
+    if (shipping) options.onNotice(`shipping "${before.title}"…`);
+    const forgetHome = shipping ? shipsAway.leave(options.projectPath, home) : () => undefined;
+    options.bridge.moveCard({ projectPath: options.projectPath, id: before.id, column }).then(
+      async (answer) => {
         forgetHome();
-        // A notice, not a failure, because main has already logged this one as the `ship` entry: through
-        // onError the log would hold every failed ship twice.
-        if (!result.ok) return options.onNotice(result.message);
-        options.onNotice('');
+        // A notice, not a failure, because main has already logged a failed ship as the `ship` entry:
+        // through onError the log would hold every failed ship twice.
+        if ('refused' in answer) return options.onNotice(answer.refused);
+        // What entering Review started, said; a ship says so by walking the card home.
+        options.onNotice(answer.ran === 'review' ? answer.started : '');
+        if (answer.ran !== 'ship') return;
         await bringHome({
           read: () => readAgain(false),
           // Found again by returnFromShip rather than remembered: a ship takes as long as git does, and
@@ -761,7 +767,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       },
       (error: unknown) => {
         forgetHome();
-        options.onError(`ship failed: ${String(error)}`);
+        options.onError(`move failed: ${failureText(error)}`);
       },
     );
   }
@@ -881,7 +887,10 @@ export function createBoardView(options: BoardOptions): BoardView {
           state = { ...state, selection };
           return moveHighlight();
         }
-        case 'board-move':
+        case 'board-move': {
+          // A card in Done moves only by dragging it; done-lock.ts says why.
+          const refusal = keyboardMoveRefusal(state.board, state.selection);
+          if (refusal !== null) return options.onError(refusal);
           // Up and down trade places with the next card you can see, not one the filter hides.
           if (isFilterActive(filter) && (action.direction === 'up' || action.direction === 'down')) {
             const row = reorderRow(visible, state.selection, action.direction);
@@ -891,15 +900,11 @@ export function createBoardView(options: BoardOptions): BoardView {
           if (isFilterActive(filter)) {
             const target = state.selection.column + (action.direction === 'right' ? 1 : -1);
             const row = sideRow(visible, state.selection, target, state.board.columns[target]?.cards.length ?? 0);
-            return moveThenShip(state.selection, dropCard(state.board, state.selection, target, row), action.direction);
+            return moveThenAsk(state.selection, dropCard(state.board, state.selection, target, row));
           }
-          // The row the card is leaving, which both halves of a ship need: whether this move is the
-          // gesture at all, and where the card goes back to once the ship works.
-          return moveThenShip(
-            state.selection,
-            moveCard(state.board, state.selection, action.direction),
-            action.direction,
-          );
+          // The row the card is leaving, which a ship needs: where the card goes back to once it works.
+          return moveThenAsk(state.selection, moveCard(state.board, state.selection, action.direction));
+        }
         case 'board-attach': {
           // The one refusal worth explaining. The others — no card above, nothing selected — are
           // obvious from the screen. attachmentRing decides it on the same call, so the message cannot

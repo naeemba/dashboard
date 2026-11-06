@@ -20,6 +20,7 @@ import {
   type Card,
   type Selection,
 } from '../../shared/board/board';
+import { columnEntry } from '../../shared/board/column-entry';
 import { USAGE } from './board-usage';
 
 // Every decision the command line makes. The board it is handed and the board it answers with are
@@ -35,6 +36,29 @@ import { USAGE } from './board-usage';
 export type CommandResult =
   | { ok: true; output: string; board: Board | null }
   | { ok: false; message: string };
+
+// The board verbs the app answers, over the session socket, as [BOARD_REQUEST, verb, folder, ...words]:
+// each is an action in main (src/main/actions/), which writes the move and starts what it means.
+// Every other verb is a file edit made here, and starts nothing.
+export const BOARD_REQUEST = 'board';
+export const APP_VERBS: readonly string[] = ['move', 'ship', 'review'];
+
+// Whether the command asks the app or edits the files itself. ship and review are the app's alone; a
+// move only when entering its column can start something (column-entry.ts), so a move into Doing or
+// Done stays a file edit that works with the app closed, over SSH, or against an older running app.
+// Main still starts nothing for a worktree's board.
+export function asksApp(commandArguments: readonly string[]): boolean {
+  const [verb, , column] = commandArguments;
+  if (verb === undefined || !APP_VERBS.includes(verb)) return false;
+  if (verb !== 'move' || column === undefined) return true;
+  return columnEntry({ column, source: 'command', autoLoop: true, projectBoard: true }) !== 'nothing';
+}
+
+// Why a board with a card file that does not parse is not written. Both writers refuse it: the command
+// here and card.move in the app.
+export function brokenFilesRefusal(brokenFiles: readonly string[]): string {
+  return `board files do not parse, nothing was written; fix them first: ${brokenFiles.join(', ')}`;
+}
 
 // `--name value` and `--name=value` both, because an agent writing the command will use either and
 // refusing one of them is a refusal nobody can see coming. A flag repeated takes its last value.

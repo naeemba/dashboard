@@ -46,3 +46,31 @@ only the cards new on the branch; dropping it (`git rm .dashboard/board.json`)
 keeps none of them. Either way, redo the branch's moves with the `board`
 command — a card the branch moved to Review in `board.json` reads back in
 whatever column main's folder has it.
+
+## board-decision-2: A move into Ship ships whatever made it
+
+**Replaces the rule that a move into Ship had to come from a gesture**, which
+lived in `landsInShip` in `board.ts`: only Shift+Right or a drop shipped, never
+a move to the left and never `board move <id> Ship`, so a key that sent a card
+straight to a column could not start a worktree by mistake. That made the
+command a second, silent set of rules: an agent or a person typing `dashboard
+board move <id> Ship` wrote the card into Ship and nothing shipped, with nothing
+saying why. A command is as deliberate as a keystroke, so now a move into Ship
+from the command, a drop from either side or Shift+Right goes through card.move
+and ships (actions-decision-1); so does a move into Review, which starts the
+review loop, and so does Shift+Left. What it costs: walking a card from Doing
+back to Todo ships it at the Ship step, and a card walked rightward through
+Review starts its loop at that step. A card whose agent still works is refused,
+as a second ship always was. A finished card cannot be walked back from Done by
+key at all (board-decision-3).
+
+## board-decision-3: A card in Done moves only by dragging it
+
+**Shift with an arrow on a card in Done is refused with an error naming the
+card; a drag still moves it.** A finished card is merged, so a keystroke on it
+is more likely the highlight on the wrong card than a decision, and under
+board-decision-2 walking it left would start a review at Review and ship it
+again at Ship. Picking the card up with the mouse is deliberate enough to
+allow. `keyboardMoveRefusal` in `done-lock.ts` decides it, with its test. The
+command (`dashboard board move`) is not a keystroke on a highlight and is not
+refused.

@@ -12,12 +12,12 @@ import { posixQuoted } from '../../shared/panes/shell';
 //
 // A card *past* Review is not one of those. This moves to a column by number, so a card sitting in Done
 // is dragged back into Review with a pull request that merged last week. Nothing does that today only
-// because sweepOne asks awaitsReview first and returns on false — the refusal is one line up the call,
-// not here, and a second caller has to ask too.
+// because its one caller, the review start in review-flow.ts (`review`), asks awaitsReview first and
+// refuses on false — the refusal is up the call, not here, and a second caller has to ask too.
 //
-// A card the board does not mention answers null, but the sweep cannot reach here with one:
-// awaitsReview says null for it and sweepOne returns on that before the move is asked for. The only
-// way this sees a missing card is the board changing between those two reads in the same tick.
+// A card the board does not mention answers null. Neither caller reaches here with one: awaitsReview
+// says null for it, and sweepOne returns on that before the move is asked for while `review` refuses.
+// The only way this sees a missing card is the board changing between those reads.
 export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
 }

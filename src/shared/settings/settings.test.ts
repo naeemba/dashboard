@@ -6,6 +6,12 @@ import { ACTIONS, scopesOverlap } from '../keys/actions';
 import { THEME } from '../app/theme';
 
 describe('parseSettings', () => {
+  it('starts the review loop on its own unless the file turns it off', () => {
+    expect(parseSettings({}, false).review).toEqual({ autoLoop: true });
+    expect(parseSettings({ review: { autoLoop: false } }, false).review).toEqual({ autoLoop: false });
+    expect(parseSettings({ review: { autoLoop: 'no' } }, false).review).toEqual({ autoLoop: true });
+  });
+
   it('gives the defaults for an empty object, a missing file, or rubbish', () => {
     const defaults = defaultSettings(true);
     expect(parseSettings({}, true)).toEqual(defaults);
