@@ -31,7 +31,6 @@ import {
   EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
 } from '../shared/panes/terminals';
 import { terminalStatus, type StatusPage } from './app/status';
-import { WORKING_REPORT_MS } from '../shared/panes/working-panes';
 import type { WorktreeList, Project, Session, WorktreeEntry } from '../shared/app/bridge';
 import { createPageSync } from './app/page-sync';
 import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
@@ -45,9 +44,11 @@ import {
 import { createManagerPage } from './manager/manager-page';
 import { createProjectCloser } from './app/close-project';
 import { paneSends } from './panes/pane-sends';
-import { paneLastLine, paneLooksBusy, paneScrollback, paneTail, type Pane } from './panes/pane';
+import { paneLastLine, paneScrollback, paneTail, type Pane } from './panes/pane';
+import { createPaneOutputWiring } from './panes/pane-output-wiring';
+import { createProjectFileWiring } from './app/project-file-wiring';
 import {
-  createPageBuilder, fitPage, focusTerminals, focusedChat, focusedPane, openIndices, panesById, restylePanes, setPaneTitle, showMode, showNotesPage, typedNames, type Page,
+  createPageBuilder, fitPage, focusTerminals, focusedChat, focusedPane, openIndices, restylePanes, showMode, showNotesPage, typedNames, type Page,
 } from './app/page';
 import { neighborPane, paneAtPosition, stepPane } from '../shared/panes/pane-layout';
 import { closePane, runPaneAction, type PanePorts } from './panes/pane-actions';
@@ -60,9 +61,10 @@ import { editFocusedBox } from './chat/chat-line-editing';
 
 // Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
 // is the seam it had named for itself. What is left is plumbing: which page is in front, what the
-// status bar says, what the session file holds, and where a key goes. The next feature that needs room
-// splits again, and the seam then is the group at the bottom that answers for panes somewhere else —
-// goToPane, jumpToWorktree, sendToPanes and answerPane.
+// status bar says, what the session file holds, and where a key goes. The pane listeners went to
+// pane-output-wiring.ts and the file-change listeners to project-file-wiring.ts at the next split. The
+// next feature that needs room splits again, and the seam then is the session: saveSession, applyLayout
+// and restore, which share the `restoring` flag and nothing else here.
 
 // board-writes.ts says why the app's own board writes are reported.
 const boardWrites = reportBoardWrites(window.dashboard);
@@ -762,30 +764,8 @@ function goToPaneId(paneId: string): void {
 }
 bridge.onNotificationClick(goToPaneId);
 
-// Something other than the app wrote the board's files — the `board` command an agent runs, or a hand
-// edit. Only the page in front is told: a hidden board is re-read in full when you arrive at it, and
-// a board that is not on screen has nothing to redraw. The manager's stack of boards is one of these
-// too, and finds the project the path belongs to itself.
-bridge.onBoardChange((projectPath) => {
-  const page = pages[activeIndex];
-  if (page.mode !== 'board') return;
-  page.board?.reload(projectPath);
-});
-
-// Another screen wrote a page of notes. The box in front reads its file again if the page is its own,
-// keeping anything typed here that has not been written yet. Any other box reads again when you
-// arrive at it.
-bridge.onNotesChange((projectPath) => {
-  const page = pages[activeIndex];
-  if (page.mode === 'notes') void page.notes?.reload(projectPath);
-});
-
-// The same for the handwriting page, which has its own file and its own message. Only the page showing is
-// told: a hidden one reads when you switch to it.
-bridge.onInkChange((projectPath) => {
-  const page = pages[activeIndex];
-  if (page.mode === 'notes' && page.inkShowing) void page.ink?.reload(projectPath);
-});
+// Board, notes and handwriting written elsewhere; project-file-wiring.ts.
+createProjectFileWiring({ bridge, activePage: () => pages[activeIndex] });
 
 // jumps.ts says where each of these lands.
 const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
@@ -795,13 +775,8 @@ const { sendToPanes, answerPane, openWorker } = paneSends({
   projectPages, readPanes: bridge.readPanes, addPane: bridge.addPane, applyProjects, renderStatus,
 });
 
-bridge.onData((id, data) => {
-  const pane = panesById.get(id);
-  if (!pane) return;
-  pane.lastPrintedAt = Date.now();
-  pane.flow.queued(data.length);
-  pane.terminal.write(data, () => pane.flow.parsed(data.length));
-});
+// A pane's output, its exit and whether it is still working; pane-output-wiring.ts.
+createPaneOutputWiring({ bridge, renderStatus });
 
 // The manager's pane rows are the only thing on any screen that goes stale where it stands: every
 // other line is redrawn by whatever changed it, and a pane printing on quietly changes nothing that
@@ -812,41 +787,6 @@ bridge.onData((id, data) => {
 // rows are all it has to change, so the list is not rebuilt under someone who is reading it.
 const PANE_REFRESH_MS = 30_000;
 window.setInterval(() => renderStatus(true), PANE_REFRESH_MS);
-
-// Telling main which panes have an agent still working in them. It cannot see this for itself: it holds
-// the pty and so knows a process is there, and the pane runs `exec claude`, which sits at its prompt
-// when the card is done rather than exiting. The review sweep is what needs the answer — it takes a
-// card's worktree away, and `git worktree remove` kills every shell in that folder — and without this
-// it waits on an exit that only arrives when you close the pane by hand, so no review ever starts.
-//
-// paneLooksBusy is the reading, and it is the screen's, not main's — the one question about a pane
-// that a foreground process cannot answer, which is why it goes this way round while "is anything
-// running in this pane" goes the other. One report is a sample and not an answer, and what main makes
-// of a run of them is working-panes.ts's, which is also where the interval below comes from — the same
-// number the sweep that reads the reports ticks on, written once so halving one halves the other.
-//
-// Every pane, including the ones no card was ever shipped into, because working out which pane a
-// worktree record names means pairing its project with a slot and that pairing is main's. The cost is
-// one screen laid out per pane per five seconds; if it ever shows, the narrowing is to report only the
-// panes the records name.
-window.setInterval(() => {
-  const working: string[] = [];
-  for (const [id, pane] of panesById) if (paneLooksBusy(pane)) working.push(id);
-  bridge.reportWorkingPanes(working);
-}, WORKING_REPORT_MS);
-bridge.onExit((id, exitCode) => {
-  const pane = panesById.get(id);
-  if (!pane) return;
-  pane.exited = true;
-  // The title dies with the program that set it, which is here. Left standing, the bar names a file
-  // nothing has open: quit nvim and the pane still reads `nvim · board.json` until you press Enter and
-  // the next nvim prints its own. A typed name is untouched — that one is yours and survives a restart.
-  setPaneTitle(pane, undefined);
-  pane.terminal.write(`\r\n[exited ${exitCode}] press Enter to restart\r\n`);
-  // The pane says so to whoever is looking at it; this is what tells the manager, which is where you
-  // find out about a pane on a project you are not on.
-  renderStatus();
-});
 
 // Results arrive one project at a time, from whichever run is going. The manager page is built before
 // the first one can land, so there is always a view to hand it to. Found the same way every other

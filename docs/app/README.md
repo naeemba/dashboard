@@ -91,7 +91,7 @@ its own side. `eslint.config.test.ts` pins each of those.
 - Restore: `session.ts`, `session-store.ts`
 - Atomic write: `replace-file.ts`
 - Whether a socket is listening (the nvim server, the `dashboard` command finding the app): `can-connect.ts`
-- Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`, `default-branch.ts` (which branch on a remote is its default, for the ship and `/create-task` alike)
+- Project files: `dashboard-folder.ts`, `project-file-wiring.ts` (the board, notes and handwriting written elsewhere, redrawn on the page in front), `project-files-ipc.ts`, `git.ts`, `default-branch.ts` (which branch on a remote is its default, for the ship and `/create-task` alike)
 - Log: `log-entry.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,
   `clamp-index.ts`, `fuzzy.ts`, `is-record.ts`, `base-name.ts`, `slug.ts`, `age.ts`,
@@ -208,6 +208,8 @@ directives go.
 ## Open questions
 
 - `main.ts` is at the 600-line ceiling, at 599 code lines, and `renderer.ts` is
-  already past it at 610, even after the close flow moved into `close-project.ts` and the which-key
-  strip's tracking into `which-key-tracking.ts`. A feature that adds code to
-  `main.ts` or `renderer.ts` needs a seam split out first (workflow-decision-1).
+  at 580, after the pane listeners moved into `pane-output-wiring.ts` and the
+  board, notes and handwriting listeners into `project-file-wiring.ts`. A
+  feature that adds code to `main.ts` or `renderer.ts` needs a seam split out
+  first (workflow-decision-1); the next one in `renderer.ts` is the session
+  save and restore.
