@@ -10,8 +10,8 @@ import { type AskCallback, type FromScreenHost, type HostedParams, type HostedSt
 // pane host (workers-decision-6). One app at a time; screen-host-entry.ts is the socket around it.
 //
 // While no app is connected nothing waits on one: a session's messages are dropped (the screen reads
-// its transcript back when it opens), a hook is answered at once and held for the app to hear, and a
-// question waits until an app answers it. Every hook the app gives is told, never asked: the host
+// its transcript back when it opens) but a result, which says the turn is over; a hook is answered at
+// once and held for the app to hear, and a question waits until an app answers it. Every hook the app gives is told, never asked: the host
 // answers it before the app hears it, so a hook's answer cannot change what the session does.
 
 export type StartSession = (params: HostedParams) => Query;
@@ -27,6 +27,8 @@ type Hosted = {
   // Whether the app has taken it up since it connected; until then it hears nothing of it.
   attached: boolean;
   busy: boolean;
+  // Asked to stop: a start for its key now begins a new session rather than taking up this one.
+  stopped: boolean;
 };
 
 export function screenHostServer(start: StartSession, idle: () => void) {
@@ -72,7 +74,7 @@ export function screenHostServer(start: StartSession, idle: () => void) {
 
   function begin(key: string, request: HostedStart): void {
     const input = inputQueue<SDKUserMessage>();
-    const hosted: Hosted = { query: null, input, asks: new Map(), held: [], attached: true, busy: false };
+    const hosted: Hosted = { query: null, input, asks: new Map(), held: [], attached: true, busy: false, stopped: false };
     sessions.set(key, hosted);
     const query = start({
       prompt: input,
@@ -88,8 +90,10 @@ export function screenHostServer(start: StartSession, idle: () => void) {
       let error: string | null = null;
       try {
         for await (const message of query) {
-          if (isRecord(message) && message.type === 'result') hosted.busy = false;
-          tell(hosted, { type: 'message', key, message }, false);
+          const result = isRecord(message) && message.type === 'result';
+          if (result) hosted.busy = false;
+          // A turn can end without a Stop hook (an API error, a usage limit), so its result is held.
+          tell(hosted, { type: 'message', key, message }, result);
         }
       } catch (thrown: unknown) {
         error = failureText(thrown);
@@ -138,8 +142,11 @@ export function screenHostServer(start: StartSession, idle: () => void) {
       if (message.type === 'hello') return;
       const hosted = sessions.get(message.key);
       if (message.type === 'start') {
-        if (hosted) attach(message.key, hosted);
-        else begin(message.key, message);
+        if (hosted && !hosted.stopped) return attach(message.key, hosted);
+        // One still closing is let go: its end would reach the new session's listener in the app,
+        // which ends the old one itself (screenHost's query).
+        if (hosted) hosted.attached = false;
+        begin(message.key, message);
       } else if (message.type === 'prompt') {
         hosted?.input.push(message.message);
       } else if (message.type === 'call') {
@@ -150,6 +157,7 @@ export function screenHostServer(start: StartSession, idle: () => void) {
         pending?.resolve(message.value);
       } else if (message.type === 'stop' && hosted) {
         // Its end is still sent, for the app's screen to hear it closed.
+        hosted.stopped = true;
         hosted.input.close();
         hosted.query?.close();
       }

@@ -13,3 +13,9 @@ export function startsAtOpen(projectPath: string, workerDispatchers: Iterable<st
 export function sessionToMeasure<S>(start: boolean, starting: () => Promise<S>, existing: Promise<S> | undefined): Promise<S> | undefined {
   return start ? starting() : existing;
 }
+
+// Whether a quit closes a session: not one the screen host runs, which stays up for the next launch to
+// take back (workers-decision-6).
+export function closedAtQuit(session: { hosted: boolean }): boolean {
+  return !session.hosted;
+}

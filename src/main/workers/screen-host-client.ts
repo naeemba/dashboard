@@ -27,7 +27,8 @@ type Listener = (message: FromScreenHost) => void;
 const ANSWER_WAIT_MS = 5000;
 const HOST_STOPPED = 'The screen host stopped';
 
-export function screenHost(options: { socket: string | null; launch(): void }): ScreenHost {
+// `connectTries` is how long a launched host is waited for (reachHost); a test passes 0.
+export function screenHost(options: { socket: string | null; launch(): void; connectTries?: number }): ScreenHost {
   let connection: net.Socket | null = null;
   let kept = new Map<string, KeptSession>();
   const listeners = new Map<string, Listener>();
@@ -84,7 +85,7 @@ export function screenHost(options: { socket: string | null; launch(): void }): 
     if (connection !== null) return Promise.resolve(true);
     const socketPath = options.socket;
     if (socketPath === null) return Promise.resolve(false);
-    reaching ??= reachHost(socketPath, options.launch).then((socket) => socket !== null && greet(socket));
+    reaching ??= reachHost(socketPath, options.launch, options.connectTries).then((socket) => socket !== null && greet(socket));
     return reaching;
   }
 
@@ -96,9 +97,16 @@ export function screenHost(options: { socket: string | null; launch(): void }): 
       await ready;
       if (!(await reach())) return null;
       kept.delete(key);
+      let own: Listener | null = null;
       return hostedQuery(key, params, send, (listener) => {
-        if (listener === null) listeners.delete(key);
-        else listeners.set(key, listener);
+        if (listener === null) {
+          if (listeners.get(key) === own) listeners.delete(key);
+          return;
+        }
+        // A session of this key still closing ends now: the host sends it nothing more.
+        listeners.get(key)?.({ type: 'ended', key, error: null });
+        own = listener;
+        listeners.set(key, listener);
       });
     },
   };

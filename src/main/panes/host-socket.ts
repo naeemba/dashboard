@@ -10,11 +10,11 @@ const CONNECT_TRIES = 50;
 const CONNECT_PAUSE_MS = 100;
 
 // A host's socket, starting the host when nothing answers on it.
-export async function reachHost(socketPath: string, launch: () => void): Promise<net.Socket | null> {
+export async function reachHost(socketPath: string, launch: () => void, tries = CONNECT_TRIES): Promise<net.Socket | null> {
   let socket = await attempt(socketPath);
   if (socket !== null) return socket;
   launch();
-  for (let tries = 0; socket === null && tries < CONNECT_TRIES; tries += 1) {
+  for (let tried = 0; socket === null && tried < tries; tried += 1) {
     await new Promise((resolve) => setTimeout(resolve, CONNECT_PAUSE_MS));
     socket = await attempt(socketPath);
   }
@@ -47,7 +47,7 @@ export function acceptApps<To extends { type: string }>(server: AppServer<To>, t
       if (message.type !== 'hello') return void socket.destroy();
       // One app at a time. An app that went has had its end closed by the kernel, so a second one
       // arriving while one is connected is a second Dashboard on the same user data: it is turned away
-      // and runs its shells itself, rather than taking the first one's panes out from under it.
+      // and runs its own, rather than taking what the host keeps for the first one out from under it.
       // The proof goes with a busy too: on Windows an unproven busy is an impostor's.
       const proof = token !== undefined && message.nonce !== undefined ? hostProof(token, message.nonce) : undefined;
       if (current !== null) {

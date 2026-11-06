@@ -4,9 +4,9 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { inputQueue } from '../chat/input-queue';
+import { inputQueue, type InputQueue } from '../chat/input-queue';
 import { prepareHostSocket } from '../panes/pane-host-protocol';
-import { screenHost } from './screen-host-client';
+import { hostedQuery, screenHost } from './screen-host-client';
 import { acceptApps } from '../panes/host-socket';
 import { screenHostServer, type StartSession } from './screen-host-server';
 import { screenHostSocket, type ToScreenHost } from './screen-host-protocol';
@@ -17,7 +17,7 @@ const signal = new AbortController().signal;
 // The SDK's query as the host sees it: what it was started with, the messages the test makes it
 // stream, and whether it was closed.
 function fakeSdk() {
-  const sessions: { options: Options; prompts: SDKUserMessage[]; stream: ReturnType<typeof inputQueue<unknown>>; closed: boolean }[] = [];
+  const sessions: { options: Options; prompts: SDKUserMessage[]; stream: InputQueue<unknown>; closed: boolean }[] = [];
   const start: StartSession = ({ prompt, options }) => {
     const session = { options, prompts: [] as SDKUserMessage[], stream: inputQueue<unknown>(), closed: false };
     sessions.push(session);
@@ -58,7 +58,7 @@ function appSession(heard: string[]) {
   const prompt = inputQueue<SDKUserMessage>();
   const options: Options = {
     cwd: '/work/api',
-    hooks: { Stop: [{ hooks: [async (input) => { heard.push(`hook ${input.hook_event_name}`); return {}; }] }] },
+    hooks: Object.fromEntries(['Stop', 'PostToolUse'].map((event) => [event, [{ hooks: [async (input: HookInput) => { heard.push(`hook ${JSON.stringify(input)}`); return {}; }] }]])),
     canUseTool: async (toolName): Promise<PermissionResult> => {
       heard.push(`ask ${toolName}`);
       return { behavior: 'allow', updatedInput: {} };
@@ -97,7 +97,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const after = await second.query(KEY, appSession(heard));
     await settle();
     expect(sdk.sessions).toHaveLength(1);
-    expect(heard).toEqual(['ask Bash', 'hook Stop']);
+    expect(heard).toEqual(['ask Bash', 'hook {"hook_event_name":"Stop"}']);
     expect(await answered).toEqual({ behavior: 'allow', updatedInput: {} });
     expect(heardFirst).toEqual([]);
     expect(await after?.supportedModels()).toEqual([{ value: 'opus' }]);
@@ -129,11 +129,73 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   it('answers null when no host can be reached, so the session runs in the app', async () => {
     folder = mkdtempSync(path.join(os.tmpdir(), 'screen-host-'));
     let launched = 0;
-    const app = screenHost({ socket: path.join(folder, 'none.sock'), launch: () => { launched += 1; } });
+    const app = screenHost({ socket: path.join(folder, 'none.sock'), launch: () => { launched += 1; }, connectTries: 0 });
     await app.ready;
     expect(app.kept(KEY)).toBeUndefined();
     expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(launched).toBe(1);
-  }, 10_000);
+  });
+
+  it('holds what a turn ended with while the app was away: a result clears busy, a hook keeps only its name but Stop', async () => {
+    const sdk = fakeSdk();
+    const socketPath = await host(sdk.start);
+    await screenHost({ socket: socketPath, launch: () => undefined }).query(KEY, appSession([]));
+    await settle();
+    const [session] = sdk.sessions;
+    await hook(session.options, 'UserPromptSubmit', { hook_event_name: 'UserPromptSubmit' });
+    accepted[0].destroy();
+    await settle();
+    await session.options.hooks?.PostToolUse?.[0].hooks[0]({ hook_event_name: 'PostToolUse', tool_response: 'long' } as never, undefined, { signal });
+    session.stream.push({ type: 'result', subtype: 'error_during_execution' });
+    await hook(session.options, 'Stop', { hook_event_name: 'Stop', last_assistant_message: 'done' });
+    await settle();
+
+    const second = screenHost({ socket: socketPath, launch: () => undefined });
+    await second.ready;
+    expect(second.kept(KEY)).toEqual({ key: KEY, busy: false });
+    const heard: string[] = [];
+    const after = await second.query(KEY, appSession(heard));
+    await settle();
+    expect(heard).toEqual(['hook {"hook_event_name":"PostToolUse"}', 'hook {"hook_event_name":"Stop","last_assistant_message":"done"}']);
+    expect((await after?.[Symbol.asyncIterator]().next())?.value).toEqual({ type: 'result', subtype: 'error_during_execution' });
+  });
+
+  it('ends the app\'s sessions when the host goes, and reaches for a host again on the next', async () => {
+    let launched = 0;
+    const socketPath = await host(fakeSdk().start);
+    const app = screenHost({ socket: socketPath, launch: () => { launched += 1; }, connectTries: 0 });
+    const query = await app.query(KEY, appSession([]));
+    await settle();
+    listener?.close();
+    accepted[0].destroy();
+    await expect(query?.[Symbol.asyncIterator]().next()).rejects.toThrow('The screen host stopped');
+    expect(await app.query(KEY, appSession([]))).toBeNull();
+    expect(launched).toBe(1);
+  });
+
+  it('starts a new session for a key stopped a moment ago, and ends the old one in the app', async () => {
+    const sdk = fakeSdk();
+    const socketPath = await host(sdk.start);
+    const app = screenHost({ socket: socketPath, launch: () => undefined });
+    const old = await app.query(KEY, appSession([]));
+    await settle();
+    const oldMessages = old?.[Symbol.asyncIterator]();
+    old?.close();
+    const fresh = await app.query(KEY, appSession([]));
+    expect((await oldMessages?.next())?.done).toBe(true);
+    await settle();
+    expect(sdk.sessions).toHaveLength(2);
+    sdk.sessions[1].stream.push({ type: 'assistant' });
+    expect((await fresh?.[Symbol.asyncIterator]().next())?.value).toEqual({ type: 'assistant' });
+  });
+});
+
+describe('hostedQuery', () => {
+  it('refuses an option it would have to call back, and sends nothing', () => {
+    const sent: ToScreenHost[] = [];
+    const params = { prompt: inputQueue<SDKUserMessage>(), options: { stderr: () => undefined } };
+    expect(() => hostedQuery(KEY, params, (message) => sent.push(message), () => undefined)).toThrow('stderr');
+    expect(sent).toEqual([]);
+  });
 });

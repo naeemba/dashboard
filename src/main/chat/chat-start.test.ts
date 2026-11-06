@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sessionToMeasure, startsAtOpen } from './chat-start';
+import { closedAtQuit, sessionToMeasure, startsAtOpen } from './chat-start';
 
 describe('startsAtOpen', () => {
   it('starts a page whose main dispatched a worker, wherever the worker runs', () => {
@@ -28,5 +28,12 @@ describe('sessionToMeasure', () => {
     expect(sessionToMeasure(false, starting, running)).toBe(running);
     expect(sessionToMeasure(false, starting, undefined)).toBeUndefined();
     expect(started).toBe(0);
+  });
+});
+
+describe('closedAtQuit', () => {
+  it('closes a session the app runs and leaves one the screen host runs', () => {
+    expect(closedAtQuit({ hosted: false })).toBe(true);
+    expect(closedAtQuit({ hosted: true })).toBe(false);
   });
 });

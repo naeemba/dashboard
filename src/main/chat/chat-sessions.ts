@@ -15,7 +15,7 @@ import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
 import { exportTarget } from './chat-export-target';
-import { sessionToMeasure } from './chat-start';
+import { closedAtQuit, sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
@@ -743,7 +743,7 @@ export function registerChatSessions(
     stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
     // A quit: the screen host's sessions stay up for the next launch to take back.
     stopAll: () => {
-      for (const [slot, session] of [...sessions]) void session.then((running) => { if (!running.hosted) stop(slot); }, () => undefined);
+      for (const [slot, session] of [...sessions]) void session.then((running) => { if (closedAtQuit(running)) stop(slot); }, () => undefined);
     },
     // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
     tell: (slot, text) => send(slot, [{ type: 'text', text }]),
