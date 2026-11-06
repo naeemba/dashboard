@@ -97,7 +97,11 @@ jobs:
       matrix:
         include:
           - name: linux
-            os: ubuntu-latest
+            # 22.04 for its rpm 4.17. From 4.20 rpmbuild runs %install in BUILD/<name>-<version>-build,
+            # and electron-installer-redhat's spec copies usr/* from BUILD, so the rpm leg failed with
+            # "cp: cannot stat 'usr/*'". A newer runner needs a specTemplate that copies from
+            # %{_topdir}/BUILD/usr.
+            os: ubuntu-22.04
             electron-cache: ~/.cache/electron
           - name: windows
             os: windows-latest
@@ -145,11 +149,11 @@ jobs:
             "out/make/Dashboard-${TAG#v}-arm64.dmg"
       - name: Upload to the release
         run: |
-          shopt -s globstar nullglob
-          files=()
-          for file in out/make/**/*; do [ -f "$file" ] && files+=("$file"); done
-          printf '%s\n' "${files[@]}"
-          gh release upload "$TAG" "${files[@]}" --clobber
+          # Node lists the files: a mac's bash 3.2 has no globstar, and Squirrel's Setup.exe has a space.
+          node -e 'const { readdirSync } = require("node:fs"); const { join } = require("node:path");
+            const files = readdirSync("out/make", { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile());
+            process.stdout.write(files.map((entry) => join(entry.parentPath, entry.name)).join("\0"));' \
+            | xargs -0 gh release upload "$TAG" --clobber
 
   publish:
     needs: [prepare, build]
