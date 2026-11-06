@@ -16,15 +16,16 @@ function store(session = false) {
   if (session) writeFileSync(path.join(userData, SESSION_FILE), '{}');
   const table = channels();
   registerWhatsNew(table, userData);
-  const record = (build: string) => table.invoke(LOCAL_SCREEN, 'whats-new:record', [{ build, newest: null }]);
-  return { userData, record };
+  const record = (commit: string) => table.invoke(LOCAL_SCREEN, 'whats-new:record', [{ newest: { commit, time: '2026-11-06T12:00:00Z' } }]);
+  const shownFor = (commit: string) => ({ newest: { commit, time: '2026-11-06T12:00:00Z' } });
+  return { userData, record, shownFor };
 }
 
 describe('whats-new:record', () => {
   it('answers no record and no history on a fresh folder, then the build it was handed', async () => {
-    const { record } = store();
+    const { record, shownFor } = store();
     expect(await record('one')).toEqual({ shown: null, history: false });
-    expect(await record('two')).toEqual({ shown: { build: 'one', newest: null }, history: false });
+    expect(await record('two')).toEqual({ shown: shownFor('one'), history: false });
   });
 
   it('says a folder with a saved session has history', async () => {
@@ -39,9 +40,9 @@ describe('whats-new:record', () => {
   });
 
   it('reads a record that does not parse as none, and writes over it', async () => {
-    const { userData, record } = store();
+    const { userData, record, shownFor } = store();
     writeFileSync(path.join(userData, 'whats-new.json'), '{ not json');
     expect(await record('one')).toEqual({ shown: null, history: false });
-    expect(await record('two')).toEqual({ shown: { build: 'one', newest: null }, history: false });
+    expect(await record('two')).toEqual({ shown: shownFor('one'), history: false });
   });
 });

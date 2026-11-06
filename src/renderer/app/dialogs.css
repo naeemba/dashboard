@@ -162,10 +162,10 @@
 }
 
 /* Each day's list is as tall as its rows; the dialog scrolls, not every list inside it. */
-.whats-new-dialog .search-list {
-  flex: none;
-  overflow: visible;
+.whats-new-list {
+  margin: 0;
   padding: 0 10px;
+  list-style: none;
 }
 
 /* The number stays whole beside a title long enough to wrap. */
@@ -278,7 +278,8 @@
 
 .search-list li,
 .worktrees-list li,
-.anchored-list li {
+.anchored-list li,
+.whats-new-list li {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -289,17 +290,20 @@
 
 .search-list li:hover,
 .worktrees-list li:hover,
-.anchored-list li:hover {
+.anchored-list li:hover,
+.whats-new-list li:hover {
   background: var(--hover);
 }
 
 .search-list li.highlighted,
 .worktrees-list li.highlighted,
-.anchored-list li.highlighted {
+.anchored-list li.highlighted,
+.whats-new-list li.highlighted {
   background: var(--tint);
 }
 
-.search-list .icon {
+.search-list .icon,
+.whats-new-list .icon {
   color: var(--muted);
 }
 
@@ -323,7 +327,8 @@
   white-space: nowrap;
 }
 
-.search-list li.highlighted .search-detail {
+.search-list li.highlighted .search-detail,
+.whats-new-list li.highlighted .search-detail {
   color: var(--white);
 }
 

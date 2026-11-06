@@ -40,10 +40,12 @@ same way. A shallow clone has only the merges it fetched, so a release build
 checks out with full history. Outside a git checkout the list is empty, the
 same as the version stamp's `unknown`.
 
-What it last showed is `whats-new.json` in userData: the build's stamp and the
-newest entry that build carried. The renderer hands main the build it is over
-`whats-new:record` and gets back the one before, so the record moves on whether
-or not anything is shown. Which entries to show is `entriesToShow` in
+What it last showed is `whats-new.json` in userData: the newest entry the last
+build carried. The same build carries the same newest entry, so that alone tells
+a new build that merged something from one that did not. The renderer hands main
+what this build carries over `whats-new:record` and gets back the record before,
+so the record moves on whether or not anything is shown; the same build again
+writes nothing. Which entries to show is `entriesToShow` in
 `whats-new.ts`: the last shown entry is found by its commit, and one this build
 no longer carries is passed by time, so an older build installed over a newer
 one shows nothing. `whats-new:record` is a client channel: on a remote screen

@@ -1,21 +1,17 @@
-import { execFileSync } from 'node:child_process';
 import { version } from './package.json';
+import { attempt, git } from './vite.build-version';
 import type { Changelog, ChangelogEntry } from './src/shared/app/whats-new';
 
 // The what's-new popup's list, read from git when the renderer is built, so a local rebuild.sh and a
 // release build carry the same thing: the pull requests merged into the line the build was made from,
 // newest first. `--first-parent` keeps to that line's own merges, not the commits each one brought in.
 // Capped, because the bundle carries it whole and nobody scrolls past a few months of it.
-export const CHANGELOG_LIMIT = 200;
+const CHANGELOG_LIMIT = 200;
 
 // Fields and records are split on ASCII unit and record separators, which no title contains.
 const FIELD = '\x1f';
 const RECORD = '\x1e';
 const MERGE_SUBJECT = /^Merge pull request #(\d+) from /;
-
-function git(...gitArguments: string[]): string {
-  return execFileSync('git', gitArguments, { cwd: __dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-}
 
 // GitHub writes the pull request's title as the first line of the merge commit's body; a merge made
 // without one falls back to the subject, which at least names the branch.
@@ -36,14 +32,6 @@ export function repositoryOf(remote: string): string | null {
   return match ? match[1] : null;
 }
 
-function attempt<Value>(read: () => Value, fallback: Value): Value {
-  try {
-    return read();
-  } catch {
-    return fallback;
-  }
-}
-
 // Outside a git checkout every part is empty rather than a failed build, the same as the version stamp.
 // A release is a build of the commit its `v<version>` tag names, which is what the release workflow
 // checks out; any other build has no version heading.
@@ -60,5 +48,3 @@ export function readChangelog(): Changelog {
     entries: parseMerges(log),
   };
 }
-
-export const changelogDefine = { __CHANGELOG__: JSON.stringify(readChangelog()) };

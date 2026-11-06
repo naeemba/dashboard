@@ -19,7 +19,7 @@ import type { UsageSnapshot } from '../usage/usage';
 import type { FileLink } from '../panes/links';
 import type { DispatchedWorker } from '../workers/worker-roster';
 import type { DocEntry, DocReply, DrawerReply, ResumeReply, SessionList } from '../drawer/drawer';
-import type { LastShown, ShownBuild } from './whats-new';
+import type { LastShown, ShownRecord } from './whats-new';
 
 export type Project = { name: string; path: string; missing: boolean };
 
@@ -133,8 +133,8 @@ export type DashboardBridge = {
   // Chrome stopped putting a path on File, so only the preload can say where a dropped file lives.
   getPathForFile(file: File): string;
   openExternal(url: string): void;
-  // The what's-new popup's record: this build in, the one the app last showed for back.
-  recordWhatsNew(current: ShownBuild): Promise<LastShown>;
+  // The what's-new popup's record: what this build carries in, what the app last showed back.
+  recordWhatsNew(current: ShownRecord): Promise<LastShown>;
   // The banner a ringing pane raises. An OS notification belongs to main, the way openExternal does:
   // main is the side macOS knows the app by. The pane's id travels with it so a click on the banner
   // can be answered with the pane it was raised for.

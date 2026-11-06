@@ -1,8 +1,8 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { clampIndex } from '../../shared/app/clamp-index';
-import { byDate, entriesToShow, pullRequestUrl, shownBuild, type ChangelogEntry } from '../../shared/app/whats-new';
-import { icon, labelled } from './icons';
-import { openOverlay } from './overlay';
+import { byDate, entriesToShow, pullRequestUrl, shownRecord, type ChangelogEntry } from '../../shared/app/whats-new';
+import { labelled } from './icons';
+import { answerKeys, openOverlay, searchRowElement } from './overlay';
 import { isModified } from '../keys/shortcuts';
 
 // How far each key moves the selection; a Page key about one screen of the dialog's rows.
@@ -47,17 +47,10 @@ export function openWhatsNew(bridge: DashboardBridge, entries: readonly Changelo
       const heading = document.createElement('h2');
       heading.textContent = group.date;
       const list = document.createElement('ul');
-      list.className = 'search-list';
+      list.className = 'whats-new-list';
       for (const entry of group.entries) {
         const index = rows.length;
-        const row = document.createElement('li');
-        const title = document.createElement('span');
-        title.className = 'search-name';
-        title.textContent = entry.title;
-        const number = document.createElement('span');
-        number.className = 'search-detail';
-        number.textContent = `#${entry.pullRequest}`;
-        row.append(icon('pullRequest'), title, number);
+        const row = searchRowElement('pullRequest', entry.title, `#${entry.pullRequest}`);
         row.addEventListener('click', () => {
           select(index);
           openSelected();
@@ -77,6 +70,7 @@ export function openWhatsNew(bridge: DashboardBridge, entries: readonly Changelo
     select(0);
     dialog.focus();
 
+    answerKeys(dialog, (key) => (key === 'Enter' ? openSelected() : close()));
     dialog.addEventListener('keydown', (event) => {
       if (isModified(event)) return;
       const step = STEPS[event.key];
@@ -87,8 +81,6 @@ export function openWhatsNew(bridge: DashboardBridge, entries: readonly Changelo
       switch (event.key) {
         case 'Home': event.preventDefault(); return select(0);
         case 'End': event.preventDefault(); return select(rows.length - 1);
-        case 'Enter': event.preventDefault(); return openSelected();
-        case 'Escape': event.preventDefault(); return close();
       }
     });
   });
@@ -97,7 +89,7 @@ export function openWhatsNew(bridge: DashboardBridge, entries: readonly Changelo
 // Once per launch: this build is recorded, and what changed since the build last shown comes up, if
 // anything did. A record main cannot read or write costs the popup, never the launch.
 export async function whatsNewAtLaunch(bridge: DashboardBridge, closed: () => void): Promise<void> {
-  const last = await bridge.recordWhatsNew(shownBuild(__BUILD_VERSION__, CHANGELOG)).catch(() => null);
-  const entries = last ? entriesToShow(CHANGELOG, last, __BUILD_VERSION__) : [];
+  const last = await bridge.recordWhatsNew(shownRecord(CHANGELOG)).catch(() => null);
+  const entries = last ? entriesToShow(CHANGELOG, last) : [];
   if (entries.length > 0) await openWhatsNew(bridge, entries).then(closed);
 }
