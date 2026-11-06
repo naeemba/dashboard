@@ -1,7 +1,8 @@
 import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
-import { runBoardCommandOnLatest } from './board-cli';
+import { APP_VERBS, BOARD_REQUEST, brokenFilesRefusal, runBoardCommandOnLatest } from './board-cli';
+import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
@@ -12,18 +13,22 @@ import { boardTarget } from './board-target';
 // The current directory points it, or --project and a name from ~/.dashboard/projects.yaml; which one
 // is board-target.ts's to say. projectRoot is what makes any depth inside the project work, so an
 // agent that has stepped into src/ still edits the project's one board.
-function run(words: readonly string[]): number {
+async function run(words: readonly string[]): Promise<number> {
   const target = boardTarget(words, process.cwd(), { isHome: isManagerHomeDirectory, projectRoot, named: projectNamedInFile });
   if (!target.ok) {
     process.stderr.write(`${target.message}\n`);
     return 1;
   }
   const { project, commandArguments } = target;
+  // A move, a ship or a review is the app's to do, so the screen, the command and the sweep all mean
+  // the same thing by one; docs/actions/README.md says why. The app is started when none answers.
+  const [verb, ...rest] = commandArguments;
+  if (verb !== undefined && APP_VERBS.includes(verb)) return askRunningApp([BOARD_REQUEST, verb, project, ...rest]);
   // Without salvage: a file that does not parse stays where it is under its own name, so every run
   // refuses until it is fixed. readBoard says why a rename here would commit the card as deleted.
   const read = openBoard(project, false);
   if (read.brokenFiles.length > 0) {
-    process.stderr.write(`board files do not parse, nothing was written; fix them first: ${read.brokenFiles.join(', ')}\n`);
+    process.stderr.write(`${brokenFilesRefusal(read.brokenFiles)}\n`);
     return 1;
   }
 
@@ -47,9 +52,9 @@ function run(words: readonly string[]): number {
 // board that cannot be replaced — and without this those two are the only ones that answer an agent
 // with a node stack trace instead of a sentence. What the line says is failureLine's decision, in
 // command/failure-line.ts, shared by every program the dashboard command runs.
-export function runBoardProgram(commandArguments: readonly string[]): number {
+export async function runBoardProgram(commandArguments: readonly string[]): Promise<number> {
   try {
-    return run(commandArguments);
+    return await run(commandArguments);
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);
     return 1;

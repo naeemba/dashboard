@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 describe('the board command over a card file that does not parse', () => {
-  it('refuses on every run and leaves the file under its own name', () => {
+  it('refuses on every run and leaves the file under its own name', async () => {
     const project = mkdtempSync(join(tmpdir(), 'board-program-'));
     writeBoard(project, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
     const cards = join(project, BOARD_FOLDER_PATH, 'cards');
@@ -23,7 +23,8 @@ describe('the board command over a card file that does not parse', () => {
     const stderr = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
     vi.spyOn(process.stdout, 'write').mockReturnValue(true);
     for (let run = 0; run < 2; run += 1) {
-      expect(runBoardProgram(['move', 'card', 'Done'])).toBe(1);
+      // A file edit: move, ship and review are the app's, and card.move refuses the same way there.
+      expect(await runBoardProgram(['set', 'card', '--priority', 'high'])).toBe(1);
       expect(String(stderr.mock.calls.at(-1)?.[0])).toContain(join(cards, 'broken.json'));
     }
     expect(readdirSync(cards).filter((name) => name.startsWith('broken'))).toEqual(['broken.json']);

@@ -36,6 +36,18 @@ export type CommandResult =
   | { ok: true; output: string; board: Board | null }
   | { ok: false; message: string };
 
+// The board verbs the app answers, over the session socket, as [BOARD_REQUEST, verb, folder, ...words]:
+// each is an action in main (src/main/actions/), which writes the move and starts what it means.
+// Every other verb is a file edit made here, and starts nothing.
+export const BOARD_REQUEST = 'board';
+export const APP_VERBS: readonly string[] = ['move', 'ship', 'review'];
+
+// Why a board with a card file that does not parse is not written. Both writers refuse it: the command
+// here and card.move in the app.
+export function brokenFilesRefusal(brokenFiles: readonly string[]): string {
+  return `board files do not parse, nothing was written; fix them first: ${brokenFiles.join(', ')}`;
+}
+
 // `--name value` and `--name=value` both, because an agent writing the command will use either and
 // refusing one of them is a refusal nobody can see coming. A flag repeated takes its last value.
 function readFlags(flagArguments: readonly string[], allowed: readonly string[]): { flags: Map<string, string> } | { message: string } {
