@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-10-22T09:46:13.168Z",
-  "updatedAt": "2026-10-22T10:10:49.896Z",
+  "updatedAt": "2026-11-06T14:39:23.037Z",
   "branch": "resume-claude-sessions",
   "pullRequest": 76,
   "comments": [
@@ -14,6 +14,6 @@
       "body": "PR #76 open. Each pane running Claude at Quit comes back in that conversation: a shell in the session's folder with claude --resume typed, or, in a card's worktree, the card's agent resumed the way a ship starts it. session.json keeps a claude slot per pane, main is its only writer, a 30s grace from the resume covers Claudes that have not written their session file yet, and a failed ps saves nothing. Needs the check by hand in a rebuilt app."
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 174
 }

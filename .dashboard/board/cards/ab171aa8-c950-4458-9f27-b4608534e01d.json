@@ -4,7 +4,7 @@
   "notes": "Click a path, or press Alt+O for hint mode (letter labels over every path on screen). Resolve against the pane's live cwd, falling back to the project root. Only existing regular files open. Open with nvim --remote +line in the current window, then switch to nvim mode.",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-10-22T09:11:24.511Z",
+  "updatedAt": "2026-11-06T14:39:23.573Z",
   "branch": "pane-file-links",
   "pullRequest": 75,
   "comments": [
@@ -13,6 +13,6 @@
       "body": "Pull request #75: click a path or press Alt+O to open it in the project's nvim at its line. Resolved from the pane's live folder, then its start folder, then the project."
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 177
 }
