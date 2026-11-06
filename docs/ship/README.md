@@ -11,12 +11,12 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 
 - Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`, `branch-worktree.ts`
 - Review: `review.ts`, `review-flow.ts`
-
-Started by the card.ship and card.review actions (docs/actions), which are what a
-move into Ship or Review, and `dashboard board ship` and `review`, call.
 - Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`, `worktree-scan.ts`,
   `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
   `worktree-removal.ts`, `worktrees.css`
+
+Started by the card.ship and card.review actions (docs/actions), which are what
+a move into Ship or Review, and `dashboard board ship` and `review`, call.
 
 ## Scenarios
 

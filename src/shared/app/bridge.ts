@@ -91,8 +91,12 @@ export type Refused = { refused: string };
 
 // A card moved on the board, asked of main's card.move action: the move written, then whatever
 // entering that column starts. `ran` is which one ran, so the board can walk a shipped card home.
-export type CardMoveRequest = { projectPath: string; id: string; column: string };
-export type CardMoveAnswer = { output: string; ran: ColumnEntry; started: string } | Refused;
+// `started` is what the entry's action answered, empty when it ran none. CardInput is what every
+// card action starts from: the project's folder and the card's id.
+export type CardInput = { projectPath: string; id: string };
+export type CardMoveRequest = CardInput & { column: string };
+export type CardMoveResult = { output: string; ran: ColumnEntry; started: string };
+export type CardMoveAnswer = CardMoveResult | Refused;
 
 // What a removal answers. `dirty` is the files in the way when the answer is no, so the dialog can ask
 // a second time naming them rather than deciding on its own what "dirty enough" means. Named here

@@ -446,6 +446,33 @@ describe('reviewSweep', () => {
     expect(log.started).toHaveLength(1);
   });
 
+  // The loop off, a review started by hand a moment before the agent's commit: the sweep's own retry
+  // goes through card.move, which starts nothing with the loop off, so the start by hand is retried.
+  it('with the loop off, retries a review started by hand that met a dirty worktree', async () => {
+    const { entry, projectPath } = flight(12);
+    let committed = false;
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async () => (committed
+        ? { ok: true, message: '', dirty: [] }
+        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+    });
+    const sweep = reviewSweep(made);
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
+    committed = true;
+    await sweep.run();
+    expect(log.started).toHaveLength(1);
+    expect(columnOfCard(projectPath)).toBe('Review');
+  });
+
+  it('refuses a review by hand for a card past Review', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    const { ports: made, log } = ports(entry);
+    await expect(reviewSweep(made).review(CARD)).resolves.toEqual({ refused: '"Ship it" is past Review; its review has run' });
+    expect(log.removed).toEqual([]);
+    expect(columnOfCard(projectPath)).toBe('Done');
+  });
+
   it('refuses a review by hand while the agent works, before it has a pull request, and twice', async () => {
     const working = flight(12);
     await expect(reviewSweep(ports(working.entry, { agentWorksIn: () => true }).ports).review(CARD))

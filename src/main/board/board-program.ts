@@ -1,7 +1,7 @@
 import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
-import { APP_VERBS, BOARD_REQUEST, brokenFilesRefusal, runBoardCommandOnLatest } from './board-cli';
+import { asksApp, BOARD_REQUEST, brokenFilesRefusal, runBoardCommandOnLatest } from './board-cli';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 
@@ -20,10 +20,13 @@ async function run(words: readonly string[]): Promise<number> {
     return 1;
   }
   const { project, commandArguments } = target;
-  // A move, a ship or a review is the app's to do, so the screen, the command and the sweep all mean
-  // the same thing by one; docs/actions/README.md says why. The app is started when none answers.
-  const [verb, ...rest] = commandArguments;
-  if (verb !== undefined && APP_VERBS.includes(verb)) return askRunningApp([BOARD_REQUEST, verb, project, ...rest]);
+  // A ship, a review and a move into Ship or Review are the app's to do, so the screen, the command
+  // and the sweep all mean the same thing by one; docs/actions/README.md says why. The app is started
+  // when none answers. asksApp says which.
+  if (asksApp(commandArguments)) {
+    const [verb, ...rest] = commandArguments;
+    return askRunningApp([BOARD_REQUEST, verb, project, ...rest]);
+  }
   // Without salvage: a file that does not parse stays where it is under its own name, so every run
   // refuses until it is fixed. readBoard says why a rename here would commit the card as deleted.
   const read = openBoard(project, false);

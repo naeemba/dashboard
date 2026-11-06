@@ -1,10 +1,17 @@
 import { isColumnNamed, REVIEW_COLUMN, SHIP_COLUMN } from './board';
+import { isManagerPath } from '../manager/manager';
+import type { Direction } from '../panes/terminals';
 
 // What moved a card. `user` is a gesture on the board, `command` is `dashboard board move`, and
 // `automatic` is the app itself: the review sweep moving a shipped card into Review once its pull
 // request appears. A card file edited by anything else — an agent writing its worktree's board — is
 // not a move request at all and never reaches this table.
-export type MoveSource = 'user' | 'command' | 'automatic';
+export const MOVE_SOURCES = ['user', 'command', 'automatic'] as const;
+export type MoveSource = (typeof MOVE_SOURCES)[number];
+
+export function isMoveSource(value: unknown): value is MoveSource {
+  return MOVE_SOURCES.some((source) => source === value);
+}
 
 // The action entering a column starts, or nothing.
 export type ColumnEntry = 'ship' | 'review' | 'nothing';
@@ -29,4 +36,20 @@ export function columnEntry({ column, source, autoLoop, projectBoard }: Entering
   // person always starts it, which is how a user with the setting off starts a loop by hand.
   if (isColumnNamed(column, REVIEW_COLUMN)) return source !== 'automatic' || autoLoop ? 'review' : 'nothing';
   return 'nothing';
+}
+
+// What moved a card on the screen: one of the four arrow steps, or the pointer letting go of it.
+export type MoveGesture = Direction | 'drop';
+
+// What the screen asks main about once its own move is saved, 'nothing' for a move it asks nothing
+// about. A card that stayed in its column has entered nothing: reordered inside Ship, or pushed against
+// the edge of a board with Ship last. A keystroke asks only to the right: Shift+Left is a step of a
+// walk putting a card back, and asked of main it would ship a card walked from Doing to Todo, or ship
+// a finished card again walked back from Done. A drop is aimed at its column from either side. The
+// manager's board has no repository behind it (board-decision-2).
+export function screenMoveEntry(
+  projectPath: string, column: string, from: number, to: number, gesture: MoveGesture,
+): ColumnEntry {
+  if (from === to || (gesture !== 'right' && gesture !== 'drop')) return 'nothing';
+  return columnEntry({ column, source: 'user', autoLoop: true, projectBoard: !isManagerPath(projectPath) });
 }

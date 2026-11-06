@@ -48,8 +48,18 @@ describe('card.move', () => {
 
   it('starts the review loop for a card a person moves into Review', async () => {
     const { ports, seen } = fakePorts({ autoLoop: () => false });
-    await expect(move(ports, 'review', 'user')).resolves.toMatchObject({ ran: 'review' });
-    expect(seen.ran).toEqual(['review']);
+    await expect(move(ports, 'review', 'command')).resolves.toMatchObject({ ran: 'review' });
+    await expect(move(ports, 'Review', 'user')).resolves.toMatchObject({ ran: 'review' });
+    expect(seen.ran).toEqual(['review', 'review']);
+  });
+
+  // Shift+Right twice quickly from Doing: the screen's save of Done lands before its ask about Review.
+  it('never moves a card the screen asks about back from the column it has moved on to', async () => {
+    const { ports, seen } = fakePorts();
+    await move(ports, 'Done');
+    await expect(move(ports, 'Review', 'user')).resolves.toEqual({ output: 'card card has moved on from Review', ran: 'nothing', started: '' });
+    expect(seen.writes.map(({ board }) => columnOf(board))).toEqual(['Done']);
+    expect(seen.ran).toEqual([]);
   });
 
   it('leaves a card the sweep moves into Review waiting when the loop is off', async () => {

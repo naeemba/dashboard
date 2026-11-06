@@ -35,9 +35,10 @@ dispatches into, an editor and a kanban board kept in the project's .dashboard/b
   dashboard project <command>   list, open, close and switch to the projects in ~/.dashboard/projects.yaml
   dashboard <noun> --help       what a noun takes
 
-pane, board move, ship and review, and project open, close and focus need the running app and start
-it when none answers; the other board verbs and project list, find and init work on files alone. Outside a pane the command does not know which
-project you mean: board uses the folder you are in, or --project <name>; pane claim needs --project.`;
+pane, board ship and review, a board move into Ship or Review, and project open, close and focus
+need the running app and start it when none answers; every other board verb and move, and project
+list, find and init, work on files alone. Outside a pane the command does not know which project you
+mean: board uses the folder you are in, or --project <name>; pane claim needs --project.`;
 
 const NOUN_HELP: Record<Noun, string> = {
   board: `dashboard board — the kanban board of a project, kept in its .dashboard/board folder

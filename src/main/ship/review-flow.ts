@@ -271,13 +271,24 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // Marked whatever the move goes on to do. With review.autoLoop off the card waits in Review, and
     // unmarked the sweep would move it there again every five seconds; `review` takes the mark off
     // again for a card that was only early.
+    //
+    // A card a person started by hand that was only early goes back to `review` directly: through
+    // card.move it is the sweep's move, and with the loop off that starts nothing, so the review the
+    // person asked for would say "waiting for the commit" and never come.
     reviewed.add(entry.cardId);
+    if (byHand.delete(entry.cardId)) {
+      await review(entry.cardId);
+      return;
+    }
     await ports.arrived(entry);
   }
 
   // Cards a review is being started for right now. Every guard below runs before the first await and
   // so does this, so two starts of one card — the sweep's and a keystroke's — cannot both get through.
   const starting = new Set<string>();
+  // Cards whose review was asked for by `review` itself and stopped on a dirty worktree, so the sweep
+  // retries that same start rather than its own move once the mark comes off.
+  const byHand = new Set<string>();
 
   async function review(id: string): Promise<{ output: string } | Refused> {
     const entry = entryForCard(ports.worktrees(), id);
@@ -288,6 +299,11 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (ports.agentWorksIn(slot, entry.pane)) return { refused: `the agent on "${entry.title}" is still working` };
     const pullRequest = finishedIn(entry);
     if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };
+    // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
+    // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a
+    // pull request that merged.
+    const board = projectBoard(entry.projectPath);
+    if (board !== null && awaitsReview(board, id) === false) return { refused: `"${entry.title}" is past Review; its review has run` };
     reviewed.add(id);
     starting.add(id);
     try {
@@ -303,7 +319,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       // The mark comes back off for a card that was only early. Everything else keeps it: a locked
       // repository, a pane that went, a git step that threw — none of those pass by themselves, and
       // the card carries the line saying so until somebody acts on it.
-      if (swap.again) reviewed.delete(id);
+      if (swap.again) {
+        reviewed.delete(id);
+        byHand.add(id);
+      }
       if (swap.message === '') return { output: `review started for "${entry.title}", pull request #${pullRequest}` };
       // On the card as well as in the answer. A review the sweep started has nobody waiting on the
       // answer and no status bar it belongs to, so the card is the only place it can be said.
@@ -322,5 +341,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     await Promise.all(ports.worktrees().map((entry) => sweepOne(entry)));
   }
 
-  return { run, forget: (cardId) => reviewed.delete(cardId), review };
+  function forget(cardId: string): void {
+    reviewed.delete(cardId);
+    byHand.delete(cardId);
+  }
+
+  return { run, forget, review };
 }

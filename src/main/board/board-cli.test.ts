@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
+import { asksApp, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
 import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from '../../shared/board/board';
 
@@ -362,5 +362,21 @@ describe('homeDirectoryRefusal', () => {
   it('says the home directory is the manager\'s own folder', () => {
     expect(homeDirectoryRefusal()).toMatch(/home directory/);
     expect(homeDirectoryRefusal()).toMatch(/cd into a project/);
+  });
+});
+
+describe('asksApp', () => {
+  it('asks the app for ship, review and a move into Ship or Review, in any case', () => {
+    expect(asksApp(['ship', 'card'])).toBe(true);
+    expect(asksApp(['review', 'card'])).toBe(true);
+    expect(asksApp(['move', 'card', 'ship'])).toBe(true);
+    expect(asksApp(['move', 'card', 'Review'])).toBe(true);
+  });
+
+  it('edits the files for a move that starts nothing, and for every other verb', () => {
+    expect(asksApp(['move', 'card', 'Doing'])).toBe(false);
+    expect(asksApp(['move', 'card', 'Done'])).toBe(false);
+    expect(asksApp(['set', 'card', '--priority', 'high'])).toBe(false);
+    expect(asksApp([])).toBe(false);
   });
 });

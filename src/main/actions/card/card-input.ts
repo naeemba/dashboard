@@ -1,7 +1,6 @@
-import type { Refused } from '../../../shared/app/bridge';
+import type { CardInput, Refused } from '../../../shared/app/bridge';
 
-// The input every card action starts from: the project's folder and the card's id.
-export type CardInput = { projectPath: string; id: string };
+export type { CardInput };
 
 export function cardInput(raw: Record<string, unknown>): CardInput | Refused {
   const { projectPath, id } = raw;

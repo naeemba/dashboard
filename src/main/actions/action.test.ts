@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { channels } from '../app/channels';
 import { APP_VERBS, BOARD_REQUEST } from '../board/board-cli';
-import { action, actionRequests, bind, channelOf, registerActions, verbOf } from './action';
-import { CARD_ACTIONS } from './card/card-actions';
+import { action, actionRequests, bind, registerActions, verbOf } from './action';
+import { cardActions, type CardActionsMain } from './card/card-actions';
 
 // An action that answers with what it was given, so the test sees what each door handed it.
 const echo = action<null, Record<string, unknown>, { output: string }>('card.echo', {
@@ -35,8 +35,11 @@ describe('the action registry', () => {
     await expect(answer({ directory: '/', args: ['claim'] })).resolves.toEqual({ ok: true, output: 'the session command' });
   });
 
-  it('names a channel and a verb after the action, and the command asks for exactly these verbs', () => {
-    expect(CARD_ACTIONS.map((each) => channelOf(each.name))).toEqual(['card:move', 'card:ship', 'card:review']);
-    expect(CARD_ACTIONS.map((each) => verbOf(each.name))).toEqual([...APP_VERBS]);
+  // What main serves, not a list beside it: the actions cardActions binds and the channels it registers.
+  it('serves exactly the verbs the command asks for, and a channel only for card.move', () => {
+    const table = channels();
+    const { actions } = cardActions({ table, worktrees: () => [] } as unknown as CardActionsMain);
+    expect(actions.map((each) => verbOf(each.name))).toEqual([...APP_VERBS]);
+    expect(table.handled()).toEqual(['card:move']);
   });
 });

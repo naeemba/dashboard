@@ -19,10 +19,10 @@ Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the
 takes --project <name|aka> to work on that project's board, from ~/.dashboard/projects.yaml, instead
 of the board of the folder you are in.
 
-move, ship and review ask the running app, starting it when none answers: a move into Ship ships the
-card to an agent in a worktree, and one into Review starts its review loop. ship and review start them
-without a move; review is how to start a loop with the review.autoLoop setting off. On a worktree's
-board a move is only a move. Everything else edits the board's files alone.
+ship, review and a move into Ship or Review ask the running app, starting it when none answers: a move
+into Ship ships the card to an agent in a worktree, and one into Review starts its review loop. ship
+and review start them without a move; review is how to start a loop with the review.autoLoop setting
+off. On a worktree's board a move is only a move. Everything else edits the board's files alone.
 
 --notes replaces the card's description. To record what you found, use \`comment\`: it appends to the
 card's trail and takes nothing away. \`show\` prints one card with its description and its trail.`;

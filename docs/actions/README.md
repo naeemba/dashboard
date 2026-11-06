@@ -19,13 +19,25 @@ Neither door holds any of the logic; each only asks.
   A move into the column the card is already in writes nothing and still runs
   the entry: the board has written its own move already when it asks, and it is
   how a ship that stopped part way is picked up or a waiting card's loop started.
-  A refused ship or review leaves the move written and answers why.
-- **card.ship** (`card:ship`, `dashboard board ship <id>`): `shipFlow` in
-  `ship-flow.ts`, for a card on a project open in the app.
-- **card.review** (`card:review`, `dashboard board review <id>`): the review
-  start in `review-flow.ts` — the worktree swapped for a review one and
-  `/pr-loop` started in it. Refused for a card with no worktree, no pull request
-  on its branch's board, an agent still working, or a review already running.
+  The board's ask never moves the card: one a later keystroke has moved on
+  starts nothing. A refused ship or review leaves the move written and answers
+  why.
+- **card.ship** (`dashboard board ship <id>`): `shipFlow` in `ship-flow.ts`, for
+  a card on a project open in the app.
+- **card.review** (`dashboard board review <id>`): the review start in
+  `review-flow.ts` — the worktree swapped for a review one and `/pr-loop`
+  started in it. Refused for a card with no worktree, no pull request on its
+  branch's board, an agent still working, a review already running, or a card
+  past Review. One started this way that meets a dirty worktree is started
+  again by the sweep once the commit lands, whatever the setting.
+
+Only card.move has a channel: it is the only action the bridge exposes. A screen
+that needs ship or review registers its channel in the same change.
+
+The board asks card.move only for a move that changed the column, and only for
+Shift+Right or a drop (`screenMoveEntry` in `column-entry.ts`): Shift+Left is a
+card being put back, so walking one from Doing to Todo or from Done back past
+Review starts nothing.
 
 A move carries its source: `user` from the screen, `command` from the command,
 `automatic` from the review sweep. The door sets it; a caller cannot. An agent
@@ -45,9 +57,10 @@ starts its loop.
 edge; `run` returns a result with an `output` line or `{ refused }`
 (errors-rule-2); dependencies come in as ports, so a test passes fakes. `words`
 names the command's positional words after the verb. `bind` gives an action its
-ports, and `registerActions` and `actionRequests` bind every action to its
+ports, and `registerActions` and `actionRequests` bind each action to its
 channel (`<noun>:<verb>`, app-rule-1) and its board verb, once. The command's
-side is `APP_VERBS` in `board-cli.ts`; `action.test.ts` pins that it matches.
+side is `APP_VERBS` in `board-cli.ts`; `action.test.ts` pins that it matches
+what `cardActions` serves.
 
 ## Files
 
@@ -57,6 +70,7 @@ Folder: `src/main/actions/`.
 - `card/card-actions.ts` — main's wiring: shipFlow, reviewSweep and the three
   card actions with their ports
 - `card/move.ts`, `card/ship.ts`, `card/review.ts`, `card/card-input.ts`
+- `card/project-board.ts` — whether a folder's board is a project's own
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios
@@ -72,6 +86,10 @@ Folder: `src/main/actions/`.
   board. Walking a shipped card back to the column it came from is still the
   board view's (`bringHome` in `ships-away.ts`), so only a ship from the screen
   goes home.
-- `move`, `ship` and `review` need the running app, of the same build as the
-  command; a rebuilt command against an older app is refused until the app is
-  restarted, where the move used to be a file write that never asked.
+- `ship`, `review` and a `move` into Ship or Review need the running app, of the
+  same build as the command; a rebuilt command against an older app is refused
+  until the app is restarted. Every other move is a file edit (`asksApp` in
+  `board-cli.ts`) and works with the app closed.
+- Shift+Right through Review to Done, slowly enough that each save lands before
+  the next keystroke, starts the review loop at the Review step: the walk is
+  read one step at a time.

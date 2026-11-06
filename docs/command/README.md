@@ -20,8 +20,8 @@ for someone who has never seen the app: that is how a Claude session learns it.
 
 ## When it starts the app
 
-`pane ...`, `board move`, `ship` and `review`, and `project open`, `close` and
-`focus` need the running app. They
+`pane ...`, `board ship` and `review`, a `board move` into Ship or Review, and
+`project open`, `close` and `focus` need the running app. They
 ask the app the pane belongs to (`DASHBOARD_SOCKET`), else the one whose socket
 path is in `session-socket` in the app's userData folder. When neither answers
 they start the app detached and wait up to 30 seconds for it to write that file
@@ -37,8 +37,8 @@ userData folder (`DASHBOARD_USER_DATA`, set in a copy run with
 writes `session-socket` where the command waits for it. Bare `dashboard` with a
 `DASHBOARD_APP` that is gone says so and exits 1.
 
-The other `board` verbs, `project list`, `find` and `init` work on files and
-never start it:
+Every other `board` verb and move, `project list`, `find` and `init` work on
+files and never start it:
 the app already watches each project's `.dashboard` folder. Quitting,
 restarting or replacing the app is never the command's.
 

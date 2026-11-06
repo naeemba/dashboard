@@ -3,19 +3,16 @@ import type { ShipResult, WorktreeEntry } from '../../../shared/app/bridge';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import { shipEntry } from '../../../shared/app/log-entry';
 import { REVIEW_COLUMN, type Board } from '../../../shared/board/board';
-import { isManagerPath } from '../../../shared/manager/manager';
 import type { BoardChanges } from '../../board/board-changes';
 import { readBoard, writeBoard } from '../../board/board-store';
 import { realPath } from '../../ship/worktree-scan';
+import { isProjectBoard } from './project-board';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
 import { bind, registerActions, type BoundAction } from '../action';
 import { cardMove } from './move';
 import { cardReview } from './review';
 import { cardShip } from './ship';
-
-// The card actions in the order the registry lists them. action.test.ts pins their channels and verbs.
-export const CARD_ACTIONS = [cardMove, cardShip, cardReview] as const;
 
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
@@ -45,9 +42,7 @@ export function cardActions(main: CardActionsMain): { reviews: ReviewSweep; acti
     // A move from the command is written plainly, so the watcher logs it as the command's, as it did
     // when the command wrote the file itself.
     write: (projectPath, board, source) => (source === 'automatic' ? writeLogged(projectPath, board) : writeBoard(projectPath, board)),
-    // Through realPath, as slotOfProject does: the command's folder is process.cwd(), symlinks resolved.
-    projectBoard: (projectPath) => !isManagerPath(projectPath)
-      && !main.worktrees().some((entry) => realPath(entry.worktreePath) === realPath(projectPath)),
+    projectBoard: (projectPath) => isProjectBoard(projectPath, main.worktrees().map((entry) => entry.worktreePath), realPath),
     autoLoop: main.autoLoop,
     ship: (input) => ship.call(input),
     review: (input) => review.call(input),
@@ -63,7 +58,9 @@ export function cardActions(main: CardActionsMain): { reviews: ReviewSweep; acti
   });
   const review = bind(cardReview, { review: ({ id }) => reviews.review(id) });
 
-  const actions = [move, ship, review];
-  registerActions(main.table, actions);
-  return { reviews, actions };
+  // Every action is a board verb; only card.move has a channel, because it is the only one the bridge
+  // exposes. A screen that needs ship or review gets its channel in the same change.
+  // action.test.ts pins both lists against what is served here.
+  registerActions(main.table, [move]);
+  return { reviews, actions: [move, ship, review] };
 }
