@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { closeSync, fchmodSync, fsyncSync, mkdirSync, openSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, fchmodSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 // The name a write goes through, beside the file, until the rename. Exported so what watches or commits
@@ -51,4 +51,19 @@ export function replaceFile(filePath: string, text: string, mode?: number): void
     }
     throw error;
   }
+}
+
+// replaceFile only when the bytes differ, so a launch with nothing new leaves the file alone. A file
+// whose bytes match but whose mode does not (its execute bit dropped by a chmod, a restore or a sync)
+// is chmodded, not rewritten. Through replaceFile, so a program started mid-write is the old file or
+// the new one, never half of one.
+export function replaceFileIfChanged(filePath: string, text: string, mode?: number): void {
+  let current: string | null = null;
+  try {
+    current = readFileSync(filePath, 'utf8');
+  } catch {
+    // Not there yet.
+  }
+  if (current !== text) replaceFile(filePath, text, mode);
+  else if (mode !== undefined && (statSync(filePath).mode & 0o777) !== mode) chmodSync(filePath, mode);
 }

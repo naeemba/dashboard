@@ -19,6 +19,7 @@ commits cite the id.
 | [chat](chat/README.md) | The Claude screen: the project's main session as an Agent SDK chat |
 | [nvim](nvim/README.md) | The editor view, scrollback and file paths opened in it |
 | [board](board/README.md) | The kanban board and the `board` command |
+| [skills](skills/README.md) | The Claude Code skills the app installs: `/create-task` and `/adopt-docs` |
 | [command](command/README.md) | The `dashboard` command from any terminal: `board`, `pane` and `project` behind one entry |
 | [projects](projects/README.md) | `~/.dashboard/projects.yaml` and `dashboard project find`, `list`, `init`, `open`, `close` and `focus` |
 | [actions](actions/README.md) | What the app does on request — card move, ship and review — defined once in main for the screen and the command |
