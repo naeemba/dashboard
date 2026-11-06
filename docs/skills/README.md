@@ -24,25 +24,29 @@ requests, and writes the pattern this repository uses:
 
 It moves existing docs into the right feature without dropping any text, never deletes a doc it
 cannot place, and lists those docs (and any source file no feature claims) in the pull request.
-It works in a worktree of `origin/<default branch>` on a `docs/adopt-docs` branch, so the checkout
-it starts in is left as it was, and changes only Markdown. A repository already in the pattern
-(an index of feature folders and the docs rule in `CLAUDE.md`) is skipped with no pull request.
-It never merges.
+It works in a worktree of `origin/<default branch>` on a `docs/adopt-docs` branch, at a fixed path
+inside the repository's git folder that every later command names in full, so the checkout it
+starts in is left as it was, and changes only Markdown. A repository whose default branch is already
+in the pattern (an index of feature folders and the docs rule in `CLAUDE.md`), or that already has
+a `docs/adopt-docs` branch from an earlier run, is skipped with no pull request. It never merges
+(skills-decision-1).
 
 The skill's text is `ADOPT_DOCS_SKILL`, written from this repository's own `docs/` as the worked
 example. A change to the pattern here (the index's wording, the id scheme, the CLAUDE.md rule)
-changes that text in the same pull request.
+changes that text in the same pull request; `CLAUDE.md` says so beside the docs rule
+(skills-decision-2).
 
 ## Rolling /adopt-docs out to every project
 
-The rollout is the manager's, run by hand from the manager session; nothing in the app starts it.
+The rollout is the manager's, run by hand from the manager session; nothing in the app starts it
+(skills-decision-1).
 For each project in `~/.dashboard/projects.yaml` other than `dashboard`:
 
     node "$DASHBOARD_COMMAND" pane claim --project <name>
     node "$DASHBOARD_COMMAND" pane run <pane> '/adopt-docs'
 
-Each worker runs `/adopt-docs` in its project and ends on one line: that project's pull request URL,
-or "already in the docs pattern". Its hook tells the manager when it is done; the manager reads that
+Each worker runs `/adopt-docs` in its project and ends on one of three lines: that project's pull
+request URL, "already in the docs pattern", or "earlier run: docs/adopt-docs exists". Its hook tells the manager when it is done; the manager reads that
 line from each pane, collects one pull request link per project, and merges none of them.
 
 ## Files
@@ -60,4 +64,5 @@ Folders: `src/main/skills/`.
 - Given a launch whose skill files already match this build, when it runs, then no file is rewritten.
 - Given a build missing the `/create-task` program, when it launches, then `/adopt-docs` is still installed and one warning is logged.
 - Given a repository whose main checkout is on a branch with uncommitted work, when `/adopt-docs` runs there, then the pull request is opened from its own worktree and the checkout is unchanged.
-- Given a repository already in the pattern, when `/adopt-docs` runs, then it says so and opens nothing.
+- Given a repository whose default branch is already in the pattern, when `/adopt-docs` runs from a checkout on an older branch, then it says "already in the docs pattern" and opens nothing.
+- Given a repository with a `docs/adopt-docs` branch, when `/adopt-docs` runs, then it says "earlier run: docs/adopt-docs exists" and opens nothing.

@@ -37,14 +37,9 @@ the board, even where the repository's own \`CLAUDE.md\` says to move a card fir
 
 ## 1. Stop if it is already done
 
-If \`docs/README.md\` is an index of \`docs/<feature>/README.md\` folders and the
-repository's \`CLAUDE.md\` already says a change to a feature's files changes its
-docs, say "already in the docs pattern" and stop. No branch, no pull request.
-
-## 2. Work in a worktree of your own
-
 The checkout you start in may be on someone's branch with work in progress.
-Leave it exactly as it is.
+Leave it exactly as it is, and judge the repository by its default branch, not
+by that checkout.
 
 \`<default branch>\` is what \`git symbolic-ref --short refs/remotes/origin/HEAD\`
 names (without \`origin/\`), else \`main\`, else \`master\`. First:
@@ -53,13 +48,35 @@ names (without \`origin/\`), else \`main\`, else \`master\`. First:
     git ls-remote --heads origin docs/adopt-docs
     git branch --list docs/adopt-docs
 
-Either one printing a branch means an earlier run: stop and say so. Otherwise:
+Either one printing a branch means an earlier run: print
+"earlier run: docs/adopt-docs exists" and stop.
 
-    folder="$(mktemp -d)"
-    git worktree add --no-track -b docs/adopt-docs "$folder/adopt-docs" origin/<default branch>
+Then read \`git show origin/<default branch>:docs/README.md\` and
+\`git show origin/<default branch>:CLAUDE.md\`. If the first is an index of
+\`docs/<feature>/README.md\` folders and the second already says a change to a
+feature's files changes its docs, print "already in the docs pattern" and stop.
+No branch, no pull request.
 
-\`--no-track\`, so no later push can land on the default branch. Do everything
-below in that worktree.
+## 2. Work in a worktree of your own
+
+Every shell command you run starts a fresh shell: a variable set in one is
+empty in the next, and a \`cd\` does not carry over. So the worktree gets a
+fixed path, written out in full every time. Run:
+
+    git rev-parse --path-format=absolute --git-common-dir
+
+and call that path followed by \`/adopt-docs\` \`<worktree>\`
+(\`/home/me/app/.git/adopt-docs\`, say). Print it once, then write the literal
+path wherever \`<worktree>\` appears below, never a shell variable:
+
+    git worktree add --no-track -b docs/adopt-docs <worktree> origin/<default branch>
+
+\`--no-track\`, so no later push can land on the default branch. Everything
+below happens in that worktree: every git command is \`git -C <worktree> ...\`,
+every other command (\`gh\`, \`glab\`, a check script) is
+\`cd <worktree> && ...\` in the same command, and every file is read, written
+or edited by its absolute path under \`<worktree>\`. A command without one of
+those runs in the checkout you started in, on someone else's branch.
 
 ## 3. Read before writing
 
@@ -213,15 +230,15 @@ the docs hold the why.
   unclaimed in the pull request.
 - Every link and \`#anchor\` in \`docs/\`, \`README.md\` and \`CLAUDE.md\`
   resolves: write a small script that checks each one, rather than eyeballing.
-- \`git diff --stat origin/<default branch>\` shows only Markdown.
+- \`git -C <worktree> diff --stat origin/<default branch>\` shows only Markdown.
 - Commit in a few pieces (the moves, the new folders, the index and
-  \`CLAUDE.md\`), push with \`git push -u origin docs/adopt-docs\`, and open the
-  pull request with \`gh pr create\` (or \`glab mr create\`). The body says which
+  \`CLAUDE.md\`), push with \`git -C <worktree> push -u origin docs/adopt-docs\`, and open
+  the pull request with \`cd <worktree> && gh pr create\` (or \`glab mr create\`). The body says which
   features there are, what moved where, every doc left unplaced and why, every
   file left unclaimed, and every code comment or card still naming a moved doc.
   Do not merge.
-- Remove your worktree (\`git worktree remove\`) and the \`$folder\` it was in;
-  the branch stays.
+- Remove your worktree with \`git worktree remove <worktree>\`, run from
+  outside it; the branch stays.
 
 Print the pull request's URL and stop.
 `;
