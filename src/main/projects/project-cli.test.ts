@@ -79,7 +79,6 @@ describe('project add, set and remove', () => {
   const written = (words: string[], text: string | null = FILE) => {
     const answer = edit(words, text);
     if (!answer.ok || !('file' in answer) || answer.file === undefined) throw new Error(JSON.stringify(answer));
-    expect(answer.overwrite).toBe(true);
     const read = readProjects(answer.file);
     return read.ok ? read.projects.find((project) => project.name === 'screensaver') : read;
   };
@@ -106,7 +105,7 @@ describe('project add, set and remove', () => {
   });
 
   it('removes a project by name or aka', () => {
-    expect(edit(['remove', 'Mandala'])).toEqual({ ok: true, file: '- name: new-crm\n  aka: [crm]\n  path: /crm\n', overwrite: true, output: 'removed screensaver in projects.yaml' });
+    expect(edit(['remove', 'Mandala'])).toEqual({ ok: true, file: '- name: new-crm\n  aka: [crm]\n  path: /crm\n', output: 'removed screensaver in projects.yaml' });
   });
 });
 

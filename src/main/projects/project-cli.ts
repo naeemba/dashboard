@@ -5,7 +5,8 @@ import { wholePath } from '../nvim/file-open';
 import { projectNamed } from './project-named';
 import { firstProjectsFile } from './projects-first';
 import { findProjects, projectsListed, type Project } from './projects-file';
-import { addProject, CLEARABLE, realFolder, removeProject, setProject, type DeployChange, type ProjectChange, type ProjectsWrite } from './projects-write';
+import { realPath as realFolder } from '../app/real-path';
+import { addProject, CLEARABLE, removeProject, setProject, type DeployChange, type ProjectChange, type ProjectsWrite } from './projects-write';
 
 // The `project` noun's decisions: which verb, and what it answers given the file's text and, for init,
 // the folders the app knows. The files themselves are project-program.ts's to read, so every branch
@@ -37,11 +38,11 @@ export const PROJECT_REQUEST = 'project';
 // The verbs the app answers, over the socket; project-requests.ts reads the same list.
 export const APP_VERBS: readonly string[] = ['open', 'close', 'focus'];
 
-// `file` is what to write to the file before printing the output: init's never over a file that is
-// there, add, set and remove's with `overwrite`. `ask`, from open close and focus, is what to ask the
+// `file` is what to write to the file before printing the output: over the file read when there was
+// one, and never over one when there was not (init, or add with no file yet). `ask`, from open close and focus, is what to ask the
 // app: [PROJECT_REQUEST, verb, folder, name].
 export type ProjectAnswer =
-  | { ok: true; output: string; file?: string; overwrite?: true }
+  | { ok: true; output: string; file?: string }
   | { ok: false; message: string }
   | { ok: true; ask: string[] };
 
@@ -166,7 +167,7 @@ function projectEdit(
   }
   if (!result.ok) return result;
   const done = { add: 'added', set: 'changed', remove: 'removed' }[verb];
-  return { ok: true, file: result.text, overwrite: true, output: `${done} ${result.name} in ${filePath}` };
+  return { ok: true, file: result.text, output: `${done} ${result.name} in ${filePath}` };
 }
 
 // `project list`: the file's projects, each marked open when the app had it open at its last save, then

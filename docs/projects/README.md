@@ -71,7 +71,9 @@ The app adds a project to the file whenever it opens one the file does not list
 name and path only, the name made unique with `-2`, `-3`. It never rewrites,
 reorders or removes an entry, writes nothing while there is no file (that is
 `init`'s) or while the file does not read, and a failed write never fails the
-open.
+open. A launch reopens the pages it was left on the same way, so a project
+removed while its page is open comes back, name and path only, at the next
+launch: close its page first to keep it out.
 
 ## On screen
 

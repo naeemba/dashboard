@@ -1,8 +1,9 @@
-import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isMap, isSeq, parseDocument, type Document, type YAMLMap, type YAMLSeq } from 'yaml';
+import { realPath as realFolder } from '../app/real-path';
 import { replaceFile } from '../app/replace-file';
 import { wholePath } from '../nvim/file-open';
+import { exactProject } from './project-named';
 import { projectsListed, readProjects, readProjectsFile, type Project } from './projects-file';
 import { uniqueName, writtenPath } from './projects-first';
 
@@ -16,16 +17,6 @@ import { uniqueName, writtenPath } from './projects-first';
 
 // `name` is the entry's name once changed, for the command to say which project it changed.
 export type ProjectsWrite = { ok: true; text: string; name: string } | { ok: false; message: string };
-
-// Where a folder really is, so a project opened through a symlink is the entry that names the
-// folder by its other path. A folder that is not there is compared as written.
-export function realFolder(folder: string): string {
-  try {
-    return realpathSync(folder);
-  } catch {
-    return folder;
-  }
-}
 
 // One deploy as `set --deploy` gives it: the name says which, and only the fields given change.
 export type DeployChange = { name: string; role?: string; address?: string };
@@ -64,17 +55,22 @@ function entries(document: Document): YAMLMap[] {
   return (document.contents as YAMLSeq).items as YAMLMap[];
 }
 
-// The entry whose name or aka is the word, in any case, the way projectNamed matches.
-function entryIndex(projects: readonly Project[], word: string): number {
-  const wanted = word.trim().toLowerCase();
-  return projects.findIndex((project) => [project.name, ...project.aka].some((each) => each.toLowerCase() === wanted));
+// The file opened, and the entry whose name or aka is the word, the way `project open` matches.
+function located(text: string | null, filePath: string, word: string): { document: Document; project: Project; index: number } | { ok: false; message: string } {
+  const file = opened(text, filePath);
+  if (!file.ok) return file;
+  const project = exactProject(file.projects, word);
+  if (project === undefined) return { ok: false, message: `no project is called ${word}` };
+  return { document: file.document, project, index: file.projects.indexOf(project) };
 }
 
+// The entry naming the folder. A path written exactly as the folder skips the realpath call, which
+// is the common case for an entry the app appended itself.
 function listedFolder(projects: readonly Project[], folder: string, home: string, realPath: (folder: string) => string): Project | undefined {
   const real = realPath(folder);
   return projects.find((project) => {
     const whole = wholePath(project.path, home);
-    return whole !== undefined && realPath(whole) === real;
+    return whole !== undefined && (whole === folder || realPath(whole) === real);
   });
 }
 
@@ -88,7 +84,7 @@ function akaList(document: Document, aka: readonly string[]): YAMLSeq {
 // the folder, under whatever path; a name or aka another project has is readProjects' refusal.
 export function addProject(
   text: string | null, filePath: string, folder: string, fields: { name?: string; aka?: string[]; site?: string; about?: string },
-  home: string, realPath: (folder: string) => string = realFolder,
+  home: string, realPath: (folder: string) => string,
 ): ProjectsWrite {
   const file = opened(text, filePath);
   if (!file.ok) return file;
@@ -108,15 +104,13 @@ export function addProject(
 // `project set`: the clears first, so `--clear deploy --deploy name=...` replaces the list. An aka is
 // added beside the ones there, a deploy added or changed by its name, and site and about replaced.
 export function setProject(text: string | null, filePath: string, word: string, change: ProjectChange): ProjectsWrite {
-  const file = opened(text, filePath);
-  if (!file.ok) return file;
-  const index = entryIndex(file.projects, word);
-  if (index === -1) return { ok: false, message: `no project is called ${word}` };
-  const { document } = file;
-  const entry = entries(document)[index];
+  const found = located(text, filePath, word);
+  if ('ok' in found) return found;
+  const { document, project } = found;
+  const entry = entries(document)[found.index];
   for (const field of change.clear ?? []) entry.delete(field);
 
-  const known = new Set(change.clear?.includes('aka') ? [] : file.projects[index].aka.map((each) => each.toLowerCase()));
+  const known = new Set<string>(change.clear?.includes('aka') ? [] : project.aka.map((each) => each.toLowerCase()));
   const addedAka: string[] = [];
   for (const each of change.aka ?? []) {
     if (known.has(each.toLowerCase())) continue;
@@ -129,44 +123,41 @@ export function setProject(text: string | null, filePath: string, word: string, 
   if (change.site !== undefined) entry.set('site', change.site);
   if (change.about !== undefined) entry.set('about', change.about);
 
-  for (const deploy of change.deploy ?? []) {
+  if (change.deploy && change.deploy.length > 0) {
     const existing: unknown = entry.get('deploy', true);
     const list = isSeq(existing) ? existing : document.createNode([]) as YAMLSeq;
     if (list !== existing) entry.set('deploy', list);
-    const items = list.items;
-    const same = items.find((item): item is YAMLMap => isMap(item) && String(item.get('name')) === deploy.name);
-    if (same === undefined) {
-      items.push(document.createNode(deploy));
-      continue;
+    for (const deploy of change.deploy) {
+      const same = list.items.find((item): item is YAMLMap => isMap(item) && String(item.get('name')) === deploy.name);
+      if (same === undefined) list.items.push(document.createNode(deploy));
+      else {
+        if (deploy.role !== undefined) same.set('role', deploy.role);
+        if (deploy.address !== undefined) same.set('address', deploy.address);
+      }
     }
-    if (deploy.role !== undefined) same.set('role', deploy.role);
-    if (deploy.address !== undefined) same.set('address', deploy.address);
   }
-  return written(document, filePath, file.projects[index].name);
+  return written(document, filePath, project.name);
 }
 
 // `project remove`: the entry the word names, and nothing else.
 export function removeProject(text: string | null, filePath: string, word: string): ProjectsWrite {
-  const file = opened(text, filePath);
-  if (!file.ok) return file;
-  const index = entryIndex(file.projects, word);
-  if (index === -1) return { ok: false, message: `no project is called ${word}` };
-  entries(file.document).splice(index, 1);
-  return written(file.document, filePath, file.projects[index].name);
+  const found = located(text, filePath, word);
+  if ('ok' in found) return found;
+  entries(found.document).splice(found.index, 1);
+  return written(found.document, filePath, found.project.name);
 }
 
 // The file with an entry appended for a folder the app has opened, or null when there is nothing to
 // write: no file (init writes the first one), a file that does not read, or one that lists the folder
-// already. The name is the folder's, with -2, -3 after it when a name or aka has it.
+// already. The name is the folder's, with -2, -3 after it when a name or aka has it. A listed folder,
+// the case on almost every open, is answered from one read, before the document is parsed to edit.
 export function withOpenedProject(text: string | null, folder: string, home: string, realPath: (folder: string) => string = realFolder): string | null {
   if (text === null) return null;
-  const file = opened(text, 'projects.yaml');
-  if (!file.ok || listedFolder(file.projects, folder, home, realPath)) return null;
-  const taken = new Set(file.projects.flatMap((project) => [project.name, ...project.aka].map((word) => word.toLowerCase())));
-  const name = uniqueName(folder, taken);
-  entries(file.document).push(file.document.createNode({ name, path: writtenPath(folder, home) }));
-  const changed = written(file.document, 'projects.yaml', name);
-  return changed.ok ? changed.text : null;
+  const listed = projectsListed(text, 'projects.yaml');
+  if (!listed.ok || listedFolder(listed.projects, folder, home, realPath)) return null;
+  const taken = new Set(listed.projects.flatMap((project) => [project.name, ...project.aka].map((word) => word.toLowerCase())));
+  const added = addProject(text, 'projects.yaml', folder, { name: uniqueName(folder, taken) }, home, realPath);
+  return added.ok ? added.text : null;
 }
 
 // What main runs on every open. Like the recents history, the file is a convenience here: a write

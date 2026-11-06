@@ -31,7 +31,7 @@ export async function runProjectProgram(commandArguments: readonly string[]): Pr
     const { text, filePath } = readProjectsFile();
     const answer = runProjectCommand(commandArguments, text, filePath, knownFolders, homedir());
     if ('ask' in answer) return await askRunningApp(answer.ask);
-    if (answer.ok && answer.file !== undefined && answer.overwrite) replaceFile(filePath, answer.file);
+    if (answer.ok && answer.file !== undefined && text !== null) replaceFile(filePath, answer.file);
     else if (answer.ok && answer.file !== undefined) {
       mkdirSync(dirname(filePath), { recursive: true });
       // wx: a file written between the read above and now is still never overwritten.
