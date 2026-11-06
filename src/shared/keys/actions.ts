@@ -19,6 +19,7 @@ export type Action =
   | { kind: 'help' }
   | { kind: 'settings' }
   | { kind: 'worktrees' }
+  | { kind: 'whats-new' }
 | { kind: 'needs-you-next' }
   | { kind: 'mode-set'; mode: Mode }
   | { kind: 'terminal-focus'; index: number }
@@ -244,6 +245,13 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'worktrees', description: 'List the worktrees cards were shipped into',
     group: 'app', scope: 'global',
     action: { kind: 'worktrees' }, mac: 'Ctrl+Shift+W', other: 'Ctrl+Shift+W',
+  },
+  // Shift for the reason worktrees above gives. L for the list of what changed; the popup opens on
+  // its own after an update, and this brings it back.
+  {
+    name: 'whats-new', description: "Show what changed in this build: the pull requests merged into it",
+    group: 'app', scope: 'global',
+    action: { kind: 'whats-new' }, mac: 'Ctrl+Shift+L', other: 'Ctrl+Shift+L',
   },
   // Shift for the reason worktrees above gives. J for jump: the next thing waiting on you, in any
   // open project, from wherever you are.

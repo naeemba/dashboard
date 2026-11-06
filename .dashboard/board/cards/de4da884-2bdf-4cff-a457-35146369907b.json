@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-10-06T18:31:32.238Z",
-  "updatedAt": "2026-10-06T19:07:20.906Z",
+  "updatedAt": "2026-11-06T14:39:23.212Z",
   "branch": "board-backlog-filter",
   "pullRequest": 73,
   "comments": [
@@ -14,6 +14,6 @@
       "body": "Shipped in #73: Backlog column first on every board (board add defaults there), a filter over every card field (f, Shift+F resets, strip with Reset, hidden cards skipped by arrows/moves/attach/drag), and a sort button on each column heading. 1120 tests pass."
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 175
 }

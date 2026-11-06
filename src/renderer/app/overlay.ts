@@ -190,6 +190,20 @@ export function promptOverlay(
   });
 }
 
+// One row of a list on a sheet: its icon, its name, and a dimmer detail after it. The search dialogs'
+// rows and what's new's are this; each caller adds its own highlight and click.
+export function searchRowElement(glyph: IconName, nameText: string, detailText: string): HTMLLIElement {
+  const item = document.createElement('li');
+  const name = document.createElement('span');
+  name.className = 'search-name';
+  name.textContent = nameText;
+  const detail = document.createElement('span');
+  detail.className = 'search-detail';
+  detail.textContent = detailText;
+  item.append(icon(glyph), name, detail);
+  return item;
+}
+
 // The third sheet: a box to type in with a list under it that the arrows walk, Enter takes the
 // highlighted row and Escape leaves. Three dialogs are this — the project picker, the board's card
 // search and the Claude screen's /resume conversation picker — and they differ only in what a row
@@ -240,16 +254,9 @@ export function searchOverlay<Choice>(options: {
     box.focus();
 
     function renderRow(row: SearchRow<Choice>, index: number): HTMLElement {
-      const item = document.createElement('li');
+      const item = searchRowElement(options.glyph(row), row.name, row.detail);
       if (index === highlighted) item.classList.add('highlighted');
       if (row.className) item.classList.add(row.className);
-      const name = document.createElement('span');
-      name.className = 'search-name';
-      name.textContent = row.name;
-      const detail = document.createElement('span');
-      detail.className = 'search-detail';
-      detail.textContent = row.detail;
-      item.append(icon(options.glyph(row)), name, detail);
       item.addEventListener('click', () => finish(row.choice));
       return item;
     }

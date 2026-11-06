@@ -4,6 +4,13 @@
   "notes": "The comment says it: the `session` command is broken on Windows, not just its test. Both tests here drive the real `askApp` against the real `listenForSessions`, so the empty reply or timeout they get on `windows-latest` is what a worker pane gets when it runs `session ...` on Windows. The main session asks a worker to report back, and the call either says \"the app answered with something that was not a reply\" or hangs until it times out.\n\nTagged medium, not high, because the cause (the pipe not staying half open after the client's `end()`) is inferred and not yet reproduced outside CI. A likely fix, outside this PR, is to stop relying on half-close: the client writes the request followed by a newline and keeps its side open, and the server answers once it has read one line. That works the same over a unix socket and a named pipe. Then drop `halfOpenOnly`.\n\nIssue: https://github.com/naeemba/dashboard/issues/198\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441551443",
   "priority": "medium",
   "parent": null,
-  "column": "Backlog",
-  "order": 19
+  "updatedAt": "2026-11-06T14:39:25.378Z",
+  "comments": [
+    {
+      "at": "2026-11-06T14:39:25.111Z",
+      "body": "Fixed by PR #196 (the request ends at its newline); its named-pipe round trip now runs and passes on the Windows CI job (#197)."
+    }
+  ],
+  "column": "Done",
+  "order": 179
 }

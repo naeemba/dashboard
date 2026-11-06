@@ -1,0 +1,11 @@
+{
+  "id": "2639b165-d4bd-44f3-bd6c-8a7ad1f13c12",
+  "title": "Split renderer.ts under the 600-line limit",
+  "notes": "src/renderer/renderer.ts is at 610 code lines after PR #220 (was 612), over the 600-line ceiling in the user's file-size rule, and it is meant to be wiring only (workflow-rule-2). Split along its real seams (each wiring group that sets up one feature: a feature's handlers and listeners move beside that feature as a create<Feature>Wiring(ports) function), not by moving arbitrary lines. Count code lines, not comments. No behaviour change; checks green; note the before/after counts in the PR. main.ts is at 599, so leave it alone unless the same seam applies.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-06T14:34:37.219Z",
+  "updatedAt": "2026-11-06T14:37:12.000Z",
+  "column": "Doing",
+  "order": 1
+}
