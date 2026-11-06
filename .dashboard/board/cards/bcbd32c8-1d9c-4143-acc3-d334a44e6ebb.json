@@ -1,0 +1,11 @@
+{
+  "id": "bcbd32c8-1d9c-4143-acc3-d334a44e6ebb",
+  "title": "Build and publish releases from GitHub Actions for Linux, Windows and macOS",
+  "notes": "There is no GitHub release yet. Build and publish the app from GitHub Actions. Agreed with the user (2026-11-06): no signing for now; three platforms; the first release is cut later, after this card and the what's-new card are merged.\n\n- New workflow .github/workflows/release.yml, triggered by workflow_dispatch with an input bump: patch | minor | major (first release will be minor, v2.42.0).\n- Job 1 (ubuntu): bump package.json version by the input (workflow-rule-3: the version moves only on a release), update CHANGELOG.md with a new section (merged PRs since the last v* tag: number, title, link; grouped as GitHub's generated notes group them), commit to main, tag vX.Y.Z, push, create a draft release with GitHub's generated release notes plus the CHANGELOG section.\n- Job 2, matrix on the tag: ubuntu-latest (linux x64: .deb, .rpm, .zip), windows-latest (Squirrel Setup.exe and its RELEASES/nupkg), macos-14 (macOS arm64: .zip and .dmg). pnpm install --frozen-lockfile, pnpm run make, then `gh release upload vX.Y.Z <files>`; no new dependency (no Forge publisher). Electron's binary and pnpm store cached.\n- Job 3: when every matrix leg uploaded, publish the draft. A failed leg leaves the release a draft and says which leg.\n- The release body lists one download link per platform, written from the uploaded asset names.\n- Unsigned: README and the release body say so, with the one-time step per OS (macOS right-click Open; Windows SmartScreen More info, Run anyway).\n- Check the workflow on a fork or with a pre-release tag (v2.42.0-rc.1) before the real one; put that run's link in the PR. docs/workflow (README, decisions, history) updated.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-06T13:57:06.794Z",
+  "updatedAt": "2026-11-06T13:57:06.794Z",
+  "column": "Doing",
+  "order": 0
+}

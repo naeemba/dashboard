@@ -1,0 +1,11 @@
+{
+  "id": "2df43137-5e1a-4723-a9dc-204ec37a0a5d",
+  "title": "Show what changed in a what's-new popup after an update or rebuild",
+  "notes": "Show what changed when the app is reinstalled or updated. Agreed with the user (2026-11-06).\n\n- At build time, bundle a changelog: the merged pull requests on main (git log --first-parent of merge commits: commit, date, PR number, title), newest first, capped (e.g. last 200), as JSON in the build. Works for local rebuild.sh builds and for GitHub release builds alike, since both stamp <version>+<commit>.\n- The app stores the build it last showed (userData). On the first launch of a build whose commit differs, a popup lists only the entries newer than the last-shown commit (all of them, capped, when none is known), grouped by date, each PR a link to GitHub; a release build also shows its version heading.\n- Keyboard first: arrows and Page keys scroll, Enter on an entry opens its PR in the browser, Escape closes; a key (a row in src/shared/keys/actions.ts) and a help-dialog entry reopen it any time.\n- Not shown when nothing changed (same commit), and never on the very first install with no history (just remember the build).\n- Which entries to show (from last-shown to current) is a small tested module (workflow-rule-2). Help blurb within BLURB_WORD_LIMIT; docs/app updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-06T13:57:06.899Z",
+  "updatedAt": "2026-11-06T13:57:06.899Z",
+  "column": "Doing",
+  "order": 1
+}
