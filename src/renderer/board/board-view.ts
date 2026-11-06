@@ -17,7 +17,6 @@ import {
   pullRequestFrom,
   returnFromShip,
   selectionOf,
-  shipColumnIndex,
   shipHome,
   sortColumn,
   type Card,
@@ -51,6 +50,8 @@ import { cardEditor, MULTILINE, type EditableField } from './card-editor';
 import { putEditBack, takeEdit } from '../app/carried-edit';
 import { bringHome, shipsAway } from '../ship/ships-away';
 import { failureText } from '../../shared/errors/failure';
+import { columnEntry } from '../../shared/board/column-entry';
+import { isManagerPath } from '../../shared/manager/manager';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -548,9 +549,12 @@ export function createBoardView(options: BoardOptions): BoardView {
     const landed = cardAt(state.board, state.selection);
     if (!moving || !landed || from.column === state.selection.column) return;
     const column = state.board.columns[state.selection.column].name;
-    // Only for what the screen shows while main works: the notice, and the home a shipped card walks
-    // back to. Whether a ship ran is main's answer.
-    const shipping = state.selection.column === shipColumnIndex(state.board);
+    // The same table main runs, asked here only for what the screen does while main works: nothing to
+    // ask about, or the notice and the home a shipped card walks back to. A move by a person never
+    // depends on the setting, and main still says no for a worktree's board.
+    const entry = columnEntry({ column, source: 'user', autoLoop: true, projectBoard: !isManagerPath(options.projectPath) });
+    if (entry === 'nothing') return;
+    const shipping = entry === 'ship';
     void written.then((saved) => {
       if (saved) askMove(moving, landed, home, column, shipping);
     });
@@ -746,8 +750,8 @@ export function createBoardView(options: BoardOptions): BoardView {
         // A notice, not a failure, because main has already logged a failed ship as the `ship` entry:
         // through onError the log would hold every failed ship twice.
         if ('refused' in answer) return options.onNotice(answer.refused);
-        // The last line is what entering the column started: the branch shipped on, the loop begun.
-        options.onNotice(answer.ran === 'review' ? answer.output.split('\n').at(-1) ?? '' : '');
+        // What entering Review started, said; a ship says so by walking the card home.
+        options.onNotice(answer.ran === 'review' ? answer.started : '');
         if (answer.ran !== 'ship') return;
         await bringHome({
           read: () => readAgain(false),

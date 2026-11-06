@@ -1,4 +1,4 @@
-import { REVIEW_COLUMN, SHIP_COLUMN } from './board';
+import { isColumnNamed, REVIEW_COLUMN, SHIP_COLUMN } from './board';
 
 // What moved a card. `user` is a gesture on the board, `command` is `dashboard board move`, and
 // `automatic` is the app itself: the review sweep moving a shipped card into Review once its pull
@@ -10,7 +10,7 @@ export type MoveSource = 'user' | 'command' | 'automatic';
 export type ColumnEntry = 'ship' | 'review' | 'nothing';
 
 export type Entering = {
-  // The column the card is now in, as the board spells it.
+  // The column the card is now in, as the board spells it; matched the way columnNamed matches.
   column: string;
   source: MoveSource;
   // settings.review.autoLoop: whether a card that reaches Review on its own starts its review loop.
@@ -24,10 +24,9 @@ export type Entering = {
 // the sweep, asks it, so a column cannot mean one thing to a drag and another to `board move`.
 export function columnEntry({ column, source, autoLoop, projectBoard }: Entering): ColumnEntry {
   if (!projectBoard) return 'nothing';
-  const name = column.trim().toLowerCase();
-  if (name === SHIP_COLUMN.toLowerCase()) return 'ship';
+  if (isColumnNamed(column, SHIP_COLUMN)) return 'ship';
   // A card that reached Review on its own waits there when the loop is off; one sent there by a
   // person always starts it, which is how a user with the setting off starts a loop by hand.
-  if (name === REVIEW_COLUMN.toLowerCase()) return source !== 'automatic' || autoLoop ? 'review' : 'nothing';
+  if (isColumnNamed(column, REVIEW_COLUMN)) return source !== 'automatic' || autoLoop ? 'review' : 'nothing';
   return 'nothing';
 }

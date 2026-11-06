@@ -4,8 +4,8 @@ import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } f
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
 import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
-import type { CardInput } from '../actions/card/card-input';
 import { entryForCard } from './worktree-store';
+import { notOpenRefusal } from './ship';
 
 // The second half of a ship, in the order it happens. An agent that has put a pull request number on
 // its card is finished, so the card lands in Review, the worktree the work was written in is thrown
@@ -181,7 +181,7 @@ export type ReviewSweep = {
   forget: (cardId: string) => void;
   // The review loop for one shipped card, started now: card.review's whole job. Refused, with why,
   // for a card with no worktree, no pull request yet, an agent still working, or a review running.
-  review: (input: CardInput) => Promise<{ output: string } | Refused>;
+  review: (cardId: string) => Promise<{ output: string } | Refused>;
 };
 
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
@@ -279,12 +279,12 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // so does this, so two starts of one card — the sweep's and a keystroke's — cannot both get through.
   const starting = new Set<string>();
 
-  async function review({ id }: CardInput): Promise<{ output: string } | Refused> {
+  async function review(id: string): Promise<{ output: string } | Refused> {
     const entry = entryForCard(ports.worktrees(), id);
     if (entry === undefined) return { refused: `card ${id} has no worktree to review; ship it first` };
     if (entry.reviewing || starting.has(id)) return { refused: `"${entry.title}" is already being reviewed` };
     const slot = ports.slotOf(entry.projectPath);
-    if (slot === -1) return { refused: `"${entry.title}" is on a project the app does not have open; open it first` };
+    if (slot === -1) return { refused: notOpenRefusal(entry.title) };
     if (ports.agentWorksIn(slot, entry.pane)) return { refused: `the agent on "${entry.title}" is still working` };
     const pullRequest = finishedIn(entry);
     if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };

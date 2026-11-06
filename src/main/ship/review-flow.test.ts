@@ -82,7 +82,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
 function sweepWith(made: ReviewPorts): ReviewSweep {
   const sweep: ReviewSweep = reviewSweep({
     ...made,
-    arrived: (entry) => sweep.review({ projectPath: entry.projectPath, id: entry.cardId }),
+    arrived: (entry) => sweep.review(entry.cardId),
   });
   return sweep;
 }
@@ -442,23 +442,23 @@ describe('reviewSweep', () => {
     expect(arrivals).toBe(1);
     expect(columnOfCard(projectPath)).toBe('Review');
     expect(log.started).toEqual([]);
-    await expect(sweep.review({ projectPath, id: CARD })).resolves.toEqual({ output: 'review started for "Ship it", pull request #12' });
+    await expect(sweep.review(CARD)).resolves.toEqual({ output: 'review started for "Ship it", pull request #12' });
     expect(log.started).toHaveLength(1);
   });
 
   it('refuses a review by hand while the agent works, before it has a pull request, and twice', async () => {
     const working = flight(12);
-    await expect(reviewSweep(ports(working.entry, { agentWorksIn: () => true }).ports).review({ projectPath: working.projectPath, id: CARD }))
+    await expect(reviewSweep(ports(working.entry, { agentWorksIn: () => true }).ports).review(CARD))
       .resolves.toEqual({ refused: 'the agent on "Ship it" is still working' });
     const early = flight(null);
-    await expect(reviewSweep(ports(early.entry).ports).review({ projectPath: early.projectPath, id: CARD }))
+    await expect(reviewSweep(ports(early.entry).ports).review(CARD))
       .resolves.toEqual({ refused: '"Ship it" has no pull request on ship-it yet' });
-    await expect(reviewSweep(ports(early.entry).ports).review({ projectPath: early.projectPath, id: 'other' }))
+    await expect(reviewSweep(ports(early.entry).ports).review('other'))
       .resolves.toEqual({ refused: 'card other has no worktree to review; ship it first' });
     const twice = flight(12);
     const sweep = reviewSweep(ports(twice.entry).ports);
-    const first = sweep.review({ projectPath: twice.projectPath, id: CARD });
-    await expect(sweep.review({ projectPath: twice.projectPath, id: CARD })).resolves.toEqual({ refused: '"Ship it" is already being reviewed' });
+    const first = sweep.review(CARD);
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: '"Ship it" is already being reviewed' });
     await first;
   });
 });

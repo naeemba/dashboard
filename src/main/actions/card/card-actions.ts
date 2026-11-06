@@ -1,4 +1,3 @@
-import { resolve } from 'node:path';
 import type { Channels } from '../../app/channels';
 import type { ShipResult, WorktreeEntry } from '../../../shared/app/bridge';
 import type { LogDraft } from '../../../shared/app/log-entry';
@@ -6,7 +5,8 @@ import { shipEntry } from '../../../shared/app/log-entry';
 import { REVIEW_COLUMN, type Board } from '../../../shared/board/board';
 import { isManagerPath } from '../../../shared/manager/manager';
 import type { BoardChanges } from '../../board/board-changes';
-import { openBoard, readBoard, writeBoard } from '../../board/board-store';
+import { readBoard, writeBoard } from '../../board/board-store';
+import { realPath } from '../../ship/worktree-scan';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
 import { bind, registerActions, type BoundAction } from '../action';
@@ -41,15 +41,16 @@ export function cardActions(main: CardActionsMain): { reviews: ReviewSweep; acti
   const shipCard = shipFlow({ ...main, forgetReview: (cardId) => reviews.forget(cardId) });
 
   const move = bind(cardMove, {
-    read: (projectPath) => openBoard(projectPath, false),
+    read: (projectPath) => readBoard(projectPath, false),
     // A move from the command is written plainly, so the watcher logs it as the command's, as it did
     // when the command wrote the file itself.
     write: (projectPath, board, source) => (source === 'automatic' ? writeLogged(projectPath, board) : writeBoard(projectPath, board)),
+    // Through realPath, as slotOfProject does: the command's folder is process.cwd(), symlinks resolved.
     projectBoard: (projectPath) => !isManagerPath(projectPath)
-      && !main.worktrees().some((entry) => resolve(entry.worktreePath) === resolve(projectPath)),
+      && !main.worktrees().some((entry) => realPath(entry.worktreePath) === realPath(projectPath)),
     autoLoop: main.autoLoop,
-    ship: (input) => ship.call({ ...input }),
-    review: (input) => review.call({ ...input }),
+    ship: (input) => ship.call(input),
+    review: (input) => review.call(input),
   });
   const ship = bind(cardShip, {
     read: (projectPath) => readBoard(projectPath, false).board,
@@ -60,7 +61,7 @@ export function cardActions(main: CardActionsMain): { reviews: ReviewSweep; acti
       return result;
     },
   });
-  const review = bind(cardReview, { review: reviews.review });
+  const review = bind(cardReview, { review: ({ id }) => reviews.review(id) });
 
   const actions = [move, ship, review];
   registerActions(main.table, actions);

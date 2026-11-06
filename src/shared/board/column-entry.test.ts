@@ -31,8 +31,8 @@ describe('columnEntry', () => {
     }
   });
 
-  it('reads the column name the way the command does, in any case', () => {
-    expect(columnEntry({ column: ' ship ', source: 'command', autoLoop: true, projectBoard: true })).toBe('ship');
+  it('matches a column written by hand in another case, as `board move` does', () => {
+    expect(columnEntry({ column: 'ship', source: 'command', autoLoop: true, projectBoard: true })).toBe('ship');
     expect(columnEntry({ column: 'REVIEW', source: 'command', autoLoop: false, projectBoard: true })).toBe('review');
   });
 });

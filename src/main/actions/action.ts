@@ -2,7 +2,7 @@ import type { Channels } from '../app/channels';
 import { isRecord } from '../../shared/app/is-record';
 import type { Refused } from '../../shared/app/bridge';
 import type { MoveSource } from '../../shared/board/column-entry';
-import { APP_VERBS, BOARD_REQUEST } from '../board/board-cli';
+import { BOARD_REQUEST } from '../board/board-cli';
 import type { SessionReply, SessionRequest } from '../workers/session-cli';
 import { answered, refused } from '../workers/session-requests';
 
@@ -86,7 +86,7 @@ export function actionRequests(
     const [word, verb, folder, ...rest] = request.args;
     if (word !== BOARD_REQUEST) return otherwise(request);
     const bound = actions.find((each) => verbOf(each.name) === verb);
-    if (bound === undefined || folder === undefined || !APP_VERBS.includes(verb)) {
+    if (bound === undefined || folder === undefined) {
       return refused('the board request was not one the app could read');
     }
     if (rest.length !== bound.words.length) {

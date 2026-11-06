@@ -41,7 +41,7 @@ async function move(ports: CardMovePorts, column: string, source: MoveSource = '
 describe('card.move', () => {
   it('writes the move, then ships a card entering Ship', async () => {
     const { ports, seen } = fakePorts();
-    await expect(move(ports, 'Ship')).resolves.toEqual({ output: 'Fix login  →  Ship\nshipped on fix-login', ran: 'ship' });
+    await expect(move(ports, 'Ship')).resolves.toEqual({ output: 'Fix login  →  Ship\nshipped on fix-login', ran: 'ship', started: 'shipped on fix-login' });
     expect(seen.writes.map(({ board, source }) => [columnOf(board), source])).toEqual([['Ship', 'command']]);
     expect(seen.ran).toEqual(['ship']);
   });
@@ -54,7 +54,7 @@ describe('card.move', () => {
 
   it('leaves a card the sweep moves into Review waiting when the loop is off', async () => {
     const { ports, seen } = fakePorts({ autoLoop: () => false });
-    await expect(move(ports, 'Review', 'automatic')).resolves.toEqual({ output: 'Fix login  →  Review', ran: 'nothing' });
+    await expect(move(ports, 'Review', 'automatic')).resolves.toEqual({ output: 'Fix login  →  Review', ran: 'nothing', started: '' });
     expect(seen.ran).toEqual([]);
     expect(seen.writes.map(({ source }) => source)).toEqual(['automatic']);
   });
@@ -68,7 +68,7 @@ describe('card.move', () => {
   it('writes nothing for a card already there and still runs the entry', async () => {
     const { ports, seen } = fakePorts();
     await move(ports, 'Ship');
-    await expect(move(ports, 'Ship', 'user')).resolves.toEqual({ output: 'Fix login is already in Ship\nshipped on fix-login', ran: 'ship' });
+    await expect(move(ports, 'Ship', 'user')).resolves.toEqual({ output: 'Fix login is already in Ship\nshipped on fix-login', ran: 'ship', started: 'shipped on fix-login' });
     expect(seen.writes).toHaveLength(1);
     expect(seen.ran).toEqual(['ship', 'ship']);
   });

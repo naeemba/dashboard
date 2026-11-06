@@ -6,7 +6,8 @@ import { action, isRefused } from '../action';
 import { cardInput, type CardInput } from './card-input';
 
 export type CardMoveInput = CardInput & { column: string; source: MoveSource };
-export type CardMoveResult = { output: string; ran: ColumnEntry };
+// `started` is what the entry's action answered, empty when it ran none.
+export type CardMoveResult = { output: string; ran: ColumnEntry; started: string };
 
 export type CardMovePorts = {
   // The project's board, without salvage: a move is committed, so a card file that does not parse is
@@ -51,11 +52,11 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
       autoLoop: ports.autoLoop(),
       projectBoard: ports.projectBoard(projectPath),
     });
-    if (entry === 'nothing') return { output: moved.output, ran: entry };
+    if (entry === 'nothing') return { output: moved.output, ran: entry, started: '' };
     const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id });
     // The move stays written: a card refused a ship or a review is still where it was put, and the
     // refusal says why nothing started there.
     if (isRefused(started)) return { refused: `${moved.output}; ${started.refused}` };
-    return { output: `${moved.output}\n${started.output}`, ran: entry };
+    return { output: `${moved.output}\n${started.output}`, ran: entry, started: started.output };
   },
 });

@@ -120,7 +120,12 @@ function replaceColumn(board: Board, index: number, cards: Card[]): Board {
 // written by hand with "ship" is not a board the feature quietly refuses to work on, and `board move
 // <id> done` is what anyone types.
 export function columnNamed(board: Board, name: string): number {
-  return board.columns.findIndex((column) => column.name.toLowerCase() === name.toLowerCase().trim());
+  return board.columns.findIndex((column) => isColumnNamed(column.name, name));
+}
+
+// The match columnNamed makes, for a caller holding a column's name rather than the board.
+export function isColumnNamed(columnName: string, name: string): boolean {
+  return columnName.toLowerCase() === name.toLowerCase().trim();
 }
 
 export function shipColumnIndex(board: Board): number {

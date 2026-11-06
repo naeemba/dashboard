@@ -1,5 +1,6 @@
 import { cardById, type Board } from '../../../shared/board/board';
 import type { ShipRequest, ShipResult } from '../../../shared/app/bridge';
+import { notOpenRefusal } from '../../ship/ship';
 import { action } from '../action';
 import { cardInput, type CardInput } from './card-input';
 
@@ -20,7 +21,7 @@ export const cardShip = action<CardShipPorts, CardInput, { output: string }>('ca
     const card = cardById(ports.read(projectPath), id);
     if (card === undefined) return { refused: `no card with id ${id}` };
     const slot = ports.slotOf(projectPath);
-    if (slot === -1) return { refused: `"${card.title}" is on a project the app does not have open; open it first` };
+    if (slot === -1) return { refused: notOpenRefusal(card.title) };
     const shipped = await ports.ship({ projectPath, cardId: id, title: card.title, slot });
     return shipped.ok ? { output: `"${card.title}" shipped on ${shipped.entry.branch}` } : { refused: shipped.message };
   },
