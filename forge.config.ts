@@ -90,8 +90,10 @@ const config: ForgeConfig = {
     new MakerSquirrel({}),
     // A zip on Linux too: the release offers one beside the .deb and .rpm.
     new MakerZIP({}, ['darwin', 'linux']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    // The packaged binary is named for productName, Dashboard; both Linux makers look for the
+    // package name, dashboard, unless told.
+    new MakerRpm({ options: { bin: 'Dashboard' } }),
+    new MakerDeb({ options: { bin: 'Dashboard' } }),
   ],
   plugins: [
     new VitePlugin({

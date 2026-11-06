@@ -105,7 +105,9 @@ jobs:
             # Squirrel only, as in CI: the other makers are for a mac or Linux.
             targets: --targets @electron-forge/maker-squirrel
           - name: macos
-            os: macos-14
+            # Apple silicon. macos-14 is no longer offered: its legs failed with "The configuration
+            # 'macos-14-arm64-us-default' is not supported".
+            os: macos-latest
             electron-cache: ~/Library/Caches/electron
     defaults:
       run:
