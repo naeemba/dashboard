@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-10-12T11:15:05.802Z",
-  "updatedAt": "2026-10-12T11:19:09.662Z",
+  "updatedAt": "2026-11-06T14:39:23.739Z",
   "branch": "linux-pane-copy",
   "pullRequest": 74,
   "comments": [
@@ -14,6 +14,6 @@
       "body": "PR #74: Ctrl+Shift+C / Ctrl+Shift+V copy and paste in a pane off a mac, as terminal-copy and terminal-paste rows. Mac unbound, Cmd keys reach the menu. Version 1.12.0. Not run in the app."
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 178
 }

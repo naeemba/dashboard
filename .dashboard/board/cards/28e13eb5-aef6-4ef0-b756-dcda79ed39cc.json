@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-10-06T14:14:10.174Z",
-  "updatedAt": "2026-10-06T14:31:55.301Z",
+  "updatedAt": "2026-11-06T14:39:23.371Z",
   "branch": "app-look",
   "pullRequest": 72,
   "comments": [
@@ -14,6 +14,6 @@
       "body": "PR #72: tabs in the title row, a status bar at the foot with a view switch, board lanes and raised cards, one dialog sheet with keycaps and search, Lucide icons throughout. index.css split into chrome, board, dialogs and which-key stylesheets. Panes and keys unchanged. v1.11.0."
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 176
 }

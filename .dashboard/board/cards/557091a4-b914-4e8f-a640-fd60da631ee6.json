@@ -5,13 +5,13 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-05T15:01:08.306Z",
-  "updatedAt": "2026-11-05T15:07:51.786Z",
+  "updatedAt": "2026-11-06T14:39:25.618Z",
   "comments": [
     {
       "at": "2026-11-05T15:07:51.786Z",
       "body": "The user (2026-11-05): when an agent learns something new about a project, say a test environment and its address, it should be recorded. So: --deploy on 'project set' adds or updates one deployment by name (never wipes the others), and the CLAUDE.md snippet in docs/command/README.md tells agents to run 'dashboard project set <name> --deploy name=...,role=...,address=...' when they find a deployment, a site or an alias the file does not have. Same for --aka (adds, does not replace) and --site/--about (replace)."
     }
   ],
-  "column": "Backlog",
-  "order": 28
+  "column": "Doing",
+  "order": 2
 }
