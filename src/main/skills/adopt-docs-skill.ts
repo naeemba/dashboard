@@ -8,7 +8,7 @@ description: Move this repository's docs into the docs/<feature>/ pattern (READM
 
 Move this repository's documentation into the feature docs pattern, then open
 one pull request with the change. Docs only: never change code, config, tests or
-the board. $ARGUMENTS
+the board, even where the repository's own \`CLAUDE.md\` says to move a card first.
 
 ## The pattern
 
@@ -20,10 +20,13 @@ the board. $ARGUMENTS
 
 - A feature is a part of the product a person would name: "the board", "sign-in",
   "billing", "the importer". Find them by folder and by what the code does, not
-  by file type. Five to fifteen features is usual; one per top-level folder is
+  by file type. Five to fifteen is usual, fewer in a small repository; one per top-level folder is
   usually too many or too few.
-- Every source file is claimed by exactly one feature, in that feature's
-  README under \`## Files\`. Tests sit beside what they test.
+- Every tracked file outside \`docs/\` and \`.dashboard/\` is claimed by exactly
+  one feature, in that feature's README under \`## Files\`: source, config,
+  build files, lockfiles and assets alike. Generated files are claimed by their
+  folder (\`drizzle/\`), not one by one. Tests sit beside what they test. A
+  cross-cutting folder claims files only when no feature owns them.
 - \`hard-rules.md\`, \`decisions.md\` and \`history.md\` exist only once they have
   a first entry. Never write an empty one or a placeholder.
 - Every rule and decision has a stable id, \`<feature>-rule-N\` and
@@ -43,13 +46,20 @@ docs, say "already in the docs pattern" and stop. No branch, no pull request.
 The checkout you start in may be on someone's branch with work in progress.
 Leave it exactly as it is.
 
-    git fetch origin
-    git worktree add -b docs/adopt-docs "$(mktemp -d)/adopt-docs" origin/<default branch>
-
 \`<default branch>\` is what \`git symbolic-ref --short refs/remotes/origin/HEAD\`
-names (without \`origin/\`), else \`main\`, else \`master\`. Do everything below in
-that worktree. A branch named \`docs/adopt-docs\` already on the remote means an
-earlier run: stop and say so.
+names (without \`origin/\`), else \`main\`, else \`master\`. First:
+
+    git fetch origin
+    git ls-remote --heads origin docs/adopt-docs
+    git branch --list docs/adopt-docs
+
+Either one printing a branch means an earlier run: stop and say so. Otherwise:
+
+    folder="$(mktemp -d)"
+    git worktree add --no-track -b docs/adopt-docs "$folder/adopt-docs" origin/<default branch>
+
+\`--no-track\`, so no later push can land on the default branch. Do everything
+below in that worktree.
 
 ## 3. Read before writing
 
@@ -61,8 +71,10 @@ earlier run: stop and say so.
 - History: \`git log --merges --first-parent --format='%ad %s' --date=short\` on the
   default branch, and the merged pull requests (\`gh pr list --state merged
   --limit 200 --json number,title,mergedAt,body\`, or \`glab mr list --merged\`
-  on GitLab). Commit messages and pull request bodies are where decisions and
-  rules come from.
+  on GitLab), and the commits pushed straight to the default branch
+  (\`git log --first-parent --no-merges\`). Commit messages and pull request
+  bodies are where decisions and rules come from. A pull request's body can be
+  overtaken by a later commit in it: its final diff is what was decided.
 
 ## 4. Write each feature's folder
 
@@ -76,7 +88,7 @@ earlier run: stop and say so.
 
     ## Files
 
-    Folders: \`src/billing/\`.
+    Folders: \`src/billing/\`.     (leave this line out when it has no folder)
 
     - <what this group does>: \`invoice.ts\`, \`invoice.test.ts\`
 
@@ -91,10 +103,12 @@ tests. Do not invent a scenario the code does not do. Open questions are gaps
 you found (a TODO, a known bug, two parts that disagree); leave the heading out
 when there are none.
 
-**hard-rules.md**, only for a rule whose breaking was seen: a rule in
-\`CLAUDE.md\`, a "never"/"always" comment in the code, a fix that names what went
-wrong. Each entry says what happens to a person when it is broken, not the
-mechanism:
+**hard-rules.md**, only for a rule whose breaking was seen: a fix commit or pull
+request that names what went wrong, or a "never"/"always" comment that says what
+happened. A rule in \`CLAUDE.md\` with no such record stays a one-liner there,
+with no entry. A comment saying what *would* happen is not a seen breaking. Each
+entry says what happens to a person when it is broken, not the mechanism, and
+each one gets a one-line rule in \`CLAUDE.md\` (step 7):
 
     # <Feature>: hard rules
 
@@ -107,8 +121,9 @@ mechanism:
     made.">
 
 **decisions.md**, for questions that were settled: an option weighed and
-turned down, a "we chose X over Y" in a pull request or commit. Give the date and
-the pull request when the history has them. Never invent a reason; if the
+turned down, a "we chose X over Y" in a pull request or commit. Give the merge
+date and the pull request, or the commit's date and short hash for a direct
+push. Never invent a reason; if the
 history says what was chosen but not why, write only what was chosen.
 
     # <Feature>: decisions
@@ -120,7 +135,8 @@ history says what was chosen but not why, write only what was chosen.
     <What was decided, what it was weighed against, why.> (2026-03-14, #42)
 
 **history.md**, one line per merged change that touched the feature, oldest
-first, from the merged pull requests:
+first: each merged pull request by its merge date, each direct push by its
+commit date and short hash:
 
     # <Feature>: history
 
@@ -133,17 +149,22 @@ first, from the merged pull requests:
 Every existing doc either moves into a feature (or a cross-cutting folder) or
 stays where it is. Nothing is lost:
 
-- Move with \`git mv\` when a whole file belongs to one feature, then reshape it.
-  Text that splits across features is copied into each, word for word, before
-  being reshaped.
+- Move with \`git mv\` to the feature's \`README.md\` when a whole file belongs to
+  one feature, then reshape it, moving its settled questions out to
+  \`decisions.md\`. Text that splits across features is copied into each, word
+  for word, in a commit of its own before the commit that reshapes it, so the
+  diff shows nothing was dropped.
 - Every fact, rule, example and link in the old docs is somewhere in the new
-  ones. Rewording is fine; dropping is not.
+  ones. Rewording is fine; dropping is not. Check it section by section against
+  the old file before committing.
 - Specs, plans, research and design notes that are inputs rather than the
   record go to \`docs/<feature>/\` if they belong to one, else stay where they
   are, listed in the index as inputs.
 - A doc you cannot place stays exactly where it is. Never delete a doc you
   cannot place. List each one in the pull request.
-- Fix every link the move broke, in the docs, the \`README.md\` and \`CLAUDE.md\`.
+- Fix every link and every backticked path the move broke, in the docs, the
+  \`README.md\` and \`CLAUDE.md\`. A code comment or a board card naming a moved
+  doc stays as it is: list each one in the pull request as a follow-up.
 
 ## 6. Write the index
 
@@ -166,7 +187,8 @@ stays where it is. Nothing is lost:
     |---|---|
     | [billing](billing/README.md) | <one line> |
 
-then \`## Cross-cutting\` if there is any, then a line for each input folder.
+then \`## Cross-cutting\` if there is any (same table), then \`## Inputs\`: one
+line per spec, plan or research file or folder left as an input.
 
 ## 7. Add the docs rule to CLAUDE.md
 
@@ -180,20 +202,26 @@ imports when it is a link or an \`@\` import. Near the top, under the title:
     \`decisions.md\`. Read the entry before arguing with a rule.
 
 Then end each rule already in \`CLAUDE.md\` that now has a hard-rules entry
-with its id in brackets: \`(billing-rule-1)\`. Keep every rule's wording;
-\`CLAUDE.md\` stays the one-line rules, the docs hold the why.
+with its id in brackets: \`(billing-rule-1)\`, and add a one-line rule, with its
+id, for each hard-rules entry \`CLAUDE.md\` did not have yet. Keep every existing
+rule's wording, with or without an id; \`CLAUDE.md\` stays the one-line rules,
+the docs hold the why.
 
 ## 8. Check, commit, open the pull request
 
 - Every source file is claimed by one feature, and only one. List any you left
   unclaimed in the pull request.
-- Every link in \`docs/\`, \`README.md\` and \`CLAUDE.md\` resolves.
+- Every link and \`#anchor\` in \`docs/\`, \`README.md\` and \`CLAUDE.md\`
+  resolves: write a small script that checks each one, rather than eyeballing.
 - \`git diff --stat origin/<default branch>\` shows only Markdown.
 - Commit in a few pieces (the moves, the new folders, the index and
-  \`CLAUDE.md\`), push, and open the pull request with \`gh pr create\` (or
-  \`glab mr create\`). The body says which features there are, what moved where,
-  every doc left unplaced and why, and every file left unclaimed. Do not merge.
-- Remove your worktree (\`git worktree remove\`); the branch stays.
+  \`CLAUDE.md\`), push with \`git push -u origin docs/adopt-docs\`, and open the
+  pull request with \`gh pr create\` (or \`glab mr create\`). The body says which
+  features there are, what moved where, every doc left unplaced and why, every
+  file left unclaimed, and every code comment or card still naming a moved doc.
+  Do not merge.
+- Remove your worktree (\`git worktree remove\`) and the \`$folder\` it was in;
+  the branch stays.
 
 Print the pull request's URL and stop.
 `;
