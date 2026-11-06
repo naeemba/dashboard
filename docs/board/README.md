@@ -44,7 +44,10 @@ puts a card there when it is not told a column.
 There is a Ship column, just right of Todo. Moving a card into it — Shift
 with either arrow, a drop from either side, or `dashboard board move <id>
 Ship` — hands it to an agent, and `dashboard board ship <id>` does the same
-without the move. The app refuses if the project has anything uncommitted
+without the move. A card in Done moves only by dragging it: Shift with an
+arrow on it is refused with an error naming the card, since the highlight may
+be on the wrong one (board-decision-3). The app refuses if the project has
+anything uncommitted
 outside .dashboard/, fetches and branches off the project's base branch, makes a
 worktree in a folder beside the project, and starts an agent in a worker
 that is sitting at a prompt with nothing running in it, or in a new worker

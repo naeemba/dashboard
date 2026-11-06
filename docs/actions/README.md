@@ -36,9 +36,9 @@ that needs ship or review registers its channel in the same change.
 
 The board asks card.move only for a move that changed the column
 (`screenMoveEntry` in `column-entry.ts`), in either direction, as the agreed
-design has it. Walking a card left from Done back past Review and Ship
-therefore starts a review and then a ship; that is raised on the pull request
-as an open question, not decided here.
+design has it. A card in Done cannot be moved by key at all, only dragged
+(board-decision-3), so a finished card is never walked back into a review and
+a ship by mistake.
 
 A move carries its source: `user` from the screen, `command` from the command,
 `automatic` from the review sweep. The door sets it; a caller cannot. An agent

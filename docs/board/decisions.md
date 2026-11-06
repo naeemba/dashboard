@@ -59,7 +59,18 @@ saying why. A command is as deliberate as a keystroke, so now a move into Ship
 from the command, a drop from either side or Shift+Right goes through card.move
 and ships (actions-decision-1); so does a move into Review, which starts the
 review loop, and so does Shift+Left. What it costs: walking a card from Doing
-back to Todo ships it at the Ship step, and walking a finished card from Done
-back starts a review at Review and ships it again at Ship; a card walked
-rightward through Review starts its loop at that step. A card whose agent still
-works is refused, as a second ship always was.
+back to Todo ships it at the Ship step, and a card walked rightward through
+Review starts its loop at that step. A card whose agent still works is refused,
+as a second ship always was. A finished card cannot be walked back from Done by
+key at all (board-decision-3).
+
+## board-decision-3: A card in Done moves only by dragging it
+
+**Shift with an arrow on a card in Done is refused with an error naming the
+card; a drag still moves it.** A finished card is merged, so a keystroke on it
+is more likely the highlight on the wrong card than a decision, and under
+board-decision-2 walking it left would start a review at Review and ship it
+again at Ship. Picking the card up with the mouse is deliberate enough to
+allow. `keyboardMoveRefusal` in `done-lock.ts` decides it, with its test. The
+command (`dashboard board move`) is not a keystroke on a highlight and is not
+refused.

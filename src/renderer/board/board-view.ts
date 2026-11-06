@@ -51,6 +51,7 @@ import { putEditBack, takeEdit } from '../app/carried-edit';
 import { bringHome, shipsAway } from '../ship/ships-away';
 import { failureText } from '../../shared/errors/failure';
 import { screenMoveEntry } from '../../shared/board/column-entry';
+import { keyboardMoveRefusal } from '../../shared/board/done-lock';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -886,7 +887,10 @@ export function createBoardView(options: BoardOptions): BoardView {
           state = { ...state, selection };
           return moveHighlight();
         }
-        case 'board-move':
+        case 'board-move': {
+          // A card in Done moves only by dragging it; done-lock.ts says why.
+          const refusal = keyboardMoveRefusal(state.board, state.selection);
+          if (refusal !== null) return options.onError(refusal);
           // Up and down trade places with the next card you can see, not one the filter hides.
           if (isFilterActive(filter) && (action.direction === 'up' || action.direction === 'down')) {
             const row = reorderRow(visible, state.selection, action.direction);
@@ -900,6 +904,7 @@ export function createBoardView(options: BoardOptions): BoardView {
           }
           // The row the card is leaving, which a ship needs: where the card goes back to once it works.
           return moveThenAsk(state.selection, moveCard(state.board, state.selection, action.direction));
+        }
         case 'board-attach': {
           // The one refusal worth explaining. The others — no card above, nothing selected — are
           // obvious from the screen. attachmentRing decides it on the same call, so the message cannot
