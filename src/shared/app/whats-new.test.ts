@@ -62,6 +62,7 @@ describe('parseShownRecord', () => {
     expect(parseShownRecord(null)).toBeNull();
     expect(parseShownRecord({})).toBeNull();
     expect(parseShownRecord({ newest: { commit: 3 } })).toBeNull();
+    expect(parseShownRecord({ newest: { commit: 'abc', time: '' } })).toBeNull();
   });
 });
 

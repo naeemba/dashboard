@@ -54,7 +54,7 @@ export function pullRequestUrl(repository: string, pullRequest: number): string 
 export function parseShownRecord(value: unknown): ShownRecord | null {
   if (!isRecord(value) || !('newest' in value)) return null;
   const { newest } = value;
-  if (isRecord(newest) && typeof newest.commit === 'string' && typeof newest.time === 'string') {
+  if (isRecord(newest) && typeof newest.commit === 'string' && typeof newest.time === 'string' && !Number.isNaN(Date.parse(newest.time))) {
     return { newest: { commit: newest.commit, time: newest.time } };
   }
   return newest === null ? { newest: null } : null;

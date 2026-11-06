@@ -45,11 +45,11 @@ build carried. The same build carries the same newest entry, so that alone tells
 a new build that merged something from one that did not. The renderer hands main
 what this build carries over `whats-new:record` and gets back the record before,
 so the record moves forward whether or not anything is shown; the same build
-again, or an older one, writes nothing (`recordMovesForward`). Which entries to show is `entriesToShow` in
-`whats-new.ts`: the last shown entry is found by its commit, and one this build
-no longer carries is passed by time, so an older build installed over a newer
-one shows nothing. `whats-new:record` is a client channel: on a remote screen
-it answers for this install, not the host's.
+again, or an older one, writes nothing (`recordMovesForward`). Which entries to
+show is `entriesToShow` in `whats-new.ts`: the last shown entry is found by its
+commit, and one this build no longer carries is passed by time, so an older
+build installed over a newer one shows nothing. `whats-new:record` is a client
+channel: on a remote screen it answers for this install, not the host's.
 
 ## Files
 
