@@ -320,6 +320,8 @@ export function registerChatSessions(
         // for as a summary, the text the pane folds into the conversation; left to the default, a
         // newer model's thinking arrives empty. The flag alone leaves whether to think to the settings.
         // A worker screen runs as a terminal worker does: auto mode, its own name, no dispatch prompt.
+        // Every settings file loads, as in the terminal, so its allow rules apply (workers-decision-5).
+        settingSources: ['user', 'project', 'local'],
         permissionMode: preferences.get(slot)?.permissionMode ?? (worker ? 'auto' : undefined),
         extraArgs: { name: worker?.name ?? mainSessionName(projectPath), 'thinking-display': 'summarized' },
         hooks: worker?.hooks,

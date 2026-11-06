@@ -16,3 +16,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-05 #209 — Main hears a worker stopped only after three minutes with no report, once per stop, as a status line (workers-decision-1)
 - 2026-11-05 — Main hears a worker stopped at once when its Stop hook says nothing is in flight or scheduled, and a worker waiting on its own work is listed paused (workers-decision-1)
 - 2026-11-05 — `pane run --screen` runs a worker as a Claude screen in its pane, opt-in, its done detection from its own Stop hook (workers-decision-5)
+- 2026-11-06 — A worker screen asks permission as a terminal worker does: the user's allow rules, then a question in its box; the trial's `gh pr create` refusal was not reproduced (workers-decision-5)
