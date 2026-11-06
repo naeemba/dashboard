@@ -111,7 +111,7 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 
 - Pane: `pane.ts`, `pane-actions.ts`, `pane-channels.ts`, `pane-layout.ts`,
   `pane-openers.ts`, `pane-reading.ts`, `pane-screen-copy.ts`, `pane-sends.ts`,
-  `terminals.ts`, `jumps.ts`
+  `pane-output-wiring.ts` (output, exit and the working report), `terminals.ts`, `jumps.ts`
 - Shell and process: `shell.ts`, `process-tree.ts`, `shell-directory.ts`,
   `shell-directory-lookup.ts`, `working-panes.ts`, `free-pane.ts`, `waiting.ts`
 - Pane host: `pane-host-protocol.ts`, `pane-host-server.ts`,
