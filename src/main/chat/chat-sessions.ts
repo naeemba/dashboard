@@ -15,7 +15,7 @@ import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
 import { exportTarget } from './chat-export-target';
-import { sessionToMeasure } from './chat-start';
+import { closedAtQuit, sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
@@ -28,6 +28,8 @@ import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
 import { unpacked } from '../app/unpacked';
 import { nameMemoryFiles } from '../drawer/measured-memory';
+import { inputQueue, type InputQueue } from './input-queue';
+import type { HostedParams } from '../workers/screen-host-protocol';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started the first time the page's Claude screen is shown (its measure asks), on the
@@ -54,6 +56,9 @@ export type ChatHost = {
   projectPath(slot: number): string | undefined;
   // The worker screen running under this key, or undefined for a page's main.
   worker(slot: number): ScreenSession | undefined;
+  // A worker screen's session run in the screen host, so it outlives the app, or null when there is
+  // no host and it runs here (screen-host-client.ts).
+  hosted(key: string, params: HostedParams): Promise<Query | null>;
   // The environment every pane gets, so the agent's own shell can find the board command too.
   environment: Record<string, string>;
   userData: string;
@@ -80,8 +85,6 @@ const NOTHING_TO_BRANCH = 'Nothing to branch yet: send a prompt first.';
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
 type SideQuestions = { askSideQuestion(question: string): Promise<{ response: string } | null> };
 
-export type InputQueue<T> = AsyncIterable<T> & { push(message: T): void; close(): void };
-
 // `stopped` is a close the app asked for — a project closed, a new conversation — which ends the
 // stream like a crash does and must not be reported as one.
 type Session = {
@@ -90,26 +93,9 @@ type Session = {
   // Kept with what was asked, so a screen that connects while one waits can still answer it.
   asks: Map<string, { ask: PermissionAsk; resolve(result: PermissionResult): void }>;
   stopped: boolean;
+  // Run in the screen host, which a quit leaves running.
+  hosted: boolean;
 };
-
-// The prompts of one session, handed to the SDK as the async iterable streaming input mode reads.
-export function inputQueue<T>(): InputQueue<T> {
-  const waiting: T[] = [];
-  let wake: (() => void) | null = null;
-  let closed = false;
-  return {
-    push(message) { waiting.push(message); wake?.(); },
-    close() { closed = true; wake?.(); },
-    async *[Symbol.asyncIterator]() {
-      for (;;) {
-        while (waiting.length > 0) yield waiting.shift() as T;
-        if (closed) return;
-        await new Promise<void>((resolve) => { wake = resolve; });
-        wake = null;
-      }
-    },
-  };
-}
 
 // The CLI the SDK drives, from the platform package pnpm installed beside it. Named here rather than
 // left to the SDK because a packaged app keeps it in app.asar.unpacked: nothing can be executed from
@@ -306,7 +292,7 @@ export function registerChatSessions(
     const resume = worker ? undefined : remembered[projectPath];
     const input = inputQueue<SDKUserMessage>();
     const asks: Session['asks'] = new Map();
-    const session: Session = { input, asks, stopped: false, query: query({
+    const params: HostedParams = {
       prompt: input,
       options: {
         cwd: projectPath,
@@ -352,7 +338,9 @@ export function registerChatSessions(
         // (onUserDialog) are left undeclared, so the CLI never sends one and keeps its own fallback.
         onElicitation: async (request, options) => elicitationResult(request, await ask(slot, asks, elicitationAsk(request), options.signal)),
       },
-    }) };
+    };
+    const hosted = worker ? await host.hosted(worker.session, params) : null;
+    const session: Session = { input, asks, stopped: false, hosted: hosted !== null, query: hosted ?? query(params) };
     // Failing, the session stays on the settings file's level and fast mode until the next pick.
     const replayed = replayedFlagSettings(preferences.get(slot));
     if (Object.keys(replayed).length > 0) session.query.applyFlagSettings(replayed).catch(() => undefined);
@@ -756,7 +744,10 @@ export function registerChatSessions(
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
     stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
-    stopAll: () => { for (const slot of [...sessions.keys()]) stop(slot); },
+    // A quit: the screen host's sessions stay up for the next launch to take back.
+    stopAll: () => {
+      for (const [slot, session] of [...sessions]) void session.then((running) => { if (closedAtQuit(running)) stop(slot); }, () => undefined);
+    },
     // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
     tell: (slot, text) => send(slot, [{ type: 'text', text }]),
     // One of those taken back while it still waits in the queue: a worker's report read after its notice.

@@ -47,6 +47,7 @@ import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
 import { registerPaneOpeners } from './panes/pane-openers';
 import { registerWorkerChannels } from './workers/worker-channels';
 import { screenWorkers } from './workers/screen-workers';
+import { workerScreenHost } from './workers/screen-host-client';
 import { channels, registerWithIpc } from './app/channels';
 import { agentStartEntry, paneExitEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
@@ -470,8 +471,9 @@ table.handle('recent-projects:read', () => existingProjects(readRecentPaths(rece
 // "Error invoking remote method" prefix.
 table.handle('projects:open', async (screen, projectPath: string | null): Promise<ProjectOpen> => {
   // The launch's restore opens every project here, and one opened before the pane host has said what it
-  // kept would start fresh shells in panes that already have one.
-  await shellHost.ready;
+  // kept would start fresh shells in panes that already have one; before the screen host has, a worker
+  // screen it still runs would be counted done.
+  await Promise.all([shellHost.ready, workerScreens.host.ready]);
   if (projectPath === null) {
     const refused = folderDialogRefusal(screen);
     if (refused !== null) return { refused };
@@ -584,12 +586,13 @@ registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal: panes
 // The Claude screen's sessions. chat-sessions.ts holds what one is; main hands over the way to every
 // screen and which project a slot holds.
 const workerScreens = screenWorkers({
-  file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(),
-  tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
+  // The screen host runs their sessions, so they outlive this process too (workers-decision-6).
+  file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
+  tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => chats.start(key), notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
 });
 const chats = registerChatSessions(table, {
   send: (slot, event) => { sendToRenderer('chat:receive', slot, event); workerScreens.observe(slot, event); },
-  projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, environment: paneEnvironment, userData: app.getPath('userData'),
+  projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'),
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
   heard: (slot, sender) => workerAnswers.heard(slot, sender),
@@ -601,7 +604,7 @@ try {
   mkdirSync(MANAGER_FOLDER, { recursive: true });
   chats.open(MANAGER_SLOT);
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
-  void shellHost.ready.then(() => {
+  void Promise.all([shellHost.ready, workerScreens.host.ready]).then(() => {
     adoptSurvivors(MANAGER_SLOT, MANAGER_FOLDER);
     screensComeBack(MANAGER_SLOT, MANAGER_FOLDER);
     startMainsWaitedOn();

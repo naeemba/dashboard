@@ -5,7 +5,8 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { hostCommand, hostLaunch, launchPaneHost, paneHost } from './pane-host-client';
 import { hostProof, line, lineReader, paneHostAddress, paneKey, pipeName, pipeTokenFile, prepareHostSocket, renewPipeToken, type FromHost, type SpawnRequest, type ToHost } from './pane-host-protocol';
-import { acceptApps, paneHostServer } from './pane-host-server';
+import { acceptApps } from './host-socket';
+import { paneHostServer } from './pane-host-server';
 import type { PaneShell } from './pane-shell';
 
 // A shell that does what the test tells it, in place of node-pty.

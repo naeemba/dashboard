@@ -195,6 +195,7 @@ export function lineReader<T>(message: (value: T) => void): (chunk: string) => v
   };
 }
 
-export function line(message: ToHost | FromHost): string {
+// Also the screen host's (screen-host-protocol.ts), so both hosts frame their lines the same way.
+export function line<Message extends { type: string }>(message: Message): string {
   return `${JSON.stringify(message)}\n`;
 }

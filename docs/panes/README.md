@@ -114,7 +114,7 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   `pane-output-wiring.ts` (output, exit and the working report), `terminals.ts`, `jumps.ts`
 - Shell and process: `shell.ts`, `process-tree.ts`, `shell-directory.ts`,
   `shell-directory-lookup.ts`, `working-panes.ts`, `free-pane.ts`, `waiting.ts`
-- Pane host: `pane-host-protocol.ts`, `pane-host-server.ts`,
+- Pane host: `pane-host-protocol.ts`, `host-socket.ts` (shared with the screen host, workers-decision-6), `pane-host-server.ts`,
   `pane-host-entry.ts`, `pane-host-client.ts`, `pane-shell.ts`, `pane-shells.ts`,
   `adopted-pane.ts`, and `vite.pane-host.config.ts` at the root
 - Output no faster than it draws: `output-pauses.ts`, and `write-flow.ts` in

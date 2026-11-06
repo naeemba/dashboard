@@ -184,7 +184,7 @@ How it is built, so the chat code does not fork:
   `stop-notices.ts` rules (workers-decision-1). UserPromptSubmit and PostToolUse report running. A
   permission question is the screen's own ask, which marks the pane blocked. Stop does not run for an
   interrupted turn or a session that dies, so the SDK's `result` and the session's end also end the turn
-  for the review sweep, without a report to main. A worker back from a restart starts with its turn over.
+  for the review sweep, without a report to main. A worker back from a restart starts with its turn over, unless the screen host kept it mid-turn (workers-decision-6).
 - Pane readings carry `screen`, so `paneIsBusy` and every picker and refusal built on it count the pane
   as an agent's; its hidden shell sits at a prompt and its command runs nothing.
 - The pane keeps its plain shell, hidden under the screen, so everything that counts panes, releases
@@ -205,8 +205,8 @@ throwaway clone on a second instance; it opened draft PR #216, left unmerged):
 
 What blocks making it the default, each a Backlog card:
 
-- A worker screen's Claude is the app's child, so a restart ends the turn it was in; a terminal
-  worker's keeps running in the pane host.
+- ~~A worker screen's Claude is the app's child, so a restart ends the turn it was in.~~ It runs in the
+  screen host now, off Windows (workers-decision-6).
 - The working line once kept counting after the turn ended, and the real card's screen once showed no
   reply after a `pane send` its transcript had. Neither was reproduced.
 - The task strip was never caught with a row in it, so it is unchecked on a worker screen.
@@ -228,3 +228,64 @@ worker screen is asked as a terminal worker is:
 Why the trial's session reached the classifier is not known: its debug log and demo instance are gone.
 If a worker screen is refused again, run the command through the CLI with `--permission-mode dontAsk`
 in the same folder; a refusal there means the rules did not match, not that the screen differs.
+
+## workers-decision-6: A worker screen's session runs in the screen host, outside the app
+
+**A worker screen's Agent SDK session runs in the screen host, a detached `node` process beside the
+pane host, so a quit or restart leaves its turn going the way a terminal worker's goes on in the pane
+host.** Card 461bb646, the first of workers-decision-5's blockers. A page's main stays in the app: it
+is resumed on its conversation at every launch, and nothing waits on it mid-turn the way main waits on
+a worker.
+
+Why a process of its own rather than the pane host: the SDK and every session's traffic would then
+live in the process holding every terminal of every project, and a session that crashes it or grows
+in it takes them all down. The two share their socket code instead: `reachHost`, `attempt` and
+`acceptApps` from `src/main/panes/host-socket.ts`, the framing (`line`, `lineReader`) and
+`prepareHostSocket` from `pane-host-protocol.ts`, and `launchPaneHost` from `pane-host-client.ts`,
+which starts either host.
+
+How it is built:
+
+- `chat-sessions.ts` still drives every session. For a worker it asks the screen host first and gets
+  back a Query whose methods all go over the socket (`hostedQuery` in `screen-host-client.ts`); with no
+  host it runs the SDK in the app as before. Nothing else in the chat code knows the difference.
+- The host keys a session by its conversation id, which stays the same across a restart where its pane
+  id does not. The app's `start` for a key the host already runs takes that session up instead of
+  starting another.
+- The callbacks stay in the app. A question (`canUseTool`, `onElicitation`) is sent to the app and
+  waits for its answer, through a restart if it has to; the app that takes the session up is sent the
+  questions still waiting. A hook is answered by the host at once and told to the app, held while no
+  app has the session: a Stop hook that ran while the app was away reports done to main when the
+  project opens again. A held hook keeps only its name, Stop's input excepted. Every hook the app
+  has today returns nothing, so none needs its answer heard.
+- Messages are not held, but for a result: a screen opening reads its conversation back from the
+  transcript, as it does after any restart, and a result is what says a turn ended without a Stop
+  hook (an API error, a usage limit). The host counts a turn running from UserPromptSubmit to the
+  result, so a worker taken back mid-turn is counted working for the review sweep, and one whose
+  turn ended is not.
+- A stop ends the session in the app at once, and the host tells the app nothing more of it, so
+  nothing of the one still closing can land on a new session under the same key. A start for a key
+  the app just stopped begins a new session.
+- An option that is a callback, other than those, is refused rather than dropped by the line.
+- The app tries to reach or launch the host once per run, shared by every worker starting together.
+- The host answers one app at a time, as the pane host does; a second Dashboard on the same user data
+  runs its worker screens itself. It exits once no app is connected and no session runs.
+- It is run by the `node` a login shell finds, as the pane host is, so the Agent SDK is bundled into
+  `screen-host-entry.mjs` (node cannot read it inside the asar) as an ES module, since the SDK reads
+  `import.meta.url` as it loads. The CLI binary is the app's unpacked one, named in the options.
+
+Checked by hand with the bundled host and the real CLI (Haiku), a stand-in app on the socket: a turn
+running `sleep 15` went on after the app quit 1.5s in and wrote its file 14s later; a second app saw it
+`busy` while running and heard its reply, result and Stop hook live, or, arriving after it ended, saw
+it idle and heard the held Stop hook. Stopping every session let the host exit.
+
+Watch for:
+
+- Windows has none: a named pipe needs the proof the pane host does (`paneHostAddress`), not built yet.
+  Worker screens there still die with the app.
+- A protocol bump, or an app update that changes the socket's name, leaves the old host's sessions
+  running unseen; a worker brought back then resumes its conversation in a second process. Bump only for
+  a change an older host would misread.
+- A session that dies while no app is connected and is the last one running takes the host and what it
+  held with it; that worker comes back with its turn over and main is not told, as before.
+- A session in the host runs the build that started it until it ends, as a terminal worker's Claude does.

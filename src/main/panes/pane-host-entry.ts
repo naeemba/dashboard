@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import net from 'node:net';
 import { prepareHostSocket } from './pane-host-protocol';
-import { acceptApps, paneHostServer } from './pane-host-server';
+import { acceptApps } from './host-socket';
+import { paneHostServer } from './pane-host-server';
 import { spawnShell } from './pane-shell';
 
 // The pane host: a node process the app starts detached, so the shells in it outlive the app.

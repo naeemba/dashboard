@@ -12,13 +12,15 @@ afterEach(() => { rmSync(folder, { recursive: true, force: true }); });
 const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const START = { session: SESSION, name: 'api-terminal-2', prompt: 'fix it\n\nSendMessage to main-api when done' };
 
-function workers(file = path.join(folder, 'screen-workers.json')) {
+function workers(file = path.join(folder, 'screen-workers.json'), kept: Record<string, { busy: boolean }> = {}) {
   const said: string[] = [];
   const screens = screenWorkers({
     file,
     changed: () => said.push('changed'),
     tell: (key, text) => said.push(`tell ${key} ${text.split('\n')[0]}`),
     stop: (key) => said.push(`stop ${key}`),
+    start: (key) => said.push(`start ${key}`),
+    host: { ready: Promise.resolve(), kept: (session) => (session in kept ? { key: session, ...kept[session] } : undefined), query: () => Promise.resolve(null) },
     notify: (id, state, waiting) => said.push(`${id} ${state}${waiting ? ` ${waiting.background}/${waiting.scheduled}` : ''}`),
   });
   return { screens, said, file };
@@ -113,6 +115,19 @@ describe('screenWorkers', () => {
     expect(after.screens.session(screenKey('4:3'))).toMatchObject({ session: SESSION, resume: false });
     expect(after.screens.working('4:3')).toBe(false);
     expect(after.screens.comeBack(4, '/work/api')).toEqual([]);
+  });
+
+  // The screen host kept the session through the restart: a turn still under way is counted working,
+  // so the review sweep leaves its worktree alone, and the session is taken up at once to hear it.
+  it('takes up at once a worker the screen host kept, working while its turn goes on', () => {
+    const before = workers();
+    before.screens.start('2:3', '/work/api', '/work/api', START, null, '/work/api');
+    before.screens.start('2:4', '/work/api', '/work/api', { ...START, session: 'other' }, null, '/work/api');
+    const after = workers(before.file, { [SESSION]: { busy: true }, other: { busy: false } });
+    after.screens.comeBack(4, '/work/api');
+    expect(after.screens.working('4:3')).toBe(true);
+    expect(after.screens.working('4:4')).toBe(false);
+    expect(after.said).toEqual([`start ${screenKey('4:3')}`, `start ${screenKey('4:4')}`]);
   });
 
   // Resuming an id with no transcript fails every prompt after the restart.
