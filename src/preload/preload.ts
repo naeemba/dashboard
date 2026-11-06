@@ -14,6 +14,7 @@ const bridge: DashboardBridge = {
   onHostChange: (listener) => ipcRenderer.on('host:change', (_event, host) => listener(host)),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openExternal: (url) => ipcRenderer.send('link:open', url),
+  recordWhatsNew: (current) => ipcRenderer.invoke('whats-new:record', current),
   notify: (title, body, paneId) => ipcRenderer.send('notification:show', title, body, paneId),
   onNotificationClick: (listener) =>
     ipcRenderer.on('notification:click', (_event, paneId) => listener(paneId)),

@@ -49,6 +49,7 @@ import { screenWorkers } from './workers/screen-workers';
 import { channels, registerWithIpc } from './app/channels';
 import { agentStartEntry, paneExitEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
+import { registerWhatsNew } from './app/whats-new-store';
 import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
 import { SESSION_FILE } from './app/session';
 import { sessionIndexStore } from './workers/session-index-store';
@@ -113,6 +114,7 @@ process.on('uncaughtException', (error: unknown) => failures.report(error));
 process.on('unhandledRejection', (error: unknown) => failures.report(error));
 const table = channels();
 const logStore = registerLog(table, app.getPath('userData'), sendToRenderer);
+registerWhatsNew(table, app.getPath('userData'));
 const boardLog = boardChanges((draft) => logStore.log(draft), peekBoard);
 
 // The app opens without it. What is in this file is a shell command and a list of project folders, so a

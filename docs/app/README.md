@@ -17,6 +17,40 @@ the box to filter — every word must appear, so `error ship` is the ships that
 failed. Kept in dashboard.log in the app's data folder, 5 files of 5 MB; the
 path is at the top. Never what you type in a pane.
 
+### What's new
+
+The pull requests merged into the build you are running, under the day each
+merged, newest first. It opens by itself on the first launch of a build whose
+stamp differs from the one it last spoke for, with only what merged since the
+newest entry shown then; a release build heads it with its version. Not shown
+for the same build again, for a build that merged nothing new (a board commit on
+main), or on the very first install, which only remembers the build. A userData
+folder with a saved session but no record yet (an update from a build before
+this) gets the whole list. Ctrl+Shift+L opens it with the whole list any time.
+The arrows walk the rows, Page Up and Page Down jump ten, Home and End go to
+the ends, Enter opens the selected pull request on GitHub and leaves the list
+up, Escape closes.
+
+The list is read from git when the renderer is built (`vite.changelog.ts`):
+`git log --first-parent --merges` for subjects `Merge pull request #N`, the
+title from the first line of the merge's body, capped at 200, plus `origin`'s
+`owner/name` for the links and, when HEAD carries the `v<version>` tag, that
+tag as the release heading. A local `rebuild.sh` and a release build read it the
+same way. A shallow clone has only the merges it fetched, so a release build
+checks out with full history. Outside a git checkout the list is empty, the
+same as the version stamp's `unknown`.
+
+What it last showed is `whats-new.json` in userData: the newest entry the last
+build carried. The same build carries the same newest entry, so that alone tells
+a new build that merged something from one that did not. The renderer hands main
+what this build carries over `whats-new:record` and gets back the record before,
+so the record moves forward whether or not anything is shown; the same build
+again, or an older one, writes nothing (`recordMovesForward`). Which entries to
+show is `entriesToShow` in `whats-new.ts`: the last shown entry is found by its
+commit, and one this build no longer carries is passed by time, so an older
+build installed over a newer one shows nothing. `whats-new:record` is a client
+channel: on a remote screen it answers for this install, not the host's.
+
 ## Files
 
 Folders: `src/main/`, `src/main/app/`, `src/preload/`, `src/shared/app/`, `src/renderer/`, `src/renderer/app/`.
@@ -46,8 +80,11 @@ its own side. `eslint.config.test.ts` pins each of those.
 
 - Process and window: `index.html` and its test, `main.ts`, `launch-gate.ts`, `renderer.ts`,
   `preload.ts`, `bridge.ts`, `channels.ts`, `app-window.ts`
-- Build: `vite.build-version.ts` and its test at the repository root, declared
-  in `forge.env.d.ts`
+- Build: `vite.build-version.ts`, `vite.changelog.ts` and their tests at the
+  repository root, declared in `forge.env.d.ts`
+- What's new: `whats-new.ts` (in `src/shared/app/`), `whats-new-store.ts`,
+  `whats-new-view.ts`
+- Font loaded before the first pane: `font-preload.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,
   `projects.ts`, `picker.ts`, `close-project.ts`, `close-refusal.ts` (in `src/shared/panes/`, since
   `dashboard project close` asks it from main too), `chrome-bars.ts`, `status.ts`
@@ -163,10 +200,14 @@ directives go.
 - Given the app is running, when it is launched again with `--user-data-dir` on another folder, then that copy runs on its own.
 - Given the app is killed while it writes `session.json`, when it next launches, then it opens the projects of the last whole write.
 - Given a reply carries markup that gets past the markdown renderer, when it is drawn, then no script in it runs.
+- Given a build merged two pull requests since the one the app last ran, when it launches, then what's new lists those two and nothing older.
+- Given the same build launches again, when the window opens, then what's new does not come up.
+- Given a fresh userData folder, when the app first launches, then what's new does not come up and the build is remembered.
+- Given what's new is open, when you press Enter on a row, then its pull request opens in the browser and the list stays up.
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling, at 591 code lines, and `renderer.ts` is
-  already past it at 612, even after the close flow moved into `close-project.ts` and the which-key
+- `main.ts` is at the 600-line ceiling, at 599 code lines, and `renderer.ts` is
+  already past it at 610, even after the close flow moved into `close-project.ts` and the which-key
   strip's tracking into `which-key-tracking.ts`. A feature that adds code to
   `main.ts` or `renderer.ts` needs a seam split out first (workflow-decision-1).
