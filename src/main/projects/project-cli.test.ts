@@ -90,8 +90,8 @@ describe('project add, set and remove', () => {
   });
 
   it('reads every set flag, each --deploy and --clear on its own', () => {
-    const changed = written(['set', 'mandala', '--aka', 'saver', '--site', 'https://s.example.com', '--deploy', 'name=box,role=test,address=http://box?a=b', '--deploy', 'name=live,role=production,address=https://live']);
-    expect(changed).toMatchObject({ name: 'screensaver', aka: ['mandala', 'saver'], site: 'https://s.example.com', deploy: [{ name: 'box', address: 'http://box?a=b' }, { name: 'live' }] });
+    const changed = written(['set', 'mandala', '--aka', 'saver', '--site', 'https://s.example.com', '--deploy', 'name=box,role=test,address=http://box?a=b', '--deploy', 'name=live,role=production,address=https://live?tags=a,b']);
+    expect(changed).toMatchObject({ name: 'screensaver', aka: ['mandala', 'saver'], site: 'https://s.example.com', deploy: [{ name: 'box', address: 'http://box?a=b' }, { name: 'live', address: 'https://live?tags=a,b' }] });
     expect(written(['set', 'screensaver', '--clear', 'aka', '--clear', 'site'], '- name: screensaver\n  aka: [m]\n  path: /s\n  site: x\n')).toMatchObject({ aka: [], site: '' });
   });
 

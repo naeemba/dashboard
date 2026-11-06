@@ -58,13 +58,18 @@ nothing is written, and a file that does not read is never edited. `add`
 refuses a folder the file lists already, compared by real path, so a folder
 reached through a symlink is the same one; a relative path is read from the
 folder the command runs in, and a path under home is written from `~`. With no
-file, `add` writes the first one.
+`--name`, `add` takes the folder's name, with `-2`, `-3` after it when another
+project has it. `add` leaves every byte already in the file as it was and puts
+the new entry after it; `set` and `remove` reprint the file, never folding a
+long line. The comment above an entry `remove` takes out stays, moved to the
+entry after it. With no file, `add` writes the first one.
 
 On `set`, `--aka` adds names beside the ones there, `--deploy` adds a deploy or
-changes the one with that name (only the fields given; the other deploys stay),
+changes the one with that name, in any case (only the fields given; the other deploys stay),
 and `--site` and `--about` replace. `--clear` takes `aka`, `site`, `about` or
 `deploy` away, and runs first, so `--clear deploy --deploy name=...` replaces
-the list. `--deploy` and `--clear` can be given more than once.
+the list. `--deploy` and `--clear` can be given more than once. A comma inside
+a `--deploy` address is kept unless a word and `=` follow it.
 
 The app adds a project to the file whenever it opens one the file does not list
 — from the picker, `project open`, `pane claim --project` or a restored page —
@@ -166,6 +171,8 @@ Folders: `src/main/projects/`.
 - Given new-crm open and listed, and notes open but not listed, when `dashboard project list` runs, then new-crm reads `open` and notes is listed after the file's projects as `open, not in` the file.
 - Given `dashboard project close cr`, when no project is named or aka'd `cr`, then it is refused naming the near matches and nothing closes.
 - Given a commented projects.yaml, when `dashboard project add ~/api --aka backend` runs, then `- name: api` with `aka: [backend]` and `path: ~/api` is the last entry and every comment is still there.
+- Given a file written by `init`, when `dashboard project remove` takes out its first project, then the header comment is still at the top.
+- Given api listed at ~/x/api, when `dashboard project add ~/y/api` runs, then it is added as api-2.
 - Given new-crm listed, when `dashboard project add ~/ws/new-crm` runs and `ws` links to `Workspace`, then it is refused as already listed, as new-crm.
 - Given new-crm with a `new-raxel` test deploy, when `dashboard project set crm --deploy name=new-raxel,address=https://staging.example.com` runs, then new-raxel's address changes, its role stays test, and every other deploy stays.
 - Given `dashboard project set crm --aka screensaver`, when screensaver is another project, then it is refused naming that project and the file is left as it was.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readProjects } from './projects-file';
+import { firstProjectsFile } from './projects-first';
 import { addProject, removeProject, setProject, withOpenedProject, type ProjectsWrite } from './projects-write';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive.
@@ -36,8 +37,19 @@ function project(written: string, name: string) {
 describe('addProject', () => {
   posixPathsOnly('appends an entry, path from ~, keeping comments and order', () => {
     const written = text(addProject(FILE, 'projects.yaml', '/home/me/api', { aka: ['backend'], site: 'https://api.example.com' }, HOME, asWritten));
-    expect(written.startsWith(FILE.replace('new-crm   #', 'new-crm #'))).toBe(true);
-    expect(written.endsWith('- name: api\n  aka: [backend]\n  path: ~/api\n  site: https://api.example.com\n')).toBe(true);
+    expect(written).toBe(`${FILE}- name: api\n  aka: [backend]\n  path: ~/api\n  site: https://api.example.com\n`);
+  });
+
+  posixPathsOnly('leaves hand formatting and a long about as written', () => {
+    const original = `- name:    other\n  aka: [ c, sales ]\n  path: /other\n  about: ${'a long line about the project '.repeat(5)}\n  deploy:\n      - name: box\n        role: test\n        address: http://box`;
+    const written = text(addProject(original, 'projects.yaml', '/new', {}, HOME, asWritten));
+    expect(written).toBe(`${original}\n- name: new\n  path: /new\n`);
+  });
+
+  posixPathsOnly('takes the folder\'s name with -2 after it when it is taken, unless a name is asked for', () => {
+    expect(text(addProject('- name: api\n  path: /x/api\n', 'p.yaml', '/y/api', {}, HOME, asWritten))).toContain('- name: api-2\n  path: /y/api\n');
+    expect(addProject('- name: api\n  path: /x/api\n', 'p.yaml', '/y/z', { name: 'API' }, HOME, asWritten))
+      .toMatchObject({ ok: false, message: expect.stringContaining('"API" already names api') });
   });
 
   posixPathsOnly('refuses a folder listed already, by its real path, and a name taken', () => {
@@ -73,6 +85,11 @@ describe('setProject', () => {
       { name: 'new-raxel', role: 'test', address: 'https://staging.example.com' },
       { name: 'live', role: 'production', address: 'https://crm.example.com' },
     ]);
+    const anyCase = text(setProject(FILE, 'projects.yaml', 'new-crm', { deploy: [{ name: 'New-Raxel', address: 'https://other.example.com' }] }));
+    expect(project(anyCase, 'new-crm')?.deploy).toEqual([{ name: 'new-raxel', role: 'test', address: 'https://other.example.com' }]);
+    const asWrittenName = '- name: a\n  path: /a\n  deploy:\n    - name: 0123\n      role: test\n      address: x\n';
+    expect(project(text(setProject(asWrittenName, 'projects.yaml', 'a', { deploy: [{ name: '0123', address: 'y' }] })), 'a')?.deploy)
+      .toEqual([{ name: '0123', role: 'test', address: 'y' }]);
     expect(project(text(setProject(FILE, 'projects.yaml', 'screensaver', { deploy: [{ name: 'box', role: 'test', address: 'http://box' }] })), 'screensaver')?.deploy)
       .toEqual([{ name: 'box', role: 'test', address: 'http://box' }]);
   });
@@ -97,6 +114,15 @@ describe('removeProject', () => {
     expect(written).toContain('# the big one');
     expect(readProjects(written)).toMatchObject({ ok: true, projects: [{ name: 'new-crm' }] });
     expect(removeProject(FILE, 'projects.yaml', 'zzz')).toEqual({ ok: false, message: 'no project is called zzz' });
+  });
+
+  it('keeps the comment above the entry it takes out, the header of an init-written file too', () => {
+    expect(text(removeProject(FILE, 'projects.yaml', 'new-crm'))).toContain('# Every project I work on.');
+    expect(text(removeProject(FILE, 'projects.yaml', 'screensaver'))).toContain('# Side projects below.');
+    const { file } = firstProjectsFile(['/a', '/b'], HOME);
+    const written = text(removeProject(file, 'projects.yaml', 'a'));
+    expect(written.startsWith(file.slice(0, file.indexOf('- name: a')))).toBe(true);
+    expect(readProjects(written)).toMatchObject({ ok: true, projects: [{ name: 'b' }] });
   });
 });
 

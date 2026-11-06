@@ -6,7 +6,7 @@ import path from 'node:path';
 import { existingProjects, pickedFolder, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { git, runProgram } from './app/git';
-import { realPath } from './ship/worktree-scan';
+import { realPath } from './app/real-path';
 import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';

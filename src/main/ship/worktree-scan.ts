@@ -38,10 +38,6 @@ const sizes = createWorktreeSizes({
 
 export const forgetSize = sizes.forget;
 
-// git prints real paths, so a path is compared in that spelling. Kept in a leaf module so the
-// `dashboard project` command can use it without the ship code.
-export { realPath };
-
 // A project git cannot list answers with nothing rather than failing the whole scan. `records` are the
 // app's own, so a worktree git lists is answered under the path and project its record names.
 export async function scanWorktrees(

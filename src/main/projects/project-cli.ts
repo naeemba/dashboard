@@ -6,7 +6,7 @@ import { projectNamed } from './project-named';
 import { firstProjectsFile } from './projects-first';
 import { findProjects, projectsListed, type Project } from './projects-file';
 import { realPath as realFolder } from '../app/real-path';
-import { addProject, CLEARABLE, removeProject, setProject, type DeployChange, type ProjectChange, type ProjectsWrite } from './projects-write';
+import { addProject, CLEARABLE, removeProject, type Clearable, setProject, type DeployChange, type ProjectChange, type ProjectsWrite } from './projects-write';
 
 // The `project` noun's decisions: which verb, and what it answers given the file's text and, for init,
 // the folders the app knows. The files themselves are project-program.ts's to read, so every branch
@@ -19,7 +19,7 @@ export const PROJECT_USAGE = `project — the projects in ~/.dashboard/projects.
   project find <word>   the projects whose name or aka match the word, then whose about contains it
   project init          write a first projects.yaml from the open and recent projects, never over one
   project add <path> [--name <n>] [--aka a,b] [--site <url>] [--about "<line>"]
-                        list a folder; refused when it is listed already or the name is taken
+                        list a folder, under its name or name-2; refused when listed already
   project set <name> [--aka a,b] [--site <url>] [--about "<line>"]
                      [--deploy name=<n>,role=<r>,address=<a>]... [--clear <field>]...
                         --aka adds names, --deploy adds or changes one deploy by its name,
@@ -106,10 +106,11 @@ function projectInit(words: readonly string[], text: string | null, knownFolders
 const names = (value: string): string[] => value.split(',').map((each) => each.trim()).filter((each) => each !== '');
 
 // `--deploy name=<n>,role=<r>,address=<a>`: name says which deploy, the others are what changes. An
-// address keeps any = after its first.
+// address keeps any = after its first, and any comma not followed by a word and =, so
+// `?tags=a,b` stays whole while `?a=1,b=2` reads b= as a field and is refused.
 function deployChange(value: string): DeployChange | string {
   const change: Record<string, string> = {};
-  for (const part of value.split(',')) {
+  for (const part of value.split(/,(?=\s*\w+=)/)) {
     const equals = part.indexOf('=');
     const key = part.slice(0, equals).trim();
     if (equals === -1 || !['name', 'role', 'address'].includes(key)) return `--deploy takes name=<n>,role=<r>,address=<a>, not ${part}`;
@@ -118,6 +119,8 @@ function deployChange(value: string): DeployChange | string {
   if (!change.name) return '--deploy needs name=<n>, the deploy to add or change';
   return { name: change.name, role: change.role, address: change.address };
 }
+
+const isClearable = (value: string): value is Clearable => (CLEARABLE as readonly string[]).includes(value);
 
 // The flags set takes, as the change projects-write.ts makes, or why they are refused.
 function projectChange(flags: readonly [string, string][]): ProjectChange | string {
@@ -128,7 +131,7 @@ function projectChange(flags: readonly [string, string][]): ProjectChange | stri
     if (flag === 'site') change.site = value;
     if (flag === 'about') change.about = value;
     if (flag === 'clear') {
-      if (!CLEARABLE.includes(value)) return `--clear takes ${CLEARABLE.join(', ')}; name and path are required`;
+      if (!isClearable(value)) return `--clear takes ${CLEARABLE.join(', ')}; name and path are required`;
       change.clear = [...(change.clear ?? []), value];
     }
     if (flag === 'deploy') {
