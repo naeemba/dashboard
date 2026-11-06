@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
-import { realpathSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { git } from '../app/git';
+import { realPath } from '../app/real-path';
 import {
   diskUsageBytes, distinctWorktrees, parseWorktreeList, type ScannedWorktree, type WorktreeRecord,
 } from '../../shared/ship/git-worktrees';
@@ -37,16 +37,6 @@ const sizes = createWorktreeSizes({
 });
 
 export const forgetSize = sizes.forget;
-
-// git prints real paths, so a path is compared in that spelling. One that cannot be resolved — a
-// folder gone — is compared as given.
-export function realPath(path: string): string {
-  try {
-    return realpathSync(path);
-  } catch {
-    return path;
-  }
-}
 
 // A project git cannot list answers with nothing rather than failing the whole scan. `records` are the
 // app's own, so a worktree git lists is answered under the path and project its record names.

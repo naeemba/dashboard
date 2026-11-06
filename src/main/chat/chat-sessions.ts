@@ -308,6 +308,9 @@ export function registerChatSessions(
         // A worker screen runs as a terminal worker does: auto mode, its own name, no dispatch prompt.
         permissionMode: preferences.get(slot)?.permissionMode ?? (worker ? 'auto' : undefined),
         extraArgs: { name: worker?.name ?? mainSessionName(projectPath), 'thinking-display': 'summarized' },
+        // Every settings file loads, on main's screen and a worker's, as in the terminal, so the
+        // user's allow rules apply before auto mode decides (workers-decision-5).
+        settingSources: ['user', 'project', 'local'],
         hooks: worker?.hooks,
         env: environment,
         includePartialMessages: true,

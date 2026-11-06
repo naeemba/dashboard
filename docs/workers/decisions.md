@@ -207,8 +207,6 @@ What blocks making it the default, each a Backlog card:
 
 - ~~A worker screen's Claude is the app's child, so a restart ends the turn it was in.~~ It runs in the
   screen host now, off Windows (workers-decision-6).
-- Auto mode refused `gh pr create` on the screen with nobody to ask; it went on only once told the
-  user approved. A terminal worker was not run on the same prompt to compare.
 - The working line once kept counting after the turn ended, and the real card's screen once showed no
   reply after a `pane send` its transcript had. Neither was reproduced.
 - The task strip was never caught with a row in it, so it is unchecked on a worker screen.
@@ -216,6 +214,20 @@ What blocks making it the default, each a Backlog card:
   Stop hook says done rather than by its spinner.
 - A screen started fresh in the project folder (no `--worktree` or `--card`) shares its folder with main;
   its /resume list shows main's conversations.
+
+Not a blocker after all (checked 2026-11-06, card 01509ff6): the trial's refusal of `gh pr create`. A
+worker screen is asked as a terminal worker is:
+
+- Every settings file loads (`settingSources` in `chat-sessions.ts`), so the user's allow rules apply
+  first. With `Bash(gh pr *)` allowed, the trial's exact command ran with no question under
+  `--permission-mode dontAsk` in the CLI and the SDK's pinned binary, and through `query()` with the
+  screen's options.
+- A call auto mode cannot decide comes to `canUseTool`, the question in the box (chat-decision-1).
+- A call auto mode blocks is refused in the terminal too; neither asks until repeated denials.
+
+Why the trial's session reached the classifier is not known: its debug log and demo instance are gone.
+If a worker screen is refused again, run the command through the CLI with `--permission-mode dontAsk`
+in the same folder; a refusal there means the rules did not match, not that the screen differs.
 
 ## workers-decision-6: A worker screen's session runs in the screen host, outside the app
 

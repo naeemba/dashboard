@@ -25,17 +25,25 @@ development copy beside it.
 
 ## Install
 
+Download the build for your system from [Releases](https://github.com/naeemba/dashboard/releases): a `.dmg` or `.zip` for a mac with Apple silicon, the `Setup.exe` for Windows, a `.deb`, `.rpm` or `.zip` for Linux. The builds are not signed, so each system warns once before the first launch:
+
+- macOS: Control-click Dashboard.app in Applications and choose Open, then Open again. On macOS 15 and later, open it once, then go to System Settings → Privacy & Security and click Open Anyway.
+- Windows: SmartScreen says "Windows protected your PC". Click More info, then Run anyway.
+
+To build and install from this checkout instead:
+
     scripts/rebuild.sh
 
 It packages the app and installs it to `/Applications/Dashboard.app` on a mac or `~/.local/opt/dashboard` on Linux, leaving any running copy alone. On Linux nothing adds a launcher: run `~/.local/opt/dashboard/Dashboard`, or point a desktop entry of your own at it.
 
 On a mac, building signs the app with a self-signed certificate named `Dashboard Local` in the login keychain, and fails without it. Create it once in Keychain Access → Certificate Assistant → Create a Certificate…, Identity Type *Self Signed Root*, Certificate Type *Code Signing*. Recreating it makes macOS ask for folder access once more.
 
-Every launch of the installed app also installs the `/create-task` skill for Claude Code, rewriting a file only when this build's copy differs:
+Every launch of the installed app also installs the `/create-task` and `/adopt-docs` skills for Claude Code, rewriting a file only when this build's copy differs:
 
 - `~/.claude/skills/create-task/SKILL.md`: the `/create-task` command
 - `~/.claude/skills/create-task/create-task.js`: the program it runs, at a path that does not move. Point `PR_LOOP_CARD_SCRIPT` at it; it takes `--title`, `--notes`, `--priority` and, for a board on a remote other than `origin`, `--remote <name>`. It works outside a Dashboard pane. [Board](docs/board/README.md#create-task) has the rest.
 - `~/.claude/skills/create-task/package.json`: `{"type":"commonjs"}`, so a `"type": "module"` package.json above it cannot make node read the program as ESM
+- `~/.claude/skills/adopt-docs/SKILL.md`: the `/adopt-docs` command, which moves a repository's docs into the `docs/<feature>/` pattern and opens one pull request. [Skills](docs/skills/README.md) has the rest.
 
 The installed app reads `$XDG_CONFIG_HOME/dashboard/.env` (falling back to `~/.config/dashboard/.env`) instead of the repo `.env`.
 

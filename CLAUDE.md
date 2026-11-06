@@ -9,6 +9,10 @@ the entry saying what breaking it looked like, in `docs/<feature>/hard-rules.md`
 settled questions are in each feature's `decisions.md`. Read the entry before
 arguing with a rule.
 
+A change to the docs pattern (the index preamble, the id scheme, the docs rule
+above) changes `src/main/skills/adopt-docs-skill.ts` in the same PR, or every
+project `/adopt-docs` reaches afterwards gets the old pattern. (skills-decision-2)
+
 ## Checks
 
     pnpm test                # vitest, node environment only

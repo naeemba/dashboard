@@ -1,0 +1,212 @@
+name: Release
+
+# A release is cut by hand from the Actions tab: Release → Run workflow on main, with the bump. That
+# bumps package.json, adds the CHANGELOG.md section, commits both to main and tags it. Pushing a
+# pre-release tag (v2.42.0-rc.1) whose commit already carries that version builds the same release
+# without touching main, which is how the workflow is tried out (workflow-decision-4).
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Which part of the version moves
+        type: choice
+        options: [patch, minor, major]
+        default: minor
+  push:
+    tags: ['v*-*']
+
+# One release at a time. A dispatch queued behind a running one still checks out the main it was
+# dispatched on, so it bumps to the same version and stops at "Commit and tag the release", which
+# finds that tag already pushed: dispatch again once the first finishes.
+concurrency: release
+
+# Actions pinned to a commit: this workflow's token can push to main. GH_TOKEN goes only to the steps
+# that call gh, never to the build's install and make, which run every dependency's scripts.
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      notes: ${{ steps.notes.outputs.notes }}
+    env:
+      BUMP: ${{ inputs.bump }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Every tag, to find the last release.
+          fetch-depth: 0
+      - id: version
+        name: Work out the version
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            tag="$GITHUB_REF_NAME"
+            version=$(node -p 'require("./package.json").version')
+            if [ "v$version" != "$tag" ]; then
+              echo "::error::Tag $tag points at a commit whose package.json says $version. Bump it to ${tag#v} in that commit first."
+              exit 1
+            fi
+          elif [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::Release runs from main; this run was started on $GITHUB_REF_NAME."
+            exit 1
+          else
+            tag=$(npm version "$BUMP" --no-git-tag-version)
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+      - id: notes
+        name: Write the notes
+        run: |
+          # The last release that is not a pre-release, so a release's notes cover every pull request
+          # since the one before it, rc tags included.
+          previous=$(git tag --list 'v*' --sort=-v:refname | grep -v -- - | head -n 1 || true)
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
+            ${previous:+-f previous_tag_name="$previous"} --jq .body > "$RUNNER_TEMP/notes.md"
+          { echo 'notes<<END_OF_NOTES'; cat "$RUNNER_TEMP/notes.md"; echo END_OF_NOTES; } >> "$GITHUB_OUTPUT"
+      - name: Commit and tag the release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # A re-run after the push checks out the same commit and works out the same tag: go straight
+          # on to the release. A first attempt that finds the tag is a second dispatch that waited
+          # behind the run which made it. Both checked out the same main, so the attempt number tells
+          # them apart, not the SHA.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            if [ "$GITHUB_RUN_ATTEMPT" = 1 ]; then
+              echo "::error::$TAG was released by another run while this one waited. Dispatch again to cut the next version."
+              exit 1
+            fi
+            echo "$TAG is already on main."
+            exit 0
+          fi
+          node scripts/release-notes-step.mjs changelog "$TAG" "$(date -u +%F)" "$RUNNER_TEMP/notes.md"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json CHANGELOG.md
+          git commit -m "Release $TAG"
+          git tag "$TAG"
+          git push --atomic origin HEAD:main "$TAG"
+      - name: Create the draft release
+        env:
+          PRERELEASE: ${{ github.event_name == 'push' }}
+        # The notes alone until the publish job writes the whole body.
+        run: gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --prerelease="$PRERELEASE"
+
+  build:
+    needs: prepare
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      # Every leg runs to the end, so one run says which platforms failed and which uploaded.
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            # 22.04 for its rpm 4.17. From 4.20 rpmbuild runs %install in BUILD/<name>-<version>-build,
+            # and electron-installer-redhat's spec copies usr/* from BUILD, so the rpm leg failed with
+            # "cp: cannot stat 'usr/*'". A newer runner needs a specTemplate that copies from
+            # %{_topdir}/BUILD/usr.
+            os: ubuntu-22.04
+            electron-cache: ~/.cache/electron
+          - name: windows
+            os: windows-latest
+            electron-cache: ~/AppData/Local/electron/Cache
+            # Squirrel only, as in CI: the other makers are for a mac or Linux.
+            targets: --targets @electron-forge/maker-squirrel
+          - name: macos
+            # Apple silicon. macos-14 is no longer offered: its legs failed with "The configuration
+            # 'macos-14-arm64-us-default' is not supported".
+            os: macos-latest
+            electron-cache: ~/Library/Caches/electron
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      # An ad hoc signature on a mac; see forge.config.ts.
+      DASHBOARD_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          persist-credentials: false
+          # The whole history: the what's-new popup's changelog is read from git log at build time, and a
+          # shallow clone ships one that lists only the merges it fetched.
+          fetch-depth: 0
+      - name: Refuse a shallow clone
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != false ]; then
+            echo "::error::The clone is shallow, so the bundled changelog would be cut short. Check out with fetch-depth: 0."
+            exit 1
+          fi
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install rpmbuild
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - run: pnpm install --frozen-lockfile
+      # Electron's zip, which packaging downloads into this folder and finds there next time. Keyed on
+      # the installed Electron, so a bump of any other package keeps the same cache.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ matrix.electron-cache }}
+          key: electron-${{ runner.os }}-${{ hashFiles('node_modules/electron/package.json') }}
+      - run: pnpm run make ${{ matrix.targets }}
+      - name: Make the disk image
+        if: runner.os == 'macOS'
+        run: |
+          # The app beside an Applications link, the window a person drags it across.
+          mkdir "$RUNNER_TEMP/dmg"
+          cp -R out/Dashboard-darwin-arm64/Dashboard.app "$RUNNER_TEMP/dmg/"
+          ln -s /Applications "$RUNNER_TEMP/dmg/Applications"
+          hdiutil create -volname Dashboard -srcfolder "$RUNNER_TEMP/dmg" -ov -format UDZO \
+            "out/make/Dashboard-${TAG#v}-arm64.dmg"
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Node lists the files: a mac's bash 3.2 has no globstar, and Squirrel's Setup.exe has a space.
+          node -e 'const { readdirSync } = require("node:fs"); const { join } = require("node:path");
+            const files = readdirSync("out/make", { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile());
+            process.stdout.write(files.map((entry) => join(entry.parentPath, entry.name)).join("\0"));' \
+            | xargs -0 gh release upload "$TAG" --clobber
+
+  publish:
+    needs: [prepare, build]
+    # Runs after a failed leg too, only to say which one; the release then stays a draft.
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # To read which build legs failed.
+      actions: read
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      NOTES: ${{ needs.prepare.outputs.notes }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Stop if a build leg failed
+        if: needs.build.result != 'success'
+        run: |
+          failed=$(gh run view "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --json jobs \
+            --jq '[.jobs[] | select(.name | startswith("build (")) | select(.conclusion != "success" and .conclusion != null) | .name] | join(", ")')
+          echo "::error::$TAG stays a draft: ${failed:-a build leg} did not upload. Re-run the failed jobs to finish it."
+          echo "$TAG stays a draft: ${failed:-a build leg} did not upload." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          persist-credentials: false
+      # The runner's own node runs release-notes-step.mjs, which needs no packages.
+      - name: List the downloads and publish
+        run: |
+          printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
+          mapfile -t assets < <(gh release view "$TAG" --json assets --jq '.assets[].name')
+          node scripts/release-notes-step.mjs body "$GITHUB_REPOSITORY" "$TAG" "$RUNNER_TEMP/notes.md" "${assets[@]}" > "$RUNNER_TEMP/body.md"
+          gh release edit "$TAG" --notes-file "$RUNNER_TEMP/body.md" --draft=false

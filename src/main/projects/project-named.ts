@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { wholePath } from '../nvim/file-open';
-import { findProjects, projectsListed, readProjectsFile } from './projects-file';
+import { findProjects, projectsListed, readProjectsFile, type Project } from './projects-file';
 
 // The one project a word names in ~/.dashboard/projects.yaml, for whatever opens or dispatches into a
 // project by name. Only an exact name or aka counts, in any case: a fuzzy match is a guess, and a
@@ -12,9 +12,7 @@ export type ProjectNamed = { ok: true; name: string; path: string } | { ok: fals
 export function projectNamed(text: string | null, filePath: string, word: string, home: string): ProjectNamed {
   const listed = projectsListed(text, filePath);
   if (!listed.ok) return listed;
-  const wanted = word.trim().toLowerCase();
-  // readProjects refuses two projects sharing a name or aka in any case, so at most one is found.
-  const found = listed.projects.find((project) => [project.name, ...project.aka].some((each) => each.toLowerCase() === wanted));
+  const found = exactProject(listed.projects, word);
   if (found) {
     // The file's `path` is written by hand and kept as written; `~` is the home folder only here, where
     // a project is about to be opened from it. A relative path is refused: main would read it against
@@ -30,6 +28,13 @@ export function projectNamed(text: string | null, filePath: string, word: string
       ? `no project is called ${word}; it could be ${near.join(', ')}`
       : `no project is called ${word}; ${filePath} has ${listed.projects.map((project) => project.name).join(', ') || 'none'}`,
   };
+}
+
+// The project whose name or aka is the word, in any case. readProjects refuses two projects sharing
+// a name or aka in any case, so at most one is found. `project set` and `remove` match the same way.
+export function exactProject(projects: readonly Project[], word: string): Project | undefined {
+  const wanted = word.trim().toLowerCase();
+  return projects.find((project) => [project.name, ...project.aka].some((each) => each.toLowerCase() === wanted));
 }
 
 // projectNamed against the file on disk and this user's home folder: what main asks.

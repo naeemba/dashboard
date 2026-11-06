@@ -8,3 +8,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-02 #191 — Build hooks in Node and a Windows-aware forge.config, so the app starts and packages on Windows
 - 2026-11-02 #197 — Run the checks and the Squirrel make on windows-latest in CI
 - 2026-11-03 #201 — Install with pnpm and the hoisted linker, so worktrees share one copy of node_modules (workflow-decision-3)
+- 2026-11-06 #221 — Build and publish releases for Linux, Windows and macOS from GitHub Actions (workflow-decision-4)

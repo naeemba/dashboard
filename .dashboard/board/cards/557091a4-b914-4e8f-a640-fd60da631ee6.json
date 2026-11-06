@@ -1,17 +1,19 @@
 {
   "id": "557091a4-b914-4e8f-a640-fd60da631ee6",
   "title": "Add, edit and auto-append projects in ~/.dashboard/projects.yaml from the dashboard command",
-  "notes": "~/.dashboard/projects.yaml only changes by hand: `dashboard project` has list, find, init (never over an existing file), open, close, focus. A project opened later is never added, and no aka, site, about or deploy gets filled in (the user's file has names and paths only).\n- `dashboard project add <path> [--name <n>] [--aka a,b] [--site <url>] [--about \"<line>\"]`: refuses a path already listed (by real path) or a name/aka already taken, as a value with the reason.\n- `dashboard project set <name|aka> [--aka a,b] [--site <url>] [--about \"<line>\"] [--deploy name=<n>,role=<r>,address=<a>]...` and `--clear <field>`; `project remove <name>`.\n- The app appends name and path when a project is opened that the file does not list (name from the folder, made unique), so the file stays current; never rewrites or reorders existing entries.\n- Every write keeps the file's comments and hand formatting (yaml's Document API, yaml@2.9.1), goes through one writer next to projects-file.ts, is atomic (replaceFile), and validates against the same schema readProjects uses (unknown keys refused).\n- Tests for add/set/remove/append, the refusals and comment preservation. docs/projects and `dashboard project --help` updated.",
+  "notes": "Shipped in #223: dashboard project add, set (--aka adds, --deploy adds or updates by name, --site/--about replace, --clear) and remove, all through src/main/projects/projects-write.ts (keeps comments, validated by readProjects, atomic replaceFile). The app appends name and path for any project it opens that the file lacks. The CLAUDE.md snippet in docs/command/README.md tells agents to record deploys, sites and aliases with project set. Not done: a removed project whose page is still open comes back at the next launch (documented); no lock between the app's append and a concurrent set.",
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-05T15:01:08.306Z",
-  "updatedAt": "2026-11-06T14:39:25.618Z",
+  "updatedAt": "2026-11-06T15:21:49.092Z",
+  "branch": "work-board-card-557091a4-b914-4e8f-a640-fd6",
+  "pullRequest": 223,
   "comments": [
     {
       "at": "2026-11-05T15:07:51.786Z",
       "body": "The user (2026-11-05): when an agent learns something new about a project, say a test environment and its address, it should be recorded. So: --deploy on 'project set' adds or updates one deployment by name (never wipes the others), and the CLAUDE.md snippet in docs/command/README.md tells agents to run 'dashboard project set <name> --deploy name=...,role=...,address=...' when they find a deployment, a site or an alias the file does not have. Same for --aka (adds, does not replace) and --site/--about (replace)."
     }
   ],
-  "column": "Doing",
-  "order": 2
+  "column": "Done",
+  "order": 182
 }
