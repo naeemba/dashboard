@@ -201,12 +201,13 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const told: FromScreenHost[] = [];
     server.connect((message) => told.push(message));
     server.receive({ type: 'start', key: KEY, options: {}, hooks: [] });
+    server.receive({ type: 'call', key: KEY, id: 1, method: 'supportedModels', args: [] });
     server.receive({ type: 'stop', key: KEY });
     await settle();
     server.receive({ type: 'start', key: KEY, options: {}, hooks: [] });
     await settle();
     expect(sdk.sessions).toHaveLength(2);
-    expect(told.filter((message) => message.type === 'ended')).toEqual([]);
+    expect(told.filter((message) => message.type === 'ended' || message.type === 'reply')).toEqual([]);
   });
 
   it('starts a new session for a key stopped a moment ago, and ends the old one in the app', async () => {

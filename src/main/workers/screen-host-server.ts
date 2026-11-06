@@ -121,13 +121,15 @@ export function screenHostServer(start: StartSession, idle: () => void) {
   }
 
   async function call(key: string, id: number, method: string, args: unknown[]): Promise<void> {
-    const query = sessions.get(key)?.query as unknown as Record<string, (...given: unknown[]) => unknown> | null | undefined;
+    const hosted = sessions.get(key);
+    const query = hosted?.query as unknown as Record<string, (...given: unknown[]) => unknown> | null | undefined;
+    // A reply for a session stopped meanwhile would answer the next session's call of the same id.
+    const reply = (message: FromScreenHost): void => { if (!hosted?.stopped) send?.(message); };
     try {
       if (typeof query?.[method] !== 'function') throw new Error(`The worker screen has no running session to ${method}`);
-      const value = await query[method](...args);
-      send?.({ type: 'reply', key, id, value });
+      reply({ type: 'reply', key, id, value: await query[method](...args) });
     } catch (thrown: unknown) {
-      send?.({ type: 'reply', key, id, error: failureText(thrown) });
+      reply({ type: 'reply', key, id, error: failureText(thrown) });
     }
   }
 
