@@ -46,7 +46,8 @@ import { createProjectCloser } from './app/close-project';
 import { paneSends } from './panes/pane-sends';
 import { paneLastLine, paneScrollback, paneTail, type Pane } from './panes/pane';
 import { createPaneOutputWiring } from './panes/pane-output-wiring';
-import { createProjectFileWiring } from './app/project-file-wiring';
+import { createBoardWiring } from './board/board-wiring';
+import { createNotesWiring } from './notes/notes-wiring';
 import {
   createPageBuilder, fitPage, focusTerminals, focusedChat, focusedPane, openIndices, restylePanes, showMode, showNotesPage, typedNames, type Page,
 } from './app/page';
@@ -61,10 +62,9 @@ import { editFocusedBox } from './chat/chat-line-editing';
 
 // Pane and terminal building left here for page.ts when this file reached the 600-line ceiling, which
 // is the seam it had named for itself. What is left is plumbing: which page is in front, what the
-// status bar says, what the session file holds, and where a key goes. The pane listeners went to
-// pane-output-wiring.ts and the file-change listeners to project-file-wiring.ts at the next split. The
-// next feature that needs room splits again, and the seam then is the session: saveSession, applyLayout
-// and restore, which share the `restoring` flag and nothing else here.
+// status bar says, what the session file holds, and where a key goes. The next feature that needs room
+// splits again, and the seam then is the session: saveSession, applyLayout and restore, with the
+// `restoring` flag they share with comeHome and focusMode.
 
 // board-writes.ts says why the app's own board writes are reported.
 const boardWrites = reportBoardWrites(window.dashboard);
@@ -764,8 +764,10 @@ function goToPaneId(paneId: string): void {
 }
 bridge.onNotificationClick(goToPaneId);
 
-// Board, notes and handwriting written elsewhere; project-file-wiring.ts.
-createProjectFileWiring({ bridge, activePage: () => pages[activeIndex] });
+// The board, notes and handwriting written elsewhere; board-wiring.ts and notes-wiring.ts.
+const activePage = (): Page => pages[activeIndex];
+createBoardWiring({ bridge, activePage });
+createNotesWiring({ bridge, activePage });
 
 // jumps.ts says where each of these lands.
 const { goToPane, jumpToWorktree, jumpToNeed } = createJumps({ pages: () => pages, showPage });
