@@ -72,7 +72,7 @@ strictly than any other path. Print it once, then write the literal path
 wherever \`<worktree>\` appears below, never a shell variable:
 
     git worktree add --no-track -b docs/adopt-docs <worktree> origin/<default branch>
-    echo /.adopt-docs/ >> "$(git rev-parse --git-path info/exclude)"
+    mkdir -p "$(git rev-parse --git-path info)" && echo /.adopt-docs/ >> "$(git rev-parse --git-path info/exclude)"
 
 Both run in the checkout you started in. The second line hides the folder from
 that checkout: without it, a \`git add .\` there commits the worktree as an
