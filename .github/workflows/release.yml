@@ -16,8 +16,8 @@ on:
     tags: ['v*-*']
 
 # One release at a time. A dispatch queued behind a running one still checks out the main it was
-# dispatched on, so it bumps to the same version and fails at the push instead of racing: dispatch
-# again once the first finishes.
+# dispatched on, so it bumps to the same version and stops at "Commit and tag the release", which
+# finds that tag already pushed: dispatch again once the first finishes.
 concurrency: release
 
 # Actions pinned to a commit: this workflow's token can push to main. GH_TOKEN goes only to the steps
@@ -70,8 +70,14 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           # A re-run after the push checks out the same commit and works out the same tag: go straight
-          # on to the release.
+          # on to the release. A first attempt that finds the tag is a second dispatch that waited
+          # behind the run which made it. Both checked out the same main, so the attempt number tells
+          # them apart, not the SHA.
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            if [ "$GITHUB_RUN_ATTEMPT" = 1 ]; then
+              echo "::error::$TAG was released by another run while this one waited. Dispatch again to cut the next version."
+              exit 1
+            fi
             echo "$TAG is already on main."
             exit 0
           fi
