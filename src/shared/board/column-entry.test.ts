@@ -53,25 +53,19 @@ describe('columnEntry', () => {
 });
 
 describe('screenMoveEntry', () => {
-  it('asks about a step right or a drop into Ship and Review', () => {
-    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 1, 2, 'right')).toBe('ship');
-    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 3, 2, 'drop')).toBe('ship');
-    expect(screenMoveEntry('/work/api', REVIEW_COLUMN, 3, 4, 'right')).toBe('review');
-  });
-
-  it('asks nothing for a step left, so walking a card back past Ship or Review starts nothing', () => {
-    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 3, 2, 'left')).toBe('nothing');
-    expect(screenMoveEntry('/work/api', REVIEW_COLUMN, 5, 4, 'left')).toBe('nothing');
+  it('asks about any move into Ship or Review, from either side', () => {
+    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 1, 2)).toBe('ship');
+    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 3, 2)).toBe('ship');
+    expect(screenMoveEntry('/work/api', REVIEW_COLUMN, 3, 4)).toBe('review');
+    expect(screenMoveEntry('/work/api', REVIEW_COLUMN, 5, 4)).toBe('review');
   });
 
   it('asks nothing for a card that stayed in its column', () => {
-    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 2, 2, 'up')).toBe('nothing');
-    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 2, 2, 'right')).toBe('nothing');
-    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 2, 2, 'drop')).toBe('nothing');
+    expect(screenMoveEntry('/work/api', SHIP_COLUMN, 2, 2)).toBe('nothing');
   });
 
   it('asks nothing for another column or on the manager\'s board', () => {
-    expect(screenMoveEntry('/work/api', 'Doing', 2, 3, 'right')).toBe('nothing');
-    expect(screenMoveEntry(MANAGER_PROJECT.path, SHIP_COLUMN, 1, 2, 'right')).toBe('nothing');
+    expect(screenMoveEntry('/work/api', 'Doing', 2, 3)).toBe('nothing');
+    expect(screenMoveEntry(MANAGER_PROJECT.path, SHIP_COLUMN, 1, 2)).toBe('nothing');
   });
 });

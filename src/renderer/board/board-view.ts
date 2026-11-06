@@ -50,7 +50,7 @@ import { cardEditor, MULTILINE, type EditableField } from './card-editor';
 import { putEditBack, takeEdit } from '../app/carried-edit';
 import { bringHome, shipsAway } from '../ship/ships-away';
 import { failureText } from '../../shared/errors/failure';
-import { screenMoveEntry, type MoveGesture } from '../../shared/board/column-entry';
+import { screenMoveEntry } from '../../shared/board/column-entry';
 import {
   addBlankCard,
   applyAutomaticChange,
@@ -541,7 +541,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   //
   // `from` is where the card was a gesture ago, which is not always the selection — a drag is let go of
   // on a card the keyboard is not on.
-  function moveThenAsk(from: Selection, next: Change, gesture: MoveGesture): void {
+  function moveThenAsk(from: Selection, next: Change): void {
     const moving = cardAt(state.board, from);
     const home = shipHome(state.board, from, shipsAway.away(options.projectPath));
     const written = apply(applyChange(state, next));
@@ -550,7 +550,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const column = state.board.columns[state.selection.column].name;
     // Which moves ask main at all, and what the screen does while main works: the notice and the home
     // a shipped card walks back to. Main still says no for a worktree's board.
-    const entry = screenMoveEntry(options.projectPath, column, from.column, state.selection.column, gesture);
+    const entry = screenMoveEntry(options.projectPath, column, from.column, state.selection.column);
     if (entry === 'nothing') return;
     const shipping = entry === 'ship';
     void written.then((saved) => {
@@ -576,7 +576,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const at = selectionOf(state.board, id);
     if (!at) return options.onNotice('That card belongs to another project — a card stays on the board it was made on');
     const row = realRow(visible, columnIndex, dropMarker.rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length);
-    moveThenAsk(at, dropCard(state.board, at, columnIndex, row), 'drop');
+    moveThenAsk(at, dropCard(state.board, at, columnIndex, row));
   }
 
   // The mouse half of `s`: the selection moves to the column, then `s` runs there. On the manager, the
@@ -896,10 +896,10 @@ export function createBoardView(options: BoardOptions): BoardView {
           if (isFilterActive(filter)) {
             const target = state.selection.column + (action.direction === 'right' ? 1 : -1);
             const row = sideRow(visible, state.selection, target, state.board.columns[target]?.cards.length ?? 0);
-            return moveThenAsk(state.selection, dropCard(state.board, state.selection, target, row), action.direction);
+            return moveThenAsk(state.selection, dropCard(state.board, state.selection, target, row));
           }
           // The row the card is leaving, which a ship needs: where the card goes back to once it works.
-          return moveThenAsk(state.selection, moveCard(state.board, state.selection, action.direction), action.direction);
+          return moveThenAsk(state.selection, moveCard(state.board, state.selection, action.direction));
         case 'board-attach': {
           // The one refusal worth explaining. The others — no card above, nothing selected — are
           // obvious from the screen. attachmentRing decides it on the same call, so the message cannot

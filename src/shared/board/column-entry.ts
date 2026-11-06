@@ -1,6 +1,5 @@
 import { isColumnNamed, REVIEW_COLUMN, SHIP_COLUMN } from './board';
 import { isManagerPath } from '../manager/manager';
-import type { Direction } from '../panes/terminals';
 
 // What moved a card. `user` is a gesture on the board, `command` is `dashboard board move`, and
 // `automatic` is the app itself: the review sweep moving a shipped card into Review once its pull
@@ -38,18 +37,13 @@ export function columnEntry({ column, source, autoLoop, projectBoard }: Entering
   return 'nothing';
 }
 
-// What moved a card on the screen: one of the four arrow steps, or the pointer letting go of it.
-export type MoveGesture = Direction | 'drop';
-
 // What the screen asks main about once its own move is saved, 'nothing' for a move it asks nothing
 // about. A card that stayed in its column has entered nothing: reordered inside Ship, or pushed against
-// the edge of a board with Ship last. A keystroke asks only to the right: Shift+Left is a step of a
-// walk putting a card back, and asked of main it would ship a card walked from Doing to Todo, or ship
-// a finished card again walked back from Done. A drop is aimed at its column from either side. The
-// manager's board has no repository behind it (board-decision-2).
+// the edge of a board with Ship last. Any move into another column asks, in either direction, as the
+// agreed design has it (board-decision-2). The manager's board has no repository behind it.
 export function screenMoveEntry(
-  projectPath: string, column: string, from: number, to: number, gesture: MoveGesture,
+  projectPath: string, column: string, from: number, to: number,
 ): ColumnEntry {
-  if (from === to || (gesture !== 'right' && gesture !== 'drop')) return 'nothing';
+  if (from === to) return 'nothing';
   return columnEntry({ column, source: 'user', autoLoop: true, projectBoard: !isManagerPath(projectPath) });
 }

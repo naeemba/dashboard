@@ -58,11 +58,8 @@ board move <id> Ship` wrote the card into Ship and nothing shipped, with nothing
 saying why. A command is as deliberate as a keystroke, so now a move into Ship
 from the command, a drop from either side or Shift+Right goes through card.move
 and ships (actions-decision-1); so does a move into Review, which starts the
-review loop. Shift+Left still asks nothing (`screenMoveEntry` in
-`column-entry.ts`): a keystroke is one step of a walk, and a walk to the left is
-a card being put back. Asked of main, walking a card from Doing back to Todo
-would ship it at the Ship step, and walking a finished card from Done back to
-Todo would start a review at Review and ship it again at Ship. What it costs: a
-card walked rightward through Review, one saved step at a time, starts its
-review loop at that step; a card whose agent still works is refused, as a
-second ship always was.
+review loop, and so does Shift+Left. What it costs: walking a card from Doing
+back to Todo ships it at the Ship step, and walking a finished card from Done
+back starts a review at Review and ships it again at Ship; a card walked
+rightward through Review starts its loop at that step. A card whose agent still
+works is refused, as a second ship always was.

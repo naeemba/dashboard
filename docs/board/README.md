@@ -41,11 +41,10 @@ Backlog is where a card waits until somebody picks it; Todo holds only what has
 been picked. Every board gets Backlog in front of Todo, and the board command
 puts a card there when it is not told a column.
 
-There is a Ship column, just right of Todo. Moving a card into it —
-Shift+Right, a drop from either side, or `dashboard board move <id> Ship`
-— hands it to an agent, and `dashboard board ship <id>` does the same
-without the move. Shift+Left into Ship is a card being put back and starts
-nothing. The app refuses if the project has anything uncommitted outside
+There is a Ship column, just right of Todo. Moving a card into it — Shift
+with either arrow, a drop from either side, or `dashboard board move <id>
+Ship` — hands it to an agent, and `dashboard board ship <id>` does the same
+without the move. The app refuses if the project has anything uncommitted outside
 .dashboard/, fetches and branches off the project's base branch, makes a
 worktree in a folder beside the project, and starts an agent in a worker
 that is sitting at a prompt with nothing running in it, or in a new worker
@@ -95,7 +94,7 @@ reviewed again.
 
 With the settings screen's Review row off (`review.autoLoop` in settings.json),
 a card whose pull request opens is moved into Review and waits there. Moving
-a card into Review yourself, with Shift+Right, a drop or `dashboard board
+a card into Review yourself, with Shift and an arrow, a drop or `dashboard board
 move <id> Review`, starts its review loop whatever the setting, and so does
 `dashboard board review <id>`; a card with no worktree, no pull request
 yet, an agent still working, a card gone from the board, or a card already
