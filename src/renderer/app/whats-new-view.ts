@@ -1,8 +1,8 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { clampIndex } from '../../shared/app/clamp-index';
-import { byDate, entriesToShow, pullRequestUrl, shownRecord, type ChangelogEntry } from '../../shared/app/whats-new';
+import { byDate, entriesToShow, pullRequestUrl, shownRecord, whatsNewFooter, type ChangelogEntry } from '../../shared/app/whats-new';
 import { labelled } from './icons';
-import { answerKeys, openOverlay, searchRowElement } from './overlay';
+import { answerKeys, holdFocus, openOverlay, searchRowElement } from './overlay';
 import { isModified } from '../keys/shortcuts';
 
 // How far each key moves the selection; a Page key about one screen of the dialog's rows.
@@ -21,11 +21,14 @@ export function openWhatsNew(bridge: DashboardBridge, entries: readonly Changelo
   let selected = 0;
   return new Promise<void>((resolve) => {
     function close(): void {
+      releaseFocus();
       remove();
       resolve();
     }
 
     const { dialog, remove } = openOverlay('whats-new', close);
+    // A --remote join can land while this is up and focus the pane behind it.
+    const releaseFocus = holdFocus(dialog);
     dialog.append(labelled('h2', 'dialog-title', 'pullRequest', release ? `What's new in ${release}` : "What's new"));
     const rows: HTMLElement[] = [];
 
@@ -63,9 +66,7 @@ export function openWhatsNew(bridge: DashboardBridge, entries: readonly Changelo
 
     const footer = document.createElement('p');
     footer.className = 'help-footer';
-    if (entries.length === 0) footer.textContent = 'No merged pull requests in this build\'s history. Escape closes.';
-    else if (repository) footer.textContent = 'Enter opens the pull request on GitHub. Escape closes.';
-    else footer.textContent = 'This build has no GitHub origin to link to. Escape closes.';
+    footer.textContent = whatsNewFooter(entries.length, repository);
     dialog.append(footer);
     select(0);
     dialog.focus();

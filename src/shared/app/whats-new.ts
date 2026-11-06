@@ -60,7 +60,19 @@ export function parseShownRecord(value: unknown): ShownRecord | null {
   return newest === null ? { newest: null } : null;
 }
 
-// Whether writing `current` would change what is on disk: the same build launched again writes nothing.
-export function sameRecord(one: ShownRecord | null, other: ShownRecord): boolean {
-  return one !== null && one.newest?.commit === other.newest?.commit;
+// Whether `current` replaces the record on disk: only when it moves forward. The same build launched
+// again writes nothing, and an older build over a newer record leaves it, so the next newer build does
+// not show again what was already seen.
+export function recordMovesForward(shown: ShownRecord | null, current: ShownRecord): boolean {
+  if (shown === null) return true;
+  if (current.newest === null) return false;
+  if (shown.newest === null) return true;
+  return Date.parse(current.newest.time) > Date.parse(shown.newest.time);
+}
+
+// The popup's last line: what Enter does, if anything.
+export function whatsNewFooter(count: number, repository: string | null): string {
+  if (count === 0) return 'No merged pull requests in this build\'s history. Escape closes.';
+  if (repository) return 'Enter opens the pull request on GitHub. Escape closes.';
+  return 'This build has no GitHub origin to link to. Escape closes.';
 }

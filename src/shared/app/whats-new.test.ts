@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { byDate, entriesToShow, parseShownRecord, sameRecord, shownRecord, type Changelog, type ChangelogEntry } from './whats-new';
+import {
+  byDate, entriesToShow, parseShownRecord, recordMovesForward, shownRecord, whatsNewFooter, type Changelog, type ChangelogEntry,
+} from './whats-new';
 
 function entry(pullRequest: number, time: string): ChangelogEntry {
   return { commit: `commit${pullRequest}`, time, pullRequest, title: `Pull request ${pullRequest}` };
@@ -63,12 +65,28 @@ describe('parseShownRecord', () => {
   });
 });
 
-describe('sameRecord', () => {
-  it('is the same only when a record exists and names the same newest commit', () => {
-    const shown = shownRecord(changelog);
-    expect(sameRecord(shown, shown)).toBe(true);
-    expect(sameRecord(null, shown)).toBe(false);
-    expect(sameRecord({ newest: { commit: oldest.commit, time: oldest.time } }, shown)).toBe(false);
-    expect(sameRecord({ newest: null }, { newest: null })).toBe(true);
+describe('recordMovesForward', () => {
+  const newer = shownRecord(changelog);
+  const older = { newest: { commit: oldest.commit, time: oldest.time } };
+
+  it('writes a first record, and a newer build over an older one', () => {
+    expect(recordMovesForward(null, newer)).toBe(true);
+    expect(recordMovesForward(older, newer)).toBe(true);
+    expect(recordMovesForward({ newest: null }, newer)).toBe(true);
+  });
+
+  it('leaves the record alone for the same build again, and for an older build over a newer record', () => {
+    expect(recordMovesForward(newer, newer)).toBe(false);
+    expect(recordMovesForward(newer, older)).toBe(false);
+    expect(recordMovesForward(newer, { newest: null })).toBe(false);
+    expect(recordMovesForward({ newest: null }, { newest: null })).toBe(false);
+  });
+});
+
+describe('whatsNewFooter', () => {
+  it('says Enter links only when there are rows and a GitHub origin', () => {
+    expect(whatsNewFooter(0, 'owner/name')).toMatch(/^No merged pull requests/);
+    expect(whatsNewFooter(3, 'owner/name')).toMatch(/^Enter opens/);
+    expect(whatsNewFooter(3, null)).toMatch(/no GitHub origin/);
   });
 });

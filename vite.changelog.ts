@@ -18,18 +18,24 @@ const MERGE_SUBJECT = /^Merge pull request #(\d+) from /;
 export function parseMerges(log: string): ChangelogEntry[] {
   return log.split(RECORD).flatMap((record) => {
     const [commit, time, subject, body] = record.trim().split(FIELD);
-    const number = MERGE_SUBJECT.exec(subject ?? '');
-    if (!commit || !time || !number) return [];
+    const subjectMatch = MERGE_SUBJECT.exec(subject ?? '');
+    if (!commit || !time || !subjectMatch) return [];
     const title = body?.split('\n').map((line) => line.trim()).find((line) => line !== '') ?? subject;
-    return [{ commit: commit.slice(0, 12), time, pullRequest: Number(number[1]), title }];
+    return [{ commit: commit.slice(0, 12), time, pullRequest: Number(subjectMatch[1]), title }];
   });
 }
 
 // `owner/name` out of whatever origin is spelled as: an ssh alias (`git@github.com-p:owner/name.git`)
-// or an https URL alike. Null when there is no origin, and the popup's rows then link nowhere.
+// or an https URL alike. Null when there is no origin or it is not on GitHub, and the popup's rows
+// then link nowhere.
 export function repositoryOf(remote: string): string | null {
-  const match = /[:/]([^/:]+\/[^/]+?)(?:\.git)?\/?$/.exec(remote.trim());
+  const match = /github\.com[^:/]*[:/]([^/:]+\/[^/]+?)(?:\.git)?\/?$/.exec(remote.trim());
   return match ? match[1] : null;
+}
+
+// The `v<version>` heading when HEAD carries exactly that tag, null for any other build.
+export function releaseOf(tags: readonly string[], version: string): string | null {
+  return tags.includes(`v${version}`) ? `v${version}` : null;
 }
 
 // Outside a git checkout every part is empty rather than a failed build, the same as the version stamp.
@@ -44,7 +50,7 @@ export function readChangelog(): Changelog {
   const tags = attempt(() => git('tag', '--points-at', 'HEAD').split('\n').map((tag) => tag.trim()), []);
   return {
     repository: attempt(() => repositoryOf(git('remote', 'get-url', 'origin')), null),
-    release: tags.includes(`v${version}`) ? `v${version}` : null,
+    release: releaseOf(tags, version),
     entries: parseMerges(log),
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseMerges, repositoryOf } from './vite.changelog';
+import { parseMerges, releaseOf, repositoryOf } from './vite.changelog';
 
 const record = (...fields: string[]): string => `${fields.join('\x1f')}\x1e\n`;
 
@@ -32,7 +32,17 @@ describe('repositoryOf', () => {
     expect(repositoryOf('https://github.com/naeemba/dashboard.git')).toBe('naeemba/dashboard');
   });
 
-  it('answers null for no origin', () => {
+  it('answers null for no origin, a local path and a non-GitHub URL', () => {
     expect(repositoryOf('')).toBeNull();
+    expect(repositoryOf('/home/me/src/dashboard')).toBeNull();
+    expect(repositoryOf('https://gitlab.com/me/dashboard.git')).toBeNull();
+  });
+});
+
+describe('releaseOf', () => {
+  it('names the release only when HEAD carries this version\'s tag', () => {
+    expect(releaseOf(['v2.41.4'], '2.41.4')).toBe('v2.41.4');
+    expect(releaseOf(['v2.42.0-rc.1'], '2.41.4')).toBeNull();
+    expect(releaseOf([], '2.41.4')).toBeNull();
   });
 });
