@@ -5,15 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-05T15:07:51.937Z",
-  "updatedAt": "2026-11-06T14:58:52.050Z",
+  "updatedAt": "2026-11-06T15:21:00.102Z",
   "branch": "work-board-card-1dfa6aae-bc4a-4e1e-9c57-388",
   "pullRequest": 225,
   "comments": [
     {
       "at": "2026-11-06T14:58:52.050Z",
       "body": "Skill tested on habit-tracker: https://github.com/naeemba/habit-tracker/pull/11 (open, not merged). Rollout command is in #225; not started."
+    },
+    {
+      "at": "2026-11-06T15:21:00.102Z",
+      "body": "Shipped in #225: /adopt-docs installed beside /create-task at launch, docs/skills. Trial PR naeemba/habit-tracker#11 (open). Rollout not started."
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 182
 }
