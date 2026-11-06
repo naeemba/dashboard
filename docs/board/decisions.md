@@ -46,3 +46,17 @@ only the cards new on the branch; dropping it (`git rm .dashboard/board.json`)
 keeps none of them. Either way, redo the branch's moves with the `board`
 command — a card the branch moved to Review in `board.json` reads back in
 whatever column main's folder has it.
+
+## board-decision-2: A move into Ship ships whatever made it
+
+**Replaces the rule that a move into Ship had to come from a gesture**, which
+lived in `landsInShip` in `board.ts`: only Shift+Right or a drop shipped, never
+a move to the left and never `board move <id> Ship`, so a key that sent a card
+straight to a column could not start a worktree by mistake. That made the
+command a second, silent set of rules: an agent or a person typing `dashboard
+board move <id> Ship` wrote the card into Ship and nothing shipped, with nothing
+saying why. A command is as deliberate as a keystroke, so now every move into
+Ship, from the board in either direction or from the command, goes through
+card.move and ships (actions-decision-1). What it costs: moving a card left out
+of Review into Ship ships it again, where it used to just sit there; a card
+whose agent still works is refused, as a second ship always was.

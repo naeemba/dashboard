@@ -33,8 +33,9 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'launch. Quit it and Enter starts it again. The scrollback key on the terminals screen sends a '
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',
   board: 'A kanban board in .dashboard/board, a file per card, written on every change: no save key, undo is '
-    + 'the way back. Another writer\'s change shows while you look. A card moved into Ship goes to an '
-    + 'agent in its own worktree; the app puts it in Review once a pull request is open.',
+    + 'the way back. Another writer\'s change shows while you look. Into Ship, a card goes to an '
+    + 'agent in its own worktree; into Review, its review loop starts. A setting '
+    + 'makes one arriving by itself wait.',
   notes: 'Two pages for what is not a card: free text in .dashboard/notes.md and handwriting in '
     + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
     + 'key turns between them. No save key: written a moment after you stop, read only when you '

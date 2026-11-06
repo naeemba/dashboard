@@ -27,6 +27,11 @@ including when that default moves. The app tidies the file each time it starts,
 so a line you write that already matches the default is taken out again. Delete
 it and everything is back to how it shipped.
 
+The Review row (`review.autoLoop`, default on) says whether a shipped card whose
+pull request opens starts its review loop by itself. Enter turns it over. Off,
+the card waits in Review until you move it into Review or run `dashboard board
+review <id>` (docs/actions).
+
 The Host rows make this Dashboard reachable from another: a port, read at the
 next launch, and the token the other machine pastes once. The port opens on
 127.0.0.1 only, so the other machine reaches it through an SSH tunnel (ssh -L
