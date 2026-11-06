@@ -133,6 +133,15 @@ jobs:
         with:
           ref: ${{ needs.prepare.outputs.tag }}
           persist-credentials: false
+          # The whole history: the what's-new popup's changelog is read from git log at build time, and a
+          # shallow clone ships one that lists only the merges it fetched.
+          fetch-depth: 0
+      - name: Refuse a shallow clone
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != false ]; then
+            echo "::error::The clone is shallow, so the bundled changelog would be cut short. Check out with fetch-depth: 0."
+            exit 1
+          fi
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
