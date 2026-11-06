@@ -11,8 +11,9 @@ import { type AskCallback, type FromScreenHost, type HostedParams, type HostedSt
 //
 // While no app is connected nothing waits on one: a session's messages are dropped (the screen reads
 // its transcript back when it opens) but a result, which says the turn is over; a hook is answered at
-// once and held for the app to hear, and a question waits until an app answers it. Every hook the app gives is told, never asked: the host
-// answers it before the app hears it, so a hook's answer cannot change what the session does.
+// once and held for the app to hear, and a question waits until an app answers it. Every hook the app
+// gives is told, never asked: the host answers it before the app hears it, so a hook's answer cannot
+// change what the session does.
 
 export type StartSession = (params: HostedParams) => Query;
 
@@ -27,7 +28,8 @@ type Hosted = {
   // Whether the app has taken it up since it connected; until then it hears nothing of it.
   attached: boolean;
   busy: boolean;
-  // Asked to stop: a start for its key now begins a new session rather than taking up this one.
+  // Asked to stop: the app ended it on its side and hears nothing more of it, and a start for its key
+  // begins a new session rather than taking up this one.
   stopped: boolean;
 };
 
@@ -37,6 +39,7 @@ export function screenHostServer(start: StartSession, idle: () => void) {
 
   // To the app if it has taken the session up, otherwise held when it must not be lost.
   function tell(hosted: Hosted, message: FromScreenHost, hold: boolean): void {
+    if (hosted.stopped) return;
     if (send !== null && hosted.attached) send(message);
     else if (hold) hosted.held.push(message);
   }
@@ -103,7 +106,7 @@ export function screenHostServer(start: StartSession, idle: () => void) {
       for (const pending of hosted.asks.values()) pending.resolve({ behavior: 'deny', message: 'The session ended.' });
       hosted.asks.clear();
       tell(hosted, { type: 'ended', key, error }, true);
-      if (sessions.get(key) === hosted && hosted.held.length === 0) sessions.delete(key);
+      if (sessions.get(key) === hosted && (hosted.stopped || hosted.held.length === 0)) sessions.delete(key);
       checkIdle();
     })();
   }
@@ -143,9 +146,6 @@ export function screenHostServer(start: StartSession, idle: () => void) {
       const hosted = sessions.get(message.key);
       if (message.type === 'start') {
         if (hosted && !hosted.stopped) return attach(message.key, hosted);
-        // One still closing is let go: its end would reach the new session's listener in the app,
-        // which ends the old one itself (screenHost's query).
-        if (hosted) hosted.attached = false;
         begin(message.key, message);
       } else if (message.type === 'prompt') {
         hosted?.input.push(message.message);
@@ -156,7 +156,6 @@ export function screenHostServer(start: StartSession, idle: () => void) {
         hosted?.asks.delete(message.id);
         pending?.resolve(message.value);
       } else if (message.type === 'stop' && hosted) {
-        // Its end is still sent, for the app's screen to hear it closed.
         hosted.stopped = true;
         hosted.input.close();
         hosted.query?.close();

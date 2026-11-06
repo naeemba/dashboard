@@ -9,7 +9,7 @@ import { prepareHostSocket } from '../panes/pane-host-protocol';
 import { hostedQuery, screenHost } from './screen-host-client';
 import { acceptApps } from '../panes/host-socket';
 import { screenHostServer, type StartSession } from './screen-host-server';
-import { screenHostSocket, type ToScreenHost } from './screen-host-protocol';
+import { screenHostSocket, type FromScreenHost, type ToScreenHost } from './screen-host-protocol';
 
 const KEY = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const signal = new AbortController().signal;
@@ -43,13 +43,21 @@ afterEach(() => {
   rmSync(folder, { recursive: true, force: true });
 });
 
-async function host(start: StartSession, idle = (): void => undefined): Promise<string> {
+function hostSocket(): string {
   folder = mkdtempSync(path.join(os.tmpdir(), 'screen-host-'));
-  const socketPath = screenHostSocket(process.platform, folder) ?? '';
+  return screenHostSocket(process.platform, folder) ?? '';
+}
+
+async function listen(socketPath: string, start: StartSession, idle = (): void => undefined): Promise<void> {
   prepareHostSocket(process.platform, socketPath);
   const accept = acceptApps<ToScreenHost>(screenHostServer(start, idle));
   listener = net.createServer((socket) => { accepted.push(socket); accept(socket); });
   await new Promise<void>((resolve) => listener?.listen(socketPath, resolve));
+}
+
+async function host(start: StartSession, idle = (): void => undefined): Promise<string> {
+  const socketPath = hostSocket();
+  await listen(socketPath, start, idle);
   return socketPath;
 }
 
@@ -172,6 +180,33 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     await expect(query?.[Symbol.asyncIterator]().next()).rejects.toThrow('The screen host stopped');
     expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(launched).toBe(1);
+  });
+
+  it('launches the host again once one it launched itself has gone', async () => {
+    const socketPath = hostSocket();
+    let launched = 0;
+    const app = screenHost({ socket: socketPath, launch: () => { launched += 1; void listen(socketPath, fakeSdk().start); } });
+    const query = await app.query(KEY, appSession([]));
+    expect(launched).toBe(1);
+    listener?.close();
+    accepted[0].destroy();
+    await expect(query?.[Symbol.asyncIterator]().next()).rejects.toThrow('The screen host stopped');
+    expect(await app.query(KEY, appSession([]))).not.toBeNull();
+    expect(launched).toBe(2);
+  });
+
+  it('tells the app nothing of a stopped session, even one that ends before the next start for its key', async () => {
+    const sdk = fakeSdk();
+    const server = screenHostServer(sdk.start, () => undefined);
+    const told: FromScreenHost[] = [];
+    server.connect((message) => told.push(message));
+    server.receive({ type: 'start', key: KEY, options: {}, hooks: [] });
+    server.receive({ type: 'stop', key: KEY });
+    await settle();
+    server.receive({ type: 'start', key: KEY, options: {}, hooks: [] });
+    await settle();
+    expect(sdk.sessions).toHaveLength(2);
+    expect(told.filter((message) => message.type === 'ended')).toEqual([]);
   });
 
   it('starts a new session for a key stopped a moment ago, and ends the old one in the app', async () => {

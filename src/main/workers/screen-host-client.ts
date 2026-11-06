@@ -97,16 +97,9 @@ export function screenHost(options: { socket: string | null; launch(): void; con
       await ready;
       if (!(await reach())) return null;
       kept.delete(key);
-      let own: Listener | null = null;
       return hostedQuery(key, params, send, (listener) => {
-        if (listener === null) {
-          if (listeners.get(key) === own) listeners.delete(key);
-          return;
-        }
-        // A session of this key still closing ends now: the host sends it nothing more.
-        listeners.get(key)?.({ type: 'ended', key, error: null });
-        own = listener;
-        listeners.set(key, listener);
+        if (listener === null) listeners.delete(key);
+        else listeners.set(key, listener);
       });
     },
   };
@@ -135,6 +128,20 @@ export function hostedQuery(key: string, params: HostedParams, send: (message: T
     if (asks.delete(id)) send({ type: 'answer', key, id, value });
   }
 
+  // Once, whether the host said it ended or the app closed it: after a stop the host sends nothing
+  // more under this key, which a new session may already be using.
+  let over = false;
+  function end(error: string | null): void {
+    if (over) return;
+    over = true;
+    failure = error;
+    listen(null);
+    for (const controller of asks.values()) controller.abort();
+    for (const pending of calls.values()) pending.reject(new Error(error ?? 'The session ended'));
+    calls.clear();
+    messages.close();
+  }
+
   listen((message) => {
     if (message.type === 'message') messages.push(message.message);
     else if (message.type === 'ask') void answer(message.id, message.callback, message.args);
@@ -151,14 +158,7 @@ export function hostedQuery(key: string, params: HostedParams, send: (message: T
       calls.delete(message.id);
       if (message.error === undefined) pending?.resolve(message.value);
       else pending?.reject(new Error(message.error));
-    } else if (message.type === 'ended') {
-      failure = message.error;
-      listen(null);
-      for (const controller of asks.values()) controller.abort();
-      for (const pending of calls.values()) pending.reject(new Error(message.error ?? 'The session ended'));
-      calls.clear();
-      messages.close();
-    }
+    } else if (message.type === 'ended') end(message.error);
   });
   send({ type: 'start', key, options: rest, hooks: Object.keys(hooks ?? {}) });
   void (async () => {
@@ -181,7 +181,7 @@ export function hostedQuery(key: string, params: HostedParams, send: (message: T
   return new Proxy({}, {
     get(_target, name) {
       if (name === Symbol.asyncIterator) return stream;
-      if (name === 'close') return () => send({ type: 'stop', key });
+      if (name === 'close') return () => { send({ type: 'stop', key }); end(null); };
       // Not a thenable: a Query is never awaited as a whole.
       if (typeof name !== 'string' || name === 'then') return undefined;
       return (...args: unknown[]) => call(name, args);
