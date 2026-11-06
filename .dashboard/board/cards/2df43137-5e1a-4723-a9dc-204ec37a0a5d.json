@@ -5,9 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-06T13:57:06.899Z",
-  "updatedAt": "2026-11-06T14:13:48.805Z",
+  "updatedAt": "2026-11-06T14:29:19.498Z",
   "branch": "work-board-card-2df43137-5e1a-4723-a9dc-204",
   "pullRequest": 220,
-  "column": "Review",
-  "order": 5
+  "comments": [
+    {
+      "at": "2026-11-06T14:29:19.498Z",
+      "body": "Shipped in #220: a what's-new popup lists the PRs merged since the build last shown (bundled from git log at build time, record in userData), Ctrl+Shift+L reopens it. Release builds need a full-history checkout (fetch-depth: 0)."
+    }
+  ],
+  "column": "Done",
+  "order": 173
 }
