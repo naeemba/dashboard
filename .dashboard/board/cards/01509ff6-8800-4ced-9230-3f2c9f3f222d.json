@@ -5,9 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-05T16:29:23.417Z",
-  "updatedAt": "2026-11-06T14:57:01.744Z",
+  "updatedAt": "2026-11-06T15:01:32.951Z",
   "branch": "work-board-card-01509ff6-8800-4ced-9230-3f2",
   "pullRequest": 224,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-06T15:01:32.951Z",
+      "body": "Shipped in #224: the trial's gh pr create refusal did not reproduce. A worker screen takes the terminal's permission path: the user's allow rules first, a question in its box for what auto mode cannot decide. settingSources is now explicit in chat-sessions.ts; workers-decision-5 updated."
+    }
+  ],
+  "column": "Done",
+  "order": 181
 }
