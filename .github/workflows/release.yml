@@ -18,10 +18,9 @@ on:
 # One release at a time: two would both bump from the same version.
 concurrency: release
 
+# Actions pinned to a commit: this workflow's token can push to main.
 permissions:
   contents: write
-  # The publish job reads which build legs failed.
-  actions: read
 
 jobs:
   prepare:
@@ -34,11 +33,11 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       BUMP: ${{ inputs.bump }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Every tag, to find the last release.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - id: version
@@ -117,16 +116,17 @@ jobs:
       # An ad hoc signature on a mac; see forge.config.ts.
       DASHBOARD_SIGNING_IDENTITY: '-'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ needs.prepare.outputs.tag }}
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
       # Electron's zip, which packaging downloads into this folder and finds there next time.
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ matrix.electron-cache }}
           key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -154,6 +154,10 @@ jobs:
     # Runs after a failed leg too, only to say which one; the release then stays a draft.
     if: always() && needs.prepare.result == 'success'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # To read which build legs failed.
+      actions: read
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ needs.prepare.outputs.tag }}
@@ -167,10 +171,11 @@ jobs:
           echo "::error::$TAG stays a draft: ${failed:-a build leg} did not upload. Re-run the failed jobs to finish it."
           echo "$TAG stays a draft: ${failed:-a build leg} did not upload." >> "$GITHUB_STEP_SUMMARY"
           exit 1
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ needs.prepare.outputs.tag }}
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: List the downloads and publish
