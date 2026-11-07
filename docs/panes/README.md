@@ -41,8 +41,12 @@ over. Going to the pane clears the edge, and so does the worker getting back to
 work. Main only runs a worker in, or closes, a pane it started or one with
 nothing running in it.
 
-The new-pane key, or the button at the right end of the title row, opens a plain
-shell at the bottom of it. The close key, or the cross in a worker's corner,
+The button at the right end of the title row is two halves, [New Terminal | New
+Claude], each with its key. New Terminal opens a plain shell at the bottom of
+the list. New Claude opens a Claude screen there instead, in the project's
+folder, empty until you type its first prompt: your own Claude, not main's
+worker (workers-decision-7). Neither half takes the keyboard when clicked; the
+new pane takes it once it opens. The close key, or the cross in a worker's corner,
 closes it, asking first if something still runs in it; the fold key, or the
 arrow beside the cross, folds it to its name so the others share its room, and a
 click on the name or moving to it opens it again. The first focus key is main
