@@ -1,0 +1,11 @@
+{
+  "id": "dcd04077-9693-4ce9-8813-1dc30a357425",
+  "title": "Show a running workflow's progress on the Claude screen",
+  "notes": "Claude Code's terminal shows a running Workflow (e.g. /pr-loop) in its footer: the workflow's name, a progress bar, agents done of total (1/2), elapsed time and tokens. Selecting it opens a panel: the workflow's description, its phases in a list (Conflicts, Round 1: Review, Round 1: Re-review, Round 1: Fix ...) with done/running marks and counts per phase, and the agents of the selected phase with model, tokens and time; keys to walk the phases, stop the workflow, pause, go back. Screenshots from the user, 2026-11-07.\n\nThe Claude screen shows none of it: while a workflow runs, main's screen only says it is waiting.\n\nChange: the screen's foot shows a line per running workflow (name, bar, agents done/total, elapsed, tokens), like the background tasks line it already has. A key and a click open a panel with the phases and their agents, walked with the arrow keys (keyboard first, conventions-rule-1), with stop (and pause, if the SDK exposes it). Find what the Agent SDK streams for a workflow's progress (task or workflow events in the message stream) before designing; if it streams nothing usable, say so on the card instead of building a guess.\n\nA key is a row in src/shared/keys/actions.ts and help.ts updates (keys-rule-2). Decisions in small modules with tests (workflow-rule-2). Docs: chat README, history.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-07T18:50:36.875Z",
+  "updatedAt": "2026-11-07T18:50:36.875Z",
+  "column": "Todo",
+  "order": 13
+}
