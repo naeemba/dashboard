@@ -10,18 +10,13 @@ const idle = (index: number): ClosingPane => ({
   name: `terminal ${index + 1}`, index, exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false,
 });
 
-function setup(
-  open: Record<string, number>,
-  panes: ClosingPane[] = [idle(1)],
-  missingSlots: number[] = [],
-  startMain: ProjectRequestPorts['startMain'] = async (slot) => `main-${slot}`,
-) {
+function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], missingSlots: number[] = []) {
   const ports: ProjectRequestPorts = {
     slotOf: (projectPath) => open[projectPath] ?? -1,
     missingIn: (slot) => missingSlots.includes(slot),
     folderExists: (projectPath) => projectPath !== '/gone',
     open: vi.fn(() => 7),
-    startMain: vi.fn(startMain),
+    startMain: vi.fn(async (slot: number) => `main-${slot}`),
     panesOf: () => panes,
     close: vi.fn(),
     focus: vi.fn(),
@@ -58,13 +53,14 @@ describe('projectRequests', () => {
   });
 
   posixPathsOnly('refuses when main fails to start, and when it does not answer in time', async () => {
-    const failing = setup({}, [idle(1)], [], async () => { throw new Error('claude not found'); });
-    await expect(failing.answer('open', '/api', 'api'))
+    const { ports, answer } = setup({});
+    vi.mocked(ports.startMain).mockRejectedValueOnce(new Error('claude not found'));
+    await expect(answer('open', '/api', 'api'))
       .resolves.toEqual({ ok: false, output: 'opened api, but its main session did not start: claude not found' });
     vi.useFakeTimers();
     try {
-      const stuck = setup({}, [idle(1)], [], () => new Promise(() => undefined));
-      const reply = stuck.answer('open', '/api', 'api');
+      vi.mocked(ports.startMain).mockReturnValueOnce(new Promise(() => undefined));
+      const reply = answer('open', '/api', 'api');
       await vi.advanceTimersByTimeAsync(MAIN_START_MS);
       await expect(reply).resolves.toEqual({ ok: false, output: 'opened api, but its main session did not start: nothing answered within 60 seconds' });
     } finally {

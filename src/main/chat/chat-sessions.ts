@@ -725,6 +725,16 @@ export function registerChatSessions(
     await changeMcpServer((await running(slot, projectPath)).query, name, action);
   });
 
+  // The page's session started if it is not running, answered with its name once it has initialised:
+  // Claude Code has registered that name by then, so another session's SendMessage reaches it.
+  // `dashboard project open` waits on it (project-requests.ts).
+  async function reachable(slot: number): Promise<string> {
+    const projectPath = host.projectPath(slot);
+    if (projectPath === undefined) throw new Error('the page has no project folder');
+    await (await running(slot, projectPath)).query.initializationResult();
+    return mainSessionName(projectPath);
+  }
+
   return {
     // A project opening sets up what its main session will start on, without starting it: that waits
     // for the screen, a prompt or start(). `adopt` is the conversation the terminal main left;
@@ -736,20 +746,9 @@ export function registerChatSessions(
       if (opening.resume !== remembered[projectPath]) remember(projectPath, opening.resume);
       preferences.set(slot, opening.preferences);
     },
-    // The page's session started if it is not running, answered with its name once it has initialised:
-    // Claude Code has registered that name by then, so another session's SendMessage reaches it.
-    // `dashboard project open` waits on it (project-requests.ts).
-    async reachable(slot) {
-      const projectPath = host.projectPath(slot);
-      if (projectPath === undefined) throw new Error('the page has no project folder');
-      await (await running(slot, projectPath)).query.initializationResult();
-      return mainSessionName(projectPath);
-    },
+    reachable,
     // The page's session started now, for a worker's SendMessage to arrive at (chat-start.ts).
-    start(slot) {
-      const projectPath = host.projectPath(slot);
-      if (projectPath !== undefined) running(slot, projectPath).catch(() => undefined);
-    },
+    start: (slot) => { reachable(slot).catch(() => undefined); },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
     stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },
