@@ -6,23 +6,11 @@
 /* global process, console */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { cardsReachedDone, changelogWith, notesWithWhatsNew, releaseBody } from './release-notes.mjs';
+import { cardsAt, cardsReachedDone, changelogWith, notesWithWhatsNew, releaseBody } from './release-notes.mjs';
 
 const cardsFolder = '.dashboard/board/cards';
 
-const git = (...args) => execFileSync('git', args, { encoding: 'utf8' });
-
-// The board as it was at a tag. No tag (the first release) or no cards folder there is an empty board.
-function cardsAt(tag) {
-  if (!tag) return [];
-  let names;
-  try {
-    names = git('ls-tree', '--name-only', `${tag}:${cardsFolder}`).split('\n').filter((name) => name.endsWith('.json'));
-  } catch {
-    return [];
-  }
-  return names.map((name) => JSON.parse(git('show', `${tag}:${cardsFolder}/${name}`)));
-}
+const git = (...args) => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
 const cardsNow = () =>
   readdirSync(cardsFolder)
@@ -39,7 +27,7 @@ if (step === 'changelog') {
   process.stdout.write(releaseBody(readFileSync(notesFile, 'utf8'), assetNames, repository, tag));
 } else if (step === 'whats-new') {
   const [previousTag, notesFile] = rest;
-  const cards = cardsReachedDone(cardsAt(previousTag), cardsNow());
+  const cards = cardsReachedDone(cardsAt(previousTag, cardsFolder, git), cardsNow());
   writeFileSync(notesFile, notesWithWhatsNew(readFileSync(notesFile, 'utf8'), cards));
 } else {
   console.error(

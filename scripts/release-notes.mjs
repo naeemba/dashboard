@@ -43,6 +43,23 @@ export function releaseBody(notes, assetNames, repository, tag) {
   return [downloadsSection(assetNames, repository, tag), unsignedSection(repository), notes.trim() + '\n'].join('\n');
 }
 
+// The board's cards as they were at a tag, read through `git(...args)`, which returns stdout and throws
+// on a non-zero exit. No tag (the first release) or no cards folder at the tag is an empty board; any
+// other failure (a tag missing from the clone) throws, so a release never lists every Done card.
+export function cardsAt(tag, cardsFolder, git) {
+  if (!tag) return [];
+  try {
+    git('cat-file', '-e', `${tag}:${cardsFolder}`);
+  } catch {
+    git('cat-file', '-e', `${tag}^{commit}`);
+    return [];
+  }
+  return git('ls-tree', '--name-only', `${tag}:${cardsFolder}`)
+    .split('\n')
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => JSON.parse(git('show', `${tag}:${cardsFolder}/${name}`)));
+}
+
 // The cards that reached Done between two boards: in Done now, and not in Done (or not on the board)
 // before. A subtask is part of its parent's line, so only cards with no parent count. Oldest move first,
 // by updatedAt, which is as near to "when it reached Done" as a card file says.

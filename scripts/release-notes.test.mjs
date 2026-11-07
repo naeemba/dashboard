@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardsReachedDone, changelogWith, downloadsSection, notesWithWhatsNew, releaseBody } from './release-notes.mjs';
+import { cardsAt, cardsReachedDone, changelogWith, downloadsSection, notesWithWhatsNew, releaseBody } from './release-notes.mjs';
 
 describe('changelogWith', () => {
   it('starts a changelog that does not exist yet', () => {
@@ -88,5 +88,31 @@ describe('notesWithWhatsNew', () => {
 
   it('leaves the notes alone when no card reached Done', () => {
     expect(notesWithWhatsNew('* A\n', [])).toBe('* A\n');
+  });
+});
+
+describe('cardsAt', () => {
+  // A fake git over a map of the refs it asks for to their output. A ref not in the map throws, as git does.
+  const gitOver = (objects) => (...args) => {
+    const ref = args.at(-1);
+    if (!(ref in objects)) throw new Error(`fatal: Not a valid object name ${ref}`);
+    return objects[ref];
+  };
+
+  it('is an empty board with no tag', () => {
+    expect(cardsAt('', 'cards', gitOver({}))).toEqual([]);
+  });
+
+  it('is an empty board at a tag with no cards folder', () => {
+    expect(cardsAt('v1', 'cards', gitOver({ 'v1^{commit}': '' }))).toEqual([]);
+  });
+
+  it('reads every card file at the tag', () => {
+    const git = gitOver({ 'v1:cards': 'a.json\nnotes.txt\n', 'v1:cards/a.json': '{"id":"a"}' });
+    expect(cardsAt('v1', 'cards', git)).toEqual([{ id: 'a' }]);
+  });
+
+  it('throws for a tag the clone does not have, rather than listing every Done card', () => {
+    expect(() => cardsAt('v9.9.9', 'cards', gitOver({ 'v1^{commit}': '', 'v1:cards': '' }))).toThrow('v9.9.9');
   });
 });
