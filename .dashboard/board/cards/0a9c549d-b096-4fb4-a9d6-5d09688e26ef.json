@@ -1,0 +1,11 @@
+{
+  "id": "0a9c549d-b096-4fb4-a9d6-5d09688e26ef",
+  "title": "One scrollbar and one width for every Claude screen",
+  "notes": "Main's Claude screen and a worker's Claude screen look different (screenshot from the user, 2026-11-07):\n- Scrollbar: app.css themes scrollbars with :not(.pane, .pane *)::-webkit-scrollbar, so a worker screen, which sits inside .pane, gets the system's wide grey bar. Main gets the app's bar, 10px with a 3px transparent border, which leaves a 4px thumb: too thin. Fix: exclude only what draws its own (the xterm), not the whole pane, and make the visible thumb 7px, the user's number. One rule for every app scrollbar.\n- Width: .chat is width min(100%, 110ch) in main's column, so main's conversation is a centred strip with wide empty gutters, while .pane-screen > .chat is 100%. The user prefers the worker's: main's screen fills its column too, same padding as a worker screen or close to it.\n\nCSS only; no test (no DOM environment). Hand check in the app: both screens' scrollbars match at 7px, a terminal pane's scrolling is unchanged, main's text fills the column. Docs: the chat README's layout line if it names the measure, history.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-07T18:00:18.598Z",
+  "updatedAt": "2026-11-07T18:00:18.598Z",
+  "column": "Doing",
+  "order": 0
+}
