@@ -12,13 +12,14 @@ const PROTOCOL_VERSION = 1;
 // Beside the pane host's, in a private folder of the user data, so a second Dashboard on its own
 // --user-data-dir has a host of its own. Windows has none: a named pipe there needs the proof the pane
 // host does (paneHostAddress), and worker screens run in the app as before.
-export function hasScreenHost(platform: string): boolean {
-  return platform !== 'win32';
-}
-
 export function screenHostSocket(platform: string, userData: string): string | null {
   if (!hasScreenHost(platform)) return null;
   return path.join(userData, 'screen-host', `screens-${PROTOCOL_VERSION}.sock`);
+}
+
+// Windows has none (above), which is why a worker there is a terminal unless asked (session-cli.ts).
+export function hasScreenHost(platform: string): boolean {
+  return platform !== 'win32';
 }
 
 // What a session starts on, on either side of the socket: chat-sessions.ts's prompts and options.

@@ -37,11 +37,10 @@ claim opens a worker pane and prints its id: --project opens it on the page of t
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
-and neither in the project itself. The worker is a Claude screen in the pane; --terminal runs Claude
-Code in the pane's terminal instead. On Windows, which has no screen host to keep a screen's turn
-going through a quit, it is the terminal unless --screen asks for a screen; elsewhere --screen
-changes nothing. send types the text into the pane and presses Enter, or hands it to a Claude screen
-as its next prompt. notify is what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for
+and neither in the project itself. The worker is a Claude screen; --terminal runs Claude Code in the
+pane's terminal. On Windows the terminal is the default, since a screen's turn there ends with the
+app, and --screen asks for a screen. send types the text into the pane and presses Enter, or hands
+it to a Claude screen as its next prompt. notify is what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for
 how many background tasks and wakeups the session still waits on. list --all lists the panes of every
 open project and the manager.`;
 
@@ -133,7 +132,6 @@ export function stopHookArguments(given: readonly string[], input: string | unde
   return [...given.slice(0, 3), ...(input === undefined ? [] : stopInputArguments(input))];
 }
 
-// `platform` is the machine's, where the command and the app both run; a test passes its own.
 export function parseSessionCommand(commandArguments: readonly string[], platform: string = process.platform): Parsed {
   const [verb, ...rest] = commandArguments;
   switch (verb) {

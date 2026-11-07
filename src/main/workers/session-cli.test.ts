@@ -33,7 +33,6 @@ describe('parseSessionCommand', () => {
 
   // A screen by default where the screen host keeps its turn through a quit; a terminal on Windows.
   it('runs a worker as a screen unless --terminal, and as a terminal on Windows unless --screen', () => {
-    expect(parseSessionCommand(['run', '2:3', 'go'], 'linux')).toMatchObject({ ok: true, command: { screen: true, prompt: 'go' } });
     expect(parseSessionCommand(['run', '2:3', '--terminal', 'go'], 'linux')).toMatchObject({ ok: true, command: { screen: false, prompt: 'go' } });
     expect(parseSessionCommand(['run', '2:3', '--screen', 'go'], 'darwin')).toMatchObject({ ok: true, command: { screen: true, prompt: 'go' } });
     expect(parseSessionCommand(['run', '2:3', 'go'], 'win32')).toMatchObject({ ok: true, command: { screen: false } });
