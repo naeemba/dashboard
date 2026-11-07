@@ -1,0 +1,11 @@
+{
+  "id": "5bb4e6c7-ffda-4901-a061-bc7b3149bd40",
+  "title": "release.sh dies silently on a GitHub blip and --resume refuses after the release commit",
+  "notes": "Seen cutting v2.43.0 (run 42395223367).\n\n1. gh run watch failed with 'failed to get run: ... EOF' (a GitHub API blip) while the run was still going. The script then went into its failed-leg branch, whose gh run view also failed under set -eu inside the command substitution, so it exited with no 'Stopped:' line at all. The release was fine and still building. Fix: retry gh run watch on a transport error (as land.sh does with retries), and never let the failed-leg lookup exit silently; a watch that fails while the run is still in_progress goes back to watching.\n\n2. scripts/release.sh --resume <run id> then refused with 'main is not origin/main. Pull or push until they match.', because the workflow's prepare job had pushed 'Release vX.Y.Z' to main. --resume is exactly the case where origin/main is ahead by that commit: fast-forward when local main is an ancestor of origin/main, refuse only on local commits or a dirty tree.\n\nTests for both decisions (a small module or the script's testable half), docs/workflow README scenarios and history.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-07T17:16:26.574Z",
+  "updatedAt": "2026-11-07T17:16:26.574Z",
+  "column": "Todo",
+  "order": 9
+}
