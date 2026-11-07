@@ -1,12 +1,13 @@
 ---
-name: release
 description: Cut a Dashboard release with the bump the user names (/release minor), then install it here without restarting the app
 argument-hint: <major|minor|patch>
 disable-model-invocation: true
-allowed-tools: Bash(scripts/release.sh:*)
+allowed-tools: Bash(./scripts/release.sh:*)
+model: sonnet
+effort: low
 ---
 
-Run `scripts/release.sh $ARGUMENTS` from the top of this repository and report what it printed: the
+Run `./scripts/release.sh $ARGUMENTS` from the top of this repository and report what it printed: the
 version, the release URL and "restart the app when ready", or the reason it stopped.
 
 Run it only because the user typed `/release` just now. A release publishes to everyone who downloads

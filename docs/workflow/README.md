@@ -4,7 +4,7 @@ How a change is made and shipped here: never touch the running app, a decision
 gets a module and a test, and the build stamps its commit instead of every card
 bumping the version. Owns `.gitattributes`, the CI and release workflows (the release notes and download links in
 `scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` and the
-`/release` skill, the pnpm setup and the build
+`/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build
 hooks, `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
 in `scripts/running-app.mjs`, tested beside it), written in Node so the same
 hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
