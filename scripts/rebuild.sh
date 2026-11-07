@@ -48,14 +48,14 @@ built=$(ls -d "$repo"/$pattern 2>/dev/null | head -1)
 mkdir -p "$parent"
 rm -rf "$staged" "$previous"
 $copy "$built" "$staged"
+# The stamp the build carries (vite.build-version.ts), read out of the staged app.asar, which keeps
+# main.cjs as plain text. Checked before the swap, so a build this checkout did not make never
+# replaces the installed one.
+stamp="$(node -p 'require("./package.json").version')+$(git rev-parse --short=12 HEAD)"
+grep -a -q -F "$stamp" "$staged/$resources/app.asar" || { rm -rf "$staged"; echo "Stopped: the build does not carry $stamp; $installed is unchanged."; exit 1; }
 if [ -d "$installed" ]; then mv "$installed" "$previous"; fi
 mv "$staged" "$installed"
 rm -rf "$previous"
-
-# The stamp the build carries (vite.build-version.ts), read back out of the installed app.asar, which
-# keeps main.cjs as plain text: what is installed is what this checkout built.
-stamp="$(node -p 'require("./package.json").version')+$(git rev-parse --short=12 HEAD)"
-grep -a -q -F "$stamp" "$installed/$resources/app.asar" || { echo "Stopped: $installed does not carry $stamp."; exit 1; }
 
 # The `dashboard` command for any terminal: no words open the app, `dashboard <noun> ...` runs the
 # command entry under node (docs/command). Written beside and renamed over, never through: the old
