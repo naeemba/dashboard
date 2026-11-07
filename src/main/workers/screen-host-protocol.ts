@@ -12,8 +12,12 @@ const PROTOCOL_VERSION = 1;
 // Beside the pane host's, in a private folder of the user data, so a second Dashboard on its own
 // --user-data-dir has a host of its own. Windows has none: a named pipe there needs the proof the pane
 // host does (paneHostAddress), and worker screens run in the app as before.
+export function hasScreenHost(platform: string): boolean {
+  return platform !== 'win32';
+}
+
 export function screenHostSocket(platform: string, userData: string): string | null {
-  if (platform === 'win32') return null;
+  if (!hasScreenHost(platform)) return null;
   return path.join(userData, 'screen-host', `screens-${PROTOCOL_VERSION}.sock`);
 }
 

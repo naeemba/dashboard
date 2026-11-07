@@ -5,10 +5,12 @@
 import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
+import { hasScreenHost } from './screen-host-protocol';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
-  // `screen` runs the worker as a Claude screen in the pane rather than Claude Code in its terminal.
+  // `screen` runs the worker as a Claude screen in the pane rather than Claude Code in its terminal: the
+  // default where there is a screen host, so the turn outlives the app (workers-decision-5).
   | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; screen: boolean }
   | { kind: 'list'; all: boolean }
   | { kind: 'send'; id: string; text: string }
@@ -25,7 +27,7 @@ export type SessionReply = { ok: boolean; output: string };
 export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
   session claim [--project <name|aka>]
-  session run <id> [--card <card id> | --worktree] [--screen] "<prompt>"
+  session run <id> [--card <card id> | --worktree] [--terminal] "<prompt>"
   session list [--all]
   session send <id> "<text>"
   session release <id>
@@ -35,9 +37,11 @@ claim opens a worker pane and prints its id: --project opens it on the page of t
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
-and neither in the project itself; --screen runs it as a Claude screen in the pane rather than its
-terminal. send types the text into the pane and presses Enter, or hands it to a Claude screen as its
-next prompt. notify is what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for
+and neither in the project itself. The worker is a Claude screen in the pane; --terminal runs Claude
+Code in the pane's terminal instead. On Windows, which has no screen host to keep a screen's turn
+going through a quit, it is the terminal unless --screen asks for a screen; elsewhere --screen
+changes nothing. send types the text into the pane and presses Enter, or hands it to a Claude screen
+as its next prompt. notify is what a worker's hooks call: --stop-input reads Claude Code's Stop hook input for
 how many background tasks and wakeups the session still waits on. list --all lists the panes of every
 open project and the manager.`;
 
@@ -57,16 +61,17 @@ function paneId(word: string | undefined, command: string): string | Parsed {
   return PANE_ID.test(word) ? word : refuse(`${word} is not a pane id — claim prints one, like 2:3`);
 }
 
-function parseRun(words: readonly string[]): Parsed {
+function parseRun(words: readonly string[], platform: string): Parsed {
   const id = paneId(words[0], 'run');
   if (typeof id !== 'string') return id;
   let card: string | null = null;
   let worktree = false;
-  let screen = false;
+  let screen = hasScreenHost(platform);
   const prompt: string[] = [];
   for (let at = 1; at < words.length; at++) {
     if (words[at] === '--worktree') worktree = true;
     else if (words[at] === '--screen') screen = true;
+    else if (words[at] === '--terminal') screen = false;
     else if (words[at] === '--card') {
       card = words[++at] ?? '';
       if (card === '') return refuse('--card needs the card id, the one `board list` prints');
@@ -128,7 +133,8 @@ export function stopHookArguments(given: readonly string[], input: string | unde
   return [...given.slice(0, 3), ...(input === undefined ? [] : stopInputArguments(input))];
 }
 
-export function parseSessionCommand(commandArguments: readonly string[]): Parsed {
+// `platform` is the machine's, where the command and the app both run; a test passes its own.
+export function parseSessionCommand(commandArguments: readonly string[], platform: string = process.platform): Parsed {
   const [verb, ...rest] = commandArguments;
   switch (verb) {
     case 'claim': {
@@ -142,7 +148,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       if (rest.length === 1 && rest[0] === '--all') return { ok: true, command: { kind: 'list', all: true } };
       return refuse('session list takes nothing, or --all');
     }
-    case 'run': return parseRun(rest);
+    case 'run': return parseRun(rest, platform);
     case 'send': {
       const id = paneId(rest[0], 'send');
       if (typeof id !== 'string') return id;

@@ -18,3 +18,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-05 — `pane run --screen` runs a worker as a Claude screen in its pane, opt-in, its done detection from its own Stop hook (workers-decision-5)
 - 2026-11-06 — A worker screen's session runs in the screen host, so its turn goes on through an app restart (workers-decision-6)
 - 2026-11-06 #224 — A worker screen asks permission as a terminal worker does: the user's allow rules, then a question in its box; the trial's `gh pr create` refusal was not reproduced (workers-decision-5)
+- 2026-11-07 — `pane run` starts a Claude screen by default; `--terminal` asks for Claude Code in the terminal, and Windows keeps the terminal (workers-decision-5)
