@@ -1,0 +1,11 @@
+{
+  "id": "20be4145-f571-4013-b407-f3906c999fcc",
+  "title": "Split the new-pane button into New Terminal and New Claude",
+  "notes": "The title row's '+ New pane' becomes two halves: [New Terminal | New Claude]. New Terminal is today's button and the terminal-add key. New Claude opens a new worker pane and starts the claude command in its shell, in the project's folder.\n\nKeyboard first: New Claude gets its own key, a row in src/shared/keys/actions.ts beside terminal-add (a terminals-scope name), and src/renderer/keys/help.ts plus the terminals blurb say so. Both halves keep the button's mousedown preventDefault, so a click leaves the keyboard where it was; the new pane takes it once it opens, as addPane does now.\n\nWhy the claude command and not a Claude screen (pane run --screen): the terminal Claude is full Claude Code, comes back after a restart through the pane host, and needs no new session plumbing. A Claude screen opened by hand would start empty, and screen parity is a backlog card of its own (a6b5043b).\n\nA Claude opened this way is the user's, not main's worker: it reports to nobody when its turn ends (workers README, 'a Claude opened by hand tells nobody').\n\nChecks: the decision of which command a new pane starts with goes in a small module with a test (workflow-rule-2); docs/panes README and history get a line.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-07T12:51:21.965Z",
+  "updatedAt": "2026-11-07T12:51:21.965Z",
+  "column": "Todo",
+  "order": 9
+}
