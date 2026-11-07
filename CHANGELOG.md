@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.43.1 (2026-11-07)
+
+### What's new
+
+- One scrollbar and one width for every Claude screen
+
+### What's Changed
+* One scrollbar and one width for every Claude screen by @naeemba in https://github.com/naeemba/dashboard/pull/232
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.43.0...v2.43.1
+
 ## v2.43.0 (2026-11-07)
 
 ### What's new
