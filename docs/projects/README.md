@@ -25,7 +25,7 @@ deploy needs all of `name`, `role` and `address`.
 | `project add <path> [--name <n>] [--aka a,b] [--site <url>] [--about "<line>"]` | `added <name> in <file>`: a new entry at the end, the name from the folder unless given |
 | `project set <name> [--aka a,b] [--site <url>] [--about "<line>"] [--deploy name=<n>,role=<r>,address=<a>]... [--clear <field>]...` | `changed <name> in <file>` |
 | `project remove <name>` | `removed <name> in <file>` |
-| `project open <name>` | `opened <name>; main-<name> is running`: the app opens its folder the way the project picker does and starts its main session, answering once SendMessage can reach it (a minute at most, else a refusal); an open project's main is started the same way |
+| `project open <name>` | `opened <name>; main-<folder> is running`, `<folder>` being the slug of the path's last segment, not the entry's name; the printed session name is the one to SendMessage. The app opens its folder the way the project picker does and starts its main session, answering once SendMessage can reach it (a minute at most, else a refusal); an open project's main is started the same way |
 | `project close <name>` | `closed <name>`, or the close key's own refusal naming the panes still running something |
 | `project focus <name>` | `switched to <name>`: the window comes to the front on that project's page, at its main pane |
 

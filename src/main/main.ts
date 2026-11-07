@@ -838,7 +838,7 @@ const answerSession = projectRequests({
   missingIn: (slot) => projects[slot]?.missing === true,
   folderExists,
   open: (projectPath) => openProject(projectPath).index,
-  startMain: chats.reachable,
+  startMain: chats.startMain,
   // Named the way the close key names them, less any name you gave a pane: those are the screen's.
   panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
   close: closeProjectSlot,
