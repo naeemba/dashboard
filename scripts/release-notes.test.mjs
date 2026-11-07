@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changelogWith, downloadsSection, releaseBody } from './release-notes.mjs';
+import { cardsAt, cardsReachedDone, changelogWith, downloadsSection, notesWithWhatsNew, releaseBody } from './release-notes.mjs';
 
 describe('changelogWith', () => {
   it('starts a changelog that does not exist yet', () => {
@@ -57,5 +57,62 @@ describe('releaseBody', () => {
     expect(body.indexOf('## Downloads')).toBeLessThan(body.indexOf('## Unsigned builds'));
     expect(body.indexOf('## Unsigned builds')).toBeLessThan(body.indexOf("## What's Changed"));
     expect(body).toContain('https://github.com/o/r#install');
+  });
+});
+
+describe('cardsReachedDone', () => {
+  const card = (id, column, extra = {}) => ({ id, title: `Card ${id}`, column, updatedAt: '2026-11-01', ...extra });
+
+  it('counts a card new in Done and one that moved into Done, not one already there', () => {
+    const before = [card('a', 'Done'), card('b', 'Doing')];
+    const now = [card('a', 'Done'), card('b', 'Done'), card('c', 'Done'), card('d', 'Review')];
+    expect(cardsReachedDone(before, now).map((done) => done.id)).toEqual(['b', 'c']);
+  });
+
+  it('leaves a subtask to its parent', () => {
+    expect(cardsReachedDone([], [card('a', 'Done', { parent: 'p' })])).toEqual([]);
+  });
+
+  it('lists the oldest move first', () => {
+    const now = [card('late', 'Done', { updatedAt: '2026-11-07' }), card('early', 'Done', { updatedAt: '2026-11-02' })];
+    expect(cardsReachedDone([], now).map((done) => done.id)).toEqual(['early', 'late']);
+  });
+});
+
+describe('notesWithWhatsNew', () => {
+  it("puts the card titles above GitHub's list", () => {
+    expect(notesWithWhatsNew("## What's Changed\n* A\n", [{ title: 'One' }, { title: 'Two' }])).toBe(
+      "## What's new\n\n- One\n- Two\n\n## What's Changed\n* A\n",
+    );
+  });
+
+  it('leaves the notes alone when no card reached Done', () => {
+    expect(notesWithWhatsNew('* A\n', [])).toBe('* A\n');
+  });
+});
+
+describe('cardsAt', () => {
+  // A fake git over a map of the refs it asks for to their output. A ref not in the map throws, as git does.
+  const gitOver = (objects) => (...args) => {
+    const ref = args.at(-1);
+    if (!(ref in objects)) throw new Error(`fatal: Not a valid object name ${ref}`);
+    return objects[ref];
+  };
+
+  it('is an empty board with no tag', () => {
+    expect(cardsAt('', 'cards', gitOver({}))).toEqual([]);
+  });
+
+  it('is an empty board at a tag with no cards folder', () => {
+    expect(cardsAt('v1', 'cards', gitOver({ 'v1^{commit}': '' }))).toEqual([]);
+  });
+
+  it('reads every card file at the tag', () => {
+    const git = gitOver({ 'v1:cards': 'a.json\nnotes.txt\n', 'v1:cards/a.json': '{"id":"a"}' });
+    expect(cardsAt('v1', 'cards', git)).toEqual([{ id: 'a' }]);
+  });
+
+  it('throws for a tag the clone does not have, rather than listing every Done card', () => {
+    expect(() => cardsAt('v9.9.9', 'cards', gitOver({ 'v1^{commit}': '', 'v1:cards': '' }))).toThrow('v9.9.9');
   });
 });

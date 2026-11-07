@@ -48,6 +48,11 @@ built=$(ls -d "$repo"/$pattern 2>/dev/null | head -1)
 mkdir -p "$parent"
 rm -rf "$staged" "$previous"
 $copy "$built" "$staged"
+# The stamp the build carries (vite.build-version.ts), read out of the staged app.asar, which keeps
+# main.cjs as plain text. Checked before the swap, so a build this checkout did not make never
+# replaces the installed one.
+stamp="$(node -p 'require("./package.json").version')+$(git rev-parse --short=12 HEAD)"
+grep -a -q -F "$stamp" "$staged/$resources/app.asar" || { rm -rf "$staged"; echo "Stopped: the build does not carry $stamp; $installed is unchanged."; exit 1; }
 if [ -d "$installed" ]; then mv "$installed" "$previous"; fi
 mv "$staged" "$installed"
 rm -rf "$previous"
@@ -67,4 +72,4 @@ LAUNCHER
 chmod 755 "$launcher.new"
 mv -f "$launcher.new" "$launcher"
 
-echo "Installed $installed and $launcher. The running app is untouched — restart it when you are ready."
+echo "Installed $stamp in $installed, and $launcher. The running app is untouched — restart it when you are ready."
