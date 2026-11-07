@@ -87,3 +87,29 @@ two npm copies of the same packages were 1.4 GB.
 - The changelog is GitHub's generated notes, the same text the release shows: every merged pull request
   since the last stable tag, with its number, title and link, grouped as `.github/release.yml` would group
   them (one list while there is none).
+
+## workflow-decision-5: One command cuts a release, and the board writes its first lines
+
+Agreed on 2026-11-07. A release was a hand dispatch of `release.yml`, then watching it, then pulling the
+tag and rebuilding the local app. `scripts/release.sh <bump>` does all of it; `/release` is a project
+skill that runs the script.
+
+- A shell script, not a Node one, beside `rebuild.sh`: it is a row of guards and `gh` and `git` calls.
+  Its refusals were tried by hand (each prints its own reason), not by a test.
+- The skill sets `disable-model-invocation: true` and says it runs only when the user typed it. A
+  release publishes to everyone who downloads the app; nothing chains it onto a merge.
+- The run a dispatch made is the newest dispatched Release run that was not the newest before it:
+  `gh workflow run` does not print the run id. `--resume <run id>` covers a run started any other way
+  and one finished by re-running its failed jobs. It installs only a release on main, found as the first
+  stable tag on main that contains the commit the run ran on, not by the release commit's message; a
+  pre-release tag run has none.
+- `rebuild.sh` checks the installed build by grepping its `app.asar` for `<version>+<commit>`: `main.cjs`
+  is stored in it as plain text, so no asar tool is needed. Every rebuild gets the check, and the install
+  paths stay in one script.
+- "What's new" comes from the board, not the pull requests: a card's title says what changed for a
+  person, a pull request title often says how. A card reached `Done` since the last release when it is in
+  `Done` in the checkout and was not at the last stable tag (`git show <tag>:.dashboard/board/cards/...`).
+  Cards carry no move history, and the column at two commits is the same answer without one. Cards are
+  listed by `updatedAt`, the nearest a card file has to when it moved. Subtasks are part of their
+  parent's line. The workflow writes the list, so the script, the skill and the Actions tab give the
+  same notes.
