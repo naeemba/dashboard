@@ -33,7 +33,8 @@ export type ProjectRequestPorts = {
 export const MAIN_START_MS = 60_000;
 
 // An explicit open starts main as well as the page, so the manager can hand the project to it at once.
-// Restoring pages at launch does not come here, so a restored page's main still waits to be shown, told something, or reported to (chat-start.ts).
+// Restoring pages at launch does not come here, so a restored page's main still waits to be shown,
+// told something, or reported to (chat-start.ts).
 async function startedMain(ports: ProjectRequestPorts, slot: number, opened: string): Promise<SessionReply> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
