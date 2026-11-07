@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-07T13:21:17.354Z",
-  "updatedAt": "2026-11-07T13:28:50.576Z",
+  "updatedAt": "2026-11-07T13:37:48.751Z",
   "branch": "work-board-card-52afbf79-9495-43df-b0a6-009",
   "pullRequest": 229,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-07T13:37:48.751Z",
+      "body": "Shipped in #229: dashboard project open starts the project's main session and answers once main-<name> has initialised; a start failure or a 60 s timeout is refused. Restored pages stay lazy. Follow-ups in issue #230."
+    }
+  ],
+  "column": "Done",
+  "order": 185
 }
