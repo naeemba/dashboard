@@ -1,0 +1,11 @@
+{
+  "id": "52afbf79-9495-43df-b0a6-0096b0a71fe0",
+  "title": "project open starts the project's main session",
+  "notes": "What happens: dashboard project add <path> then dashboard project open <name> opens the page, but main-<name> does not start until someone shows that page. Until then ListAgents does not list it and SendMessage to main-<name> fails with \"No agent named 'main-<name>' is reachable\". A manager that creates a project to hand it to that project's main is stuck until the user clicks the page.\n\nRepro: from the main manager, project add ~/Workspace/personal/kamandsystem --name kamandsystem, project open kamandsystem, SendMessage to main-kamandsystem: fails. After the user opens the page, the same SendMessage works; the session had started 34 seconds earlier.\n\nWhy: main's session starts on the screen's first show (chat-view.ts shown(), docs/chat/README.md: 'It starts the first time you show this screen, or when a worker reports to it, so a project you never look at runs no Claude'). project open is not a show.\n\nChange: project open starts the project's main session along with the page, and answers once main-<name> is reachable, printing its name; a timeout prints a refusal through failureText. Keep the lazy start for pages the app restores on launch, so ten restored projects still run no Claude until looked at. The rule (an explicit open starts main, a restore does not) goes in a small module with a test (workflow-rule-2).\n\nDocs: chat README's start sentence, projects or command README for project open, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-07T13:21:17.354Z",
+  "updatedAt": "2026-11-07T13:21:17.354Z",
+  "column": "Todo",
+  "order": 9
+}
