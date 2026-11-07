@@ -303,7 +303,7 @@ export const ACTIONS: readonly ActionEntry[] = [
   // list: the two halves of the button above it. Shift for the reason mode-notes gives: Ctrl+Shift with
   // a letter reaches a pane as no bytes, so the keys cost the shell nothing.
   {
-    name: 'terminal-add', description: 'Open a new worker pane', group: 'terminals', scope: 'terminals',
+    name: 'terminal-add', description: 'Open a new terminal in a worker pane', group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-add' }, mac: 'Ctrl+Shift+T', other: 'Ctrl+Shift+T',
   },
   {

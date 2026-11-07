@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, keepsItsConversation, replayedFlagSettings, liveConversation, runningElsewhere, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, runningElsewhere, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('rememberedSessions', () => {
   const folder = mkdtempSync(path.join(tmpdir(), 'chat-sessions-'));
@@ -158,13 +158,17 @@ describe('conversationReporter', () => {
   });
 });
 
-describe('keepsItsConversation', () => {
-  const screen = { session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, carryOnIn: () => undefined };
+describe('nextConversation', () => {
+  it('keeps a screen opened by hand off main\'s remembered conversation and its held cut', () => {
+    expect(nextConversation(true, 'picked')).toEqual({ screen: 'picked' });
+    expect(nextConversation(true, undefined)).toEqual({ screen: null });
+    expect(nextConversation(true, { cutAt: 'm3' })).toEqual({ fork: 'm3' });
+  });
 
-  it('refuses a new conversation only on main\'s worker screen', () => {
-    expect(keepsItsConversation({ ...screen, owner: 'main' })).toBe(true);
-    expect(keepsItsConversation({ ...screen, owner: 'you' })).toBe(false);
-    expect(keepsItsConversation(undefined)).toBe(false);
+  it('has the page\'s main remember the id, forget it, or hold the cut', () => {
+    expect(nextConversation(false, 'picked')).toEqual({ remember: 'picked' });
+    expect(nextConversation(false, undefined)).toEqual({ remember: undefined });
+    expect(nextConversation(false, { cutAt: 'm3' })).toEqual({ cut: 'm3' });
   });
 });
 

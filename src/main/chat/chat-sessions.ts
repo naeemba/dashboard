@@ -83,7 +83,7 @@ export type ChatHost = {
 
 // Why /clear, /resume, /branch and /rewind are refused on main's worker screen, which keeps the
 // conversation the app started it on. A screen opened by hand is yours and takes all four.
-export const keepsItsConversation = (worker: ScreenSession | undefined): boolean => worker?.owner === 'main';
+const keepsItsConversation = (worker: ScreenSession | undefined): boolean => worker?.owner === 'main';
 const WORKER_KEEPS_ITS_CONVERSATION = 'A worker screen stays on the conversation it was started on.';
 // Why /branch is refused before the page has a conversation to copy.
 const NOTHING_TO_BRANCH = 'Nothing to branch yet: send a prompt first.';
@@ -233,16 +233,29 @@ export function workerSessionStart(worker: ScreenSession): { resume: string } | 
   return worker.resume ? { resume: worker.session } : { sessionId: worker.session };
 }
 
+// Where a conversation /resume picked runs now, or null: a worker pane, or for a screen opened by hand
+// in the project's folder, main, whose conversations its /resume lists too.
+export function runningElsewhere(
+  sessionId: string, paneRunningIt: string | null, worker: ScreenSession | undefined, mainsConversation: string | undefined,
+): string | null {
+  if (paneRunningIt !== null) return paneRunningIt;
+  return worker !== undefined && sessionId === mainsConversation ? 'main' : null;
+}
+
+// What a change of conversation does: the id to go on in, undefined for a new conversation, or a cut a
+// /rewind left. A screen opened by hand never touches main's state, which is kept per project and so
+// shared with the screen: it saves the id as its own (null for a new one), or goes on in a copy cut
+// there now. The page's main remembers the id, or forgets it, or holds the cut until its next prompt.
+export type NextConversation = { screen: string | null } | { fork: string } | { remember: string | undefined } | { cut: string };
+
+export function nextConversation(onScreen: boolean, next: string | undefined | { cutAt: string }): NextConversation {
+  if (typeof next === 'object') return onScreen ? { fork: next.cutAt } : { cut: next.cutAt };
+  return onScreen ? { screen: next ?? null } : { remember: next };
+}
+
 // The conversation running under a key: a worker screen's own once the session has written it, never
 // main's, which a worker in the project folder shares that folder with; or the page's remembered one.
 // Reading `remembered` for a worker would have /rename on a worker screen rename main's conversation.
-// Where a conversation /resume picked runs now, or null: a worker pane, or for a screen opened by hand
-// in the project's folder, main, whose conversations its /resume lists too.
-export function runningElsewhere(sessionId: string, inPane: string | null, worker: ScreenSession | undefined, mains: string | undefined): string | null {
-  if (inPane !== null) return inPane;
-  return worker !== undefined && sessionId === mains ? 'main' : null;
-}
-
 export function liveConversation(worker: ScreenSession | undefined, remembered: string | undefined): string | undefined {
   if (worker) return worker.resume ? worker.session : undefined;
   return remembered;
@@ -648,35 +661,48 @@ export function registerChatSessions(
     }, () => undefined);
   }
 
-  // A new conversation: the running one is closed, the page forgets its id, and a fresh session starts
-  // at once, so a worker's report still has a main to arrive at. The old transcript stays on disk for
-  // whatever lists sessions later. Every screen is told, so none keeps showing the closed one.
-  table.handle('chat:reset', (_screen, slot: number): { refused: string } | null => {
+  // A new conversation: the running one is closed, the page forgets its id (a screen opened by hand
+  // saves a new one of its own), and a fresh session starts at once, so a worker's report still has a
+  // main to arrive at. The old transcript stays on disk for whatever lists sessions later. Every screen
+  // is told, so none keeps showing the closed one.
+  table.handle('chat:reset', async (_screen, slot: number): Promise<{ refused: string } | null> => {
     const projectPath = host.projectPath(slot);
-    if (keepsItsConversation(host.worker(slot))) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
+    const worker = host.worker(slot);
+    if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
     if (projectPath === undefined) stop(slot);
-    else carryOnIn(slot, projectPath, undefined);
+    else await changeConversation(slot, projectPath, worker, undefined);
     return null;
   });
 
-  // An earlier conversation picked in /resume: the running one is closed, the page remembers the picked
-  // one, and a session resuming it starts at once. Every screen reads it back. One a worker pane runs
-  // is refused, as the drawer refuses one the Claude screen runs.
-  table.handle('chat:resume', (_screen, slot: number, sessionId: string): { refused: string } | null => {
+  // An earlier conversation picked in /resume: the running one is closed, the page (or a screen opened
+  // by hand) goes on in the picked one, and a session resuming it starts at once. Every screen reads it
+  // back. One a worker pane runs is refused, as the drawer refuses one the Claude screen runs, and so is
+  // main's on a screen opened by hand.
+  table.handle('chat:resume', async (_screen, slot: number, sessionId: string): Promise<{ refused: string } | null> => {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return null;
     const worker = host.worker(slot);
     if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
     const refused = stillRunning(undefined, runningElsewhere(sessionId, host.runningInPane(sessionId), worker, remembered[projectPath]));
     if (refused !== null) return { refused };
-    carryOnIn(slot, projectPath, sessionId);
+    await changeConversation(slot, projectPath, worker, sessionId);
     return null;
   });
 
-  // The page, or a screen opened by hand, goes on in another conversation, or a new one for undefined.
-  function carryOnIn(slot: number, projectPath: string, sessionId: string | undefined): void {
-    const worker = host.worker(slot);
-    restart(slot, projectPath, () => (worker ? worker.carryOnIn(sessionId ?? null) : remember(projectPath, sessionId)));
+  // The page, or the screen opened by hand `worker` names, goes on in another conversation, as
+  // nextConversation says. `worker` is the one read before any await: a screen closed since is left
+  // alone, rather than read again as main's page.
+  async function changeConversation(
+    slot: number, projectPath: string, worker: ScreenSession | undefined, next: string | undefined | { cutAt: string },
+  ): Promise<void> {
+    if (host.worker(slot) !== worker) return;
+    const change = nextConversation(worker !== undefined, next);
+    if ('fork' in change) return forkInto(slot, projectPath, worker, liveConversation(worker, undefined), change.fork, '');
+    restart(slot, projectPath, () => {
+      if ('screen' in change) worker?.carryOnIn(change.screen);
+      else if ('remember' in change) remember(projectPath, change.remember);
+      else rewound.set(projectPath, change.cut);
+    });
   }
 
   // The session closed, what it starts on next changed, and a fresh one started, which every screen reads back.
@@ -688,10 +714,13 @@ export function registerChatSessions(
   }
 
   // The conversation copied, up to `cutAt` when given, and the page or screen going on in the copy.
-  async function forkInto(slot: number, projectPath: string, from: string, cutAt: string | undefined, title: string): Promise<void> {
+  async function forkInto(
+    slot: number, projectPath: string, worker: ScreenSession | undefined, from: string | undefined, cutAt: string | undefined, title: string,
+  ): Promise<void> {
+    if (from === undefined) return;
     const { forkSession } = await import('@anthropic-ai/claude-agent-sdk');
     const { sessionId } = await forkSession(from, forkFrom(projectPath, cutAt, title));
-    carryOnIn(slot, projectPath, sessionId);
+    await changeConversation(slot, projectPath, worker, sessionId);
   }
 
   // /branch: the conversation is copied into a new one and the page goes on in the copy the way
@@ -703,11 +732,11 @@ export function registerChatSessions(
     const projectPath = host.projectPath(slot);
     const current = projectPath === undefined ? undefined : conversationOf(slot, projectPath);
     if (projectPath === undefined || current === undefined) return { refused: NOTHING_TO_BRANCH };
-    await forkInto(slot, projectPath, current, worker ? undefined : rewound.get(projectPath), title);
+    await forkInto(slot, projectPath, worker, current, worker ? undefined : rewound.get(projectPath), title);
     return null;
   });
 
-  // The prompts /rewind lists. Refused on a worker screen before either sheet opens.
+  // The prompts /rewind lists. Refused on main's worker screen before either sheet opens.
   table.handle('chat-prompts:read', async (_screen, slot: number): Promise<RewindPoint[] | { refused: string }> => (
     keepsItsConversation(host.worker(slot)) ? { refused: WORKER_KEEPS_ITS_CONVERSATION } : rewindPoints(await conversation(slot))
   ));
@@ -728,11 +757,7 @@ export function registerChatSessions(
     }
     const conversationRewind = conversationAfterRewind(point, choice, restored);
     if (conversationRewind === 'keep') return restored;
-    // A screen opened by hand goes on in a copy cut there now: the cut a page's main holds until its
-    // next prompt is kept per project, which the screen shares with main.
-    if (conversationRewind === 'forget') carryOnIn(slot, projectPath, undefined);
-    else if (worker) await forkInto(slot, projectPath, conversationOf(slot, projectPath) ?? '', conversationRewind.cutAt, '');
-    else restart(slot, projectPath, () => rewound.set(projectPath, conversationRewind.cutAt));
+    await changeConversation(slot, projectPath, worker, conversationRewind === 'forget' ? undefined : { cutAt: conversationRewind.cutAt });
     return restored;
   });
 

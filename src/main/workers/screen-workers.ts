@@ -201,8 +201,9 @@ export function screenWorkers(ports: ScreenPorts) {
       save();
     },
     // The project opened in `slot`: the workers saved for it, back under this slot's pane ids, each to
-    // be opened again as main's worker, or as yours for one with no dispatcher. Their sessions start when shown or told something, except one
-    // the screen host kept, taken up at once so what it did while the app was away is heard.
+    // be opened again as main's worker, or as yours for one with no dispatcher. Their sessions start
+    // when shown or told something, except one the screen host kept, taken up at once so what it did
+    // while the app was away is heard.
     comeBack(slot: number, projectPath: string): Saved[] {
       const back = waiting.filter((saved) => saved.projectPath === projectPath);
       waiting = waiting.filter((saved) => saved.projectPath !== projectPath);
