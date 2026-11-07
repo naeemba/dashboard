@@ -3,6 +3,7 @@ import { claudeArguments } from '../../shared/panes/shell';
 import { paneLabel } from '../../shared/panes/terminals';
 import { slug } from '../../shared/app/slug';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
+import { hasScreenHost } from './screen-host-protocol';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -30,8 +31,16 @@ export function workerSessionName(projectPath: string, index: number): string {
 
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
-export function mainPrompt(projectPath: string): string {
+export function mainPrompt(projectPath: string, platform: string = process.platform): string {
   const manager = projectPath === MANAGER_FOLDER;
+  // The default parseRun picks for this platform, so main is told what a plain run starts here.
+  const runUsage = hasScreenHost(platform)
+    ? ['  run <id> [--card <card id> | --worktree] [--terminal] "<prompt>"',
+      '                         start Claude in that pane with the prompt, as a Claude screen;',
+      '                         --terminal runs Claude Code in its terminal instead']
+    : ['  run <id> [--card <card id> | --worktree] [--screen] "<prompt>"',
+      '                         start Claude Code in that pane\'s terminal with the prompt;',
+      '                         --screen runs it as a Claude screen instead'];
   return [
     `You are the main session of ${manager ? 'the Dashboard manager' : baseName(projectPath)}, in the Dashboard`
       + " app's left-hand pane. The panes on the right are workers: you dispatch tasks into them rather"
@@ -46,8 +55,7 @@ export function mainPrompt(projectPath: string): string {
     '  claim [--project <name|aka>]',
     '                         open a worker pane; prints its id. --project opens it on the page of',
     '                         the project of that name, opening the project if it is closed',
-    '  run <id> [--card <card id> | --worktree] "<prompt>"',
-    '                         start Claude in that pane with the prompt',
+    ...runUsage,
     '  list [--all]           every pane, and whether its worker is running, blocked or done;',
     '                         --all across every open project',
     '  release <id>           close the pane once you have its report',

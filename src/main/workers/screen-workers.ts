@@ -13,7 +13,7 @@ import type { ScreenHost } from './screen-host-client';
 import { screenOwner } from './screen-owner';
 import { workerSessionName } from './dispatch';
 
-// Worker panes run as Claude screens: `pane run --screen`. The pane keeps its shell, hidden, and the
+// Worker panes run as Claude screens (`pane run`, off Windows). The pane keeps its shell, hidden, and the
 // renderer draws a Claude screen over it, run by chat-sessions.ts under the pane's screen key the way a
 // page's main runs under its slot. Its turns are reported by the session's own hooks, called in this
 // process, where a terminal worker's run `session notify`: the Stop hook's input says what the session

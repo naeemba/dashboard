@@ -51,7 +51,7 @@ export type Pane = {
   lastPrintedAt: number;
   printWidths: PrintWidths;
   flow: WriteFlow;
-  // The Claude screen drawn over a worker run with --screen, its shell hidden under it.
+  // The Claude screen drawn over a worker run as a screen, its shell hidden under it.
   screen?: ChatView;
 };
 

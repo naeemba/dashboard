@@ -1,0 +1,11 @@
+{
+  "id": "4530447b-d6b5-4b3e-b4ed-cdc5e64ea6b5",
+  "title": "Two open projects with the same folder name share one main session name",
+  "notes": "mainSessionName (src/main/workers/dispatch.ts) is main- plus the slug of the folder's basename, so ~/work/api and ~/clients/api both run their main as main-api. With both open, a worker's or manager's SendMessage to main-api can land in the wrong project's main. Derive the name from something unique per open project. Issue: https://github.com/naeemba/dashboard/issues/230 Review: https://github.com/naeemba/dashboard/pull/229#discussion_r4501925947",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-07T13:32:54.951Z",
+  "updatedAt": "2026-11-07T13:32:54.951Z",
+  "column": "Backlog",
+  "order": 36
+}

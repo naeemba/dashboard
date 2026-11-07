@@ -38,7 +38,7 @@ export type PaneReading = {
   shell: string | undefined;
   command: PaneCommand | undefined;
   inWorktree: boolean;
-  // A worker run as a Claude screen (pane run --screen). Its command runs nothing and its shell sits at
+  // A worker run as a Claude screen (pane run, the default off Windows). Its command runs nothing and its shell sits at
   // a prompt under the screen, so neither says an agent is there; this does.
   screen?: boolean;
 };

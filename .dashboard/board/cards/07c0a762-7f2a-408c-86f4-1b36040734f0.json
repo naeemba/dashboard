@@ -1,0 +1,11 @@
+{
+  "id": "07c0a762-7f2a-408c-86f4-1b36040734f0",
+  "title": "pane release prints 'session release failed: spawn git ENOENT'",
+  "notes": "Every pane release after a merge in the 2026-11-06 and 2026-11-07 batches (#221 to #227) printed \"session release failed: spawn git ENOENT\", yet the pane closed and its worktree was removed. Likely git is spawned with the removed worktree as its cwd, which Node reports as ENOENT for git itself. Find the spawn, and either run it before the removal or from the main checkout; the message should not appear on a release that worked.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-07T13:28:49.896Z",
+  "updatedAt": "2026-11-07T13:28:49.896Z",
+  "column": "Backlog",
+  "order": 35
+}

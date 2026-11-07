@@ -79,7 +79,7 @@ export type ExportWrite = { path: string } | { refused: string };
 // Each slot's project, and the terminals it has open — main first, then its workers — by number. One
 // list for both, because a worker opening or closing is a change to what every screen has to draw.
 // `manager` is the manager's workers, which have no slot in `projects`; openPanesOf reads both.
-// `screens` is the worker panes drawn as a Claude screen rather than a terminal (pane run --screen).
+// `screens` is the worker panes drawn as a Claude screen rather than a terminal (pane run, the default off Windows).
 export type OpenProjects = { projects: (Project | null)[]; panes: number[][]; manager?: number[]; screens?: string[] };
 
 // What the board hands main when a card is moved into Ship. The slot is the project's page, which is
