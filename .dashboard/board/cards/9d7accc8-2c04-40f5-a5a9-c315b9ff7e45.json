@@ -2,10 +2,16 @@
   "id": "9d7accc8-2c04-40f5-a5a9-c315b9ff7e45",
   "title": "board move <id> Review on a worktree's board exits 1 after moving",
   "notes": "From the screen-worker trial (#227). On a worktree's board a move is only a move, yet board move <id> Review writes the column and then exits 1 with \"has no worktree to review; ship it first\", because the branch's copy of the card has no worktree field. Every worker's move to Review prints a failure that did not fail. Fix: on a worktree's board, a move into Review or Ship does not ask the app to start anything, and exits 0.",
-  "priority": "low",
+  "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T13:28:49.805Z",
-  "updatedAt": "2026-11-07T13:28:49.805Z",
+  "updatedAt": "2026-11-07T13:54:58.634Z",
+  "comments": [
+    {
+      "at": "2026-11-07T13:54:58.634Z",
+      "body": "Hit all three workers of the 2026-11-07 batch (#227, #228, #229); each one's move && set && commit chain broke on the exit 1."
+    }
+  ],
   "column": "Backlog",
   "order": 34
 }

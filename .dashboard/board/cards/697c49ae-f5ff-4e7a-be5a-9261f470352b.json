@@ -1,0 +1,11 @@
+{
+  "id": "697c49ae-f5ff-4e7a-be5a-9261f470352b",
+  "title": "One conversation port per slot in chat-sessions.ts",
+  "notes": "From #228's altitude review: chat-sessions.ts branches on worker screen vs page (main) in several places. One conversation port per slot would carry what differs (keepsItsConversation, who it reports to) and let those branches go.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-07T13:54:58.728Z",
+  "updatedAt": "2026-11-07T13:54:58.728Z",
+  "column": "Backlog",
+  "order": 37
+}
