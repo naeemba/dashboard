@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T18:00:18.598Z",
-  "updatedAt": "2026-11-07T18:00:18.598Z",
-  "column": "Doing",
-  "order": 0
+  "updatedAt": "2026-11-07T18:09:48.436Z",
+  "branch": "work-board-card-0a9c549d-b096-4fb4-a9d6-5d0",
+  "pullRequest": 232,
+  "comments": [
+    {
+      "at": "2026-11-07T18:09:48.436Z",
+      "body": "Shipped in #232: the themed scrollbar skips only the terminal (worker Claude screens included), 7px thumb; main's Claude screen fills its column with a worker's padding."
+    }
+  ],
+  "column": "Done",
+  "order": 187
 }

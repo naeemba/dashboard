@@ -608,8 +608,3 @@ body *:not(.pane, .pane *) {
 .workers > .pane.folded > .chat {
   display: none;
 }
-
-.pane-screen > .chat {
-  width: 100%;
-  padding: 0 12px 8px;
-}

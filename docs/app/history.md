@@ -20,3 +20,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-01 #153 — /resume, the @ file list and the board search rank with ranked too
 - 2026-11-02 #181 — A Content-Security-Policy on the window
 - 2026-11-06 #220 — A what's-new popup lists the pull requests an update brought
+- 2026-11-07 #232 — One themed scrollbar, 7px thumb, for everything but a terminal, a worker's Claude screen included
