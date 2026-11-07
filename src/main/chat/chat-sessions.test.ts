@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, replayedFlagSettings, liveConversation, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, keepsItsConversation, replayedFlagSettings, liveConversation, runningElsewhere, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('rememberedSessions', () => {
   const folder = mkdtempSync(path.join(tmpdir(), 'chat-sessions-'));
@@ -68,14 +68,14 @@ describe('relayed', () => {
 
 describe('workerSessionStart', () => {
   it('starts a new worker under its own id and resumes one whose conversation is written', () => {
-    const worker = { session: 'abc', name: 'api-terminal-2', hooks: {} };
+    const worker = { session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
     expect(workerSessionStart({ ...worker, resume: false })).toEqual({ sessionId: 'abc' });
     expect(workerSessionStart({ ...worker, resume: true })).toEqual({ resume: 'abc' });
   });
 });
 
 describe('liveConversation', () => {
-  const worker = { session: 'abc', name: 'api-terminal-2', hooks: {} };
+  const worker = { session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
 
   it('names a worker its own conversation once written, and never main\'s', () => {
     expect(liveConversation({ ...worker, resume: true }, 'main')).toBe('abc');
@@ -155,5 +155,29 @@ describe('conversationReporter', () => {
     expect(reporters.ended('/a', 'old')).toBe(false);
     expect(reporters.ended('/a', 'new')).toBe(true);
     expect(reporters.ended('/a', 'new')).toBe(false);
+  });
+});
+
+describe('keepsItsConversation', () => {
+  const screen = { session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, carryOnIn: () => undefined };
+
+  it('refuses a new conversation only on main\'s worker screen', () => {
+    expect(keepsItsConversation({ ...screen, owner: 'main' })).toBe(true);
+    expect(keepsItsConversation({ ...screen, owner: 'you' })).toBe(false);
+    expect(keepsItsConversation(undefined)).toBe(false);
+  });
+});
+
+describe('runningElsewhere', () => {
+  const screen = { session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, owner: 'you' as const, carryOnIn: () => undefined };
+
+  it('names the pane running the picked conversation first', () => {
+    expect(runningElsewhere('xyz', 'terminal 3', screen, 'xyz')).toBe('terminal 3');
+  });
+
+  it('names main for a screen picking main\'s conversation, and nothing for main itself', () => {
+    expect(runningElsewhere('xyz', null, screen, 'xyz')).toBe('main');
+    expect(runningElsewhere('other', null, screen, 'xyz')).toBeNull();
+    expect(runningElsewhere('xyz', null, undefined, 'xyz')).toBeNull();
   });
 });

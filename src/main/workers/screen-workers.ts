@@ -10,6 +10,8 @@ import { replaceFile } from '../app/replace-file';
 import type { ScreenSession } from '../chat/chat-sessions';
 import { stopWaiting } from './session-cli';
 import type { ScreenHost } from './screen-host-client';
+import { screenOwner } from './screen-owner';
+import { workerSessionName } from './dispatch';
 
 // Worker panes run as Claude screens: `pane run --screen`. The pane keeps its shell, hidden, and the
 // renderer draws a Claude screen over it, run by chat-sessions.ts under the pane's screen key the way a
@@ -18,15 +20,17 @@ import type { ScreenHost } from './screen-host-client';
 // still waits on, as PR #211 reads it from stdin. A question waiting on you is the screen's own ask.
 //
 // Each one is written to screen-workers.json by project and pane number, so a restart opens the pane
-// again on the same conversation, as main's worker, once its project opens.
+// again on the same conversation, as main's worker, once its project opens. A screen opened by hand
+// with New Claude is saved the same way with no dispatcher, and comes back as yours (screen-owner.ts).
 
 export type ScreenStart = { session: string; name: string; prompt: string };
 
 // `started` is whether the session has written its conversation, so a restart resumes it rather than
 // starting it fresh. A file from before it was saved names none, and was resumed then too.
+// `dispatcherPath` is null for a screen opened by hand.
 type Saved = {
   projectPath: string; index: number; directory: string; session: string; name: string;
-  dispatcherPath: string; cardId: string | null; started?: boolean;
+  dispatcherPath: string | null; cardId: string | null; started?: boolean;
 };
 
 // What chat-sessions runs it on, beside what is saved of it and whether its last turn has ended.
@@ -44,6 +48,8 @@ export type ScreenPorts = {
   // Where the sessions run, and which ones it kept through the restart (screen-host-client.ts).
   host: ScreenHost;
   notify(id: string, state: WorkerState, waiting?: StopWaiting): void;
+  // A new conversation id for the project, in the session index the drawer lists.
+  newSession(projectPath: string, directory: string, card: string | null): string;
 };
 
 // What a screen event says about its worker: a question waiting on you, the question gone, the
@@ -67,7 +73,7 @@ export function savedScreens(file: string): Saved[] {
     return Array.isArray(read) ? read.filter((each): each is Saved => (
       isRecord(each) && typeof each.projectPath === 'string' && typeof each.index === 'number'
       && typeof each.directory === 'string' && typeof each.session === 'string' && typeof each.name === 'string'
-      && typeof each.dispatcherPath === 'string' && (each.cardId === null || typeof each.cardId === 'string')
+      && screenOwner(each.dispatcherPath) !== undefined && (each.cardId === null || typeof each.cardId === 'string')
       && (each.started === undefined || typeof each.started === 'boolean')
     )) : [];
   } catch {
@@ -119,7 +125,18 @@ export function screenWorkers(ports: ScreenPorts) {
   function add(id: string, saved: Saved, back: boolean): void {
     const resume = back && saved.started !== false;
     const done = back && ports.host.kept(saved.session)?.busy !== true;
-    const worker = { session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done };
+    const worker: Worker = {
+      session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done,
+      owner: screenOwner(saved.dispatcherPath) ?? 'main',
+      // A screen opened by hand going on in another conversation, or a new one, which a restart resumes.
+      carryOnIn(session) {
+        worker.session = session ?? ports.newSession(saved.projectPath, saved.directory, saved.cardId);
+        worker.resume = session !== null;
+        saved.session = worker.session;
+        saved.started = worker.resume;
+        save();
+      },
+    };
     live.set(id, worker);
     byKey.set(screenKey(id), worker);
   }
@@ -133,6 +150,15 @@ export function screenWorkers(ports: ScreenPorts) {
       // Drawn first, so the screen is there for the prompt to land on.
       ports.changed();
       ports.tell(screenKey(id), screen.prompt);
+    },
+    // New Claude: a screen in the project's folder that starts nothing until you type. Its session runs
+    // in the screen host as a worker screen's does, and it is yours, not main's worker.
+    openByHand(id: string, projectPath: string): void {
+      const { index } = paneFromId(id);
+      const session = ports.newSession(projectPath, projectPath, null);
+      add(id, { projectPath, index, directory: projectPath, session, name: workerSessionName(projectPath, index), dispatcherPath: null, cardId: null, started: false }, false);
+      save();
+      ports.changed();
     },
     has: (id: string): boolean => live.has(id),
     // `pane send` to a worker screen: the text as its next prompt. False for a pane that is not one.
@@ -175,7 +201,7 @@ export function screenWorkers(ports: ScreenPorts) {
       save();
     },
     // The project opened in `slot`: the workers saved for it, back under this slot's pane ids, each to
-    // be opened as main's worker again. Their sessions start when shown or told something, except one
+    // be opened again as main's worker, or as yours for one with no dispatcher. Their sessions start when shown or told something, except one
     // the screen host kept, taken up at once so what it did while the app was away is heard.
     comeBack(slot: number, projectPath: string): Saved[] {
       const back = waiting.filter((saved) => saved.projectPath === projectPath);

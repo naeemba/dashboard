@@ -374,7 +374,8 @@ function spawnProject(project: Project, projectIndex: number): void {
 }
 
 // The worker screens saved for this page come back in their panes on their own conversations, the
-// pane opened again if it closed, and a card's is named on its record again, as resumeIn does.
+// pane opened again if it closed, and a card's is named on its record again, as resumeIn does. One
+// opened by hand comes back as yours, not as main's worker.
 function screensComeBack(slot: number, projectPath: string): void {
   for (const back of workerScreens.comeBack(slot, projectPath)) {
     const id = terminalId(slot, back.index);
@@ -382,7 +383,7 @@ function screensComeBack(slot: number, projectPath: string): void {
       setPaneCommand(id, { args: [], directory: back.directory });
       panes.spawn(id);
     }
-    mainsWorkers.set(id, back.dispatcherPath);
+    if (back.dispatcherPath !== null) mainsWorkers.set(id, back.dispatcherPath);
     const card = agentToResume(worktrees.entries(), agentPanesBeforeLaunch, back, projectPath, back.index, realPath);
     if (card !== undefined) recordWorktree({ ...card, pane: back.index });
   }
@@ -587,7 +588,7 @@ registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal: panes
 // screen and which project a slot holds.
 const workerScreens = screenWorkers({
   // The screen host runs their sessions, so they outlive this process too (workers-decision-6).
-  file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
+  file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), newSession: sessionIndex.launched, host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
   tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => chats.start(key), notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
 });
 const chats = registerChatSessions(table, {
@@ -687,7 +688,7 @@ function takePane(projectPath: string, index: number, cardId: string): void {
 }
 
 registerWorkerChannels(table, {
-  project: projectIn, openPanes, openWorker, closeWorker, openProjects,
+  project: projectIn, openPanes, openWorker, closeWorker, openProjects, openScreen: workerScreens.openByHand,
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {

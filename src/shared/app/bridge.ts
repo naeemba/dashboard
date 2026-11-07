@@ -183,9 +183,10 @@ export type DashboardBridge = {
   // could not reach and names it; the close reads it as nothing to lose and goes ahead, which is what
   // an empty list means — main holds every shell, so a project it has no slot for has no shells left.
   readPanes(projectPath: string): Promise<PaneUse[]>;
-  // A new worker pane on this page: a shell in the project. Answers like openProject, with the list
-  // that has it on, or null for a page with no folder.
-  addPane(slot: number): Promise<{ index: number; open: OpenProjects } | null>;
+  // A new worker pane on this page: a shell in the project, or with `claude` a Claude screen there
+  // waiting for its first prompt. Answers like openProject, with the list that has it on, or null for a
+  // page with no folder.
+  addPane(slot: number, claude?: boolean): Promise<{ index: number; open: OpenProjects } | null>;
   // A worker pane closed for good: its shell, or whatever runs in it, is killed.
   closePane(slot: number, index: number): Promise<void>;
   // A worker's hooks saying it is waiting on a permission or has finished its turn.
