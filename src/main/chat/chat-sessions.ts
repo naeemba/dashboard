@@ -675,25 +675,35 @@ export function registerChatSessions(
 
   // The page, or a screen opened by hand, goes on in another conversation, or a new one for undefined.
   function carryOnIn(slot: number, projectPath: string, sessionId: string | undefined): void {
-    stop(slot);
     const worker = host.worker(slot);
-    if (worker) worker.carryOnIn(sessionId ?? null);
-    else remember(projectPath, sessionId);
+    restart(slot, projectPath, () => (worker ? worker.carryOnIn(sessionId ?? null) : remember(projectPath, sessionId)));
+  }
+
+  // The session closed, what it starts on next changed, and a fresh one started, which every screen reads back.
+  function restart(slot: number, projectPath: string, change: () => void): void {
+    stop(slot);
+    change();
     host.send(slot, { kind: 'reset' });
     running(slot, projectPath).catch(() => undefined);
+  }
+
+  // The conversation copied, up to `cutAt` when given, and the page or screen going on in the copy.
+  async function forkInto(slot: number, projectPath: string, from: string, cutAt: string | undefined, title: string): Promise<void> {
+    const { forkSession } = await import('@anthropic-ai/claude-agent-sdk');
+    const { sessionId } = await forkSession(from, forkFrom(projectPath, cutAt, title));
+    carryOnIn(slot, projectPath, sessionId);
   }
 
   // /branch: the conversation is copied into a new one and the page goes on in the copy the way
   // /resume goes on in a picked one, so the original is left as it was and stays in /resume's list. A
   // rewind not yet carried on is kept: the copy stops at its cut.
   table.handle('chat:branch', async (_screen, slot: number, title: string): Promise<{ refused: string } | null> => {
-    if (keepsItsConversation(host.worker(slot))) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
+    const worker = host.worker(slot);
+    if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
     const projectPath = host.projectPath(slot);
     const current = projectPath === undefined ? undefined : conversationOf(slot, projectPath);
     if (projectPath === undefined || current === undefined) return { refused: NOTHING_TO_BRANCH };
-    const { forkSession } = await import('@anthropic-ai/claude-agent-sdk');
-    const { sessionId } = await forkSession(current, forkFrom(projectPath, host.worker(slot) ? undefined : rewound.get(projectPath), title));
-    carryOnIn(slot, projectPath, sessionId);
+    await forkInto(slot, projectPath, current, worker ? undefined : rewound.get(projectPath), title);
     return null;
   });
 
@@ -721,16 +731,8 @@ export function registerChatSessions(
     // A screen opened by hand goes on in a copy cut there now: the cut a page's main holds until its
     // next prompt is kept per project, which the screen shares with main.
     if (conversationRewind === 'forget') carryOnIn(slot, projectPath, undefined);
-    else if (worker) {
-      const { forkSession } = await import('@anthropic-ai/claude-agent-sdk');
-      const { sessionId } = await forkSession(conversationOf(slot, projectPath) ?? '', forkFrom(projectPath, conversationRewind.cutAt, ''));
-      carryOnIn(slot, projectPath, sessionId);
-    } else {
-      stop(slot);
-      rewound.set(projectPath, conversationRewind.cutAt);
-      host.send(slot, { kind: 'reset' });
-      running(slot, projectPath).catch(() => undefined);
-    }
+    else if (worker) await forkInto(slot, projectPath, conversationOf(slot, projectPath) ?? '', conversationRewind.cutAt, '');
+    else restart(slot, projectPath, () => rewound.set(projectPath, conversationRewind.cutAt));
     return restored;
   });
 
