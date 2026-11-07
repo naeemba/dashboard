@@ -43,7 +43,7 @@ import type { HostedParams } from '../workers/screen-host-protocol';
 // chat-sessions.json; the next launch resumes that id when the project opens and reads its history
 // back for the screen to draw. /resume lists the older ones.
 
-// A worker pane's Claude screen (pane run --screen), run here under a key of its own beside the pages'
+// A worker pane's Claude screen (pane run, the default off Windows), run here under a key of its own beside the pages'
 // mains: the conversation the app chose for it, started fresh the first time and resumed after, the
 // name main hears it by, and the hooks that report its turns (screen-workers.ts). It keeps that one
 // conversation: nothing here remembers it per project, and /clear, /resume, /branch and /rewind are
