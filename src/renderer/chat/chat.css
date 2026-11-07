@@ -1,6 +1,6 @@
 /* The Claude screen, the project's main session in the terminals view's left column: a column of
-   conversation over a prompt box. Read like a document rather than a terminal, so prose is in the
-   app's own face and a measure wide enough for code. */
+   conversation over a prompt box, filling the column the way a worker's screen fills its pane. Read
+   like a document rather than a terminal, so prose is in the app's own face. */
 .main-chat {
   display: grid;
   min-height: 0;
@@ -8,17 +8,16 @@
      hint made it wider than the window: the whole window scrolled sideways, the Terminals view with
      it. The column is the view's width, whatever is in it. */
   grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
   background: var(--background);
 }
 
 .chat {
   display: flex;
   flex-direction: column;
-  width: min(100%, 110ch);
+  width: 100%;
   height: 100%;
   min-height: 0;
-  padding: 0 24px 12px;
+  padding: 0 12px 8px;
   box-sizing: border-box;
 }
 
@@ -669,7 +668,7 @@
   line-height: 1.5;
 }
 
-/* One agent's conversation over the screen (chat-agents-view.ts): as wide as the screen's own, and
+/* One agent's conversation over the screen (chat-agents-view.ts): a measure wide enough for code, and
    scrolled by the keys, since the dialog has the keyboard. */
 .chat-agent-dialog {
   display: block;
