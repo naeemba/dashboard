@@ -243,14 +243,21 @@ export function runningElsewhere(
 }
 
 // What a change of conversation does: the id to go on in, undefined for a new conversation, or a cut a
-// /rewind left. A screen opened by hand never touches main's state, which is kept per project and so
-// shared with the screen: it saves the id as its own (null for a new one), or goes on in a copy cut
-// there now. The page's main remembers the id, or forgets it, or holds the cut until its next prompt.
-export type NextConversation = { screen: string | null } | { fork: string } | { remember: string | undefined } | { cut: string };
+// /rewind left. `before` is the screen read before any await, `now` the one read at the change: a
+// screen closed since does nothing, rather than be read again as main's page. A screen opened by hand
+// never touches main's state, which is kept per project and so shared with the screen: it saves the id
+// as its own (null for a new one), or goes on in a copy cut there now. The page's main remembers the
+// id, or forgets it, or holds the cut until its next prompt.
+export type NextConversation =
+  | { nothing: true } | { carryOnIn: string | null } | { fork: string } | { remember: string | undefined } | { cut: string };
 
-export function nextConversation(onScreen: boolean, next: string | undefined | { cutAt: string }): NextConversation {
-  if (typeof next === 'object') return onScreen ? { fork: next.cutAt } : { cut: next.cutAt };
-  return onScreen ? { screen: next ?? null } : { remember: next };
+export function nextConversation(
+  before: ScreenSession | undefined, now: ScreenSession | undefined, next: string | undefined | { cutAt: string },
+): NextConversation {
+  if (before !== now) return { nothing: true };
+  const openedByHand = now !== undefined;
+  if (typeof next === 'object') return openedByHand ? { fork: next.cutAt } : { cut: next.cutAt };
+  return openedByHand ? { carryOnIn: next ?? null } : { remember: next };
 }
 
 // The conversation running under a key: a worker screen's own once the session has written it, never
@@ -690,16 +697,15 @@ export function registerChatSessions(
   });
 
   // The page, or the screen opened by hand `worker` names, goes on in another conversation, as
-  // nextConversation says. `worker` is the one read before any await: a screen closed since is left
-  // alone, rather than read again as main's page.
+  // nextConversation says. `worker` is the one read before any await.
   async function changeConversation(
     slot: number, projectPath: string, worker: ScreenSession | undefined, next: string | undefined | { cutAt: string },
   ): Promise<void> {
-    if (host.worker(slot) !== worker) return;
-    const change = nextConversation(worker !== undefined, next);
+    const change = nextConversation(worker, host.worker(slot), next);
+    if ('nothing' in change) return;
     if ('fork' in change) return forkInto(slot, projectPath, worker, liveConversation(worker, undefined), change.fork, '');
     restart(slot, projectPath, () => {
-      if ('screen' in change) worker?.carryOnIn(change.screen);
+      if ('carryOnIn' in change) worker?.carryOnIn(change.carryOnIn);
       else if ('remember' in change) remember(projectPath, change.remember);
       else rewound.set(projectPath, change.cut);
     });

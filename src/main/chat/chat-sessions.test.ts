@@ -159,16 +159,23 @@ describe('conversationReporter', () => {
 });
 
 describe('nextConversation', () => {
+  const screen = { session: 'abc', resume: true, name: 'api-terminal-2', hooks: {}, owner: 'you' as const, carryOnIn: () => undefined };
+
   it('keeps a screen opened by hand off main\'s remembered conversation and its held cut', () => {
-    expect(nextConversation(true, 'picked')).toEqual({ screen: 'picked' });
-    expect(nextConversation(true, undefined)).toEqual({ screen: null });
-    expect(nextConversation(true, { cutAt: 'm3' })).toEqual({ fork: 'm3' });
+    expect(nextConversation(screen, screen, 'picked')).toEqual({ carryOnIn: 'picked' });
+    expect(nextConversation(screen, screen, undefined)).toEqual({ carryOnIn: null });
+    expect(nextConversation(screen, screen, { cutAt: 'm3' })).toEqual({ fork: 'm3' });
   });
 
   it('has the page\'s main remember the id, forget it, or hold the cut', () => {
-    expect(nextConversation(false, 'picked')).toEqual({ remember: 'picked' });
-    expect(nextConversation(false, undefined)).toEqual({ remember: undefined });
-    expect(nextConversation(false, { cutAt: 'm3' })).toEqual({ cut: 'm3' });
+    expect(nextConversation(undefined, undefined, 'picked')).toEqual({ remember: 'picked' });
+    expect(nextConversation(undefined, undefined, undefined)).toEqual({ remember: undefined });
+    expect(nextConversation(undefined, undefined, { cutAt: 'm3' })).toEqual({ cut: 'm3' });
+  });
+
+  it('leaves main alone when the screen closed while its fork ran', () => {
+    expect(nextConversation(screen, undefined, 'forked')).toEqual({ nothing: true });
+    expect(nextConversation(screen, undefined, { cutAt: 'm3' })).toEqual({ nothing: true });
   });
 });
 
