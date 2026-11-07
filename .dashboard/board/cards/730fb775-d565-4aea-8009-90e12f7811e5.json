@@ -1,0 +1,11 @@
+{
+  "id": "730fb775-d565-4aea-8009-90e12f7811e5",
+  "title": "Every change goes through an action: inventory and plan for panes, projects, worktrees and the rest",
+  "notes": "The actions layer (#219, docs/actions, actions-decision-1) covers only cards: card.move, card.ship, card.review. Everything else still changes state from wherever it is asked: IPC handlers in main.ts, the dashboard/board/pane/project commands, keys, buttons, the review sweep, restart and resume. The pane case showed the cost: five paths start an agent in a pane and only one picks screen or terminal (ece7e995).\n\nGoal: every change to app state goes through one action per noun and verb, src/main/actions/<noun>/<verb>.ts, and every caller (UI, CLI, sweep, restart) calls the action rather than doing the work itself. Nouns at least: pane (claim, dispatch, send, release, close, fold or zoom if main owns them), project (open, close, add, set, remove), worktree (make, remove, discard), session or chat (start, reset, resume, rename), card (already there; check nothing bypasses it), notes and settings if they are written from more than one place.\n\nThis card is the inventory and the plan, not the whole move:\n1. List every entry point that changes state, by noun and verb, with file:line and which caller reaches it (IPC channel, CLI command, key, sweep, restart). Mark each one that bypasses an existing action.\n2. Propose the action set, one row per noun.verb, and what decision each owns (like dispatch choosing screen or terminal).\n3. Split the move into one card per noun, ordered so they do not fight over main.ts: pane first (fold ece7e995 into it), then worktree, project, session. Add those cards to the board.\n4. Record the rule as an actions decision and in CLAUDE.md's hard rules: a new caller that changes state calls an action; a new kind of change adds one. Pin it with a test or a lint if a cheap one exists (e.g. only src/main/actions/ may call startAgent, workerScreens.start, worktree removal).\n\nOutput: docs/actions README and decision updated, the per-noun cards on the board, a PR with the docs and the rule. No behaviour change in this card.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-07T18:15:04.281Z",
+  "updatedAt": "2026-11-07T18:15:04.281Z",
+  "column": "Todo",
+  "order": 12
+}

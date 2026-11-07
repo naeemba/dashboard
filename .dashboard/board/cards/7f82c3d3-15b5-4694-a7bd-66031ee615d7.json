@@ -1,0 +1,11 @@
+{
+  "id": "7f82c3d3-15b5-4694-a7bd-66031ee615d7",
+  "title": "unicode-bidi: plaintext skips worker Claude screens",
+  "notes": "From #232: index.css:43 body *:not(.pane, .pane *) { unicode-bidi: plaintext } excludes the whole .pane, so a worker's Claude screen, which sits inside .pane, does not get it. Persian or Arabic prose there can lay out wrong while main's screen is right. Same fix as #232's scrollbar: exclude only .xterm, not the pane. CSS only; hand check with a Persian line in a worker screen.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-07T18:15:04.356Z",
+  "updatedAt": "2026-11-07T18:15:04.356Z",
+  "column": "Backlog",
+  "order": 39
+}
