@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-07T14:03:27.681Z",
-  "updatedAt": "2026-11-07T14:18:05.804Z",
+  "updatedAt": "2026-11-07T14:29:24.353Z",
   "branch": "work-board-card-5fe8b798-bf64-4da9-8e37-9f6",
   "pullRequest": 231,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-07T14:29:24.353Z",
+      "body": "Shipped in PR #231: scripts/release.sh <bump> (refuses unless main is clean, at origin/main and green; dispatches Release, watches, names a failed leg, then pulls, checks and rebuilds without restarting the app; --resume <run id>), /release project command, a What's new list from Done cards in the notes, and a stamp check in rebuild.sh. Not tested live: the What's new step inside release.yml, which first runs on v2.43.0."
+    }
+  ],
+  "column": "Done",
+  "order": 186
 }
