@@ -62,8 +62,9 @@ jobs:
         name: Write the notes
         run: |
           # The last release that is not a pre-release, so a release's notes cover every pull request
-          # since the one before it, rc tags included.
-          previous=$(git tag --list 'v*' --sort=-v:refname | grep -v -- - | head -n 1 || true)
+          # since the one before it, rc tags included. Never this release's own tag: a re-run after the
+          # push finds it in the clone, and comparing a release with itself gives empty notes.
+          previous=$(git tag --list 'v*' --sort=-v:refname | grep -v -- - | grep -vxF "$TAG" | head -n 1 || true)
           gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
             ${previous:+-f previous_tag_name="$previous"} --jq .body > "$RUNNER_TEMP/notes.md"
           # The titles of the board cards that reached Done since that release, above GitHub's list.
