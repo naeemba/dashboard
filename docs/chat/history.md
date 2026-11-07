@@ -43,3 +43,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-05 #208 — Pane links in the screen's link colour, and Alt+G follows a selected entry's links
 - 2026-11-05 #212 — The working line counts tool input and each message's real output tokens
 - 2026-11-05 #215 — Agents key (Alt+A), each agent's conversation, and subagent tokens on the Agent call and the working line
+- 2026-11-07 #229 — `dashboard project open` starts the project's main session and waits until it is reachable

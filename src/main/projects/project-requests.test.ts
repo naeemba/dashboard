@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ClosingPane } from '../../shared/panes/close-refusal';
 import { PROJECT_REQUEST } from './project-cli';
-import { projectRequests, type ProjectRequestPorts } from './project-requests';
+import { MAIN_START_MS, projectRequests, type ProjectRequestPorts } from './project-requests';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -15,7 +15,8 @@ function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], m
     slotOf: (projectPath) => open[projectPath] ?? -1,
     missingIn: (slot) => missingSlots.includes(slot),
     folderExists: (projectPath) => projectPath !== '/gone',
-    open: vi.fn(),
+    open: vi.fn(() => 7),
+    startMain: vi.fn(async (slot: number) => `main-${slot}`),
     panesOf: () => panes,
     close: vi.fn(),
     focus: vi.fn(),
@@ -40,19 +41,38 @@ describe('projectRequests', () => {
     expect(otherwise).toHaveBeenCalledOnce();
   });
 
-  posixPathsOnly('opens a folder that is not open, and leaves one that is', async () => {
+  // A manager opens a project to hand it to that project's main, which has to be running to be told.
+  posixPathsOnly('opens a folder that is not open with its main, and starts the main of one that is', async () => {
     const { ports, answer } = setup({ '/web': 0 });
-    await expect(answer('open', '/api/', 'api')).resolves.toEqual({ ok: true, output: 'opened api' });
+    await expect(answer('open', '/api/', 'api')).resolves.toEqual({ ok: true, output: 'opened api; main-7 is running' });
     expect(ports.open).toHaveBeenCalledWith('/api');
-    await expect(answer('open', '/web', 'web')).resolves.toEqual({ ok: true, output: 'web is already open' });
+    expect(ports.startMain).toHaveBeenCalledWith(7);
+    await expect(answer('open', '/web', 'web')).resolves.toEqual({ ok: true, output: 'web is already open; main-0 is running' });
     expect(ports.open).toHaveBeenCalledOnce();
+    expect(ports.startMain).toHaveBeenLastCalledWith(0);
+  });
+
+  posixPathsOnly('refuses when main fails to start, and when it does not answer in time', async () => {
+    const { ports, answer } = setup({});
+    vi.mocked(ports.startMain).mockRejectedValueOnce(new Error('claude not found'));
+    await expect(answer('open', '/api', 'api'))
+      .resolves.toEqual({ ok: false, output: 'opened api, but its main session did not start: claude not found' });
+    vi.useFakeTimers();
+    try {
+      vi.mocked(ports.startMain).mockReturnValueOnce(new Promise(() => undefined));
+      const reply = answer('open', '/api', 'api');
+      await vi.advanceTimersByTimeAsync(MAIN_START_MS);
+      await expect(reply).resolves.toEqual({ ok: false, output: 'opened api, but its main session did not start: nothing answered within 60 seconds' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // Restored while its drive was unmounted, it sits in its slot reading Directory not found; answering
   // "already open" would leave it dead with the command reporting success.
   posixPathsOnly('opens over a dead page whose folder is back, as the picker does', async () => {
     const { ports, answer } = setup({ '/api': 2 }, [idle(1)], [2]);
-    await expect(answer('open', '/api', 'api')).resolves.toEqual({ ok: true, output: 'opened api' });
+    await expect(answer('open', '/api', 'api')).resolves.toEqual({ ok: true, output: 'opened api; main-7 is running' });
     expect(ports.open).toHaveBeenCalledWith('/api');
   });
 
@@ -60,6 +80,7 @@ describe('projectRequests', () => {
     const { ports, answer } = setup({ '/gone': 2 }, [idle(1)], [2]);
     await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: "gone's folder, /gone, does not exist" });
     expect(ports.open).not.toHaveBeenCalled();
+    expect(ports.startMain).not.toHaveBeenCalled();
   });
 
   // Opened anyway, it would be a dead page reading Directory not found.

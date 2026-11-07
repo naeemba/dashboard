@@ -21,7 +21,10 @@ status-line measure with `start`, and `chat:measure` starts the session to answe
 is there as soon as it starts; the renderer skips it while a restore lands on each page in turn. Every
 other measure reads null from a page with no session, so a model picked after a crash does not start a
 CLI, and a session that fails to start is not started again on each visit. A prompt or a worker report through the app (`tell`) starts
-it too, as before.
+it too, as before. So does `dashboard project open`, and it answers only once the session has
+initialised (`project-requests.ts`): a manager opens a project to hand it to that project's main,
+whose SendMessage otherwise failed with "No agent named main-<name> is reachable" until someone showed
+the page. An explicit open starts main; a restore at launch does not, so ten restored pages still run no Claude.
 
 A worker's SendMessage needs a running session to arrive at (workers-decision-1). A worker main
 dispatched in this run had main running already, since main dispatched it. One that came back after a

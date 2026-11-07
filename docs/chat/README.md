@@ -22,8 +22,9 @@ log — as its first 6 lines and a row counting the rest, opened the same way
 from the web is a link, so nothing is fetched until you click it), an edit as a
 diff. It runs in the project's folder with the project's own CLAUDE.md,
 settings, skills, hooks and MCP servers, the same as claude typed in a pane, as
-the project's main session. It starts the first time you show this screen, or
-when a worker reports to it, so a project you never look at runs no Claude.
+the project's main session. It starts the first time you show this screen,
+when a worker reports to it, or when `dashboard project open` opens the project,
+so a page the app restores at launch and you never look at runs no Claude.
 
 The boxes take the terminal's readline keys: deleting the word before the caret,
 back to the start of the line or on to its end keeps what went, and the yank key
