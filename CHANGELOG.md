@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.43.0 (2026-11-07)
+
+### What's new
+
+- Run workers as Claude screens by default
+- project open starts the project's main session
+- Split the new-pane button into New Terminal and New Claude
+- One command to cut a release: scripts/release.sh and /release
+
+### What's Changed
+* Run workers as Claude screens by default by @naeemba in https://github.com/naeemba/dashboard/pull/227
+* Start a project's main session on dashboard project open by @naeemba in https://github.com/naeemba/dashboard/pull/229
+* Split the new-pane button into New Terminal and New Claude by @naeemba in https://github.com/naeemba/dashboard/pull/228
+* One command to cut a release: scripts/release.sh and /release by @naeemba in https://github.com/naeemba/dashboard/pull/231
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.42.0...v2.43.0
+
 ## v2.42.0 (2026-11-06)
 
 ### What's Changed
