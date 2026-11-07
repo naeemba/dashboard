@@ -1,0 +1,11 @@
+{
+  "id": "0e903031-9ffe-4d75-a427-4262e1eced2a",
+  "title": "Run workers as Claude screens by default",
+  "notes": "A worker main dispatches with pane run is Claude Code in the pane's terminal unless main passes --screen (#218, workers-decision-5). Main's dispatch rule (src/main/workers/dispatch.ts) never mentions --screen, so in practice no worker runs as a screen. The trial's two blockers are settled: #224 found the gh pr create refusal does not reproduce, and #226 runs worker screens in the screen host so they outlive the app.\n\nChange: pane run starts a Claude screen by default; --terminal asks for Claude Code in the terminal instead, and --screen stays accepted as a no-op so older prompts keep working. Parse in session-cli.ts, usage text there, and the dispatch rule in dispatch.ts updated to match. Windows has no screen host, so there a screen worker's turn ends with the app: say so in the usage text, or default to the terminal on Windows. Pick one and record it as a decision.\n\nOut of scope: the agent a move into Ship starts, which stays as it is; a card of its own if it should follow.\n\nTests: the parse (default, --terminal, --screen) in session-cli's test. Docs: workers README scenarios, workers-decision-5 updated, history.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-07T13:06:07.816Z",
+  "updatedAt": "2026-11-07T13:06:07.816Z",
+  "column": "Todo",
+  "order": 10
+}
