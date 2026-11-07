@@ -42,3 +42,19 @@ These builds are not signed, so macOS and Windows warn once before the first lau
 export function releaseBody(notes, assetNames, repository, tag) {
   return [downloadsSection(assetNames, repository, tag), unsignedSection(repository), notes.trim() + '\n'].join('\n');
 }
+
+// The cards that reached Done between two boards: in Done now, and not in Done (or not on the board)
+// before. A subtask is part of its parent's line, so only cards with no parent count. Oldest move first,
+// by updatedAt, which is as near to "when it reached Done" as a card file says.
+export function cardsReachedDone(before, now) {
+  const doneBefore = new Set(before.filter((card) => card.column === 'Done').map((card) => card.id));
+  return now
+    .filter((card) => card.column === 'Done' && !card.parent && !doneBefore.has(card.id))
+    .sort((first, second) => String(first.updatedAt).localeCompare(String(second.updatedAt)));
+}
+
+// A "What's new" list of those cards' titles above GitHub's pull request list. No cards, no list.
+export function notesWithWhatsNew(notes, cards) {
+  if (cards.length === 0) return notes;
+  return `## What's new\n\n${cards.map((card) => `- ${card.title}`).join('\n')}\n\n${notes.trim()}\n`;
+}

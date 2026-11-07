@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changelogWith, downloadsSection, releaseBody } from './release-notes.mjs';
+import { cardsReachedDone, changelogWith, downloadsSection, notesWithWhatsNew, releaseBody } from './release-notes.mjs';
 
 describe('changelogWith', () => {
   it('starts a changelog that does not exist yet', () => {
@@ -57,5 +57,36 @@ describe('releaseBody', () => {
     expect(body.indexOf('## Downloads')).toBeLessThan(body.indexOf('## Unsigned builds'));
     expect(body.indexOf('## Unsigned builds')).toBeLessThan(body.indexOf("## What's Changed"));
     expect(body).toContain('https://github.com/o/r#install');
+  });
+});
+
+describe('cardsReachedDone', () => {
+  const card = (id, column, extra = {}) => ({ id, title: `Card ${id}`, column, updatedAt: '2026-11-01', ...extra });
+
+  it('counts a card new in Done and one that moved into Done, not one already there', () => {
+    const before = [card('a', 'Done'), card('b', 'Doing')];
+    const now = [card('a', 'Done'), card('b', 'Done'), card('c', 'Done'), card('d', 'Review')];
+    expect(cardsReachedDone(before, now).map((done) => done.id)).toEqual(['b', 'c']);
+  });
+
+  it('leaves a subtask to its parent', () => {
+    expect(cardsReachedDone([], [card('a', 'Done', { parent: 'p' })])).toEqual([]);
+  });
+
+  it('lists the oldest move first', () => {
+    const now = [card('late', 'Done', { updatedAt: '2026-11-07' }), card('early', 'Done', { updatedAt: '2026-11-02' })];
+    expect(cardsReachedDone([], now).map((done) => done.id)).toEqual(['early', 'late']);
+  });
+});
+
+describe('notesWithWhatsNew', () => {
+  it("puts the card titles above GitHub's list", () => {
+    expect(notesWithWhatsNew("## What's Changed\n* A\n", [{ title: 'One' }, { title: 'Two' }])).toBe(
+      "## What's new\n\n- One\n- Two\n\n## What's Changed\n* A\n",
+    );
+  });
+
+  it('leaves the notes alone when no card reached Done', () => {
+    expect(notesWithWhatsNew('* A\n', [])).toBe('* A\n');
   });
 });

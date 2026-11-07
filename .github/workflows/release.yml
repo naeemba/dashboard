@@ -1,6 +1,7 @@
 name: Release
 
-# A release is cut by hand from the Actions tab: Release → Run workflow on main, with the bump. That
+# A release is cut with scripts/release.sh <bump> (or /release), which dispatches this, or by hand from
+# the Actions tab: Release → Run workflow on main, with the bump. That
 # bumps package.json, adds the CHANGELOG.md section, commits both to main and tags it. Pushing a
 # pre-release tag (v2.42.0-rc.1) whose commit already carries that version builds the same release
 # without touching main, which is how the workflow is tried out (workflow-decision-4).
@@ -65,6 +66,8 @@ jobs:
           previous=$(git tag --list 'v*' --sort=-v:refname | grep -v -- - | head -n 1 || true)
           gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" \
             ${previous:+-f previous_tag_name="$previous"} --jq .body > "$RUNNER_TEMP/notes.md"
+          # The titles of the board cards that reached Done since that release, above GitHub's list.
+          node scripts/release-notes-step.mjs whats-new "$previous" "$RUNNER_TEMP/notes.md"
           { echo 'notes<<END_OF_NOTES'; cat "$RUNNER_TEMP/notes.md"; echo END_OF_NOTES; } >> "$GITHUB_OUTPUT"
       - name: Commit and tag the release
         if: github.event_name == 'workflow_dispatch'
