@@ -67,15 +67,20 @@ export function showsAddPane(mode: string, hasWorkers: boolean): boolean {
   return mode === 'terminals' && hasWorkers;
 }
 
-// The new-pane key's twin, at the right end of the title row: in the worker list it would cost the list a
-// row of its own. It takes no keyboard, so a click leaves it where it was.
-export function createAddPaneButton(onClick: () => void): { element: HTMLElement; render(shown: boolean): void } {
-  const element = document.createElement('button');
-  element.type = 'button';
+// The two new-pane keys' twin, at the right end of the title row: in the worker list it would cost the
+// list a row of its own. New Terminal opens a shell, New Claude a Claude screen. Neither half takes the
+// keyboard, so a click leaves it where it was until the new pane takes it.
+export function createAddPaneButton(onClick: (claude: boolean) => void): { element: HTMLElement; render(shown: boolean): void } {
+  const element = document.createElement('div');
   element.className = 'add-pane';
-  element.textContent = '+ New pane';
-  element.addEventListener('mousedown', (event) => event.preventDefault());
-  element.addEventListener('click', onClick);
+  for (const [label, claude] of [['New Terminal', false], ['New Claude', true]] as const) {
+    const half = document.createElement('button');
+    half.type = 'button';
+    half.textContent = label;
+    half.addEventListener('mousedown', (event) => event.preventDefault());
+    half.addEventListener('click', () => onClick(claude));
+    element.append(half);
+  }
   return {
     element,
     render(shown) {

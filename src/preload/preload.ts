@@ -34,7 +34,7 @@ const bridge: DashboardBridge = {
   resumeOutput: (id) => ipcRenderer.send('pty:resume', id),
   reportWorkingPanes: (ids) => ipcRenderer.send('panes:report', ids),
   readPanes: (projectPath) => ipcRenderer.invoke('panes:read', projectPath),
-  addPane: (slot) => ipcRenderer.invoke('pane:add', slot),
+  addPane: (slot, claude) => ipcRenderer.invoke('pane:add', slot, claude),
   closePane: (slot, index) => ipcRenderer.invoke('pane:close', slot, index),
   onPaneMark: (listener) => ipcRenderer.on('pane:mark', (_event, id, state) => listener(id, state)),
   onData: (listener) => ipcRenderer.on('pty:data', (_event, id, data) => listener(id, data)),

@@ -78,23 +78,39 @@
   white-space: nowrap;
 }
 
-/* The new-pane key's twin, at the right end of the title row and out of its drag region. No display
-   of its own, so hidden still hides it. */
+/* The two new-pane keys' twin, [New Terminal | New Claude], at the right end of the title row and out
+   of its drag region. flex beats the browser's own [hidden], so the rule below it puts that back. */
 .add-pane {
+  display: flex;
   flex: none;
   margin: 0 8px 0 auto;
   height: 22px;
   -webkit-app-region: no-drag;
+}
+
+.add-pane[hidden] {
+  display: none;
+}
+
+.add-pane button {
   padding: 0 12px;
   border: 1px dashed var(--line);
-  border-radius: var(--radius);
   background: none;
   color: var(--muted);
   font: inherit;
   cursor: pointer;
 }
 
-.add-pane:hover {
+.add-pane button:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.add-pane button:last-child {
+  border-left: none;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.add-pane button:hover {
   background: var(--hover);
   color: var(--brightWhite);
 }

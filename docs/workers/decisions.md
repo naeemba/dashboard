@@ -300,3 +300,38 @@ Watch for:
 - A session that dies while no app is connected and is the last one running takes the host and what it
   held with it; that worker comes back with its turn over and main is not told, as before.
 - A session in the host runs the build that started it until it ends, as a terminal worker's Claude does.
+
+## workers-decision-7: A Claude screen opened by hand is yours, not main's worker
+
+**New Claude opens a worker pane as a Claude screen of yours: in the project's folder, empty, and
+started only by your first prompt.** Card 20be4145. The title row's new-pane button became two halves,
+New Terminal (the old button and `terminal-add`) and New Claude (`terminal-add-claude`, Ctrl+Shift+A).
+
+How it is built, on the worker screen's own path so nothing forks:
+
+- `pane:add` takes a `claude` flag; `worker-channels.ts` opens the worker as before, then hands it to
+  `screen-workers.ts`'s `openByHand`, which saves it in `screen-workers.json` with a new id from the
+  session index (so the drawer lists it) and no first prompt. Its session starts on the first prompt
+  and runs in the screen host as a worker screen's does (workers-decision-6), so it outlives a restart
+  off Windows, and comes back on its conversation when the project opens.
+- Which screen is whose is `screen-owner.ts`: saved with a dispatcher's folder it is main's worker,
+  saved with `null` it is yours. A file from before this names a dispatcher on every screen.
+- Yours reports to nobody: it is never put in main.ts's `mainsWorkers`, so `session-requests.ts`
+  never tells a main of its stop, and `pane release` will not kill it. Its hooks still mark the pane,
+  so a question still turns its edge yellow and a turn end green.
+- The refusals of /clear, /resume, /branch and /rewind are main's worker's only:
+  `keepsItsConversation` in `chat-sessions.ts`, where they are decided. On yours, all four carry the
+  screen on in another conversation through `ScreenSession.carryOnIn`, which saves it, so a restart
+  resumes the one it was last on. Nothing of main's is touched: main's remembered conversation and its
+  pending rewind cut are kept per project, which the screen shares with main.
+- So a /rewind of the conversation on yours forks a copy cut at the prompt at once, rather than
+  holding the cut until the next prompt as main does; the original stays in /resume's list either way.
+  A /resume of the conversation main is on is refused as running in main: two Claudes on one
+  conversation each write their own turns into it.
+
+Watch for: a `conversation_reset` the CLI sends by itself moves the session to a new conversation that
+the saved screen does not follow, so a restart after one resumes the conversation from before it. Every
+/clear the screen sends goes through `chat:reset` and is followed.
+
+Watch for: the session index row is written when the screen opens, as a dispatched worker's is when it
+runs, so a New Claude closed before its first prompt leaves a drawer row with no conversation behind it.

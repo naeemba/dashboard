@@ -105,7 +105,7 @@ const showError = statusError.show;
 const showNotice = statusError.notice;
 statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
-const addPaneButton = createAddPaneButton(() => addPane(pages[activeIndex]));
+const addPaneButton = createAddPaneButton((claude) => addPane(pages[activeIndex], claude));
 const pagesElement = document.getElementById('pages') as HTMLElement;
 const pages: Page[] = [];
 let activeIndex = 0;
@@ -469,10 +469,11 @@ const builder = createPageBuilder({
   goToPane: (id) => goToPaneId(id),
 });
 
-// The new-pane key and its button in the title row. Main opens it and answers with the list that has it
-// on, the way an open does, so the pane is on this page before it is given the keyboard.
-function addPane(page: Page): void {
-  void openWorker(page.slot).then((index) => {
+// The new-pane keys and their button in the title row: a shell, or a Claude screen. Main opens it and
+// answers with the list that has it on, the way an open does, so the pane is on this page before it is
+// given the keyboard.
+function addPane(page: Page, claude = false): void {
+  void openWorker(page.slot, claude).then((index) => {
     if (index !== null && pages[activeIndex] === page) focusTerminal(index);
   }, (error: unknown) => showError('pane', `No new pane: ${failureText(error)}`));
 }
@@ -686,6 +687,7 @@ function apply(action: Action): void {
     case 'terminal-previous': return focusTerminal(stepPane(openIndices(page), page.focused, -1));
     case 'terminal-move': return focusTerminal(neighborPane(openIndices(page), page.focused, action.direction));
     case 'terminal-add': return addPane(page);
+    case 'terminal-add-claude': return addPane(page, true);
     case 'terminal-scrollback': return openScrollback(page);
     case 'terminal-name': return namePane(page);
     case 'terminal-file-hints': return showNotice('file', showFileHints(page, openFileLink));

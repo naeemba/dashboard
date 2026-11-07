@@ -25,10 +25,10 @@ export const MODE_NAMES: Record<Mode, string> = {
 export const BLURB_WORD_LIMIT = 60;
 
 export const BLURBS: Record<Mode | ActionGroup, string> = {
-  terminals: 'Main, the project\'s Claude Code session, on the left, dispatching your tasks into the '
-    + 'worker panes down the right: Claude screens, or terminals. A yellow edge: a worker waits on you; '
-    + 'green: its turn is over. Panes keep running on other pages and through a restart. Ctrl+C is the '
-    + 'shell\'s interrupt; off a mac copy and paste have keys.',
+  terminals: 'Main, the project\'s Claude Code session, on the left, dispatching tasks into worker '
+    + 'panes down the right: Claude screens or terminals; New Claude opens one of your own. Yellow '
+    + 'edge: a worker waits on you; green: its turn is over. Panes outlive their page and a restart. '
+    + 'Ctrl+C is the shell\'s interrupt; off a mac copy and paste have keys.',
   nvim: 'One nvim filling the window, started the first time you press the nvim key here, not at '
     + 'launch. Quit it and Enter starts it again. The scrollback key on the terminals screen sends a '
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',

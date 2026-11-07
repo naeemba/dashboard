@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, replayedFlagSettings, liveConversation, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, runningElsewhere, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('rememberedSessions', () => {
   const folder = mkdtempSync(path.join(tmpdir(), 'chat-sessions-'));
@@ -68,14 +68,14 @@ describe('relayed', () => {
 
 describe('workerSessionStart', () => {
   it('starts a new worker under its own id and resumes one whose conversation is written', () => {
-    const worker = { session: 'abc', name: 'api-terminal-2', hooks: {} };
+    const worker = { session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
     expect(workerSessionStart({ ...worker, resume: false })).toEqual({ sessionId: 'abc' });
     expect(workerSessionStart({ ...worker, resume: true })).toEqual({ resume: 'abc' });
   });
 });
 
 describe('liveConversation', () => {
-  const worker = { session: 'abc', name: 'api-terminal-2', hooks: {} };
+  const worker = { session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
 
   it('names a worker its own conversation once written, and never main\'s', () => {
     expect(liveConversation({ ...worker, resume: true }, 'main')).toBe('abc');
@@ -155,5 +155,40 @@ describe('conversationReporter', () => {
     expect(reporters.ended('/a', 'old')).toBe(false);
     expect(reporters.ended('/a', 'new')).toBe(true);
     expect(reporters.ended('/a', 'new')).toBe(false);
+  });
+});
+
+describe('nextConversation', () => {
+  const screen = { session: 'abc', resume: true, name: 'api-terminal-2', hooks: {}, owner: 'you' as const, carryOnIn: () => undefined };
+
+  it('keeps a screen opened by hand off main\'s remembered conversation and its held cut', () => {
+    expect(nextConversation(screen, screen, 'picked')).toEqual({ carryOnIn: 'picked' });
+    expect(nextConversation(screen, screen, undefined)).toEqual({ carryOnIn: null });
+    expect(nextConversation(screen, screen, { cutAt: 'm3' })).toEqual({ fork: 'm3' });
+  });
+
+  it('has the page\'s main remember the id, forget it, or hold the cut', () => {
+    expect(nextConversation(undefined, undefined, 'picked')).toEqual({ remember: 'picked' });
+    expect(nextConversation(undefined, undefined, undefined)).toEqual({ remember: undefined });
+    expect(nextConversation(undefined, undefined, { cutAt: 'm3' })).toEqual({ cut: 'm3' });
+  });
+
+  it('leaves main alone when the screen closed while its fork ran', () => {
+    expect(nextConversation(screen, undefined, 'forked')).toEqual({ nothing: true });
+    expect(nextConversation(screen, undefined, { cutAt: 'm3' })).toEqual({ nothing: true });
+  });
+});
+
+describe('runningElsewhere', () => {
+  const screen = { session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, owner: 'you' as const, carryOnIn: () => undefined };
+
+  it('names the pane running the picked conversation first', () => {
+    expect(runningElsewhere('xyz', 'terminal 3', screen, 'xyz')).toBe('terminal 3');
+  });
+
+  it('names main for a screen picking main\'s conversation, and nothing for main itself', () => {
+    expect(runningElsewhere('xyz', null, screen, 'xyz')).toBe('main');
+    expect(runningElsewhere('other', null, screen, 'xyz')).toBeNull();
+    expect(runningElsewhere('xyz', null, undefined, 'xyz')).toBeNull();
   });
 });

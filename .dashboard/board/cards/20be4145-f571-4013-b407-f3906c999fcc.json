@@ -1,11 +1,13 @@
 {
   "id": "20be4145-f571-4013-b407-f3906c999fcc",
   "title": "Split the new-pane button into New Terminal and New Claude",
-  "notes": "The title row's '+ New pane' becomes two halves: [New Terminal | New Claude]. New Terminal is today's button and the terminal-add key. New Claude opens a new worker pane showing a Claude screen like main's, in the project's folder, empty and waiting for the first prompt.\n\nKeyboard first: New Claude gets its own key, a row in src/shared/keys/actions.ts beside terminal-add (a terminals-scope name), and src/renderer/keys/help.ts plus the terminals blurb say so. Both halves keep the button's mousedown preventDefault, so a click leaves the keyboard where it was; the new pane takes it once it opens, as addPane does now.\n\nTwo costs, both part of this card:\n1. A screen with no first prompt. Today a worker screen only comes from pane run --screen with a prompt (workers-decision-5, screen-workers.ts). New Claude needs a path that opens the pane as a screen and starts nothing until the user types. It should run in the screen host like a worker screen, so it outlives an app restart (workers-decision-6; Windows has no host, so there the turn ends with the app).\n2. A screen opened by hand is the user's, not main's worker. The worker-screen refusals of /clear, /resume, /branch and /rewind do not apply to it, and it reports to nobody when its turn ends (workers README: 'a Claude opened by hand tells nobody'). The rule saying which screen is which goes in a small module with a test (workflow-rule-2), and the refusal's predicate stays where the refusal is decided (errors-rule-1).\n\nAfter a restart it comes back as a Claude screen on the same conversation, as a worker screen does.\n\nDocs: workers and panes README, a decision entry for the hand-opened screen, history.",
+  "notes": "Shipped in #228: the title row's new-pane button is New Terminal | New Claude. New Claude (terminal-add-claude, Ctrl+Shift+A) opens a worker pane as a Claude screen of yours in the project folder, empty until the first prompt, run in the screen host and back on its conversation after a restart. /clear, /resume, /branch and /rewind act on its own conversation; it reports to nobody. Rule in screen-owner.ts, refusal predicate keepsItsConversation in chat-sessions.ts, workers-decision-7. Not checked by hand in the app.",
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T12:51:21.965Z",
-  "updatedAt": "2026-11-07T13:09:03.365Z",
-  "column": "Doing",
-  "order": 1
+  "updatedAt": "2026-11-07T13:42:26.094Z",
+  "branch": "work-board-card-20be4145-f571-4013-b407-f39",
+  "pullRequest": 228,
+  "column": "Done",
+  "order": 185
 }

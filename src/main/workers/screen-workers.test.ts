@@ -22,6 +22,7 @@ function workers(file = path.join(folder, 'screen-workers.json'), kept: Record<s
     start: (key) => said.push(`start ${key}`),
     host: { ready: Promise.resolve(), kept: (session) => (session in kept ? { key: session, ...kept[session] } : undefined), query: () => Promise.resolve(null) },
     notify: (id, state, waiting) => said.push(`${id} ${state}${waiting ? ` ${waiting.background}/${waiting.scheduled}` : ''}`),
+    newSession: (projectPath) => { said.push(`new ${projectPath}`); return `new-${said.length}`; },
   });
   return { screens, said, file };
 }
@@ -138,6 +139,35 @@ describe('screenWorkers', () => {
     const after = workers(before.file);
     after.screens.comeBack(4, '/work/api');
     expect(after.screens.session(screenKey('4:3'))).toMatchObject({ resume: true });
+  });
+
+  it('opens a screen by hand as yours, on a new conversation, with no first prompt', () => {
+    const { screens, said } = workers();
+    screens.openByHand('2:1', '/work/api');
+    expect(said).toEqual(['new /work/api', 'changed']);
+    expect(screens.folder('2:1')).toBe('/work/api');
+    expect(screens.session(screenKey('2:1'))).toMatchObject({ session: 'new-1', resume: false, owner: 'you' });
+  });
+
+  it('carries a screen opened by hand on in another conversation, and brings it back there as yours', () => {
+    const before = workers();
+    before.screens.openByHand('2:1', '/work/api');
+    before.screens.session(screenKey('2:1'))?.carryOnIn('picked');
+    expect(before.screens.session(screenKey('2:1'))).toMatchObject({ session: 'picked', resume: true });
+    const after = workers(before.file);
+    expect(after.screens.comeBack(3, '/work/api')).toMatchObject([{ session: 'picked', dispatcherPath: null }]);
+    expect(after.screens.session(screenKey('3:1'))).toMatchObject({ session: 'picked', resume: true, owner: 'you' });
+    after.screens.session(screenKey('3:1'))?.carryOnIn(null);
+    expect(after.screens.session(screenKey('3:1'))).toMatchObject({ resume: false, owner: 'you' });
+    expect(after.said).toEqual(['new /work/api']);
+  });
+
+  it('brings main\'s worker back as main\'s', () => {
+    const before = workers();
+    before.screens.start('2:3', '/work/api', '/work/api', START, null, '/work/desk');
+    const after = workers(before.file);
+    after.screens.comeBack(4, '/work/api');
+    expect(after.screens.session(screenKey('4:3'))?.owner).toBe('main');
   });
 
   it('reads a file that is missing or not its own as nobody to bring back', () => {
