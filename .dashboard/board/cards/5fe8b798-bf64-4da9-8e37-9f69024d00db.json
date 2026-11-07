@@ -1,0 +1,11 @@
+{
+  "id": "5fe8b798-bf64-4da9-8e37-9f69024d00db",
+  "title": "One command to cut a release: scripts/release.sh and /release",
+  "notes": "Today a release is a hand-started workflow_dispatch of .github/workflows/release.yml, then watching it, then pulling the tag and rebuilding the local app. The user wants one command that does all of it, choosing only the bump.\n\n1. scripts/release.sh <major|minor|patch>, for the user to run by hand. It refuses unless main is checked out, clean, equal to origin/main, and CI is green on that commit. It dispatches release.yml with the bump, watches the run, and on a failed leg stops and names the leg (the release stays a draft). Once the release is published, it pulls the tagged commit, runs pnpm install --frozen-lockfile, the three checks and scripts/rebuild.sh, checks the stamp in the installed app.asar, and prints the version, the release URL and 'restart the app when ready'. It never quits or restarts the running app (workflow-rule-1).\n2. A project skill, .claude/skills/release/SKILL.md, so the user can type /release minor and main runs the script. The skill says it runs only when the user typed it: a release publishes, so it is never chained onto a merge or started on main's own judgement.\n3. Better notes, in scripts/release-notes.mjs, so they are the same from the script, the skill or the Actions tab: a 'What's new' list at the top, made from the titles of board cards that reached Done since the last release tag, with GitHub's PR list below it. Done cards are read from .dashboard/board/cards/ (one file per card; find how to tell when a card reached Done, e.g. its move history or git log of the card file). Keep release-notes.mjs tested.\n\nTesting: never cut a real release. Test the notes with the unit tests and against the real board; test the script's refusals locally, and its watch-and-rebuild half against the finished v2.42.0 run if it can take a run id, or with a pre-release tag v2.43.0-rc.N on a throwaway commit, deleting the tag and pre-release after. The real v2.43.0 is cut by the user after merge.\n\nDocs: docs/workflow README (how to release), workflow-decision-4 or a new decision, history; README's release lines.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-07T14:03:27.681Z",
+  "updatedAt": "2026-11-07T14:03:27.681Z",
+  "column": "Doing",
+  "order": 0
+}
