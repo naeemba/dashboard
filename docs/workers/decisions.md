@@ -164,11 +164,20 @@ request is already written when the command gives up, so that app, or an older o
 accepting, may still claim or dispatch; the line says to check `pane list` after restarting before
 asking again, or a card can end up with a second worktree and worker.
 
-## workers-decision-5: Worker screens are opt-in behind `pane run --screen`
+## workers-decision-5: A worker is a Claude screen unless `pane run --terminal`
 
-**A worker can run as a Claude screen, the Agent SDK pane main already is, but only when main asks with
-`--screen`.** Agreed with the user on 2026-11-05 in stages: opt-in first, the default only once it has
-held up on real cards. A plain `pane run` starts Claude Code in the terminal exactly as before.
+**A worker runs as a Claude screen, the Agent SDK pane main already is, unless main asks for the
+terminal with `--terminal`.** Agreed with the user on 2026-11-05 in stages: opt-in behind `--screen`
+first, the default only once it had held up on real cards. It became the default on 2026-11-07 (card
+0e903031), once the blockers below that could end a turn were settled. `--screen` is still accepted and
+changes nothing, so a prompt written for the opt-in keeps working.
+
+Windows keeps the terminal by default: it has no screen host (workers-decision-6), so a screen's turn
+there ends with the app, which is the blocker the default waited on. `--screen` still asks for one. The
+condition is `hasScreenHost` in `screen-host-protocol.ts`, which `screenHostSocket` and the parse in
+`session-cli.ts` both read. Telling main in the usage text instead was weighed and rejected: a main
+asked to dispatch does not reread its usage, and a worker that dies on a quit is not something a
+sentence prevents.
 
 How it is built, so the chat code does not fork:
 
@@ -203,7 +212,9 @@ throwaway clone on a second instance; it opened draft PR #216, left unmerged):
 - Memory after one short turn each: the terminal worker's Claude 205 MB PSS plus 112 MB of MCP
   servers, the screen's 182 MB plus 86 MB; the screen's share of the renderer was not measured.
 
-What blocks making it the default, each a Backlog card:
+What blocked making it the default, each a Backlog card. The two that could end a turn or refuse
+work are settled (struck through here, and the `gh pr create` refusal below); the rest stay open and
+are watched on real cards rather than held against the default:
 
 - ~~A worker screen's Claude is the app's child, so a restart ends the turn it was in.~~ It runs in the
   screen host now, off Windows (workers-decision-6).

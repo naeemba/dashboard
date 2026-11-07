@@ -110,11 +110,11 @@ describe('sessionRequests', () => {
     expect(await outside(['send', '9:1', 'hi'])).toEqual({ ok: false, output: '9:1 is not in a project open in Dashboard' });
   });
 
-  it('runs a worker in the project with its prompt as the argument', async () => {
+  it('runs a terminal worker in the project with its prompt as the argument', async () => {
     const { ports, started } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
-    expect(await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] }))
+    expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--terminal', 'research the cache'] }))
       .toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
     expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api', cardId: null });
     expect(started[0].agentArguments[1]).toContain('research the cache');
@@ -480,7 +480,7 @@ describe('sessionRequests across projects', () => {
     const { ask, started, opened } = pages();
     expect(await ask(['claim', '--project', 'api'])).toEqual({ ok: true, output: '2:1' });
     expect(opened).toEqual([]);
-    expect(await ask(['run', '2:1', 'fix the tests'])).toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
+    expect(await ask(['run', '2:1', '--terminal', 'fix the tests'])).toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
     expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api' });
     expect(started[0].agentArguments[1]).toContain('SendMessage to main-desk when done');
     expect(await ask(['release', '2:1'])).toEqual({ ok: true, output: 'released 2:1' });

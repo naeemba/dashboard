@@ -74,7 +74,7 @@ export const panesById = new Map<string, Pane>();
 const chatsBySlot = new Map<number, ChatView>();
 // What each pane does when its worker's hooks report, by terminal id, the way a pty's bytes find it.
 const markersById = new Map<string, (state: WorkerState) => void>();
-// The worker panes main draws as a Claude screen (pane run --screen), as its last list said.
+// The worker panes main draws as a Claude screen (pane run, the default off Windows), as its last list said.
 let screenPanes: ReadonlySet<string> = new Set();
 export function setScreenPanes(ids: readonly string[]): void {
   screenPanes = new Set(ids);
@@ -159,7 +159,7 @@ export function mainHasKeyboard(page: Page): boolean {
   return page.focused === MAIN_INDEX && page.chat !== null;
 }
 
-// The Claude screen the terminals view's keyboard is on: main's, or a worker's run with --screen.
+// The Claude screen the terminals view's keyboard is on: main's, or a worker's run as one.
 export function focusedChat(page: Page): ChatView | undefined {
   return mainHasKeyboard(page) ? page.chat ?? undefined : focusedPane(page)?.screen;
 }

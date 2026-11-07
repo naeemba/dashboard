@@ -602,7 +602,7 @@ body *:not(.pane, .pane *) {
 }
 
 
-/* A worker run as a Claude screen (pane run --screen): the screen fills the pane and the shell kept
+/* A worker run as a Claude screen (pane run, the default off Windows): the screen fills the pane and the shell kept
    under it stays out of sight. Folded, it is one bar like any other worker. */
 .workers > .pane.pane-screen .xterm,
 .workers > .pane.folded > .chat {
