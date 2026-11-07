@@ -5,9 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T13:06:07.816Z",
-  "updatedAt": "2026-11-07T13:15:06.213Z",
+  "updatedAt": "2026-11-07T13:23:27.996Z",
   "branch": "work-board-card-0e903031-9ffe-4d75-a427-426",
   "pullRequest": 227,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-07T13:23:27.996Z",
+      "body": "Shipped in PR #227: pane run starts a Claude screen by default, --terminal asks for the terminal, --screen is still accepted, and --screen with --terminal is refused. Windows keeps the terminal by default (no screen host) and main's prompt says so there. workers-decision-5 records it."
+    }
+  ],
+  "column": "Done",
+  "order": 184
 }
