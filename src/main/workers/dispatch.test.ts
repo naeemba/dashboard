@@ -52,6 +52,12 @@ describe('mainPrompt', () => {
       + ' those stay inline or in the Agent tool.',
     );
   });
+
+  // A plain run is a screen where there is a screen host and a terminal on Windows (parseRun).
+  it('tells main what a plain run starts on its platform', () => {
+    expect(mainPrompt('/work/api', 'linux')).toContain('--terminal runs Claude Code in its terminal instead');
+    expect(mainPrompt('/work/api', 'win32')).toContain('--screen runs it as a Claude screen instead');
+  });
 });
 
 describe('workerSettings', () => {

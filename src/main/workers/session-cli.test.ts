@@ -39,6 +39,10 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['run', '2:3', '--screen', 'go'], 'win32')).toMatchObject({ ok: true, command: { screen: true } });
   });
 
+  it('refuses --screen and --terminal together', () => {
+    expect(parseSessionCommand(['run', '2:3', '--terminal', '--screen', 'go'], 'linux')).toMatchObject({ ok: false });
+  });
+
   it('refuses a run with no prompt, or with both places to run it', () => {
     expect(parseSessionCommand(['run', '2:3'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['run', '2:3', '--card'])).toMatchObject({ ok: false });
