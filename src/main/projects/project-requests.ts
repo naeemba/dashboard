@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { failureText } from '../../shared/errors/failure';
 import { closeRefusal, type ClosingPane } from '../../shared/panes/close-refusal';
 import type { SessionReply, SessionRequest } from '../workers/session-cli';
 import { answered, refused } from '../workers/session-requests';
@@ -14,8 +15,11 @@ export type ProjectRequestPorts = {
   // Whether the project in that slot was restored with its folder gone: a dead page, not an open one.
   missingIn(slot: number): boolean;
   folderExists(projectPath: string): boolean;
-  // Opens the folder the way the project picker does: a page on every screen.
-  open(projectPath: string): void;
+  // Opens the folder the way the project picker does: a page on every screen. Answers its slot.
+  open(projectPath: string): number;
+  // Starts the page's main session if it is not running, and answers its name once it has initialised,
+  // which is when another session's SendMessage can reach it.
+  startMain(slot: number): Promise<string>;
   // The project's panes as the close key reads them, each with its name.
   panesOf(slot: number): ClosingPane[];
   // Closes it the way the close key does once it has agreed: shells, editor and page gone.
@@ -23,6 +27,26 @@ export type ProjectRequestPorts = {
   // Brings the window to the front on the page in that slot.
   focus(slot: number): void;
 };
+
+// How long `project open` waits for main to answer. Claude Code takes a few seconds to start; a minute
+// is long enough for a slow machine and short enough that a session stuck starting is said out loud.
+export const MAIN_START_MS = 60_000;
+
+// An explicit open starts main as well as the page, so the manager can hand the project to it at once.
+// A restored page never comes through here: it waits until it is shown (chat-start.ts).
+async function startedMain(ports: ProjectRequestPorts, slot: number, opened: string): Promise<SessionReply> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(`nothing answered within ${MAIN_START_MS / 1000} seconds`)), MAIN_START_MS);
+  });
+  try {
+    return answered(`${opened}; ${await Promise.race([ports.startMain(slot), timeout])} is running`);
+  } catch (error) {
+    return refused(`${opened}, but its main session did not start: ${failureText(error)}`);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export function projectRequests(
   ports: ProjectRequestPorts,
@@ -38,10 +62,9 @@ export function projectRequests(
     const slot = ports.slotOf(projectPath);
     if (verb === 'open') {
       // A dead page is opened over, as the picker revives it once its folder is back.
-      if (slot !== -1 && !ports.missingIn(slot)) return answered(`${name} is already open`);
+      if (slot !== -1 && !ports.missingIn(slot)) return startedMain(ports, slot, `${name} is already open`);
       if (!ports.folderExists(projectPath)) return refused(`${name}'s folder, ${projectPath}, does not exist`);
-      ports.open(projectPath);
-      return answered(`opened ${name}`);
+      return startedMain(ports, ports.open(projectPath), `opened ${name}`);
     }
     if (slot === -1) return refused(`${name} is not open`);
     if (verb === 'focus') {

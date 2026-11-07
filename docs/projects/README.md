@@ -25,7 +25,7 @@ deploy needs all of `name`, `role` and `address`.
 | `project add <path> [--name <n>] [--aka a,b] [--site <url>] [--about "<line>"]` | `added <name> in <file>`: a new entry at the end, the name from the folder unless given |
 | `project set <name> [--aka a,b] [--site <url>] [--about "<line>"] [--deploy name=<n>,role=<r>,address=<a>]... [--clear <field>]...` | `changed <name> in <file>` |
 | `project remove <name>` | `removed <name> in <file>` |
-| `project open <name>` | `opened <name>`: the app opens its folder the way the project picker does |
+| `project open <name>` | `opened <name>; main-<name> is running`: the app opens its folder the way the project picker does and starts its main session, answering once SendMessage can reach it (a minute at most, else a refusal); an open project's main is started the same way |
 | `project close <name>` | `closed <name>`, or the close key's own refusal naming the panes still running something |
 | `project focus <name>` | `switched to <name>`: the window comes to the front on that project's page, at its main pane |
 
@@ -166,8 +166,9 @@ Folders: `src/main/projects/`.
 - Given no `~/.dashboard/projects.yaml`, when `list` or `find` runs, then it says the file does not exist yet, names `dashboard project init`, and exits 1.
 - Given no `~/.dashboard/projects.yaml` and two projects open, when `dashboard project init` runs, then the file lists those two and every recent project still on disk, and `project list` reads it.
 - Given a `~/.dashboard/projects.yaml`, when `dashboard project init` runs, then the file is left as it was, and it says so and exits 1.
-- Given `path: ~/Workspace/new-crm` and the project not open, when `dashboard project open crm` runs in a pane, then a new-crm page appears and it prints `opened new-crm`.
-- Given api restored reading `Directory not found` and its drive mounted since, when `dashboard project open api` runs, then the page comes back with its shells and it prints `opened api`.
+- Given `path: ~/Workspace/new-crm` and the project not open, when `dashboard project open crm` runs in a pane, then a new-crm page appears, its main session starts, and it prints `opened new-crm; main-new-crm is running` once SendMessage to `main-new-crm` arrives.
+- Given api restored reading `Directory not found` and its drive mounted since, when `dashboard project open api` runs, then the page comes back with its shells and it prints `opened api; main-api is running`.
+- Given new-crm restored at launch and never shown, when `dashboard project open crm` runs, then its main starts and it prints `new-crm is already open; main-new-crm is running`; a main that does not start within a minute is refused with why.
 - Given new-crm opened from the picker as `~/ws/new-crm`, `ws` a symlink to `Workspace`, when `dashboard project close new-crm` runs, then that page closes.
 - Given new-crm open with `npm run dev` in terminal 2, when `dashboard project close new-crm` runs, then it prints `new-crm is still running in terminal 2 npm — stop it and close again`, exits 1 and the page stays.
 - Given new-crm open with every pane at a prompt, when `dashboard project close new-crm` runs, then the page goes with no dialog.

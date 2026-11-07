@@ -25,7 +25,7 @@ export const PROJECT_USAGE = `project — the projects in ~/.dashboard/projects.
                         --aka adds names, --deploy adds or changes one deploy by its name,
                         --site and --about replace, --clear takes aka, site, about or deploy away
   project remove <name> take the project out of the file
-  project open <name>   open it in the app, the way the project picker does
+  project open <name>   open it in the app, the way the project picker does, with its main session
   project close <name>  close it, refused while any of its panes is running something
   project focus <name>  bring the app to the front on that project's page
 
