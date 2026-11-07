@@ -16,5 +16,5 @@ without being asked. If no bump was given, ask which one (major, minor or patch)
 
 If the script stops, stop with it. Do not dispatch the workflow by hand, do not fix main to get past a
 refusal, and do not quit or restart the running app. Say the reason it gave and leave it to the user.
-A run that stopped on a failed leg is finished later with `scripts/release.sh --resume <run id>`, once
+A run that stopped on a failed leg is finished later with `./scripts/release.sh --resume <run id>`, once
 the user has re-run the failed jobs.
