@@ -31,6 +31,7 @@ export type Action =
   | { kind: 'terminal-paste' }
   | { kind: 'terminal-zoom' }
   | { kind: 'terminal-add' }
+  | { kind: 'terminal-add-claude' }
   | { kind: 'terminal-close' }
   | { kind: 'terminal-fold' }
   | { kind: 'terminal-scrollback' }
@@ -298,12 +299,16 @@ export const ACTIONS: readonly ActionEntry[] = [
     mac: `Cmd+${number}`, other: `Alt+${number}`,
     family: 'terminal-focus', familyDescription: 'Focus main, then a worker by its place in the list',
   })),
-  // A fresh worker pane, a shell in the project, at the end of the list. The button above the list
-  // does the same. Shift for the reason mode-notes gives: Ctrl+Shift with a letter reaches a pane as
-  // no bytes, so the key costs the shell nothing.
+  // A fresh worker pane, a shell in the project or a Claude screen of yours there, at the end of the
+  // list: the two halves of the button above it. Shift for the reason mode-notes gives: Ctrl+Shift with
+  // a letter reaches a pane as no bytes, so the keys cost the shell nothing.
   {
     name: 'terminal-add', description: 'Open a new worker pane', group: 'terminals', scope: 'terminals',
     action: { kind: 'terminal-add' }, mac: 'Ctrl+Shift+T', other: 'Ctrl+Shift+T',
+  },
+  {
+    name: 'terminal-add-claude', description: 'Open a new Claude screen in a worker pane', group: 'terminals', scope: 'terminals',
+    action: { kind: 'terminal-add-claude' }, mac: 'Ctrl+Shift+A', other: 'Ctrl+Shift+A',
   },
   {
     name: 'terminal-close', description: 'Close this worker pane', group: 'terminals', scope: 'terminals',

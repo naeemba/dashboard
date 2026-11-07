@@ -12,7 +12,7 @@ export type PaneSendPorts = {
   projectPages(): Page[];
   readPanes(projectPath: string): Promise<PaneUse[]>;
   // Main opens a worker and answers with its number and the list that has it on.
-  addPane(slot: number): Promise<{ index: number; open: OpenProjects } | null>;
+  addPane(slot: number, claude?: boolean): Promise<{ index: number; open: OpenProjects } | null>;
   applyProjects(open: OpenProjects): void;
   renderStatus(): void;
 };
@@ -20,11 +20,12 @@ export type PaneSendPorts = {
 export function paneSends(ports: PaneSendPorts): {
   sendToPanes(command: string, paths: readonly string[]): Promise<SendPlan>;
   answerPane(slot: number, index: number, key: string): void;
-  openWorker(slot: number): Promise<number | null>;
+  openWorker(slot: number, claude?: boolean): Promise<number | null>;
 } {
-  // A new worker, on its page before anything is typed into it or it is given the keyboard.
-  async function openWorker(slot: number): Promise<number | null> {
-    const added = await ports.addPane(slot);
+  // A new worker, a shell or a Claude screen, on its page before anything is typed into it or it is
+  // given the keyboard.
+  async function openWorker(slot: number, claude = false): Promise<number | null> {
+    const added = await ports.addPane(slot, claude);
     if (!added) return null;
     ports.applyProjects(added.open);
     return added.index;
