@@ -1,11 +1,11 @@
 {
   "id": "5f0e8adb-6d3d-47b1-a02d-77d966bdac7a",
   "title": "A card shipped to an agent runs it as a Claude screen",
-  "notes": "#227 made pane run start a Claude screen by default but left the agent a move into Ship starts as Claude Code in a terminal (out of scope there). The user asked another project's main why its board ship opened a terminal worker; that is why. Change: the Ship agent runs as a Claude screen wherever pane run would (hasScreenHost), terminal on Windows, same rule and same decision entry (workers-decision-5). The review loop's agent too, if it starts one the same way. Tests for the choice; docs: ship/board README, workers-decision-5, history.",
-  "priority": "medium",
+  "notes": "Superseded by the pane.dispatch card (one action every agent start goes through), which covers the Ship agent. Leave this one alone.",
+  "priority": "low",
   "parent": null,
   "createdAt": "2026-11-07T18:07:55.051Z",
-  "updatedAt": "2026-11-07T18:07:55.051Z",
-  "column": "Todo",
-  "order": 10
+  "updatedAt": "2026-11-07T18:12:53.045Z",
+  "column": "Backlog",
+  "order": 38
 }

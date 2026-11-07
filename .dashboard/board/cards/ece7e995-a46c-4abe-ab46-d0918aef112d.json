@@ -1,0 +1,11 @@
+{
+  "id": "ece7e995-a46c-4abe-ab46-d0918aef112d",
+  "title": "One pane.dispatch action that every agent start goes through",
+  "notes": "Today an agent is started in a pane from several places, and only one of them picks screen or terminal:\n- pane run: session-requests.ts -> startWorker (main.ts ~805): Claude screen by default off Windows (#227).\n- A move into Ship / board ship: main.ts ~739 -> startAgent: always a terminal.\n- The review loop's agent: startAgent: always a terminal.\n- A resume after a restart: resumeIn (main.ts ~436) -> startAgent: a terminal unless it was a screen worker.\n- New Claude (#228): its own screen opener.\nSo #227 fixed one caller, and the user's card ship on v2.43 still opened a terminal worker.\n\nChange: one action, src/main/actions/pane/dispatch.ts (the board actions pattern of #219: one file per verb, the decisions in it, main.ts only wires), that takes a pane, a folder, a prompt or none, the card and who it reports to, decides screen or terminal once (hasScreenHost; a terminal on Windows; an explicit --terminal or --screen from pane run wins), and starts the one it chose. pane run, ship, the review loop, the resume and New Claude all call it; startAgent is left only as the terminal half it calls, and nothing else calls startAgent or workerScreens.start directly. Every place that needs a pane goes through it from here on: say so as a decision (workers-decision-N) so the next caller does not add a sixth path.\n\nTests: the action's choice (each caller's case, Windows, the explicit flags) beside it. Hand check: a card shipped on Linux opens a Claude screen; a review loop agent too; a restart brings each back as what it was.\nDocs: workers README and decisions, board/ship README, history. Supersedes 5f0e8adb.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-07T18:12:52.887Z",
+  "updatedAt": "2026-11-07T18:12:52.887Z",
+  "column": "Todo",
+  "order": 11
+}
