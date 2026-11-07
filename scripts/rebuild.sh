@@ -52,6 +52,11 @@ if [ -d "$installed" ]; then mv "$installed" "$previous"; fi
 mv "$staged" "$installed"
 rm -rf "$previous"
 
+# The stamp the build carries (vite.build-version.ts), read back out of the installed app.asar, which
+# keeps main.cjs as plain text: what is installed is what this checkout built.
+stamp="$(node -p 'require("./package.json").version')+$(git rev-parse --short=12 HEAD)"
+grep -a -q -F "$stamp" "$installed/$resources/app.asar" || { echo "Stopped: $installed does not carry $stamp."; exit 1; }
+
 # The `dashboard` command for any terminal: no words open the app, `dashboard <noun> ...` runs the
 # command entry under node (docs/command). Written beside and renamed over, never through: the old
 # launcher was a symlink to the app's executable, and writing through it would overwrite the app.
@@ -67,4 +72,4 @@ LAUNCHER
 chmod 755 "$launcher.new"
 mv -f "$launcher.new" "$launcher"
 
-echo "Installed $installed and $launcher. The running app is untouched — restart it when you are ready."
+echo "Installed $stamp in $installed, and $launcher. The running app is untouched — restart it when you are ready."
