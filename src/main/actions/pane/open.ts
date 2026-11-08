@@ -1,7 +1,7 @@
 import type { Refused } from '../../../shared/app/bridge';
 import { nextPaneIndex } from '../../../shared/panes/pane-layout';
 import { terminalId } from '../../../shared/panes/terminals';
-import { action } from '../action';
+import { action, isRefused } from '../action';
 import type { PaneDispatchInput } from './dispatch';
 import { isFilledTextOrNull, isSlot } from './pane-input';
 
@@ -54,6 +54,6 @@ export const paneOpen = action<PaneOpenPorts, PaneOpenInput, { output: string; i
     const started = await ports.dispatch({
       id, projectPath: project.path, directory: folder, prompt: null, resume, cardId: null, dispatcherPath: null, as: null,
     });
-    return 'refused' in started ? started : { output: started.output, index };
+    return isRefused(started) ? started : { output: started.output, index };
   },
 });

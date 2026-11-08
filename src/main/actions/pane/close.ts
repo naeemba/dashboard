@@ -8,7 +8,7 @@ import { isFilledText } from './pane-input';
 
 export type PaneClosePorts = {
   openPanes(slot: number): readonly number[];
-  projectPath(slot: number): string | undefined;
+  project(slot: number): { path: string } | undefined;
   // Everything the pane was let go of: its shell, its screen, main's claim and the command's answers.
   drop(id: string): void;
   // A card's record naming the pane gives it up, so the card is not counted as sitting in a pane that is gone.
@@ -24,7 +24,7 @@ export const paneClose = action<PaneClosePorts, { id: string }, { output: string
     const { slot, index } = paneFromId(id);
     if (!ports.openPanes(slot).includes(index)) return { refused: `${id} is not open` };
     ports.drop(id);
-    ports.endClaim(ports.projectPath(slot) ?? '', index);
+    ports.endClaim(ports.project(slot)?.path ?? '', index);
     ports.changed();
     return { output: `closed ${id}` };
   },

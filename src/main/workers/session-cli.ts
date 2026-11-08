@@ -23,6 +23,9 @@ export type SessionCommand =
 export type SessionRequest = { directory: string; args: readonly string[]; version?: string };
 export type SessionReply = { ok: boolean; output: string };
 
+export const answered = (output: string): SessionReply => ({ ok: true, output });
+export const refused = (output: string): SessionReply => ({ ok: false, output });
+
 export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
   session claim [--project <name|aka>]

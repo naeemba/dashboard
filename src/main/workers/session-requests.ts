@@ -3,7 +3,7 @@ import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
 import type { ProjectNamed } from '../projects/project-named';
-import { namesItsTarget, parseSessionCommand, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
+import { answered, namesItsTarget, parseSessionCommand, refused, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
@@ -88,9 +88,6 @@ function askingSlot(command: SessionCommand, folderSlot: number): number {
   if (folderSlot !== -1) return folderSlot;
   return 'id' in command ? paneFromId(command.id).slot : -1;
 }
-
-export const answered = (output: string): SessionReply => ({ ok: true, output });
-export const refused = (output: string): SessionReply => ({ ok: false, output });
 
 export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
   // Every worker a session run started that is still open, in the order they ran, each naming the slot
@@ -222,7 +219,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     },
   });
 
-  // Run, send and release are refused a pane the asker may not touch before the action is asked.
+  // Send and release are refused a pane the asker may not touch before the action is asked.
   async function onWorker(id: string, slot: number, act: () => Promise<{ output: string } | Refused>): Promise<SessionReply> {
     const refusal = worker(id, slot);
     return refusal === null ? sessionReply(await act()) : refused(refusal);

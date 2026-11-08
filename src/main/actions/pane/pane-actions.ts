@@ -4,7 +4,7 @@ import { paneFromId } from '../../../shared/panes/terminals';
 import { bind, type BoundAction } from '../action';
 import { paneClose, type PaneClosePorts } from './close';
 import { paneDispatch, type PaneDispatchPorts } from './dispatch';
-import { paneOpen, type PaneOpenPorts } from './open';
+import { paneOpen } from './open';
 import { paneRestore, type PaneRestorePorts } from './restore';
 import { paneSend, type PaneSendPorts } from './send';
 
@@ -13,19 +13,14 @@ import { paneSend, type PaneSendPorts } from './send';
 // command (session-requests.ts), whose ledger of who claimed what they need. The claim on main's worker
 // is tested in pane-actions.test.ts, every other decision in its action's own test.
 export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession'>
-  & Pick<PaneOpenPorts, 'project'>
-  & Pick<PaneClosePorts, 'openPanes' | 'projectPath' | 'drop' | 'endClaim' | 'changed'>
-  & Pick<PaneSendPorts, 'screenPrompt' | 'typeIntoShell'>
-  & Omit<PaneRestorePorts, 'openPanes' | 'setPaneCommand' | 'spawn' | 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & {
+  & PaneClosePorts & PaneSendPorts
+  & Omit<PaneRestorePorts, 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & {
     // The session command's answers about the pane, forgotten: it is the new agent's.
     forgetAnswers(id: string): void;
     // Main's claim on each pane: the main its worker reports to.
     mainsWorkers: Pick<Map<string, string>, 'set' | 'delete'>;
     commands: Pick<Map<string, PaneCommand>, 'get' | 'has' | 'set'>;
-    // What a pane runs from now on; one that had no command is a worker opening, announced first.
-    setPaneCommand(id: string, command: PaneCommand): void;
     shells: Pick<Map<string, { kill(): void }>, 'get' | 'has' | 'delete'>;
-    spawn(id: string): void;
     // Working from this instant, rather than from the first report that catches its spinner: there is a
     // second or two of Claude Code starting before the spinner exists, and the sweep in between would
     // read the pane as quiet and take the folder away from the agent.
@@ -51,6 +46,7 @@ export function paneActions(main: PaneActionsMain): PaneActions {
     main.shells.delete(id);
     main.spawn(id);
   }
+  const plainShell = (id: string, directory: string) => shellIn(id, directory, []);
 
   const dispatch = bind(paneDispatch, {
     platform: main.platform,
@@ -68,15 +64,14 @@ export function paneActions(main: PaneActionsMain): PaneActions {
       main.agentStarted(id);
       shellIn(id, directory, agentArguments);
     },
-    plainShell: (id, directory) => shellIn(id, directory, []),
+    plainShell,
     screen: main.startScreen,
   });
 
   return {
     dispatch,
     open: bind(paneOpen, {
-      project: main.project, openPanes: main.openPanes, dispatch: dispatch.call,
-      shell: (id, directory) => shellIn(id, directory, []),
+      project: main.project, openPanes: main.openPanes, dispatch: dispatch.call, shell: plainShell,
     }),
     close: bind(paneClose, main),
     send: bind(paneSend, main),

@@ -1,6 +1,6 @@
 import type { Refused } from '../../../shared/app/bridge';
 import { baseName } from '../../../shared/app/base-name';
-import { action } from '../action';
+import { action, isRefused } from '../action';
 import { isFilledText } from './pane-input';
 
 // `pane release`: the worker closed, unless what runs in it is somebody else's, and the throwaway
@@ -31,7 +31,7 @@ export const paneRelease = action<PaneReleasePorts, { id: string }, { output: st
     const program = ports.busyWith(id);
     if (program !== null && !ports.mainsWorker(id)) return { refused: `${id} is running ${program}, which no session run started — close it by hand` };
     const closed = await ports.close(id);
-    if ('refused' in closed) return closed;
+    if (isRefused(closed)) return closed;
     const throwaway = ports.forget(id);
     if (throwaway === undefined) return { output: `released ${id}` };
     const reason = await ports.unfinished(throwaway.worktreePath);

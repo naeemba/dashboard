@@ -9,6 +9,7 @@ import type { SessionIndexStore } from '../workers/session-index-store';
 import type { DrawerReply, ResumeReply } from '../../shared/drawer/drawer';
 import type { OpenProjects } from '../../shared/app/bridge';
 import type { PaneActions } from '../actions/pane/pane-actions';
+import { isRefused } from '../actions/action';
 import { MANAGER_FOLDER, sessionsFolder } from '../manager/manager-terminals';
 
 // The folders the manager's page lists the docs of: its own and Claude's.
@@ -37,6 +38,6 @@ export function registerDrawer(table: Channels, main: Pick<PaneActions, 'open'> 
     if ('refused' in choice) return choice;
     main.sessions.used(projectPath, id);
     const opened = await main.open.call({ slot, directory: choice.record.directory, claude: true, resume: id });
-    return 'refused' in opened ? opened : { index: opened.index, open: main.openProjects() };
+    return isRefused(opened) ? opened : { index: opened.index, open: main.openProjects() };
   });
 }

@@ -3,7 +3,7 @@ import { isRecord } from '../../shared/app/is-record';
 import type { Refused } from '../../shared/app/bridge';
 import type { MoveSource } from '../../shared/board/column-entry';
 import { BOARD_REQUEST } from '../board/board-cli';
-import type { SessionReply, SessionRequest } from '../workers/session-cli';
+import { answered, refused, type SessionReply, type SessionRequest } from '../workers/session-cli';
 
 // What an action is, and the one place each is bound to its two doors: an IPC channel for the screen
 // and a verb of `dashboard board` for the command. docs/actions/README.md says why actions live in main
@@ -57,7 +57,7 @@ export function isRefused(value: unknown): value is Refused {
 
 // An action's answer as the session socket carries it.
 export function sessionReply(result: { output: string } | Refused): SessionReply {
-  return isRefused(result) ? { ok: false, output: result.refused } : { ok: true, output: result.output };
+  return isRefused(result) ? refused(result.refused) : answered(result.output);
 }
 
 export function channelOf(name: string): string {
@@ -91,10 +91,10 @@ export function actionRequests(
     if (word !== BOARD_REQUEST) return otherwise(request);
     const bound = actions.find((each) => verbOf(each.name) === verb);
     if (bound === undefined || folder === undefined) {
-      return { ok: false, output: 'the board request was not one the app could read' };
+      return refused('the board request was not one the app could read');
     }
     if (rest.length !== bound.words.length) {
-      return { ok: false, output: `usage: board ${verb} ${bound.words.map((name) => `<${name}>`).join(' ')}` };
+      return refused(`usage: board ${verb} ${bound.words.map((name) => `<${name}>`).join(' ')}`);
     }
     const raw = { projectPath: folder, ...Object.fromEntries(bound.words.map((name, index) => [name, rest[index]])) };
     const result = await bound.call(withSource(raw, 'command'));

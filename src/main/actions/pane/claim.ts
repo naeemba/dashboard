@@ -1,7 +1,7 @@
 import type { Refused } from '../../../shared/app/bridge';
 import { terminalId } from '../../../shared/panes/terminals';
 import type { ProjectNamed } from '../../projects/project-named';
-import { action } from '../action';
+import { action, isRefused } from '../action';
 import { isFilledTextOrNull, isSlot } from './pane-input';
 
 // `pane claim`: a fresh worker on the asker's own page, or with --project on the page of the project
@@ -40,7 +40,7 @@ export const paneClaim = action<PaneClaimPorts, PaneClaimInput, { output: string
       target = ports.openProject(found.path);
     }
     const opened = await ports.open(target);
-    if ('refused' in opened) return opened;
+    if (isRefused(opened)) return opened;
     const id = terminalId(target, opened.index);
     ports.claimedBy(id, target === slot || slot === -1 ? null : slot);
     return { output: id };
