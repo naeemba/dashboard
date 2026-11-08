@@ -4,14 +4,17 @@ import { keptSelection, nextTaskSelection, pickedTask, taskDetail, taskOrder, ty
 // The strip over the box listing what Claude has running: one row per agent, workflow or background
 // command, each under the one that started it, with what it has done so far and, when the session
 // writes one, its one-line summary. Hidden with nothing running. The task key picks a row, which the
-// stop and background keys act on; a click picks the row it lands on and opens it, as Enter on the
-// agents key's list does (chat-agents-view.ts).
+// stop and background keys act on; a click picks the row it lands on and opens it, an agent's as
+// Enter on the agents key's list does (chat-agents-view.ts), a workflow's as the workflow key does
+// (chat-workflow-view.ts).
 export type TaskStrip = {
   element: HTMLElement;
   render(tasks: ChatTasks): void;
   step(): void;
   // The picked task, as pickedTask in chat-tasks.ts decides it.
   picked(): ChatTask | 'ended' | null;
+  // The tasks last drawn.
+  tasks(): ChatTasks;
 };
 
 export function createTaskStrip(open: (task: ChatTask) => void): TaskStrip {
@@ -66,5 +69,6 @@ export function createTaskStrip(open: (task: ChatTask) => void): TaskStrip {
       mark();
     },
     picked: () => pickedTask(drawn, selected),
+    tasks: () => drawn,
   };
 }

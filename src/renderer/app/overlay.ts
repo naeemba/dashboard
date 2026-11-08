@@ -230,6 +230,8 @@ export function searchOverlay<Choice>(options: {
   // For a list that changes while it is open: called once with the way to ask for the rows again,
   // and answers with the way to stop, which closing the dialog calls.
   watch?: (changed: () => void) => () => void;
+  // The choice the highlight starts on, the one a setting is on now; the top row when it is not listed.
+  opensOn?: Choice;
 }): Promise<Choice | undefined> {
   let rows: SearchRow<Choice>[] = [];
   let highlighted = 0;
@@ -309,7 +311,9 @@ export function searchOverlay<Choice>(options: {
         case 'ArrowUp': event.preventDefault(); return move(-1);
       }
     });
-    search();
+    rows = options.rows('');
+    highlighted = heldIndex(rows.map((row) => row.choice), options.opensOn, 0);
+    draw();
     // A refresh can reorder the rows, so the highlight follows the row it was on, not its place.
     unwatch = options.watch?.(() => {
       const was = rows[highlighted]?.choice;

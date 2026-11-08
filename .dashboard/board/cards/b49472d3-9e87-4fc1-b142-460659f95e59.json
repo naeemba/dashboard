@@ -1,0 +1,19 @@
+{
+  "id": "b49472d3-9e87-4fc1-b142-460659f95e59",
+  "title": "False 'stopped without sending you a report' after a worker that did report is released",
+  "notes": "Every merge in the 2026-11-06 to 11-08 batches (#221 to #236, about 15 times, terminal and screen workers alike): the worker SendMessages main its report, main reads it, merges and runs pane release on the pane; within seconds main gets '<name> in pane <id> (dashboard://pane/<id>) has stopped without sending you a report.' The notice is false every time, and the user sees it on screen (screenshot 2026-11-08). It also lands after the next worker has started in the same pane under the same name, which makes it look like the new worker died.\n\nWhere: stop-notices.ts decides; session-requests.ts heard() marks a report when main's session reads a peer message (chat-sessions.ts peerSender -> host.heard), and doneReport() in shared/workers/done-report.ts writes the notice. Likely cause, to confirm first: the report is heard while the worker is still in its turn and covers that turn's stop, then pane release ends the worker (the session end or a last Stop hook as it is killed) and that reads as a second stop with no report ahead of it. Or heard() misses because the sender's name no longer maps to an open pane once it is released.\n\nFix: a pane that main released (pane.release, #235's action) never gets a stop notice afterwards, for the worker it had; a notice already pending for it is dropped on release. A notice names the worker it was about by its session, so a new worker in the same pane under the same name is never the subject. Test the stop-notices decision for: report then release, release with no report (still no notice: main released it on purpose), a new worker in the same pane after release. Docs: workers README scenario, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-08T15:04:41.528Z",
+  "updatedAt": "2026-11-08T15:27:09.511Z",
+  "branch": "work-board-card-b49472d3-9e87-4fc1-b142-460",
+  "pullRequest": 241,
+  "comments": [
+    {
+      "at": "2026-11-08T15:27:09.511Z",
+      "body": "Shipped in PR #241: pane release takes back a stop notice still queued in main's queue (main hears a report only when the turn that read it ends, on the SDK result), and a released screen worker's late hooks no longer count for the next worker at its number. Not done: a main that reads a report without releasing can still take the notice at its turn end."
+    }
+  ],
+  "column": "Done",
+  "order": 195
+}

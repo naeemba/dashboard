@@ -12,7 +12,8 @@ import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { createLiveBlock } from './chat-live-view';
 import { permissionTitle } from './chat-permission';
 import { revealed } from './chat-reveal';
-import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
+import { runScreenCommand, showFootSetting, type CommandScreen } from './chat-screen-dispatch';
+import { footSetting, MODE_LABELS, MODELS, MODES } from '../../shared/chat/foot-choices';
 import { FOOT_CONTEXT, FOOT_WORKERS, footSides, piece } from './chat-foot-view';
 import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
@@ -27,7 +28,8 @@ import { promptParts, withdrawable } from './chat-queue';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
 import { createAgentsView } from './chat-agents-view';
-import { runTaskCommand, type TaskScreen } from './chat-task-commands';
+import { createWorkflowView } from './chat-workflow-view';
+import { runTaskCommand, stopTask, type TaskScreen } from './chat-task-commands';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from '../app/overlay';
@@ -71,17 +73,6 @@ export type ChatView = {
   question(): string | null;
 };
 
-// What the model key walks. Null is whatever the session's own settings choose.
-const MODELS: (string | null)[] = [null, 'opus', 'sonnet', 'haiku'];
-// What the edits key walks, in the Claude Code terminal's order. Auto is on it because main starts in
-// it, and a walk that could not come back would leave main asking before every edit and dispatch. A
-// mode that is not here, skipping permissions, is shown, and the key walks on from the top.
-const MODES: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto'];
-const MODE_LABELS: Record<PermissionMode, string> = {
-  default: 'asking before edits', acceptEdits: 'accepting edits', plan: 'planning',
-  auto: 'auto mode', bypassPermissions: 'skipping permissions', dontAsk: 'refusing what is not allowed',
-};
-
 const PAINT_MS = 80;
 
 function next<T>(list: readonly T[], current: T): T {
@@ -119,7 +110,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   activity.append(piece('chat-spinner', '✻'), activityText);
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  const agents = createAgentsView(() => transcript, { ...options, openPdf }, () => focus());
+  const workflows = createWorkflowView(() => transcript, (task) => stopTask(options, slot, task), () => focus());
+  const agents = createAgentsView(() => transcript, { ...options, openPdf, openWorkflow: workflows.open }, () => focus());
   const tasks = createTaskStrip(agents.open);
   const queue = createQueueStrip();
   element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
@@ -200,6 +192,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest(`.${FOOT_WORKERS}`)) openWorkers();
     if (target?.closest(`.${FOOT_CONTEXT}`)) showContext();
+    const setting = target ? footSetting(target.classList) : null;
+    if (setting) showFootSetting(setting, commandScreen);
   });
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
@@ -240,6 +234,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (prompt.placeholder !== placeholder) prompt.placeholder = placeholder;
     tasks.render(transcript.tasks);
     agents.update();
+    workflows.update();
     queue.render(transcript.queued);
     if (stick) log.scrollTop = log.scrollHeight;
   }
@@ -591,12 +586,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
 
-  const taskScreen: TaskScreen = { options, slot, strip: tasks, agents };
+  const taskScreen: TaskScreen = { options, slot, strip: tasks, agents, workflows };
   const commandScreen: CommandScreen = {
     bridge, slot, options, prompt, configure, focus, showContext,
     transcript: () => transcript,
     askCount: () => asks.length,
     model: () => model,
+    mode: () => mode,
     effort: () => effort,
     fast: () => fast,
     imageCount: () => attachments.list().length,

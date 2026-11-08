@@ -40,3 +40,8 @@ export type SearchRow<Choice> = {
   // searched needs one — the picker's line that opens a folder dialog.
   className?: string;
 };
+
+// A list ranked by what is typed, the one a setting is on now marked, as /effort's and the foot's sheets show it.
+export function markedRows<Choice>(choices: Choice[], current: Choice | undefined, label: (choice: Choice) => string, query: string, detail: (choice: Choice) => string = () => ''): SearchRow<Choice>[] {
+  return ranked(choices, label, query).map((choice) => ({ name: `${choice === current ? '● ' : ''}${label(choice)}`, detail: detail(choice), choice }));
+}

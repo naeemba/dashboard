@@ -1,11 +1,13 @@
 {
   "id": "64d36cbc-f8a0-41ba-bbfe-62189b411185",
   "title": "Change model, mode and effort by clicking them in the Claude screen's foot",
-  "notes": "The foot of every Claude screen reads e.g. 'Opus 5.5 · auto mode · default effort' (screenshot from the user, 2026-11-08). Today they change only by key: Alt+M walks the models, the permission-mode key walks the modes, and effort is the /effort search sheet (chat-screen-dispatch.ts). A click on them does nothing.\n\nChange: each of the three is clickable. A click opens the same kind of sheet /effort opens, listing that setting's choices with the current one selected, walked with the arrow keys and taken with Enter; a click on a row selects it and then does what Enter does (conventions-rule-1). Model lists MODELS (chat-view.ts), mode lists the modes the key walks (auto included), effort reuses the /effort sheet. The keys stay as they are. Hover shows they are clickable (cursor, a subtle underline or colour), and the foot's layout does not shift.\n\nDecisions (which list a click opens, what is selected first) in a small module with a test (workflow-rule-2). help.ts's Claude screen blurb mentions the click if the blurb names these keys (keys-rule-2). Docs: chat README, history.",
+  "notes": "The foot of every Claude screen reads e.g. 'Opus 5.5 · auto mode · default effort' (screenshot from the user, 2026-11-08). Today they change only by key: Alt+M walks the models, the permission-mode key walks the modes, and effort is the /effort search sheet (chat-screen-dispatch.ts). A click on them does nothing.\n\nChange: each of the three is clickable. A click opens the same kind of sheet /effort opens, listing that setting's choices with the current one selected, walked with the arrow keys and taken with Enter; a click on a row selects it and then does what Enter does (conventions-rule-1). Model lists MODELS (chat-view.ts), mode lists the modes the key walks (auto included), effort reuses the /effort sheet. The keys stay as they are. Hover shows they are clickable (cursor, a subtle underline or colour), and the foot's layout does not shift.\n\nDecisions (which list a click opens, what is selected first) in a small module with a test (workflow-rule-2). help.ts's Claude screen blurb mentions the click if the blurb names these keys (keys-rule-2). Docs: chat README, history.\n\nShipped in #239: a click on the foot's model, mode or effort opens a sheet of its choices, open on the one it is on (model is /model's sheet, mode the four the key walks, effort /effort's). Ctrl+H blurb and chat README updated.",
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T14:57:53.148Z",
-  "updatedAt": "2026-11-08T14:58:40.030Z",
-  "column": "Doing",
-  "order": 3
+  "updatedAt": "2026-11-08T15:21:07.637Z",
+  "branch": "work-board-card-64d36cbc-f8a0-41ba-bbfe-621",
+  "pullRequest": 239,
+  "column": "Done",
+  "order": 194
 }

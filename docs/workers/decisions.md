@@ -61,7 +61,7 @@ So stop-notices.ts decides each stop on its own. Anything in either list is a pa
 the worker done: main is told after `REPORT_SETTLE_MS`, ten seconds, which is there because a report is
 counted only once main reads it, and an idle main reads one sent just before the stop within that. Only
 once until the worker runs again. A stop the worker's own SendMessage covers gets no notice at all:
-chat-sessions.ts sees the message arrive in main by its sender's name. A report read before a pause
+chat-sessions.ts sees the message in main by its sender's name, once the turn that read it ends. A report read before a pause
 still covers the stop after it. The Claude screen draws the notice as a status line, not a prompt
 bubble, since nobody typed it; the older wording, still in conversations saved before this, is drawn
 the same way.
@@ -82,9 +82,21 @@ paused, waiting on its own background work, not stopped. Told it had stopped, ma
 kill the work it waits on, while `pane list` says paused. The stop that ends the pause is still told,
 since main heard only that the worker waits.
 
+Main hears a report only when the turn that read it ends. Checked 2026-11-08 with the agent SDK
+0.3.316 and a throwaway session sent a SendMessage: the peer prompt opens the turn with no message of
+its own on the stream, and its `origin`, the sender's name, comes only on that turn's `result`. The
+turn main spends on a report is the merge and the `pane release`, longer than the settle after the
+worker's stop, so the notice was queued before every report was heard; then the release made the pane
+nobody's, the report heard at the turn's end found no worker to cover, and main read the notice at
+once, about fifteen times across #221 to #236. So the release takes the notice back: pane.release
+forgets the worker's stop notices, and forgetting withdraws one still in main's queue, as a run in the
+pane or a close does. A screen worker's hooks count only while the pane is still that worker's, so a
+hook of one released a moment ago never reads as the stop of the next one at its number.
+
 Watch for: a report main reads only after it has already taken the notice into a turn. The notice
-cannot be withdrawn then, and main reads both; that needs a main that finishes its turn between the
-settle and the report arriving.
+cannot be withdrawn then, and main reads both. Since the report is heard only at the end of main's
+turn, a main that reads a report and does not release the worker (#219, 2026-11-06) can still take
+the notice the moment that turn ends, before the app has heard its result.
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and
