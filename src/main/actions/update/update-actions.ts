@@ -3,19 +3,19 @@ import { rmSync } from 'node:fs';
 import path from 'node:path';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import type { Release, UpdateState } from '../../../shared/app/update';
-import { failureText } from '../../../shared/errors/failure';
 import type { Channels } from '../../app/channels';
 import { clearQuarantine, download, swapInto, unpack, verifyStaged } from '../../update/install';
 import { assetFor, CHECK_EVERY_MS, installFolder, LATEST_RELEASE_URL, releaseFolderUrl, stagingFolder, updateRefusal } from '../../update/release';
 import { bind, isRefused, registerActions } from '../action';
 import { scheduledCheck, updateCheck } from './check';
 import { updateDownload } from './download';
+import { updateInstall } from './install';
 import { updateRestart } from './restart';
 
 // Main's wiring for the update actions: the state they move, this platform's stage, swap and restart,
 // and the check on launch and every six hours. Out of main.ts, which is over its 600-line ceiling.
-// Every decision is in release.ts and the three actions. The restart's swap and relaunch run in the
-// window's beforeQuit, once the quit question has been answered Quit.
+// Every decision is in release.ts and the actions. update.install runs the restart's swap and relaunch
+// from the window's beforeQuit, once the quit question has been answered Quit, and forgets it otherwise.
 
 export type UpdateMain = {
   table: Channels;
@@ -131,20 +131,15 @@ export function updateActions(main: UpdateMain): UpdateQuit {
   const scheduled = scheduledCheck(main.enabled, () => check.call({}), (message) => main.log({ level: 'warn', kind: 'app', message }));
   scheduled();
   setInterval(scheduled, CHECK_EVERY_MS);
+  const install = bind(updateInstall, {
+    armed: () => armed,
+    disarm() { armed = null; },
+    swap: (release) => (installer ?? unreachable()).swap(release),
+    relaunch: () => (installer ?? unreachable()).relaunch(),
+    log: main.log,
+  });
   return {
-    // A swap that fails here leaves the install as it was (swapInto) and the app quits as asked, unrestarted.
-    async beforeQuit() {
-      if (armed === null || installer === null) return;
-      const release = armed;
-      armed = null;
-      try {
-        await installer.swap(release);
-        main.log({ level: 'info', kind: 'app', message: `restarting into v${release.version}` });
-        installer.relaunch();
-      } catch (error: unknown) {
-        main.log({ level: 'warn', kind: 'app', message: `update not installed: ${failureText(error)}` });
-      }
-    },
-    quitCancelled() { armed = null; },
+    beforeQuit: async () => { await install.call({ quit: true }); },
+    quitCancelled: () => { void install.call({ quit: false }); },
   };
 }

@@ -3,6 +3,7 @@ import type { Release, UpdateState } from '../../../shared/app/update';
 import { bind } from '../action';
 import { scheduledCheck, updateCheck } from './check';
 import { updateDownload } from './download';
+import { updateInstall } from './install';
 import { updateRestart } from './restart';
 
 const RELEASE: Release = { version: '2.45.0', notes: [], url: 'https://example.com', assets: [] };
@@ -114,5 +115,47 @@ describe('update.restart', () => {
   it('refuses with nothing downloaded', async () => {
     const restart = bind(updateRestart, { ...held({ kind: 'available', release: RELEASE }), verify: vi.fn(), quit: vi.fn() });
     await expect(restart.call({})).resolves.toEqual({ refused: 'no update is downloaded to restart into' });
+  });
+});
+
+describe('update.install', () => {
+  function installing(armed: Release | null, swap: () => Promise<void> = async () => undefined) {
+    let held = armed;
+    const order: string[] = [];
+    const ports = {
+      armed: () => held,
+      disarm: () => { held = null; },
+      swap: vi.fn(async () => { order.push('swap'); await swap(); }),
+      relaunch: vi.fn(() => { order.push('relaunch'); }),
+      log: vi.fn(),
+    };
+    return { install: bind(updateInstall, ports), ports, order, armed: () => held };
+  }
+
+  it('runs nothing with no update armed', async () => {
+    const { install, order } = installing(null);
+    await expect(install.call({ quit: true })).resolves.toEqual({ refused: 'no update is waiting for this quit' });
+    expect(order).toEqual([]);
+  });
+
+  it('forgets an armed update when the quit is cancelled, so the next quit is only a quit', async () => {
+    const { install, order } = installing(RELEASE);
+    await install.call({ quit: false });
+    await expect(install.call({ quit: true })).resolves.toHaveProperty('refused');
+    expect(order).toEqual([]);
+  });
+
+  it('swaps the armed update in, then relaunches', async () => {
+    const { install, order, armed } = installing(RELEASE);
+    await expect(install.call({ quit: true })).resolves.toEqual({ output: 'restarting into v2.45.0' });
+    expect(order).toEqual(['swap', 'relaunch']);
+    expect(armed()).toBeNull();
+  });
+
+  it('does not relaunch when the swap fails, and logs why', async () => {
+    const { install, ports, order } = installing(RELEASE, async () => { throw new Error('EXDEV'); });
+    await install.call({ quit: true });
+    expect(order).toEqual(['swap']);
+    expect(ports.log).toHaveBeenCalledWith({ level: 'warn', kind: 'app', message: 'update not installed: EXDEV' });
   });
 });

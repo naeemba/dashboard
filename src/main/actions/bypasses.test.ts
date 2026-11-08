@@ -38,7 +38,7 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: 'placeProject(', allowed: { 'src/main/main.ts': 1 } },
   { call: 'closeProjectSlot(', allowed: { 'src/main/main.ts': 1 } },
   { call: 'landOnPane(', allowed: { 'src/main/main.ts': 1, 'src/main/panes/pane-channels.ts': 1 } },
-  // The install swapped and the app restarted: the definition and update.restart's ports, nowhere else.
+  // The install swapped and the app restarted: the definition and update.install's ports, nowhere else.
   { call: 'swapInto(', allowed: { 'src/main/actions/update/update-actions.ts': 1, 'src/main/update/install.ts': 1 } },
   { call: 'app.relaunch(', allowed: { 'src/main/actions/update/update-actions.ts': 1 } },
   { call: 'quitAndInstall(', allowed: { 'src/main/actions/update/update-actions.ts': 1 } },

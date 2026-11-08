@@ -65,8 +65,9 @@ because Electron's `fs` treats an `.asar` as a folder.
   download, where the install is (updates-decision-1)
 - `src/main/update/install.ts`: download, size check, unpack, the swap
 - `src/main/actions/update/`: `update.check` and the schedule's settings gate,
-  `update.download`, `update.restart`, and `update-actions.ts`, the wiring and
-  the swap the window's `beforeQuit` runs
+  `update.download`, `update.restart`, `update.install` (what the quit
+  question's answer does to an armed update), and `update-actions.ts`, the
+  wiring
 - `src/renderer/app/update-view.ts`: the status bar line and the dialog
 
 ## Scenarios

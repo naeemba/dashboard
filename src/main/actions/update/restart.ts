@@ -5,7 +5,7 @@ import type { UpdateStatePorts } from './check';
 
 // The staged release checked, then the quit asked for with the update armed. Only ever on the person
 // picking the row: nothing restarts the app on its own (updates-rule-1). The swap and the relaunch wait
-// for the quit question's Quit (update-actions.ts), so a Cancel leaves the install and the next quit as
+// for the quit question's Quit (update.install), so a Cancel leaves the install and the next quit as
 // they were, and Restart can be picked again.
 
 export type UpdateRestartPorts = UpdateStatePorts & {
