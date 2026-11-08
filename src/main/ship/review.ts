@@ -44,13 +44,20 @@ export function intoReview(board: Board, cardId: string): Board | null {
 // A board somebody has taken Review out of is different, and still true: the card is there, and a board
 // with no Review column cannot say a card is past a column it does not have.
 //
+// Whether the card sits in Cancelled. One of the reasons awaitsReview answers false, exported so the
+// refusal of a review by hand can say this one by name rather than "its review has run".
+export function isCancelled(board: Board, cardId: string): boolean {
+  const at = selectionOf(board, cardId);
+  return at !== null && isColumnNamed(board.columns[at.column]?.name ?? '', CANCELLED_COLUMN);
+}
+
 // A card in Cancelled is false wherever that column sits, even on an old board that has it in front of
 // Review: it will not be done, so it is never pulled into Review, and the sweep removes its worktree
 // the way it removes a Done card's (board-decision-4).
 export function awaitsReview(board: Board, cardId: string): boolean | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;
-  if (isColumnNamed(board.columns[at.column]?.name ?? '', CANCELLED_COLUMN)) return false;
+  if (isCancelled(board, cardId)) return false;
   const review = reviewColumnIndex(board);
   return review === -1 || at.column <= review;
 }

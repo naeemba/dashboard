@@ -1,6 +1,6 @@
 import { boardFolderPath, peekBoard, readBoard } from '../board/board-store';
 import { isCardSetAside } from '../board/board-files';
-import { awaitsReview, intoReview, reviewPrompt, reviewRefused, worktreeKept } from './review';
+import { awaitsReview, intoReview, isCancelled, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
 import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
@@ -315,6 +315,9 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
     const board = projectBoard(entry.projectPath);
     const awaits = board === null ? null : awaitsReview(board, id);
+    if (board !== null && isCancelled(board, id)) {
+      return { refused: `"${entry.title}" is cancelled; move it out of Cancelled to review it` };
+    }
     if (awaits === false) return { refused: `"${entry.title}" is past Review; its review has run` };
     if (awaits === null) return { refused: `"${entry.title}" is not on the project's board, or the board could not be read` };
     reviewed.add(id);
