@@ -119,7 +119,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch |
 | worktree.make | card, throwaway or again; the branch it names; whether it fetches and takes the project's queue itself (only a throwaway) |
 | worktree.remove | per door, forced or not, queued or not, logged or not (`removalOf`); the keeper refuses with changes and kills the shells and closes the screens in it |
-| project.open | a missing folder refused, a dead page opened over, its main started or not (`startsMain`); the dialog stays the picker's door's |
+| project.open | a missing folder refused, a dead page opened over, its main started only for the command; the dialog stays the picker's door's |
 | project.close | `closeRefusal`, once, for the key and the command; only a check before the key's question |
 | project.focus | which pane to land on: main, or the banner's |
 | session.start | whether a main starts at open (`startsAtOpen`) |

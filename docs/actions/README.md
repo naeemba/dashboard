@@ -63,7 +63,7 @@ Neither door holds any of the logic; each only asks.
 - **project.open** (`projects:open`, `project open`, `pane claim --project`):
   waits for the pane and screen hosts, refuses a folder that is not there,
   opens over a dead page, and starts main and waits for it only for the
-  command (`startsMain`). The picker's folder dialog and path check stay its
+  command. The picker's folder dialog and path check stay its
   door's, `project-actions.ts`.
 - **project.close** (`projects:close`, `project close`): `closeRefusal`, asked
   here alone. The close key asks it twice, `onlyCheck` before its question and

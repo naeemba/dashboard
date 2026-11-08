@@ -34,13 +34,6 @@ export type ProjectOpenPorts = {
 // is long enough for a slow machine and short enough that a session stuck starting is said out loud.
 export const MAIN_START_MS = 60_000;
 
-// Only the command starts main with the page, so the manager can hand the project to it at once. The
-// picker's page and a claim's leave it to wait to be shown, told something, or reported to
-// (chat-start.ts), as a page restored at launch does.
-export function startsMain(from: ProjectOpenFrom): boolean {
-  return from === 'command';
-}
-
 async function startedMain(ports: ProjectOpenPorts, slot: number, opened: string): Promise<{ output: string; index: number } | { refused: string }> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
@@ -73,6 +66,9 @@ export const projectOpen = action<ProjectOpenPorts, ProjectOpenInput, { output: 
     if (!live && !ports.folderExists(projectPath)) return { refused: `${name}'s folder, ${projectPath}, does not exist` };
     const index = ports.place(projectPath);
     const opened = live ? `${name} is already open` : `opened ${name}`;
-    return startsMain(from) ? startedMain(ports, index, opened) : { output: opened, index };
+    // Only the command starts main with the page, so the manager can hand the project to it at once.
+    // The picker's page and a claim's leave it to wait to be shown, told something, or reported to
+    // (chat-start.ts), as a page restored at launch does.
+    return from === 'command' ? startedMain(ports, index, opened) : { output: opened, index };
   },
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { bind } from '../action';
-import { projectOpen, startsMain, type ProjectOpenPorts } from './open';
+import { projectOpen, type ProjectOpenPorts } from './open';
 
 // The command's open, main and all, is tested through its door in project-requests.test.ts.
 function setUp(open: Record<string, number> = {}) {
@@ -17,10 +17,6 @@ function setUp(open: Record<string, number> = {}) {
 }
 
 describe('project.open', () => {
-  it('starts main only for the command', () => {
-    expect(['picker', 'claim', 'command'].filter((from) => startsMain(from as 'picker'))).toEqual(['command']);
-  });
-
   it('opens the picker\'s and a claim\'s project once the hosts are ready, and leaves main to wait', async () => {
     const { ports, order, open } = setUp({ '/web': 2 });
     await expect(open.call({ projectPath: '/api', name: 'api', from: 'picker' })).resolves.toEqual({ output: 'opened api', index: 4 });
