@@ -6,7 +6,7 @@ function setUp(retitle: SessionRenamePorts['retitle'] = async () => undefined) {
   const labels: Record<string, string> = { abc: 'api-1' };
   const ports = {
     onScreen: (slot: number) => (slot === 1 ? 'abc' : null),
-    folderOf: () => '/api',
+    projectPath: () => '/api',
     directoryOf: (sessionId: string) => (sessionId in labels ? '/api.worktrees/card' : undefined),
     relabel: vi.fn((sessionId: string, label: string) => {
       if (!(sessionId in labels)) return 'That session is not in this project any more';
@@ -21,7 +21,7 @@ function setUp(retitle: SessionRenamePorts['retitle'] = async () => undefined) {
 describe('session.rename', () => {
   it('names the conversation in /resume and in the drawer from /rename', async () => {
     const { ports, labels, rename } = setUp();
-    await expect(rename.call({ slot: 1, title: 'login fix' })).resolves.toEqual({ output: 'Renamed to login fix.' });
+    await expect(rename.call({ slot: 1, title: ' login fix ' })).resolves.toEqual({ output: 'Renamed to login fix.' });
     expect(ports.retitle).toHaveBeenCalledWith('abc', 'login fix', '/api');
     expect(labels.abc).toBe('login fix');
     await expect(rename.call({ slot: 2, title: 'x' })).resolves.toEqual({ refused: 'No conversation to rename yet. Send a prompt first.' });
@@ -39,7 +39,7 @@ describe('session.rename', () => {
   it('says so when the drawer has the name and the transcript would not take it', async () => {
     const { labels, rename } = setUp(async () => { throw new Error('no transcript'); });
     await expect(rename.call({ id: 'abc', label: 'login fix' })).resolves.toEqual({
-      refused: 'Renamed to login fix here, but /resume still lists it by its old name: no transcript',
+      refused: 'Renamed to login fix in the drawer, but /resume still lists it by its old name: no transcript',
     });
     expect(labels.abc).toBe('login fix');
   });

@@ -28,8 +28,9 @@ export const sessionBranch = action<SessionBranchPorts, { slot: number; title: s
     const worker = ports.worker(slot);
     if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
     const projectPath = ports.projectPath(slot);
-    const current = projectPath === undefined ? undefined : ports.conversationOf(slot, projectPath);
-    if (projectPath === undefined || current === undefined) return { refused: NOTHING_TO_BRANCH };
+    if (projectPath === undefined) return { refused: NOTHING_TO_BRANCH };
+    const current = ports.conversationOf(slot, projectPath);
+    if (current === undefined) return { refused: NOTHING_TO_BRANCH };
     await ports.fork(slot, projectPath, worker, current, worker ? undefined : ports.cutPending(projectPath), title);
     return { output: `branched ${current}` };
   },

@@ -5,7 +5,7 @@ import { sessionBranch } from './branch';
 import { WORKER_KEEPS_ITS_CONVERSATION } from './conversation-ports';
 import { sessionReset } from './reset';
 import { runningElsewhere, sessionResume } from './resume';
-import { sessionRewind } from './rewind';
+import { sessionRewind, type SessionRewindPorts } from './rewind';
 
 const screen = (owner: 'main' | 'you'): ScreenSession => ({
   session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, owner, carryOnIn: () => undefined,
@@ -24,7 +24,7 @@ function setUp() {
     conversationOf: (slot: number) => (slot === 1 ? 'mains' : undefined),
     cutPending: () => 'm3',
     fork: vi.fn(async () => undefined),
-    rewindFiles: vi.fn(async (_slot: number, _projectPath: string, _pointId: string, dryRun: boolean) => ({ canRewind: true, filesChanged: dryRun ? ['a.ts'] : ['a.ts'] })),
+    rewindFiles: vi.fn<SessionRewindPorts['rewindFiles']>(async () => ({ canRewind: true, filesChanged: ['a.ts'] })),
   };
   return { ports, workers };
 }

@@ -4,7 +4,7 @@ import { replaceFile } from '../app/replace-file';
 import { projectSlug } from './dispatch';
 import { paneLabel, paneFromId } from '../../shared/panes/terminals';
 import {
-  parseSessionIndex, renamed, sessionPage, withLive, withSession, withUse, type SessionIndex,
+  GONE, parseSessionIndex, projectOf, renamed, sessionPage, withLive, withSession, withUse, type SessionIndex,
 } from './session-index';
 import type { SessionPlacement } from './resume-ledger';
 import type { SessionList, SessionRecord } from '../../shared/drawer/drawer';
@@ -97,8 +97,9 @@ export function sessionIndexStore(file: string, onScreen: (id: string) => string
     find: (projectPath, id) => index[projectPath]?.find((row) => row.id === id),
     row: (id) => Object.values(index).flat().find((row) => row.id === id),
     rename(id, label) {
-      const projectPath = Object.keys(index).find((key) => index[key]?.some((row) => row.id === id));
-      const next = renamed(index, projectPath ?? '', id, label);
+      const projectPath = projectOf(index, id);
+      if (projectPath === undefined) return GONE;
+      const next = renamed(index, projectPath, id, label);
       if (typeof next === 'string') return next;
       save(next);
       return null;

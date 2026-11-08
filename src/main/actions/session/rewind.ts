@@ -41,7 +41,7 @@ export const sessionRewind = action<SessionRewindPorts, SessionRewindInput, { ou
     }
     const conversationRewind = conversationAfterRewind(point, choice, restored);
     if (conversationRewind !== 'keep') {
-      await ports.change(slot, projectPath, worker, conversationRewind === 'forget' ? undefined : { cutAt: conversationRewind.cutAt });
+      await ports.change(slot, projectPath, worker, conversationRewind === 'forget' ? undefined : conversationRewind);
     }
     return { output: `rewound to ${point.id}`, restored };
   },

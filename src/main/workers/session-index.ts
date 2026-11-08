@@ -72,7 +72,13 @@ export function withLive(index: SessionIndex, live: Iterable<string>, at: number
   };
 }
 
-const GONE = 'That session is not in this project any more';
+export const GONE = 'That session is not in this project any more';
+
+// The project whose rows hold a conversation, or undefined. Ids are UUIDs, so at most one does, and a
+// rename finds its row by the id alone, from the drawer or from the Claude screen.
+export function projectOf(index: SessionIndex, id: string): string | undefined {
+  return Object.keys(index).find((projectPath) => index[projectPath]?.some((row) => row.id === id));
+}
 
 // A rename from the drawer, or the sentence saying why not.
 export function renamed(index: SessionIndex, projectPath: string, id: string, label: string): SessionIndex | string {

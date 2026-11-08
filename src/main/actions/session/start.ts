@@ -10,9 +10,9 @@ import { isSlot } from '../pane/pane-input';
 // - `kept`: a worker screen the screen host kept through a restart, taken back.
 // - `command`: `dashboard project open`, which answers only once main can be reached (project.open).
 
-export type SessionStartFrom = 'restart' | 'kept' | 'command';
+const FROMS = ['restart', 'kept', 'command'] as const;
 
-const FROMS: readonly SessionStartFrom[] = ['restart', 'kept', 'command'];
+export type SessionStartFrom = typeof FROMS[number];
 
 export type SessionStartPorts = {
   // The project open in the slot, or undefined.

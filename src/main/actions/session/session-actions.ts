@@ -36,7 +36,7 @@ export function sessionActions({ chat, sessions, ...main }: SessionActionsMain) 
     configure: bind(sessionConfigure, chat),
     rename: bind(sessionRename, {
       onScreen: chat.onScreen,
-      folderOf: chat.projectPath,
+      projectPath: chat.projectPath,
       directoryOf: (sessionId) => sessions.row(sessionId)?.directory,
       relabel: sessions.rename,
       async retitle(sessionId, title, folder) {
@@ -47,8 +47,9 @@ export function sessionActions({ chat, sessions, ...main }: SessionActionsMain) 
     // project.open's `startMain`: the command's open answers once main can be reached.
     async startedMain(slot: number): Promise<string> {
       const started = await start.call({ slot, from: 'command' });
-      if (isRefused(started) || started.name === null) throw new Error(isRefused(started) ? started.refused : 'main did not start');
-      return started.name;
+      if (isRefused(started)) throw new Error(started.refused);
+      // Only a restart's start leaves the name null.
+      return started.name ?? '';
     },
   };
 }

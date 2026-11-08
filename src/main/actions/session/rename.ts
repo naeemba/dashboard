@@ -14,7 +14,7 @@ export type SessionRenamePorts = {
   // The conversation /resume marks as the page's, or null with none yet or a rewind waiting.
   onScreen(slot: number): string | null;
   // The folder the page's session runs in.
-  folderOf(slot: number): string | undefined;
+  projectPath(slot: number): string | undefined;
   // The folder the drawer's row says the conversation ran in, or undefined for one with no row.
   directoryOf(sessionId: string): string | undefined;
   // The drawer's row relabelled, or why not (session-index.ts's `renamed`).
@@ -30,28 +30,30 @@ function read(raw: Record<string, unknown>): SessionRenameInput | null {
   return null;
 }
 
+// What a rename names, whichever door asked: the conversation, the name trimmed, and the folder its
+// transcript lives under. /rename's own refusals (renameTarget) come here; the drawer's are its row's.
+function targetOf(ports: SessionRenamePorts, input: SessionRenameInput): { sessionId: string; title: string; folder: string | undefined } | { refused: string } {
+  if (!('slot' in input)) return { sessionId: input.id, title: input.label.trim(), folder: ports.directoryOf(input.id) };
+  const target = renameTarget(ports.onScreen(input.slot), input.title.trim());
+  return 'refused' in target ? target : { ...target, folder: ports.projectPath(input.slot) };
+}
+
 export const sessionRename = action<SessionRenamePorts, SessionRenameInput, { output: string }>('session.rename', {
   words: [],
   input: (raw) => read(raw) ?? { refused: 'the conversation to rename was not one the app could read' },
   async run(ports, input) {
-    if ('slot' in input) {
-      // Refused with no name, and with no conversation yet or a rewind waiting on its next prompt.
-      const target = renameTarget(ports.onScreen(input.slot), input.title);
-      if ('refused' in target) return target;
-      await ports.retitle(target.sessionId, target.title, ports.folderOf(input.slot));
-      // A conversation the drawer has no row for has no label there to change.
-      ports.relabel(target.sessionId, target.title);
-      return { output: `Renamed to ${target.title}.` };
-    }
-    // The drawer's own refusals first: an empty name, a row that is gone.
-    const refused = ports.relabel(input.id, input.label);
-    if (refused !== null) return { refused };
-    const title = input.label.trim();
+    const target = targetOf(ports, input);
+    if ('refused' in target) return target;
+    const { sessionId, title, folder } = target;
+    // The drawer's refusals: an empty name, a row that is gone. A /rename of a conversation the drawer
+    // has no row for has no label there to change, and goes on to its title.
+    const refused = ports.relabel(sessionId, title);
+    if (refused !== null && !('slot' in input)) return { refused };
     try {
-      await ports.retitle(input.id, title, ports.directoryOf(input.id));
+      await ports.retitle(sessionId, title, folder);
     } catch (error) {
       // The row has the name by now; say what did not, rather than read as nothing renamed.
-      return { refused: `Renamed to ${title} here, but /resume still lists it by its old name: ${failureText(error)}` };
+      return { refused: `Renamed to ${title} in the drawer, but /resume still lists it by its old name: ${failureText(error)}` };
     }
     return { output: `Renamed to ${title}.` };
   },
