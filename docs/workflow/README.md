@@ -5,7 +5,7 @@ gets a module and a test, and the build stamps its commit instead of every card
 bumping the version. Owns `.gitattributes`, the CI and release workflows (the release notes and download links in
 `scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` (its decisions in `scripts/release-checks.mjs`, tested beside it) and the
 `/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build
-hooks, the test run's temporary-folder guard (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, its count in
+hooks, the test run's temporary-folder guard (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, tested beside it, its count in
 `vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
 in `scripts/running-app.mjs`, tested beside it), written in Node so the same
 hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
