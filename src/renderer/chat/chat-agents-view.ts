@@ -20,7 +20,7 @@ export type AgentsView = {
   update(): void;
 };
 
-type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'goToPane'> & { openPdf(tile: HTMLElement): void; openWorkflow(task: ChatTask): void };
+type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'goToPane'> & { openPdf(tile: HTMLElement): void; openWorkflow(task: ChatTask, closed: () => void): void };
 
 export function createAgentsView(transcript: () => Transcript, say: Say, back: () => void): AgentsView {
   let listChanged: (() => void) | null = null;
@@ -48,8 +48,9 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
   }
 
   function open(task: ChatTask | FinishedTask): void {
-    // A workflow has no conversation; its phases open instead (chat-workflow-view.ts).
-    if (task.workflow) return say.openWorkflow(task);
+    // A workflow has no conversation; its phases open instead (chat-workflow-view.ts), and their
+    // Escape comes back to the list as a conversation's does.
+    if (task.workflow) return say.openWorkflow(task, show);
     const target = agentConversation(task, transcript().agents);
     if (target.kind === 'refused') {
       say.onNotice(target.reason);

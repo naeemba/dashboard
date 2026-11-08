@@ -157,7 +157,8 @@ and a pane link puts the conversation away and lands on the pane. An agent that
 has said nothing yet opens empty and fills as it goes; only the last 20 agents'
 conversations are kept, besides any still running, and a session that ends lists
 what it was running as ended. A background command has no conversation to
-open, and says so; Enter on a workflow opens its panel (chat-decision-15).
+open, and says so; Enter on a workflow opens its panel, whose Escape comes back
+to the list (chat-decision-15).
 
 A running workflow's strip row also carries a bar and how many of its agents
 have ended of those started, `▰▰▰▱▱▱▱▱▱▱ 3/10 agents`, beside its tokens and
@@ -171,7 +172,7 @@ and once it ends says so and drops the stop row. The session sends this as a
 `workflow_progress` list on each task_progress about the workflow, a field the
 Agent SDK's types leave out; a session that sends none shows the row without a
 bar and the panel without phases. There is no pause: the SDK can stop a task but
-offers no way to pause one.
+offers no way to pause one (chat-decision-16).
 
 The row under the box holds what Claude Code's status line does: on the left the
 model, whether edits are asked about or accepted, the effort level (default

@@ -46,9 +46,8 @@ export function messageUsage(message: Record<string, unknown>, known: AgentUsage
 
 const isAgent = (message: Record<string, unknown>): boolean => message.task_type === 'local_agent' || text(message.subagent_type) !== '';
 
-// background_tasks_changed names a workflow's kind `workflow`, task_started `local_workflow`.
-const workflowOf = (message: Record<string, unknown>): WorkflowProgress | null =>
-  (message.task_type === 'local_workflow' || message.type === 'workflow' || text(message.workflow_name) !== '' ? NO_PROGRESS : null);
+// background_tasks_changed and task_started both name a workflow's task_type `local_workflow`.
+const workflowOf = (message: Record<string, unknown>): WorkflowProgress | null => (message.task_type === 'local_workflow' ? NO_PROGRESS : null);
 
 // A task the strip leaves out: Claude Code's own housekeeping, which it marks as not being activity.
 function quiet(message: Record<string, unknown>): boolean {

@@ -1,11 +1,13 @@
 import { isRecord, stringOrEmpty as text } from '../app/is-record';
+import { heldIndex } from '../app/clamp-index';
 
 // A running workflow's phases and agents, as its strip row and the workflow key's panel draw them.
 // The session carries them on each task_progress about the workflow, as `workflow_progress`: a
 // field the SDK's types leave out but the CLI bundled with Agent SDK 0.3.316 sends, the whole list each time,
 // one `workflow_phase` entry per phase the script announced and one `workflow_agent` entry per agent
-// run (its queued entry and its running one are two entries with the same index). A progress
-// message with only token ticks leaves the list out, so the last one stands until the next.
+// run: the CLI keeps one slot per type and index and swaps each update into it, so an agent's latest
+// state is its only entry. A progress message with only token ticks leaves the list out, so the last
+// one stands until the next.
 
 export type WorkflowAgentState = 'queued' | 'running' | 'done' | 'failed';
 
@@ -19,13 +21,12 @@ export type WorkflowAgent = {
   seconds: number;
 };
 
-export type WorkflowPhase = { title: string; agents: WorkflowAgent[] };
+// `index` is the phase's own from the stream, -1 for the bucket of agents outside any phase.
+export type WorkflowPhase = { index: number; title: string; agents: WorkflowAgent[] };
 
 export type WorkflowProgress = { phases: WorkflowPhase[] };
 
 export const NO_PROGRESS: WorkflowProgress = { phases: [] };
-
-const RANK: Record<WorkflowAgentState, number> = { queued: 0, running: 1, done: 2, failed: 2 };
 
 const number = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
@@ -60,9 +61,7 @@ export function workflowProgress(entries: unknown): WorkflowProgress | null {
     const agent = agentOf(entry);
     const phase = typeof entry.phaseIndex === 'number' ? entry.phaseIndex : -1;
     if (phase !== -1 && !titles.has(phase)) titles.set(phase, text(entry.phaseTitle));
-    // An agent's furthest entry wins: its queued one stays in the list beside its running one.
-    const known = agents.get(agent.index);
-    if (!known || RANK[agent.state] >= RANK[known.agent.state]) agents.set(agent.index, { phase, agent });
+    agents.set(agent.index, { phase, agent });
   }
   const byPhase = new Map<number, WorkflowAgent[]>();
   for (const { phase, agent } of [...agents.values()].sort((a, b) => a.agent.index - b.agent.index)) {
@@ -72,6 +71,7 @@ export function workflowProgress(entries: unknown): WorkflowProgress | null {
   if (byPhase.has(-1)) order.push(-1);
   return {
     phases: order.map((phase) => ({
+      index: phase,
       title: phase === -1 ? 'Agents' : titles.get(phase) || `Phase ${phase + 1}`,
       agents: byPhase.get(phase) ?? [],
     })),
@@ -102,4 +102,28 @@ export function workflowBar(progress: WorkflowProgress): string | null {
   if (total === 0) return null;
   const filled = Math.round((done / total) * BAR_CELLS);
   return `${'▰'.repeat(filled)}${'▱'.repeat(BAR_CELLS - filled)} ${done}/${total} ${total === 1 ? 'agent' : 'agents'}`;
+}
+
+// The workflow panel's rows: each phase by its index, then, while the workflow runs, the row that
+// stops it.
+export type WorkflowRow = number | 'stop';
+
+export function workflowRows(progress: WorkflowProgress | null, live: boolean): WorkflowRow[] {
+  return [...(progress?.phases ?? []).map((phase) => phase.index), ...(live ? ['stop' as const] : [])];
+}
+
+// Where the panel's selection lands once its rows were rebuilt: on the row it was on, wherever that
+// moved. The stop row is held only when it was picked from among phases; selected because it was the
+// only row, before any phase arrived, it gives way to the first phase, so Enter never stops a workflow
+// nobody pointed at.
+export function heldWorkflowRow(before: readonly WorkflowRow[], after: readonly WorkflowRow[], selected: number): number {
+  const key = before.length === 1 && before[0] === 'stop' ? undefined : before[selected];
+  return heldIndex(after, key, selected);
+}
+
+// What the open panel shows after the transcript changed, or null when nothing it shows did: the
+// workflow as streamed now while it runs, the last one marked ended once it left the strip.
+export function panelUpdate<Task>(shown: { task: Task; live: boolean }, now: Task | undefined): { task: Task; live: boolean } | null {
+  if (now === shown.task || (!now && !shown.live)) return null;
+  return now ? { task: now, live: shown.live } : { task: shown.task, live: false };
 }

@@ -1,6 +1,6 @@
 import { taskDetail, usageParts, type ChatTask } from '../../shared/chat/chat-tasks';
-import { agentCount, phaseMark, type PhaseMark, type WorkflowAgentState } from '../../shared/chat/chat-workflow';
-import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
+import { agentCount, heldWorkflowRow, panelUpdate, phaseMark, workflowRows, type PhaseMark, type WorkflowAgentState } from '../../shared/chat/chat-workflow';
+import { clampIndex } from '../../shared/app/clamp-index';
 import type { Transcript } from '../../shared/chat/chat-transcript';
 import { piece } from './chat-foot-view';
 import { viewerOverlay } from '../app/overlay';
@@ -9,10 +9,10 @@ import { isModified } from '../keys/shortcuts';
 // One running workflow over the screen, kept up while it runs: its phases with how far each got,
 // and the agents of the phase picked, each with its model, tokens and time. Up and Down walk the
 // phases and, while it runs, a last row that stops it on Enter; a click on a row picks it and does
-// what Enter does there. Escape gives the keyboard back to the box. The workflow key opens it, as a
-// click on the workflow's strip row or Enter on it in the agents key's list does.
+// what Enter does there. Escape goes back where it was opened from: the agents key's list when Enter
+// there opened it, else the box, as from the workflow key or a click on the workflow's strip row.
 export type WorkflowView = {
-  open(task: ChatTask): void;
+  open(task: ChatTask, closed?: () => void): void;
   // The transcript changed: the open panel follows it.
   update(): void;
 };
@@ -20,13 +20,10 @@ export type WorkflowView = {
 const PHASE_GLYPH: Record<PhaseMark, string> = { done: '✓', running: '●', waiting: '○' };
 const AGENT_GLYPH: Record<WorkflowAgentState, string> = { done: '✓', failed: '✗', running: '●', queued: '○' };
 
-// The stop row's key among the phase titles a selection is held by.
-const STOP = Symbol('stop');
-
 export function createWorkflowView(transcript: () => Transcript, stop: (task: ChatTask) => void, back: () => void): WorkflowView {
   let redraw: (() => void) | null = null;
 
-  function open(opened: ChatTask): void {
+  function open(opened: ChatTask, closed = back): void {
     const sheet = document.createElement('div');
     const title = document.createElement('div');
     title.className = 'chat-agent-title';
@@ -39,7 +36,7 @@ export function createWorkflowView(transcript: () => Transcript, stop: (task: Ch
     let live = transcript().tasks.some((each) => each.id === opened.id);
     let selected = 0;
 
-    const rowKeys = (): (string | symbol)[] => [...(task.workflow?.phases ?? []).map((phase) => phase.title), ...(live ? [STOP] : [])];
+    const rowKeys = () => workflowRows(task.workflow, live);
 
     function draw(): void {
       const list = task.workflow?.phases ?? [];
@@ -69,7 +66,7 @@ export function createWorkflowView(transcript: () => Transcript, stop: (task: Ch
     }
 
     function enter(): void {
-      if (rowKeys()[selected] === STOP) stop(task);
+      if (rowKeys()[selected] === 'stop') stop(task);
     }
 
     phases.addEventListener('click', (event) => {
@@ -80,19 +77,17 @@ export function createWorkflowView(transcript: () => Transcript, stop: (task: Ch
     });
 
     redraw = () => {
-      const now = transcript().tasks.find((each) => each.id === task.id);
-      if (now === task || (!now && !live)) return;
-      // The selection stays on the row it was on, wherever a new phase moves it.
-      const key = rowKeys()[selected];
-      if (now) task = now;
-      else live = false;
-      selected = heldIndex(rowKeys(), key, selected);
+      const next = panelUpdate({ task, live }, transcript().tasks.find((each) => each.id === task.id));
+      if (!next) return;
+      const before = rowKeys();
+      ({ task, live } = next);
+      selected = heldWorkflowRow(before, rowKeys(), selected);
       draw();
     };
     viewerOverlay('chat-agent', sheet, {
       closed: () => {
         redraw = null;
-        back();
+        closed();
       },
       enter,
       keys: (event) => {

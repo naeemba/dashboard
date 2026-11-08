@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentCount, phaseMark, workflowBar, workflowProgress } from './chat-workflow';
+import { agentCount, heldWorkflowRow, panelUpdate, phaseMark, workflowBar, workflowProgress, workflowRows } from './chat-workflow';
 import { applyTaskMessage, taskDetail, type ChatTasks } from './chat-tasks';
 
 const phase = (index: number, title: string) => ({ type: 'workflow_phase', index, title, kind: 'phase' });
@@ -7,13 +7,10 @@ const agent = (index: number, phaseIndex: number, extra: Record<string, unknown>
   ({ type: 'workflow_agent', index, label: `agent ${index}`, phaseIndex, model: 'opus', state: 'start', ...extra });
 
 describe('workflowProgress', () => {
-  it('groups agents under their phases and keeps an agent\'s furthest entry', () => {
+  it('groups agents under their phases, one entry per agent', () => {
     const progress = workflowProgress([
       phase(0, 'Review'), phase(1, 'Fix'),
-      agent(1, 0, { queuedAt: 1 }),
-      agent(1, 0, { state: 'done', startedAt: 1_000, lastProgressAt: 31_000, tokens: 12_000, toolCalls: 3 }),
-      // The queued entry is updated in place after the run ended; it must not undo the done.
-      agent(1, 0, { queuedAt: 2 }),
+      agent(1, 0, { state: 'done', queuedAt: 1, startedAt: 1_000, lastProgressAt: 31_000, tokens: 12_000, toolCalls: 3 }),
       agent(2, 0, { state: 'progress', startedAt: 5_000 }),
       { type: 'workflow_log', message: 'hello' },
     ]);
@@ -57,5 +54,38 @@ describe('a workflow task', () => {
     ]);
     expect(tasks[0].workflow?.phases[0].agents).toHaveLength(1);
     expect(taskDetail(tasks[0])).toBe(`pr-loop · ${'▰'.repeat(10)} 1/1 agent · 1 tool · 3K tokens · 9s`);
+  });
+});
+
+describe('the workflow panel', () => {
+  const two = workflowProgress([phase(0, 'Review'), phase(1, 'Review')]);
+  const three = workflowProgress([phase(0, 'Review'), phase(1, 'Review'), phase(2, 'Fix')]);
+
+  it('lists phases by index, and the stop row only while it runs', () => {
+    expect(workflowRows(two, true)).toEqual([0, 1, 'stop']);
+    expect(workflowRows(two, false)).toEqual([0, 1]);
+    expect(workflowRows(null, true)).toEqual(['stop']);
+  });
+
+  it('keeps the selection on its phase, even beside one with the same title', () => {
+    expect(heldWorkflowRow(workflowRows(two, true), workflowRows(three, true), 1)).toBe(1);
+    expect(heldWorkflowRow(workflowRows(two, true), workflowRows(three, true), 2)).toBe(3);
+  });
+
+  it('does not leave the selection on stop when it was the only row', () => {
+    expect(heldWorkflowRow(workflowRows(null, true), workflowRows(two, true), 0)).toBe(0);
+  });
+
+  it('drops the stop row once ended and clamps the selection onto the last phase', () => {
+    expect(heldWorkflowRow(workflowRows(two, true), workflowRows(two, false), 2)).toBe(1);
+  });
+
+  it('takes the task as streamed, marks it ended once gone, and skips what changed nothing', () => {
+    const task = { id: 'w' };
+    const now = { id: 'w' };
+    expect(panelUpdate({ task, live: true }, task)).toBeNull();
+    expect(panelUpdate({ task, live: true }, now)).toEqual({ task: now, live: true });
+    expect(panelUpdate({ task, live: true }, undefined)).toEqual({ task, live: false });
+    expect(panelUpdate({ task, live: false }, undefined)).toBeNull();
   });
 });
