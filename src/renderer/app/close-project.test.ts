@@ -44,11 +44,11 @@ describe('createProjectCloser', () => {
   });
 
   it('sends only what the structured clone under IPC can carry', async () => {
-    const { ports } = setUp();
+    const { ports, close } = setUp();
     // A pane as renderer.ts hands it over: a terminal object and functions beside the name.
-    const pane = { index: 1, name: 'terminal 2', terminal: new (class Terminal {})(), tail: () => [] };
+    const pane = { index: 1, name: 'terminal 2', terminal: { cols: 80 }, tail: () => [] };
     ports.namedPanes = () => [pane];
-    await createProjectCloser(ports)(4);
+    await close(4);
     const request = vi.mocked(ports.closeProject).mock.calls[0][0];
     expect(() => structuredClone(request)).not.toThrow();
     expect(request.names).toEqual([{ index: 1, name: 'terminal 2' }]);
