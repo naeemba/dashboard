@@ -182,7 +182,9 @@ Folder: `src/main/actions/`.
 - `ship`, `review` and a `move` into Ship or Review need the running app, of the
   same build as the command; a rebuilt command against an older app is refused
   until the app is restarted. Every other move, and every move on a worktree's
-  board (a folder whose `.git` is a linked worktree's, `linked-worktree.ts`), is
+  board (a folder in `<project>.worktrees/` whose `.git` points back into that
+  project, `linked-worktree.ts`; a bare repository's checkout is a project and
+  keeps Ship and Review), is
   a file edit (`asksApp` in `board-cli.ts`) and works with the app closed.
 - Shift+Right through Review to Done, slowly enough that each save lands before
   the next keystroke, starts the review loop at the Review step: the walk is
