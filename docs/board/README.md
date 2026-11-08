@@ -179,7 +179,7 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
   onto the file as it is now)
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
-  `board-usage.ts`, `board-target.ts` (which project, `--project`) (also `dashboard board`, see [command](../command/README.md))
+  `board-usage.ts`, `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
   (what the app writes under `~/.claude` at launch), each beside its `.test.ts`

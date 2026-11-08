@@ -47,12 +47,14 @@ export const APP_VERBS: readonly string[] = ['move', 'ship', 'review'];
 // Whether the command asks the app or edits the files itself. ship and review are the app's alone; a
 // move only when entering its column can start something (column-entry.ts), so a move into Doing or
 // Done stays a file edit that works with the app closed, over SSH, or against an older running app.
-// Main still starts nothing for a worktree's board.
-export function asksApp(commandArguments: readonly string[]): boolean {
+// On a worktree's board (`projectBoard` false) every move is a file edit and asks the app nothing: the
+// app has no ship or review to start for the agent's working copy, and asking it anyway answered a
+// worker's move into Review with exit 1 after the move was written.
+export function asksApp(commandArguments: readonly string[], projectBoard: boolean): boolean {
   const [verb, , column] = commandArguments;
   if (verb === undefined || !APP_VERBS.includes(verb)) return false;
   if (verb !== 'move' || column === undefined) return true;
-  return columnEntry({ column, source: 'command', autoLoop: true, projectBoard: true }) !== 'nothing';
+  return columnEntry({ column, source: 'command', autoLoop: true, projectBoard }) !== 'nothing';
 }
 
 // Why a board with a card file that does not parse is not written. Both writers refuse it: the command

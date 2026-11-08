@@ -163,7 +163,7 @@ Folder: `src/main/actions/`.
 
 - Given a card in Todo, when `dashboard board move <id> Ship` runs, then the card is written into Ship and shipped, exactly as a drag into Ship does (`move.test.ts`).
 - Given `review.autoLoop` off, when a shipped card's pull request appears, then the card is moved into Review and no review starts until it is moved into Review by hand or `dashboard board review <id>` runs (`review-flow.test.ts`, `column-entry.test.ts`).
-- Given an agent moving its card on its worktree's board, when the move lands, then nothing starts (`column-entry.test.ts`).
+- Given an agent moving its card on its worktree's board, when the move lands, then nothing starts (`column-entry.test.ts`), and `board move <id> Review` there is a file edit that exits 0 without asking the app (`board-cli.test.ts`, `linked-worktree.test.ts`).
 - Given a conversation on the Claude screen, when you `/rename` it, then the drawer lists it by that name too; renamed in the drawer, `/resume` lists it by the drawer's name (`rename.test.ts`).
 - Given main's worker screen, when you send /clear, /resume, /branch or /rewind, then each is refused and the conversation stays (`conversation.test.ts`).
 - Given a refused ship, when the board or the command asked, then the card stays where it was put and the answer says why (`move.test.ts`).
@@ -181,8 +181,9 @@ Folder: `src/main/actions/`.
   goes home.
 - `ship`, `review` and a `move` into Ship or Review need the running app, of the
   same build as the command; a rebuilt command against an older app is refused
-  until the app is restarted. Every other move is a file edit (`asksApp` in
-  `board-cli.ts`) and works with the app closed.
+  until the app is restarted. Every other move, and every move on a worktree's
+  board (a folder whose `.git` is a linked worktree's, `linked-worktree.ts`), is
+  a file edit (`asksApp` in `board-cli.ts`) and works with the app closed.
 - Shift+Right through Review to Done, slowly enough that each save lands before
   the next keystroke, starts the review loop at the Review step: the walk is
   read one step at a time.

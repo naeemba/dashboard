@@ -4,6 +4,7 @@ import { projectNamedInFile } from '../projects/project-named';
 import { asksApp, BOARD_REQUEST, brokenFilesRefusal, runBoardCommandOnLatest } from './board-cli';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
+import { isLinkedWorktree } from './linked-worktree';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
 // file and a line of output out, and the exit code back. Every decision it could make is made there
@@ -22,8 +23,8 @@ async function run(words: readonly string[]): Promise<number> {
   const { project, commandArguments } = target;
   // A ship, a review and a move into Ship or Review are the app's to do, so the screen, the command
   // and the sweep all mean the same thing by one; docs/actions/README.md says why. The app is started
-  // when none answers. asksApp says which.
-  if (asksApp(commandArguments)) {
+  // when none answers. asksApp says which; on a worktree's board a move is only a move.
+  if (asksApp(commandArguments, !isLinkedWorktree(project))) {
     const [verb, ...rest] = commandArguments;
     return askRunningApp([BOARD_REQUEST, verb, project, ...rest]);
   }
