@@ -72,45 +72,43 @@ function readContext(value: unknown): LogContext | undefined {
   return Object.keys(context).length === 0 ? undefined : context;
 }
 
-// One reader for the file and the wire: a line read back and a draft another screen sent pass the same
-// checks and the same cuts, so neither can put a megabyte stack in the file. The new fields are each
-// optional and a wrong-typed one is left off rather than costing the line. A wrong-typed level, kind
-// or message does cost it: there would be nothing to show in the row.
-export function readLogEntry(value: unknown): LogEntry | undefined {
-  if (!isRecord(value)) return undefined;
-  const { time, level, kind, project, message } = value;
-  if (typeof time !== 'string' || typeof message !== 'string') return undefined;
-  if (typeof level !== 'string' || typeof kind !== 'string') return undefined;
+// The fields every line and every draft share, read with the same checks and the same cuts, so
+// neither the file nor another screen can put a megabyte stack in the log. Each new field is optional
+// and a wrong-typed one is left off rather than costing the line. A wrong-typed level, kind or message
+// does cost it: there would be nothing to show in the row.
+function readBody(value: Record<string, unknown>): Omit<LogEntry, 'time' | 'build'> | undefined {
+  const { level, kind, project, message } = value;
+  if (typeof message !== 'string' || typeof level !== 'string' || typeof kind !== 'string') return undefined;
   if (project !== undefined && typeof project !== 'string') return undefined;
-  const entry: LogEntry = { time, level, kind, ...inProject(project), message };
-  const detail = {
+  return {
+    level, kind, ...inProject(project), message,
     error: errorDetail(value.error), source: optionalText(value.source), action: optionalText(value.action),
-    channel: optionalText(value.channel), context: readContext(value.context), build: optionalText(value.build),
+    channel: optionalText(value.channel), context: readContext(value.context),
   };
-  for (const [key, field] of Object.entries(detail)) if (field !== undefined) Object.assign(entry, { [key]: field });
-  return entry;
 }
 
-// A draft off the wire, as main writes it: read the way a line is, then held to the levels and kinds
-// this build writes, since it is about to be written by this build.
+export function readLogEntry(value: unknown): LogEntry | undefined {
+  if (!isRecord(value) || typeof value.time !== 'string') return undefined;
+  const body = readBody(value);
+  return body && { ...body, time: value.time, build: optionalText(value.build) };
+}
+
+// A draft off the wire, as main writes it: held to the levels and kinds this build writes, since it is
+// about to be written by this build. Its time, build and source are main's to stamp.
 export function readLogDraft(value: unknown, source: LogSource): LogDraft | undefined {
-  const entry = readLogEntry(isRecord(value) ? { ...value, time: '' } : value);
-  if (entry === undefined) return undefined;
-  const { level, kind } = entry;
+  const body = isRecord(value) ? readBody(value) : undefined;
+  if (body === undefined) return undefined;
+  const { level, kind } = body;
   if (!LOG_LEVELS.some((known) => known === level) || !LOG_KINDS.some((known) => known === kind)) return undefined;
-  const draft: Record<string, unknown> = { ...entry, source };
-  delete draft.time;
-  delete draft.build;
-  return draft as LogDraft;
+  return { ...body, level: level as LogLevel, kind: kind as LogKind, source };
 }
 
 // An IPC handler that threw. The renderer hears about it too, behind Electron's prefix and with its own
 // stack; this line is the one with main's stack and the channel it came in on.
 export function ipcFailureEntry(channel: string, error: unknown, action: string | undefined): LogDraft {
-  const detail = errorDetail(error);
   return {
-    level: 'error', kind: 'error', source: 'main', channel, ...(action === undefined ? {} : { action }),
-    message: `${channel} failed: ${failureText(error)}`, ...(detail === undefined ? {} : { error: detail }),
+    level: 'error', kind: 'error', source: 'main', channel, action,
+    message: `${channel} failed: ${failureText(error)}`, error: errorDetail(error),
   };
 }
 

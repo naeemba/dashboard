@@ -28,33 +28,30 @@ export type RemoteTarget = {
 };
 
 export function channels(): Channels {
-  const handlers = new Map<string, ChannelHandler>();
+  const handlers = new Map<string, { handler: ChannelHandler; action?: string }>();
   const listeners = new Map<string, ChannelHandler>();
-  const actions = new Map<string, string>();
   let thrown: (channel: string, error: unknown, action: string | undefined) => void = () => undefined;
-  // Every call runs through here, sync throw or rejection alike.
-  async function guarded(channel: string, run: () => unknown): Promise<unknown> {
-    try {
-      return await run();
-    } catch (error: unknown) {
-      thrown(channel, error, actions.get(channel));
-      throw error;
-    }
+  function fail(channel: string, error: unknown): never {
+    thrown(channel, error, handlers.get(channel)?.action);
+    throw error;
   }
   return {
-    handle(channel, handler, action) {
-      handlers.set(channel, handler);
-      if (action !== undefined) actions.set(channel, action);
-    },
+    handle(channel, handler, action) { handlers.set(channel, { handler, action }); },
     on(channel, handler) { listeners.set(channel, handler); },
     // A send arriving as a request, which is how a remote screen sends everything, is dispatched and
     // answered null: it has no reply of its own, but the screen's frame has an id that waits for one.
-    invoke(screen, channel, channelArguments) {
-      const handler = handlers.get(channel);
-      if (handler) return guarded(channel, () => handler(screen, ...channelArguments));
+    // A throw or a rejection either way is told to whenThrown, then fails the call as before.
+    async invoke(screen, channel, channelArguments) {
+      const handler = handlers.get(channel)?.handler;
       const listener = listeners.get(channel);
-      if (!listener) return Promise.reject(new Error(`No such channel: ${channel}`));
-      return guarded(channel, () => { listener(screen, ...channelArguments); return null; });
+      if (!handler && !listener) throw new Error(`No such channel: ${channel}`);
+      try {
+        if (handler) return await handler(screen, ...channelArguments);
+        listener?.(screen, ...channelArguments);
+        return null;
+      } catch (error: unknown) {
+        return fail(channel, error);
+      }
     },
     // Synchronous, as ipcMain's listener is: a throw still goes on to the process's last resort, which
     // says it on the bar.
@@ -62,8 +59,7 @@ export function channels(): Channels {
       try {
         listeners.get(channel)?.(screen, ...channelArguments);
       } catch (error: unknown) {
-        thrown(channel, error, actions.get(channel));
-        throw error;
+        fail(channel, error);
       }
     },
     handled: () => [...handlers.keys()],

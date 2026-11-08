@@ -68,7 +68,7 @@ describe('ipcFailureEntry', () => {
       message: 'project:close failed: An object could not be cloned',
       error: { name: 'Error', message: 'An object could not be cloned', stack: thrown.stack },
     });
-    expect(ipcFailureEntry('log:read', new Error('x'), undefined)).not.toHaveProperty('action');
+    expect(ipcFailureEntry('log:read', new Error('x'), undefined).action).toBeUndefined();
   });
 });
 

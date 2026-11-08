@@ -26,8 +26,7 @@ export function rememberRead(reads: readonly FailureRead[], read: FailureRead): 
 // A thrown string or number has nothing the sentence does not already say, so it adds no detail.
 export function errorDraft(message: string, reads: readonly FailureRead[], now: number): LogDraft {
   const draft: LogDraft = { level: 'error', kind: 'error', message };
-  const read = [...reads].reverse().find((each) => now - each.at <= FAILURE_READ_WINDOW_MS && message.includes(each.text));
+  const read = reads.findLast((each) => now - each.at <= FAILURE_READ_WINDOW_MS && message.includes(each.text));
   if (read === undefined || typeof read.error !== 'object' || read.error === null) return draft;
-  const detail = errorDetail(read.error);
-  return detail === undefined ? draft : { ...draft, error: detail };
+  return { ...draft, error: errorDetail(read.error) };
 }

@@ -86,3 +86,9 @@ Main never sets the listener. Its failures reach the bar as sentences over
 `failure:show` and are logged by the renderer without a stack; an IPC handler
 that throws is logged by main itself, with the channel and main's stack
 (`channels.ts`, `whenThrown`).
+
+Watch for: the match is by text. A sentence that reshapes the text
+(`firstLine(...)`) gets no stack, one shown more than a second after its read
+loses it, and a generic text (`no reason given`) read by one failure can lend
+its stack to another shown in the same second. Passing the Error through each
+caller's `onError` removes the guess; it can land one caller at a time.

@@ -21,28 +21,20 @@ function codeOf(value: unknown): string | undefined {
   return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
 }
 
-function readAt(value: unknown, depth: number): LogError | undefined {
-  if (!isRecord(value) && !(value instanceof Error)) {
-    if (value === undefined || value === null) return undefined;
-    return { message: cutToSize(String(value), MESSAGE_LIMIT) };
-  }
+// Anything thrown, as the log keeps it. Also how an entry is read back off disk or off the wire: the
+// same cuts apply to a stack another screen sent as to one built here.
+export function errorDetail(value: unknown, depth = 0): LogError | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!isRecord(value)) return { message: cutToSize(String(value), MESSAGE_LIMIT) };
   // An Error's name, message and stack are its own or its prototype's, never enumerable, so they are
   // read by name rather than spread.
-  const { name, message, stack, code, cause } = value as Record<string, unknown>;
+  const { name, message, stack, code } = value;
   const detail: LogError = { message: typeof message === 'string' ? cutToSize(message, MESSAGE_LIMIT) : '' };
   if (typeof name === 'string' && name !== '') detail.name = name;
   if (typeof stack === 'string' && stack !== '') detail.stack = cutToSize(stack, STACK_LIMIT);
   const readCode = codeOf(code);
   if (readCode !== undefined) detail.code = readCode;
-  if (depth < CAUSE_DEPTH) {
-    const readCause = readAt(cause, depth + 1);
-    if (readCause !== undefined) detail.cause = readCause;
-  }
+  const cause = depth < CAUSE_DEPTH ? errorDetail(value.cause, depth + 1) : undefined;
+  if (cause !== undefined) detail.cause = cause;
   return detail;
-}
-
-// Anything thrown, as the log keeps it. Also how an entry is read back off disk or off the wire: the
-// same cuts apply to a stack another screen sent as to one built here.
-export function errorDetail(error: unknown): LogError | undefined {
-  return readAt(error, 0);
 }
