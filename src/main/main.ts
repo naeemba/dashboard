@@ -14,12 +14,12 @@ import { launchPaneHost, paneHost } from './panes/pane-host-client';
 import { paneHostAddress, paneOfKey, renewPipeToken } from './panes/pane-host-protocol';
 import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { adoptedPane } from './panes/adopted-pane';
-import { agentArguments, agentResumeArguments, pickShell } from '../shared/panes/shell';
+import { pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
 import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, terminalId, workersOfSlot } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
-import { workerResumeArguments } from './workers/dispatch';
+import { paneActions } from './actions/pane/pane-actions';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
@@ -49,7 +49,7 @@ import { registerWorkerChannels } from './workers/worker-channels';
 import { screenWorkers } from './workers/screen-workers';
 import { workerScreenHost } from './workers/screen-host-client';
 import { channels, registerWithIpc } from './app/channels';
-import { agentStartEntry, paneExitEntry } from '../shared/app/log-entry';
+import { paneExitEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
 import { registerWhatsNew } from './app/whats-new-store';
 import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
@@ -294,7 +294,7 @@ const worktrees = worktreeKeeper({
   file: worktreesFile,
   entries: recordAtLaunch,
   commands: terminalCommands,
-  shells,
+  shells, closeScreensIn: (worktreePath) => workerScreens.closeIn(worktreePath),
   announce: (list) => sendToRenderer('worktree:change', list),
 });
 
@@ -432,9 +432,8 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
     shells.get(id)?.write(resumeLine(resume));
     return;
   }
-  const agentArguments = comesBackAs === 'worker' ? workerResumeArguments(shellCommand, id, resume.session) : agentResumeArguments(shellCommand, resume.session);
-  startAgent(id, card?.worktreePath ?? resume.directory, agentArguments);
-  if (comesBackAs === 'worker') mainsWorkers.set(id, workerDispatcher(resume, projectPath));
+  const dispatcherPath = comesBackAs === 'worker' ? workerDispatcher(resume, projectPath) : null;
+  paneDispatch({ id, projectPath, directory: card?.worktreePath ?? resume.directory, prompt: null, resume: resume.session, cardId: null, dispatcherPath, as: null });
 }
 
 // The panes main's worker is in now, which the `session` command may release and session.json marks so
@@ -442,28 +441,6 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
 // it closes, so release never kills what somebody else put there afterwards. Each names the path of the
 // page whose main dispatched it, the one it reports to.
 const mainsWorkers = new Map<string, string>();
-
-// Point a pane at a worktree and start the agent in it. The pane keeps its id — it is still terminal
-// 3 of that project — and only what it runs and where changes, which is exactly what terminalCommands
-// exists to say. The old shell is killed first: retargeting a pane that is still running one would
-// leave two processes writing to the same id.
-//
-// What it runs is the caller's, because there are three agents now: the one that works a card, the one
-// that reviews the pull request the first one opened, and either of them resumed after a restart.
-function startAgent(id: string, worktreePath: string, agentArguments: string[]): void {
-  mainsWorkers.delete(id);
-  workerAnswers.forget(id);
-  setPaneCommand(id, { args: agentArguments, directory: worktreePath });
-  // Working from this instant, rather than from the first report that catches its spinner. The reports
-  // are on a timer and there is a second or two of Claude Code starting up before the spinner exists,
-  // and the sweep in between would read the pane as quiet and take the folder away from the agent.
-  agentsAtWork.started(id, Date.now());
-  const { slot, index } = paneFromId(id);
-  logStore.log(agentStartEntry(projectIn(slot)?.path, index));
-  shells.get(id)?.kill();
-  shells.delete(id);
-  panes.spawn(id);
-}
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
 table.handle('recent-projects:read', () => existingProjects(readRecentPaths(recentsFile)));
@@ -591,6 +568,14 @@ const workerScreens = screenWorkers({
   file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), newSession: sessionIndex.launched, host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
   tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => chats.start(key), notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
 });
+// Every agent a pane starts, of every kind, from every caller (workers-decision-8).
+const { dispatch: paneDispatch } = paneActions({
+  platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched,
+  forgetAnswers: (id) => workerAnswers.forget(id), mainsWorkers,
+  command: (id) => terminalCommands.get(id), setPaneCommand, shells, spawn: panes.spawn,
+  agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,
+  log: (draft) => logStore.log(draft),
+});
 const chats = registerChatSessions(table, {
   send: (slot, event) => { sendToRenderer('chat:receive', slot, event); workerScreens.observe(slot, event); },
   projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'),
@@ -688,7 +673,7 @@ function takePane(projectPath: string, index: number, cardId: string): void {
 }
 
 registerWorkerChannels(table, {
-  project: projectIn, openPanes, openWorker, closeWorker, openProjects, openScreen: workerScreens.openByHand,
+  project: projectIn, openPanes, openWorker, closeWorker, openProjects, openScreen: (id, projectPath) => paneDispatch({ id, projectPath, directory: projectPath, prompt: null, resume: null, cardId: null, dispatcherPath: null, as: null }),
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
@@ -735,8 +720,8 @@ function attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipRes
   }
   const pane = freePaneIn(slot);
   takePane(entry.projectPath, pane, entry.cardId);
-  const session = sessionIndex.launched(entry.projectPath, entry.worktreePath, entry.cardId);
-  startAgent(terminalId(slot, pane), entry.worktreePath, agentArguments(shellCommand, prompt, session));
+  const projectPath = projectIn(slot)?.path ?? entry.projectPath;
+  paneDispatch({ id: terminalId(slot, pane), projectPath, directory: entry.worktreePath, prompt, resume: null, cardId: entry.cardId, dispatcherPath: null, as: null });
   return { ok: true, entry: recordWorktree({ ...entry, pane }) };
 }
 
@@ -796,21 +781,17 @@ const workerAnswers = sessionRequests({
   },
   directoryOf: (id) => workerScreens.folder(id) ?? terminalCommands.get(id)?.directory,
   mainsWorkerIn: (id) => mainsWorkers.has(id),
-  shellCommand: () => shellCommand,
   openWorker,
-  newSession: sessionIndex.launched,
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
   // this worker pushes would never be reviewed.
-  startWorker(id, directory, launch, cardId, dispatcherPath) {
+  startWorker(id, { directory, prompt, as, cardId, dispatcherPath }) {
     const entry = cardId === null ? undefined : entryForCard(worktrees.entries(), cardId);
     const { slot, index } = paneFromId(id);
     takePane(projectIn(slot)?.path ?? '', index, cardId ?? '');
     if (entry) reviews.forget(entry.cardId);
     if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
-    if ('terminal' in launch) startAgent(id, directory, launch.terminal);
-    else workerScreens.start(id, projectIn(slot)?.path ?? directory, directory, launch.screen, cardId, dispatcherPath);
-    mainsWorkers.set(id, dispatcherPath);
+    paneDispatch({ id, projectPath: projectIn(slot)?.path ?? directory, directory, prompt, resume: null, cardId, dispatcherPath, as });
   },
   closeWorker,
   // A worker screen takes the text as a prompt; its hidden shell would only swallow it.

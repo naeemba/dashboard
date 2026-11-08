@@ -17,8 +17,8 @@ describe('parseSessionCommand', () => {
 
   // The prompt comes in as one quoted word or several; either way it is what the worker is handed.
   it('reads a run, its prompt and where it runs', () => {
-    expect(parseSessionCommand(['run', '2:3', 'fix', 'the', 'tests'], 'linux')).toEqual({
-      ok: true, command: { kind: 'run', id: '2:3', prompt: 'fix the tests', card: null, worktree: false, screen: true },
+    expect(parseSessionCommand(['run', '2:3', 'fix', 'the', 'tests'])).toEqual({
+      ok: true, command: { kind: 'run', id: '2:3', prompt: 'fix the tests', card: null, worktree: false, as: null },
     });
     expect(parseSessionCommand(['run', '2:3', '--card', 'abc', 'work the card'])).toMatchObject({
       ok: true, command: { card: 'abc', worktree: false, prompt: 'work the card' },
@@ -27,20 +27,19 @@ describe('parseSessionCommand', () => {
       ok: true, command: { card: null, worktree: true },
     });
     expect(parseSessionCommand(['run', '2:3', '--card', 'abc', '--screen', 'work the card'])).toMatchObject({
-      ok: true, command: { card: 'abc', screen: true, prompt: 'work the card' },
+      ok: true, command: { card: 'abc', as: 'screen', prompt: 'work the card' },
     });
   });
 
-  // A screen by default where the screen host keeps its turn through a quit; a terminal on Windows.
-  it('runs a worker as a screen unless --terminal, and as a terminal on Windows unless --screen', () => {
-    expect(parseSessionCommand(['run', '2:3', '--terminal', 'go'], 'linux')).toMatchObject({ ok: true, command: { screen: false, prompt: 'go' } });
-    expect(parseSessionCommand(['run', '2:3', '--screen', 'go'], 'darwin')).toMatchObject({ ok: true, command: { screen: true, prompt: 'go' } });
-    expect(parseSessionCommand(['run', '2:3', 'go'], 'win32')).toMatchObject({ ok: true, command: { screen: false } });
-    expect(parseSessionCommand(['run', '2:3', '--screen', 'go'], 'win32')).toMatchObject({ ok: true, command: { screen: true } });
+  // Only what was asked for: which one a plain run gets is pane.dispatch's (paneKind).
+  it('reads --screen and --terminal as asked for, and neither as the default\'s', () => {
+    expect(parseSessionCommand(['run', '2:3', '--terminal', 'go'])).toMatchObject({ ok: true, command: { as: 'terminal', prompt: 'go' } });
+    expect(parseSessionCommand(['run', '2:3', '--screen', 'go'])).toMatchObject({ ok: true, command: { as: 'screen', prompt: 'go' } });
+    expect(parseSessionCommand(['run', '2:3', 'go'])).toMatchObject({ ok: true, command: { as: null } });
   });
 
   it('refuses --screen and --terminal together', () => {
-    expect(parseSessionCommand(['run', '2:3', '--terminal', '--screen', 'go'], 'linux')).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['run', '2:3', '--terminal', '--screen', 'go'])).toMatchObject({ ok: false });
   });
 
   it('refuses a run with no prompt, or with both places to run it', () => {

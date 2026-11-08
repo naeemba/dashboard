@@ -21,7 +21,7 @@ function entry(worktreePath: string, cardId: string): WorktreeEntry {
 function keeperWith(entries: WorktreeEntry[], commands: Map<string, PaneCommand>) {
   const file = join(mkdtempSync(join(folder, 'record-')), 'worktrees.json');
   const sent: WorktreeList[] = [];
-  const keeper = worktreeKeeper({ file, entries, commands, shells: new Map(), announce: (list) => sent.push(list) });
+  const keeper = worktreeKeeper({ file, entries, commands, shells: new Map(), closeScreensIn: () => undefined, announce: (list) => sent.push(list) });
   return { keeper, file, sent };
 }
 

@@ -16,11 +16,13 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
   `worktree-removal.ts`, `worktrees.css`
 
 Started by the card.ship and card.review actions (docs/actions), which are what
-a move into Ship or Review, and `dashboard board ship` and `review`, call.
+a move into Ship or Review, and `dashboard board ship` and `review`, call. The
+agent itself, and the review's, is started by pane.dispatch: a Claude screen
+off Windows, Claude Code in the terminal on it (workers-decision-8).
 
 ## Scenarios
 
-- Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane.
+- Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane, on a Claude screen off Windows.
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.
 - Given the review merged the pull request, when it finishes, then the card is moved to Done on the branch, then merged, then on the app's board.

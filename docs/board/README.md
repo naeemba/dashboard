@@ -51,7 +51,9 @@ anything uncommitted
 outside .dashboard/, fetches and branches off the project's base branch, makes a
 worktree in a folder beside the project, and starts an agent in a worker
 that is sitting at a prompt with nothing running in it, or in a new worker
-when none is. Main is never taken. A pane still standing in an earlier card's
+when none is. The agent is a Claude screen in that pane, as a worker main
+dispatches is, except on Windows, where it is Claude Code in the terminal; the
+review pane below is the same (workers-decision-8). Main is never taken. A pane still standing in an earlier card's
 worktree is taken last, since its transcript is still on screen.
 
 Only what is in the foreground counts as running, and the pane it takes is

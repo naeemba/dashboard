@@ -20,6 +20,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - The app's index of every Claude it started: `session-index.ts`, `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
 - A worker's Claude screen, the `pane run` default off Windows: `session-cli.ts`; `screen-workers.ts`, `../../shared/workers/screen-key.ts`; the session is the [chat](../chat/README.md)'s `chat-sessions.ts`, the pane `src/renderer/app/page.ts` (workers-decision-5)
 - A Claude screen opened by hand with New Claude, and which screen is whose: `screen-owner.ts`, `screen-workers.ts`, `worker-channels.ts`, the button `src/renderer/app/chrome-bars.ts` (workers-decision-7)
+- Every agent a pane starts, screen or terminal, from every caller: the pane.dispatch action, `src/main/actions/pane/dispatch.ts` and `pane-actions.ts`, the default `pane-kind.ts` (workers-decision-8, [actions](../actions/README.md))
 - The screen host a worker screen's session runs in, so it outlives the app: `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`, `screen-host-protocol.ts`, `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios
@@ -61,6 +62,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a project's terminals view, when you press the New Claude key or click New Claude in the title row, then a new worker pane opens as a Claude screen in the project's folder, empty, starting no session until you send the first prompt, and the keyboard goes to its box (workers-decision-7).
 - Given a Claude screen opened by hand, when its turn ends, then its pane goes green and main is told nothing; `pane release` and a `pane run` into it are refused as for any pane running an agent that is not main's worker.
 - Given a Claude screen opened by hand, when /clear, /resume, /branch or /rewind is typed in it, then each acts on its own conversation as on main's, never touching main's; a /resume of the conversation main is on is refused as still running in main, and a /rewind of the conversation goes on in a copy cut at the prompt.
+- Given Dashboard off Windows, when a card is shipped or its review loop starts, then its agent is a Claude screen in the pane, as a plain `pane run`'s is; on Windows it is Claude Code in the terminal (`dispatch.test.ts`).
+- Given a card's agent or main's worker in a terminal, when the app restarts, then it comes back in the terminal on its conversation; one on a Claude screen comes back as a screen.
 - Given a Claude screen opened by hand, when the app restarts, then it comes back as a Claude screen on the conversation it was last on, in the screen host off Windows as a worker screen is, and still not main's worker.
 - Given the screen host is not running (Windows, a machine restart, a socket that would not open, another Dashboard holding it), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
 

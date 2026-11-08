@@ -3,7 +3,7 @@ import { claudeArguments } from '../../shared/panes/shell';
 import { paneLabel } from '../../shared/panes/terminals';
 import { slug } from '../../shared/app/slug';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
-import { hasScreenHost } from './screen-host-protocol';
+import { defaultPaneKind } from './pane-kind';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -33,8 +33,8 @@ export function workerSessionName(projectPath: string, index: number): string {
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
 export function mainPrompt(projectPath: string, platform: string = process.platform): string {
   const manager = projectPath === MANAGER_FOLDER;
-  // The default parseRun picks for this platform, so main is told what a plain run starts here.
-  const runUsage = hasScreenHost(platform)
+  // What a plain run starts on this platform, so main is told: pane.dispatch's default.
+  const runUsage = defaultPaneKind(platform) === 'screen'
     ? ['  run <id> [--card <card id> | --worktree] [--terminal] "<prompt>"',
       '                         start Claude in that pane with the prompt, as a Claude screen;',
       '                         --terminal runs Claude Code in its terminal instead']

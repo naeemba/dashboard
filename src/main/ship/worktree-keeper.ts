@@ -22,12 +22,14 @@ type WorktreeKeeperPorts = {
   entries: WorktreeEntry[];
   commands: Map<string, PaneCommand>;
   shells: ReadonlyMap<string, { kill(): void }>;
+  // The Claude screens working in the folder, closed: killing the hidden shell under one leaves it open.
+  closeScreensIn(worktreePath: string): void;
   announce: (list: WorktreeList) => void;
 };
 
 // The worktree record after launch, and every change to it. main.ts holds the launch read, because a
 // record it cannot read stops the app with a dialog only main can show.
-export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells, announce }: WorktreeKeeperPorts) {
+export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells, closeScreensIn, announce }: WorktreeKeeperPorts) {
   let entries = recordAtLaunch;
   // The worktrees a removal is part way through. `git worktree remove` is awaited, and git unlinks the
   // folder before it answers, so without this the sweep lands in that gap, calls the record dead and
@@ -144,6 +146,7 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
       // The agent goes with the folder it was working in: leaving it running leaves it writing into a
       // directory git has just deleted. Only here, where the folder was deleted on purpose.
       for (const id of shellsIn(worktreePath)) shells.get(id)?.kill();
+      closeScreensIn(worktreePath);
       releasePanes(entry);
       set(withoutWorktree(entries, worktreePath));
       return { ok: true, message: `removed ${entry.branch}`, dirty: [] };
