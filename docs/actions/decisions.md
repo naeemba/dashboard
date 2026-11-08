@@ -78,3 +78,14 @@ was making its worktree could land on git's index lock and fail in git's own
 words. The cost: `d` waits for a running ship's fetch before it answers. The
 queue is not re-entrant, so a door that holds it already is named in
 `removalOf` rather than queued again, which would wait on itself.
+
+## actions-decision-7: A conversation has one name, written from either door
+
+**session.rename writes the transcript's title and the drawer row's label
+together, from /rename and from the drawer's F2.** Before, /rename wrote only
+the title and F2 only the label, so a conversation renamed in the drawer still
+showed its old name in /resume, and the other way round. The drawer finds the
+row by the conversation's id in any project, since ids are UUIDs. The cost: a
+row whose transcript was never written (a pane closed before Claude started)
+takes the label, and the answer says /resume keeps the old name rather than
+reading as nothing renamed.

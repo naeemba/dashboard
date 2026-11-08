@@ -42,7 +42,7 @@ import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
 import { landOnPane, registerPaneChannels, typeIntoPane } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
-import { startsAtOpen } from './chat/chat-start';
+import { registerSessionChannels, sessionActions } from './actions/session/session-actions';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
 import { connectAtLaunch, registerRemote } from './remote-host/remote-ipc';
 import { registerPaneOpeners } from './panes/pane-openers';
@@ -361,14 +361,11 @@ function restorePanes(slot: number, projectPath: string, firstPane: PaneConversa
     .catch((error: unknown) => failures.hold(`Panes not restored: ${failureText(error)}`));
 }
 
-// Every open page whose main a worker that came back after a restart reports to, started for its
-// SendMessage to arrive at. Run once a page's own main is open, so the worker opening on X starts the
-// main on A that dispatched it, and A opening after X starts it too. A main already running is left as is.
+// Every open page asked whether its main starts now: session.start says yes for one a worker that came
+// back after a restart reports to. Run once a page's own main is open, so the worker opening on X starts
+// the main on A that dispatched it, and A opening after X starts it too.
 function startMainsWaitedOn(): void {
-  for (const slot of [MANAGER_SLOT, ...projects.keys()]) {
-    const project = projectIn(slot);
-    if (project !== undefined && !project.missing && startsAtOpen(project.path, mainsWorkers.values())) chats.start(slot);
-  }
+  for (const slot of [MANAGER_SLOT, ...projects.keys()]) session.start.call({ slot, from: 'restart' }).catch(() => undefined);
 }
 
 // The panes main's worker is in now, which the `session` command may release and session.json marks so
@@ -472,7 +469,7 @@ registerPaneChannels(table, {
 const workerScreens = screenWorkers({
   // The screen host runs their sessions, so they outlive this process too (workers-decision-6).
   file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), newSession: sessionIndex.launched, host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
-  tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => chats.start(key), notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
+  tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => { session.start.call({ slot: key, from: 'kept' }).catch(() => undefined); }, notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
 });
 // Every change to a pane, from every door: every agent a pane starts, of every kind (workers-decision-8),
 // a pane opened, closed, typed into, and each one back after a restart.
@@ -501,6 +498,9 @@ const chats = registerChatSessions(table, {
   // Called only once a session runs, by which time the session command's answers are set up below.
   heard: (slot, sender) => workerAnswers.heard(slot, sender),
 });
+// Every change to a session, from every door (session-actions.ts).
+const session = sessionActions({ chat: chats.actionPorts, sessions: sessionIndex, projectAt: projectIn, dispatchers: () => mainsWorkers.values() });
+registerSessionChannels(table, session);
 // The manager's main, opened at launch the way a project's is when it opens, and started the same way:
 // shown, told something, or a worker it dispatched kept through a restart. Its folder is made first, since
 // a session cannot start in a folder that is not there.
@@ -652,7 +652,7 @@ const project = projectActions({
   missingIn: (slot) => projects[slot]?.missing === true,
   folderExists: (folder) => !projectFromPath(folder).missing,
   place: placeProject,
-  startMain: chats.startMain,
+  startMain: session.startedMain,
   isOpen: (slot) => projects[slot] !== undefined,
   panesOf: paneUsesIn,
   close: closeProjectSlot,

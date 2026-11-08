@@ -5,8 +5,7 @@ action each one moves behind (actions-decision-4). Line numbers are as of the
 card that wrote this list; each noun's card corrects its own rows as it moves
 them. **Bypass** marks a row that does the work itself rather than call an
 action; `src/main/actions/bypasses.test.ts` pins the calls and wrappers it
-lists. A **yes** row with no pin there (the `chat:*` handlers, `pane send`,
-the restart's reopenings) is held by actions-rule-1 alone.
+lists. A **yes** row with no pin there is held by actions-rule-1 alone.
 
 Doors: **IPC** is a channel the screen asks (keys, buttons and clicks all reach
 main this way), **CLI** a `dashboard` command over the session socket,
@@ -73,15 +72,20 @@ door is now. Every door's call is in `actions/project/project-actions.ts` or
 
 ### session (a main's chat and a pane's conversation)
 
+Moved behind the session actions by the session card; the rows say where each
+door is now. Every door's call is in `actions/session/session-actions.ts`, and
+what each action asks of the session is `actionPorts` in `chat/chat-sessions.ts`.
+
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
-| start main | `chats.start`, `main.ts:398` and `:569` (`startMainsWaitedOn`), `chats.startMain` from `project open` | restart, CLI `project open` | yes |
-| reset | `chat:reset`, `chat/chat-sessions.ts:675` | IPC (/clear) | yes |
-| resume | `chat:resume`, `chat-sessions.ts:688` | IPC (/resume) | yes |
-| branch | `chat:branch`, `chat-sessions.ts:735` | IPC (/branch) | yes |
-| rewind | `chat:rewind`, `chat-sessions.ts:754` | IPC (/rewind) | yes |
-| rename | `chat:rename`, `chat-sessions.ts:525`; `sessions:rename`, `drawer-ipc.ts:29` | IPC (/rename, the drawer) | yes, two writers of one label |
-| configure | `chat:configure`, `chat-sessions.ts:593` | IPC (model, mode, effort) | yes |
+| start | session.start, `actions/session/start.ts`; `chats.actionPorts.start` its port | restart (`startMainsWaitedOn`, `from: 'restart'`), a kept worker screen taken back (`screen-workers.ts`, `'kept'`), CLI `project open` (project.open's `startMain`, `'command'`) | no |
+| reset | session.reset, `actions/session/reset.ts` | IPC `chat:reset` (/clear) | no |
+| resume | session.resume, `actions/session/resume.ts` | IPC `chat:resume` (/resume) | no |
+| branch | session.branch, `actions/session/branch.ts` | IPC `chat:branch` (/branch) | no |
+| rewind | session.rewind, `actions/session/rewind.ts` | IPC `chat:rewind` (/rewind) | no |
+| rename | session.rename, `actions/session/rename.ts` | IPC `chat:rename` (/rename), IPC `sessions:rename` (the drawer's F2) | no: one label, written in both places (actions-decision-7) |
+| configure | session.configure, `actions/session/configure.ts` | IPC `chat:configure` (model, mode, effort, fast) | no |
+| started by use | `running`, `chat-sessions.ts` | a prompt, a worker's report, the screen's first measure, the slash, model and MCP lists | the conversation itself, not a door |
 
 `chat:send`, `chat:interrupt`, `chat:answer` and the reads are the
 conversation itself, not changes to app state.
@@ -122,9 +126,10 @@ One row per noun.verb, and what it decides that its callers do not.
 | project.open | a missing folder refused, a dead page opened over, its main started only for the command; the dialog stays the picker's door's |
 | project.close | `closeRefusal`, once, for the key and the command; only a check before the key's question |
 | project.focus | which pane to land on: main, or the banner's |
-| session.start | whether a main starts at open (`startsAtOpen`) |
-| session.reset, .resume, .branch, .rewind | `keepsItsConversation`: refused on main's worker screen |
-| session.rename | one label for the chat and the drawer |
+| session.start | whether a main starts at a restart (`startsAtOpen`); the command's start answers once main can be reached |
+| session.reset, .resume, .branch, .rewind | `keepsItsConversation`: refused on main's worker screen; a resume of a conversation running elsewhere (`runningElsewhere`); a rewind's dry run before the code goes back |
+| session.rename | one label for the chat and the drawer: both doors write the transcript's title and the drawer's row |
+| session.configure | the choice kept for the next start, and the running session moved onto it |
 | settings.write | the one writer of settings.json, and the shell it picks |
 
 ## The plan
@@ -140,7 +145,9 @@ two fight over `main.ts`:
    record in one place, the keeper's `givePane`.
 3. **project** (done): open, close and focus behind one action each, and one
    refusal for the key and the command.
-4. **session**: start, reset, resume, branch, rewind, rename.
+4. **session** (done): start, reset, resume, branch, rewind, rename and
+   configure behind one action each, and one name for a conversation in
+   /resume and the drawer.
 5. **settings**: settings.write as the one writer.
 
 Each card lowers its rows in `bypasses.test.ts` to what it left behind. card

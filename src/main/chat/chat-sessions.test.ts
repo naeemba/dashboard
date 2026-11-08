@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, runningElsewhere, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('rememberedSessions', () => {
   const folder = mkdtempSync(path.join(tmpdir(), 'chat-sessions-'));
@@ -176,19 +176,5 @@ describe('nextConversation', () => {
   it('leaves main alone when the screen closed while its fork ran', () => {
     expect(nextConversation(screen, undefined, 'forked')).toEqual({ nothing: true });
     expect(nextConversation(screen, undefined, { cutAt: 'm3' })).toEqual({ nothing: true });
-  });
-});
-
-describe('runningElsewhere', () => {
-  const screen = { session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, owner: 'you' as const, carryOnIn: () => undefined };
-
-  it('names the pane running the picked conversation first', () => {
-    expect(runningElsewhere('xyz', 'terminal 3', screen, 'xyz')).toBe('terminal 3');
-  });
-
-  it('names main for a screen picking main\'s conversation, and nothing for main itself', () => {
-    expect(runningElsewhere('xyz', null, screen, 'xyz')).toBe('main');
-    expect(runningElsewhere('other', null, screen, 'xyz')).toBeNull();
-    expect(runningElsewhere('xyz', null, undefined, 'xyz')).toBeNull();
   });
 });

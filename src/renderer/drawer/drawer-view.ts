@@ -300,7 +300,7 @@ export function createDrawer(ports: DrawerPorts): Drawer {
       if (shownFor === page) box.focus();
       if (label === null) return;
       try {
-        const reply = await ports.bridge.renameSession(page.project.path, row.session.id, label);
+        const reply = await ports.bridge.renameSession(row.session.id, label);
         if (reply !== null) ports.report(reply.refused);
         load(false);
       } catch (error: unknown) {

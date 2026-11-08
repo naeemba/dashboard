@@ -72,7 +72,15 @@ export function withLive(index: SessionIndex, live: Iterable<string>, at: number
   };
 }
 
-const GONE = 'That session is not in this project any more';
+export const GONE = 'That session is not in this project any more';
+// A rename finds its row in any project, so its refusal names the drawer, not a project.
+export const NOT_IN_DRAWER = 'That session is not in the drawer any more';
+
+// The project whose rows hold a conversation, or undefined. Ids are UUIDs, so at most one does, and a
+// rename finds its row by the id alone, from the drawer or from the Claude screen.
+export function projectOf(index: SessionIndex, id: string): string | undefined {
+  return Object.keys(index).find((projectPath) => index[projectPath]?.some((row) => row.id === id));
+}
 
 // A rename from the drawer, or the sentence saying why not.
 export function renamed(index: SessionIndex, projectPath: string, id: string, label: string): SessionIndex | string {
@@ -80,7 +88,7 @@ export function renamed(index: SessionIndex, projectPath: string, id: string, la
   if (trimmed === '') return 'A session needs a name — Escape keeps the one it has';
   // withRow hands the same index back only when it found no row to change.
   const next = withRow(index, projectPath, id, (row) => ({ ...row, label: trimmed }));
-  return next === index ? GONE : next;
+  return next === index ? NOT_IN_DRAWER : next;
 }
 
 // The `count` most recently used, newest first, and whether older ones are left.

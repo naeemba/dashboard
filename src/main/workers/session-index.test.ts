@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LIVE_USE_STEP_MS, parseSessionIndex, renamed, resumeChoice, sessionPage, stillRunning, withLive, withSession, type SessionIndex } from './session-index';
+import { LIVE_USE_STEP_MS, parseSessionIndex, projectOf, renamed, resumeChoice, sessionPage, stillRunning, withLive, withSession, type SessionIndex } from './session-index';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
@@ -46,13 +46,22 @@ describe('withLive', () => {
   });
 });
 
+describe('projectOf', () => {
+  it('finds the project holding a conversation by its id alone', () => {
+    const row = { id: 'abc', label: 'api-1', directory: '/api', card: null, startedAt: 1, lastUsedAt: 1 };
+    const index: SessionIndex = { '/web': [], '/api': [row] };
+    expect(projectOf(index, 'abc')).toBe('/api');
+    expect(projectOf(index, 'gone')).toBeUndefined();
+  });
+});
+
 describe('renamed', () => {
   it('trims the new name and refuses an empty one', () => {
     const index = started({}, ID, 1);
     const next = renamed(index, PROJECT, ID, '  drawer work ');
     expect(typeof next === 'string' ? next : next[PROJECT][0].label).toBe('drawer work');
     expect(renamed(index, PROJECT, ID, '   ')).toMatch(/needs a name/);
-    expect(renamed(index, PROJECT, OTHER, 'x')).toMatch(/not in this project/);
+    expect(renamed(index, PROJECT, OTHER, 'x')).toMatch(/not in the drawer/);
   });
 });
 

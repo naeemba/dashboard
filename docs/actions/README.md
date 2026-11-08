@@ -72,6 +72,19 @@ Neither door holds any of the logic; each only asks.
 - **project.focus** (`project focus`, a notification's click): the window to
   the front on the project's main, or on the pane the banner named.
 
+- **session.start** (a restart, a kept worker screen, `project open`): whether a
+  page's main starts before anyone looks at it (`startsAtOpen`, only for a
+  restart's); the command's answers once main can be reached.
+- **session.reset**, **.resume**, **.branch**, **.rewind** (/clear, /resume,
+  /branch, /rewind): `keepsItsConversation` refuses all four on main's worker
+  screen. A resume of a conversation a pane runs, or main's on a screen opened
+  by hand, is refused; a rewind counts the code back by a dry run first.
+- **session.rename** (/rename, the drawer's F2): the conversation's one name,
+  written as its transcript's title and its drawer row's label from either door
+  (actions-decision-7).
+- **session.configure** (model, mode, effort, fast): kept for the next start,
+  and the running session moved onto it; none is started for it.
+
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
 [`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls and wrappers
@@ -82,7 +95,9 @@ Only card.move has a channel of its own name: it is the only action the bridge
 exposes that way. The pane and project actions answer on the channels and commands
 that were there before (`pane:add`, `pane:close`, `sessions:resume`,
 `projects:open`, `projects:close`, `pane claim`, `send`, `release`, `run`,
-`project open`, `close`, `focus`); a screen that needs ship or review registers its
+`project open`, `close`, `focus`), and so do the session actions (`chat:reset`,
+`chat:resume`, `chat:branch`, `chat:rewind`, `chat:rename`, `chat:configure`,
+`sessions:rename`); a screen that needs ship or review registers its
 channel in the same change.
 
 The board asks card.move only for a move that changed the column
@@ -130,6 +145,9 @@ Folder: `src/main/actions/`.
 - `pane/pane-input.ts` — the input checks the pane actions share
 - `worktree/worktree-actions.ts` — main's wiring: make and remove, and each door's port into them
 - `worktree/make.ts`, `worktree/remove.ts`
+- `session/session-actions.ts` — main's wiring: the session actions, their ports and the screen's doors
+- `session/start.ts`, `session/reset.ts`, `session/resume.ts`, `session/branch.ts`, `session/rewind.ts`, `session/rename.ts`, `session/configure.ts`
+- `session/conversation-ports.ts` — what reset, resume, branch and rewind ask of the session, and `keepsItsConversation`
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios
@@ -137,6 +155,8 @@ Folder: `src/main/actions/`.
 - Given a card in Todo, when `dashboard board move <id> Ship` runs, then the card is written into Ship and shipped, exactly as a drag into Ship does (`move.test.ts`).
 - Given `review.autoLoop` off, when a shipped card's pull request appears, then the card is moved into Review and no review starts until it is moved into Review by hand or `dashboard board review <id>` runs (`review-flow.test.ts`, `column-entry.test.ts`).
 - Given an agent moving its card on its worktree's board, when the move lands, then nothing starts (`column-entry.test.ts`).
+- Given a conversation on the Claude screen, when you `/rename` it, then the drawer lists it by that name too; renamed in the drawer, `/resume` lists it by the drawer's name (`rename.test.ts`).
+- Given main's worker screen, when you send /clear, /resume, /branch or /rewind, then each is refused and the conversation stays (`conversation.test.ts`).
 - Given a refused ship, when the board or the command asked, then the card stays where it was put and the answer says why (`move.test.ts`).
 - Given a new IPC handler that calls `worktrees.remove` itself, when the tests run, then `bypasses.test.ts` fails naming the file.
 - Given a removal from the worktree dialog while a ship of the same project is running git, when you press `d`, then the removal waits for the ship rather than racing it onto git's lock (`remove.test.ts`).
