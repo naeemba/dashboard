@@ -62,6 +62,7 @@ the pull request it came from may still be open.
 Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
 
 - `settings.ts`, `settings-store.ts`, `settings-rows.ts`, `settings-view.ts`
+- every write goes through settings.write, `src/main/actions/settings/` (docs/actions)
 
 ## Scenarios
 
