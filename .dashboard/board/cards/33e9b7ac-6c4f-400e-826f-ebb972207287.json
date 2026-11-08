@@ -1,0 +1,11 @@
+{
+  "id": "33e9b7ac-6c4f-400e-826f-ebb972207287",
+  "title": "Log entries carry the details an error needs: stack, cause, where it came from",
+  "notes": "The log is already JSON lines (dashboard.log, src/shared/app/log-entry.ts: time, level, kind, project, message), but an error entry says only its sentence. 'Something broke: An object could not be cloned' (2026-11-09) gave no hint where; finding it took reading code.\n\nChange: an entry may carry, all optional: error { name, message, stack, code, cause (the same shape, nested) }, source ('main' | 'renderer' | 'screen-host' | 'pane-host'), action (the action name when one was running, e.g. project.close), channel (the IPC channel for a failed invoke), and context ids (slot, pane id, card id, session id) when the caller has them. The app's version and commit stamp go on every entry. Errors reported from the renderer (failureText's callers, window error and unhandledrejection) send their stack to main with the entry; an IPC handler that throws logs its channel and the error with stack. Keep message the one sentence a person reads; the rest is detail.\n\nOld entries stay valid: parseLogLine accepts an entry without any of the new fields, and an entry with fields it does not know (no rejection on unknown keys; an unknown kind or level is kept as text rather than dropped, or say why not). Size: a stack is cut to a sane length so the 5 MB rotation still holds days of log.\n\nTests: parse old and new entries, an error with a cause chain, a stack cut to size, the renderer to main path's shape (a decision module). Docs: app or log feature README, decisions, history.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T21:29:55.376Z",
+  "updatedAt": "2026-11-08T21:33:16.535Z",
+  "column": "Doing",
+  "order": 1
+}

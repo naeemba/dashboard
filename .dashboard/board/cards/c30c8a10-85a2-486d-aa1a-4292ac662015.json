@@ -1,0 +1,11 @@
+{
+  "id": "c30c8a10-85a2-486d-aa1a-4292ac662015",
+  "title": "The manager's log page: copy button per entry, and a click opens the entry formatted in a popup",
+  "notes": "The manager's Log section (src/renderer/manager/log-view.ts) lists entries as now. Add:\n- A copy button at the end of each entry's row, copying the whole entry as JSON (keyboard first: a key copies the selected row, conventions-rule-1; help row and blurb, keys-rule-2).\n- A click on an entry, or Enter on the selected row, opens it in a popup like the drawer's viewer for markdown files (src/renderer/drawer/doc-viewer.ts / data-viewer.ts, which already formats JSON with folds): the entry pretty-printed as JSON, with any stack shown as readable lines, not one escaped string. Escape closes it; copy works there too.\n- Old entries in the user's dashboard.log must work: an entry with only time, level, kind, project, message opens and copies fine, and a line the parser skips never breaks the page. Test against a fixture of the user's real older lines (copy a few from ~/.config/Dashboard or wherever the log lives, scrubbed of anything private).\n\nReuse the drawer's viewer rather than a second JSON formatter. Decisions (what the popup shows for an entry, how a stack is split into lines) in small modules with tests (workflow-rule-2). Docs: manager README (Log section), history. Pairs with the card for richer log entries (stack, cause, source), but works without it.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T21:29:55.475Z",
+  "updatedAt": "2026-11-08T21:29:55.475Z",
+  "column": "Todo",
+  "order": 10
+}
