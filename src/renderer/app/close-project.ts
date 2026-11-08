@@ -35,7 +35,11 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
   // the way. What guards a half-finished edit in nvim is the question below, which is asked whether or
   // not anything is in the way.
   async function askMain(page: Page, onlyCheck: boolean): Promise<string> {
-    const answer = await ports.closeProject({ slot: page.slot, name: page.project.name, names: ports.namedPanes(page), onlyCheck });
+    // Narrowed to the two fields here, not trusted to the port: renderer.ts hands over whole panes, with
+    // the xterm terminal and its element inside, and the structured clone under IPC refuses them — every
+    // close failed with "An object could not be cloned".
+    const names = ports.namedPanes(page).map(({ index, name }) => ({ index, name }));
+    const answer = await ports.closeProject({ slot: page.slot, name: page.project.name, names, onlyCheck });
     return 'refused' in answer ? answer.refused : '';
   }
 
