@@ -18,3 +18,20 @@ path is the change that adds the working directory, resolved before the
 reader sees it. The `dashboard` command (board card 18a7caa6) drives a running
 app through the session socket, not through argv; with no arguments it launches
 the app, which a second launch turns into focusing the running one.
+
+## app-decision-2: A log entry from another build still reads
+
+`readLogEntry` is the one reader for the file and for a draft off the wire. An
+entry needs a string `time`, `level`, `kind` and `message`; every field added
+since (`error`, `source`, `action`, `channel`, `context`, `build`) is optional,
+and one of the wrong type is left off rather than costing the line. A key it
+does not know is ignored. A level or kind it does not know is kept as the text
+it is: a newer build wrote it, and dropping the line for its label hides it
+from the one place someone looks. A draft main is about to write is held to the
+levels and kinds this build writes, and its `time`, `build` and `source` are
+main's to stamp, never the sender's.
+
+A stack is cut at 2000 characters and a message at 1000, a cause chain at four
+deep (an error that is its own cause would never end). At that size a 5 MB file
+still holds a couple of thousand failures, and twenty-odd frames say where one
+came from.

@@ -17,6 +17,17 @@ the box to filter — every word must appear, so `error ship` is the ships that
 failed. Kept in dashboard.log in the app's data folder, 5 files of 5 MB; the
 path is at the top. Never what you type in a pane.
 
+Each line of the file is one JSON entry: `time`, `level`, `kind`, `project`
+and `message`, the one sentence the row shows. Every entry also says which
+`build` wrote it (`<version>+<commit>`) and its `source` (`main`, `renderer`,
+`screen-host`, `pane-host`). An error entry carries `error` — `name`,
+`message`, `stack`, `code` and `cause`, the same shape nested — and where it
+came from when the writer knew: `action` (`project.close`), `channel` (the IPC
+channel whose handler threw) and `context` ids (`slot`, `pane`, `card`,
+`session`). A stack is cut at 2000 characters. An entry from an older build,
+without any of these, still reads; so does one from a newer build with a level,
+kind or key this one does not know (app-decision-2).
+
 ### What's new
 
 The pull requests merged into the build you are running, under the day each
@@ -93,7 +104,7 @@ its own side. `eslint.config.test.ts` pins each of those.
 - Atomic write, and a write skipped when the bytes match (`replaceFileIfChanged`): `replace-file.ts`
 - Whether a socket is listening (the nvim server, the `dashboard` command finding the app): `can-connect.ts`
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`, `default-branch.ts` (which branch on a remote is its default, for the ship and `/create-task` alike)
-- Log: `log-entry.ts`, `log-ipc.ts`, `log-store.ts`
+- Log: `log-entry.ts`, `log-error.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,
   `clamp-index.ts`, `fuzzy.ts`, `is-record.ts`, `base-name.ts`, `slug.ts`, `age.ts`,
   `stale.ts`, `theme.ts`, `icons.ts`
