@@ -27,7 +27,8 @@ import { promptParts, withdrawable } from './chat-queue';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
 import { createAgentsView } from './chat-agents-view';
-import { runTaskCommand, type TaskScreen } from './chat-task-commands';
+import { createWorkflowView } from './chat-workflow-view';
+import { runTaskCommand, stopTask, type TaskScreen } from './chat-task-commands';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
 import { imageOverlay, pdfOverlay, searchOverlay } from '../app/overlay';
@@ -119,7 +120,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
   activity.append(piece('chat-spinner', '✻'), activityText);
   const foot = document.createElement('div');
   foot.className = 'chat-foot';
-  const agents = createAgentsView(() => transcript, { ...options, openPdf }, () => focus());
+  const workflows = createWorkflowView(() => transcript, (task) => stopTask(options, slot, task), () => focus());
+  const agents = createAgentsView(() => transcript, { ...options, openPdf, openWorkflow: workflows.open }, () => focus());
   const tasks = createTaskStrip(agents.open);
   const queue = createQueueStrip();
   element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
@@ -240,6 +242,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     if (prompt.placeholder !== placeholder) prompt.placeholder = placeholder;
     tasks.render(transcript.tasks);
     agents.update();
+    workflows.update();
     queue.render(transcript.queued);
     if (stick) log.scrollTop = log.scrollHeight;
   }
@@ -591,7 +594,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }, (error: unknown) => options.onError(`The edited prompt was not read: ${failureText(error)}`));
   }
 
-  const taskScreen: TaskScreen = { options, slot, strip: tasks, agents };
+  const taskScreen: TaskScreen = { options, slot, strip: tasks, agents, workflows };
   const commandScreen: CommandScreen = {
     bridge, slot, options, prompt, configure, focus, showContext,
     transcript: () => transcript,

@@ -48,10 +48,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'how it exited and the last line it printed; the other key types it into a free shell in each, '
     + 'where it prints as it goes. The last line is a guess, and the command and its results '
     + 'are gone on restart.',
-  claude: 'Claude Code as a page: tables, code, diffs, and tool calls folded, which the unfold key '
+  claude: 'Claude Code as a page: tables, code, diffs, tool calls folded, which the unfold key '
     + 'opens; the link key follows links. The project\'s main session. A slash lists commands, @ '
-    + 'mentions a file, the agents key opens agents\' conversations. The foot shows usage and cache '
-    + 'warmth; the refresh key rereads it, the context key lists it, Enter opens rows.',
+    + 'mentions a file, the agents and workflow keys open agents and '
+    + 'workflows. The foot shows usage and cache warmth; the refresh key rereads it, the context key lists it.',
   sections: 'The manager is five screens under one strip of names; two of these keys walk it from any '
     + 'of them, since the arrows belong to the board and the notes. The refresh key reads the four '
     + 'cards above the strip now rather than at the next half hour.',

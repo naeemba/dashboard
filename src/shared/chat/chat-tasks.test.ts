@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyTaskMessage, backgroundTarget, keptSelection, nextTaskSelection, pickedTask, stopTarget, taskDetail, taskOrder, type ChatTasks } from './chat-tasks';
+import { applyTaskMessage, backgroundTarget, workflowTarget, keptSelection, nextTaskSelection, pickedTask, stopTarget, taskDetail, taskOrder, type ChatTasks } from './chat-tasks';
 
 const fold = (messages: Record<string, unknown>[], start: ChatTasks = []): ChatTasks =>
   messages.reduce(applyTaskMessage, start);
@@ -116,5 +116,15 @@ describe('stopTarget', () => {
     expect(stopTarget(task)).toEqual({ kind: 'one', taskId: 'a' });
     expect(stopTarget(null).kind).toBe('refused');
     expect(stopTarget('ended').kind).toBe('refused');
+  });
+});
+
+describe('workflowTarget', () => {
+  const tasks = fold([startedTask('a'), startedTask('w', { subagent_type: undefined, task_type: 'local_workflow', workflow_name: 'spec' })]);
+
+  it('opens the picked workflow, else the first one listed, and refuses with none running', () => {
+    expect(workflowTarget(tasks, tasks[1])).toEqual({ kind: 'open', task: tasks[1] });
+    expect(workflowTarget(tasks, tasks[0])).toEqual({ kind: 'open', task: tasks[1] });
+    expect(workflowTarget(tasks.slice(0, 1), null)).toEqual({ kind: 'refused', reason: 'No workflow is running.' });
   });
 });
