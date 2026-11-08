@@ -313,9 +313,27 @@ The list of agents is a search sheet behind the agents key rather than keys that
 place: the strip is a status line over the box that the box's own arrows (history, the queue) already
 use, and a sheet is how every other list on this screen is walked. The conversation opens over the
 screen rather than replacing it, so Escape lands back on the list and the main conversation keeps its
-place. Only an agent has a conversation to open; a workflow or a background command says so.
+place. Only an agent has a conversation to open; a workflow opens its panel of phases instead, whose
+Escape lands back on the list the same way (chat-decision-16), and a background command says so.
 Each kept conversation holds its tools' output, up to 20,000 characters a result, so only the last 20
 agents started keep one: a manager session running agents all day would otherwise hold megabytes of
 output for conversations nobody opens. A running agent's is never the one dropped: dropping it would
 start it again from its next message, with nothing saying its beginning was cut. A finished agent past
 that says so when picked.
+
+## chat-decision-16: A workflow's progress is read from a field the SDK's types leave out, and it can be stopped, not paused
+
+The strip's bar and the workflow panel read `workflow_progress`, a list the session sends on each
+task_progress about a workflow. The Agent SDK's types (0.3.316) leave it out; the CLI bundled with
+that SDK sends it. Checked in that CLI's bundle:
+
+- It keeps one slot per `${type}:${index}` and swaps each `workflow_agent` or `workflow_phase` update
+  into its slot, then sends the whole deduplicated list. An agent's queued and running states are
+  never two entries, so its one entry is its latest state.
+- `background_tasks_changed` and `task_started` both carry a workflow's `task_type` as
+  `local_workflow`; `workflow_name` is only set on such a task.
+
+There is no pause: the SDK offers `stopTask` and nothing that pauses a task, so the panel's last row
+stops the workflow. That row is never the default selection: opened before any phase has arrived, it
+is the only row, and the first phase takes the selection once it does. The panel holds its selection
+by each phase's index from the stream, not its title, since a script may name two phases alike.
