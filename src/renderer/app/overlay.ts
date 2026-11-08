@@ -1,7 +1,7 @@
 import { icon, type IconName } from './icons';
 import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
 import { isModified } from '../keys/shortcuts';
-import { openingRow, type SearchRow } from '../../shared/app/fuzzy';
+import type { SearchRow } from '../../shared/app/fuzzy';
 
 // The class every sheet built here carries, so that one name means "a dialog owns the keyboard" and
 // nobody has to keep a list of the dialogs in step by hand. The box inside it carries the same name
@@ -312,7 +312,7 @@ export function searchOverlay<Choice>(options: {
       }
     });
     rows = options.rows('');
-    highlighted = openingRow(rows, options.opensOn);
+    highlighted = heldIndex(rows.map((row) => row.choice), options.opensOn, 0);
     draw();
     // A refresh can reorder the rows, so the highlight follows the row it was on, not its place.
     unwatch = options.watch?.(() => {

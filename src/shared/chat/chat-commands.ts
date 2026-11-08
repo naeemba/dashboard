@@ -4,7 +4,7 @@ import { onlyPlumbing } from './chat-events';
 import { isModel, type FootState } from './chat-status';
 import { tagged, unescaped } from './chat-tags';
 import { isImageType, type ChatEntry } from './chat-transcript';
-import { ranked, type SearchRow } from '../app/fuzzy';
+import { markedRows, ranked, type SearchRow } from '../app/fuzzy';
 import type { ChatSessions } from '../app/bridge';
 
 // Slash commands on the Claude screen. The session runs every command Claude Code has when it is sent
@@ -86,11 +86,7 @@ const EFFORT_DETAILS: Record<string, string> = {
 // What /effort lists: auto, then the levels lowest first, or the ones matching what is typed, best
 // first. The one the screen is on is marked; none is until one is picked.
 export function effortRows(current: ChosenEffort, query: string): SearchRow<EffortLevel | null>[] {
-  return ranked([null, ...EFFORT_LEVELS], (level) => level ?? 'auto', query).map((level) => ({
-    name: `${level === current ? '● ' : ''}${level ?? 'auto'}`,
-    detail: EFFORT_DETAILS[level ?? 'auto'] ?? '',
-    choice: level,
-  }));
+  return markedRows<EffortLevel | null>([null, ...EFFORT_LEVELS], current, (level) => level ?? 'auto', query, (level) => EFFORT_DETAILS[level ?? 'auto'] ?? '');
 }
 
 // What `/fast x` turns fast mode to: the other of what it is on when nothing is named, on or off when

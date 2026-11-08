@@ -1,4 +1,5 @@
 import type { CacheWarmth } from '../../shared/usage/cache-warmth';
+import { FOOT_EFFORT, FOOT_MODE, FOOT_MODEL } from '../../shared/chat/foot-choices';
 import { modelTone, statusMeters, type ChatMeasure, type StatusTone, type FootState } from '../../shared/chat/chat-status';
 
 // The row under the Claude screen's box as DOM: on the left the model, the mode, the effort, what
@@ -33,9 +34,9 @@ export function footSides(model: string, mode: string, effort: string, ultrathin
   chosen.className = 'chat-foot-side';
   const stateName = piece('chat-foot-state', STATE_LABELS[state]);
   stateName.dataset.state = state;
-  const effortName = piece('chat-foot-effort', effort);
+  const effortName = piece(FOOT_EFFORT, effort);
   effortName.classList.toggle('ultrathink', ultrathink);
-  chosen.append(toned(piece('chat-foot-model', model), modelTone(model)), piece('chat-foot-mode', mode), effortName, stateName);
+  chosen.append(toned(piece(FOOT_MODEL, model), modelTone(model)), piece(FOOT_MODE, mode), effortName, stateName);
   if (workers) chosen.append(piece(FOOT_WORKERS, workers));
   const meters = document.createElement('div');
   meters.className = 'chat-foot-side';

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { effortRows } from './chat-commands';
-import { openingRow } from '../app/fuzzy';
+import { heldIndex } from '../app/clamp-index';
+import type { SearchRow } from '../app/fuzzy';
 import { footModeRows, footModelRows, footSetting } from './foot-choices';
 
 describe('footSetting', () => {
@@ -11,6 +12,9 @@ describe('footSetting', () => {
     expect(footSetting(['chat-foot-state'])).toBeNull();
   });
 });
+
+// The row a sheet opens on, as searchOverlay picks it for opensOn.
+const openingRow = <Choice>(rows: SearchRow<Choice>[], current: Choice): number => heldIndex(rows.map((row) => row.choice), current, 0);
 
 describe('the foot sheets', () => {
   it('list the models the key walks, the one on marked, and open on it', () => {

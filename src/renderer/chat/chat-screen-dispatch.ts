@@ -6,6 +6,7 @@ import { exportConversation } from './chat-export-view';
 import { manageMcp } from './chat-mcp-view';
 import { rewind } from './chat-rewind-view';
 import { branch, chooseModel, copyReply, renameConversation, resume, showEdits } from './chat-screen-commands';
+import type { SearchRow } from '../../shared/app/fuzzy';
 import { footModeRows, footModelRows, type FootSetting } from '../../shared/chat/foot-choices';
 import { working, type Transcript } from '../../shared/chat/chat-transcript';
 import type { ChatViewOptions } from './chat-view';
@@ -109,27 +110,21 @@ function showEfforts(screen: CommandScreen, name: string): void {
     else screen.configure({ effort: named });
     return;
   }
-  void searchOverlay({
-    name: 'chat-effort', placeholder: 'Search effort levels', rows: (query) => effortRows(screen.effort(), query),
-    empty: 'No level matches.', glyph: () => 'claude', opensOn: screen.effort(),
-  }).then((picked) => {
-    if (picked !== undefined) screen.configure({ effort: picked });
-    screen.focus();
-  });
+  sheet(screen, 'chat-effort', 'effort levels', (query) => effortRows(screen.effort(), query), screen.effort(), (effort) => ({ effort }));
 }
 
 // A click on the model, the mode or the effort in the foot: a sheet of that setting's choices, open on
 // the one it is on. The model sheet is the list the model key walks, not /model's, which asks the session.
 export function showFootSetting(setting: FootSetting, screen: CommandScreen): void {
   if (setting === 'effort') return showEfforts(screen, '');
-  const picked = setting === 'model'
-    ? searchOverlay({
-      name: 'chat-model', placeholder: 'Search models', rows: (query) => footModelRows(screen.model(), query),
-      empty: 'No model matches.', glyph: () => 'claude', opensOn: screen.model(),
-    }).then((model) => { if (model !== undefined) screen.configure({ model }); })
-    : searchOverlay({
-      name: 'chat-mode', placeholder: 'Search modes', rows: (query) => footModeRows(screen.mode(), query),
-      empty: 'No mode matches.', glyph: () => 'claude', opensOn: screen.mode(),
-    }).then((permissionMode) => { if (permissionMode !== undefined) screen.configure({ permissionMode }); });
-  void picked.then(screen.focus);
+  if (setting === 'model') return sheet(screen, 'chat-model', 'models', (query) => footModelRows(screen.model(), query), screen.model(), (model) => ({ model }));
+  sheet(screen, 'chat-mode', 'modes', (query) => footModeRows(screen.mode(), query), screen.mode(), (permissionMode) => ({ permissionMode }));
+}
+
+// A sheet of one setting's choices, open on the one it is on; the one taken is the setting's change.
+function sheet<Choice>(screen: CommandScreen, name: string, noun: string, rows: (query: string) => SearchRow<Choice>[], current: Choice, change: (picked: Choice) => ChatPreferences): void {
+  void searchOverlay({ name, placeholder: `Search ${noun}`, rows, empty: 'Nothing matches.', glyph: () => 'claude', opensOn: current }).then((picked) => {
+    if (picked !== undefined) screen.configure(change(picked));
+    screen.focus();
+  });
 }

@@ -41,8 +41,7 @@ export type SearchRow<Choice> = {
   className?: string;
 };
 
-// The row a search sheet opens on: the one it is on now, or the top when that is not on the list (a model
-// /model named, skipping permissions, effort left to the settings file).
-export function openingRow<Choice>(rows: SearchRow<Choice>[], current: Choice): number {
-  return Math.max(0, rows.findIndex((row) => row.choice === current));
+// A list ranked by what is typed, the one a setting is on now marked, as /effort's and the foot's sheets show it.
+export function markedRows<Choice>(choices: Choice[], current: Choice | undefined, label: (choice: Choice) => string, query: string, detail: (choice: Choice) => string = () => ''): SearchRow<Choice>[] {
+  return ranked(choices, label, query).map((choice) => ({ name: `${choice === current ? '● ' : ''}${label(choice)}`, detail: detail(choice), choice }));
 }
