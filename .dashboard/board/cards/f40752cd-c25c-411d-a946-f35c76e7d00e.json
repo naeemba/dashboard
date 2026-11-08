@@ -1,0 +1,11 @@
+{
+  "id": "f40752cd-c25c-411d-a946-f35c76e7d00e",
+  "title": "Every project change goes through a project action: open, close, focus",
+  "notes": "Third per-noun move, after the worktree card. project.open: projects:open (main.ts:450), project open (project-requests.ts:64), pane claim --project, all into openProject (main.ts:469). project.close: projects:close (main.ts:494) and project close (project-requests.ts:80), closeRefusal decided once. project.focus (project-requests.ts:71). add/set/remove stay file edits of projects.yaml. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T13:25:39.432Z",
+  "updatedAt": "2026-11-08T13:25:39.432Z",
+  "column": "Todo",
+  "order": 16
+}

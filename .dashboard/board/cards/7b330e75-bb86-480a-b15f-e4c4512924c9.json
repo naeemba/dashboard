@@ -1,0 +1,11 @@
+{
+  "id": "7b330e75-bb86-480a-b15f-e4c4512924c9",
+  "title": "Every session change goes through a session action: start, reset, resume, branch, rewind, rename",
+  "notes": "Fourth per-noun move, after the project card. session.start: chats.start at main.ts:398 and :569, chats.startMain from project open. chat:reset/resume/branch/rewind/configure in chat-sessions.ts (675, 688, 735, 754, 593), keepsItsConversation decided in the action. session.rename: chat:rename (chat-sessions.ts:525) and sessions:rename (drawer-ipc.ts:29), two writers of one label. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T13:25:39.511Z",
+  "updatedAt": "2026-11-08T13:25:39.511Z",
+  "column": "Todo",
+  "order": 17
+}

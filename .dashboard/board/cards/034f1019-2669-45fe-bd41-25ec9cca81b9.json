@@ -1,0 +1,11 @@
+{
+  "id": "034f1019-2669-45fe-bd41-25ec9cca81b9",
+  "title": "Every pane change goes through a pane action: dispatch's door, resume, claim, open, send, release, close, restore",
+  "notes": "First of the per-noun moves (from 730fb775). Gaps #233 left: pane.dispatch has no door yet, main calls startPane directly (main.ts:572); the drawer's resume (resumeInWorker, main.ts:543, from sessions:resume) and a pane that comes back as a plain shell (resumeIn's shell branch, main.ts:432) still type claude --resume into the shell instead of going through pane.dispatch, so they get no worker hooks and no agent-start log line. Then pane.claim, open (pane:add), send, release, close (pane:close, closeWorker), restore (spawnProject, screensComeBack, adoptSurvivors, resumeIn). The write(resumeLine( count in bypasses.test.ts goes to 0. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-08T13:25:39.256Z",
+  "updatedAt": "2026-11-08T13:25:39.256Z",
+  "column": "Todo",
+  "order": 14
+}
