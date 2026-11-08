@@ -2,10 +2,10 @@
   "id": "9e92dc4c-a776-452e-b159-d8896ff9b373",
   "title": "Tests leak temp folders into /tmp until it fills",
   "notes": "On 2026-11-08 /tmp (a 16G tmpfs) filled and every worker and main stopped with ENOSPC: no shell command could run. Left behind by test runs, all directories: dashboard-review-* 17,686, dashboard-board-* 8,737, dashboard-settings-* 6,180, dashboard-worktrees-* 2,809, dashboard-ink-* 1,541, dashboard-notes-* 1,540, dashboard-* 931, dashboard-git-* 308; create-task-* 11,564 (1.3G); board-files-* 5,305 (601M). Five workers each running pnpm test several times a day multiply it.\n\nFix: every test that makes a temp folder removes it (afterEach/afterAll rmSync, or a shared helper that tracks and removes what it made), including tests whose subject makes the folder (create-task-program, the review flow, the board files). A guard test or vitest globalSetup/teardown that fails or reports when a run leaves new dashboard-*, create-task-* or board-files-* folders behind, so the leak cannot come back. Check scripts/*.test.mjs too.\n\nMeasure: count the three patterns in /tmp before and after one pnpm test; after must equal before. Docs: workflow README (Checks), history.",
-  "priority": "high",
+  "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-08T16:35:35.947Z",
-  "updatedAt": "2026-11-08T16:35:35.947Z",
-  "column": "Todo",
-  "order": 9
+  "updatedAt": "2026-11-08T16:35:51.856Z",
+  "column": "Doing",
+  "order": 3
 }
