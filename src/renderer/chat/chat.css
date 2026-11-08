@@ -677,6 +677,24 @@
   overflow-y: auto;
 }
 
+/* A workflow's panel (chat-workflow-view.ts): its phases, one picked, then the picked phase's agents. */
+.chat-workflow-phase,
+.chat-workflow-agent {
+  display: block;
+  padding: 2px 4px;
+}
+
+.chat-workflow-phase.selected {
+  background: var(--tint);
+}
+
+.chat-workflow-agents {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
 .chat-agent-title {
   position: sticky;
   top: 0;
