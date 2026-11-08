@@ -704,7 +704,6 @@ export function createBoardView(options: BoardOptions): BoardView {
     const outcome = deleteKeyOutcome(state.board, state.selection);
     const card = cardAt(state.board, state.selection);
     if (!outcome || !card) return;
-    if (outcome.kind === 'refused') return options.onError(outcome.reason);
     if (outcome.kind === 'cancel') {
       return moveThenAsk(state.selection, moveCardToColumn(state.board, state.selection, outcome.column));
     }

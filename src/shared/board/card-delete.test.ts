@@ -16,10 +16,11 @@ describe('deleteKeyOutcome', () => {
     expect(deleteKeyOutcome(board, selection)).toEqual({ kind: 'delete' });
   });
 
-  // Done's lock (board-decision-3): a stray `d` on a merged card must not cancel it unasked.
-  it('refuses a card in Done, as a keyboard move out of it is', () => {
+  // Done's lock (board-decision-3): a stray `d` on a merged card must not move it, and the confirm
+  // in front of a delete keeps it from doing anything unasked.
+  it('deletes a card in Done after the confirm rather than cancelling it', () => {
     const { board, selection } = addCard(empty, { column: columnNamed(empty, DONE_COLUMN), card: 0 }, 'a', 'Card');
-    expect(deleteKeyOutcome(board, selection)).toMatchObject({ kind: 'refused' });
+    expect(deleteKeyOutcome(board, selection)).toEqual({ kind: 'delete' });
   });
 
   it('deletes as before on a board with no Cancelled column', () => {

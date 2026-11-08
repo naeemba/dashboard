@@ -91,10 +91,13 @@ taking one back up is a decision as ordinary as moving a card out of Backlog:
 Shift+Left from Cancelled lands in Done, and walking on past Review and Ship
 starts them, as board-decision-2 says of any card.
 
-**`d` on a card in Done is refused, with Done's lock.** Moving a merged card to
-Cancelled by key is the stray keystroke board-decision-3 stops; a card a stray
-`d` cancelled would also drop out of the release notes' What's new. Drag it to
-Cancelled to cancel it, then `d` there deletes it.
+**`d` on a card in Done deletes it after the confirm, rather than cancelling
+it.** Moving a merged card to Cancelled by key is the stray keystroke
+board-decision-3 stops; a card a stray `d` cancelled would also drop out of the
+release notes' What's new. Refusing `d` there instead left no key that removes a
+Done card, a duplicate say, and every action must be reachable by key
+(conventions-rule-1). The confirm catches a stray `d`, so nothing moves or goes
+unasked. Drag a Done card to Cancelled to keep it as cancelled.
 
 **A cancelled card does not wait for review, wherever Cancelled sits.**
 `awaitsReview` answers false for it by name, so a board that already had a

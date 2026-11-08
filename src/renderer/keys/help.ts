@@ -35,7 +35,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
   board: 'A kanban board in .dashboard/board, written on every change: no save key, undo is '
     + 'the way back. Into Ship, a card goes to an agent in its own worktree; into Review, its review loop '
     + 'starts, unless a setting makes one arriving alone wait. Done moves only by dragging. Delete '
-    + 'sends a card to Cancelled; there it deletes.',
+    + 'sends a card to Cancelled; there, or in Done, it deletes.',
   notes: 'Two pages for what is not a card: free text in .dashboard/notes.md and handwriting in '
     + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
     + 'key turns between them. No save key: written a moment after you stop, read only when you '
