@@ -1,15 +1,14 @@
 import type { Channels } from '../app/channels';
-import type { LogDraft } from '../../shared/app/log-entry';
-import { removalEntry } from '../../shared/app/log-entry';
+import type { BoundAction } from '../actions/action';
 import { scanWorktrees, worktreeState } from './worktree-scan';
 import type { worktreeKeeper } from './worktree-keeper';
 
 // The worktree dialog's and the manager's channels: the record, git's state of each worktree, the scan
 // and a removal. Main-process wiring only, out of main.ts at its 600-line ceiling; main hands over the
-// record it holds. A ship is the card.ship action's (actions/card/).
+// record it holds. A ship is the card.ship action's (actions/card/), a removal worktree.remove's.
 export function registerWorktreeChannels(table: Channels, main: {
   worktrees: ReturnType<typeof worktreeKeeper>;
-  log(draft: LogDraft): void;
+  remove: BoundAction;
 }): void {
   const { worktrees } = main;
   // The renderer's first read, and the worktree dialog's own on the way open — the one screen that wants
@@ -41,9 +40,7 @@ export function registerWorktreeChannels(table: Channels, main: {
     scanWorktrees(projectPaths, worktrees.entries())
   ));
 
-  table.handle('worktree:remove', async (_screen, worktreePath: string, force: boolean, projectPath: string) => {
-    const result = await worktrees.remove(worktreePath, force, projectPath);
-    main.log(removalEntry(projectPath, worktreePath, result));
-    return result;
-  });
+  table.handle('worktree:remove', (_screen, worktreePath: string, force: boolean, projectPath: string) => (
+    main.remove.call({ worktreePath, force, projectPath, from: 'dialog' })
+  ));
 }

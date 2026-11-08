@@ -6,9 +6,12 @@ import { git } from '../app/git';
 import { changedFiles } from './ship';
 import { forgetSize } from './worktree-scan';
 import {
+  claimsPane,
   entryForPath,
   livingEntries,
   stillLiving,
+  withEntry,
+  withoutPane,
   withoutWorktree,
   worktreesDiffer,
   writeWorktrees,
@@ -93,6 +96,30 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
     announce(list());
   }
 
+  // One record per card, replaced rather than added to. The ship writes it once the folder is on disk,
+  // before any pane has taken it.
+  function record(entry: WorktreeEntry): WorktreeEntry {
+    set(withEntry(entries, entry));
+    return entry;
+  }
+
+  // The pane may still be named by another card's record, whose agent has exited and left it in that
+  // worktree. Taking the pane — for a card, a worker, or to close it — is what ends that claim, so the old
+  // record gives it up here: one record per pane in this project. claimsPane holds why the project half
+  // matters. `cardId` is the card taking it, whose own record is left alone.
+  function takePane(projectPath: string, index: number, cardId: string): void {
+    const claimed = claimsPane(entries, projectPath, index, cardId);
+    if (claimed) record(withoutPane(claimed));
+  }
+
+  // A card's agent started in the pane, by a ship, a review, a card's `pane run` or a restart: its record
+  // names the pane from here on, and any other card's record naming it gives it up. The one place a
+  // dispatch's pane is written onto a record, so no door that starts a card's agent can forget the claim.
+  function givePane(entry: WorktreeEntry, index: number): WorktreeEntry {
+    takePane(entry.projectPath, index, entry.cardId);
+    return record({ ...entry, pane: index });
+  }
+
   // Every record whose folder has stopped existing, and the panes with it. A worktree deleted by hand
   // outside the app strands a pane exactly the way one removed inside it used to, so the two share this.
   // What it does not do is kill whatever is running: a folder that went by other means may still have an
@@ -163,5 +190,5 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
     }
   }
 
-  return { entries: () => entries, list, set, dropDead, remove, shellsIn };
+  return { entries: () => entries, list, set, record, takePane, givePane, dropDead, remove, shellsIn };
 }

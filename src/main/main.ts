@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, pickedFolder, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
-import { git, runProgram } from './app/git';
+import { runProgram } from './app/git';
 import { realPath } from './app/real-path';
 import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
@@ -30,7 +30,7 @@ import { announceSocket, clearSocketPointer } from './command/app-address';
 import { environmentForPanes, paneCommands } from './command/pane-environment';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { unfinishedWork } from './workers/finished-work';
-import { makeThrowawayWorktree } from './ship/branch-worktree';
+import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
 import { boardChanges } from './board/board-changes';
@@ -72,13 +72,7 @@ import {
   type PaneCommand, type PaneReading, type PaneUse,
 } from '../shared/panes/pane-reading';
 import { usageSweep } from './usage/usage-sweep';
-import {
-  claimsPane,
-  entryForCard,
-  withEntry,
-  withoutPane,
-  withoutPanes,
-} from './ship/worktree-store';
+import { entryForCard, withoutPanes } from './ship/worktree-store';
 import type { Settings } from '../shared/settings/settings';
 import { cardActions } from './actions/card/card-actions';
 import { actionRequests } from './actions/action';
@@ -508,12 +502,12 @@ const pane = paneActions({
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,
   log: (draft) => logStore.log(draft),
   project: projectIn, openPanes, drop: dropPane, changed: () => panesChanged(),
-  endClaim: (projectPath, index) => takePane(projectPath, index, ''),
+  endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
   screenPrompt: workerScreens.send,
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
-  worktrees: worktrees.entries, panesBeforeLaunch: agentPanesBeforeLaunch, realPath, recordWorktree,
+  worktrees: worktrees.entries, panesBeforeLaunch: agentPanesBeforeLaunch, realPath, givePane: worktrees.givePane,
 });
 registerDrawer(table, {
   sessions: sessionIndex, open: pane.open,
@@ -587,21 +581,7 @@ function dropPane(id: string): void {
   paneScreens.drop(id);
 }
 
-// The pane may still be named by another card's record, whose agent has exited and left it in that
-// worktree. Taking the pane — for a card, a worker, or to close it — is what ends that claim, so the old
-// record gives it up here: one record per pane in this project. claimsPane holds why the project half
-// matters. `cardId` is the card taking it, whose own record is left alone.
-function takePane(projectPath: string, index: number, cardId: string): void {
-  const claimed = claimsPane(worktrees.entries(), projectPath, index, cardId);
-  if (claimed) recordWorktree(withoutPane(claimed));
-}
-
 registerWorkerChannels(table, { ...pane, openProjects });
-
-function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
-  worktrees.set(withEntry(worktrees.entries(), entry));
-  return entry;
-}
 
 // The lowest-numbered worker of this project that nobody is using, or the number a new one would get
 // when every worker is taken: workers are opened as they are needed, so there is always one going.
@@ -641,16 +621,19 @@ async function attachPane(entry: WorktreeEntry, slot: number, prompt: string): P
     };
   }
   const index = freePaneIn(slot);
-  takePane(entry.projectPath, index, entry.cardId);
+  const given = worktrees.givePane(entry, index);
   const projectPath = projectIn(slot)?.path ?? entry.projectPath;
   const started = await pane.dispatch.call({ id: terminalId(slot, index), projectPath, directory: entry.worktreePath, prompt, resume: null, cardId: entry.cardId, dispatcherPath: null, as: null });
   if (isRefused(started)) return { ok: false, message: started.refused };
-  return { ok: true, entry: recordWorktree({ ...entry, pane: index }) };
+  return { ok: true, entry: given };
 }
 
 // Ships in one project run one after another, never together; ship.ts says why. A review of a card in
 // that project is queued behind them too: it runs `git worktree` twice in the same repository.
 const shipInProject = oneAtATime();
+// Every worktree made and removed, from every door: a ship, a review, `pane run --worktree`, `pane
+// release` and the worktree dialog.
+const worktree = worktreeActions({ remove: worktrees.remove, queue: shipInProject, log: (draft) => logStore.log(draft) });
 
 // A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
 // card actions in actions/card/, bound here to their channels and, below, to the session socket.
@@ -662,18 +645,19 @@ const { reviews, actions: cardActionList } = cardActions({
   agentRunsIn,
   agentWorksIn,
   shellLivesIn,
-  recordWorktree,
+  recordWorktree: worktrees.record,
+  makeWorktree: worktree.forShip,
   attachPane,
   dropDeadWorktrees: worktrees.dropDead,
-  removeWorktree: worktrees.remove,
-  addWorktree: (entry) => git(['worktree', 'add', entry.worktreePath, entry.branch], entry.projectPath),
-  startReview: (entry, slot, prompt) => attachPane(recordWorktree(entry), slot, prompt),
+  removeWorktree: worktree.removeForReview,
+  addWorktree: worktree.again,
+  startReview: (entry, slot, prompt) => attachPane(worktrees.record(entry), slot, prompt),
   queue: shipInProject,
   boardLog,
   autoLoop: () => settings.review.autoLoop,
   log: (draft) => logStore.log(draft),
 });
-registerWorktreeChannels(table, { worktrees, log: (draft) => logStore.log(draft) });
+registerWorktreeChannels(table, { worktrees, remove: worktree.remove });
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
@@ -711,9 +695,12 @@ const workerAnswers = sessionRequests({
   startWorker(id, { directory, prompt, as, cardId, dispatcherPath }) {
     const entry = cardId === null ? undefined : entryForCard(worktrees.entries(), cardId);
     const { slot, index } = paneFromId(id);
-    takePane(projectIn(slot)?.path ?? '', index, cardId ?? '');
-    if (entry) reviews.forget(entry.cardId);
-    if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
+    if (entry) {
+      reviews.forget(entry.cardId);
+      worktrees.givePane({ ...entry, reviewing: false }, index);
+    } else {
+      worktrees.takePane(projectIn(slot)?.path ?? '', index, '');
+    }
     return pane.dispatch.call({ id, projectPath: projectIn(slot)?.path ?? directory, directory, prompt, resume: null, cardId, dispatcherPath, as });
   },
   close: (id) => pane.close.call({ id }),
@@ -726,14 +713,9 @@ const workerAnswers = sessionRequests({
     if (entry?.projectPath !== projectPath) return undefined;
     return { worktreePath: entry.worktreePath, working: agentRunsIn(slotOfProject(projectPath), entry.pane) };
   },
-  makeWorktree: (projectPath, title) => shipInProject(projectPath, () => makeThrowawayWorktree(projectPath, title)),
+  makeWorktree: worktree.throwaway,
   unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
-  // The worktree dialog's own removal, so a folder deleted by hand and a sweep landing mid-removal are
-  // handled the one way. Unforced: unfinishedWork has already said there is nothing in it to lose.
-  removeWorktree: (worktreePath, projectPath) => shipInProject(projectPath, async () => {
-    const removal = await worktrees.remove(worktreePath, false, projectPath);
-    if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
-  }),
+  removeWorktree: worktree.removeForRelease,
 });
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());

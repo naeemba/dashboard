@@ -42,16 +42,20 @@ the byte stream, not changes of state.
 
 ### worktree
 
+Moved behind the worktree actions by the worktree card; the rows say where each
+door is now. Every door's call is a port in `actions/worktree/worktree-actions.ts`.
+
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
-| make, a card's | `addBranchWorktree`, `ship/ship-flow.ts:88` → `ship/branch-worktree.ts:15`, shared with the throwaway | IPC, CLI (card.ship) | behind card.ship already |
-| make again, a reviewed card's | `addWorktree` port, `main.ts:746`, from `review-flow.ts:154` | sweep, card.review | behind card.review already |
-| make, a throwaway | `makeWorktree`, `main.ts:807` → `makeThrowawayWorktree`, `ship/branch-worktree.ts:22`, through the card's `branch-worktree.ts:15` | CLI `pane run --worktree` | yes |
+| make, a card's | worktree.make `card`, `actions/worktree/make.ts`, the ship's `makeWorktree` port | IPC, CLI (card.ship) | no |
+| make again, a reviewed card's | worktree.make `again`, the review's `addWorktree` port | sweep, card.review | no |
+| make, a throwaway | worktree.make `throwaway`, `makeWorktree` in `session-requests.ts` | CLI `pane run --worktree` | no |
 | make, /create-task | `create-task-program.ts:71` | the `/create-task` skill's program | outside the app; stays |
-| remove | `worktree:remove`, `ship/worktree-channels.ts:44` → `worktrees.remove` | IPC (worktree dialog's `d`, the manager's list) | yes |
-| remove, a throwaway | `removeWorktree`, `main.ts:811` | CLI `pane release` | yes |
-| remove, a reviewed card's | `removeWorktree` port, `main.ts:745`, in `review-flow.ts:126` and `:167` | sweep, card.review | behind card.review already |
-| drop dead records | `worktrees.dropDead`, `main.ts:328` and `worktree:list` | sweep, IPC | a read that tidies; stays |
+| remove | worktree.remove `dialog`, `actions/worktree/remove.ts`, from `worktree:remove` (`ship/worktree-channels.ts`) | IPC (worktree dialog's `d`, the manager's list) | no |
+| remove, a throwaway | worktree.remove `release`, pane.release's `removeWorktree` port | CLI `pane release` | no |
+| remove, a reviewed card's | worktree.remove `review`, the review's `removeWorktree` port, in `review-flow.ts` | sweep, card.review | no |
+| a card's pane on its record | `givePane`, `ship/worktree-keeper.ts` | a ship, a review, a card's `pane run`, pane.restore | a record write under pane.dispatch's callers, not a door |
+| drop dead records | `worktrees.dropDead`, `main.ts` and `worktree:list` | sweep, IPC | a read that tidies; stays |
 
 ### project
 
@@ -109,8 +113,8 @@ One row per noun.verb, and what it decides that its callers do not.
 | pane.release | whether the pane is the asker's, and whether its throwaway worktree goes |
 | pane.close | that the pane is a worker; ends a card record's claim on it |
 | pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch |
-| worktree.make | card or throwaway, queued on the project |
-| worktree.remove | forced or not, refused with changes, the shells killed and screens closed in it |
+| worktree.make | card, throwaway or again; the branch it names; whether it fetches and takes the project's queue itself (`queuesItself`) |
+| worktree.remove | per door, forced or not, queued or not, logged or not (`removalOf`); the keeper refuses with changes and kills the shells and closes the screens in it |
 | project.open | the dialog or a path, a dead page opened over, its main started or not |
 | project.close | `closeRefusal`, once, for the key and the command |
 | project.focus | which pane to land on |
@@ -127,8 +131,9 @@ two fight over `main.ts`:
 1. **pane** (done): pane.dispatch has its doors, the shell's and the drawer's
    resume are behind it, and claim, open, send, release, close and restore are
    actions. Left: the agent's exit and `pty:restart`.
-2. **worktree**: make and remove behind one action each, the dialog, the
-   throwaway and the review on it.
+2. **worktree** (done): make and remove behind one action each, the dialog,
+   the throwaway and the review on it, and a card's pane written onto its
+   record in one place, the keeper's `givePane`.
 3. **project**: open, close and focus, one refusal for the key and the command.
 4. **session**: start, reset, resume, branch, rewind, rename.
 5. **settings**: settings.write as the one writer.

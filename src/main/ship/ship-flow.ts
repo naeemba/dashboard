@@ -5,7 +5,6 @@ import { failureText } from '../../shared/errors/failure';
 import { baseBranch, git } from '../app/git';
 import { isManagerPath } from '../../shared/manager/manager';
 import { blockingChanges, uncommittedCount, workPrompt } from './ship';
-import { addBranchWorktree } from './branch-worktree';
 import { entryForCard } from './worktree-store';
 
 // A card moved into Ship: the worktree, the branch, the board move and the pane. Out of main.ts because
@@ -15,6 +14,8 @@ import { entryForCard } from './worktree-store';
 export type ShipPorts = {
   worktrees(): readonly WorktreeEntry[];
   recordWorktree(entry: WorktreeEntry): WorktreeEntry;
+  // worktree.make's card kind: a new branch off origin/<base>, in the folder every worktree goes in.
+  makeWorktree(request: { projectPath: string; title: string; cardId: string; base: string }): Promise<{ branch: string; worktreePath: string }>;
   // A free worker for the card's agent, or a new one; main.ts says how it picks.
   attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult>;
   agentRunsIn(slot: number, pane: number | null): boolean;
@@ -85,7 +86,7 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
       // Diverged, or mid-rebase. The worktree is what matters and it comes off the remote.
     }
 
-    const { branch, worktreePath } = await addBranchWorktree(projectPath, title, cardId, base);
+    const { branch, worktreePath } = await ports.makeWorktree({ projectPath, title, cardId, base });
 
     // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
     // worktree that exists is always one the worktree list can show you and remove. An orphan worktree
