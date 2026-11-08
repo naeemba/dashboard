@@ -43,6 +43,9 @@ export function bind<Ports, Input, Result extends { output: string }>(
   return {
     name: definition.name,
     words: definition.words,
+    // Nothing is awaited before `run` starts, so everything a run does before its own first await is
+    // done when `call` returns. pane.dispatch and pane.restore are written to it: a restart goes on to
+    // start the mains its workers report to off what they set. An await here breaks that.
     async call(raw) {
       const input = definition.input(raw);
       if (isRefused(input)) return input;
