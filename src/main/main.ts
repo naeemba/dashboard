@@ -400,10 +400,11 @@ function placeProject(projectPath: string): number {
   return index;
 }
 // project.close's `close`, once it has agreed. Its panes and editor are killed and forgotten, and its
-// slot is emptied. The worktree records naming a pane in it give that pane up, for the reason the launch above clears
-// every pane on read: no shell of this project survives the close, so a record still naming pane 2
-// would put a branch under a pane that is a plain shell of some other project — and would hold its
-// card in flight, unable to be shipped again, with nothing left running to finish it.
+// slot is emptied. The worktree records naming a pane in it give that pane up, for the reason the
+// launch above clears every pane on read: no shell of this project survives the close, so a record
+// still naming pane 2 would put a branch under a pane that is a plain shell of some other project —
+// and would hold its card in flight, unable to be shipped again, with nothing left running to
+// finish it.
 // Every screen takes the page down on the list it is sent.
 function closeProjectSlot(slot: number): void {
   const closing = projects[slot];
