@@ -19,6 +19,13 @@ describe('isLinkedWorktree', () => {
     expect(isLinkedWorktree(folder)).toBe(true);
   });
 
+  it('resolves a relative gitdir against the folder, not the current directory', () => {
+    const work = temporaryFolder('linked-worktree-');
+    mkdirSync(join(work, 'api'));
+    const folder = folderWithGit('gitdir: ../../api/.git/worktrees/card-1\n', join(work, 'api.worktrees', 'card-1'));
+    expect(isLinkedWorktree(folder)).toBe(true);
+  });
+
   it('is not a project\'s own checkout, a submodule, or a folder with no .git', () => {
     expect(isLinkedWorktree(folderWithGit(null))).toBe(false);
     expect(isLinkedWorktree(folderWithGit('gitdir: ../.git/modules/vendor\n'))).toBe(false);
