@@ -32,7 +32,11 @@ function lastByte(file: string, size: number): number {
   }
 }
 
-export function logStore(directory: string, onAppended: (entry: LogEntry) => void, limit = LOG_FILE_LIMIT): LogStore {
+// `build` goes on every entry, and `source` on every one that does not say: main's own writers are
+// main's, and the renderer's are marked so where they come in (log-ipc.ts).
+export function logStore(
+  directory: string, onAppended: (entry: LogEntry) => void, build: string, limit = LOG_FILE_LIMIT,
+): LogStore {
   const files = logFileNames(path.join(directory, LOG_FILE), LOG_FILE_COUNT);
 
   // The oldest goes, then every file moves a place down. A file missing from the middle is skipped:
@@ -62,7 +66,7 @@ export function logStore(directory: string, onAppended: (entry: LogEntry) => voi
   // A write that fails costs that entry and nothing else. Logging is never a reason for the thing being
   // logged to fail, and the terminal the app started from still hears about it.
   function log(draft: LogDraft): void {
-    const entry: LogEntry = { ...draft, time: new Date().toISOString() };
+    const entry: LogEntry = { source: 'main', ...draft, time: new Date().toISOString(), build };
     let line = `${JSON.stringify(entry)}\n`;
     try {
       if (needsRotation(sizeOf(files[0]), Buffer.byteLength(line), limit)) rotate();

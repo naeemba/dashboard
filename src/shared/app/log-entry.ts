@@ -1,5 +1,8 @@
 import type { ShipRequest, ShipResult, WorktreeRemoval } from './bridge';
 import { paneLabel } from '../panes/terminals';
+import { failureText } from '../errors/failure';
+import { isRecord } from './is-record';
+import { errorDetail, type LogError } from './log-error';
 
 // One line of the log, and every decision about the file that does not touch the disk. Shared: main
 // writes entries and the renderer reads and filters them, so both sides import the one shape.
@@ -8,10 +11,30 @@ export type LogLevel = typeof LOG_LEVELS[number];
 const LOG_KINDS = ['app', 'project', 'pane', 'agent', 'card', 'ship', 'worktree', 'board', 'error', 'screen'] as const;
 export type LogKind = typeof LOG_KINDS[number];
 
-export type LogEntry = { time: string; level: LogLevel; kind: LogKind; project?: string; message: string };
-// What a writer hands over. The time is stamped where the line is written, so every entry in the file
-// is on main's clock whichever side of the wire it came from.
-export type LogDraft = Omit<LogEntry, 'time'>;
+// Which process wrote it. Main stamps its own and the renderer's; the two hosts are named for when they
+// report their own.
+export type LogSource = 'main' | 'renderer' | 'screen-host' | 'pane-host';
+// The ids the writer had to hand, so a line can be matched to the slot, pane, card or session it was
+// about. Each only when known.
+export type LogContext = { slot?: number; pane?: number; card?: string; session?: string };
+
+// What a writer hands over. The time and the build are stamped where the line is written, so every
+// entry in the file is on main's clock whichever side of the wire it came from. `message` is the one
+// sentence a person reads; everything after it is detail for finding where it came from.
+export type LogDraft = {
+  level: LogLevel; kind: LogKind; project?: string; message: string;
+  error?: LogError; source?: LogSource;
+  // The action running when it was written (`project.close`), and the IPC channel of a failed invoke.
+  action?: string; channel?: string;
+  context?: LogContext;
+};
+// A line as it is read back. A level, kind or source this build does not know is kept as the text it
+// is: a newer build wrote it, and a line dropped for its label is a line nobody can find.
+export type LogEntry = Omit<LogDraft, 'level' | 'kind' | 'source'> & {
+  time: string; level: string; kind: string; source?: string;
+  // The app's `<version>+<commit>`, so a line says which build wrote it.
+  build?: string;
+};
 // What the log section reads: the newest entries, oldest first, and where the file is for anything
 // older than those.
 export type LogRead = { file: string; entries: LogEntry[] };
@@ -23,7 +46,8 @@ export const LOG_FILE_LIMIT_SHOWN = `${LOG_FILE_LIMIT / 1024 / 1024} MB`;
 export const LOG_READ_COUNT = 1000;
 
 // Undefined for anything that is not an entry. A crash mid-write leaves half a line at the end of the
-// file, and a person may edit it by hand; either costs that one line, never the section.
+// file, and a person may edit it by hand; either costs that one line, never the section. A key this
+// build does not know is ignored, not refused.
 export function parseLogLine(line: string): LogEntry | undefined {
   let value: unknown;
   try {
@@ -31,13 +55,62 @@ export function parseLogLine(line: string): LogEntry | undefined {
   } catch {
     return undefined;
   }
-  if (typeof value !== 'object' || value === null) return undefined;
-  const { time, level, kind, project, message } = value as Record<string, unknown>;
+  return readLogEntry(value);
+}
+
+function optionalText(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function readContext(value: unknown): LogContext | undefined {
+  if (!isRecord(value)) return undefined;
+  const context: LogContext = {};
+  if (typeof value.slot === 'number') context.slot = value.slot;
+  if (typeof value.pane === 'number') context.pane = value.pane;
+  if (typeof value.card === 'string') context.card = value.card;
+  if (typeof value.session === 'string') context.session = value.session;
+  return Object.keys(context).length === 0 ? undefined : context;
+}
+
+// One reader for the file and the wire: a line read back and a draft another screen sent pass the same
+// checks and the same cuts, so neither can put a megabyte stack in the file. The new fields are each
+// optional and a wrong-typed one is left off rather than costing the line. A wrong-typed level, kind
+// or message does cost it: there would be nothing to show in the row.
+export function readLogEntry(value: unknown): LogEntry | undefined {
+  if (!isRecord(value)) return undefined;
+  const { time, level, kind, project, message } = value;
   if (typeof time !== 'string' || typeof message !== 'string') return undefined;
-  if (!LOG_LEVELS.some((known) => known === level) || !LOG_KINDS.some((known) => known === kind)) return undefined;
+  if (typeof level !== 'string' || typeof kind !== 'string') return undefined;
   if (project !== undefined && typeof project !== 'string') return undefined;
+  const entry: LogEntry = { time, level, kind, ...inProject(project), message };
+  const detail = {
+    error: errorDetail(value.error), source: optionalText(value.source), action: optionalText(value.action),
+    channel: optionalText(value.channel), context: readContext(value.context), build: optionalText(value.build),
+  };
+  for (const [key, field] of Object.entries(detail)) if (field !== undefined) Object.assign(entry, { [key]: field });
+  return entry;
+}
+
+// A draft off the wire, as main writes it: read the way a line is, then held to the levels and kinds
+// this build writes, since it is about to be written by this build.
+export function readLogDraft(value: unknown, source: LogSource): LogDraft | undefined {
+  const entry = readLogEntry(isRecord(value) ? { ...value, time: '' } : value);
+  if (entry === undefined) return undefined;
+  const { level, kind } = entry;
+  if (!LOG_LEVELS.some((known) => known === level) || !LOG_KINDS.some((known) => known === kind)) return undefined;
+  const draft: Record<string, unknown> = { ...entry, source };
+  delete draft.time;
+  delete draft.build;
+  return draft as LogDraft;
+}
+
+// An IPC handler that threw. The renderer hears about it too, behind Electron's prefix and with its own
+// stack; this line is the one with main's stack and the channel it came in on.
+export function ipcFailureEntry(channel: string, error: unknown, action: string | undefined): LogDraft {
+  const detail = errorDetail(error);
   return {
-    time, level: level as LogLevel, kind: kind as LogKind, ...inProject(project), message,
+    level: 'error', kind: 'error', source: 'main', channel, ...(action === undefined ? {} : { action }),
+    message: `${channel} failed: ${failureText(error)}`, ...(detail === undefined ? {} : { error: detail }),
   };
 }
 
@@ -67,22 +140,25 @@ export function paneExitEntry(project: string | undefined, index: number, exitCo
   const pane = wasAgent ? `agent in ${paneLabel(index)}` : paneLabel(index);
   return {
     level: exitCode === 0 ? 'info' : 'warn', kind: wasAgent ? 'agent' : 'pane', ...inProject(project),
-    message: `${pane} exited (code ${exitCode})`,
+    message: `${pane} exited (code ${exitCode})`, context: { pane: index },
   };
 }
 
 export function agentStartEntry(project: string | undefined, index: number): LogDraft {
-  return { level: 'info', kind: 'agent', ...inProject(project), message: `agent started in ${paneLabel(index)}` };
+  return {
+    level: 'info', kind: 'agent', ...inProject(project), message: `agent started in ${paneLabel(index)}`, context: { pane: index },
+  };
 }
 
 export function shipEntry(request: ShipRequest, result: ShipResult): LogDraft {
   const project = request.projectPath;
-  if (result.ok) return { level: 'info', kind: 'ship', project, message: `"${request.title}" shipped on ${result.entry.branch}` };
+  const context = { slot: request.slot, card: request.cardId };
+  if (result.ok) return { level: 'info', kind: 'ship', project, context, message: `"${request.title}" shipped on ${result.entry.branch}` };
   // Some of main's refusals already name the card, and naming it again reads `"Fix login" not shipped:
   // "Fix login" is on…`.
   const title = `"${request.title}"`;
   const message = result.message.includes(title) ? `not shipped: ${result.message}` : `${title} not shipped: ${result.message}`;
-  return { level: 'error', kind: 'ship', project, message };
+  return { level: 'error', kind: 'ship', project, context, message };
 }
 
 // A refusal is a warning: a worktree with changes in it asks you a second time, it does not fail.
