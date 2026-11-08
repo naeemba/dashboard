@@ -517,8 +517,7 @@ const { removePage, applyProjects, host } = createPageSync({
 
 // Closing a project, refused and asked about in close-project.ts.
 const closeProject = createProjectCloser({
-  readPanes: (projectPath) => bridge.readPanes(projectPath),
-  closeProject: (slot) => bridge.closeProject(slot),
+  closeProject: (request) => bridge.closeProject(request),
   pages: () => pages,
   positionOfSlot,
   activeIndex: () => activeIndex,

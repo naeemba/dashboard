@@ -11,6 +11,7 @@ import type { Board } from '../board/board';
 import type { ColumnEntry } from '../board/column-entry';
 import type { MarketName, MarketsSnapshot } from '../markets/markets';
 import type { PaneUse } from '../panes/pane-reading';
+import type { PaneName } from '../panes/close-refusal';
 import type { LogDraft, LogEntry, LogRead } from './log-entry';
 import type { Mode } from '../keys/modes';
 import type { Settings } from '../settings/settings';
@@ -114,6 +115,9 @@ export type WorktreeList = { entries: WorktreeEntry[]; paneDirectories: Record<s
 // What `projects:open` answers: the slot and the list, null for a cancelled dialog, or why not.
 export type ProjectOpen = { index: number; open: OpenProjects } | { refused: string } | null;
 
+// What the close key asks project.close: the page's names for its panes, and whether only to check.
+export type ProjectClose = { slot: number; name: string; names: PaneName[]; onlyCheck: boolean };
+
 export type DashboardBridge = {
   platform: string;
   getRecentProjects(): Promise<Project[]>;
@@ -126,10 +130,9 @@ export type DashboardBridge = {
   // Which session the window shows: the joined host's address, or LOCAL_SCREEN for this machine's own.
   // Said before that session's list arrives, so the pages of the one before are taken down first.
   onHostChange(listener: (host: string) => void): void;
-  // Closing a project: its shells and its editor are killed and its slot is given up. The page is
-  // the renderer's to take off the screen; nothing comes back, because there is nothing to answer — the
-  // one thing that could refuse is read off the panes, and the renderer has already asked them.
-  closeProject(slot: number): void;
+  // project.close: whether the project may close, or (onlyCheck false) closing it, its shells and its
+  // editor killed and its slot given up. The page is the renderer's to take off the screen once it is.
+  closeProject(request: ProjectClose): Promise<{ output: string } | Refused>;
   // Chrome stopped putting a path on File, so only the preload can say where a dropped file lives.
   getPathForFile(file: File): string;
   openExternal(url: string): void;

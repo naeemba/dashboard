@@ -5,7 +5,7 @@ const bridge: DashboardBridge = {
   platform: process.platform,
   getRecentProjects: () => ipcRenderer.invoke('recent-projects:read'),
   openProject: (projectPath) => ipcRenderer.invoke('projects:open', projectPath),
-  closeProject: (slot) => ipcRenderer.send('projects:close', slot),
+  closeProject: (request) => ipcRenderer.invoke('projects:close', request),
   onProjectsChange: (listener) =>
     ipcRenderer.on('projects:change', (_event, open) => listener(open)),
   connectHost: (address, token) => ipcRenderer.invoke('host:connect', address, token),

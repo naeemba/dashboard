@@ -1,36 +1,15 @@
 import type { Page } from './page';
-import type { PaneUse } from '../../shared/panes/pane-reading';
-import { closeRefusal, type ClosingPane } from '../../shared/panes/close-refusal';
+import type { ProjectClose, Refused } from '../../shared/app/bridge';
 import { isProjectPage, positionAfterClose } from '../../shared/manager/manager';
 
-// The close key's flow. Whether the project may go, and the sentence saying why not, are
-// close-refusal.ts's; this asks it before it closes anything and again with the answer to the question.
-
-// The readings main answers with, paired with the names the page has for its panes by pane number:
-// workers come and go, so neither list's positions are pane numbers. A reading with no name is left
-// out, and so is a name with no reading — the page names its editor, which main does not read, and a
-// page whose folder has gone has no panes and no editor at all.
-//
-// What leaving a reading out costs, if this reached for a name that is not there instead: press Ctrl+Q
-// on a page reading `Directory not found: /work/api` and the promise nobody awaits rejects, and the
-// close stops before the dialog — no refusal in the status bar, no question, no page removed. That key
-// is the only way to take a dead page off the tab strip.
-export function closingPanes(
-  uses: readonly PaneUse[],
-  names: readonly { index: number; name: string }[],
-): ClosingPane[] {
-  const byIndex = new Map(names.map((named) => [named.index, named.name]));
-  return uses.flatMap((use) => {
-    const name = byIndex.get(use.index);
-    return name === undefined ? [] : [{ ...use, name }];
-  });
-}
+// The close key's flow. Whether the project may go, and the sentence saying why not, are project.close's
+// in main; this asks it before its question, then closes through it, which asks again.
 
 // What the close flow needs from renderer.ts, which owns the page list and the screen. Handed in rather
 // than imported so this file stays a module the tests can load: the overlay and the page are DOM.
 export type ProjectCloserPorts = {
-  readPanes: (projectPath: string) => Promise<PaneUse[]>;
-  closeProject: (slot: number) => void;
+  // project.close, over `projects:close`.
+  closeProject: (request: ProjectClose) => Promise<{ output: string } | Refused>;
   // A function, since the list changes between calls: the closer reads it again after removePage.
   pages: () => readonly Page[];
   positionOfSlot: (slot: number) => number;
@@ -49,24 +28,22 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
   // second one costs.
   let closing = false;
 
-  // Asked twice — once before the question and once with the answer — so it is one function. What the
-  // flags catch and what the sentence says are closeRefusal's; the reading itself is main's, over
-  // `panes:read`, and this only puts the names to it.
+  // Asked twice — once before the question and once with the answer, which closes it — so it is one
+  // function. The reading and the refusal are main's; this only puts the page's names to the panes.
   //
   // The terminals, not the editor — which is a change, and a deliberate one. The editor pane runs nvim
   // for as long as the project is open, so on a reading of what the pty has in the foreground it is busy
   // from launch, and a close that counted it would refuse every time with `nvim` named as the thing in
-  // the way. It was never much of a signal on the old reading either: it blocked a close only while its
-  // bell was ringing or its screen happened to match an agent's spinner. What guards a half-finished
-  // edit in nvim is the question below, which is asked whether or not anything is in the way.
-  async function closeRefusalFor(page: Page): Promise<string> {
-    const uses = await ports.readPanes(page.project.path);
-    return closeRefusal(page.project.name, closingPanes(uses, ports.namedPanes(page)));
+  // the way. What guards a half-finished edit in nvim is the question below, which is asked whether or
+  // not anything is in the way.
+  async function askMain(page: Page, onlyCheck: boolean): Promise<string> {
+    const answer = await ports.closeProject({ slot: page.slot, name: page.project.name, names: ports.namedPanes(page), onlyCheck });
+    return 'refused' in answer ? answer.refused : '';
   }
 
   // Closing a project: the one you are on, or the one the manager's list is pointing at. Everything it
   // takes is gone for good — its shells, the editor, and whatever was running in them — so what can stop
-  // it, and the sentence saying so, are closeRefusal's. A pane that has exited or is sitting at a
+  // it, and the sentence saying so, are project.close's. A pane that has exited or is sitting at a
   // prompt stops nothing, so the question below is asked whether or not anything was in the way.
   // The slot is not given to anyone else afterwards: main hands out a new one per project opened, so a
   // pane id that named this project names nothing from here on.
@@ -85,9 +62,9 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
     closing = true;
     let refusal: string;
     try {
-      refusal = await closeRefusalFor(page);
+      refusal = await askMain(page, true);
     } finally {
-      // In a finally, because readPanes is an IPC call and can reject: a flag left up by one failed
+      // In a finally, because the check is an IPC call and can reject: a flag left up by one failed
       // round trip would make Ctrl+Q do nothing for the rest of the run. Nothing yields between here
       // and the sheet below, so no keystroke can arrive in the gap.
       closing = false;
@@ -114,16 +91,13 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
       // one the check at the top answered for and isProjectPage reads nothing else.
       const closingPage = ports.pages()[ports.positionOfSlot(slot)];
       if (!closingPage) return;
-      // Read again with the page and for the same reason: the answer was given over a quiet project, and
-      // a pane that took an agent or a question while the dialog was up is one the close refuses over.
-      const late = await closeRefusalFor(closingPage);
-      if (late !== '') return ports.showNotice('close', late);
-      // The page's place in the list, found after that question rather than before it: asking main is a
-      // round trip, and a project closed from elsewhere while it was out shifts every page after it
-      // along. The index taken before would splice a different project out of the list.
+      // The page's place in the list, found before the close: once main has closed it, the list it pushes
+      // may take the page out before the answer gets here.
       const closingPosition = ports.positionOfSlot(slot);
-      if (closingPosition === -1) return;
-      ports.closeProject(slot);
+      // Asked again with the close, for the same reason: the answer was given over a quiet project, and
+      // a pane that took an agent or a question while the dialog was up is one main refuses over.
+      const late = await askMain(closingPage, false);
+      if (late !== '') return ports.showNotice('close', late);
       ports.removePage(slot);
       // The page that went can be the one you were standing on, since the key closes the project you are
       // looking at. Land on whatever took its tab — the project to its right, or the tab to its left when
