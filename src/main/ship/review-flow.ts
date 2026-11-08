@@ -220,6 +220,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // here, once: the review pane cannot remove the folder it is standing in, and without this every
     // shipped card leaves one beside the project for good.
     const board = projectBoard(entry.projectPath);
+    // A cancelled card keeps its worktree until the worktree dialog removes it (board-decision-4), and
+    // is never reviewed. Not marked, so moving it out of Cancelled lets the next tick pick it up.
+    // ponytail: two board reads per cancelled worktree every tick; mark it if that ever shows.
+    if (board !== null && isCancelled(board, entry.cardId)) return;
     const awaits = board === null ? null : awaitsReview(board, entry.cardId);
     if (awaits === false) {
       // Marked before asking, because asking waits on `ps` and `lsof`, and a tick that starts while

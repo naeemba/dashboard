@@ -158,6 +158,18 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Done');
   });
 
+  // Cancelled is past Review on a board as shipped, but a cancelled card may be taken back up: its
+  // worktree waits for the worktree dialog (board-decision-4).
+  it('keeps the worktree of a cancelled card and starts no review for it', async () => {
+    const { entry, projectPath } = flight(12);
+    const board = boardWithCard(null);
+    writeBoard(projectPath, moveCardById(board, CARD, columnNamed(board, CANCELLED_COLUMN)) ?? board);
+    const { ports: made, log } = ports(entry);
+    await sweepWith(made).run();
+    expect(log.removed).toEqual([]);
+    expect(log.started).toEqual([]);
+  });
+
   // The review agent moves the project's card to Done and then writes its summary. Taking the folder
   // then kills the shell mid-sentence.
   it('waits for the review agent to stop before removing a finished worktree', async () => {

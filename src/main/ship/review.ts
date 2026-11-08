@@ -52,8 +52,8 @@ export function isCancelled(board: Board, cardId: string): boolean {
 // with no Review column cannot say a card is past a column it does not have.
 //
 // A card in Cancelled is false wherever that column sits, even on an old board that has it in front of
-// Review: it will not be done, so it is never pulled into Review, and the sweep removes its worktree
-// the way it removes a Done card's (board-decision-4).
+// Review: it will not be done, so it is never pulled into Review. The sweep asks isCancelled before
+// this and leaves its worktree alone (board-decision-4).
 export function awaitsReview(board: Board, cardId: string): boolean | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;

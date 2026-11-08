@@ -102,7 +102,8 @@ unasked. Drag a Done card to Cancelled to keep it as cancelled.
 **A cancelled card does not wait for review, wherever Cancelled sits.**
 `awaitsReview` answers false for it by name, so a board that already had a
 Cancelled column in front of Review does not pull the card back into Review. The
-sweep then removes its worktree as it does a Done card's.
+sweep leaves a cancelled card's worktree alone, unlike a Done card's: the card
+may be taken back up, and the worktree dialog removes it when it will not.
 
 **Finished is decided by name, not position.** `isFinishedColumn` counts Done
 and Cancelled; the subtask bar used to count the last column, so that renaming a
