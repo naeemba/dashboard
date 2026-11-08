@@ -74,3 +74,19 @@ again at Ship. Picking the card up with the mouse is deliberate enough to
 allow. `keyboardMoveRefusal` in `done-lock.ts` decides it, with its test. The
 command (`dashboard board move`) is not a keystroke on a highlight and is not
 refused.
+
+## board-decision-4: A card that will not be done is cancelled, not deleted
+
+**`d` moves a card into Cancelled, the last column, and deletes only a card
+already there.** Deleting threw away the card's notes, trail and the record that
+the idea was had and turned down; the user would rather keep it. Cancelling
+asks nothing, because it is a move undo takes back; the delete in Cancelled
+keeps the confirm. `deleteKeyOutcome` in `card-delete.ts` decides it, with its
+test. Only the card moves: its subtasks keep their columns, as on any move.
+
+**A card leaves Cancelled like any column, by key or drag, unlike Done's lock
+(board-decision-3).** Done's lock stops a stray Shift+Left on a merged card from
+starting a review and a ship again. A cancelled card was never merged, and
+taking one back up is a decision as ordinary as moving a card out of Backlog:
+Shift+Left from Cancelled lands in Done, and walking on past Review and Ship
+starts them, as board-decision-2 says of any card.
