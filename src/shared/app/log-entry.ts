@@ -114,13 +114,20 @@ export function ipcFailureEntry(channel: string, error: unknown, action: string 
 
 // A channel that throws on a timer (`panes:report`) or on every key (`pty:input`) says the same
 // sentence again and again; written each time, it would rotate every older line out in a day. A
-// repeat of the last sentence within this long of the last throw is dropped, so a failure that keeps
-// happening is written once, and again only after it has been quiet for the window.
+// sentence thrown again within this long of its own last throw is dropped, so a failure that keeps
+// happening is written once, and again only after it has been quiet for the window. Each sentence
+// keeps its own time, so two channels failing in turn do not clear each other's check.
 export const FAILURE_REPEAT_WINDOW_MS = 60_000;
-export type LastFailure = { message: string; at: number };
 
-export function isRepeatFailure(last: LastFailure | undefined, message: string, at: number): boolean {
-  return last !== undefined && last.message === message && at - last.at < FAILURE_REPEAT_WINDOW_MS;
+// Records the throw in `lastThrown` (sentence to its last throw time) and answers whether it repeats
+// one inside the window. Sentences quiet for the window are dropped, so the map stays small.
+export function isRepeatFailure(lastThrown: Map<string, number>, message: string, at: number): boolean {
+  for (const [seen, thrownAt] of lastThrown) {
+    if (at - thrownAt >= FAILURE_REPEAT_WINDOW_MS) lastThrown.delete(seen);
+  }
+  const repeat = lastThrown.has(message);
+  lastThrown.set(message, at);
+  return repeat;
 }
 
 // The live file first, the oldest last: rotation renames each one a place down this list.

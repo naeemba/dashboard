@@ -73,12 +73,26 @@ describe('ipcFailureEntry', () => {
 });
 
 describe('isRepeatFailure', () => {
-  it('drops the same sentence inside the window of the last throw, and nothing else', () => {
-    const last = { message: 'pty:input failed: gone', at: 1000 };
-    expect(isRepeatFailure(undefined, last.message, 1000)).toBe(false);
-    expect(isRepeatFailure(last, last.message, 1000 + FAILURE_REPEAT_WINDOW_MS - 1)).toBe(true);
-    expect(isRepeatFailure(last, last.message, 1000 + FAILURE_REPEAT_WINDOW_MS)).toBe(false);
-    expect(isRepeatFailure(last, 'panes:report failed: gone', 1001)).toBe(false);
+  const input = 'pty:input failed: gone';
+  const report = 'panes:report failed: gone';
+
+  it('drops the same sentence inside the window of its last throw, and nothing else', () => {
+    const lastThrown = new Map<string, number>();
+    expect(isRepeatFailure(lastThrown, input, 1000)).toBe(false);
+    expect(isRepeatFailure(lastThrown, input, 1000 + FAILURE_REPEAT_WINDOW_MS - 1)).toBe(true);
+    expect(isRepeatFailure(lastThrown, input, 1000 + 2 * FAILURE_REPEAT_WINDOW_MS - 1)).toBe(false);
+  });
+
+  it('keeps each sentence apart, so two failing in turn are each written once', () => {
+    const lastThrown = new Map<string, number>();
+    expect([input, report, input, report].map((message, index) => isRepeatFailure(lastThrown, message, 1000 + index)))
+      .toEqual([false, false, true, true]);
+  });
+
+  it('forgets a sentence quiet for the window', () => {
+    const lastThrown = new Map<string, number>([[report, 1000]]);
+    isRepeatFailure(lastThrown, input, 1000 + FAILURE_REPEAT_WINDOW_MS);
+    expect([...lastThrown.keys()]).toEqual([input]);
   });
 });
 
