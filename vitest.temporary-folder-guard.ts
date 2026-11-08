@@ -8,8 +8,11 @@ import { leftoverTemporaryEntries } from './vitest.temporary-folder-leftovers';
 // it spawns — lands inside it. At the end the run fails naming whatever was left there, then the folder
 // goes either way, so a leak fails the run instead of filling /tmp. Nothing is put back: the process
 // running this teardown is about to exit.
+// On a mac the folder is made in /tmp, not os.tmpdir(): that is /var/folders/xx/<30 characters>/T/, and one
+// level more under it pushes the suite's Unix sockets (session.sock, screens-1.sock) past the 104-byte
+// sun_path limit, so they refuse to listen with EINVAL.
 export default function setup(): () => void {
-  const folder = mkdtempSync(join(tmpdir(), 'vitest-'));
+  const folder = mkdtempSync(join(process.platform === 'darwin' ? '/tmp' : tmpdir(), 'vitest-'));
   for (const name of ['TMPDIR', 'TEMP', 'TMP']) process.env[name] = folder;
   return () => {
     const leftovers = leftoverTemporaryEntries(readdirSync(folder));
