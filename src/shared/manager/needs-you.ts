@@ -41,7 +41,7 @@ export const NEED_LABELS: Record<NeedKind, string> = {
   exited: 'died',
   stalled: 'agent gone quiet',
   review: 'in Review, no review running',
-  leftover: 'Done, uncommitted work left',
+  leftover: 'Done or Cancelled, uncommitted work left',
 };
 
 function columnCards(board: Board | undefined, name: string): Card[] {

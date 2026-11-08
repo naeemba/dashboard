@@ -693,9 +693,9 @@ export function createBoardView(options: BoardOptions): BoardView {
     options.onChanged();
   }
 
-  // The delete key. Outside Cancelled it moves the card there, a move like any other and undone like
-  // one (card-delete.ts says why), and in Done it is refused like any keyboard move. In Cancelled it
-  // deletes for good, after the confirm.
+  // The delete key. Outside Cancelled and Done it moves the card to Cancelled, a move like any other
+  // and undone like one (card-delete.ts says why). In Cancelled or Done it deletes for good, after
+  // the confirm.
   //
   // The count is descendants, not direct children, because that is how many cards vanish — and most
   // of them are in columns you are not looking at. A leaf card gets the same dialog without the
