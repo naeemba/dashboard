@@ -1,0 +1,42 @@
+import type { Refused } from '../../../shared/app/bridge';
+import { baseName } from '../../../shared/app/base-name';
+import { action } from '../action';
+import { isFilledText } from './pane-input';
+
+// `pane release`: the worker closed, unless what runs in it is somebody else's, and the throwaway
+// worktree it was given removed once nothing in it is left unfinished. The asker's right to the pane
+// is the command's to check first (session-requests.ts).
+
+export type Throwaway = { worktreePath: string; projectPath: string };
+
+export type PaneReleasePorts = {
+  // What is running in the pane when something is, or null.
+  busyWith(id: string): string | null;
+  // Whether what runs there is main's worker, which release may kill. Anything else is somebody else's:
+  // a dev server, a card a ship gave an agent.
+  mainsWorker(id: string): boolean;
+  // pane.close.
+  close(id: string): Promise<{ output: string } | Refused>;
+  // Everything the command held of the pane let go of, and the throwaway worktree it was given, if any.
+  forget(id: string): Throwaway | undefined;
+  // Why the worktree is kept, or null when nothing in it would be lost (finished-work.ts).
+  unfinished(worktreePath: string): Promise<string | null>;
+  removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
+};
+
+export const paneRelease = action<PaneReleasePorts, { id: string }, { output: string }>('pane.release', {
+  words: [],
+  input: ({ id }) => (isFilledText(id) ? { id } : { refused: 'no pane was given' }),
+  async run(ports, { id }) {
+    const program = ports.busyWith(id);
+    if (program !== null && !ports.mainsWorker(id)) return { refused: `${id} is running ${program}, which no session run started — close it by hand` };
+    const closed = await ports.close(id);
+    if ('refused' in closed) return closed;
+    const throwaway = ports.forget(id);
+    if (throwaway === undefined) return { output: `released ${id}` };
+    const reason = await ports.unfinished(throwaway.worktreePath);
+    if (reason !== null) return { output: `released ${id}; kept ${throwaway.worktreePath}: ${reason}` };
+    await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);
+    return { output: `released ${id} and removed ${baseName(throwaway.worktreePath)}` };
+  },
+});

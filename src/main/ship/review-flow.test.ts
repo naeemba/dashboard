@@ -65,7 +65,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
         return { ok: true, message: '', dirty: [] };
       },
       addWorktree: async (added) => { log.added.push(added.branch); },
-      startReview: (started, slot, prompt) => {
+      startReview: async (started, slot, prompt) => {
         log.started.push({ slot, prompt });
         return { ok: true, entry: started };
       },
@@ -409,7 +409,7 @@ describe('reviewSweep', () => {
   it('says on the card when the pane could not be taken', async () => {
     const { entry, projectPath } = flight(12);
     const { ports: made } = ports(entry, {
-      startReview: () => ({ ok: false, message: 'api was closed mid-ship' }),
+      startReview: async () => ({ ok: false, message: 'api was closed mid-ship' }),
     });
     await sweepWith(made).run();
     expect(commentsOnCard(projectPath)).toEqual(['No review worktree: api was closed mid-ship']);

@@ -1,30 +1,22 @@
-import type { OpenProjects, Project } from '../../shared/app/bridge';
+import type { OpenProjects } from '../../shared/app/bridge';
 import type { Channels } from '../app/channels';
 import { terminalId } from '../../shared/panes/terminals';
+import type { PaneActions } from '../actions/pane/pane-actions';
 
-// The new-pane and close-pane channels. Main-process wiring only, out of main.ts at its 600-line
-// ceiling; main hands over the worker lifecycle it holds.
-export function registerWorkerChannels(table: Channels, main: {
-  project(slot: number): Project | undefined;
-  openPanes(slot: number): number[];
-  openWorker(slot: number): number;
-  closeWorker(id: string): void;
+// The new-pane and close-pane channels: doors of pane.open and pane.close, which decide.
+export function registerWorkerChannels(table: Channels, main: Pick<PaneActions, 'open' | 'close'> & {
   openProjects(): OpenProjects;
-  // New Claude: the new pane drawn as a Claude screen of yours in the project's folder (screen-workers.ts).
-  openScreen(id: string, projectPath: string): void;
 }): void {
   // The two keys and the two halves of the button above the worker list: a shell, or with `claude` a
-  // Claude screen waiting for its first prompt. A project with no folder has no panes to add to.
-  table.handle('pane:add', (_screen, slot: number, claude = false) => {
-    const project = main.project(slot);
-    if (project === undefined || project.missing) return null;
-    const index = main.openWorker(slot);
-    if (claude) main.openScreen(terminalId(slot, index), project.path);
-    return { index, open: main.openProjects() };
+  // Claude screen waiting for its first prompt. A refusal (a project with no folder) answers null, as
+  // the screen has nothing to land on.
+  table.handle('pane:add', async (_screen, slot: number, claude = false) => {
+    const opened = await main.open.call({ slot, claude });
+    return 'refused' in opened ? null : { index: opened.index, open: main.openProjects() };
   });
-  // The close key and a worker's close button. Only a worker that is open: main is the Claude screen and
-  // the editor is not in the list.
-  table.handle('pane:close', (_screen, slot: number, index: number) => {
-    if (main.openPanes(slot).includes(index)) main.closeWorker(terminalId(slot, index));
+  // The close key and a worker's close button. The screen only closes a pane it shows, so a refusal has
+  // nobody to tell.
+  table.handle('pane:close', async (_screen, slot: number, index: number) => {
+    await main.close.call({ id: terminalId(slot, index) });
   });
 }

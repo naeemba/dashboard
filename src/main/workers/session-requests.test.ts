@@ -37,24 +37,29 @@ function project(overrides: Partial<SessionPorts> = {}) {
     busyWith: (id) => (agents.has(id) ? 'an agent' : null),
     directoryOf: () => '/work/api',
     mainsWorkerIn: (id) => workers.has(id),
-    openWorker: () => {
+    open: async () => {
       const index = open.length;
       open.push(index);
-      return index;
+      return { index };
     },
-    startWorker: (id, start) => {
+    startWorker: async (id, start) => {
       agents.add(id);
       workers.add(id);
       started.push({ id, ...start });
+      return { output: '' };
     },
-    closeWorker: (id) => {
+    close: async (id) => {
       closed.push(id);
       agents.delete(id);
       workers.delete(id);
       open.splice(open.indexOf(Number(id.split(':')[1])), 1);
+      return { output: '' };
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
-    type: (id, text) => { typed.push(`${id} ${text}`); },
+    send: async (id, text) => {
+      typed.push(`${id} ${text}`);
+      return { output: `typed into ${id}` };
+    },
     tell: (slot, text) => String(told.push(`${slot} ${text}`) - 1),
     withdraw: (slot, messageId) => { withdrawn.push(`${slot} ${messageId}`); },
     cardWorktree: (_projectPath, cardId) => ({
@@ -212,7 +217,7 @@ describe('sessionRequests', () => {
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
-    ports.closeWorker('2:1');
+    await ports.close('2:1');
     expect(await answer({ directory: '/work/api', args: ['claim'] })).toEqual({ ok: true, output: '2:1' });
     expect(answer.workers()).toEqual([]);
     await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
@@ -441,22 +446,24 @@ function pages() {
       return 3;
     },
     openPanes: (slot) => panes.get(slot) ?? [],
-    openWorker: (slot) => {
+    open: async (slot) => {
       const open = panes.get(slot) ?? [];
       open.push(open.length);
-      return open.length - 1;
+      return { index: open.length - 1 };
     },
     directoryOf: (id) => paths.get(Number(id.split(':')[0])),
     agentIn: (id) => working.has(id),
     mainsWorkerIn: (id) => working.has(id),
-    startWorker: (id, start) => {
+    startWorker: async (id, start) => {
       working.add(id);
       started.push({ id, ...start });
+      return { output: '' };
     },
-    closeWorker: (id) => {
+    close: async (id) => {
       const [slot, index] = id.split(':').map(Number);
       panes.set(slot, (panes.get(slot) ?? []).filter((each) => each !== index));
       working.delete(id);
+      return { output: '' };
     },
   });
   const answer = sessionRequests(ports);
@@ -535,7 +542,7 @@ describe('sessionRequests across projects', () => {
     const { ask, ports } = pages();
     await ask(['claim', '--project', 'api']);
     // Closed by hand, not released: the number is free and the api's own claim takes it.
-    ports.closeWorker('2:1');
+    await ports.close('2:1');
     expect(await ask(['claim'], '/work/api')).toEqual({ ok: true, output: '2:1' });
     expect(await ask(['run', '2:1', 'go'])).toEqual({ ok: false, output: '2:1 is not a pane of this project' });
   });

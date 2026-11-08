@@ -41,7 +41,7 @@ export type ReviewPorts = {
   addWorktree: (entry: WorktreeEntry) => Promise<unknown>;
   // Record the worktree and start the agent on it, answering the way a ship does — with the record it
   // wrote, or with the message saying which step refused.
-  startReview: (entry: WorktreeEntry, slot: number, prompt: string) => ShipResult;
+  startReview: (entry: WorktreeEntry, slot: number, prompt: string) => Promise<ShipResult>;
   // Run this with the project's git queue held — the same queue the ships use, so a review and a ship
   // of two different cards in one repository cannot land on git's index lock together.
   queue: <T>(key: string, run: () => Promise<T>) => Promise<T>;
@@ -152,7 +152,7 @@ async function swapWorktree(
     return { message: refusal(entry, removed, 'waiting for the commit'), again: true };
   }
   await ports.addWorktree(entry);
-  const started = ports.startReview(
+  const started = await ports.startReview(
     { ...entry, pane: null, reviewing: true },
     slot,
     reviewPrompt(entry.cardId, pullRequest, entry.projectPath, entry.title),

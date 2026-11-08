@@ -16,7 +16,7 @@ export type ShipPorts = {
   worktrees(): readonly WorktreeEntry[];
   recordWorktree(entry: WorktreeEntry): WorktreeEntry;
   // A free worker for the card's agent, or a new one; main.ts says how it picks.
-  attachPane(entry: WorktreeEntry, slot: number, prompt: string): ShipResult;
+  attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult>;
   agentRunsIn(slot: number, pane: number | null): boolean;
   dropDeadWorktrees(): void;
   forgetReview(cardId: string): void;

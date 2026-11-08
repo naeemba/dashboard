@@ -112,15 +112,6 @@ export function agentToResume(
   ));
 }
 
-// How a resumed conversation comes back. Main's worker comes back as main's worker, the pane's agent
-// started the way a session run starts one, so its hooks report to the pane it is in now. A card's agent
-// a ship started comes back as that agent. Anything else is typed into a shell, so exiting it leaves a
-// prompt. A worker main ran on a card is both, and main's: the card's record names the pane either way.
-export function resumedAs(conversation: PaneConversation, card: WorktreeEntry | undefined): 'worker' | 'agent' | 'shell' {
-  if (conversation.dispatched === true) return 'worker';
-  return card === undefined ? 'shell' : 'agent';
-}
-
 // What a project's saved first pane comes back as. Main resumes it when it ran in the project's
 // checkout, compared in real paths for the reason agentToResume gives. Anything else was not main's: a
 // session.json from before main existed held the first of five shells there, often a card's agent, and
@@ -132,10 +123,4 @@ export function mainResume(
 ): { session?: string; worker?: PaneConversation } {
   if (saved === null) return {};
   return realPath(saved.directory) === realPath(projectPath) ? { session: saved.session } : { worker: saved };
-}
-
-// Typed into the pane's own shell rather than run as the pane's process, so exiting Claude leaves a
-// prompt instead of a dead pane.
-export function resumeLine(conversation: PaneConversation): string {
-  return `claude --resume ${conversation.session}\r`;
 }
