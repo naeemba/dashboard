@@ -1,11 +1,11 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 describe('rememberedSessions', () => {
-  const folder = mkdtempSync(path.join(tmpdir(), 'chat-sessions-'));
+  const folder = temporaryFolder('chat-sessions-');
   const file = (name: string, text: string): string => {
     const at = path.join(folder, name);
     writeFileSync(at, text);

@@ -5,10 +5,26 @@ gets a module and a test, and the build stamps its commit instead of every card
 bumping the version. Owns `.gitattributes`, the CI and release workflows (the release notes and download links in
 `scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` (its decisions in `scripts/release-checks.mjs`, tested beside it) and the
 `/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build
-hooks, `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
+hooks, the test run's temporary-folder guard (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, its count in
+`vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
 in `scripts/running-app.mjs`, tested beside it), written in Node so the same
 hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
 line and points at its id here.
+
+## Checks
+
+    pnpm test                # vitest, node environment only
+    pnpm exec tsc --noEmit
+    pnpm exec eslint .
+
+`pnpm test` runs in a temporary folder of its own: the guard points `TMPDIR` at a fresh `vitest-…` folder
+before any test file starts, so every `os.tmpdir()` (a test's, the code under test's, a git or node it
+spawns) lands inside it. When the run ends it removes that folder, and fails the run naming what was left
+in it by the name it was made with, `dashboard-review- ×62`. A test that needs a folder takes it from
+`temporaryFolder(prefix)` in `src/main/testing/temporary-folder.ts`, which removes it after the test file;
+a test that makes one itself removes it in an `afterAll` or `afterEach`. Node's own compile caches are
+not counted. Before the guard, test runs left hundreds of folders in `/tmp` a run, and on 2026-11-08 they
+filled its 16G and stopped every worker.
 
 ## How to release
 
@@ -51,4 +67,6 @@ follows. The workflow writes them, so they are the same whichever way the run wa
 - Given a second Run workflow while one is running, when it starts after the first finishes, then it works out the version the first one released and fails before committing, saying to dispatch again.
 - Given a pushed pre-release tag (`v2.42.0-rc.1`) on a commit whose `package.json` says that version, when the workflow runs, then it builds and publishes a pre-release the same way and commits nothing to main.
 - Given an app running out of this checkout, on any of the three platforms, when `pnpm run package` runs, then it stops before deleting the files that app is executing.
+- Given a test that makes a temporary folder and never removes it, when `pnpm test` ends, then the run fails naming the folder's prefix and count, and nothing it made is left in `/tmp`.
+- Given a clean `pnpm test`, when it ends, then `/tmp` holds the same `dashboard-*`, `create-task-*` and `board-files-*` folders it held before.
 - Given two branches cut after #167 that each append a line to the same `docs/**/history.md`, when one merges the other, then both lines are kept and git reports no conflict. A branch cut before #167 still conflicts once, on the merge that brings `.gitattributes` in.

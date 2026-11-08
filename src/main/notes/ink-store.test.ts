@@ -1,15 +1,16 @@
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
-import { homedir, tmpdir } from 'node:os';
+import { chmodSync, mkdirSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY } from '../board/board-store';
 import { INK_FILE, inkPath, readInk, writeInk } from './ink-store';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
 const posixModesOnly = it.skipIf(process.platform === 'win32');
 
 function project(): string {
-  return mkdtempSync(join(tmpdir(), 'dashboard-ink-'));
+  return temporaryFolder('dashboard-ink-');
 }
 
 describe('the ink file', () => {

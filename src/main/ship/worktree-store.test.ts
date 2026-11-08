@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -18,6 +17,7 @@ import {
   writeWorktrees,
 } from './worktree-store';
 import type { WorktreeEntry } from '../../shared/app/bridge';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 const entry: WorktreeEntry = {
   cardId: 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa',
@@ -32,7 +32,7 @@ const entry: WorktreeEntry = {
 
 // The file lives in the app's own folder, so a temporary one stands in for it.
 function worktreesFile(): string {
-  return join(mkdtempSync(join(tmpdir(), 'dashboard-worktrees-')), 'worktrees.json');
+  return join(temporaryFolder('dashboard-worktrees-'), 'worktrees.json');
 }
 
 describe('readWorktrees', () => {

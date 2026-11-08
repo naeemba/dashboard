@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
 import { BOARD_FILE_PATH, peekBoard } from './board-store';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Real git for the create-task tests, against a bare repository standing in for the remote. Not a
 // .test.ts, so vitest runs it only through the files that import it.
@@ -36,14 +36,14 @@ export function git(directory: string, ...commandArguments: string[]): string {
 }
 
 export function remote(): string {
-  const bare = mkdtempSync(join(tmpdir(), 'create-task-remote-'));
+  const bare = temporaryFolder('create-task-remote-');
   git(bare, 'init', '--quiet', '--bare', '-b', 'main');
   return bare;
 }
 
 // The board on a branch of `bare`, read the way the app reads one, or null when it has none.
 export function boardOn(bare: string, branch = 'main'): Board | null {
-  const checkout = mkdtempSync(join(tmpdir(), 'create-task-read-'));
+  const checkout = temporaryFolder('create-task-read-');
   git(checkout, 'clone', '--quiet', '--branch', branch, bare, '.');
   return peekBoard(checkout);
 }
@@ -57,7 +57,7 @@ export function writeLegacyBoard(checkout: string, board: Board = emptyBoard()):
 
 // A clone of `bare` standing on a feature branch with a change it has not committed.
 export function clone(bare: string, withBoard: boolean): string {
-  const checkout = mkdtempSync(join(tmpdir(), 'create-task-checkout-'));
+  const checkout = temporaryFolder('create-task-checkout-');
   git(checkout, 'clone', '--quiet', bare, '.');
   git(checkout, 'checkout', '--quiet', '-b', 'main');
   if (withBoard) writeLegacyBoard(checkout);

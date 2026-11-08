@@ -1,10 +1,10 @@
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { clone, remote, useGitTestEnvironment } from './create-task-git-fixture';
 import { createTaskScript, installCreateTask } from './create-task-install';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 useGitTestEnvironment();
 
@@ -12,7 +12,7 @@ useGitTestEnvironment();
 const posix = process.platform !== 'win32';
 
 function folder(): string {
-  return mkdtempSync(join(tmpdir(), 'create-task-install-'));
+  return temporaryFolder('create-task-install-');
 }
 
 describe('installCreateTask', () => {

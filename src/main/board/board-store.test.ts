@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -28,6 +27,7 @@ import {
   writeBoard,
 } from './board-store';
 import { MANAGER_PROJECT } from '../../shared/manager/manager';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Runs a test with a fake home directory standing in for the real one, so nothing it writes lands in
 // the .dashboard of whoever runs the tests.
@@ -44,7 +44,7 @@ function inFakeHome(test: (home: string) => void): void {
 // realpath, because on macOS the temporary folder is reached through a symlink and projectRoot
 // resolves it — a raw mkdtemp path would not compare equal to the answer.
 function project(): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), 'dashboard-board-')));
+  return realpathSync(temporaryFolder('dashboard-board-'));
 }
 
 function writeRaw(projectPath: string, text: string): void {
