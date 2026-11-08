@@ -36,4 +36,18 @@ change touches them; `shipFlow` and `reviewSweep` stay and are called by the
 actions. A conversion of every channel at once is a big diff that changes
 nothing anyone asked for and breaks things nobody is testing; this way each
 conversion rides with a change that needed it, and the registry is proven on
-three actions first.
+three actions first. Its "when a change touches them" is replaced by
+actions-decision-4.
+
+## actions-decision-4: Every change goes through an action, one noun at a time
+
+**A change to app state is an action, `src/main/actions/<noun>/<verb>.ts`, and
+every door calls it; the move is one card per noun, in the order
+`inventory.md` gives.** This replaces actions-decision-3's "when a change
+touches them". Waiting for a change to need it left five ways to start an agent
+in a pane and only one choosing screen or terminal (workers-decision-8), and two
+of them still type `claude --resume` into a shell. Converting everything in one
+card was weighed again and rejected for the reason actions-decision-3 gives;
+one noun per card keeps each diff to one part of `main.ts`, in an order where
+none waits on another. Until a noun's card lands, its bypasses are named in
+`bypasses.test.ts`, so they can shrink and cannot grow (actions-rule-1).

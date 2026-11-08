@@ -86,6 +86,10 @@ app.
 - **A card with a pull request open goes in `Review`, not `Done`.** This beats
   the global "move to Done when the PR is ready". The move into `Done` happens
   on the branch first, then the merge, then the app's board. (board-rule-2)
+- **A caller that changes state calls an action.** A new door (IPC handler,
+  command answer, key, sweep) calls the action in `src/main/actions/<noun>/`;
+  a new kind of change adds one. `bypasses.test.ts` names the calls still made
+  outside one: lower a count, never raise it. (actions-rule-1)
 - **IPC channels are `<noun>:<verb>`**: `link:open`, `board:read`,
   `pty:resize`. (app-rule-1)
 - **Imports stay on their process's side.** `src/renderer/` never imports

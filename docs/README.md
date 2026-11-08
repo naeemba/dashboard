@@ -22,7 +22,7 @@ commits cite the id.
 | [skills](skills/README.md) | The Claude Code skills the app installs: `/create-task` and `/adopt-docs` |
 | [command](command/README.md) | The `dashboard` command from any terminal: `board`, `pane` and `project` behind one entry |
 | [projects](projects/README.md) | `~/.dashboard/projects.yaml` and `dashboard project find`, `list`, `init`, `open`, `close` and `focus` |
-| [actions](actions/README.md) | What the app does on request — card move, ship and review — defined once in main for the screen and the command |
+| [actions](actions/README.md) | What the app does on request — card move, ship, review and pane dispatch — defined once in main for the screen and the command, and the plan for the rest |
 | [ship](ship/README.md) | A card into a worktree with an agent, the review, the worktree list |
 | [notes](notes/README.md) | Text and handwriting notes per project and for the manager |
 | [drawer](drawer/README.md) | The drawer of a page's docs and the Claude sessions the app started |

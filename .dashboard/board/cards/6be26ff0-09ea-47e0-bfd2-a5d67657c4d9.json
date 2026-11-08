@@ -1,0 +1,11 @@
+{
+  "id": "6be26ff0-09ea-47e0-bfd2-a5d67657c4d9",
+  "title": "Every worktree change goes through a worktree action: make and remove",
+  "notes": "Second per-noun move, after the pane card lands (both edit main.ts). worktree.make: the ship's (addBranchWorktree, ship-flow.ts:88 -> branch-worktree.ts:15, the same git line the throwaway uses), the throwaway's (makeWorktree, main.ts:807), and the reviewed card's re-add (addWorktree port, main.ts:746, from review-flow.ts:154, behind card.review already). worktree.remove: the dialog and manager (worktree:remove, worktree-channels.ts:44), pane release's throwaway (main.ts:811), the review's port (main.ts:745). One decision of forced or not and what gets killed in it. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T13:25:39.351Z",
+  "updatedAt": "2026-11-08T13:33:23.416Z",
+  "column": "Todo",
+  "order": 15
+}

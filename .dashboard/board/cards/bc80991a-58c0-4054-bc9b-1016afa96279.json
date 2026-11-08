@@ -1,0 +1,11 @@
+{
+  "id": "bc80991a-58c0-4054-bc9b-1016afa96279",
+  "title": "settings.json has one writer: a settings.write action",
+  "notes": "Last per-noun move. writeSettings is called from three places in main.ts: launch's host token (157), settings:write (560), and a remote join saving its address (867). One action owns the write and the shell it picks. The writeSettings(settingsFile count in bypasses.test.ts goes to 1. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-08T13:25:39.573Z",
+  "updatedAt": "2026-11-08T13:25:39.573Z",
+  "column": "Todo",
+  "order": 18
+}
