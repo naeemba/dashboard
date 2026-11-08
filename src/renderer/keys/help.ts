@@ -51,7 +51,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
   claude: 'Claude Code as a page: tables, code, diffs, and tool calls folded, which the unfold key '
     + 'opens; the link key follows links. The project\'s main session. A slash lists commands, @ '
     + 'mentions a file, the agents key opens agents\' conversations. The foot shows usage and cache '
-    + 'warmth; the refresh key rereads it, the context key lists it, Enter opens rows.',
+    + 'warmth, the context key lists it; clicking its model, mode or effort changes it.',
   sections: 'The manager is five screens under one strip of names; two of these keys walk it from any '
     + 'of them, since the arrows belong to the board and the notes. The refresh key reads the four '
     + 'cards above the strip now rather than at the next half hour.',

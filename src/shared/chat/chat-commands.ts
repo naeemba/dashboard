@@ -167,10 +167,16 @@ export function resumeRows(found: ChatSessions, query: string, now = Date.now())
 // first. The one the screen is on is marked, whether it was picked by its alias or the session named
 // it by its full id.
 export function modelRows(models: ModelInfo[], current: string | null, query: string): SearchRow<string>[] {
+  const on = currentModel(models, current);
   return ranked(models, (model) => `${model.displayName} ${model.value}`, query).map((model) => {
-    const mark = current !== null && isModel(model, current) ? '● ' : '';
+    const mark = model.value === on ? '● ' : '';
     return { name: `${mark}${model.displayName}`, detail: model.description, choice: model.value };
   });
+}
+
+// The value of the row the screen is on, the one /model marks and opens on; undefined for none listed.
+export function currentModel(models: ModelInfo[], current: string | null): string | undefined {
+  return current === null ? undefined : models.find((model) => isModel(model, current))?.value;
 }
 
 // The model `/model x` names, by its alias, full id or shown name; null for one the session does not

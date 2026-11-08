@@ -4,7 +4,7 @@ import { markedRows, type SearchRow } from '../app/fuzzy';
 // The model, the mode and the effort on the Claude screen's foot, each a sheet a click on it opens
 // (chat-screen-dispatch.ts), and the lists the keys walk.
 
-// What the model key walks and the model sheet lists. Null is whatever the session's own settings choose.
+// What the model key walks. Null is whatever the session's own settings choose.
 export const MODELS: (string | null)[] = [null, 'opus', 'sonnet', 'haiku'];
 // What the edits key walks and the mode sheet lists, in the Claude Code terminal's order. Auto is on it
 // because main starts in it, and a walk that could not come back would leave main asking before every
@@ -27,10 +27,6 @@ export type FootSetting = typeof FOOT_SETTINGS[keyof typeof FOOT_SETTINGS];
 export function footSetting(classNames: Iterable<string>): FootSetting | null {
   for (const name of classNames) if (name in FOOT_SETTINGS) return FOOT_SETTINGS[name as keyof typeof FOOT_SETTINGS];
   return null;
-}
-
-export function footModelRows(current: string | null, query: string): SearchRow<string | null>[] {
-  return markedRows(MODELS, current, (model) => model ?? 'default', query);
 }
 
 export function footModeRows(current: PermissionMode, query: string): SearchRow<PermissionMode>[] {

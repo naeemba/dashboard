@@ -7,7 +7,7 @@ import { manageMcp } from './chat-mcp-view';
 import { rewind } from './chat-rewind-view';
 import { branch, chooseModel, copyReply, renameConversation, resume, showEdits } from './chat-screen-commands';
 import type { SearchRow } from '../../shared/app/fuzzy';
-import { footModeRows, footModelRows, type FootSetting } from '../../shared/chat/foot-choices';
+import { footModeRows, type FootSetting } from '../../shared/chat/foot-choices';
 import { working, type Transcript } from '../../shared/chat/chat-transcript';
 import type { ChatViewOptions } from './chat-view';
 import { searchOverlay } from '../app/overlay';
@@ -110,20 +110,21 @@ function showEfforts(screen: CommandScreen, name: string): void {
     else screen.configure({ effort: named });
     return;
   }
-  sheet(screen, 'chat-effort', 'effort levels', (query) => effortRows(screen.effort(), query), screen.effort(), (effort) => ({ effort }));
+  sheet(screen, 'chat-effort', 'level', (query) => effortRows(screen.effort(), query), screen.effort(), (effort) => ({ effort }));
 }
 
 // A click on the model, the mode or the effort in the foot: a sheet of that setting's choices, open on
-// the one it is on. The model sheet is the list the model key walks, not /model's, which asks the session.
+// the one it is on. The model and effort sheets are /model's and /effort's.
 export function showFootSetting(setting: FootSetting, screen: CommandScreen): void {
   if (setting === 'effort') return showEfforts(screen, '');
-  if (setting === 'model') return sheet(screen, 'chat-model', 'models', (query) => footModelRows(screen.model(), query), screen.model(), (model) => ({ model }));
-  sheet(screen, 'chat-mode', 'modes', (query) => footModeRows(screen.mode(), query), screen.mode(), (permissionMode) => ({ permissionMode }));
+  if (setting === 'model') return showModels(screen, '');
+  sheet(screen, 'chat-mode', 'mode', (query) => footModeRows(screen.mode(), query), screen.mode(), (permissionMode) => ({ permissionMode }));
 }
 
 // A sheet of one setting's choices, open on the one it is on; the one taken is the setting's change.
+// The noun is one choice's, singular: the placeholder searches its plural, the empty line names it.
 function sheet<Choice>(screen: CommandScreen, name: string, noun: string, rows: (query: string) => SearchRow<Choice>[], current: Choice, change: (picked: Choice) => ChatPreferences): void {
-  void searchOverlay({ name, placeholder: `Search ${noun}`, rows, empty: 'Nothing matches.', glyph: () => 'claude', opensOn: current }).then((picked) => {
+  void searchOverlay({ name, placeholder: `Search ${noun}s`, rows, empty: `No ${noun} matches.`, glyph: () => 'claude', opensOn: current }).then((picked) => {
     if (picked !== undefined) screen.configure(change(picked));
     screen.focus();
   });
