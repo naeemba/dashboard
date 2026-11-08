@@ -20,7 +20,8 @@ import { EDITOR_INDEX, MAIN_INDEX, paneFromId, terminalId, workersOfSlot } from 
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { paneActions } from './actions/pane/pane-actions';
 import { projectActions, registerProjectChannels } from './actions/project/project-actions';
-import { isRefused } from './actions/action';
+import { actionRequests, isRefused } from './actions/action';
+import { updateActions } from './actions/update/update-actions';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
@@ -77,7 +78,6 @@ import {
 import { usageSweep } from './usage/usage-sweep';
 import { entryForCard, withoutPanes } from './ship/worktree-store';
 import { cardActions } from './actions/card/card-actions';
-import { actionRequests } from './actions/action';
 import { worktreeKeeper } from './ship/worktree-keeper';
 import type { OpenProjects, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
@@ -458,6 +458,11 @@ const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'sessi
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
 table.handle('settings:read', () => ({ settings, shellCommand }));
+// The newest release, checked now and every six hours while the settings row allows it (docs/updates).
+const updates = updateActions({
+  table, send: (channel, state) => liveWindow()?.webContents.send(channel, state), running: __BUILD_VERSION__,
+  enabled: () => settings.updates.check, log: (draft) => logStore.log(draft),
+});
 registerPaneChannels(table, {
   shells, screens: paneScreens, spawnTerminal: panes.spawn,
   land: (paneId) => { void project.focus.call(paneFromId(paneId)); },
@@ -734,13 +739,14 @@ function createWindow(): void {
   mainWindow = openAppWindow({
     background: settings.theme.background,
     // One last reading before the shells die, so a conversation started or cleared since the last sweep
-    // is the one the next launch resumes. A reading that fails still quits, on the last sweep's.
+    // is the one the next launch resumes. A reading that fails still quits, on the last sweep's. Then the
+    // update Restart armed, if it was what asked to quit.
     async beforeQuit() {
       const placement = await tokenUsage.placeNow().catch(() => null);
       if (placement !== null) claudeSessions.placed(placement);
+      await updates.beforeQuit();
     },
-    loaded: () => failures.drain(),
-    shellsDieAtQuit: panes.workDiesAtQuit,
+    loaded: () => failures.drain(), shellsDieAtQuit: panes.workDiesAtQuit, quitCancelled: updates.quitCancelled,
   });
   // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
   // that was never finished.

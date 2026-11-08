@@ -144,7 +144,8 @@
 /* Help: sections of key/action rows, scrolling as one if the screen is short. What's new is the same
    shape, a day per section and a pull request per row. */
 .help-dialog,
-.whats-new-dialog {
+.whats-new-dialog,
+.updates-dialog {
   width: min(680px, 92vw);
   max-height: 74vh;
   overflow-y: auto;

@@ -14,6 +14,7 @@ import './usage/usage.css';
 import './manager/manager.css';
 import { openHelp } from './keys/help';
 import { openWhatsNew, whatsNewAtLaunch } from './app/whats-new-view';
+import { openUpdates, watchUpdates } from './app/update-view';
 import { preloadFont } from './app/font-preload';
 import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
 import { createDrawer } from './drawer/drawer-view';
@@ -103,6 +104,7 @@ statusTerminal.className = 'terminal';
 const statusError = createStatusError(bridge);
 const showError = statusError.show;
 const showNotice = statusError.notice;
+watchUpdates(bridge, (message) => showNotice('update', message), () => bindingName(settings, 'updates'));
 statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
 const addPaneButton = createAddPaneButton((claude) => addPane(pages[activeIndex], claude));
@@ -647,6 +649,7 @@ function apply(action: Action): void {
   if (action.kind === 'help') return showHelp();
   if (action.kind === 'settings') return showSettings();
   if (action.kind === 'whats-new') return void openWhatsNew(bridge).then(() => showPage(activeIndex));
+  if (action.kind === 'updates') return void openUpdates(bridge, (message) => showError('update', message)).then(() => showPage(activeIndex));
   if (action.kind === 'project-drawer') return drawer.toggle();
   if (action.kind === 'needs-you-next') return showNotice('manager', pages[0].manager?.goToNextNeed(currentManagerRows()) ?? '');
   if (action.kind === 'worktrees') {

@@ -31,6 +31,7 @@ commits cite the id.
 | [markets](markets/README.md) | The four cards across the top of the manager page |
 | [remote-host](remote-host/README.md) | A second screen connected to another Dashboard's session |
 | [settings](settings/README.md) | The settings file and screen |
+| [updates](updates/README.md) | A newer release said on the status bar, downloaded and installed from the UI |
 | [keys](keys/README.md) | The shortcut table, modes, help dialog and which-key strip |
 | [errors](errors/README.md) | Refusals, failures nothing caught, failures at launch |
 

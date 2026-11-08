@@ -30,10 +30,12 @@ export const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 // host must keep its Cmd bindings. The weather and prices on the manager are read with this machine's
 // Place, and do not depend on whose session is shown. Connecting and disconnecting are the client's own by definition, and
 // so is the window saying it has restored its own session, which is what `--remote` waits for. So is the
-// what's-new record: it says which build of this install you last saw, whatever host it shows.
+// what's-new record: it says which build of this install you last saw, whatever host it shows. And the
+// update: the app that updates is the one on this desk, not the host's (docs/updates).
 const CLIENT_CHANNELS = new Set([
   'link:open', 'notification:show', 'settings:read', 'settings:write', 'host:connect', 'host:disconnect',
   'session:restored', 'markets:read', 'whats-new:record',
+  'update:read', 'update:check', 'update:download', 'update:restart',
 ]);
 
 export function isClientChannel(channel: string): boolean {

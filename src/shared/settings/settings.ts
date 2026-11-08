@@ -24,6 +24,9 @@ export type Settings = {
   // autoLoop: whether a shipped card that reaches Review on its own starts its review loop. Off, it
   // waits there until moved into Review by hand or `dashboard board review <id>` (column-entry.ts).
   review: { autoLoop: boolean };
+  // check: whether the app reads GitHub's newest release on launch and every six hours (docs/updates).
+  // Off, the update key still checks when pressed.
+  updates: { check: boolean };
 };
 
 // One line of the file's `keys`, read. `written` travels with the binding because the two answers come
@@ -70,6 +73,7 @@ export function defaultSettings(isMac: boolean): Settings {
     host: { port: null, token: '', bind: DEFAULT_HOST_BIND },
     remote: { address: '', token: '' },
     review: { autoLoop: true },
+    updates: { check: true },
   };
 }
 
@@ -128,6 +132,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
   const storedReview = asRecord(raw.review);
+  const storedUpdates = asRecord(raw.updates);
   // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
   // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
   // typed cannot take one off a line someone did.
@@ -161,6 +166,9 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     },
     review: {
       autoLoop: typeof storedReview.autoLoop === 'boolean' ? storedReview.autoLoop : defaults.review.autoLoop,
+    },
+    updates: {
+      check: typeof storedUpdates.check === 'boolean' ? storedUpdates.check : defaults.updates.check,
     },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }

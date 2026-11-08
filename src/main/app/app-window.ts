@@ -11,6 +11,8 @@ export type AppWindowOptions = {
   background: string;
   // What has to happen after Quit is chosen and before the shells die.
   beforeQuit(): Promise<void>;
+  // Cancel was chosen: whatever was waiting on this quit (an update's restart) is off.
+  quitCancelled(): void;
   // The page has loaded and can be sent a message.
   loaded(): void;
   // Some pane's shell runs in the app this time (no host answered, another Dashboard holds it, or it
@@ -91,6 +93,9 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
     event.preventDefault();
     if (askingToQuit) return;
     askingToQuit = true;
+    // Anything but Quit forgets an armed update, a dialog that failed included: left armed, the next
+    // quit the person confirms would install it and open the app again (updates-rule-1).
+    let confirmed = false;
     void dialog.showMessageBox(window, {
       type: 'question',
       buttons: ['Cancel', 'Quit'],
@@ -102,9 +107,11 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
         : 'Every Claude screen stops, and so does the editor. The worker panes\' shells keep running and come back when Dashboard opens again.',
     }).then(async ({ response }) => {
       if (response !== 1) return;
+      confirmed = true;
       await options.beforeQuit();
       window.destroy();
     }).finally(() => {
+      if (!confirmed) options.quitCancelled();
       // Reset on the rejection path too. Leave it true after a failed dialog and every later close
       // is cancelled before it asks anything: the window can only be shut by Force Quit, which is
       // the one exit that kills the shells without asking.

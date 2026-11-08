@@ -32,6 +32,10 @@ pull request opens starts its review loop by itself. Enter turns it over. Off,
 the card waits in Review until you move it into Review or run `dashboard board
 review <id>` (docs/actions).
 
+The Updates row (`updates.check`, default on) says whether the app reads
+GitHub's newest release on launch and every six hours. Enter turns it over; off,
+the updates key still checks when pressed (docs/updates).
+
 The Host rows make this Dashboard reachable from another: a port, read at the
 next launch, and the token the other machine pastes once. The port opens on
 127.0.0.1 only, so the other machine reaches it through an SSH tunnel (ssh -L

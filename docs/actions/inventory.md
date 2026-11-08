@@ -112,6 +112,15 @@ settings, and stays.
 | settings.write | settings.write, `actions/settings/write.ts`, bound in `settings-actions.ts`; main's `writeSettings` its `writeFile` port | launch (`keepHostToken`), IPC `settings:write`, IPC `host:connect` (`saveSettings`) | no: the shell is picked again on every write, the join's included |
 | notes.write | `notes:write`, `project-files-ipc.ts:56`; `ink:write` `:64` | IPC | one writer each; no action needed |
 
+### update
+
+| Verb | Where | Doors | Bypass |
+|---|---|---|---|
+| check | update.check, `actions/update/check.ts` | launch and every six hours, IPC `update:check` (the dialog) | no |
+| download | update.download, `actions/update/download.ts` | IPC `update:download` | no |
+| restart | update.restart, `actions/update/restart.ts` | IPC `update:restart` | no |
+| install | update.install, `actions/update/install.ts`; the swap and relaunch pinned in `bypasses.test.ts` | the quit question's answer (`app-window.ts`) | no |
+
 ## The action set
 
 One row per noun.verb, and what it decides that its callers do not.
@@ -135,6 +144,10 @@ One row per noun.verb, and what it decides that its callers do not.
 | session.rename | one label for the chat and the drawer: both doors write the transcript's title and the drawer's row |
 | session.configure | the choice kept for the next start, and the running session moved onto it |
 | settings.write | the one writer of settings.json, and the shell it picks |
+| update.check | whether the release is newer, whether this machine can install it (refused if not, never offered), leaving one being installed alone; the settings row gates only the schedule |
+| update.download | that there is a release to download; a failure kept on the state for the dialog |
+| update.restart | that a download is staged and is the release; the update armed and the quit asked for |
+| update.install | Quit swaps the armed update in and relaunches; any other answer forgets it; no relaunch when the swap fails |
 
 ## The plan
 

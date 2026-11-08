@@ -15,6 +15,11 @@ const bridge: DashboardBridge = {
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openExternal: (url) => ipcRenderer.send('link:open', url),
   recordWhatsNew: (current) => ipcRenderer.invoke('whats-new:record', current),
+  readUpdate: () => ipcRenderer.invoke('update:read'),
+  onUpdateChange: (listener) => ipcRenderer.on('update:change', (_event, state) => listener(state)),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  restartToUpdate: () => ipcRenderer.invoke('update:restart'),
   notify: (title, body, paneId) => ipcRenderer.send('notification:show', title, body, paneId),
   onNotificationClick: (listener) =>
     ipcRenderer.on('notification:click', (_event, paneId) => listener(paneId)),
