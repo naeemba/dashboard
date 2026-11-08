@@ -13,18 +13,15 @@ line and points at its id here.
 
 ## Checks
 
-    pnpm test                # vitest, node environment only
-    pnpm exec tsc --noEmit
-    pnpm exec eslint .
-
-`pnpm test` runs in a temporary folder of its own: the guard points `TMPDIR` at a fresh `vitest-…` folder
-before any test file starts, so every `os.tmpdir()` (a test's, the code under test's, a git or node it
-spawns) lands inside it. When the run ends it removes that folder, and fails the run naming what was left
-in it by the name it was made with, `dashboard-review- ×62`. A test that needs a folder takes it from
-`temporaryFolder(prefix)` in `src/main/testing/temporary-folder.ts`, which removes it after the test file;
-a test that makes one itself removes it in an `afterAll` or `afterEach`. Node's own compile caches are
-not counted. Before the guard, test runs left hundreds of folders in `/tmp` a run, and on 2026-11-08 they
-filled its 16G and stopped every worker.
+The three in `CLAUDE.md`. `pnpm test` runs in a temporary folder of its own: the guard points `TMPDIR`
+(`TEMP` and `TMP` on Windows) at a fresh `vitest-…` folder before any test file starts, so every
+`os.tmpdir()` (a test's, the code under test's, a git or node it spawns) lands inside it. When the run ends
+it removes that folder, and fails the run naming what was left in it by the name it was made with,
+`dashboard-review- ×62`. A test that needs a folder takes it from `temporaryFolder(prefix)` in
+`src/main/testing/temporary-folder.ts`, which removes it after the test file. A leftover the code under
+test made is that code's bug, not the test's: it would stay in a user's `/tmp` too, so fix the code rather
+than wrapping it. Node's own compile caches are not counted. Before the guard, a test run left about 200
+folders in `/tmp`, and on 2026-11-08 they filled its 16G and stopped every worker.
 
 ## How to release
 

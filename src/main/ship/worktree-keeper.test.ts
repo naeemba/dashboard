@@ -1,15 +1,14 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readWorktrees } from './worktree-store';
 import { worktreeKeeper } from './worktree-keeper';
 import type { WorktreeEntry, WorktreeList } from '../../shared/app/bridge';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
+import { temporaryFolder } from '../testing/temporary-folder';
 
-const folder = mkdtempSync(join(tmpdir(), 'dashboard-keeper-'));
+const folder = temporaryFolder('dashboard-keeper-');
 const projectPath = join(folder, 'project');
-afterAll(() => rmSync(folder, { recursive: true, force: true }));
 
 function entry(worktreePath: string, cardId: string): WorktreeEntry {
   return {
