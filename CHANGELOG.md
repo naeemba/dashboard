@@ -1,5 +1,29 @@
 # Changelog
 
+## v2.45.0 (2026-11-08)
+
+### What's new
+
+- settings.json has one writer: a settings.write action
+- Tests leak temp folders into /tmp until it fills
+- A Cancelled column for cards that will not be done
+- Tell the user a newer release is out and update from the UI
+- Closing a project fails: 'An object could not be cloned'
+- Log entries carry the details an error needs: stack, cause, where it came from
+- board move <id> Review on a worktree's board exits 1 after moving
+
+### What's Changed
+* Stop tests leaking temporary folders into /tmp by @naeemba in https://github.com/naeemba/dashboard/pull/244
+* settings.json has one writer: a settings.write action by @naeemba in https://github.com/naeemba/dashboard/pull/243
+* A Cancelled column for cards that will not be done by @naeemba in https://github.com/naeemba/dashboard/pull/245
+* Tell the user a newer release is out and update from the UI by @naeemba in https://github.com/naeemba/dashboard/pull/246
+* Send only pane index and name over projects:close by @naeemba in https://github.com/naeemba/dashboard/pull/247
+* Log entries carry the details an error needs: stack, cause, where it came from by @naeemba in https://github.com/naeemba/dashboard/pull/248
+* board: a move on a worktree's board is only a move, and exits 0 by @naeemba in https://github.com/naeemba/dashboard/pull/249
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.44.0...v2.45.0
+
 ## v2.44.0 (2026-11-08)
 
 ### What's new
