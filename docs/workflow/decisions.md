@@ -95,7 +95,8 @@ tag and rebuilding the local app. `scripts/release.sh <bump>` does all of it; `/
 command that runs the script, in `.claude/commands/` beside `/rebuild`, where project commands live.
 
 - A shell script, not a Node one, beside `rebuild.sh`: it is a row of guards and `gh` and `git` calls.
-  Its refusals were tried by hand (each prints its own reason), not by a test.
+  Its refusals were tried by hand (each prints its own reason), not by a test, until workflow-decision-6
+  moved the two with branches into a tested module.
 - The command sets `disable-model-invocation: true` and says it runs only when the user typed it. A
   release publishes to everyone who downloads the app; nothing chains it onto a merge.
 - The run a dispatch made is the newest dispatched Release run that was not the newest before it:
@@ -113,3 +114,22 @@ command that runs the script, in `.claude/commands/` beside `/rebuild`, where pr
   listed by `updatedAt`, the nearest a card file has to when it moved. Subtasks are part of their
   parent's line. The workflow writes the list, so the script, the command and the Actions tab give the
   same notes.
+
+## workflow-decision-6: release.sh outlasts a GitHub blip, and a resume accepts the release commit
+
+Agreed on 2026-11-08, after cutting v2.43.0 (run 42395223367). `gh run watch` failed with `failed to get
+run: ... EOF` while the run was still building; the failed-leg `gh run view` failed the same way inside a
+`$(...)` under `set -eu`, and the script exited with no `Stopped:` line. Then `--resume` refused with "main
+is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` to main.
+
+- The two decisions with branches live in `scripts/release-checks.mjs`, tested beside it, and the script asks
+  through `scripts/release-checks-step.mjs`: Node is there wherever pnpm is, and the refusal text is
+  written once, where it is decided.
+- `mainRefusal`: a bump still needs main equal to `origin/main`, since it dispatches from there. A resume
+  lets `origin/main` be ahead of a clean main (an ancestor) and refuses only local commits or a dirty tree;
+  the install's `git merge --ff-only` already pulls to `origin/main`, so no separate fast-forward.
+- `afterWatch`: a failed watch asks the run's status. Not completed means the watch dropped, so watch again;
+  completed green means install; anything else completed is the failed-leg stop.
+- Every GitHub read goes through `retry`, four tries over about twenty seconds, and every `$(...)` that can
+  fail ends in `|| stop`, so there is no silent exit. `gh workflow run` is never retried: a dispatch whose
+  answer was lost may have started a run, and a second try would cut a second release.
