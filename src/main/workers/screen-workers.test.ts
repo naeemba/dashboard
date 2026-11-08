@@ -11,6 +11,8 @@ afterEach(() => { rmSync(folder, { recursive: true, force: true }); });
 
 const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const START = { session: SESSION, name: 'api-terminal-2', prompt: 'fix it\n\nSendMessage to main-api when done' };
+// New Claude, as pane.dispatch starts it.
+const BY_HAND = { session: 'mine', name: 'api-terminal-2', prompt: null };
 
 function workers(file = path.join(folder, 'screen-workers.json'), kept: Record<string, { busy: boolean }> = {}) {
   const said: string[] = [];
@@ -141,17 +143,17 @@ describe('screenWorkers', () => {
     expect(after.screens.session(screenKey('4:3'))).toMatchObject({ resume: true });
   });
 
-  it('opens a screen by hand as yours, on a new conversation, with no first prompt', () => {
+  it('opens a screen by hand as yours, with no first prompt', () => {
     const { screens, said } = workers();
-    screens.openByHand('2:1', '/work/api');
-    expect(said).toEqual(['new /work/api', 'changed']);
+    screens.start('2:1', '/work/api', '/work/api', BY_HAND, null, null);
+    expect(said).toEqual(['changed']);
     expect(screens.folder('2:1')).toBe('/work/api');
-    expect(screens.session(screenKey('2:1'))).toMatchObject({ session: 'new-1', resume: false, owner: 'you' });
+    expect(screens.session(screenKey('2:1'))).toMatchObject({ session: 'mine', resume: false, owner: 'you' });
   });
 
   it('carries a screen opened by hand on in another conversation, and brings it back there as yours', () => {
     const before = workers();
-    before.screens.openByHand('2:1', '/work/api');
+    before.screens.start('2:1', '/work/api', '/work/api', BY_HAND, null, null);
     before.screens.session(screenKey('2:1'))?.carryOnIn('picked');
     expect(before.screens.session(screenKey('2:1'))).toMatchObject({ session: 'picked', resume: true });
     const after = workers(before.file);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { projectOfFolder, sessionRequests, type SessionPorts, type WorkerLaunch } from './session-requests';
+import { projectOfFolder, sessionRequests, type SessionPorts, type WorkerStart } from './session-requests';
 import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
 
@@ -11,15 +11,13 @@ beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
 const stayStopped = () => vi.advanceTimersByTime(STOP_GRACE_MS);
 
-const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
-
 // One project, api, in slot 2, with main open and nothing else until a test opens a worker.
 function project(overrides: Partial<SessionPorts> = {}) {
   const open = [0];
   const agents = new Set<string>(['2:0']);
   // Main's record of its workers, which main.ts keeps: added by a run, gone with the agent or the pane.
   const workers = new Set<string>();
-  const started: { id: string; directory: string; agentArguments: string[]; launch: WorkerLaunch; cardId: string | null }[] = [];
+  const started: ({ id: string } & WorkerStart)[] = [];
   const closed: string[] = [];
   const marked: string[] = [];
   const removed: string[] = [];
@@ -39,17 +37,15 @@ function project(overrides: Partial<SessionPorts> = {}) {
     busyWith: (id) => (agents.has(id) ? 'an agent' : null),
     directoryOf: () => '/work/api',
     mainsWorkerIn: (id) => workers.has(id),
-    shellCommand: () => '/bin/zsh',
     openWorker: () => {
       const index = open.length;
       open.push(index);
       return index;
     },
-    newSession: () => SESSION,
-    startWorker: (id, directory, launch, cardId) => {
+    startWorker: (id, start) => {
       agents.add(id);
       workers.add(id);
-      started.push({ id, directory, agentArguments: 'terminal' in launch ? launch.terminal : [], launch, cardId });
+      started.push({ id, ...start });
     },
     closeWorker: (id) => {
       closed.push(id);
@@ -110,26 +106,20 @@ describe('sessionRequests', () => {
     expect(await outside(['send', '9:1', 'hi'])).toEqual({ ok: false, output: '9:1 is not in a project open in Dashboard' });
   });
 
-  it('runs a terminal worker in the project with its prompt as the argument', async () => {
+  it('runs a worker in the project on its prompt, as asked for', async () => {
     const { ports, started } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--terminal', 'research the cache'] }))
       .toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
-    expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api', cardId: null });
-    expect(started[0].agentArguments[1]).toContain('research the cache');
+    expect(started[0]).toEqual({ id: '2:1', directory: '/work/api', prompt: 'research the cache', as: 'terminal', cardId: null, dispatcherPath: '/work/api' });
   });
 
-  // The same worker on a Claude screen: the conversation the app chose, its name, and the prompt with
-  // who to tell, which the screen sends as its first message rather than an argument.
-  it('runs a worker as a Claude screen with --screen, and hears its hooks through notify', async () => {
-    const { ports, started, marked } = project();
+  it('hears a worker screen\'s hooks through notify', async () => {
+    const { ports, marked } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['run', '2:1', '--screen', 'research the cache'] });
-    expect(started[0].launch).toEqual({ screen: {
-      session: SESSION, name: 'api-terminal-2', prompt: expect.stringMatching(/^research the cache\n\nSendMessage to main-api when done/),
-    } });
     expect(answer.notify('2:1', 'blocked')).toEqual({ ok: true, output: '' });
     expect(marked).toContain('2:1 blocked');
     expect((await answer({ directory: '/work/api', args: ['list'] })).output).toContain('2:1\tterminal 2\tblocked');
@@ -432,7 +422,7 @@ describe('sessionRequests', () => {
 function pages() {
   const paths = new Map<number, string>([[-2, '/work/desk'], [2, '/work/api']]);
   const panes = new Map<number, number[]>([[-2, [0]], [2, [0]]]);
-  const started: { id: string; directory: string; agentArguments: string[] }[] = [];
+  const started: ({ id: string } & WorkerStart)[] = [];
   const opened: string[] = [];
   const working = new Set<string>();
   const known: Record<string, string> = { api: '/work/api', shop: '/work/shop', gone: '/work/gone' };
@@ -457,12 +447,11 @@ function pages() {
       return open.length - 1;
     },
     directoryOf: (id) => paths.get(Number(id.split(':')[0])),
-    newSession: () => SESSION,
     agentIn: (id) => working.has(id),
     mainsWorkerIn: (id) => working.has(id),
-    startWorker: (id, directory, launch) => {
+    startWorker: (id, start) => {
       working.add(id);
-      started.push({ id, directory, agentArguments: 'terminal' in launch ? launch.terminal : [] });
+      started.push({ id, ...start });
     },
     closeWorker: (id) => {
       const [slot, index] = id.split(':').map(Number);
@@ -481,8 +470,7 @@ describe('sessionRequests across projects', () => {
     expect(await ask(['claim', '--project', 'api'])).toEqual({ ok: true, output: '2:1' });
     expect(opened).toEqual([]);
     expect(await ask(['run', '2:1', '--terminal', 'fix the tests'])).toEqual({ ok: true, output: 'started api-terminal-2 in 2:1, in /work/api dashboard://pane/2:1' });
-    expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api' });
-    expect(started[0].agentArguments[1]).toContain('SendMessage to main-desk when done');
+    expect(started[0]).toMatchObject({ id: '2:1', directory: '/work/api', dispatcherPath: '/work/desk' });
     expect(await ask(['release', '2:1'])).toEqual({ ok: true, output: 'released 2:1' });
     expect(await ask(['release', '2:1'])).toMatchObject({ ok: false });
   });

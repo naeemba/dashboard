@@ -5,13 +5,12 @@
 import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
-import { hasScreenHost } from './screen-host-protocol';
+import type { PaneKind } from '../actions/pane/dispatch';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
-  // `screen` runs the worker as a Claude screen in the pane rather than Claude Code in its terminal: the
-  // default where there is a screen host, so the turn outlives the app (workers-decision-5).
-  | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; screen: boolean }
+  // `as` is --screen or --terminal, or null for neither: pane.dispatch picks then (workers-decision-5).
+  | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; as: PaneKind | null }
   | { kind: 'list'; all: boolean }
   | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
@@ -60,7 +59,7 @@ function paneId(word: string | undefined, command: string): string | Parsed {
   return PANE_ID.test(word) ? word : refuse(`${word} is not a pane id — claim prints one, like 2:3`);
 }
 
-function parseRun(words: readonly string[], platform: string): Parsed {
+function parseRun(words: readonly string[]): Parsed {
   const id = paneId(words[0], 'run');
   if (typeof id !== 'string') return id;
   let card: string | null = null;
@@ -80,8 +79,8 @@ function parseRun(words: readonly string[], platform: string): Parsed {
   if (card !== null && worktree) return refuse('a task runs in its card\'s worktree or a throwaway one, not both');
   if (sawScreen && sawTerminal) return refuse('a worker runs as a Claude screen or in the terminal, not both');
   if (prompt.join(' ').trim() === '') return refuse('session run needs a prompt for the worker');
-  const screen = sawScreen || (!sawTerminal && hasScreenHost(platform));
-  return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, screen } };
+  const as = sawScreen ? 'screen' : sawTerminal ? 'terminal' : null;
+  return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, as } };
 }
 
 const COUNT = /^\d+$/;
@@ -135,7 +134,7 @@ export function stopHookArguments(given: readonly string[], input: string | unde
   return [...given.slice(0, 3), ...(input === undefined ? [] : stopInputArguments(input))];
 }
 
-export function parseSessionCommand(commandArguments: readonly string[], platform: string = process.platform): Parsed {
+export function parseSessionCommand(commandArguments: readonly string[]): Parsed {
   const [verb, ...rest] = commandArguments;
   switch (verb) {
     case 'claim': {
@@ -149,7 +148,7 @@ export function parseSessionCommand(commandArguments: readonly string[], platfor
       if (rest.length === 1 && rest[0] === '--all') return { ok: true, command: { kind: 'list', all: true } };
       return refuse('session list takes nothing, or --all');
     }
-    case 'run': return parseRun(rest, platform);
+    case 'run': return parseRun(rest);
     case 'send': {
       const id = paneId(rest[0], 'send');
       if (typeof id !== 'string') return id;

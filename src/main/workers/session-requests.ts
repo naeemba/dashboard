@@ -1,5 +1,5 @@
 import { baseName } from '../../shared/app/base-name';
-import { workerArguments, workerPrompt, workerSessionName } from './dispatch';
+import { workerSessionName } from './dispatch';
 import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
@@ -11,17 +11,15 @@ import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
-import type { ScreenStart } from './screen-workers';
+import type { PaneKind } from '../actions/pane/dispatch';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a
 // fake project behind them.
 
-// How a worker starts: Claude Code in the pane's terminal with these arguments, or a Claude screen in
-// the pane on this conversation (screen-workers.ts), handed the prompt as its first message.
-export type WorkerLaunch =
-  | { terminal: string[] }
-  | { screen: ScreenStart };
+// What a worker is started on. Whether it is a Claude screen or Claude Code in the pane's terminal,
+// and what either is started with, is pane.dispatch's (actions/pane/dispatch.ts).
+export type WorkerStart = { directory: string; prompt: string; as: PaneKind | null; cardId: string | null; dispatcherPath: string };
 
 export type SessionPorts = {
   // The open project a folder is in — its checkout or one of its worktrees — or -1.
@@ -45,13 +43,10 @@ export type SessionPorts = {
   // agent exits, something else is started in the pane, or the pane closes — so release never kills
   // what somebody else put there afterwards.
   mainsWorkerIn(id: string): boolean;
-  shellCommand(): string;
   // A fresh worker: a shell in the project, at the end of the list. Answers with its number.
   openWorker(slot: number): number;
-  // The id the worker's conversation starts with, recorded in the app's session index first.
-  newSession(projectPath: string, directory: string, cardId: string | null): string;
   // `dispatcherPath` is the page whose main the worker reports to, saved so a restart starts that main.
-  startWorker(id: string, directory: string, launch: WorkerLaunch, cardId: string | null, dispatcherPath: string): void;
+  startWorker(id: string, start: WorkerStart): void;
   closeWorker(id: string): void;
   // Types the text into the pane's shell, then presses Enter.
   type(id: string, text: string): void;
@@ -186,7 +181,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // The session name of the worker in the pane, which its reports to main are signed with.
   const nameOfPane = (id: string): string => workerSessionName(paneProject(id) ?? '', paneFromId(id).index);
 
-  async function run(id: string, slot: number, dispatcherPath: string, prompt: string, card: string | null, worktree: boolean, screen: boolean): Promise<SessionReply> {
+  async function run(id: string, slot: number, dispatcherPath: string, prompt: string, card: string | null, worktree: boolean, as: PaneKind | null): Promise<SessionReply> {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
     const projectPath = paneProject(id);
@@ -211,11 +206,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const { index } = paneFromId(id);
     states.delete(id);
     notices.forget(id);
-    const session = ports.newSession(projectPath, directory, card);
-    const launch: WorkerLaunch = screen
-      ? { screen: { session, name: workerSessionName(projectPath, index), prompt: workerPrompt(prompt, dispatcherPath) } }
-      : { terminal: workerArguments(ports.shellCommand(), projectPath, id, index, prompt, dispatcherPath, session) };
-    ports.startWorker(id, directory, launch, card, dispatcherPath);
+    ports.startWorker(id, { directory, prompt, as, cardId: card, dispatcherPath });
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
@@ -310,7 +301,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'claim': return claim(slot, command.project);
         case 'list': return list(slot, command.all);
         case 'send': return send(command.id, slot, command.text);
-        case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, command.screen);
+        case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, command.as);
         case 'release': return await release(command.id, slot);
       }
     } catch (error: unknown) {

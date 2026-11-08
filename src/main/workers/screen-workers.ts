@@ -11,7 +11,6 @@ import type { ScreenSession } from '../chat/chat-sessions';
 import { stopWaiting } from './session-cli';
 import type { ScreenHost } from './screen-host-client';
 import { screenOwner } from './screen-owner';
-import { workerSessionName } from './dispatch';
 
 // Worker panes run as Claude screens (`pane run`, off Windows). The pane keeps its shell, hidden, and the
 // renderer draws a Claude screen over it, run by chat-sessions.ts under the pane's screen key the way a
@@ -23,7 +22,8 @@ import { workerSessionName } from './dispatch';
 // again on the same conversation, as main's worker, once its project opens. A screen opened by hand
 // with New Claude is saved the same way with no dispatcher, and comes back as yours (screen-owner.ts).
 
-export type ScreenStart = { session: string; name: string; prompt: string };
+// `prompt` is the first message, or null for New Claude, which starts nothing until you type.
+export type ScreenStart = { session: string; name: string; prompt: string | null };
 
 // `started` is whether the session has written its conversation, so a restart resumes it rather than
 // starting it fresh. A file from before it was saved names none, and was resumed then too.
@@ -143,22 +143,15 @@ export function screenWorkers(ports: ScreenPorts) {
 
   return {
     host: ports.host,
-    start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string): void {
+    // A worker screen: main's, a card's agent, or one of yours (New Claude, `dispatcherPath` null and
+    // no prompt). Only pane.dispatch calls it (workers-decision-8).
+    start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string | null): void {
       const { index } = paneFromId(id);
       add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: false }, false);
       save();
       // Drawn first, so the screen is there for the prompt to land on.
       ports.changed();
-      ports.tell(screenKey(id), screen.prompt);
-    },
-    // New Claude: a screen in the project's folder that starts nothing until you type. Its session runs
-    // in the screen host as a worker screen's does, and it is yours, not main's worker.
-    openByHand(id: string, projectPath: string): void {
-      const { index } = paneFromId(id);
-      const session = ports.newSession(projectPath, projectPath, null);
-      add(id, { projectPath, index, directory: projectPath, session, name: workerSessionName(projectPath, index), dispatcherPath: null, cardId: null, started: false }, false);
-      save();
-      ports.changed();
+      if (screen.prompt !== null) ports.tell(screenKey(id), screen.prompt);
     },
     has: (id: string): boolean => live.has(id),
     // `pane send` to a worker screen: the text as its next prompt. False for a pane that is not one.
