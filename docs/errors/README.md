@@ -16,9 +16,13 @@ Folders: `src/shared/errors/`, `src/renderer/errors/`.
 - Given `worktrees.json` cannot be read at launch, when the app starts, then a box names the file and the app exits without writing the record.
 - Given a `.env` that will not load, when the app starts, then it opens without those settings and the bar names the file.
 - Given a failure repeats on a timer, when it is logged, then the same sentence is not written to the log every few seconds.
+- Given a renderer failure goes on the bar, when it is logged, then the entry carries the Error's stack and cause chain (errors-decision-4).
+- Given an IPC handler throws, when the call fails, then main logs the channel, the action it was the door to, and main's stack.
 
 ## Open questions
 
+- Main's own uncaught failures are logged by the renderer from the bar's
+  sentence, without main's stack (errors-decision-4).
 - The bar holds one line; a thing that fails on every tick writes over
   whatever was there, every tick (errors-decision-3).
 - `board-view.ts` still prints `String(error)` and is

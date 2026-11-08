@@ -30,21 +30,30 @@ vi.mock('node:fs', async (importOriginal) => {
 let directory: string;
 beforeEach(() => { directory = temporaryFolder('log-store-'); });
 
+const BUILD = '1.0.0+abcdef123456';
 const info = (message: string) => ({ level: 'info', kind: 'app', message }) as const;
 
 describe('logStore', () => {
   it('stamps, writes and announces each entry', () => {
     const announced: LogEntry[] = [];
-    const store = logStore(directory, (entry) => announced.push(entry));
+    const store = logStore(directory, (entry) => announced.push(entry), BUILD);
     store.log(info('started'));
     expect(announced).toHaveLength(1);
     expect(announced[0].message).toBe('started');
     expect(Number.isNaN(Date.parse(announced[0].time))).toBe(false);
     expect(store.tail(10)).toEqual(announced);
   });
+  it('marks every entry with the build, and as main\'s unless it says otherwise', () => {
+    const store = logStore(directory, () => undefined, BUILD);
+    store.log(info('started'));
+    store.log({ ...info('clicked'), source: 'renderer' });
+    expect(store.tail(2).map(({ source, build }) => ({ source, build }))).toEqual([
+      { source: 'main', build: BUILD }, { source: 'renderer', build: BUILD },
+    ]);
+  });
 
   it('rotates past the limit and never keeps more than five files', () => {
-    const store = logStore(directory, () => undefined, 200);
+    const store = logStore(directory, () => undefined, BUILD, 200);
     for (let index = 0; index < 60; index++) store.log(info(`entry ${index}`));
     const live = path.join(directory, 'dashboard.log');
     expect(existsSync(`${live}.4`)).toBe(true);
@@ -56,14 +65,14 @@ describe('logStore', () => {
   });
 
   it('writes one entry bigger than the limit without rotating away the files before it', () => {
-    const store = logStore(directory, () => undefined, 200);
+    const store = logStore(directory, () => undefined, BUILD, 200);
     store.log(info('x'.repeat(500)));
     expect(existsSync(path.join(directory, 'dashboard.log.1'))).toBe(false);
     expect(store.tail(1)[0].message).toHaveLength(500);
   });
 
   it('reads oldest first across files, and skips a half-written line', () => {
-    const store = logStore(directory, () => undefined, 200);
+    const store = logStore(directory, () => undefined, BUILD, 400);
     for (let index = 0; index < 6; index++) store.log(info(`entry ${index}`));
     appendFileSync(path.join(directory, 'dashboard.log'), '{"time":"2026');
     expect(store.tail(1000).map((entry) => entry.message)).toEqual(
@@ -73,7 +82,7 @@ describe('logStore', () => {
   });
 
   it('reads past a rotated file that has gone missing', () => {
-    const store = logStore(directory, () => undefined, 200);
+    const store = logStore(directory, () => undefined, BUILD, 200);
     for (let index = 0; index < 20; index++) store.log(info(`entry ${index}`));
     rmSync(path.join(directory, 'dashboard.log.1'));
     const messages = store.tail(1000).map((entry) => entry.message);
@@ -84,7 +93,7 @@ describe('logStore', () => {
   });
 
   it('keeps rotating past a missing middle file without throwing or growing past five files', () => {
-    const store = logStore(directory, () => undefined, 200);
+    const store = logStore(directory, () => undefined, BUILD, 200);
     for (let index = 0; index < 10; index++) store.log(info(`entry ${index}`));
     rmSync(path.join(directory, 'dashboard.log.2'));
     expect(() => {
@@ -99,7 +108,7 @@ describe('logStore', () => {
   });
 
   posixModesOnly('keeps the files and drops the entry when a rotation cannot move them', () => {
-    const store = logStore(directory, () => undefined, 200);
+    const store = logStore(directory, () => undefined, BUILD, 200);
     for (let index = 0; index < 20; index++) store.log(info(`entry ${index}`));
     const before = store.tail(1000).map((entry) => entry.message);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -116,7 +125,7 @@ describe('logStore', () => {
   });
 
   it('drops the entry, and stops rotating, when a rotated file cannot be moved', () => {
-    const store = logStore(directory, () => undefined, 200);
+    const store = logStore(directory, () => undefined, BUILD, 200);
     for (let index = 0; index < 20; index++) store.log(info(`entry ${index}`));
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     renames.failure = Object.assign(new Error('resource busy'), { code: 'EBUSY' });
@@ -131,7 +140,7 @@ describe('logStore', () => {
 
   it('starts a fresh line after a half-written line left by a crash', () => {
     appendFileSync(path.join(directory, 'dashboard.log'), '{"time":"2026');
-    const store = logStore(directory, () => undefined);
+    const store = logStore(directory, () => undefined, BUILD);
     store.log(info('started'));
     expect(store.tail(10).at(-1)?.message).toBe('started');
     store.log(info('next'));
@@ -140,7 +149,7 @@ describe('logStore', () => {
 
   it('still starts a fresh line after a half-written line when the first append failed', () => {
     appendFileSync(path.join(directory, 'dashboard.log'), '{"time":"2026');
-    const store = logStore(directory, () => undefined);
+    const store = logStore(directory, () => undefined, BUILD);
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     appends.failure = Object.assign(new Error('resource busy'), { code: 'EBUSY' });
     try {
@@ -155,7 +164,7 @@ describe('logStore', () => {
 
   it('stamps the time itself, whatever time the draft carries', () => {
     const announced: LogEntry[] = [];
-    const store = logStore(directory, (entry) => announced.push(entry));
+    const store = logStore(directory, (entry) => announced.push(entry), BUILD);
     store.log({ ...info('started'), time: '1999-01-01T00:00:00.000Z' } as LogDraft);
     expect(announced[0].time).not.toBe('1999-01-01T00:00:00.000Z');
   });
@@ -163,7 +172,7 @@ describe('logStore', () => {
   it('reads a live file with more lines than one call can spread', () => {
     const line = JSON.stringify({ time: '2026-01-01T00:00:00.000Z', level: 'info', kind: 'app', message: 'm' });
     writeFileSync(path.join(directory, 'dashboard.log'), `${Array(200_000).fill(line).join('\n')}\n`);
-    const store = logStore(directory, () => undefined);
+    const store = logStore(directory, () => undefined, BUILD);
     expect(store.tail(200_000)).toHaveLength(200_000);
   });
 
@@ -172,12 +181,12 @@ describe('logStore', () => {
       { time: '2026-01-01T00:00:00.000Z', level: 'info', kind: 'app', message: `entry ${index}` },
     ));
     writeFileSync(path.join(directory, 'dashboard.log'), `${lines.join('\n')}\n`);
-    const store = logStore(directory, () => undefined);
+    const store = logStore(directory, () => undefined, BUILD);
     expect(store.tail(2).map((entry) => entry.message)).toEqual(['entry 49998', 'entry 49999']);
   });
 
   it('returns nothing for a count of zero', () => {
-    const store = logStore(directory, () => undefined);
+    const store = logStore(directory, () => undefined, BUILD);
     store.log(info('one'));
     expect(store.tail(0)).toEqual([]);
   });
@@ -185,7 +194,7 @@ describe('logStore', () => {
   it('drops an entry it cannot write rather than throwing', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
-      const store = logStore(path.join(directory, 'missing', 'folder'), () => { throw new Error('not announced'); });
+      const store = logStore(path.join(directory, 'missing', 'folder'), () => { throw new Error('not announced'); }, BUILD);
       expect(() => store.log(info('lost'))).not.toThrow();
       expect(store.tail(10)).toEqual([]);
       expect(consoleError).toHaveBeenCalledTimes(1);
