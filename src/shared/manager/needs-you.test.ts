@@ -82,6 +82,11 @@ describe('needsYou', () => {
     expect(kinds(rows, done, [])).toEqual([]);
   });
 
+  it('lists a Cancelled card whose worktree git refused to remove, as it does a Done card', () => {
+    const cancelled = board({ Cancelled: [card('a', '2026-10-01T10:00:00Z')] });
+    expect(kinds([row([], [worktree('a', null)])], cancelled, ['/api-a'])).toEqual(['leftover']);
+  });
+
   it('sends Enter on a leftover to its card, which lands with or without a pane', () => {
     const done = board({ Done: [card('a', '2026-10-01T10:00:00Z')] });
     const [leftover] = needsYou([row([], [worktree('a', null)])], () => done, new Set(['/api-a']), NOW);
