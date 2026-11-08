@@ -2,8 +2,7 @@ import { action } from '../action';
 import { branchNameFor, worktreePathFor } from '../../ship/ship';
 import { isFilledText } from '../pane/pane-input';
 
-// Every worktree the app makes, in the folder beside the project where they all go, with the one git line
-// that makes them, so a ship, a dispatched task and a review cannot come to put their work in different
+// Every worktree the app makes, in the folder beside the project where they all go, made only here, so a ship, a dispatched task and a review cannot come to put their work in different
 // places. Three kinds:
 //
 // - card: a ship's. A new branch off origin/<base>, named after the card's title with its id to break a
@@ -29,12 +28,6 @@ export type WorktreeMakePorts = {
 
 export type MadeWorktree = { output: string; branch: string; worktreePath: string };
 
-// Whether the make takes the project's queue itself: only a throwaway's, whose caller holds nothing.
-// The queue is not re-entrant, so the ship's and the review's taking it again would wait on themselves.
-export function queuesItself(kind: WorktreeMakeInput['kind']): boolean {
-  return kind === 'throwaway';
-}
-
 function read(raw: Record<string, unknown>): WorktreeMakeInput | null {
   const { kind, projectPath } = raw;
   if (!isFilledText(projectPath)) return null;
@@ -48,30 +41,35 @@ function read(raw: Record<string, unknown>): WorktreeMakeInput | null {
   return null;
 }
 
-async function make(ports: WorktreeMakePorts, input: WorktreeMakeInput): Promise<MadeWorktree> {
-  const { projectPath } = input;
-  let branch: string;
-  let worktreePath: string;
-  let base: string | null = null;
-  if (input.kind === 'again') {
-    ({ branch, worktreePath } = input);
-  } else {
-    base = input.kind === 'card' ? input.base : await ports.baseBranch(projectPath);
-    if (input.kind === 'throwaway') await ports.git(['fetch', 'origin', base], projectPath);
-    const heads = await ports.git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], projectPath);
-    const id = input.kind === 'card' ? input.cardId : ports.newId();
-    branch = branchNameFor(input.title, id, heads.split('\n').filter((name) => name !== ''));
-    worktreePath = worktreePathFor(projectPath, branch);
-  }
-  const branchArguments = base === null ? [worktreePath, branch] : ['-b', branch, worktreePath, `origin/${base}`];
-  await ports.git(['worktree', 'add', ...branchArguments], projectPath);
+function made(branch: string, worktreePath: string): MadeWorktree {
   return { output: `made ${worktreePath} on ${branch}`, branch, worktreePath };
+}
+
+// A new branch off origin/<base>, named after the title with `id` to break a tie.
+async function newBranch(ports: WorktreeMakePorts, projectPath: string, title: string, id: string, base: string): Promise<MadeWorktree> {
+  const heads = await ports.git(['for-each-ref', '--format=%(refname:short)', 'refs/heads'], projectPath);
+  const branch = branchNameFor(title, id, heads.split('\n').filter((name) => name !== ''));
+  const worktreePath = worktreePathFor(projectPath, branch);
+  await ports.git(['worktree', 'add', '-b', branch, worktreePath, `origin/${base}`], projectPath);
+  return made(branch, worktreePath);
 }
 
 export const worktreeMake = action<WorktreeMakePorts, WorktreeMakeInput, MadeWorktree>('worktree.make', {
   words: [],
   input: (raw) => read(raw) ?? { refused: 'the worktree to make was not one the app could read' },
-  run: (ports, input) => (queuesItself(input.kind)
-    ? ports.queue(input.projectPath, () => make(ports, input))
-    : make(ports, input)),
+  async run(ports, input) {
+    const { projectPath } = input;
+    if (input.kind === 'card') return newBranch(ports, projectPath, input.title, input.cardId, input.base);
+    if (input.kind === 'throwaway') {
+      // The only kind whose caller holds no queue, so the only one that takes it. The queue is not
+      // re-entrant: the ship's and the review's taking it again would wait on themselves.
+      return ports.queue(projectPath, async () => {
+        const base = await ports.baseBranch(projectPath);
+        await ports.git(['fetch', 'origin', base], projectPath);
+        return newBranch(ports, projectPath, input.title, ports.newId(), base);
+      });
+    }
+    await ports.git(['worktree', 'add', input.worktreePath, input.branch], projectPath);
+    return made(input.branch, input.worktreePath);
+  },
 });

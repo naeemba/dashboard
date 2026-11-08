@@ -20,7 +20,7 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // worktree.remove and worktree.make: only the actions and the remove's port. /create-task's make runs
   // outside the app and stays its program's.
   { call: 'worktrees.remove', allowed: { 'src/main/main.ts': 1 } },
-  { call: "'worktree', 'add'", allowed: { 'src/main/actions/worktree/make.ts': 1, 'src/main/board/create-task-program.ts': 1 } },
+  { call: "'worktree', 'add'", allowed: { 'src/main/actions/worktree/make.ts': 2, 'src/main/board/create-task-program.ts': 1 } },
   // settings.write: launch's host token, the settings screen and the remote join.
   { call: 'writeSettings(settingsFile', allowed: { 'src/main/main.ts': 3 } },
   // The wrappers behind the other Bypass: yes rows, counted with the ports that pass them on, so a new

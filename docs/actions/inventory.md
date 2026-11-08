@@ -113,7 +113,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | pane.release | whether the pane is the asker's, and whether its throwaway worktree goes |
 | pane.close | that the pane is a worker; ends a card record's claim on it |
 | pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch |
-| worktree.make | card, throwaway or again; the branch it names; whether it fetches and takes the project's queue itself (`queuesItself`) |
+| worktree.make | card, throwaway or again; the branch it names; whether it fetches and takes the project's queue itself (only a throwaway) |
 | worktree.remove | per door, forced or not, queued or not, logged or not (`removalOf`); the keeper refuses with changes and kills the shells and closes the screens in it |
 | project.open | the dialog or a path, a dead page opened over, its main started or not |
 | project.close | `closeRefusal`, once, for the key and the command |

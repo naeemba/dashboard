@@ -116,8 +116,11 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
   // names the pane from here on, and any other card's record naming it gives it up. The one place a
   // dispatch's pane is written onto a record, so no door that starts a card's agent can forget the claim.
   function givePane(entry: WorktreeEntry, index: number): WorktreeEntry {
-    takePane(entry.projectPath, index, entry.cardId);
-    return record({ ...entry, pane: index });
+    const given = { ...entry, pane: index };
+    const claimed = claimsPane(entries, entry.projectPath, index, entry.cardId);
+    // One write and one announce for both records.
+    set(withEntry(claimed ? withEntry(entries, withoutPane(claimed)) : entries, given));
+    return given;
   }
 
   // Every record whose folder has stopped existing, and the panes with it. A worktree deleted by hand

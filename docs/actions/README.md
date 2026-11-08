@@ -51,7 +51,7 @@ Neither door holds any of the logic; each only asks.
 
 - **worktree.make** (a ship, a review, `pane run --worktree`): a card's branch
   off origin's base, a reviewed card's branch checked out again, or a
-  throwaway named after its prompt, with the one `git worktree add` line. Only
+  throwaway named after its prompt, each made only there. Only
   the throwaway takes the project's queue and fetches; the ship and the review
   hold the queue already, and it is not re-entrant.
 - **worktree.remove** (`worktree:remove`, `pane release`, the review):
