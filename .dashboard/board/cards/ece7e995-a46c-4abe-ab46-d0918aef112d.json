@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-07T18:12:52.887Z",
-  "updatedAt": "2026-11-08T12:54:27.239Z",
+  "updatedAt": "2026-11-08T13:16:13.256Z",
   "branch": "work-board-card-ece7e995-a46c-4abe-ab46-d09",
   "pullRequest": 233,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-08T13:16:13.256Z",
+      "body": "Shipped in #233: pane.dispatch (src/main/actions/pane/) starts every pane agent (pane run, ship, review loop, resume, New Claude) and picks screen or terminal once; workers-decision-8. Hand check in the app still to do."
+    }
+  ],
+  "column": "Done",
+  "order": 188
 }
