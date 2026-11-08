@@ -1,13 +1,13 @@
 {
   "id": "7b330e75-bb86-480a-b15f-e4c4512924c9",
   "title": "Every session change goes through a session action: start, reset, resume, branch, rewind, rename",
-  "notes": "Fourth per-noun move, after the project card. session.start: chats.start at main.ts:398 and :569, chats.startMain from project open. chat:reset/resume/branch/rewind/configure in chat-sessions.ts (675, 688, 735, 754, 593), keepsItsConversation decided in the action. session.rename: chat:rename (chat-sessions.ts:525) and sessions:rename (drawer-ipc.ts:29), two writers of one label. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.",
+  "notes": "Shipped in #242: session.start, .reset, .resume, .branch, .rewind, .rename and .configure in src/main/actions/session/, every door calling them; keepsItsConversation decided there; project open still waits for main (#229); /rename and the drawer write one name (actions-decision-7); chats.start bypass 3 -> 0. Not hand-checked in the app.",
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T13:25:39.511Z",
-  "updatedAt": "2026-11-08T15:56:21.004Z",
+  "updatedAt": "2026-11-08T16:05:31.213Z",
   "branch": "work-board-card-7b330e75-bb86-480a-b15f-e4c",
   "pullRequest": 242,
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 197
 }
