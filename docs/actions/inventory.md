@@ -103,8 +103,9 @@ conversation itself, not changes to app state.
 
 ### settings and notes
 
-settings moved behind settings.write by the settings card; `tidySettingsFile`'s launch tidy
-rewrites the file's own lines, not the settings, and stays.
+settings moved behind settings.write by the settings card;
+`tidySettingsFile`'s launch tidy rewrites the file's own lines, not the
+settings, and stays.
 
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|

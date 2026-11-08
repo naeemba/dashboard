@@ -86,9 +86,10 @@ Neither door holds any of the logic; each only asks.
   and the running session moved onto it; none is started for it.
 
 - **settings.write** (`settings:write`, launch's host token, a remote join
-  saving its address): settings.json's one writer. Keeps the change as main's
+  saving its address): the settings' one writer. Keeps the change as main's
   live copy with the shell it picks, then writes the file; a pane already
-  running keeps its shell.
+  running keeps its shell. The launch tidy (`tidySettingsFile`,
+  `settings-store.ts`) still rewrites the file's own lines outside it.
 
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
@@ -98,9 +99,9 @@ rule alone (actions-rule-1, actions-decision-4).
 
 Only card.move and settings.write have a channel of their own name
 (`card:move`, `settings:write`); settings.write's is the one that was there,
-answering with the shell rather than the action's result. The pane and project actions answer on the channels and commands
-that were there before (`pane:add`, `pane:close`, `sessions:resume`,
-`projects:open`, `projects:close`, `pane claim`, `send`, `release`, `run`,
+answering with the shell rather than the action's result. The pane and project
+actions answer on the channels and commands that were there before
+(`pane:add`, `pane:close`, `sessions:resume`, `projects:open`, `projects:close`, `pane claim`, `send`, `release`, `run`,
 `project open`, `close`, `focus`), and so do the session actions (`chat:reset`,
 `chat:resume`, `chat:branch`, `chat:rewind`, `chat:rename`, `chat:configure`,
 `sessions:rename`); a screen that needs ship or review registers its
