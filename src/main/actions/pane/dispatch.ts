@@ -56,50 +56,54 @@ export function paneKind(input: Pick<PaneDispatchInput, 'resume' | 'prompt' | 'a
   return input.as ?? defaultPaneKind(platform);
 }
 
-// Whether a screen's hidden shell is started over in its folder first: where the pane has none running,
-// or to let go of an earlier worktree it stood in, as a terminal agent's start lets go of it. One in the
-// project or already in the screen's folder is left as it is.
-export function screenNeedsShell(shell: PaneShell, projectPath: string, directory: string): boolean {
-  return !shell.running || (shell.directory !== projectPath && shell.directory !== directory);
+// Whether a screen's hidden shell is started over in its folder first: wherever it is not running there,
+// as a terminal agent's start puts its shell there. Every worktree check (the status bar's branch, a
+// removal's kill, the sweep's wait) reads the pane's folder off its shell, never off the screen.
+export function screenNeedsShell(shell: PaneShell, directory: string): boolean {
+  return !shell.running || shell.directory !== directory;
 }
 
-function text(value: unknown): value is string {
+function isFilledText(value: unknown): value is string {
   return typeof value === 'string' && value !== '';
 }
 
-function textOrNull(value: unknown): value is string | null {
-  return value === null || text(value);
+function isFilledTextOrNull(value: unknown): value is string | null {
+  return value === null || isFilledText(value);
 }
 
 export function paneDispatchInput(raw: Record<string, unknown>): PaneDispatchInput | Refused {
   const { id, projectPath, directory, prompt, resume, cardId, dispatcherPath, as } = raw;
-  if (!text(id)) return { refused: 'no pane was given' };
-  if (!text(projectPath) || !text(directory)) return { refused: 'no folder was given' };
-  if (!textOrNull(prompt) || !textOrNull(resume) || !textOrNull(cardId) || !textOrNull(dispatcherPath)) {
+  if (!isFilledText(id)) return { refused: 'no pane was given' };
+  if (!isFilledText(projectPath) || !isFilledText(directory)) return { refused: 'no folder was given' };
+  if (!isFilledTextOrNull(prompt) || !isFilledTextOrNull(resume) || !isFilledTextOrNull(cardId) || !isFilledTextOrNull(dispatcherPath)) {
     return { refused: 'the pane request was not one the app could read' };
   }
   if (as !== null && as !== 'screen' && as !== 'terminal') return { refused: 'a pane runs a screen or a terminal' };
   return { id, projectPath, directory, prompt, resume, cardId, dispatcherPath, as };
 }
 
-// Reached from no door yet: main calls it, and nothing in it waits.
+// The action's whole run, synchronous: main calls it with typed input, so a throw on the way reaches
+// the caller's own catch (a ship's `ship failed`, `session run failed`) rather than going unheard.
+export function startPane(ports: PaneDispatchPorts, input: PaneDispatchInput): { output: string } {
+  const { id, projectPath, directory, prompt, cardId, dispatcherPath } = input;
+  const { index } = paneFromId(id);
+  ports.starting(id, projectPath, dispatcherPath);
+  if (paneKind(input, ports.platform) === 'terminal') {
+    ports.terminal(id, directory, terminalArguments(ports, input, index));
+    return { output: `started Claude Code in ${id}` };
+  }
+  if (screenNeedsShell(ports.shellOf(id), directory)) ports.plainShell(id, directory);
+  const session = ports.newSession(projectPath, directory, cardId);
+  const first = prompt === null || dispatcherPath === null ? prompt : workerPrompt(prompt, dispatcherPath);
+  ports.screen(id, projectPath, directory, { session, name: workerSessionName(projectPath, index), prompt: first }, cardId, dispatcherPath);
+  return { output: `started a Claude screen in ${id}` };
+}
+
+// Reached from no door yet: main calls startPane directly.
 export const paneDispatch = action<PaneDispatchPorts, PaneDispatchInput, { output: string }>('pane.dispatch', {
   words: [],
   input: paneDispatchInput,
-  async run(ports, input) {
-    const { id, projectPath, directory, prompt, cardId, dispatcherPath } = input;
-    const { index } = paneFromId(id);
-    ports.starting(id, projectPath, dispatcherPath);
-    if (paneKind(input, ports.platform) === 'terminal') {
-      ports.terminal(id, directory, terminalArguments(ports, input, index));
-      return { output: `started Claude Code in ${id}` };
-    }
-    if (screenNeedsShell(ports.shellOf(id), projectPath, directory)) ports.plainShell(id, directory);
-    const session = ports.newSession(projectPath, directory, cardId);
-    const first = prompt === null || dispatcherPath === null ? prompt : workerPrompt(prompt, dispatcherPath);
-    ports.screen(id, projectPath, directory, { session, name: workerSessionName(projectPath, index), prompt: first }, cardId, dispatcherPath);
-    return { output: `started a Claude screen in ${id}` };
-  },
+  run: async (ports, input) => startPane(ports, input),
 });
 
 // What Claude Code in the terminal is started with: a conversation carried on, or a new one, each as

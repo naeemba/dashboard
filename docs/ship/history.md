@@ -11,4 +11,4 @@ One line per merged change: date, pull request, why.
 - 2026-09-28 #62 — A ship leaves main's board.json the way it found it
 - 2026-10-05 #67 — The worktree list shows every git worktree: size, dirty, remove
 - 2026-11-01 #135 — Branch names cut the shared slug (branchSlug) instead of owning their own
-- 2026-11-08 — A shipped card's agent and its review loop start through pane.dispatch, a Claude screen off Windows (workers-decision-8)
+- 2026-11-08 #233 — A shipped card's agent and its review loop start through pane.dispatch, a Claude screen off Windows (workers-decision-8)

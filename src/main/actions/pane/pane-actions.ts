@@ -1,16 +1,16 @@
 import { agentStartEntry, type LogDraft } from '../../../shared/app/log-entry';
 import type { PaneCommand } from '../../../shared/panes/pane-reading';
 import { paneFromId } from '../../../shared/panes/terminals';
-import { bind, isRefused } from '../action';
-import { paneDispatch, type PaneDispatchInput, type PaneDispatchPorts } from './dispatch';
+import { startPane, type PaneDispatchInput, type PaneDispatchPorts } from './dispatch';
 
 // Main's wiring for the pane actions: what main hands over, and pane.dispatch's ports built on it.
-// Out of main.ts, which is at its 600-line ceiling. Main-process spawning, so no test of its own; every
-// decision is dispatch.ts's and tested there.
+// Out of main.ts, which is at its 600-line ceiling. The claim's branch is tested in pane-actions.test.ts,
+// every other decision is dispatch.ts's and tested there.
 export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession'> & {
-  // The pane is the new agent's: the session command's answers about it go, and main's claim on it is
-  // set to `dispatcherPath`, the main it reports to, or cleared for an agent that is not main's worker.
-  claim(id: string, dispatcherPath: string | null): void;
+  // The session command's answers about the pane, forgotten: it is the new agent's.
+  forgetAnswers(id: string): void;
+  // Main's claim on each pane: the main its worker reports to.
+  mainsWorkers: Pick<Map<string, string>, 'set' | 'delete'>;
   command(id: string): PaneCommand | undefined;
   setPaneCommand(id: string, command: PaneCommand): void;
   shells: Pick<Map<string, { kill(): void }>, 'get' | 'has' | 'delete'>;
@@ -21,8 +21,6 @@ export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand
   agentStarted(id: string): void;
   startScreen: PaneDispatchPorts['screen'];
   log(draft: LogDraft): void;
-  // A refusal nobody asked to hear, shown the way a failure is.
-  hold(message: string): void;
 };
 
 export function paneActions(main: PaneActionsMain): { dispatch(input: PaneDispatchInput): void } {
@@ -35,12 +33,15 @@ export function paneActions(main: PaneActionsMain): { dispatch(input: PaneDispat
     main.spawn(id);
   }
 
-  const dispatch = bind(paneDispatch, {
+  const ports: PaneDispatchPorts = {
     platform: main.platform,
     shellCommand: main.shellCommand,
     newSession: main.newSession,
     starting(id, projectPath, dispatcherPath) {
-      main.claim(id, dispatcherPath);
+      main.forgetAnswers(id);
+      // Set to the main it reports to, or cleared for an agent that is not main's worker.
+      if (dispatcherPath === null) main.mainsWorkers.delete(id);
+      else main.mainsWorkers.set(id, dispatcherPath);
       main.log(agentStartEntry(projectPath, paneFromId(id).index));
     },
     shellOf: (id) => ({ directory: main.command(id)?.directory, running: main.shells.has(id) }),
@@ -50,13 +51,8 @@ export function paneActions(main: PaneActionsMain): { dispatch(input: PaneDispat
     },
     plainShell: (id, directory) => shellIn(id, directory, []),
     screen: main.startScreen,
-  });
-
-  return {
-    dispatch(input) {
-      void dispatch.call(input).then((result) => {
-        if (isRefused(result)) main.hold(`The pane did not start: ${result.refused}`);
-      });
-    },
   };
+
+  // Synchronous, so a throw reaches the caller's catch.
+  return { dispatch(input) { startPane(ports, input); } };
 }

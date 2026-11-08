@@ -353,8 +353,11 @@ terminal worker.
 its hooks and report-back prompt, a card's agent its plain prompt.
 
 The action also claims the pane for the main a worker reports to, so no caller sets `mainsWorkers`
-after it, and decides when a screen's hidden shell is started over (`screenNeedsShell`: only to leave
-an earlier worktree, or where there is none). The ports are in `pane-actions.ts`, main's wiring: `startAgent` in main.ts became its terminal
+after it, and decides when a screen's hidden shell is started over (`screenNeedsShell`: wherever it
+is not already running in the screen's folder, so the status bar, a removal's kill and the sweep's wait,
+which all read the pane's folder off its shell, see a screen's pane where its agent works). Removing a
+worktree closes the screens working in it (`closeIn`), as it kills a terminal agent's shell. The action
+runs synchronously (`startPane`), so a throw reaches the caller's own catch. The ports are in `pane-actions.ts`, main's wiring: `startAgent` in main.ts became its terminal
 half, and `screen-workers.ts`'s `openByHand` folded into `start`. Nothing else calls either. A new
 place that needs an agent in a pane is a caller of pane.dispatch, with its case in `dispatch.test.ts`,
 not a sixth path.

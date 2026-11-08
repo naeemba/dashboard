@@ -141,6 +141,13 @@ export function screenWorkers(ports: ScreenPorts) {
     byKey.set(screenKey(id), worker);
   }
 
+  function drop(id: string): void {
+    if (!live.delete(id)) return;
+    byKey.delete(screenKey(id));
+    ports.stop(screenKey(id));
+    save();
+  }
+
   return {
     host: ports.host,
     // A worker screen: main's, a card's agent, or one of yours (New Claude, `dispatcherPath` null and
@@ -187,11 +194,12 @@ export function screenWorkers(ports: ScreenPorts) {
       }
     },
     // The pane closed or released: the session goes with it.
-    drop(id: string): void {
-      if (!live.delete(id)) return;
-      byKey.delete(screenKey(id));
-      ports.stop(screenKey(id));
-      save();
+    drop,
+    // The worktree working in `directory` removed: each screen in it goes with the folder.
+    closeIn(directory: string): void {
+      const gone = [...live.values()].filter((worker) => worker.saved.directory === directory);
+      for (const worker of gone) drop(worker.id);
+      if (gone.length > 0) ports.changed();
     },
     // The project opened in `slot`: the workers saved for it, back under this slot's pane ids, each to
     // be opened again as main's worker, or as yours for one with no dispatcher. Their sessions start

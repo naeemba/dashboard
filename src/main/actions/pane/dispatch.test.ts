@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bind } from '../action';
-import { paneDispatch, paneKind, screenNeedsShell, type PaneDispatchInput, type PaneDispatchPorts } from './dispatch';
+import { paneDispatch, paneKind, screenNeedsShell, type PaneDispatchInput, type PaneDispatchPorts, type PaneShell } from './dispatch';
 
 const SHIP: PaneDispatchInput = {
   id: '2:3', projectPath: '/work/api', directory: '/work/api.worktrees/fix', prompt: '/work-card c1',
@@ -8,17 +8,17 @@ const SHIP: PaneDispatchInput = {
 };
 const RUN: PaneDispatchInput = { ...SHIP, directory: '/work/api', prompt: 'research the cache', cardId: null, dispatcherPath: '/work/desk' };
 
-function started(platform = 'linux') {
-  const seen: { claimed?: string | null; plainShell?: string; terminal?: { id: string; directory: string; words: string }; screen?: unknown[] } = {};
+function started(platform = 'linux', shell: PaneShell = { directory: '/work/api', running: true }) {
+  const seen: { claimed?: string | null; plainShell?: string; terminal?: { id: string; directory: string; words: string }; screen?: unknown[]; order: string[] } = { order: [] };
   const ports: PaneDispatchPorts = {
     platform,
     shellCommand: () => '/bin/zsh',
     newSession: () => 'new-session',
     starting: (_id, _projectPath, dispatcherPath) => { seen.claimed = dispatcherPath; },
-    shellOf: () => ({ directory: '/work/api', running: true }),
+    shellOf: () => shell,
     terminal: (id, directory, agentArguments) => { seen.terminal = { id, directory, words: agentArguments.join(' ') }; },
-    plainShell: (_id, directory) => { seen.plainShell = directory; },
-    screen: (...given) => { seen.screen = given; },
+    plainShell: (_id, directory) => { seen.plainShell = directory; seen.order.push('plainShell'); },
+    screen: (...given) => { seen.screen = given; seen.order.push('screen'); },
   };
   return { seen, dispatch: bind(paneDispatch, ports) };
 }
@@ -55,6 +55,24 @@ describe('pane.dispatch', () => {
     expect(seen.plainShell).toBeUndefined();
   });
 
+  it('puts the hidden shell in the worktree before the screen, for a new pane or one standing in the project', async () => {
+    const fresh = started('linux', { directory: undefined, running: false });
+    await fresh.dispatch.call(SHIP);
+    expect(fresh.seen.plainShell).toBe('/work/api.worktrees/fix');
+    expect(fresh.seen.order).toEqual(['plainShell', 'screen']);
+    const reused = started();
+    await reused.dispatch.call(SHIP);
+    expect(reused.seen.plainShell).toBe('/work/api.worktrees/fix');
+  });
+
+  it('opens New Claude as a screen of yours that waits for you to type', async () => {
+    const { seen, dispatch } = started('win32');
+    await dispatch.call({ ...RUN, prompt: null, dispatcherPath: null });
+    expect(seen.screen).toEqual(['2:3', '/work/api', '/work/api', { session: 'new-session', name: 'api-terminal-4', prompt: null }, null, null]);
+    expect(seen.claimed).toBeNull();
+    expect(seen.plainShell).toBeUndefined();
+  });
+
   it('gives main\'s worker its report-back prompt on a screen, and its hooks in a terminal', async () => {
     const screen = started();
     await screen.dispatch.call(RUN);
@@ -79,19 +97,20 @@ describe('pane.dispatch', () => {
     const { seen, dispatch } = started();
     expect(await dispatch.call({ ...SHIP, as: 'window' })).toEqual({ refused: 'a pane runs a screen or a terminal' });
     expect(await dispatch.call({ ...SHIP, id: '' })).toEqual({ refused: 'no pane was given' });
-    expect(seen).toEqual({});
+    expect(seen).toEqual({ order: [] });
   });
 });
 
 describe('screenNeedsShell', () => {
-  it('starts the hidden shell over where there is none or it stands in another worktree', () => {
-    expect(screenNeedsShell({ directory: '/work/api', running: false }, '/work/api', '/work/api.worktrees/fix')).toBe(true);
-    expect(screenNeedsShell({ directory: '/work/api.worktrees/old', running: true }, '/work/api', '/work/api.worktrees/fix')).toBe(true);
-    expect(screenNeedsShell({ directory: undefined, running: true }, '/work/api', '/work/api')).toBe(true);
+  it('starts the hidden shell over wherever it is not running in the screen\'s folder', () => {
+    expect(screenNeedsShell({ directory: '/work/api.worktrees/fix', running: false }, '/work/api.worktrees/fix')).toBe(true);
+    expect(screenNeedsShell({ directory: '/work/api', running: true }, '/work/api.worktrees/fix')).toBe(true);
+    expect(screenNeedsShell({ directory: '/work/api.worktrees/old', running: true }, '/work/api.worktrees/fix')).toBe(true);
+    expect(screenNeedsShell({ directory: undefined, running: true }, '/work/api')).toBe(true);
   });
 
-  it('leaves one in the project or already in the screen\'s folder', () => {
-    expect(screenNeedsShell({ directory: '/work/api', running: true }, '/work/api', '/work/api.worktrees/fix')).toBe(false);
-    expect(screenNeedsShell({ directory: '/work/api.worktrees/fix', running: true }, '/work/api', '/work/api.worktrees/fix')).toBe(false);
+  it('leaves one already running in the screen\'s folder', () => {
+    expect(screenNeedsShell({ directory: '/work/api', running: true }, '/work/api')).toBe(false);
+    expect(screenNeedsShell({ directory: '/work/api.worktrees/fix', running: true }, '/work/api.worktrees/fix')).toBe(false);
   });
 });

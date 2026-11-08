@@ -294,7 +294,7 @@ const worktrees = worktreeKeeper({
   file: worktreesFile,
   entries: recordAtLaunch,
   commands: terminalCommands,
-  shells,
+  shells, closeScreensIn: (worktreePath) => workerScreens.closeIn(worktreePath),
   announce: (list) => sendToRenderer('worktree:change', list),
 });
 
@@ -571,10 +571,10 @@ const workerScreens = screenWorkers({
 // Every agent a pane starts, of every kind, from every caller (workers-decision-8).
 const { dispatch: paneDispatch } = paneActions({
   platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched,
-  claim: (id, dispatcherPath) => { workerAnswers.forget(id); if (dispatcherPath === null) mainsWorkers.delete(id); else mainsWorkers.set(id, dispatcherPath); },
+  forgetAnswers: (id) => workerAnswers.forget(id), mainsWorkers,
   command: (id) => terminalCommands.get(id), setPaneCommand, shells, spawn: panes.spawn,
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,
-  log: (draft) => logStore.log(draft), hold: failures.hold,
+  log: (draft) => logStore.log(draft),
 });
 const chats = registerChatSessions(table, {
   send: (slot, event) => { sendToRenderer('chat:receive', slot, event); workerScreens.observe(slot, event); },

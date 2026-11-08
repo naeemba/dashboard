@@ -108,6 +108,18 @@ describe('screenWorkers', () => {
     expect(savedScreens(file)).toEqual([]);
   });
 
+  it('closes the screens working in a removed worktree, and only those', () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api.worktrees/fix', START, 'c1', null);
+    screens.start('2:2', '/work/api', '/work/api', START, null, '/work/api');
+    said.length = 0;
+    screens.closeIn('/work/api.worktrees/fix');
+    expect(screens.ids()).toEqual(['2:2']);
+    expect(said).toEqual([`stop ${screenKey('2:1')}`, 'changed']);
+    screens.closeIn('/work/api.worktrees/fix');
+    expect(said).toHaveLength(2);
+  });
+
   // Slots are a launch's page order, so the worker comes back under whatever slot its project opens in.
   it('brings a worker back after a restart under the slot its project opens in, resuming it', () => {
     const before = workers();
