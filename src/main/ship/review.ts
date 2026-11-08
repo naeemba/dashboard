@@ -1,4 +1,4 @@
-import { addComment, cardAt, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
+import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { BOARD_PATHSPECS } from '../board/board-store';
 import { posixQuoted } from '../../shared/panes/shell';
 
@@ -22,6 +22,13 @@ export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
 }
 
+// Whether the card sits in Cancelled. One of the reasons awaitsReview answers false, exported so the
+// refusal of a review by hand can say this one by name rather than "its review has run".
+export function isCancelled(board: Board, cardId: string): boolean {
+  const at = selectionOf(board, cardId);
+  return at !== null && isColumnNamed(board.columns[at.column]?.name ?? '', CANCELLED_COLUMN);
+}
+
 // Whether this card still wants reviewing, asked of the project's board. Its column is the only record
 // of a review that finished: the review's whole job is to move the card past Review, and the worktree
 // it ran in outlives it — the app removes it on a later tick once no shell stands in it, and not at
@@ -43,9 +50,14 @@ export function intoReview(board: Board, cardId: string): Board | null {
 //
 // A board somebody has taken Review out of is different, and still true: the card is there, and a board
 // with no Review column cannot say a card is past a column it does not have.
+//
+// A card in Cancelled is false wherever that column sits, even on an old board that has it in front of
+// Review: it will not be done, so it is never pulled into Review. The sweep asks isCancelled before
+// this and leaves its worktree alone (board-decision-4).
 export function awaitsReview(board: Board, cardId: string): boolean | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;
+  if (isCancelled(board, cardId)) return false;
   const review = reviewColumnIndex(board);
   return review === -1 || at.column <= review;
 }

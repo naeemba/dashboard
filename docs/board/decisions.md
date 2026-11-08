@@ -74,3 +74,40 @@ again at Ship. Picking the card up with the mouse is deliberate enough to
 allow. `keyboardMoveRefusal` in `done-lock.ts` decides it, with its test. The
 command (`dashboard board move`) is not a keystroke on a highlight and is not
 refused.
+
+## board-decision-4: A card that will not be done is cancelled, not deleted
+
+**`d` moves a card into Cancelled, the last column, and deletes only a card
+already there.** Deleting threw away the card's notes, trail and the record that
+the idea was had and turned down; the user would rather keep it. Cancelling
+asks nothing, because it is a move undo takes back; the delete in Cancelled
+keeps the confirm. `deleteKeyOutcome` in `card-delete.ts` decides it, with its
+test. Only the card moves: its subtasks keep their columns, as on any move.
+
+**A card leaves Cancelled like any column, by key or drag, unlike Done's lock
+(board-decision-3).** Done's lock stops a stray Shift+Left on a merged card from
+starting a review and a ship again. A cancelled card was never merged, and
+taking one back up is a decision as ordinary as moving a card out of Backlog:
+Shift+Left from Cancelled lands in Done, and walking on past Review and Ship
+starts them, as board-decision-2 says of any card.
+
+**`d` on a card in Done deletes it after the confirm, rather than cancelling
+it.** Moving a merged card to Cancelled by key is the stray keystroke
+board-decision-3 stops; a card a stray `d` cancelled would also drop out of the
+release notes' What's new. Refusing `d` there instead left no key that removes a
+Done card, a duplicate say, and every action must be reachable by key
+(conventions-rule-1). The confirm catches a stray `d`, so nothing moves or goes
+unasked. Drag a Done card to Cancelled to keep it as cancelled.
+
+**A cancelled card does not wait for review, wherever Cancelled sits.**
+`awaitsReview` answers false for it by name, so a board that already had a
+Cancelled column in front of Review does not pull the card back into Review. The
+sweep leaves a cancelled card's worktree alone, unlike a Done card's: the card
+may be taken back up, and the worktree dialog removes it when it will not.
+
+**Finished is decided by name, not position.** `isFinishedColumn` counts Done
+and Cancelled; the subtask bar used to count the last column, so that renaming a
+column did not change it. With two finished columns, last no longer says
+finished, so a board whose finished column has another name (`Shipped`) shows
+its subtasks as under way. That is the price of one rule the bar, the manager's
+counts and its stalled panes all share.

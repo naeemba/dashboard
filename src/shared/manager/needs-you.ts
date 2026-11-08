@@ -1,6 +1,6 @@
 import { timeOf } from '../app/age';
 import {
-  DONE_COLUMN, REVIEW_COLUMN, columnNamed, pullRequestLabel, type Board, type Card,
+  REVIEW_COLUMN, isFinishedColumn, columnNamed, pullRequestLabel, type Board, type Card,
 } from '../board/board';
 import { isAlerting, takesAnswer, type ManagerRow, type PaneSummary } from './manager';
 import type { WorktreeEntry } from '../app/bridge';
@@ -41,7 +41,7 @@ export const NEED_LABELS: Record<NeedKind, string> = {
   exited: 'died',
   stalled: 'agent gone quiet',
   review: 'in Review, no review running',
-  leftover: 'Done, uncommitted work left',
+  leftover: 'Done or Cancelled, uncommitted work left',
 };
 
 function columnCards(board: Board | undefined, name: string): Card[] {
@@ -73,18 +73,21 @@ function worktreeNeeds(
 ): Need[] {
   // Asked of the worktree record, not the card's column: the agent moves its card on the worktree's
   // own board, and the project's board still has it wherever the ship put it back. A Review card is
-  // listed as one already, and a Done card's pane is finished, not stalled.
+  // listed as one already, and a Done or Cancelled card's pane is finished, not stalled.
   const review = new Set(columnCards(board, REVIEW_COLUMN).map((card) => card.id));
-  const done = new Map(columnCards(board, DONE_COLUMN).map((card) => [card.id, card]));
+  const finished = new Map(board?.columns.flatMap((column, index) => (
+    isFinishedColumn(board, index) ? column.cards.map((card) => [card.id, card] as const) : []
+  )));
   return row.worktrees.flatMap((entry): Need[] => {
     const pane = entry.pane === null ? undefined : row.panes.find((candidate) => candidate.index === entry.pane);
-    const working = !entry.reviewing && !review.has(entry.cardId) && !done.has(entry.cardId);
+    const working = !entry.reviewing && !review.has(entry.cardId) && !finished.has(entry.cardId);
     if (working && isStalled(pane, now)) {
       return [{ ...base, subject: entry.title, kind: 'stalled', since: pane.lastPrintedAt, target: { kind: 'pane', index: pane.index } }];
     }
-    // The app removes a Done card's worktree on its own once no shell stands in it. One still here and
-    // dirty is one git refused to remove, and it stays until you commit or throw the change away.
-    const card = done.get(entry.cardId);
+    // The app removes a Done or Cancelled card's worktree on its own once no shell stands in it. One
+    // still here and dirty is one git refused to remove, and it stays until you commit or throw the
+    // change away.
+    const card = finished.get(entry.cardId);
     if (card && dirty.has(entry.worktreePath)) {
       const since = timeOf(card.updatedAt) ?? timeOf(entry.startedAt) ?? 0;
       return [{

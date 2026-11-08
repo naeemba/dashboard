@@ -10,8 +10,10 @@ import {
   detachCard,
   dropCard,
   hasSubtasks,
+  isFinishedColumn,
   isWaitingColumn,
   moveCard,
+  moveCardToColumn,
   flightParts,
   moveSelection,
   pullRequestFrom,
@@ -51,6 +53,7 @@ import { putEditBack, takeEdit } from '../app/carried-edit';
 import { bringHome, shipsAway } from '../ship/ships-away';
 import { failureText } from '../../shared/errors/failure';
 import { screenMoveEntry } from '../../shared/board/column-entry';
+import { deleteKeyOutcome } from '../../shared/board/card-delete';
 import { keyboardMoveRefusal } from '../../shared/board/done-lock';
 import {
   addBlankCard,
@@ -437,22 +440,21 @@ export function createBoardView(options: BoardOptions): BoardView {
           flight.join(' · ')));
       }
     }
-    // One segment per child, coloured by the column it is in: the last column is finished, the first
-    // has not been started, everything between is under way. Position rather than name, so renaming a
-    // column does not change what the bar says.
+    // One segment per child, coloured by the column it is in: finished (isFinishedColumn), not started,
+    // or under way.
     const columns = childColumns(state.board, card.id);
     if (columns.length > 0) {
-      const last = state.board.columns.length - 1;
+      const finished = new Set(columns.filter((columnIndex) => isFinishedColumn(state.board, columnIndex)));
       const bar = document.createElement('p');
       bar.className = 'board-progress';
       for (const columnIndex of columns) {
         const segment = document.createElement('span');
-        segment.className = columnIndex === last ? 'done' : isWaitingColumn(state.board, columnIndex) ? 'waiting' : 'underway';
+        segment.className = finished.has(columnIndex) ? 'done' : isWaitingColumn(state.board, columnIndex) ? 'waiting' : 'underway';
         bar.append(segment);
       }
       const count = document.createElement('span');
       count.className = 'board-progress-count';
-      count.textContent = `${columns.filter((columnIndex) => columnIndex === last).length}/${columns.length}`;
+      count.textContent = `${columns.filter((columnIndex) => finished.has(columnIndex)).length}/${columns.length}`;
       bar.append(count);
       item.append(bar);
     }
@@ -691,12 +693,20 @@ export function createBoardView(options: BoardOptions): BoardView {
     options.onChanged();
   }
 
+  // The delete key. Outside Cancelled and Done it moves the card to Cancelled, a move like any other
+  // and undone like one (card-delete.ts says why). In Cancelled or Done it deletes for good, after
+  // the confirm.
+  //
   // The count is descendants, not direct children, because that is how many cards vanish — and most
   // of them are in columns you are not looking at. A leaf card gets the same dialog without the
   // second clause: one key that always behaves the same way is worth more than a saved keystroke.
   function confirmDelete(): void {
+    const outcome = deleteKeyOutcome(state.board, state.selection);
     const card = cardAt(state.board, state.selection);
-    if (!card) return;
+    if (!outcome || !card) return;
+    if (outcome.kind === 'cancel') {
+      return moveThenAsk(state.selection, moveCardToColumn(state.board, state.selection, outcome.column));
+    }
     const family = descendantsOf(state.board, card.id).length;
     const question = family === 0
       ? `Delete "${card.title}"?`

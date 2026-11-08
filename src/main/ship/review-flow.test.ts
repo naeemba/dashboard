@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY, BOARD_FOLDER_PATH, readBoard, writeBoard } from '../board/board-store';
-import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
+import { CANCELLED_COLUMN, columnNamed, emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from './review-flow';
 import { intoReview } from './review';
 import type { WorktreeEntry } from '../../shared/app/bridge';
@@ -156,6 +156,18 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
     expect(log.started).toEqual([]);
     expect(columnOfCard(projectPath)).toBe('Done');
+  });
+
+  // Cancelled is past Review on a board as shipped, but a cancelled card may be taken back up: its
+  // worktree waits for the worktree dialog (board-decision-4).
+  it('keeps the worktree of a cancelled card and starts no review for it', async () => {
+    const { entry, projectPath } = flight(12);
+    const board = boardWithCard(null);
+    writeBoard(projectPath, moveCardById(board, CARD, columnNamed(board, CANCELLED_COLUMN)) ?? board);
+    const { ports: made, log } = ports(entry);
+    await sweepWith(made).run();
+    expect(log.removed).toEqual([]);
+    expect(log.started).toEqual([]);
   });
 
   // The review agent moves the project's card to Done and then writes its summary. Taking the folder
@@ -502,6 +514,16 @@ describe('reviewSweep', () => {
     await expect(reviewSweep(made).review(CARD)).resolves.toEqual({ refused: '"Ship it" is past Review; its review has run' });
     expect(log.removed).toEqual([]);
     expect(columnOfCard(projectPath)).toBe('Done');
+  });
+
+  it('refuses a review by hand for a cancelled card, saying so rather than that its review ran', async () => {
+    const { entry, projectPath } = flight(12);
+    const board = boardWithCard(null);
+    writeBoard(projectPath, moveCardById(board, CARD, columnNamed(board, CANCELLED_COLUMN)) ?? board);
+    const { ports: made } = ports(entry);
+    await expect(reviewSweep(made).review(CARD))
+      .resolves.toEqual({ refused: '"Ship it" is cancelled; move it out of Cancelled to review it' });
+    expect(columnOfCard(projectPath)).toBe('Cancelled');
   });
 
   it('refuses a review by hand while the agent works, before it has a pull request, and twice', async () => {

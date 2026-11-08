@@ -27,7 +27,7 @@ keeps its last numbers and says why underneath.
 At the top, Needs you is everything across the open projects that is waiting on
 you, the longest-waiting first: a pane asking a question, a pane that has died,
 an agent working a card whose pane has printed nothing for half an hour, a card
-in Review that no pane here is reviewing, and a Done card whose worktree git
+in Review that no pane here is reviewing, and a Done or Cancelled card whose worktree git
 would not remove because it holds uncommitted work. Enter on one goes there —
 the pane, or the card on its project's board — and the remove key works on the
 last kind. Typing a character on a question answers it, as it does on the pane's

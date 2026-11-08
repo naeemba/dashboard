@@ -34,6 +34,8 @@ export function columnEntry({ column, source, autoLoop, projectBoard }: Entering
   // A card that reached Review on its own waits there when the loop is off; one sent there by a
   // person always starts it, which is how a user with the setting off starts a loop by hand.
   if (isColumnNamed(column, REVIEW_COLUMN)) return source !== 'automatic' || autoLoop ? 'review' : 'nothing';
+  // Every other column starts nothing, Cancelled among them: a cancelled card is kept, not worked
+  // (board-decision-4).
   return 'nothing';
 }
 

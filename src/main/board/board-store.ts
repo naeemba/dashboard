@@ -22,6 +22,7 @@ import {
   isTitle,
   withReviewColumn,
   withBacklogColumn,
+  withCancelledColumn,
   withShipColumn,
   withoutEmptyShipColumn,
   type Board,
@@ -68,7 +69,7 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 
 One file per card, so two branches working different cards never edit the same file:
 
-    board/columns.json            { "columns": ["Backlog", "Todo", "Ship", "Doing", "Review", "Done"] }
+    board/columns.json            { "columns": ["Backlog", "Todo", "Ship", "Doing", "Review", "Done", "Cancelled"] }
     board/cards/<id>.json         one card, with the column it is in and its place there
 
 A card's file:
@@ -365,7 +366,7 @@ export function parseBoard(text: string, makeId: () => string = idsFor(text)): B
 }
 
 function repairedBoard(columns: Column[], makeId: () => string): Board {
-  return withBacklogColumn(withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) })));
+  return withCancelledColumn(withBacklogColumn(withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) }))));
 }
 
 // The board from its folder, and from board.json too when both are there. That happens when a write

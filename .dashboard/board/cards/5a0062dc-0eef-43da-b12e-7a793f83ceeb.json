@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T16:29:38.849Z",
-  "updatedAt": "2026-11-08T16:29:38.849Z",
-  "column": "Doing",
-  "order": 2
+  "updatedAt": "2026-11-08T17:15:46.762Z",
+  "branch": "work-board-card-5a0062dc-0eef-43da-b12e-7a7",
+  "pullRequest": 245,
+  "comments": [
+    {
+      "at": "2026-11-08T17:15:46.762Z",
+      "body": "Shipped in #245: Cancelled column last on every board; d cancels, deletes only in Cancelled (or after the confirm in Done); one isFinishedColumn for the bar, manager counts and stalled panes; cancelled cards never reviewed and keep their worktree; board move <id> Cancelled in the usage."
+    }
+  ],
+  "column": "Done",
+  "order": 198
 }

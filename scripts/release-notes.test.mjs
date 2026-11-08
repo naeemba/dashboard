@@ -69,6 +69,12 @@ describe('cardsReachedDone', () => {
     expect(cardsReachedDone(before, now).map((done) => done.id)).toEqual(['b', 'c']);
   });
 
+  it('leaves out a card moved to Cancelled, from Done or anywhere else', () => {
+    const before = [card('a', 'Done'), card('b', 'Doing')];
+    const now = [card('a', 'Cancelled'), card('b', 'Cancelled'), card('c', 'Cancelled')];
+    expect(cardsReachedDone(before, now)).toEqual([]);
+  });
+
   it('leaves a subtask to its parent', () => {
     expect(cardsReachedDone([], [card('a', 'Done', { parent: 'p' })])).toEqual([]);
   });

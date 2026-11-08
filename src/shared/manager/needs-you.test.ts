@@ -54,11 +54,12 @@ describe('needsYou', () => {
     expect(kinds(quietFor(STALL_MS - 1), shipped)).toEqual([]);
   });
 
-  it('does not call a quiet pane stalled while it reviews, or once its card is in Review or Done', () => {
+  it('does not call a quiet pane stalled while it reviews, or once its card is in Review, Done or Cancelled', () => {
     const quiet = [pane(0, 'quiet', minutesAgo(90))];
     expect(kinds([row(quiet, [worktree('a', 0, { reviewing: true })])], board({ Review: [card('a')] }))).toEqual([]);
     expect(kinds([row(quiet, [worktree('a', 0)])], board({ Review: [card('a')] }))).toEqual(['review']);
     expect(kinds([row(quiet, [worktree('a', 0)])], board({ Done: [card('a')] }))).toEqual([]);
+    expect(kinds([row(quiet, [worktree('a', 0)])], board({ Cancelled: [card('a')] }))).toEqual([]);
   });
 
   it('does not list an asking pane twice when an agent is working a card in it', () => {
@@ -79,6 +80,11 @@ describe('needsYou', () => {
     const rows = [row([], [worktree('a', null)])];
     expect(kinds(rows, done, ['/api-a'])).toEqual(['leftover']);
     expect(kinds(rows, done, [])).toEqual([]);
+  });
+
+  it('lists a Cancelled card whose worktree git refused to remove, as it does a Done card', () => {
+    const cancelled = board({ Cancelled: [card('a', '2026-10-01T10:00:00Z')] });
+    expect(kinds([row([], [worktree('a', null)])], cancelled, ['/api-a'])).toEqual(['leftover']);
   });
 
   it('sends Enter on a leftover to its card, which lands with or without a pane', () => {

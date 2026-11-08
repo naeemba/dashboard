@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   BACKLOG_COLUMN,
+  CANCELLED_COLUMN,
   REVIEW_COLUMN,
   SHIP_COLUMN,
   deleteCard,
   dropCard,
   emptyBoard,
+  isFinishedColumn,
   isWaitingColumn,
   moveCard,
   moveCardById,
@@ -17,6 +19,7 @@ import {
   shipColumnIndex,
   shipHome,
   withBacklogColumn,
+  withCancelledColumn,
   withReviewColumn,
   withShipColumn,
   withoutEmptyShipColumn,
@@ -29,7 +32,7 @@ import { board, titles } from './test-board';
 describe('the Ship column', () => {
   it('sits just right of Todo on a new board', () => {
     expect(emptyBoard().columns.map((column) => column.name))
-      .toEqual([BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
+      .toEqual([BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done', 'Cancelled']);
   });
 
   it('finds Ship whatever case it is written in', () => {
@@ -54,7 +57,7 @@ describe('the Ship column', () => {
 describe('withoutEmptyShipColumn', () => {
   it('takes an empty Ship out, leaving the other columns in their order', () => {
     expect(withoutEmptyShipColumn(emptyBoard()).columns.map((column) => column.name))
-      .toEqual([BACKLOG_COLUMN, 'Todo', 'Doing', REVIEW_COLUMN, 'Done']);
+      .toEqual([BACKLOG_COLUMN, 'Todo', 'Doing', REVIEW_COLUMN, 'Done', 'Cancelled']);
   });
 
   // Taking the column would take the cards in it, and those are somebody's cards.
@@ -362,7 +365,7 @@ describe('withBacklogColumn', () => {
 
   it('is part of a new board', () => {
     expect(emptyBoard().columns.map((column) => column.name))
-      .toEqual([BACKLOG_COLUMN, 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+      .toEqual([BACKLOG_COLUMN, 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
   });
 });
 
@@ -381,5 +384,30 @@ describe('isWaitingColumn', () => {
   it('finds Backlog by name wherever it sits', () => {
     const board = { columns: ['Todo', 'Doing', 'Backlog', 'Done'].map((name) => ({ name, cards: [] })) };
     expect([0, 1, 2, 3].map((index) => isWaitingColumn(board, index))).toEqual([true, false, true, false]);
+  });
+});
+
+describe('withCancelledColumn', () => {
+  it('puts Cancelled last on a board without one', () => {
+    const board = { columns: [{ name: 'Todo', cards: [] }, { name: 'Done', cards: [] }] };
+    expect(withCancelledColumn(board).columns.map((column) => column.name)).toEqual(['Todo', 'Done', CANCELLED_COLUMN]);
+  });
+
+  it('hands back the same board when Cancelled is already there, wherever it sits', () => {
+    const board = { columns: [{ name: 'cancelled', cards: [] }, { name: 'Done', cards: [] }] };
+    expect(withCancelledColumn(board)).toBe(board);
+  });
+});
+
+describe('isFinishedColumn', () => {
+  it('counts Done and Cancelled as finished on a new board, nothing else', () => {
+    const board = emptyBoard();
+    const finished = board.columns.map((_column, index) => isFinishedColumn(board, index));
+    expect(finished).toEqual([false, false, false, false, false, true, true]);
+  });
+
+  it('goes by name, so a last column called something else is not finished', () => {
+    const board = { columns: [{ name: 'done', cards: [] }, { name: 'Shipped', cards: [] }] };
+    expect([isFinishedColumn(board, 0), isFinishedColumn(board, 1)]).toEqual([true, false]);
   });
 });

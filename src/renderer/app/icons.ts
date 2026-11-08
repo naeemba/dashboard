@@ -2,19 +2,20 @@
 // whole set is one list to read, and so a screen asks for `icon('rocket')` without knowing which
 // library drew it. Each one is stroked in currentColor and takes the colour of the text around it.
 import {
-  ArrowDownWideNarrow, Bitcoin, Bot, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
+  ArrowDownWideNarrow, Ban, Bitcoin, Bot, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, Copy, CornerLeftUp, createElement,
   DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, PanelLeft, Plug, RefreshCw, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
   Terminal, Trees, X,
   type IconNode,
 } from 'lucide';
-import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from '../../shared/board/board';
+import { BACKLOG_COLUMN, CANCELLED_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from '../../shared/board/board';
 import type { Mode } from '../../shared/keys/modes';
 
 const ICONS = {
   backlog: Inbox,
   bitcoin: Bitcoin,
+  cancelled: Ban,
   board: Columns3,
   claude: Bot,
   calendar: Calendar,
@@ -126,6 +127,7 @@ export function iconOnlyButton(className: string, glyph: IconName, text: string,
 const COLUMN_GLYPHS: Record<string, IconName> = {
   [BACKLOG_COLUMN.toLowerCase()]: 'backlog', [TODO_COLUMN.toLowerCase()]: 'todo', doing: 'doing',
   [SHIP_COLUMN.toLowerCase()]: 'ship', [REVIEW_COLUMN.toLowerCase()]: 'review', [DONE_COLUMN.toLowerCase()]: 'done',
+  [CANCELLED_COLUMN.toLowerCase()]: 'cancelled',
 };
 
 export function columnIcon(name: string): IconName {

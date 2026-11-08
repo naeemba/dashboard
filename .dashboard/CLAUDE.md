@@ -6,7 +6,7 @@ This folder holds the project's kanban board, shown in the Dashboard app under C
 
 One file per card, so two branches working different cards never edit the same file:
 
-    board/columns.json            { "columns": ["Backlog", "Todo", "Ship", "Doing", "Review", "Done"] }
+    board/columns.json            { "columns": ["Backlog", "Todo", "Ship", "Doing", "Review", "Done", "Cancelled"] }
     board/cards/<id>.json         one card, with the column it is in and its place there
 
 A card's file:
@@ -108,6 +108,9 @@ code the app does, so a card it writes is a card the app wrote.
     into Ship ships the card to an agent in a worktree, and one into Review starts its review loop. ship
     and review start them without a move; review is how to start a loop with the review.autoLoop setting
     off. On a worktree's board a move is only a move. Everything else edits the board's files alone.
+
+    A card that will not be done is kept, not deleted: `board move <id> Cancelled` puts it in the
+    Cancelled column after Done, which starts nothing.
 
     --notes replaces the card's description. To record what you found, use `comment`: it appends to the
     card's trail and takes nothing away. `show` prints one card with its description and its trail.

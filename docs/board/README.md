@@ -2,7 +2,7 @@
 
 A project's kanban board under Ctrl+B, kept in `.dashboard/board/`, one file per
 card: cards with priority, notes, subtasks, a comment trail, a branch and a pull
-request, in Backlog, Todo, Ship, Doing, Review and Done. The `board` command
+request, in Backlog, Todo, Ship, Doing, Review, Done and Cancelled. The `board` command
 writes the same files, so an agent can work its own card. A project the app has
 not written to since still keeps `.dashboard/board.json`; it is read as it is,
 and the next write moves it into the folder (board-decision-1).
@@ -40,6 +40,19 @@ c writes one — from the board or from the card.
 Backlog is where a card waits until somebody picks it; Todo holds only what has
 been picked. Every board gets Backlog in front of Todo, and the board command
 puts a card there when it is not told a column.
+
+A card that will not be done is kept, in Cancelled, the last column, which every
+board gets on read the way it gets Backlog. `d` on a card moves it there, a move
+like any other that undo takes back; only `d` on a card already in Cancelled
+deletes it, with its subtasks, after the confirm. Its subtasks stay where they
+are. Entering Cancelled starts nothing, from the board or from `board move <id>
+Cancelled`, and a card leaves it like any column, by key too (board-decision-4).
+A cancelled card is never pulled into Review, and its worktree stays, even once
+its agent has opened a pull request, until the worktree dialog removes it. `d` on a card in Done asks and then deletes
+it, since no key moves a card out of Done. Whatever
+treats Done as finished treats Cancelled the same: the manager's column counts
+leave both out, the subtask bar counts both as finished, a pane working a
+cancelled card is not stalled, and the release notes' What's new lists only Done.
 
 There is a Ship column, just right of Todo. Moving a card into it — Shift
 with either arrow, a drop from either side, or `dashboard board move <id>
@@ -174,6 +187,7 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`, `card-editor.ts`,
   `board-saves.ts` (the screen's saves, one at a time, each beside the board it replays from),
   `board-wiring.ts` (the board's files written elsewhere, re-read on the page in front)
+- The delete key: `card-delete.ts`, Cancelled or gone
 - Narrowing: `board-filter.ts`, `filter-dialog.ts`, `card-search.ts`
 - Styles: `board.css`
 - Tests: `test-board.ts` (helpers), `board.test.ts`, `board.columns.test.ts`,
@@ -223,6 +237,8 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given an agent ran `board move`, when you rename a card twice and the board's re-read lands between the two writes, then the board reads again and shows the second rename.
 - Given a card with subtasks, when you blank its title, then it is refused and the status bar says to delete it with `d`.
 - Given you deleted a card, when you undo, then it comes back where it was.
+- Given a card in Doing, when you press `d`, then it moves to Cancelled with no question; `d` on it there asks, and Enter deletes it for good.
+- Given a board written before Cancelled existed, when the app or the command reads it, then it has an empty Cancelled column last.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.
 - Given a card's pull request is open, when its agent finishes, then the card goes in Review, not Done.
 - Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.

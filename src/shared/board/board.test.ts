@@ -23,9 +23,9 @@ import {
 import { board, titles } from './test-board';
 
 describe('emptyBoard', () => {
-  it('opens with six empty columns', () => {
+  it('opens with seven empty columns', () => {
     expect(emptyBoard().columns.map((column) => column.name))
-      .toEqual([BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done']);
+      .toEqual([BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, 'Done', 'Cancelled']);
     expect(emptyBoard().columns.every((column) => column.cards.length === 0)).toBe(true);
   });
 });
