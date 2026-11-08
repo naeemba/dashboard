@@ -1,5 +1,35 @@
 # Changelog
 
+## v2.44.0 (2026-11-08)
+
+### What's new
+
+- One pane.dispatch action that every agent start goes through
+- Every change goes through an action: inventory and plan for panes, projects, worktrees and the rest
+- Every pane change goes through a pane action: dispatch's door, resume, claim, open, send, release, close, restore
+- Every worktree change goes through a worktree action: make and remove
+- release.sh dies silently on a GitHub blip and --resume refuses after the release commit
+- Show a running workflow's progress on the Claude screen
+- Change model, mode and effort by clicking them in the Claude screen's foot
+- False 'stopped without sending you a report' after a worker that did report is released
+- Every project change goes through a project action: open, close, focus
+- Every session change goes through a session action: start, reset, resume, branch, rewind, rename
+
+### What's Changed
+* One pane.dispatch action that every agent start goes through by @naeemba in https://github.com/naeemba/dashboard/pull/233
+* Inventory every state change and pin the rule that it goes through an action by @naeemba in https://github.com/naeemba/dashboard/pull/234
+* Every pane change goes through a pane action by @naeemba in https://github.com/naeemba/dashboard/pull/235
+* Every worktree change goes through a worktree action: make and remove by @naeemba in https://github.com/naeemba/dashboard/pull/236
+* release.sh survives a GitHub blip, and --resume accepts the release commit by @naeemba in https://github.com/naeemba/dashboard/pull/238
+* Show a running workflow's progress on the Claude screen by @naeemba in https://github.com/naeemba/dashboard/pull/237
+* Change model, mode and effort by clicking them in the Claude screen's foot by @naeemba in https://github.com/naeemba/dashboard/pull/239
+* Take back a false stop notice when main releases the worker by @naeemba in https://github.com/naeemba/dashboard/pull/241
+* Every project change goes through a project action: open, close, focus by @naeemba in https://github.com/naeemba/dashboard/pull/240
+* Every session change goes through a session action: start, reset, resume, branch, rewind, rename by @naeemba in https://github.com/naeemba/dashboard/pull/242
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.43.1...v2.44.0
+
 ## v2.43.1 (2026-11-07)
 
 ### What's new
