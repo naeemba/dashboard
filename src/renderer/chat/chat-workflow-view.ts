@@ -1,10 +1,8 @@
-import { stopTarget, taskDetail, usageParts, type ChatTask } from '../../shared/chat/chat-tasks';
+import { taskDetail, usageParts, type ChatTask } from '../../shared/chat/chat-tasks';
 import { agentCount, phaseMark, type PhaseMark, type WorkflowAgentState } from '../../shared/chat/chat-workflow';
-import { clampIndex } from '../../shared/app/clamp-index';
-import { failureText } from '../../shared/errors/failure';
+import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
 import type { Transcript } from '../../shared/chat/chat-transcript';
 import { piece } from './chat-foot-view';
-import type { ChatViewOptions } from './chat-view';
 import { viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
 
@@ -12,19 +10,20 @@ import { isModified } from '../keys/shortcuts';
 // and the agents of the phase picked, each with its model, tokens and time. Up and Down walk the
 // phases and, while it runs, a last row that stops it on Enter; a click on a row picks it and does
 // what Enter does there. Escape gives the keyboard back to the box. The workflow key opens it, as a
-// click on the workflow's strip row does.
+// click on the workflow's strip row or Enter on it in the agents key's list does.
 export type WorkflowView = {
   open(task: ChatTask): void;
   // The transcript changed: the open panel follows it.
   update(): void;
 };
 
-type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'onError'>;
-
 const PHASE_GLYPH: Record<PhaseMark, string> = { done: '✓', running: '●', waiting: '○' };
 const AGENT_GLYPH: Record<WorkflowAgentState, string> = { done: '✓', failed: '✗', running: '●', queued: '○' };
 
-export function createWorkflowView(transcript: () => Transcript, slot: number, say: Say, back: () => void): WorkflowView {
+// The stop row's key among the phase titles a selection is held by.
+const STOP = Symbol('stop');
+
+export function createWorkflowView(transcript: () => Transcript, stop: (task: ChatTask) => void, back: () => void): WorkflowView {
   let redraw: (() => void) | null = null;
 
   function open(opened: ChatTask): void {
@@ -37,25 +36,22 @@ export function createWorkflowView(transcript: () => Transcript, slot: number, s
     sheet.append(title, phases, agents);
     // The workflow as last streamed; it stays drawn once it has left the strip, without the stop row.
     let task = opened;
-    let live = true;
+    let live = transcript().tasks.some((each) => each.id === opened.id);
     let selected = 0;
 
-    const rowCount = (): number => (task.workflow?.phases.length ?? 0) + (live ? 1 : 0);
+    const rowKeys = (): (string | symbol)[] => [...(task.workflow?.phases ?? []).map((phase) => phase.title), ...(live ? [STOP] : [])];
 
     function draw(): void {
       const list = task.workflow?.phases ?? [];
-      selected = clampIndex(selected, rowCount() - 1);
       title.textContent = [task.description || task.kind, taskDetail(task), ...(live ? [] : ['ended'])].join(' · ');
-      const rows = list.map((phase) => {
+      phases.replaceChildren(...list.map((phase, index) => {
         const { done, total } = agentCount([phase]);
-        return `${PHASE_GLYPH[phaseMark(phase)]} ${phase.title}${total > 0 ? ` ${done}/${total}` : ''}`;
-      });
-      phases.replaceChildren(...rows.map((text, index) => row('chat-workflow-phase', text, index)));
+        return row('chat-workflow-phase', `${PHASE_GLYPH[phaseMark(phase)]} ${phase.title}${total > 0 ? ` ${done}/${total}` : ''}`, index);
+      }));
       if (list.length === 0) phases.append(row('chat-workflow-agent', 'No phase has started yet.'));
-      if (live) phases.append(row('chat-workflow-phase chat-workflow-stop', 'Stop the workflow', list.length));
+      if (live) phases.append(row('chat-workflow-phase', 'Stop the workflow', list.length));
       agents.replaceChildren(...(list[selected]?.agents ?? []).map((agent) => row('chat-workflow-agent',
         [`${AGENT_GLYPH[agent.state]} ${agent.label}`, agent.model, ...usageParts(agent)].filter(Boolean).join(' · '))));
-      phases.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
     }
 
     function row(className: string, text: string, index?: number): HTMLElement {
@@ -66,26 +62,31 @@ export function createWorkflowView(transcript: () => Transcript, slot: number, s
       return element;
     }
 
+    function select(index: number): void {
+      selected = clampIndex(index, rowKeys().length - 1);
+      draw();
+      phases.querySelector('.selected')?.scrollIntoView({ block: 'nearest' });
+    }
+
     function enter(): void {
-      if (!live || selected !== rowCount() - 1) return;
-      const target = stopTarget(task);
-      if (target.kind === 'refused') return say.onNotice(target.reason);
-      say.bridge.chatStopTask(slot, target.taskId).catch((error: unknown) => say.onError(`Workflow not stopped: ${failureText(error)}`));
+      if (rowKeys()[selected] === STOP) stop(task);
     }
 
     phases.addEventListener('click', (event) => {
       const clicked = (event.target as Element).closest<HTMLElement>('[data-row]');
       if (!clicked) return;
-      selected = Number(clicked.dataset.row);
-      draw();
+      select(Number(clicked.dataset.row));
       enter();
     });
 
     redraw = () => {
       const now = transcript().tasks.find((each) => each.id === task.id);
       if (now === task || (!now && !live)) return;
+      // The selection stays on the row it was on, wherever a new phase moves it.
+      const key = rowKeys()[selected];
       if (now) task = now;
       else live = false;
+      selected = heldIndex(rowKeys(), key, selected);
       draw();
     };
     viewerOverlay('chat-agent', sheet, {
@@ -97,8 +98,7 @@ export function createWorkflowView(transcript: () => Transcript, slot: number, s
       keys: (event) => {
         if (isModified(event) || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
         event.preventDefault();
-        selected = clampIndex(selected + (event.key === 'ArrowUp' ? -1 : 1), rowCount() - 1);
-        draw();
+        select(selected + (event.key === 'ArrowUp' ? -1 : 1));
       },
     });
     draw();

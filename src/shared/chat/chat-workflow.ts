@@ -64,13 +64,16 @@ export function workflowProgress(entries: unknown): WorkflowProgress | null {
     const known = agents.get(agent.index);
     if (!known || RANK[agent.state] >= RANK[known.agent.state]) agents.set(agent.index, { phase, agent });
   }
+  const byPhase = new Map<number, WorkflowAgent[]>();
+  for (const { phase, agent } of [...agents.values()].sort((a, b) => a.agent.index - b.agent.index)) {
+    byPhase.set(phase, [...(byPhase.get(phase) ?? []), agent]);
+  }
   const order = [...titles.keys()].sort((a, b) => a - b);
-  const listed = [...agents.values()].sort((a, b) => a.agent.index - b.agent.index);
-  if (listed.some(({ phase }) => phase === -1)) order.push(-1);
+  if (byPhase.has(-1)) order.push(-1);
   return {
     phases: order.map((phase) => ({
       title: phase === -1 ? 'Agents' : titles.get(phase) || `Phase ${phase + 1}`,
-      agents: listed.filter((entry) => entry.phase === phase).map((entry) => entry.agent),
+      agents: byPhase.get(phase) ?? [],
     })),
   };
 }

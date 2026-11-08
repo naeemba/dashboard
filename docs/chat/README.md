@@ -156,13 +156,13 @@ click in it does what it does in the main log: an image or PDF opens over it,
 and a pane link puts the conversation away and lands on the pane. An agent that
 has said nothing yet opens empty and fills as it goes; only the last 20 agents'
 conversations are kept, besides any still running, and a session that ends lists
-what it was running as ended. A workflow or background command has no
-conversation to open, and says so (chat-decision-15).
+what it was running as ended. A background command has no conversation to
+open, and says so; Enter on a workflow opens its panel (chat-decision-15).
 
 A running workflow's strip row also carries a bar and how many of its agents
 have ended of those started, `▰▰▰▱▱▱▱▱▱▱ 3/10 agents`, beside its tokens and
 elapsed time. The workflow key (Alt+P) opens the picked workflow, or the first
-one in the strip with none picked: its phases, each marked done (✓), running (●)
+one in the strip with none picked, as does a click on its row: its phases, each marked done (✓), running (●)
 or not started (○) with its agents ended of started, and under the picked phase
 its agents with their model, tool calls, tokens and time. The arrows walk the
 phases and a last row, Stop the workflow, which Enter stops; a click on a row

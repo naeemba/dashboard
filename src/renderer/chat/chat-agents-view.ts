@@ -11,7 +11,8 @@ import { isModified } from '../keys/shortcuts';
 // The agents key's list of what ran this conversation, running first, then finished, and one agent's
 // whole conversation over the screen, drawn like the main one and kept up while it runs. Up and Down
 // walk its entries, Enter unfolds the one picked, and Escape goes back to the list, whose own Escape
-// gives the keyboard back to the box. A click on a strip row opens its agent the same way.
+// gives the keyboard back to the box. A click on a strip row opens its agent the same way; a workflow's
+// opens its phases.
 export type AgentsView = {
   show(): void;
   open(task: ChatTask): void;
@@ -19,7 +20,7 @@ export type AgentsView = {
   update(): void;
 };
 
-type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'goToPane'> & { openPdf(tile: HTMLElement): void };
+type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'goToPane'> & { openPdf(tile: HTMLElement): void; openWorkflow(task: ChatTask): void };
 
 export function createAgentsView(transcript: () => Transcript, say: Say, back: () => void): AgentsView {
   let listChanged: (() => void) | null = null;
@@ -47,6 +48,8 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
   }
 
   function open(task: ChatTask | FinishedTask): void {
+    // A workflow has no conversation; its phases open instead (chat-workflow-view.ts).
+    if (task.workflow) return say.openWorkflow(task);
     const target = agentConversation(task, transcript().agents);
     if (target.kind === 'refused') {
       say.onNotice(target.reason);

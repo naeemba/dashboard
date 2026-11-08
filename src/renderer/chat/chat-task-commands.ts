@@ -1,5 +1,5 @@
 import type { ChatCommand } from '../../shared/keys/actions';
-import { backgroundTarget, stopTarget, workflowTarget, type ChatTasks } from '../../shared/chat/chat-tasks';
+import { backgroundTarget, stopTarget, workflowTarget, type ChatTask } from '../../shared/chat/chat-tasks';
 import { failureText } from '../../shared/errors/failure';
 import type { AgentsView } from './chat-agents-view';
 import type { TaskStrip } from './chat-task-strip';
@@ -15,25 +15,25 @@ export type TaskScreen = {
   strip: TaskStrip;
   agents: AgentsView;
   workflows: WorkflowView;
-  tasks: () => ChatTasks;
 };
 
 export function runTaskCommand(command: ChatCommand, screen: TaskScreen): void {
   if (command === 'task-select') screen.strip.step();
-  if (command === 'task-stop') stopTask(screen);
+  if (command === 'task-stop') stopTask(screen.options, screen.slot, screen.strip.picked());
   if (command === 'task-background') backgroundTask(screen);
   if (command === 'agents') screen.agents.show();
   if (command === 'workflow') showWorkflow(screen);
 }
 
-function showWorkflow({ options, strip, workflows, tasks }: TaskScreen): void {
-  const target = workflowTarget(tasks(), strip.picked());
+function showWorkflow({ options, strip, workflows }: TaskScreen): void {
+  const target = workflowTarget(strip.tasks(), strip.picked());
   if (target.kind === 'refused') return options.onNotice(target.reason);
   workflows.open(target.task);
 }
 
-function stopTask({ options, slot, strip }: TaskScreen): void {
-  const target = stopTarget(strip.picked());
+// The stop key on the picked strip row, and the stop row of a workflow's panel.
+export function stopTask(options: ChatViewOptions, slot: number, task: ChatTask | 'ended' | null): void {
+  const target = stopTarget(task);
   if (target.kind === 'refused') return options.onNotice(target.reason);
   options.bridge.chatStopTask(slot, target.taskId).catch((error: unknown) => options.onError(`Task not stopped: ${failureText(error)}`));
 }

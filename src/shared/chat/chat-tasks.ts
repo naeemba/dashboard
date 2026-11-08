@@ -47,8 +47,8 @@ export function messageUsage(message: Record<string, unknown>, known: AgentUsage
 const isAgent = (message: Record<string, unknown>): boolean => message.task_type === 'local_agent' || text(message.subagent_type) !== '';
 
 // background_tasks_changed names a workflow's kind `workflow`, task_started `local_workflow`.
-const isWorkflow = (message: Record<string, unknown>): boolean =>
-  message.task_type === 'local_workflow' || message.type === 'workflow' || text(message.workflow_name) !== '';
+const workflowOf = (message: Record<string, unknown>): WorkflowProgress | null =>
+  (message.task_type === 'local_workflow' || message.type === 'workflow' || text(message.workflow_name) !== '' ? NO_PROGRESS : null);
 
 // A task the strip leaves out: Claude Code's own housekeeping, which it marks as not being activity.
 function quiet(message: Record<string, unknown>): boolean {
@@ -67,7 +67,7 @@ function merged(task: ChatTask, message: Record<string, unknown>): ChatTask {
   const kind = text(message.subagent_type) || text(message.workflow_name) || task.kind;
   const parent = text(message.parent_task_id) || task.parent;
   const agent = task.agent || isAgent(message);
-  const workflow = task.workflow ?? (isWorkflow(message) ? NO_PROGRESS : null);
+  const workflow = task.workflow ?? workflowOf(message);
   if (description === task.description && kind === task.kind && parent === task.parent && agent === task.agent && workflow === task.workflow) return task;
   return { ...task, description, kind, parent, agent, workflow };
 }
@@ -82,7 +82,7 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
     backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, agent: isAgent(message), tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
-    workflow: isWorkflow(message) ? NO_PROGRESS : null,
+    workflow: workflowOf(message),
   }];
 }
 
@@ -141,8 +141,7 @@ export function taskOrder(tasks: ChatTasks): { task: ChatTask; depth: number }[]
 
 // One row's text after its description: what kind of task, then what it has done so far.
 export function taskDetail(task: ChatTask): string {
-  const bar = task.workflow ? workflowBar(task.workflow) : null;
-  return [task.kind, ...(bar ? [bar] : []), ...usageParts(task), ...(task.lastTool ? [task.lastTool] : [])].join(' · ');
+  return [task.kind, task.workflow && workflowBar(task.workflow), ...usageParts(task), task.lastTool].filter(Boolean).join(' · ');
 }
 
 // What an agent has done, as its strip row and the Agent call that started it both say it: its tool

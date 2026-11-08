@@ -13,6 +13,8 @@ export type TaskStrip = {
   step(): void;
   // The picked task, as pickedTask in chat-tasks.ts decides it.
   picked(): ChatTask | 'ended' | null;
+  // The tasks last drawn.
+  tasks(): ChatTasks;
 };
 
 export function createTaskStrip(open: (task: ChatTask) => void): TaskStrip {
@@ -67,5 +69,6 @@ export function createTaskStrip(open: (task: ChatTask) => void): TaskStrip {
       mark();
     },
     picked: () => pickedTask(drawn, selected),
+    tasks: () => drawn,
   };
 }
