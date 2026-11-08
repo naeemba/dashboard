@@ -16,7 +16,7 @@ import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, terminalId, workersOfSlot } from '../shared/panes/terminals';
+import { EDITOR_INDEX, MAIN_INDEX, paneFromId, terminalId, workersOfSlot } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { paneActions } from './actions/pane/pane-actions';
 import { projectActions, registerProjectChannels } from './actions/project/project-actions';
