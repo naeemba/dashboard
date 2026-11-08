@@ -1,7 +1,7 @@
 import type { Page } from './page';
 import type { ProjectClose, Refused } from '../../shared/app/bridge';
 import type { PaneName } from '../../shared/panes/close-refusal';
-import { isProjectPage, positionAfterClose } from '../../shared/manager/manager';
+import { isProjectPage } from '../../shared/manager/manager';
 
 // The close key's flow. Whether the project may go, and the sentence saying why not, are project.close's
 // in main; this asks it before its question, then closes through it, which asks again.
@@ -11,7 +11,7 @@ import { isProjectPage, positionAfterClose } from '../../shared/manager/manager'
 export type ProjectCloserPorts = {
   // project.close, over `projects:close`.
   closeProject: (request: ProjectClose) => Promise<{ output: string } | Refused>;
-  // A function, since the list changes between calls: the closer reads it again after removePage.
+  // A function, since the list changes between calls: the closer reads it again after the question.
   pages: () => readonly Page[];
   positionOfSlot: (slot: number) => number;
   activeIndex: () => number;
@@ -19,9 +19,6 @@ export type ProjectCloserPorts = {
   showNotice: (owner: string, message: string) => void;
   confirm: (message: string, keysLine: string) => Promise<boolean>;
   showPage: (index: number) => void;
-  removePage: (slot: number) => void;
-  landOn: (index: number) => void;
-  renderStatus: () => void;
 };
 
 export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) => Promise<void> {
@@ -90,24 +87,15 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
       // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
       // found afresh here. Whatever page holds this slot is a project page, because the slot is the same
       // one the check at the top answered for and isProjectPage reads nothing else.
-      // Its place is taken before the close: once main has closed it, the list it pushes may take the page
-      // out before the answer gets here.
-      const closingPosition = ports.positionOfSlot(slot);
-      const closingPage = ports.pages()[closingPosition];
+      const closingPage = ports.pages()[ports.positionOfSlot(slot)];
       if (!closingPage) return;
       // Asked again with the close, for the same reason: the answer was given over a quiet project, and
       // a pane that took an agent or a question while the dialog was up is one main refuses over.
       const late = await askMain(closingPage, false);
-      if (late !== '') return ports.showNotice('close', late);
-      ports.removePage(slot);
-      // The page that went can be the one you were standing on, since the key closes the project you are
-      // looking at. Land on whatever took its tab — the project to its right, or the tab to its left when
-      // it was the last one, which is the manager at worst. A close from the manager's own list is the
-      // other case and needs none of this: the manager holds the first tab and never moves off it, so
-      // what leaves is always behind the page you are looking at.
-      if (closingPosition === ports.activeIndex()) ports.landOn(positionAfterClose(closingPosition, ports.pages().length));
-      // The row leaves the list, the tab leaves the strip, and the session file is written without it.
-      ports.renderStatus();
+      // Nothing to take down here when it closed: main pushes the list without the project before it
+      // answers, on the same pipe, so applyProjects has already removed the page and landed on the tab
+      // that took its place — the path a close from another screen takes.
+      if (late !== '') ports.showNotice('close', late);
     });
   };
 }

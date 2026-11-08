@@ -22,9 +22,6 @@ describe('createProjectCloser', () => {
       showNotice: vi.fn(),
       confirm: vi.fn(async () => options.answer ?? true),
       showPage: vi.fn(),
-      removePage: vi.fn((slot: number) => void pages.splice(pages.findIndex((each) => each.slot === slot), 1)),
-      landOn: vi.fn(),
-      renderStatus: vi.fn(),
     };
     return { ports, close: createProjectCloser(ports) };
   }
@@ -37,24 +34,13 @@ describe('createProjectCloser', () => {
     expect(ports.confirm).not.toHaveBeenCalled();
   });
 
-  it('closes a quiet project once asked, and lands on the tab that took its place', async () => {
+  it('closes a quiet project once asked', async () => {
     const { ports, close } = setUp();
     await close(4);
     await settle();
     expect(ports.showNotice).toHaveBeenCalledWith('close', '');
     expect(ports.closeProject).toHaveBeenNthCalledWith(1, { slot: 4, name: 'web', names: [{ index: 1, name: 'terminal 2' }], onlyCheck: true });
     expect(ports.closeProject).toHaveBeenLastCalledWith({ slot: 4, name: 'web', names: [{ index: 1, name: 'terminal 2' }], onlyCheck: false });
-    expect(ports.removePage).toHaveBeenCalledWith(4);
-    expect(ports.landOn).toHaveBeenCalledWith(1);
-    expect(ports.renderStatus).toHaveBeenCalled();
-  });
-
-  it('does not move you when the project closed is not the one you are on', async () => {
-    const { ports, close } = setUp({ activeIndex: 0 });
-    await close(7);
-    await settle();
-    expect(ports.closeProject).toHaveBeenLastCalledWith(expect.objectContaining({ slot: 7, onlyCheck: false }));
-    expect(ports.landOn).not.toHaveBeenCalled();
   });
 
   it('keeps the project when the question is answered no', async () => {
@@ -63,7 +49,6 @@ describe('createProjectCloser', () => {
     await settle();
     expect(ports.showPage).toHaveBeenCalledWith(1);
     expect(ports.closeProject).toHaveBeenCalledOnce();
-    expect(ports.removePage).not.toHaveBeenCalled();
   });
 
   it('refuses late when a pane got busy while the question was up', async () => {
@@ -71,7 +56,6 @@ describe('createProjectCloser', () => {
     await close(4);
     await settle();
     expect(ports.showNotice).toHaveBeenLastCalledWith('close', 'web is still running in terminal 2 npm — stop it and close again');
-    expect(ports.removePage).not.toHaveBeenCalled();
   });
 
   it('leaves the manager and a slot with no page alone', async () => {
