@@ -1,4 +1,4 @@
-import { addComment, cardAt, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
+import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { BOARD_PATHSPECS } from '../board/board-store';
 import { posixQuoted } from '../../shared/panes/shell';
 
@@ -43,9 +43,14 @@ export function intoReview(board: Board, cardId: string): Board | null {
 //
 // A board somebody has taken Review out of is different, and still true: the card is there, and a board
 // with no Review column cannot say a card is past a column it does not have.
+//
+// A card in Cancelled is false wherever that column sits, even on an old board that has it in front of
+// Review: it will not be done, so it is never pulled into Review, and the sweep removes its worktree
+// the way it removes a Done card's (board-decision-4).
 export function awaitsReview(board: Board, cardId: string): boolean | null {
   const at = selectionOf(board, cardId);
   if (!at) return null;
+  if (isColumnNamed(board.columns[at.column]?.name ?? '', CANCELLED_COLUMN)) return false;
   const review = reviewColumnIndex(board);
   return review === -1 || at.column <= review;
 }

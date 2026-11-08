@@ -54,11 +54,12 @@ describe('needsYou', () => {
     expect(kinds(quietFor(STALL_MS - 1), shipped)).toEqual([]);
   });
 
-  it('does not call a quiet pane stalled while it reviews, or once its card is in Review or Done', () => {
+  it('does not call a quiet pane stalled while it reviews, or once its card is in Review, Done or Cancelled', () => {
     const quiet = [pane(0, 'quiet', minutesAgo(90))];
     expect(kinds([row(quiet, [worktree('a', 0, { reviewing: true })])], board({ Review: [card('a')] }))).toEqual([]);
     expect(kinds([row(quiet, [worktree('a', 0)])], board({ Review: [card('a')] }))).toEqual(['review']);
     expect(kinds([row(quiet, [worktree('a', 0)])], board({ Done: [card('a')] }))).toEqual([]);
+    expect(kinds([row(quiet, [worktree('a', 0)])], board({ Cancelled: [card('a')] }))).toEqual([]);
   });
 
   it('does not list an asking pane twice when an agent is working a card in it', () => {

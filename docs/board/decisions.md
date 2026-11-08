@@ -90,3 +90,20 @@ starting a review and a ship again. A cancelled card was never merged, and
 taking one back up is a decision as ordinary as moving a card out of Backlog:
 Shift+Left from Cancelled lands in Done, and walking on past Review and Ship
 starts them, as board-decision-2 says of any card.
+
+**`d` on a card in Done is refused, with Done's lock.** Moving a merged card to
+Cancelled by key is the stray keystroke board-decision-3 stops; a card a stray
+`d` cancelled would also drop out of the release notes' What's new. Drag it to
+Cancelled to cancel it, then `d` there deletes it.
+
+**A cancelled card does not wait for review, wherever Cancelled sits.**
+`awaitsReview` answers false for it by name, so a board that already had a
+Cancelled column in front of Review does not pull the card back into Review. The
+sweep then removes its worktree as it does a Done card's.
+
+**Finished is decided by name, not position.** `isFinishedColumn` counts Done
+and Cancelled; the subtask bar used to count the last column, so that renaming a
+column did not change it. With two finished columns, last no longer says
+finished, so a board whose finished column has another name (`Shipped`) shows
+its subtasks as under way. That is the price of one rule the bar, the manager's
+counts and its stalled panes all share.

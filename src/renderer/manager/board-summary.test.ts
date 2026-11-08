@@ -22,6 +22,11 @@ describe('columnCounts', () => {
       .toEqual([{ name: 'Doing', count: 1 }]);
   });
 
+  it('leaves Cancelled out the same way', () => {
+    expect(columnCounts(board({ Doing: [card('a')], Cancelled: [card('b')] })))
+      .toEqual([{ name: 'Doing', count: 1 }]);
+  });
+
   it('counts a card split into subtasks as one piece of work', () => {
     const counted = columnCounts(board({ Todo: [card('a'), card('b', { parent: 'a' }), card('c', { parent: 'a' })] }));
     expect(counted).toEqual([{ name: 'Todo', count: 1 }]);

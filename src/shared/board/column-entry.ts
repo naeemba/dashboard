@@ -1,4 +1,4 @@
-import { CANCELLED_COLUMN, isColumnNamed, REVIEW_COLUMN, SHIP_COLUMN } from './board';
+import { isColumnNamed, REVIEW_COLUMN, SHIP_COLUMN } from './board';
 import { isManagerPath } from '../manager/manager';
 
 // What moved a card. `user` is a gesture on the board, `command` is `dashboard board move`, and
@@ -30,13 +30,12 @@ export type Entering = {
 // the sweep, asks it, so a column cannot mean one thing to a drag and another to `board move`.
 export function columnEntry({ column, source, autoLoop, projectBoard }: Entering): ColumnEntry {
   if (!projectBoard) return 'nothing';
-  // A cancelled card is kept, not worked: entering Cancelled starts nothing, and a worktree the card
-  // has stays until the worktree dialog removes it (board-decision-4).
-  if (isColumnNamed(column, CANCELLED_COLUMN)) return 'nothing';
   if (isColumnNamed(column, SHIP_COLUMN)) return 'ship';
   // A card that reached Review on its own waits there when the loop is off; one sent there by a
   // person always starts it, which is how a user with the setting off starts a loop by hand.
   if (isColumnNamed(column, REVIEW_COLUMN)) return source !== 'automatic' || autoLoop ? 'review' : 'nothing';
+  // Every other column starts nothing, Cancelled among them: a cancelled card is kept, not worked
+  // (board-decision-4).
   return 'nothing';
 }
 

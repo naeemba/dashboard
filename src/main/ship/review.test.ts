@@ -30,6 +30,13 @@ describe('awaitsReview', () => {
     expect(awaitsReview(moveCardById(boardWithCard(), CARD, 5) as Board, CARD)).toBe(false);
   });
 
+  // A board that had Cancelled before Review: position alone would pull the cancelled card into Review.
+  it('is false for a cancelled card, wherever Cancelled sits', () => {
+    const board = boardWithCard();
+    const reordered = { columns: [board.columns[0], { name: 'Cancelled', cards: [] }, ...board.columns.slice(1)] };
+    expect(awaitsReview(moveCardById(reordered, CARD, 1) as Board, CARD)).toBe(false);
+  });
+
   // Not true — the card is gone from the board, deleted after its review or lost with a board.json that
   // would not parse, and the worktree outlives it because the review prompt says not to remove it. Told
   // "review it", the sweep re-cuts that worktree and runs /pr-loop at a pull request that merged last

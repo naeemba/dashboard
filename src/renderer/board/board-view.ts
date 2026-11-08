@@ -694,7 +694,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   }
 
   // The delete key. Outside Cancelled it moves the card there, a move like any other and undone like
-  // one (card-delete.ts says why). In Cancelled it deletes for good, after the confirm.
+  // one (card-delete.ts says why), and in Done it is refused like any keyboard move. In Cancelled it
+  // deletes for good, after the confirm.
   //
   // The count is descendants, not direct children, because that is how many cards vanish — and most
   // of them are in columns you are not looking at. A leaf card gets the same dialog without the
@@ -703,6 +704,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const outcome = deleteKeyOutcome(state.board, state.selection);
     const card = cardAt(state.board, state.selection);
     if (!outcome || !card) return;
+    if (outcome.kind === 'refused') return options.onError(outcome.reason);
     if (outcome.kind === 'cancel') {
       return moveThenAsk(state.selection, moveCardToColumn(state.board, state.selection, outcome.column));
     }

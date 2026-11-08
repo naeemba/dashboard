@@ -92,9 +92,9 @@ export const BACKLOG_COLUMN = 'Backlog';
 // What has been picked to work on next. Named for isWaitingColumn, which finds it by name.
 export const TODO_COLUMN = 'Todo';
 
-// Named because withReviewColumn puts Review in front of it, and because the manager's counts leave
-// it out — it only ever grows. Nothing else in the app treats Done as special: a board is whatever
-// columns its file holds.
+// Named because withReviewColumn puts Review in front of it, because isFinishedColumn finds it by name
+// (the subtask bar, the manager's counts and its stalled panes), and for Done's lock in done-lock.ts.
+// Renaming it changes all of those.
 export const DONE_COLUMN = 'Done';
 
 // Where a card that will not be done is kept rather than deleted (board-decision-4): last, after Done.

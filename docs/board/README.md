@@ -47,7 +47,9 @@ like any other that undo takes back; only `d` on a card already in Cancelled
 deletes it, with its subtasks, after the confirm. Its subtasks stay where they
 are. Entering Cancelled starts nothing, from the board or from `board move <id>
 Cancelled`, and a card leaves it like any column, by key too (board-decision-4).
-A cancelled card's worktree stays until the worktree dialog removes it. Whatever
+A cancelled card is never pulled into Review, and the review sweep removes its
+worktree the way it removes a Done card's. `d` on a card in Done is refused, as
+any key that moves it out of Done is. Whatever
 treats Done as finished treats Cancelled the same: the manager's column counts
 leave both out, the subtask bar counts both as finished, a pane working a
 cancelled card is not stalled, and the release notes' What's new lists only Done.

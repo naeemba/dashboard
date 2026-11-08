@@ -8,8 +8,9 @@ import { isFinishedColumn, type Board } from '../../shared/board/board';
 export type ColumnCount = { name: string; count: number };
 
 // One figure per column that has anything in it, in the board's own order, so `2 Doing · 1 Review`
-// reads left to right the way the board does. Done and Cancelled (isFinishedColumn) are left out: they only ever grow,
-// and a `214 Done` on every row would be the widest thing on it while saying nothing about today.
+// reads left to right the way the board does. Done and Cancelled (isFinishedColumn) are left out:
+// they only ever grow, and a `214 Done` on every row would be the widest thing on it while saying
+// nothing about today.
 // A subtask sitting in its parent's column is not counted: a card split into six subtasks is one
 // piece of work, and counting them would make it look like seven. A subtask moved on to a column of
 // its own is counted there, or a card in Todo with a piece in Review would show no Review at all.
