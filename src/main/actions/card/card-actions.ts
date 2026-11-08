@@ -7,6 +7,7 @@ import type { BoardChanges } from '../../board/board-changes';
 import { readBoard, writeBoard } from '../../board/board-store';
 import { realPath } from '../../app/real-path';
 import { isProjectBoard } from './project-board';
+import { isLinkedWorktree } from '../../board/linked-worktree';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
 import { bind, registerActions, type BoundAction } from '../action';
@@ -42,7 +43,7 @@ export function cardActions(main: CardActionsMain): { reviews: ReviewSweep; acti
     // A move from the command is written plainly, so the watcher logs it as the command's, as it did
     // when the command wrote the file itself.
     write: (projectPath, board, source) => (source === 'automatic' ? writeLogged(projectPath, board) : writeBoard(projectPath, board)),
-    projectBoard: (projectPath) => isProjectBoard(projectPath, main.worktrees().map((entry) => entry.worktreePath), realPath),
+    projectBoard: (projectPath) => isProjectBoard(projectPath, main.worktrees().map((entry) => entry.worktreePath), realPath, isLinkedWorktree),
     autoLoop: main.autoLoop,
     ship: (input) => ship.call(input),
     review: (input) => review.call(input),

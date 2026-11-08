@@ -367,16 +367,21 @@ describe('homeDirectoryRefusal', () => {
 
 describe('asksApp', () => {
   it('asks the app for ship, review and a move into Ship or Review, in any case', () => {
-    expect(asksApp(['ship', 'card'])).toBe(true);
-    expect(asksApp(['review', 'card'])).toBe(true);
-    expect(asksApp(['move', 'card', 'ship'])).toBe(true);
-    expect(asksApp(['move', 'card', 'Review'])).toBe(true);
+    expect(asksApp(['ship', 'card'], true)).toBe(true);
+    expect(asksApp(['review', 'card'], true)).toBe(true);
+    expect(asksApp(['move', 'card', 'ship'], true)).toBe(true);
+    expect(asksApp(['move', 'card', 'Review'], true)).toBe(true);
+  });
+
+  it('edits the files for every move on a worktree\'s board, Ship and Review among them', () => {
+    expect(asksApp(['move', 'card', 'Review'], false)).toBe(false);
+    expect(asksApp(['move', 'card', 'Ship'], false)).toBe(false);
   });
 
   it('edits the files for a move that starts nothing, and for every other verb', () => {
-    expect(asksApp(['move', 'card', 'Doing'])).toBe(false);
-    expect(asksApp(['move', 'card', 'Done'])).toBe(false);
-    expect(asksApp(['set', 'card', '--priority', 'high'])).toBe(false);
-    expect(asksApp([])).toBe(false);
+    expect(asksApp(['move', 'card', 'Doing'], true)).toBe(false);
+    expect(asksApp(['move', 'card', 'Done'], true)).toBe(false);
+    expect(asksApp(['set', 'card', '--priority', 'high'], true)).toBe(false);
+    expect(asksApp([], true)).toBe(false);
   });
 });

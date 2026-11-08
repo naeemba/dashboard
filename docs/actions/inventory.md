@@ -95,7 +95,7 @@ conversation itself, not changes to app state.
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
 | move | card.move, `actions/card/move.ts` | IPC `card:move`, CLI `board move` into Ship or Review | no |
-| move, any other column | `board-cli.ts:51` (`asksApp` false) writes the file | CLI `board move` | by design: works with the app closed (actions README, Known limits) |
+| move, any other column, or any move on a worktree's board | `board-cli.ts:53` (`asksApp` false) writes the file | CLI `board move` | by design: works with the app closed (actions README, Known limits) |
 | move, the board's own write | `board:write`, `app/project-files-ipc.ts:42` | IPC (every board edit, then `card:move` for a column change) | the write is the board's; the entry is card.move's |
 | move into Ship on the branch | `commitShipMove`, `ship/ship-flow.ts:46` | card.ship | inside card.ship |
 | move into Review | `editProjectBoard`, `ship/review-flow.ts:97` | sweep | then card.move with `automatic`; the write itself bypasses |

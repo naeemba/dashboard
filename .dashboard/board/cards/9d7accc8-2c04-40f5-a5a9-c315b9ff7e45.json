@@ -5,13 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T13:28:49.805Z",
-  "updatedAt": "2026-11-08T21:43:48.704Z",
+  "updatedAt": "2026-11-08T22:04:58.647Z",
+  "branch": "work-board-card-9d7accc8-2c04-40f5-a5a9-c31",
+  "pullRequest": 249,
   "comments": [
     {
       "at": "2026-11-07T13:54:58.634Z",
       "body": "Hit all three workers of the 2026-11-07 batch (#227, #228, #229); each one's move && set && commit chain broke on the exit 1."
+    },
+    {
+      "at": "2026-11-08T22:04:58.647Z",
+      "body": "Shipped in #249: on a worktree's board a move (Review, Ship included) is a file edit and exits 0; the command and the app's isProjectBoard both read the folder's .git (linked-worktree.ts). --notes was not this bug: move refuses extra words; set --notes replaces the description by design, comment appends."
     }
   ],
-  "column": "Doing",
-  "order": 2
+  "column": "Done",
+  "order": 200
 }
