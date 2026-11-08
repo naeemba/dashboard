@@ -3,8 +3,8 @@
   "title": "View and edit permission rules from the Claude pane",
   "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
   "priority": "low",
-  "parent": null,
-  "updatedAt": "2026-10-31T22:51:28.176Z",
+  "parent": "7f82c3d3-15b5-4694-a7bd-66031ee615d7",
+  "updatedAt": "2026-11-08T13:44:26.915Z",
   "comments": [
     {
       "at": "2026-10-31T22:51:28.176Z",
