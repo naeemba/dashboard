@@ -1,9 +1,9 @@
-import { mkdtemp, mkdir, rm, writeFile, appendFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, rm, writeFile, appendFile } from 'node:fs/promises';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { liveSessions, sweepUsage } from './usage-store';
 import { totalsOf, type FileUsage } from '../../shared/usage/usage';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 const NOW = new Date(2026, 8, 14, 9, 0, 0).getTime();
 const PROJECT = '/Users/sharp/work/api';
@@ -22,12 +22,8 @@ async function sweep(known = new Map<string, FileUsage>()): Promise<Map<string, 
 }
 
 beforeEach(async () => {
-  root = await mkdtemp(path.join(tmpdir(), 'usage-'));
+  root = temporaryFolder('usage-');
   await mkdir(path.join(root, '-Users-sharp-work-api'), { recursive: true });
-});
-
-afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
 });
 
 function logPath(...parts: string[]): string {

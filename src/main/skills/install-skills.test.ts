@@ -1,12 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createTaskScript } from '../board/create-task-install';
 import { adoptDocsSkillFile, installSkills } from './install-skills';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 function folder(): string {
-  return mkdtempSync(join(tmpdir(), 'install-skills-'));
+  return temporaryFolder('install-skills-');
 }
 
 function build(): string {

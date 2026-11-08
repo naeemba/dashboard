@@ -1,11 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY, BOARD_FILE_PATH } from '../board/board-store';
 import { git } from './git';
 import { blockingChanges } from '../ship/ship';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // A real repository rather than a mocked child process: what is pinned here is what git prints and
 // what we keep of it, and a mock prints back whatever the test already believes.
@@ -14,7 +14,7 @@ import { blockingChanges } from '../ship/ship';
 // passphrase and a global hooksPath runs somebody's hook, so the test fails on one person's laptop
 // with nothing about the code changed.
 function repositoryWithAnEditedBoard(): string {
-  const repository = mkdtempSync(join(tmpdir(), 'dashboard-git-'));
+  const repository = temporaryFolder('dashboard-git-');
   const run = (...gitArguments: string[]): void => {
     execFileSync('git', gitArguments, {
       cwd: repository,

@@ -1,10 +1,10 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { temporaryFolder } from '../testing/temporary-folder';
 import { download, swapInto, unpack } from './install';
 
 // Lets one test make the rename of the staged app fail the way EXDEV does; every other rename is real.
@@ -21,18 +21,14 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 
 // The Linux download, unpack and swap against throwaway folders standing in for ~/.local/opt.
-const folders: string[] = [];
 const servers: Server[] = [];
 afterEach(() => {
   renames.failing = '';
-  for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true });
   for (const server of servers.splice(0)) server.close();
 });
 
 function scratch(): string {
-  const folder = mkdtempSync(path.join(tmpdir(), 'update-install-'));
-  folders.push(folder);
-  return folder;
+  return temporaryFolder('update-install-');
 }
 
 // A server that sends `sent` bytes of a body it says is `length` long, then ends or drops the connection.
@@ -104,8 +100,7 @@ function app(parent: string, name: string, stamp: string): string {
 
 describe('swapInto', () => {
   it('renames the staged app over the install and clears the staging folder', async () => {
-    const parent = mkdtempSync(path.join(tmpdir(), 'update-swap-'));
-    folders.push(parent);
+    const parent = temporaryFolder('update-swap-');
     const installed = app(parent, 'dashboard', '2.44.0+acf504ceef1b');
     const staging = path.join(parent, '.dashboard.update');
     const staged = app(staging, 'Dashboard-linux-x64', '2.45.0+0123456789ab');
@@ -116,8 +111,7 @@ describe('swapInto', () => {
   });
 
   it('leaves the install alone when the staged app is another version', async () => {
-    const parent = mkdtempSync(path.join(tmpdir(), 'update-swap-'));
-    folders.push(parent);
+    const parent = temporaryFolder('update-swap-');
     const installed = app(parent, 'dashboard', '2.44.0+acf504ceef1b');
     const staging = path.join(parent, '.dashboard.update');
     const staged = app(staging, 'Dashboard-linux-x64', '2.43.0+0123456789ab');
@@ -126,8 +120,7 @@ describe('swapInto', () => {
   });
 
   it('puts the install back when the staged app cannot be renamed in', async () => {
-    const parent = mkdtempSync(path.join(tmpdir(), 'update-swap-'));
-    folders.push(parent);
+    const parent = temporaryFolder('update-swap-');
     const installed = app(parent, 'dashboard', '2.44.0+acf504ceef1b');
     const staging = path.join(parent, '.dashboard.update');
     const staged = app(staging, 'Dashboard-linux-x64', '2.45.0+0123456789ab');

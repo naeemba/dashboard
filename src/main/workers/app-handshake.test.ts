@@ -1,9 +1,8 @@
 import net from 'node:net';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { awaitAcceptance, unacceptedLine, versionRefusal } from './app-handshake';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 describe('versionRefusal', () => {
   it('answers only the app’s own build', () => {
@@ -42,7 +41,7 @@ describe('awaitAcceptance', () => {
   // A connection that fails closes at once; without the close stopping the timer the command would
   // print its failure and then sit out the rest of the timeout before exiting.
   it('stops timing a connection that has closed', async () => {
-    const folder = mkdtempSync(path.join(tmpdir(), 'handshake-test-'));
+    const folder = temporaryFolder('handshake-test-');
     const silent = vi.fn();
     const connection = net.connect(path.join(folder, 'none.sock'));
     connection.on('error', () => undefined);
@@ -50,6 +49,5 @@ describe('awaitAcceptance', () => {
     await new Promise((resolve) => connection.once('close', resolve));
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(silent).not.toHaveBeenCalled();
-    rmSync(folder, { recursive: true, force: true });
   });
 });

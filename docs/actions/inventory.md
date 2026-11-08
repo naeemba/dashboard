@@ -103,9 +103,13 @@ conversation itself, not changes to app state.
 
 ### settings and notes
 
+settings moved behind settings.write by the settings card;
+`tidySettingsFile`'s launch tidy rewrites the file's own lines, not the
+settings, and stays.
+
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
-| settings.write | `writeSettings`, `main.ts:157`, `:560` (`settings:write`), `:867` (a remote join saving its address) | launch, IPC, IPC `host:connect` | yes: three writers of one file |
+| settings.write | settings.write, `actions/settings/write.ts`, bound in `settings-actions.ts`; main's `writeSettings` its `writeFile` port | launch (`keepHostToken`), IPC `settings:write`, IPC `host:connect` (`saveSettings`) | no: the shell is picked again on every write, the join's included |
 | notes.write | `notes:write`, `project-files-ipc.ts:56`; `ink:write` `:64` | IPC | one writer each; no action needed |
 
 ### update
@@ -161,7 +165,8 @@ two fight over `main.ts`:
 4. **session** (done): start, reset, resume, branch, rewind, rename and
    configure behind one action each, and one name for a conversation in
    /resume and the drawer.
-5. **settings**: settings.write as the one writer.
+5. **settings** (done): settings.write as the one writer, for launch, the
+   settings screen and a remote join.
 
 Each card lowers its rows in `bypasses.test.ts` to what it left behind. card
 has no card: its writes are the board's (board-rule-1), and the moves that start

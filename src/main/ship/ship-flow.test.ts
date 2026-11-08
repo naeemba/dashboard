@@ -1,18 +1,18 @@
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { addCard, emptyBoard } from '../../shared/board/board';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 import { BOARD_FOLDER_PATH, writeBoard } from '../board/board-store';
 import { shipFlow } from './ship-flow';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // The ship move is a committed write, so its read must not salvage: a rename would leave the second
 // run a clean board, and `git add -A` would commit the card as deleted.
 
 describe('a resumed ship over a card file that does not parse', () => {
   it('refuses on every run and leaves the file under its own name', async () => {
-    const worktreePath = mkdtempSync(join(tmpdir(), 'ship-flow-'));
+    const worktreePath = temporaryFolder('ship-flow-');
     writeBoard(worktreePath, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
     const cards = join(worktreePath, BOARD_FOLDER_PATH, 'cards');
     writeFileSync(join(cards, 'broken.json'), '{ "id": "broken", }');

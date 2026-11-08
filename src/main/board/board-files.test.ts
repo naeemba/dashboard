@@ -1,19 +1,19 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { addCard, allCards, emptyBoard, moveCardById, type Board } from '../../shared/board/board';
 import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, BOARD_PATHSPECS, boardFolderPath, boardSnapshot, peekBoard, readBoard, writeBoard } from './board-store';
 import { isCardSetAside } from './board-files';
 import { git, useGitTestEnvironment, writeLegacyBoard } from './create-task-git-fixture';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // The board kept one file per card: the move off board.json, and the merges it exists for.
 
 useGitTestEnvironment();
 
 function project(): string {
-  return mkdtempSync(join(tmpdir(), 'board-files-'));
+  return temporaryFolder('board-files-');
 }
 
 function cardsFolder(projectPath: string): string {

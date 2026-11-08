@@ -1,13 +1,12 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { screenKey } from '../../shared/workers/screen-key';
 import { savedScreens, screenSignal, screenWorkers } from './screen-workers';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 let folder: string;
-beforeEach(() => { folder = mkdtempSync(path.join(tmpdir(), 'screen-workers-')); });
-afterEach(() => { rmSync(folder, { recursive: true, force: true }); });
+beforeEach(() => { folder = temporaryFolder('screen-workers-'); });
 
 const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const START = { session: SESSION, name: 'api-terminal-2', prompt: 'fix it\n\nSendMessage to main-api when done' };

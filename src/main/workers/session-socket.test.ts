@@ -1,28 +1,17 @@
-import { mkdtempSync, rmSync, statSync } from 'node:fs';
+import { statSync } from 'node:fs';
 import net from 'node:net';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { unacceptedLine, versionRefusal } from './app-handshake';
 import { askApp, listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
-
-// Every folder a test makes, removed after it.
-const made: string[] = [];
-const folder = (prefix: string) => {
-  const madeFolder = mkdtempSync(path.join(tmpdir(), prefix));
-  made.push(madeFolder);
-  return madeFolder;
-};
-afterEach(() => {
-  for (const each of made.splice(0)) rmSync(each, { recursive: true, force: true });
-});
+import { temporaryFolder } from '../testing/temporary-folder';
 
 describe('sessionSocketPath', () => {
   // The folder is the lock: only you can enter it, so only you can reach the socket inside.
   // Skipped on Windows, which has no POSIX file modes to read back.
   const posixModesOnly = it.skipIf(process.platform === 'win32');
   posixModesOnly('puts the socket in a fresh folder only this user can enter', () => {
-    const temporary = folder('socket-test-');
+    const temporary = temporaryFolder('socket-test-');
     const socket = sessionSocketPath('linux', temporary, 42);
     expect(path.basename(socket)).toBe('session.sock');
     expect(statSync(path.dirname(socket)).mode & 0o077).toBe(0);
@@ -35,7 +24,7 @@ describe('sessionSocketPath', () => {
 
   // Quitting removes this folder recursively, so it is only ever the one made for the socket.
   it('names the folder it made for the socket, and none for a pipe', () => {
-    const temporary = folder('socket-test-');
+    const temporary = temporaryFolder('socket-test-');
     const socket = sessionSocketPath('linux', temporary, 42);
     expect(sessionSocketFolder('linux', socket)).toBe(path.dirname(socket));
     // A child of the temporary folder, never the folder itself, or quitting would empty /tmp.
@@ -51,7 +40,7 @@ describe('listenForSessions and askApp', () => {
   // whole closed the whole pipe, the answer went nowhere, and every `pane` command printed "the app
   // answered with something that was not a reply". On win32 this round trip runs over that real pipe.
   it('carries a request to the app and its answer back', async () => {
-    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async (request) => ({ ok: true, output: `${request.directory} ${request.args.join(' ')}` }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
     expect(await askApp(socket, { directory: '/work/api', args: ['claim'], version: VERSION })).toEqual({ ok: true, output: '/work/api claim' });
@@ -60,7 +49,7 @@ describe('listenForSessions and askApp', () => {
 
   // An answer that throws, or a request of the wrong shape, still gets the command a reply.
   it('answers a request it cannot handle rather than leaving the command waiting', async () => {
-    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async () => { throw new Error('no such pane'); }, () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
     expect(await askApp(socket, { directory: '/work/api', args: ['claim'], version: VERSION })).toEqual({ ok: false, output: 'no such pane' });
@@ -72,7 +61,7 @@ describe('listenForSessions and askApp', () => {
   // any request the app cannot read, not answered from half a line. Only where a socket stays half open
   // is there anyone left to read the refusal, so a Windows pipe skips this.
   it.skipIf(process.platform === 'win32')('refuses a request cut off before its newline', async () => {
-    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
     const reply = await new Promise<string>((resolve) => {
@@ -89,7 +78,7 @@ describe('listenForSessions and askApp', () => {
   // A rebuild puts a new command under an app still running the old build. Refused by the app, so the
   // command says to restart rather than acting on words the two builds might read differently.
   it('refuses a command of another build, or one too old to say', async () => {
-    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
     expect(await askApp(socket, { directory: '/work/api', args: ['list'], version: '1.5.0+aaaaaaaaaaaa' }))
@@ -102,7 +91,7 @@ describe('listenForSessions and askApp', () => {
   // A command from before #196 ended its whole request by closing its side, with no newline. It is
   // told to restart like any other build, not that its request could not be read.
   it.skipIf(process.platform === 'win32')('refuses a half-closed whole request as another build', async () => {
-    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
     const reply = await new Promise<string>((resolve) => {
@@ -119,7 +108,7 @@ describe('listenForSessions and askApp', () => {
   // The old app waited for the command to close its side, which this command never does: neither moved
   // and `pane list` hung for good. An app that never answers is that app.
   it('stops waiting on an app that never takes the request', async () => {
-    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const held: net.Socket[] = [];
     const server = net.createServer((connection) => { held.push(connection); });
     server.listen(socket);
@@ -136,7 +125,7 @@ describe('listenForSessions and askApp', () => {
   // Only the acceptance is timed: an answer that takes longer than that, such as a worktree being made,
   // still arrives.
   it('waits past the timeout for an answer the app has taken', async () => {
-    const socket = sessionSocketPath(process.platform, folder('socket-test-'), process.pid);
+    const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const slow = () => new Promise<{ ok: boolean; output: string }>((resolve) => setTimeout(() => resolve({ ok: true, output: 'made' }), 150));
     const server = listenForSessions(socket, VERSION, slow, () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
@@ -145,12 +134,12 @@ describe('listenForSessions and askApp', () => {
   });
 
   it('says the app is gone when nothing is listening', async () => {
-    const reply = await askApp(path.join(folder('socket-test-'), 'none.sock'), { directory: '/', args: [] });
+    const reply = await askApp(path.join(temporaryFolder('socket-test-'), 'none.sock'), { directory: '/', args: [] });
     expect(reply).toMatchObject({ ok: false, output: expect.stringContaining('stopped answering') });
   });
 
   it.skipIf(process.platform === 'win32')('leaves the socket readable by this user alone, then says it is listening', async () => {
-    const socket = path.join(folder('socket-test-'), 'session.sock');
+    const socket = path.join(temporaryFolder('socket-test-'), 'session.sock');
     let listening = false;
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: '' }), () => undefined, () => { listening = true; });
     await new Promise((resolve) => server.once('listening', resolve));

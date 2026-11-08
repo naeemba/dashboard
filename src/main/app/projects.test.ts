@@ -1,8 +1,8 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { pickedFolder, projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, withRecentPath } from './projects';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -67,7 +67,7 @@ describe('withRecentPath', () => {
 });
 
 describe('the recents file', () => {
-  const file = () => join(mkdtempSync(join(tmpdir(), 'dashboard-')), 'recents.json');
+  const file = () => join(temporaryFolder('dashboard-'), 'recents.json');
 
   it('returns nothing when the file is missing', () => {
     expect(readRecentPaths('/does/not/exist.json')).toEqual([]);

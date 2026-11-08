@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fileCandidates, firstFile, wholePath } from './file-open';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -44,7 +44,7 @@ describe('wholePath', () => {
 });
 
 describe('firstFile', () => {
-  const root = mkdtempSync(path.join(tmpdir(), 'file-open-'));
+  const root = temporaryFolder('file-open-');
   mkdirSync(path.join(root, 'folder'));
   writeFileSync(path.join(root, 'file.ts'), '');
 

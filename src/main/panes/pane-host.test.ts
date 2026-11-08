@@ -1,6 +1,5 @@
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { hostCommand, hostLaunch, launchPaneHost, paneHost } from './pane-host-client';
@@ -8,6 +7,7 @@ import { hostProof, line, lineReader, paneHostAddress, paneKey, pipeName, pipeTo
 import { acceptApps } from './host-socket';
 import { paneHostServer } from './pane-host-server';
 import type { PaneShell } from './pane-shell';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // A shell that does what the test tells it, in place of node-pty.
 function fakeShell(pid: number) {
@@ -171,36 +171,27 @@ describe('paneHostAddress', () => {
   });
 
   it('keeps one secret token per user-data folder, and remakes only a file that holds no token', () => {
-    const first = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
-    const second = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
-    try {
-      const address = paneHostAddress('win32', first);
-      expect(address?.token).toMatch(/^[0-9a-f]{32}$/);
-      expect(address?.socket).toBe(pipeName(address?.token ?? ''));
-      expect(paneHostAddress('win32', first)).toEqual(address);
-      expect(paneHostAddress('win32', second)?.token).not.toBe(address?.token);
-      writeFileSync(pipeTokenFile(first), '');
-      expect(paneHostAddress('win32', first)?.token).toMatch(/^[0-9a-f]{32}$/);
-      const remade = paneHostAddress('win32', first)?.token;
-      renewPipeToken(first);
-      expect(paneHostAddress('win32', first)?.token).not.toBe(remade);
-      // Each token is written beside the file and moved in whole, and nothing is left beside it.
-      expect(readdirSync(path.dirname(pipeTokenFile(first)))).toEqual(['pipe-token']);
-      expect(paneHostAddress('win32', first)?.tokenFile).toBe(pipeTokenFile(first));
-    } finally {
-      rmSync(first, { recursive: true, force: true });
-      rmSync(second, { recursive: true, force: true });
-    }
+    const first = temporaryFolder('pane-token-');
+    const second = temporaryFolder('pane-token-');
+    const address = paneHostAddress('win32', first);
+    expect(address?.token).toMatch(/^[0-9a-f]{32}$/);
+    expect(address?.socket).toBe(pipeName(address?.token ?? ''));
+    expect(paneHostAddress('win32', first)).toEqual(address);
+    expect(paneHostAddress('win32', second)?.token).not.toBe(address?.token);
+    writeFileSync(pipeTokenFile(first), '');
+    expect(paneHostAddress('win32', first)?.token).toMatch(/^[0-9a-f]{32}$/);
+    const remade = paneHostAddress('win32', first)?.token;
+    renewPipeToken(first);
+    expect(paneHostAddress('win32', first)?.token).not.toBe(remade);
+    // Each token is written beside the file and moved in whole, and nothing is left beside it.
+    expect(readdirSync(path.dirname(pipeTokenFile(first)))).toEqual(['pipe-token']);
+    expect(paneHostAddress('win32', first)?.tokenFile).toBe(pipeTokenFile(first));
   });
 
   it('gives no address, and writes no token, when the token file cannot be read for a reason other than missing', () => {
-    const folder = mkdtempSync(path.join(os.tmpdir(), 'pane-token-'));
-    try {
-      mkdirSync(pipeTokenFile(folder), { recursive: true });
-      expect(paneHostAddress('win32', folder)).toBeNull();
-    } finally {
-      rmSync(folder, { recursive: true, force: true });
-    }
+    const folder = temporaryFolder('pane-token-');
+    mkdirSync(pipeTokenFile(folder), { recursive: true });
+    expect(paneHostAddress('win32', folder)).toBeNull();
   });
 
   it('is a socket file in a pane-host folder of the user data elsewhere, with no token', () => {
@@ -223,13 +214,11 @@ describe('paneHost over a socket', () => {
   const accepted: net.Socket[] = [];
   afterEach(() => {
     for (const socket of accepted.splice(0)) socket.destroy();
-    // Windows lets go of a destroyed pipe's files a moment later, and an rmdir before then is EBUSY.
-    rmSync(folder, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 });
   });
 
   // The socket the app would use with this folder as its user data, made ready as the host makes it.
   function hostSocket(): string {
-    folder = mkdtempSync(path.join(os.tmpdir(), 'pane-host-'));
+    folder = temporaryFolder('pane-host-');
     const socketPath = paneHostAddress(process.platform, folder)?.socket ?? '';
     prepareHostSocket(process.platform, socketPath);
     return socketPath;

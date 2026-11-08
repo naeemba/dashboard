@@ -1,15 +1,15 @@
-import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
 const posixModesOnly = it.skipIf(process.platform === 'win32');
 
 function file(): string {
-  return join(mkdtempSync(join(tmpdir(), 'dashboard-settings-')), 'settings.json');
+  return join(temporaryFolder('dashboard-settings-'), 'settings.json');
 }
 
 describe('settingsFilePath', () => {
@@ -43,7 +43,7 @@ describe('readSettings', () => {
 
 describe('writeSettings', () => {
   it('makes the directory and writes something readable back', () => {
-    const path = join(mkdtempSync(join(tmpdir(), 'dashboard-settings-')), 'nested', 'settings.json');
+    const path = join(temporaryFolder('dashboard-settings-'), 'nested', 'settings.json');
     const settings = { ...defaultSettings(true), shellCommand: '/bin/fish' };
     writeSettings(path, settings, true);
     expect(readSettings(path, true)).toEqual(settings);

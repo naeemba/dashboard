@@ -85,16 +85,23 @@ Neither door holds any of the logic; each only asks.
 - **session.configure** (model, mode, effort, fast): kept for the next start,
   and the running session moved onto it; none is started for it.
 
+- **settings.write** (`settings:write`, launch's host token, a remote join
+  saving its address): the settings' one writer. Keeps the change as main's
+  live copy with the shell it picks, then writes the file; a pane already
+  running keeps its shell. The launch tidy (`tidySettingsFile`,
+  `settings-store.ts`) still rewrites the file's own lines outside it.
+
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
 [`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls and wrappers
 that still do the work themselves; the rows it does not pin are held by the
 rule alone (actions-rule-1, actions-decision-4).
 
-Only card.move has a channel of its own name: it is the only action the bridge
-exposes that way. The pane and project actions answer on the channels and commands
-that were there before (`pane:add`, `pane:close`, `sessions:resume`,
-`projects:open`, `projects:close`, `pane claim`, `send`, `release`, `run`,
+Only card.move and settings.write have a channel of their own name
+(`card:move`, `settings:write`); settings.write's is the one that was there,
+answering with the shell rather than the action's result. The pane and project
+actions answer on the channels and commands that were there before
+(`pane:add`, `pane:close`, `sessions:resume`, `projects:open`, `projects:close`, `pane claim`, `send`, `release`, `run`,
 `project open`, `close`, `focus`), and so do the session actions (`chat:reset`,
 `chat:resume`, `chat:branch`, `chat:rewind`, `chat:rename`, `chat:configure`,
 `sessions:rename`); a screen that needs ship or review registers its
@@ -148,6 +155,8 @@ Folder: `src/main/actions/`.
 - `session/session-actions.ts` — main's wiring: the session actions, their ports and the screen's doors
 - `session/start.ts`, `session/reset.ts`, `session/resume.ts`, `session/branch.ts`, `session/rewind.ts`, `session/rename.ts`, `session/configure.ts`
 - `session/conversation-ports.ts` — what reset, resume, branch and rewind ask of the session, and `keepsItsConversation`
+- `settings/settings-actions.ts` — main's wiring: settings.write and the screen's `settings:write`
+- `settings/write.ts`
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios
