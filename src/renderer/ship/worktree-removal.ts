@@ -42,11 +42,14 @@ export async function removeWorktreeAsking(
   // an agent to remove its own worktree while the sheet is up. Nothing is re-checked here: a path
   // with no record is a removal that has already happened, and main answers it that way.
   const attempt = await bridge.removeWorktree(entry.worktreePath, false, entry.projectPath);
+  // A request main could not read: nothing a forced removal would get past.
+  if ('refused' in attempt) return notify(attempt.refused, refocus);
   if (attempt.ok) return;
   const forced = await confirmOverlay(forcedQuestion(entry, attempt),
     'Enter removes it anyway and loses what is in it. Escape keeps it.');
   refocus();
   if (!forced) return;
   const attemptForced = await bridge.removeWorktree(entry.worktreePath, true, entry.projectPath);
-  if (!attemptForced.ok) await notify(attemptForced.message, refocus);
+  if ('refused' in attemptForced) await notify(attemptForced.refused, refocus);
+  else if (!attemptForced.ok) await notify(attemptForced.message, refocus);
 }

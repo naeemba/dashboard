@@ -35,7 +35,8 @@ export type ReviewPorts = {
   // into, a dev server you started there, or an nvim with unsaved edits, never has its folder taken
   // away underneath it.
   shellLivesIn: (worktreePath: string) => Promise<boolean>;
-  removeWorktree: (worktreePath: string, force: boolean) => Promise<WorktreeRemoval>;
+  // Never forced: what an agent left uncommitted exists nowhere else.
+  removeWorktree: (worktreePath: string) => Promise<WorktreeRemoval>;
   // Check the branch out again at the same path. No new branch and no base: the branch is already
   // there with the pull request on it, and everything the agent pushed is on it already.
   addWorktree: (entry: WorktreeEntry) => Promise<unknown>;
@@ -123,7 +124,7 @@ async function swapWorktree(
   // Not forced. What is uncommitted in a worktree exists nowhere else, and an agent that left
   // something behind is exactly the case worth stopping for — the card still lands in Review, and the
   // line on it names the branch to go and look at.
-  const removed = await ports.removeWorktree(entry.worktreePath, false);
+  const removed = await ports.removeWorktree(entry.worktreePath);
   if (!removed.ok) {
     if (removed.dirty.length === 0) return { message: removed.message, again: false };
     // Uncommitted files are usually the agent's own last breath. The pull request number is written
@@ -164,7 +165,7 @@ async function swapWorktree(
 // uncommitted in it exists nowhere else. When git refuses, the card says so, once.
 async function clearWorktree(ports: ReviewPorts, entry: WorktreeEntry): Promise<void> {
   const removed = await ports
-    .queue(entry.projectPath, () => ports.removeWorktree(entry.worktreePath, false))
+    .queue(entry.projectPath, () => ports.removeWorktree(entry.worktreePath))
     .catch((error: unknown) => ({ ok: false, message: failureText(error), dirty: [] as string[] }));
   if (removed.ok) return;
   const reason = refusal(entry, removed, 'remove it from the worktree list');

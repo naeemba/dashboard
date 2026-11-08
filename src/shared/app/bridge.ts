@@ -250,8 +250,9 @@ export type DashboardBridge = {
   scanWorktrees(projectPaths: string[]): Promise<ScannedWorktree[]>;
   // Removing a worktree. A dirty one comes back refused, with the files listed, so the dialog can ask
   // a second time naming them rather than deciding on its own what "dirty enough" means. The project
-  // is where git is asked from when the app holds no record of the worktree.
-  removeWorktree(worktreePath: string, force: boolean, projectPath: string): Promise<WorktreeRemoval>;
+  // is where git is asked from when the app holds no record of the worktree. A request worktree.remove
+  // cannot read comes back `{ refused }`.
+  removeWorktree(worktreePath: string, force: boolean, projectPath: string): Promise<WorktreeRemoval | Refused>;
   // One command, run in each of these projects at once, each in its own process. Not a pty and not a
   // pane: a command that borrows a shell throws away whatever was in it.
   runTask(command: string, projectPaths: string[]): void;

@@ -70,3 +70,13 @@ describe('remove', () => {
     expect(sent).toHaveLength(0);
   });
 });
+
+describe('givePane', () => {
+  it('names the pane on the card taking it, and the card that still named it gives it up', () => {
+    const before = entry(join(folder, 'before'), 'before');
+    const taking = { ...entry(join(folder, 'taking'), 'taking'), pane: null };
+    const { keeper } = keeperWith([before, taking], new Map());
+    expect(keeper.givePane(taking, 2)).toEqual({ ...taking, pane: 2 });
+    expect(keeper.entries().map((each) => [each.cardId, each.pane])).toEqual([['before', null], ['taking', 2]]);
+  });
+});

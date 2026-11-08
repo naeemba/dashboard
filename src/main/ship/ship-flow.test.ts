@@ -23,6 +23,7 @@ describe('a resumed ship over a card file that does not parse', () => {
     const shipCard = shipFlow({
       worktrees: () => [entry],
       recordWorktree: (recorded) => recorded,
+      makeWorktree: () => { throw new Error('a resumed ship makes no worktree'); },
       attachPane: () => { throw new Error('a refused ship attaches no pane'); },
       agentRunsIn: () => false,
       dropDeadWorktrees: () => undefined,
