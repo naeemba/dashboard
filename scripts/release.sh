@@ -71,7 +71,7 @@ if [ "$mode" = bump ]; then
   [ -n "$run" ] && [ "$run" != "$before" ] || stop "dispatched, but no new Release run showed up in a minute. Find it in the Actions tab and run scripts/release.sh --resume <run id>."
 fi
 
-next="lost touch with GitHub on run $run, which may still be going. Try again: scripts/release.sh --resume $run."
+next="lost touch with GitHub on run $run, which may still be going (or the id is wrong). Try again: scripts/release.sh --resume $run."
 read -r url sha <<RUN
 $(retry gh run view "$run" --json url,headSha --jq '"\(.url) \(.headSha)"')
 RUN
@@ -90,6 +90,7 @@ if [ "$outcome" != green ]; then
   stop "the run failed in ${failed:-a job}, so the release stays a draft. Re-run the failed jobs, then scripts/release.sh --resume $run."
 fi
 
+next="run $run finished, but reading its release failed. Try again: scripts/release.sh --resume $run."
 # The release a run made: the first stable tag on main after the commit it ran on. A pre-release tag
 # run's commit is on no stable tag, and is not installed from here.
 retry git fetch --quiet --tags origin

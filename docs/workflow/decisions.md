@@ -137,5 +137,5 @@ is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` t
   retried: a dispatch whose answer was lost may have started a run, and a second try would cut a second
   release.
 - An `EXIT` trap prints `Stopped:` for any failure `stop` did not explain, with a `next` line the script
-  moves along as it goes (nothing dispatched; the run may still be going; the release is out, resume to
-  install), rather than an `|| stop` on every line that can fail.
+  moves along as it goes (nothing dispatched; the run may still be going or the id is wrong; the run
+  finished but its release could not be read; the release is out, resume to install), rather than an `|| stop` on every line that can fail.
