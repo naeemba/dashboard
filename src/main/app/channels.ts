@@ -9,12 +9,17 @@ import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 export type ChannelHandler = (screen: string, ...channelArguments: any[]) => unknown;
 
 export type Channels = {
-  handle(channel: string, handler: ChannelHandler): void;
+  // `action` names the action a channel is the screen's door to (registerActions), for the log line a
+  // throw leaves.
+  handle(channel: string, handler: ChannelHandler, action?: string): void;
   on(channel: string, handler: ChannelHandler): void;
   invoke(screen: string, channel: string, channelArguments: unknown[]): Promise<unknown>;
   dispatch(screen: string, channel: string, channelArguments: unknown[]): void;
   handled(): string[];
   listened(): string[];
+  // Told of every handler or listener that throws, with the channel it came in on. The throw still
+  // reaches the caller: the screen's own catch says it on the bar, this is the line with main's stack.
+  whenThrown(listener: (channel: string, error: unknown, action: string | undefined) => void): void;
 };
 
 export type RemoteTarget = {
@@ -25,24 +30,45 @@ export type RemoteTarget = {
 export function channels(): Channels {
   const handlers = new Map<string, ChannelHandler>();
   const listeners = new Map<string, ChannelHandler>();
+  const actions = new Map<string, string>();
+  let thrown: (channel: string, error: unknown, action: string | undefined) => void = () => undefined;
+  // Every call runs through here, sync throw or rejection alike.
+  async function guarded(channel: string, run: () => unknown): Promise<unknown> {
+    try {
+      return await run();
+    } catch (error: unknown) {
+      thrown(channel, error, actions.get(channel));
+      throw error;
+    }
+  }
   return {
-    handle(channel, handler) { handlers.set(channel, handler); },
+    handle(channel, handler, action) {
+      handlers.set(channel, handler);
+      if (action !== undefined) actions.set(channel, action);
+    },
     on(channel, handler) { listeners.set(channel, handler); },
     // A send arriving as a request, which is how a remote screen sends everything, is dispatched and
     // answered null: it has no reply of its own, but the screen's frame has an id that waits for one.
-    async invoke(screen, channel, channelArguments) {
+    invoke(screen, channel, channelArguments) {
       const handler = handlers.get(channel);
-      if (handler) return handler(screen, ...channelArguments);
+      if (handler) return guarded(channel, () => handler(screen, ...channelArguments));
       const listener = listeners.get(channel);
-      if (!listener) throw new Error(`No such channel: ${channel}`);
-      listener(screen, ...channelArguments);
-      return null;
+      if (!listener) return Promise.reject(new Error(`No such channel: ${channel}`));
+      return guarded(channel, () => { listener(screen, ...channelArguments); return null; });
     },
+    // Synchronous, as ipcMain's listener is: a throw still goes on to the process's last resort, which
+    // says it on the bar.
     dispatch(screen, channel, channelArguments) {
-      listeners.get(channel)?.(screen, ...channelArguments);
+      try {
+        listeners.get(channel)?.(screen, ...channelArguments);
+      } catch (error: unknown) {
+        thrown(channel, error, actions.get(channel));
+        throw error;
+      }
     },
     handled: () => [...handlers.keys()],
     listened: () => [...listeners.keys()],
+    whenThrown(listener) { thrown = listener; },
   };
 }
 

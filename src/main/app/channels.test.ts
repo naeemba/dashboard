@@ -16,6 +16,21 @@ describe('channels', () => {
     await expect(table.invoke('mac', 'board:read', ['/code/api'])).resolves.toBe('mac:/code/api');
   });
 
+  it('tells whenThrown of a handler that throws or rejects, with its channel and action, and still fails the call', async () => {
+    const table = channels();
+    const seen: unknown[] = [];
+    table.whenThrown((channel, error, action) => seen.push([channel, (error as Error).message, action]));
+    table.handle('project:close', () => { throw new Error('An object could not be cloned'); }, 'project.close');
+    table.handle('board:read', () => Promise.reject(new Error('EACCES')));
+    table.on('pty:input', () => { throw new Error('gone'); });
+    await expect(table.invoke('local', 'project:close', [])).rejects.toThrow('An object could not be cloned');
+    await expect(table.invoke('local', 'board:read', [])).rejects.toThrow('EACCES');
+    expect(() => table.dispatch('local', 'pty:input', [])).toThrow('gone');
+    expect(seen).toEqual([
+      ['project:close', 'An object could not be cloned', 'project.close'], ['board:read', 'EACCES', undefined], ['pty:input', 'gone', undefined],
+    ]);
+  });
+
   it('rejects an unknown channel by name', async () => {
     const table = channels();
     await expect(table.invoke('mac', 'nope:nothing', [])).rejects.toThrow('No such channel: nope:nothing');
