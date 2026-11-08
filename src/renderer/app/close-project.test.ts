@@ -43,6 +43,17 @@ describe('createProjectCloser', () => {
     expect(ports.closeProject).toHaveBeenLastCalledWith({ slot: 4, name: 'web', names: [{ index: 1, name: 'terminal 2' }], onlyCheck: false });
   });
 
+  it('sends only what the structured clone under IPC can carry', async () => {
+    const { ports, close } = setUp();
+    // A pane as renderer.ts hands it over: a terminal object and functions beside the name.
+    const pane = { index: 1, name: 'terminal 2', terminal: { cols: 80 }, tail: () => [] };
+    ports.namedPanes = () => [pane];
+    await close(4);
+    const request = vi.mocked(ports.closeProject).mock.calls[0][0];
+    expect(() => structuredClone(request)).not.toThrow();
+    expect(request.names).toEqual([{ index: 1, name: 'terminal 2' }]);
+  });
+
   it('keeps the project when the question is answered no', async () => {
     const { ports, close } = setUp({ answer: false });
     await close(4);
