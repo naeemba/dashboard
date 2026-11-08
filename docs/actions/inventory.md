@@ -17,19 +17,22 @@ with what the last run left.
 
 ### pane
 
+Moved behind the pane actions by the pane card; the rows say where each door is
+now.
+
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
-| dispatch | `startPane`, `actions/pane/dispatch.ts:87`, through `paneActions` in `main.ts:572` | ship and review (`attachPane`, `main.ts:724`), `pane run` (`startWorker`, `main.ts:788`), New Claude (`pane:add` with `claude`, `main.ts:676`), restart (`resumeIn`, `main.ts:436`) | no door: main calls the run, the action and its parser are unused |
-| resume as a shell | `resumeIn`'s shell branch, `main.ts:432` | restart, a conversation `resumedAs` says comes back as `shell` | yes: types `claude --resume` into the shell |
-| resume from the drawer | `resumeInWorker`, `main.ts:543`, from `sessions:resume`, `drawer/drawer-ipc.ts:35` | IPC (the drawer's Enter) | yes: opens a worker and types `claude --resume` into it |
-| come back as a screen | `screensComeBack`, `main.ts:379` | restart | yes: reopens the pane and names the card's record itself |
-| adopt a kept shell | `adoptSurvivors`, `main.ts:404` | restart | yes |
-| claim | `claim`, `workers/session-requests.ts:164`, opens a worker through `openWorker`, `main.ts:631` | CLI `pane claim` | yes |
-| open (add) | `pane:add`, `workers/worker-channels.ts:18`, `openWorker` | IPC (new-terminal keys, the worker list's button) | yes |
-| send | `send`, `session-requests.ts:236`, main's `type` | CLI `pane send` | yes |
-| release | `release`, `session-requests.ts:216`, `closeWorker` and a throwaway's removal | CLI `pane release` | yes |
-| close | `pane:close`, `worker-channels.ts:27`, `closeWorker`, `main.ts:659` | IPC (close key, worker's close button) | yes |
-| agent exited | `releaseAgentPane`, `main.ts:282` | the shell's exit | yes, and stays an event, not a request |
+| dispatch | pane.dispatch, `actions/pane/dispatch.ts`, bound in `pane-actions.ts` | ship and review (`attachPane`), `pane run` (`startWorker`), pane.open, pane.restore | no |
+| resume as a shell | pane.restore, then pane.dispatch | restart | no: Claude Code is the pane's process (actions-decision-5) |
+| resume from the drawer | pane.open with `resume`, then pane.dispatch | IPC `sessions:resume`, `drawer/drawer-ipc.ts` | no |
+| come back as a screen | pane.restore, `actions/pane/restore.ts` | restart | no |
+| adopt a kept shell | pane.restore | restart | no |
+| claim | pane.claim, `actions/pane/claim.ts`, bound in `session-requests.ts`; opens through pane.open | CLI `pane claim` | no; `--project` opens through `openProject`, project.open's row |
+| open (add) | pane.open, `actions/pane/open.ts` | IPC `pane:add` (`workers/worker-channels.ts`), the drawer, pane.claim | no |
+| send | pane.send, `actions/pane/send.ts` | CLI `pane send` | no |
+| release | pane.release, `actions/pane/release.ts`, bound in `session-requests.ts`; closes through pane.close | CLI `pane release` | the throwaway's removal is worktree.remove's row |
+| close | pane.close, `actions/pane/close.ts` | IPC `pane:close`, pane.release | no |
+| agent exited | `releaseAgentPane`, `main.ts` | the shell's exit | yes, and stays an event, not a request |
 | restart a shell | `pty:restart`, `panes/pane-channels.ts:42` | IPC (Enter on an exited pane) | yes |
 
 Fold, zoom, focus and the layout are the renderer's own, saved through
@@ -121,8 +124,9 @@ One row per noun.verb, and what it decides that its callers do not.
 One card per noun, in this order, each landing before the next starts, so no
 two fight over `main.ts`:
 
-1. **pane**: give pane.dispatch its door, move the shell's and the drawer's
-   resume behind it, then claim, open, send, release, close and restore.
+1. **pane** (done): pane.dispatch has its doors, the shell's and the drawer's
+   resume are behind it, and claim, open, send, release, close and restore are
+   actions. Left: the agent's exit and `pty:restart`.
 2. **worktree**: make and remove behind one action each, the dialog, the
    throwaway and the review on it.
 3. **project**: open, close and focus, one refusal for the key and the command.

@@ -11,8 +11,8 @@ answer, a key or the sweep.
 What a second copy cost: a ship, `pane run`, the review loop, New Claude and a
 restart each started their agent their own way. Only `pane run` could pick a
 Claude screen, so `pane run --screen` gave a screen and a ship of the same card
-gave a terminal; and a pane that comes back as a plain shell after a restart
-still gets `claude --resume` typed into it, with no screen, no worker hooks, and
+gave a terminal; and a pane that came back as a plain shell after a restart
+got `claude --resume` typed into it, with no screen, no worker hooks, and
 nothing in the log saying an agent started.
 
 `src/main/actions/bypasses.test.ts` names the calls and wrappers that still do

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agentToResume, isPaneConversation, mainResume, resumable, resumedAs, resumeLine, sessionToWrite, withClaude, workerDispatcher,
+  agentToResume, isPaneConversation, mainResume, resumable, sessionToWrite, withClaude, workerDispatcher,
   type PaneConversation,
 } from './claude-resume';
 import type { WorktreeEntry } from '../../shared/app/bridge';
@@ -101,20 +101,6 @@ describe('sessionToWrite', () => {
   });
 });
 
-describe('resumedAs', () => {
-  const card = { cardId: 'c1' } as WorktreeEntry;
-
-  it('brings main\'s worker back as its worker, on a card or not', () => {
-    expect(resumedAs({ ...conversation(ID), dispatched: true }, undefined)).toBe('worker');
-    expect(resumedAs({ ...conversation(ID), dispatched: true }, card)).toBe('worker');
-  });
-
-  it('brings a card\'s agent back as the agent, and anything else into a shell', () => {
-    expect(resumedAs(conversation(ID), card)).toBe('agent');
-    expect(resumedAs(conversation(ID), undefined)).toBe('shell');
-  });
-});
-
 describe('agentToResume', () => {
   const card: WorktreeEntry = {
     cardId: 'c1', title: 'Fix login', projectPath: '/work/api', branch: 'fix-login',
@@ -189,12 +175,6 @@ describe('resumable', () => {
     expect(resumable(conversation(ID), () => false)).toBe(false);
     expect(resumable(null, () => true)).toBe(false);
     expect(resumable(undefined, () => true)).toBe(false);
-  });
-});
-
-describe('resumeLine', () => {
-  it('types the resume and presses Enter', () => {
-    expect(resumeLine(conversation(ID))).toBe(`claude --resume ${ID}\r`);
   });
 });
 

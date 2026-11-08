@@ -51,3 +51,19 @@ card was weighed again and rejected for the reason actions-decision-3 gives;
 one noun per card keeps each diff to one part of `main.ts`, in an order where
 none waits on another. Until a noun's card lands, its bypasses are named in
 `bypasses.test.ts`, so they can shrink and cannot grow (actions-rule-1).
+
+## actions-decision-5: A resume is the pane's process, never typed into a shell
+
+**Every resume, the restart's and the drawer's, is Claude Code started by
+pane.dispatch as the pane's process.** Typed into a shell, a resume had no
+worker hooks, no agent-start line in the log, and the pane read as a plain
+shell for the first sweep, so a ship could pick it and the sweep could take its
+folder away. The cost: exiting that Claude leaves an exited pane rather than a
+prompt, and Enter gives a shell, as it does after a ship's agent exits. The
+restart's resumes report a failure on the held failures list rather than
+failing the project's open, and one that fails no longer stops the panes after
+it from coming back.
+
+pane.claim and pane.release are bound by the session command rather than in
+`pane-actions.ts`: what they decide is read off its ledger of who claimed and
+ran each pane, and moving the ledger out would give one map two writers.

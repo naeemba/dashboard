@@ -1,21 +1,24 @@
-import { baseName } from '../../shared/app/base-name';
 import { workerSessionName } from './dispatch';
 import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
 import type { ProjectNamed } from '../projects/project-named';
-import { namesItsTarget, parseSessionCommand, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
+import { answered, namesItsTarget, parseSessionCommand, refused, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
-import type { WorkerState } from '../../shared/app/bridge';
+import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import type { PaneKind } from './pane-kind';
+import { bind, isRefused, sessionReply } from '../actions/action';
+import { paneClaim } from '../actions/pane/claim';
+import { paneRelease } from '../actions/pane/release';
 
-// What main does with a `session` command: every decision, against what main.ts hands over. Nothing
-// here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a
-// fake project behind them.
+// What main does with a `session` command: who is asking and what they may touch, against what main.ts
+// hands over. Every change to a pane is a pane action (actions/pane/): claim and release are bound here,
+// on the ledger of who claimed and ran what; open, close, send and dispatch come in bound by main.
+// Nothing here holds a pty or runs git, so the rules can be tested with a fake project behind them.
 
 // What a worker is started on. Whether it is a Claude screen or Claude Code in the pane's terminal,
 // and what either is started with, is pane.dispatch's (actions/pane/dispatch.ts).
@@ -43,13 +46,15 @@ export type SessionPorts = {
   // agent exits, something else is started in the pane, or the pane closes — so release never kills
   // what somebody else put there afterwards.
   mainsWorkerIn(id: string): boolean;
-  // A fresh worker: a shell in the project, at the end of the list. Answers with its number.
-  openWorker(slot: number): number;
-  // `dispatcherPath` is the page whose main the worker reports to, saved so a restart starts that main.
-  startWorker(id: string, start: WorkerStart): void;
-  closeWorker(id: string): void;
-  // Types the text into the pane's shell, then presses Enter.
-  type(id: string, text: string): void;
+  // pane.open: a fresh worker, a shell in the project, at the lowest number going.
+  open(slot: number): Promise<{ index: number } | Refused>;
+  // pane.dispatch, for a card's or a throwaway's worker as main sets it up. `dispatcherPath` is the page
+  // whose main the worker reports to, saved so a restart starts that main.
+  startWorker(id: string, start: WorkerStart): Promise<{ output: string } | Refused>;
+  // pane.close.
+  close(id: string): Promise<{ output: string } | Refused>;
+  // pane.send: the text as a screen's prompt, or typed into the pane's shell with Enter after it.
+  send(id: string, text: string): Promise<{ output: string } | Refused>;
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
   // Answers with the id `withdraw` takes it back by while it still waits in the queue.
@@ -83,9 +88,6 @@ function askingSlot(command: SessionCommand, folderSlot: number): number {
   if (folderSlot !== -1) return folderSlot;
   return 'id' in command ? paneFromId(command.id).slot : -1;
 }
-
-export const answered = (output: string): SessionReply => ({ ok: true, output });
-export const refused = (output: string): SessionReply => ({ ok: false, output });
 
 export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
   // Every worker a session run started that is still open, in the order they ran, each naming the slot
@@ -156,25 +158,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return isPaused(said?.waiting) ? `paused, ${waitingText(said.waiting)}` : said?.state ?? 'running';
   }
 
-  // A pane on the asker's own page, or with --project on the page of the project projects.yaml names,
-  // which is opened first if it is closed. Every claim settles who claimed the id, so a pane number
-  // claimed again never keeps the rights of whoever claimed it before. Only a claim or a release
-  // settles it: a claimed pane closed by hand and reopened by the new-terminal key stays the
-  // claimer's, as a project's own panes already are its main's.
-  function claim(slot: number, word: string | null): SessionReply {
-    let target = slot;
-    if (word !== null) {
-      const found = ports.findProject(word);
-      if (!found.ok) return refused(found.message);
-      if (!ports.folderExists(found.path)) return refused(`${found.name} is at ${found.path}, which is not a folder`);
-      target = ports.openProject(found.path);
-    }
-    const id = terminalId(target, ports.openWorker(target));
-    dispatched.delete(id);
-    if (target === slot || slot === -1) dispatchers.delete(id);
-    else dispatchers.set(id, slot);
-    return answered(id);
-  }
+  const claim = bind(paneClaim, {
+    ...ports,
+    claimedBy(id, slot) {
+      dispatched.delete(id);
+      if (slot === null) dispatchers.delete(id);
+      else dispatchers.set(id, slot);
+    },
+  });
 
   // The pane's own project, which is where its worker works and whose cards and worktrees it takes.
   const paneProject = (id: string): string | undefined => ports.projectPath(paneFromId(id).slot);
@@ -206,38 +197,32 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const { index } = paneFromId(id);
     states.delete(id);
     notices.forget(id);
-    ports.startWorker(id, { directory, prompt, as, cardId: card, dispatcherPath });
+    const started = await ports.startWorker(id, { directory, prompt, as, cardId: card, dispatcherPath });
+    if (isRefused(started)) return refused(started.refused);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory} ${paneLink(id)}`);
   }
 
-  async function release(id: string, slot: number): Promise<SessionReply> {
-    const refusal = worker(id, slot);
-    if (refusal !== null) return refused(refusal);
-    const program = ports.busyWith(id);
-    if (program !== null && !mainsWorker(id)) return refused(`${id} is running ${program}, which no session run started — close it by hand`);
-    ports.closeWorker(id);
-    states.delete(id);
-    notices.forget(id);
-    dispatchers.delete(id);
-    dispatched.delete(id);
-    const throwaway = throwaways.get(id);
-    throwaways.delete(id);
-    if (throwaway === undefined) return answered(`released ${id}`);
-    const reason = await ports.unfinished(throwaway.worktreePath);
-    if (reason !== null) return answered(`released ${id}; kept ${throwaway.worktreePath}: ${reason}`);
-    await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);
-    return answered(`released ${id} and removed ${baseName(throwaway.worktreePath)}`);
-  }
+  const release = bind(paneRelease, {
+    ...ports,
+    mainsWorker,
+    forget(id) {
+      states.delete(id);
+      notices.forget(id);
+      dispatchers.delete(id);
+      dispatched.delete(id);
+      const throwaway = throwaways.get(id);
+      throwaways.delete(id);
+      return throwaway;
+    },
+  });
 
-  // Typed into whatever is in the pane, which is the asker's to know: an agent, a prompt, a REPL.
-  function send(id: string, slot: number, text: string): SessionReply {
+  // Send and release are refused a pane the asker may not touch before the action is asked.
+  async function onWorker(id: string, slot: number, act: () => Promise<{ output: string } | Refused>): Promise<SessionReply> {
     const refusal = worker(id, slot);
-    if (refusal !== null) return refused(refusal);
-    ports.type(id, text);
-    return answered(`typed into ${id}`);
+    return refusal === null ? sessionReply(await act()) : refused(refusal);
   }
 
   function paneLines(slot: number, prefix: string): string[] {
@@ -298,11 +283,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     try {
       switch (command.kind) {
-        case 'claim': return claim(slot, command.project);
+        case 'claim': return sessionReply(await claim.call({ slot, project: command.project }));
         case 'list': return list(slot, command.all);
-        case 'send': return send(command.id, slot, command.text);
+        case 'send': return await onWorker(command.id, slot, () => ports.send(command.id, command.text));
         case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, command.as);
-        case 'release': return await release(command.id, slot);
+        case 'release': return await onWorker(command.id, slot, () => release.call({ id: command.id }));
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);

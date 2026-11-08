@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-08T13:25:39.256Z",
-  "updatedAt": "2026-11-08T13:52:51.982Z",
-  "column": "Doing",
-  "order": 0
+  "updatedAt": "2026-11-08T14:26:37.934Z",
+  "branch": "work-board-card-034f1019-2669-45fe-bd41-25e",
+  "pullRequest": 235,
+  "comments": [
+    {
+      "at": "2026-11-08T14:26:37.934Z",
+      "body": "Shipped in PR #235. Every pane change is now a pane action: dispatch (all doors), open, close, send, claim, release, restore. The restart's plain-shell resume and the drawer's resume go through pane.dispatch, so they get hooks, the agent-start log line and the working mark. resumeLine is gone, the write(resumeLine( count is 0, and the pane bypass rows are lowered. Still to check by hand in the rebuilt app: a restart with a Claude of yours in a terminal, and a resume from the drawer."
+    }
+  ],
+  "column": "Done",
+  "order": 190
 }

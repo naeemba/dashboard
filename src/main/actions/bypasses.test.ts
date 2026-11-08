@@ -7,11 +7,16 @@ import { describe, expect, it } from 'vitest';
 // card that moves a call behind its action lowers the count in the same change (docs/actions/inventory.md).
 const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // pane.dispatch's run: only the action and its wiring.
-  { call: 'startPane(', allowed: { 'src/main/actions/pane/dispatch.ts': 2, 'src/main/actions/pane/pane-actions.ts': 1 } },
+  { call: 'startPane(', allowed: { 'src/main/actions/pane/dispatch.ts': 2 } },
   // A worker screen starts only as pane.dispatch's screen half.
   { call: 'workerScreens.start', allowed: { 'src/main/main.ts': 1 } },
-  // `claude --resume` typed into a shell, not pane.dispatch: resumeIn's shell branch and the drawer.
-  { call: 'write(resumeLine(', allowed: { 'src/main/main.ts': 2 } },
+  // A resume is built only as pane.dispatch's worker arguments; none is typed into a shell.
+  { call: "'--resume'", allowed: { 'src/main/workers/dispatch.ts': 1 } },
+  { call: '--resume ${', allowed: {} },
+  // A pane's shell spawned and a pane dropped: handed to the pane actions, and the two rows still
+  // outside one, `pty:restart` (pane-channels.ts) and project.close (closeProjectSlot).
+  { call: 'panes.spawn', allowed: { 'src/main/main.ts': 2 } },
+  { call: 'dropPane(', allowed: { 'src/main/main.ts': 2 } },
   // worktree.remove: the card actions' port, `pane release`'s throwaway and the worktree dialog.
   { call: 'worktrees.remove', allowed: { 'src/main/main.ts': 2, 'src/main/ship/worktree-channels.ts': 1 } },
   // worktree.make: a reviewed card's re-add (main.ts), a ship's and a throwaway's (one line, branch-worktree.ts)
@@ -20,12 +25,10 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // settings.write: launch's host token, the settings screen and the remote join.
   { call: 'writeSettings(settingsFile', allowed: { 'src/main/main.ts': 3 } },
   // The wrappers behind the other Bypass: yes rows, counted with the ports that pass them on, so a new
-  // door into one moves a count. pane claim, add, release and close:
-  { call: 'openWorker', allowed: { 'src/main/main.ts': 4, 'src/main/workers/session-requests.ts': 2, 'src/main/workers/worker-channels.ts': 2 } },
-  { call: 'closeWorker', allowed: { 'src/main/main.ts': 3, 'src/main/workers/session-requests.ts': 2, 'src/main/workers/worker-channels.ts': 2 } },
-  // pane restart a shell, project open, close and focus, session start main.
+  // door into one moves a count. pane restart a shell, project open (pane.claim's --project among its
+  // doors), close and focus, session start main.
   { call: "'pty:restart'", allowed: { 'src/main/panes/pane-channels.ts': 1 } },
-  { call: 'openProject(', allowed: { 'src/main/main.ts': 4, 'src/main/workers/session-requests.ts': 2 } },
+  { call: 'openProject(', allowed: { 'src/main/main.ts': 4, 'src/main/workers/session-requests.ts': 1, 'src/main/actions/pane/claim.ts': 2 } },
   { call: 'closeProjectSlot(', allowed: { 'src/main/main.ts': 2 } },
   { call: 'landOnPane(', allowed: { 'src/main/main.ts': 1, 'src/main/panes/pane-channels.ts': 2 } },
   { call: 'chats.start', allowed: { 'src/main/main.ts': 3 } },

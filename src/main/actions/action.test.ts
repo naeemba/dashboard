@@ -35,6 +35,15 @@ describe('the action registry', () => {
     await expect(answer({ directory: '/', args: ['claim'] })).resolves.toEqual({ ok: true, output: 'the session command' });
   });
 
+  it('runs the action before the call returns, so what it sets before its own first await is set', () => {
+    let ran = false;
+    const started = action<null, Record<string, unknown>, { output: string }>('pane.start', {
+      words: [], input: (raw) => raw, run: async () => { ran = true; return { output: '' }; },
+    });
+    void bind(started, null).call({});
+    expect(ran).toBe(true);
+  });
+
   // What main serves, not a list beside it: the actions cardActions binds and the channels it registers.
   it('serves exactly the verbs the command asks for, and a channel only for card.move', () => {
     const table = channels();

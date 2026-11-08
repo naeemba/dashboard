@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { failureText } from '../../shared/errors/failure';
 import { closeRefusal, type ClosingPane } from '../../shared/panes/close-refusal';
 import type { SessionReply, SessionRequest } from '../workers/session-cli';
-import { answered, refused } from '../workers/session-requests';
+import { answered, refused } from '../workers/session-cli';
 import { APP_VERBS, PROJECT_REQUEST } from './project-cli';
 
 // What main does with `dashboard project open`, `close` and `focus`: every decision, against what main.ts hands

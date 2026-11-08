@@ -5,10 +5,12 @@ import { workerArguments, workerPrompt, workerResumeArguments, workerSessionName
 import { defaultPaneKind, type PaneKind } from '../../workers/pane-kind';
 import type { ScreenStart } from '../../workers/screen-workers';
 import { action } from '../action';
+import { isFilledText, isFilledTextOrNull } from './pane-input';
 
 // Every agent the app starts in a pane goes through here: `pane run`, a ship, the review loop, a resume
-// after a restart and New Claude (workers-decision-8). It decides once whether the pane gets a Claude
-// screen or Claude Code in its terminal, and starts the one it chose. A sixth caller is a row here.
+// after a restart or from the drawer, and New Claude (workers-decision-8). It decides once whether
+// the pane gets a Claude screen or Claude Code in its terminal, and starts the one it chose. A seventh
+// caller is a row here.
 
 export type PaneDispatchInput = {
   // The pane, as `2:3`, and the project whose page it is on.
@@ -63,14 +65,6 @@ export function screenNeedsShell(shell: PaneShell, directory: string): boolean {
   return !shell.running || shell.directory !== directory;
 }
 
-function isFilledText(value: unknown): value is string {
-  return typeof value === 'string' && value !== '';
-}
-
-function isFilledTextOrNull(value: unknown): value is string | null {
-  return value === null || isFilledText(value);
-}
-
 export function paneDispatchInput(raw: Record<string, unknown>): PaneDispatchInput | Refused {
   const { id, projectPath, directory, prompt, resume, cardId, dispatcherPath, as } = raw;
   if (!isFilledText(id)) return { refused: 'no pane was given' };
@@ -82,8 +76,10 @@ export function paneDispatchInput(raw: Record<string, unknown>): PaneDispatchInp
   return { id, projectPath, directory, prompt, resume, cardId, dispatcherPath, as };
 }
 
-// The action's whole run, synchronous: main calls it with typed input, so a throw on the way reaches
-// the caller's own catch (a ship's `ship failed`, `session run failed`) rather than going unheard.
+// The action's whole run, synchronous: every pane it touches is set before the first await, so a door
+// that goes on after the call (a restart's next pane, a ship's record) sees the agent started. A throw
+// comes back as the call's rejection, which the door awaits into its own catch (a ship's `ship failed`,
+// `session run failed`).
 export function startPane(ports: PaneDispatchPorts, input: PaneDispatchInput): { output: string } {
   const { id, projectPath, directory, prompt, cardId, dispatcherPath } = input;
   const { index } = paneFromId(id);
@@ -99,7 +95,8 @@ export function startPane(ports: PaneDispatchPorts, input: PaneDispatchInput): {
   return { output: `started a Claude screen in ${id}` };
 }
 
-// Reached from no door yet: main calls startPane directly.
+// Reached through pane-actions.ts by every door: a ship and the review loop (attachPane), `pane run`,
+// pane.open (New Claude, the drawer's resume) and pane.restore.
 export const paneDispatch = action<PaneDispatchPorts, PaneDispatchInput, { output: string }>('pane.dispatch', {
   words: [],
   input: paneDispatchInput,

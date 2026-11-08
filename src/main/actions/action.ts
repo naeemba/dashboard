@@ -3,8 +3,7 @@ import { isRecord } from '../../shared/app/is-record';
 import type { Refused } from '../../shared/app/bridge';
 import type { MoveSource } from '../../shared/board/column-entry';
 import { BOARD_REQUEST } from '../board/board-cli';
-import type { SessionReply, SessionRequest } from '../workers/session-cli';
-import { answered, refused } from '../workers/session-requests';
+import { answered, refused, type SessionReply, type SessionRequest } from '../workers/session-cli';
 
 // What an action is, and the one place each is bound to its two doors: an IPC channel for the screen
 // and a verb of `dashboard board` for the command. docs/actions/README.md says why actions live in main
@@ -31,19 +30,22 @@ export function action<Ports, Input, Result extends { output: string }>(
 }
 
 // An action with its ports, as main hands it to the doors.
-export type BoundAction = {
+export type BoundAction<Result extends { output: string } = { output: string }> = {
   name: string;
   words: readonly string[];
-  call(raw: Record<string, unknown>): Promise<{ output: string } | Refused>;
+  call(raw: Record<string, unknown>): Promise<Result | Refused>;
 };
 
 export function bind<Ports, Input, Result extends { output: string }>(
   definition: Action<Ports, Input, Result>,
-  ports: Ports,
-): BoundAction {
+  ports: NoInfer<Ports>,
+): BoundAction<Result> {
   return {
     name: definition.name,
     words: definition.words,
+    // Nothing is awaited before `run` starts, so everything a run does before its own first await is
+    // done when `call` returns. pane.dispatch and pane.restore are written to it: a restart goes on to
+    // start the mains its workers report to off what they set. An await here breaks that.
     async call(raw) {
       const input = definition.input(raw);
       if (isRefused(input)) return input;
@@ -54,6 +56,11 @@ export function bind<Ports, Input, Result extends { output: string }>(
 
 export function isRefused(value: unknown): value is Refused {
   return isRecord(value) && typeof value.refused === 'string';
+}
+
+// An action's answer as the session socket carries it.
+export function sessionReply(result: { output: string } | Refused): SessionReply {
+  return isRefused(result) ? refused(result.refused) : answered(result.output);
 }
 
 export function channelOf(name: string): string {
@@ -94,6 +101,6 @@ export function actionRequests(
     }
     const raw = { projectPath: folder, ...Object.fromEntries(bound.words.map((name, index) => [name, rest[index]])) };
     const result = await bound.call(withSource(raw, 'command'));
-    return isRefused(result) ? refused(result.refused) : answered(result.output);
+    return sessionReply(result);
   };
 }
