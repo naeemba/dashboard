@@ -19,11 +19,11 @@ path is at the top. Never what you type in a pane.
 
 Each line of the file is one JSON entry: `time`, `level`, `kind`, `project`
 and `message`, the one sentence the row shows. Every entry also says which
-`build` wrote it (`<version>+<commit>`) and its `source` (`main`, `renderer`,
-`screen-host`, `pane-host`). An error entry carries `error` — `name`,
-`message`, `stack`, `code` and `cause`, the same shape nested — and where it
+`build` wrote it (`<version>+<commit>`) and its `source` (`main` or
+`renderer`). An error entry carries `error` — `name`, `message`, `stack`, `code` and `cause`, the same shape nested — and where it
 came from when the writer knew: `action` (`project.close`), `channel` (the IPC
-channel whose handler threw) and `context` ids (`slot`, `pane`, `card`,
+channel whose handler threw; the same sentence again within a minute of the
+last is not written) and `context` ids (`slot`, `pane`, `card`,
 `session`). A stack is cut at 2000 characters. An entry from an older build,
 without any of these, still reads; so does one from a newer build with a level,
 kind or key this one does not know (app-decision-2).

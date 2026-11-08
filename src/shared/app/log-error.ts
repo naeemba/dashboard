@@ -2,7 +2,7 @@ import { isRecord } from './is-record';
 
 // An error as a log entry carries it: what a person needs to find where it came from, once the Error
 // itself is gone. Shared, because the renderer builds one from its own errors and main reads every
-// entry back through readLogError, whichever side wrote it.
+// entry back through errorDetail, whichever side wrote it.
 export type LogError = { name?: string; message: string; stack?: string; code?: string; cause?: LogError };
 
 // A stack past this is cut. Twenty-odd frames say where it came from; the rest is the framework's,
@@ -13,7 +13,7 @@ const MESSAGE_LIMIT = 1000;
 // wrapping itself, and an error whose cause is itself would never stop.
 const CAUSE_DEPTH = 4;
 
-export function cutToSize(text: string, limit: number): string {
+function cutToSize(text: string, limit: number): string {
   return text.length <= limit ? text : `${text.slice(0, limit)}…`;
 }
 

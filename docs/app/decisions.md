@@ -21,7 +21,8 @@ the app, which a second launch turns into focusing the running one.
 
 ## app-decision-2: A log entry from another build still reads
 
-`readLogEntry` is the one reader for the file and for a draft off the wire. An
+`readBody` (`log-entry.ts`) reads both: `readLogEntry` for a line in the file,
+`readLogDraft` for a draft off the wire. An
 entry needs a string `time`, `level`, `kind` and `message`; every field added
 since (`error`, `source`, `action`, `channel`, `context`, `build`) is optional,
 and one of the wrong type is left off rather than costing the line. A key it

@@ -11,9 +11,9 @@ export type LogLevel = typeof LOG_LEVELS[number];
 const LOG_KINDS = ['app', 'project', 'pane', 'agent', 'card', 'ship', 'worktree', 'board', 'error', 'screen'] as const;
 export type LogKind = typeof LOG_KINDS[number];
 
-// Which process wrote it. Main stamps its own and the renderer's; the two hosts are named for when they
-// report their own.
-export type LogSource = 'main' | 'renderer' | 'screen-host' | 'pane-host';
+// Which process wrote it. Main stamps its own and the renderer's; a host that reports its own entries
+// adds its name here, and an older build still reads it as text.
+export type LogSource = 'main' | 'renderer';
 // The ids the writer had to hand, so a line can be matched to the slot, pane, card or session it was
 // about. Each only when known.
 export type LogContext = { slot?: number; pane?: number; card?: string; session?: string };
@@ -110,6 +110,17 @@ export function ipcFailureEntry(channel: string, error: unknown, action: string 
     level: 'error', kind: 'error', source: 'main', channel, action,
     message: `${channel} failed: ${failureText(error)}`, error: errorDetail(error),
   };
+}
+
+// A channel that throws on a timer (`panes:report`) or on every key (`pty:input`) says the same
+// sentence again and again; written each time, it would rotate every older line out in a day. A
+// repeat of the last sentence within this long of the last throw is dropped, so a failure that keeps
+// happening is written once, and again only after it has been quiet for the window.
+export const FAILURE_REPEAT_WINDOW_MS = 60_000;
+export type LastFailure = { message: string; at: number };
+
+export function isRepeatFailure(last: LastFailure | undefined, message: string, at: number): boolean {
+  return last !== undefined && last.message === message && at - last.at < FAILURE_REPEAT_WINDOW_MS;
 }
 
 // The live file first, the oldest last: rotation renames each one a place down this list.

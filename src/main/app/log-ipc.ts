@@ -1,5 +1,5 @@
 import type { Channels } from './channels';
-import { ipcFailureEntry, LOG_READ_COUNT, readLogDraft, type LogRead } from '../../shared/app/log-entry';
+import { ipcFailureEntry, isRepeatFailure, LOG_READ_COUNT, readLogDraft, type LastFailure, type LogRead } from '../../shared/app/log-entry';
 import { logStore, type LogStore } from './log-store';
 
 // The log's three channels, and the line every channel that throws leaves. Main-process wiring; what is
@@ -13,6 +13,13 @@ export function registerLog(table: Channels, directory: string, send: (channel: 
     if (draft !== undefined) store.log(draft);
   });
   table.handle('log:read', (): LogRead => ({ file: store.file, entries: store.tail(LOG_READ_COUNT) }));
-  table.whenThrown((channel, error, action) => store.log(ipcFailureEntry(channel, error, action)));
+  let last: LastFailure | undefined;
+  table.whenThrown((channel, error, action) => {
+    const entry = ipcFailureEntry(channel, error, action);
+    const at = Date.now();
+    const repeat = isRepeatFailure(last, entry.message, at);
+    last = { message: entry.message, at };
+    if (!repeat) store.log(entry);
+  });
   return store;
 }

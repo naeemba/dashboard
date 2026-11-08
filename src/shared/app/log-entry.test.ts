@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  agentStartEntry, ipcFailureEntry, LOG_FILE_LIMIT_SHOWN, readLogDraft, logFileNames, matchesLogFilter, needsRotation, paneExitEntry, parseLogLine,
+  agentStartEntry, FAILURE_REPEAT_WINDOW_MS, ipcFailureEntry, isRepeatFailure, LOG_FILE_LIMIT_SHOWN, readLogDraft, logFileNames, matchesLogFilter, needsRotation, paneExitEntry, parseLogLine,
   removalEntry, shipEntry, type LogEntry,
 } from './log-entry';
 import { STACK_LIMIT } from './log-error';
@@ -69,6 +69,16 @@ describe('ipcFailureEntry', () => {
       error: { name: 'Error', message: 'An object could not be cloned', stack: thrown.stack },
     });
     expect(ipcFailureEntry('log:read', new Error('x'), undefined).action).toBeUndefined();
+  });
+});
+
+describe('isRepeatFailure', () => {
+  it('drops the same sentence inside the window of the last throw, and nothing else', () => {
+    const last = { message: 'pty:input failed: gone', at: 1000 };
+    expect(isRepeatFailure(undefined, last.message, 1000)).toBe(false);
+    expect(isRepeatFailure(last, last.message, 1000 + FAILURE_REPEAT_WINDOW_MS - 1)).toBe(true);
+    expect(isRepeatFailure(last, last.message, 1000 + FAILURE_REPEAT_WINDOW_MS)).toBe(false);
+    expect(isRepeatFailure(last, 'panes:report failed: gone', 1001)).toBe(false);
   });
 });
 
