@@ -1,0 +1,11 @@
+{
+  "id": "dd3723b7-a165-495d-980d-bcab3118cb99",
+  "title": "A main that read a worker's report but kept it running still gets a false stop notice",
+  "notes": "Left by #241. Main hears a report only when the turn that read it ends (the peer prompt carries its origin only in that turn's result). #241 withdraws a pending notice on pane release, but a main that reads the report and does not release the worker can still get the 10 s notice queued during its own turn, before the app handles the result. Fix: hold a worker's stop notice while its main is mid-turn, and drop it if that turn's result shows the worker's report. Test in stop-notices / session-requests; docs workers-decision-1.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T15:32:32.451Z",
+  "updatedAt": "2026-11-08T15:32:32.451Z",
+  "column": "Backlog",
+  "order": 39
+}
