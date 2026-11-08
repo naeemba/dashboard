@@ -1,20 +1,16 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { channels } from './channels';
 import { PROJECT_MODES } from '../../shared/keys/modes';
 import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 import { sessionStore } from './session-store';
-
-const directories: string[] = [];
-afterEach(() => { directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })); });
+import { temporaryFolder } from '../testing/temporary-folder';
 
 const layout = { pages: [{ path: '/code/api', mode: PROJECT_MODES[0], focused: 0, names: [null] }], activeIndex: 0 };
 
 function store() {
-  const directory = mkdtempSync(path.join(tmpdir(), 'session-store-'));
-  directories.push(directory);
+  const directory = temporaryFolder('session-store-');
   const file = path.join(directory, 'session.json');
   const table = channels();
   sessionStore(table, file, () => -1, () => undefined);

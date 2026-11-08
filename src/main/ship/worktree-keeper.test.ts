@@ -1,15 +1,14 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readWorktrees } from './worktree-store';
 import { worktreeKeeper } from './worktree-keeper';
 import type { WorktreeEntry, WorktreeList } from '../../shared/app/bridge';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
+import { temporaryFolder } from '../testing/temporary-folder';
 
-const folder = mkdtempSync(join(tmpdir(), 'dashboard-keeper-'));
+const folder = temporaryFolder('dashboard-keeper-');
 const projectPath = join(folder, 'project');
-afterAll(() => rmSync(folder, { recursive: true, force: true }));
 
 function entry(worktreePath: string, cardId: string): WorktreeEntry {
   return {
@@ -19,7 +18,7 @@ function entry(worktreePath: string, cardId: string): WorktreeEntry {
 }
 
 function keeperWith(entries: WorktreeEntry[], commands: Map<string, PaneCommand>) {
-  const file = join(mkdtempSync(join(folder, 'record-')), 'worktrees.json');
+  const file = join(temporaryFolder('dashboard-keeper-record-'), 'worktrees.json');
   const sent: WorktreeList[] = [];
   const keeper = worktreeKeeper({ file, entries, commands, shells: new Map(), closeScreensIn: () => undefined, announce: (list) => sent.push(list) });
   return { keeper, file, sent };

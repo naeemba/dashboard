@@ -50,3 +50,27 @@ describe('process boundaries', () => {
     expect(await boundaryErrors(filePath, source)).toEqual([]);
   });
 });
+
+// Pins workflow-rule-4: a test makes its folder through temporaryFolder(), never mkdtemp itself.
+describe('test folders', () => {
+  const folderErrors = async (filePath: string, source: string): Promise<string[]> => {
+    const [result] = await eslint.lintText(source, { filePath });
+    return result.messages.map((message) => message.ruleId ?? '').filter((ruleId) => ruleId !== '@typescript-eslint/no-unused-vars');
+  };
+
+  it.each([
+    ['src/main/probe.test.ts', "import { mkdtempSync } from 'node:fs';"],
+    ['src/main/probe.test.ts', "import { mkdtemp } from 'node:fs/promises';"],
+    ['src/main/board/probe-fixture.ts', "import { mkdtempSync } from 'fs';"],
+  ])('%s fails on %s', async (filePath, source) => {
+    expect(await folderErrors(filePath, source)).toEqual(['no-restricted-imports']);
+  });
+
+  it('keeps the process boundaries in a test file', async () => {
+    expect(await folderErrors('src/main/probe.test.ts', "import { x } from '../renderer/page';")).toEqual(['@typescript-eslint/no-restricted-imports']);
+  });
+
+  it('leaves the helper itself alone', async () => {
+    expect(await folderErrors('src/main/testing/temporary-folder.ts', "import { mkdtempSync } from 'node:fs';")).toEqual([]);
+  });
+});

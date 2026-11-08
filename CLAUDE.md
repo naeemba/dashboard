@@ -99,6 +99,9 @@ app.
   only on its own side. `pnpm exec eslint .` enforces it, `eslint.config.test.ts`
   pins it; a type both sides name moves to `src/shared/`, never an
   eslint-disable. (app-rule-2)
+- **A test's folder comes from `temporaryFolder()`** in
+  `src/main/testing/temporary-folder.ts`, never its own `mkdtemp`; eslint
+  refuses the import in a test. (workflow-rule-4)
 - **A card does not bump `package.json` `version`.** The build stamps its
   commit (`<version>+<commit>`); the version moves only on a release.
   (workflow-rule-3)

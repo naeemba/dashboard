@@ -62,6 +62,8 @@ import { mainResume, type PaneConversation } from './workers/claude-resume';
 import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
 import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
+import { settingsActions } from './actions/settings/settings-actions';
+import type { Settings } from '../shared/settings/settings';
 import { oneAtATime } from './ship/ship';
 import {
   freePane,
@@ -74,7 +76,6 @@ import {
 } from '../shared/panes/pane-reading';
 import { usageSweep } from './usage/usage-sweep';
 import { entryForCard, withoutPanes } from './ship/worktree-store';
-import type { Settings } from '../shared/settings/settings';
 import { cardActions } from './actions/card/card-actions';
 import { actionRequests } from './actions/action';
 import { worktreeKeeper } from './ship/worktree-keeper';
@@ -149,14 +150,21 @@ const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFI
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
 const isMac = process.platform === 'darwin';
-let settings = keepHostToken(readSettings(settingsFile, isMac), (made) => writeSettings(settingsFile, made, isMac));
+const shellFor = (chosen: Settings) => pickShell(chosen, process.env, process.platform);
+let settings = readSettings(settingsFile, isMac);
+let shellCommand = shellFor(settings);
+const settingsDoors = settingsActions(table, {
+  writeFile: (next) => writeSettings(settingsFile, next, isMac),
+  pickShell: shellFor,
+  keep(next, shell) { settings = next; shellCommand = shell; },
+});
+keepHostToken(settings, (made) => { void settingsDoors.write.call({ settings: made }); });
 // A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
 // nothing strips those lines until the settings screen is next opened. Tidying it once here drops
 // everything that still matches this build, so the next default to move reaches these people. It cannot
 // give back a default that has already moved: a line the old build wrote is identical to one typed on
 // purpose. What the file holds and what survives is tidySettingsFile's to say, not this line's.
 tidySettingsFile(settingsFile, isMac);
-let shellCommand = pickShell(settings, process.env, process.platform);
 // How big each pane is, last the renderer measured it. Kept for the panes that have no shell right
 // now as much as for the ones that do, since a pty is spawned here and the window it draws into is
 // only visible on the other side of the wire. sizeOfPane is where the rule lives.
@@ -450,16 +458,6 @@ const sessionIndex = sessionIndexStore(path.join(app.getPath('userData'), 'sessi
 // shell will receive a dropped path — PowerShell doubles a quote and a POSIX shell escapes it — and
 // `shellCommand: ""` in the file does not say which.
 table.handle('settings:read', () => ({ settings, shellCommand }));
-// Answers with the newly resolved shell so the renderer never has to re-derive pickShell's precedence
-// to know which family of shell a dropped path is quoted for.
-table.handle('settings:write', (_screen, next: Settings) => {
-  settings = next;
-  // Panes already running keep the shell they started with. Nothing here kills one: there are
-  // long-running jobs in them, and a settings change is not a reason to lose one.
-  shellCommand = pickShell(settings, process.env, process.platform);
-  writeSettings(settingsFile, settings, isMac);
-  return shellCommand;
-});
 registerPaneChannels(table, {
   shells, screens: paneScreens, spawnTerminal: panes.spawn,
   land: (paneId) => { void project.focus.call(paneFromId(paneId)); },
@@ -758,7 +756,7 @@ const held: HeldByMain = {
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.
 const remote = registerRemote(held, {
   send: (channel, ...payload) => liveWindow()?.webContents.send(channel, ...payload),
-  saveSettings(next) { settings = next; writeSettings(settingsFile, settings, isMac); },
+  saveSettings(next) { void settingsDoors.write.call({ settings: next }); },
 });
 // Before registerWithIpc, which only answers the channels already in the table.
 // A second launch is read the way this one was, once it has brought the window forward.

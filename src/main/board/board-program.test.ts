@@ -1,10 +1,10 @@
-import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addCard, emptyBoard } from '../../shared/board/board';
 import { BOARD_FOLDER_PATH, writeBoard } from './board-store';
 import { runBoardProgram } from './board-program';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // The `board` command's write is committed, so its read must not salvage: a rename would leave the
 // second run a clean board, and the next `git add -A` would commit the card as deleted.
@@ -15,7 +15,7 @@ afterEach(() => {
 
 describe('the board command over a card file that does not parse', () => {
   it('refuses on every run and leaves the file under its own name', async () => {
-    const project = mkdtempSync(join(tmpdir(), 'board-program-'));
+    const project = temporaryFolder('board-program-');
     writeBoard(project, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
     const cards = join(project, BOARD_FOLDER_PATH, 'cards');
     writeFileSync(join(cards, 'broken.json'), '{ "id": "broken", }');

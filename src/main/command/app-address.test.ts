@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { statSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { clearSocketPointer, readSocketPointer, SOCKET_POINTER_FILE, userDataFolder, writeSocketPointer } from './app-address';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 describe('userDataFolder', () => {
   it('is the folder a pane names, when it names one', () => {
@@ -21,13 +21,7 @@ describe('userDataFolder', () => {
 });
 
 describe('the socket pointer', () => {
-  const made: string[] = [];
-  afterEach(() => { for (const each of made.splice(0)) rmSync(each, { recursive: true, force: true }); });
-  const folder = () => {
-    const madeFolder = mkdtempSync(path.join(tmpdir(), 'pointer-test-'));
-    made.push(madeFolder);
-    return madeFolder;
-  };
+  const folder = () => temporaryFolder('pointer-test-');
 
   it('reads back what was written, only this user may read it, and a missing file is no app', () => {
     const userData = folder();

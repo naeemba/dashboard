@@ -56,3 +56,14 @@ that cost 13 `package.json` and 12 lockfile conflicts in one review window, and
 two cards that started on the same number still landed on the same number, so
 it told nothing apart anyway. Leave `version` alone in a card's pull request;
 move it only when cutting a release.
+
+## workflow-rule-4: A test's folder comes from temporaryFolder()
+
+A test that needs a folder takes it from `temporaryFolder(prefix)` in
+`src/main/testing/temporary-folder.ts`, which removes it after the test file
+even when an `expect` fails first. Tests that called `mkdtempSync` themselves
+and never removed what they made left about 200 folders in `/tmp` per run; on
+2026-11-08, with five workers running the suite, they filled its 16G and
+stopped every worker. `pnpm exec eslint .` refuses `mkdtemp` and `mkdtempSync`
+imported into a `*.test.ts` or `*-fixture.ts` under `src/`, and
+`eslint.config.test.ts` pins it.

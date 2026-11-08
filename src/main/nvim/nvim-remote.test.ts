@@ -1,12 +1,12 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
-import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   dropWrittenFiles, editorSocket, nvimFromOutput, openFileArguments, openFileInEditor, openPrompt, openScrollback,
   readPrompt, savedPrompt, scrollbackFile, tabArguments, wipeArguments, writePrompt,
 } from './nvim-remote';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 describe('nvimFromOutput', () => {
   it('takes the path the shell printed', () => {
@@ -110,16 +110,8 @@ describe('savedPrompt', () => {
 });
 
 describe('readPrompt', () => {
-  const folders: string[] = [];
-  afterEach(() => {
-    dropWrittenFiles();
-    for (const folder of folders.splice(0)) rmSync(folder, { recursive: true, force: true });
-  });
-  function folder(): string {
-    const made = mkdtempSync(path.join(os.tmpdir(), 'dashboard-prompt-test-'));
-    folders.push(made);
-    return made;
-  }
+  afterEach(() => dropWrittenFiles());
+  const folder = () => temporaryFolder('dashboard-prompt-test-');
 
   // The second read answering null is what stops a later return from putting the saved text back
   // over what you typed into the box since.

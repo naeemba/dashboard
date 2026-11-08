@@ -1,11 +1,13 @@
 {
   "id": "bc80991a-58c0-4054-bc9b-1016afa96279",
   "title": "settings.json has one writer: a settings.write action",
-  "notes": "Last per-noun move. writeSettings is called from three places in main.ts: launch's host token (157), settings:write (560), and a remote join saving its address (867). One action owns the write and the shell it picks. The writeSettings(settingsFile count in bypasses.test.ts goes to 1. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.",
+  "notes": "Last per-noun move. writeSettings is called from three places in main.ts: launch's host token (157), settings:write (560), and a remote join saving its address (867). One action owns the write and the shell it picks. The writeSettings(settingsFile count in bypasses.test.ts goes to 1. Plan: docs/actions/inventory.md (actions-decision-4, actions-rule-1). Lower this noun's rows in src/main/actions/bypasses.test.ts to what is left. No new doors around an action.\n\nShipped in PR #243: settings.write (src/main/actions/settings/) is settings.json's one writer, for the settings screen, launch's host token and a remote join, keeping each change with the shell it picks. The writeSettings( pin in bypasses.test.ts is now its definition plus the action's one writeFile port. Card bdebf6c2 writes its row through settingsDoors.write.",
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-08T13:25:39.573Z",
-  "updatedAt": "2026-11-08T16:23:58.729Z",
-  "column": "Doing",
-  "order": 0
+  "updatedAt": "2026-11-08T16:41:10.741Z",
+  "branch": "work-board-card-bc80991a-58c0-4054-bc9b-101",
+  "pullRequest": 243,
+  "column": "Done",
+  "order": 198
 }

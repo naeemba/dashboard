@@ -1,17 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { LIVE_USE_STEP_MS } from './session-index';
 import { sessionIndexStore } from './session-index-store';
-
-const directories: string[] = [];
-afterEach(() => { directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })); });
+import { temporaryFolder } from '../testing/temporary-folder';
 
 function temporaryFile(): string {
-  const directory = mkdtempSync(path.join(tmpdir(), 'session-index-'));
-  directories.push(directory);
+  const directory = temporaryFolder('session-index-');
   return path.join(directory, 'session-index.json');
 }
 
