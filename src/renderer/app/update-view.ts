@@ -3,7 +3,7 @@ import { clampIndex } from '../../shared/app/clamp-index';
 import { UPDATE_ROW_LABELS, updateNotice, updateRows, updateTitle, type UpdateRow, type UpdateState } from '../../shared/app/update';
 import { failureText } from '../../shared/errors/failure';
 import { labelled } from './icons';
-import { holdFocus, openOverlay, searchRowElement } from './overlay';
+import { answerKeys, holdFocus, openOverlay, searchRowElement } from './overlay';
 import { openReleaseNotes } from './whats-new-view';
 import { isModified } from '../keys/shortcuts';
 
@@ -35,7 +35,7 @@ function keysLine(rows: number): string {
 // a swap that failed, which also stays on the dialog until the next try.
 export function openUpdates(bridge: DashboardBridge, report: (message: string) => void): Promise<void> {
   let selected = 0;
-  let message = current.kind === 'none' || current.kind === 'available' ? 'Checking GitHub for a newer release…' : '';
+  let message = 'Checking GitHub for a newer release…';
   return new Promise<void>((resolve) => {
     // `after` is a sheet opened in this one's place, which the caller waits for too.
     function close(after?: Promise<void>): void {
@@ -92,16 +92,16 @@ export function openUpdates(bridge: DashboardBridge, report: (message: string) =
     redraw = render;
     render();
     dialog.focus();
-    if (message !== '') {
-      bridge.checkUpdate().then(answered, (error: unknown) => say(`Could not check: ${failureText(error)}`));
-    }
+    bridge.checkUpdate().then(answered, (error: unknown) => say(`Could not check: ${failureText(error)}`));
 
+    answerKeys(dialog, (key) => {
+      const row = updateRows(current)[selected];
+      if (key === 'Escape') close();
+      else if (row) choose(row);
+    });
     dialog.addEventListener('keydown', (event) => {
       if (isModified(event)) return;
       const rows = updateRows(current);
-      if (event.key === 'Escape' || event.key === 'Enter') event.preventDefault();
-      if (event.key === 'Escape') return close();
-      if (event.key === 'Enter' && rows[selected]) return choose(rows[selected]);
       const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
       if (step === 0) return;
       event.preventDefault();

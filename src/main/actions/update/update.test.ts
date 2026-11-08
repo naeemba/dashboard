@@ -17,27 +17,26 @@ function held(initial: UpdateState) {
 describe('update.check', () => {
   it('says a newer release is out, and nothing for this build\'s own', async () => {
     const ports = held({ kind: 'none' });
-    const newer = bind(updateCheck, { ...ports, latest: async () => ANSWER, running: '2.44.0+acf504ceef1b', enabled: () => true });
+    const newer = bind(updateCheck, { ...ports, latest: async () => ANSWER, running: '2.44.0+acf504ceef1b', refusal: () => null });
     await expect(newer.call({})).resolves.toEqual({ output: 'v2.45.0 is out' });
     expect(ports.state()).toEqual({ kind: 'available', release: { ...RELEASE, notes: [] } });
-    const same = bind(updateCheck, { ...ports, latest: async () => ANSWER, running: '2.45.0+0123456789ab', enabled: () => true });
+    const same = bind(updateCheck, { ...ports, latest: async () => ANSWER, running: '2.45.0+0123456789ab', refusal: () => null });
     await same.call({});
     expect(ports.state()).toEqual({ kind: 'none' });
   });
 
-  it('skips the schedule\'s check while the setting is off, but not a check asked for', async () => {
-    const latest = vi.fn(async () => ANSWER);
-    const check = bind(updateCheck, { ...held({ kind: 'none' }), latest, running: '2.44.0+x', enabled: () => false });
-    await expect(check.call({ asked: false })).resolves.toEqual({ output: 'the update check is off' });
-    expect(latest).not.toHaveBeenCalled();
-    await check.call({ asked: true });
-    expect(latest).toHaveBeenCalledOnce();
+  it('tells a machine that cannot install the release why, rather than offering it', async () => {
+    const ports = held({ kind: 'none' });
+    const refusal = () => ({ refused: 'this is a development run' });
+    const check = bind(updateCheck, { ...ports, latest: async () => ANSWER, running: '2.44.0+x', refusal });
+    await expect(check.call({})).resolves.toEqual({ refused: 'this is a development run' });
+    expect(ports.state()).toEqual({ kind: 'none' });
   });
 
   it('leaves a downloaded release alone', async () => {
     const ports = held({ kind: 'staged', release: RELEASE });
     const latest = vi.fn(async () => ANSWER);
-    await bind(updateCheck, { ...ports, latest, running: '2.44.0+x', enabled: () => true }).call({ asked: true });
+    await bind(updateCheck, { ...ports, latest, running: '2.44.0+x', refusal: () => null }).call({});
     expect(latest).not.toHaveBeenCalled();
     expect(ports.set).not.toHaveBeenCalled();
   });

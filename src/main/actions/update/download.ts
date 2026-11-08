@@ -8,8 +8,7 @@ import type { UpdateStatePorts } from './check';
 // stays available for another try.
 
 export type UpdateDownloadPorts = UpdateStatePorts & {
-  // Downloaded, verified and staged; throws a refusal's text as well as a failure, since a machine with
-  // no download for it is found out only here, against the release's own assets.
+  // Downloaded, verified and staged. A machine that cannot install the release was refused by the check.
   stage(release: Release): Promise<void>;
 };
 

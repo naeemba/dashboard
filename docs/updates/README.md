@@ -48,9 +48,11 @@ launch and six-hourly check off. The key still checks when pressed.
   mac builds, so this is a swap by hand. If Gatekeeper still blocks the new
   build, the dialog says so and points at the README's Install section.
 
-Any other machine (Linux on arm, an Intel mac) is refused with the reason, and
-so is a development run (`pnpm start`), which updates by pulling and
-rebuilding.
+Any other machine (Linux on arm, an Intel mac) is refused by the check with the
+reason, and so is a development run (`pnpm start`), which updates by pulling
+and rebuilding: neither is offered an Update it cannot take. Everything that
+reads or deletes an `app.asar` runs as `grep` and `rm`, as `rebuild.sh` does,
+because Electron's `fs` treats an `.asar` as a folder.
 
 ## Files
 

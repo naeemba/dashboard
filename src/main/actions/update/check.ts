@@ -1,10 +1,13 @@
-import type { UpdateState } from '../../../shared/app/update';
+import type { Refused } from '../../../shared/app/bridge';
+import type { Release, UpdateState } from '../../../shared/app/update';
 import { isNewer, readRelease } from '../../update/release';
 import { action } from '../action';
 
-// The newest release read off GitHub, and a notice if it is newer than this build. The schedule's check
-// (`asked` false) does nothing while the settings row has it off; the dialog's key asks anyway. One
-// already downloading or downloaded is left alone: the release it found is the one being installed.
+// The newest release read off GitHub, and a notice if it is newer than this build and this machine can
+// install it. A machine that cannot (a development run, a platform the release has no download for) is
+// told why instead of being offered an Update that would fail. One already downloading or downloaded is
+// left alone: the release it found is the one being installed. Whether the schedule asks at all is the
+// settings row's, decided where the schedule runs (update-actions.ts).
 
 export type UpdateStatePorts = {
   state(): UpdateState;
@@ -17,14 +20,14 @@ export type UpdateCheckPorts = UpdateStatePorts & {
   latest(): Promise<unknown>;
   // This build's stamp, `<version>+<commit>`.
   running: string;
-  enabled(): boolean;
+  // Why this machine cannot install `release`, or null when it can.
+  refusal(release: Release): Refused | null;
 };
 
-export const updateCheck = action<UpdateCheckPorts, { asked: boolean }, { output: string }>('update.check', {
+export const updateCheck = action<UpdateCheckPorts, Record<string, never>, { output: string }>('update.check', {
   words: [],
-  input: ({ asked }) => ({ asked: asked === true }),
-  async run(ports, { asked }) {
-    if (!asked && !ports.enabled()) return { output: 'the update check is off' };
+  input: () => ({}),
+  async run(ports) {
     const current = ports.state();
     if (current.kind === 'downloading' || current.kind === 'staged') return { output: `v${current.release.version} is already on its way` };
     const release = readRelease(await ports.latest());
@@ -33,6 +36,8 @@ export const updateCheck = action<UpdateCheckPorts, { asked: boolean }, { output
       ports.set({ kind: 'none' });
       return { output: `v${ports.running} is the newest release` };
     }
+    const refusal = ports.refusal(release);
+    if (refusal !== null) return refusal;
     ports.set({ kind: 'available', release });
     return { output: `v${release.version} is out` };
   },

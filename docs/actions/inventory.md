@@ -139,7 +139,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | session.rename | one label for the chat and the drawer: both doors write the transcript's title and the drawer's row |
 | session.configure | the choice kept for the next start, and the running session moved onto it |
 | settings.write | the one writer of settings.json, and the shell it picks |
-| update.check | whether the schedule asks at all (the settings row), whether the release is newer, leaving one being installed alone |
+| update.check | whether the release is newer, whether this machine can install it (refused if not, never offered), leaving one being installed alone; the settings row gates only the schedule |
 | update.download | that there is a release to download; a failure kept on the state for the dialog |
 | update.restart | that a download is staged; no restart when the swap fails |
 

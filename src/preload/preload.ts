@@ -17,7 +17,7 @@ const bridge: DashboardBridge = {
   recordWhatsNew: (current) => ipcRenderer.invoke('whats-new:record', current),
   readUpdate: () => ipcRenderer.invoke('update:read'),
   onUpdateChange: (listener) => ipcRenderer.on('update:change', (_event, state) => listener(state)),
-  checkUpdate: () => ipcRenderer.invoke('update:check', { asked: true }),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),
   restartToUpdate: () => ipcRenderer.invoke('update:restart'),
   notify: (title, body, paneId) => ipcRenderer.send('notification:show', title, body, paneId),

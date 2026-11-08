@@ -34,7 +34,7 @@ function openNotes(bridge: DashboardBridge, title: string, groups: NoteGroup[], 
     const releaseFocus = holdFocus(dialog);
     dialog.append(labelled('h2', 'dialog-title', 'pullRequest', title));
     const rows: HTMLElement[] = [];
-    const urls: (string | null)[] = [];
+    const notes = groups.flatMap((group) => group.rows);
 
     function select(index: number): void {
       rows[selected]?.classList.remove('highlighted');
@@ -46,7 +46,7 @@ function openNotes(bridge: DashboardBridge, title: string, groups: NoteGroup[], 
     }
 
     function openSelected(): void {
-      const url = urls[selected];
+      const url = notes[selected]?.url;
       if (url) bridge.openExternal(url);
     }
 
@@ -63,7 +63,6 @@ function openNotes(bridge: DashboardBridge, title: string, groups: NoteGroup[], 
           openSelected();
         });
         rows.push(row);
-        urls.push(note.url);
         list.append(row);
       }
       dialog.append(heading, list);

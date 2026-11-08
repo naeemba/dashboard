@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import type { ReadableStream } from 'node:stream/web';
@@ -9,9 +9,17 @@ import type { ReleaseAsset } from '../../shared/app/update';
 
 // The disk and network half of the Linux and macOS update: the zip down into the user data folder, its
 // size checked, unpacked beside the install, and swapped in the way scripts/rebuild.sh swaps. Windows is
-// Squirrel's (update-ports.ts). release.ts holds every decision this carries out.
+// Squirrel's (update-actions.ts). release.ts holds every decision this carries out.
+//
+// Anything that reads or deletes an app.asar is a child process, as rebuild.sh does it: inside Electron,
+// node's fs treats app.asar as a folder, so a read of it gets the archive's listing and a recursive rm
+// walks into it and fails.
 
 const run = promisify(execFile);
+
+function remove(folder: string): Promise<unknown> {
+  return run('rm', ['-rf', folder]);
+}
 
 // Into `folder` under the asset's own name. A download that is cut short, or that GitHub answers with
 // something else, is a different size from the asset's, and is thrown away rather than unpacked.
@@ -32,7 +40,7 @@ export async function download(asset: ReleaseAsset, folder: string): Promise<str
 // The zip unpacked into `staging`, emptied first, and the one folder it holds: Dashboard-linux-x64 or
 // Dashboard.app. unzip keeps Linux's modes; ditto is how a mac unpacks a bundle whole.
 export async function unpack(zip: string, staging: string, platform: NodeJS.Platform): Promise<string> {
-  rmSync(staging, { recursive: true, force: true });
+  await remove(staging);
   mkdirSync(staging, { recursive: true });
   if (platform === 'darwin') await run('ditto', ['-x', '-k', zip, staging]);
   else await run('unzip', ['-q', zip, '-d', staging]);
@@ -51,27 +59,22 @@ function appArchive(appFolder: string, platform: NodeJS.Platform): string {
 
 // The stamp rebuild.sh checks, as a release has it: `<version>+` in app.asar, which keeps main.cjs as
 // plain text (vite.build-version.ts). A folder that does not carry it never replaces the install.
-export function carriesVersion(appFolder: string, version: string, platform: NodeJS.Platform): boolean {
-  try {
-    return readFileSync(appArchive(appFolder, platform)).includes(`${version}+`);
-  } catch {
-    return false;
-  }
+export function carriesVersion(appFolder: string, version: string, platform: NodeJS.Platform): Promise<boolean> {
+  return run('grep', ['-a', '-q', '-F', `${version}+`, appArchive(appFolder, platform)]).then(() => true, () => false);
 }
 
 // Renamed in, never written over: a running copy pages its code in lazily, and rewriting those bytes
 // underneath it kills it. After the rename the old build is only unlinked, so the running app keeps its
 // own files until it restarts. `staging` goes with the swap, whatever it still held.
-export function swapInto(app: string, installed: string, staging: string, version: string, platform: NodeJS.Platform): void {
-  if (!carriesVersion(app, version, platform)) {
+export async function swapInto(app: string, installed: string, staging: string, version: string, platform: NodeJS.Platform): Promise<void> {
+  if (!(await carriesVersion(app, version, platform))) {
     throw new Error(`the staged app does not carry v${version}; ${installed} is unchanged`);
   }
   const previous = path.join(path.dirname(installed), `.${path.basename(installed)}.previous`);
-  rmSync(previous, { recursive: true, force: true });
+  await remove(previous);
   if (existsSync(installed)) renameSync(installed, previous);
   renameSync(app, installed);
-  rmSync(previous, { recursive: true, force: true });
-  rmSync(staging, { recursive: true, force: true });
+  await Promise.all([remove(previous), remove(staging)]);
 }
 
 // A zip fetched by the app carries no quarantine flag, but one copied in by hand might; Gatekeeper asks
