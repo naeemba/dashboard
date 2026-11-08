@@ -334,7 +334,7 @@ How it is built, on the worker screen's own path so nothing forks:
   never tells a main of its stop, and `pane release` will not kill it. Its hooks still mark the pane,
   so a question still turns its edge yellow and a turn end green.
 - The refusals of /clear, /resume, /branch and /rewind are main's worker's only:
-  `keepsItsConversation` in `chat-sessions.ts`, where they are decided. On yours, all four carry the
+  `keepsItsConversation` in `actions/session/conversation-ports.ts`, asked by the four session actions. On yours, all four carry the
   screen on in another conversation through `ScreenSession.carryOnIn`, which saves it, so a restart
   resumes the one it was last on. Nothing of main's is touched: main's remembered conversation and its
   pending rewind cut are kept per project, which the screen shares with main.

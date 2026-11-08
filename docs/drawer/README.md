@@ -44,7 +44,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 - Given a session still running in a pane or on the Claude screen, when you press Enter on it, then it is refused and the status bar says where it runs.
 - Given the Claude screen's session has ended, or has not started yet, when you press Enter on the conversation the Claude screen will resume, then it is refused as running on the Claude screen.
 - Given a conversation the drawer resumed into a worker pane, when you pick it in the Claude screen's `/resume`, then it is refused and the status line says which pane runs it.
-- Given a session row, when you press F2, then a box asks for its new name; an empty one is refused.
+- Given a session row, when you press F2, then a box asks for its new name; an empty one is refused, and the new name is the one the Claude screen's `/resume` lists too (session.rename, actions-decision-7).
 - Given more than fifty sessions, when you reach the Load more row and press Enter, then fifty more are listed.
 - Given the manager page, when you open the drawer, then its docs are two closed folders, `.dashboard` and `.claude`; opening one reads that folder alone, its markdown, YAML and JSON files and its folders, and the filter finds only files in folders read so far.
 - Given the manager page, when you press Enter on a doc, then it is shown in the viewer with no Edit row, and Enter or Escape closes it; the manager has no nvim.
