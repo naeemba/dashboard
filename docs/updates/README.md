@@ -18,8 +18,11 @@ settings row says. Its rows depend on where the update is:
 - **Update** downloads this machine's file from the release into the app's data
   folder, checks its size against the one GitHub lists, and stages it beside
   the install. The status bar then says `Dashboard vX.Y.Z is ready`.
-- **Restart to update** swaps the staged build in and restarts into it. The app
-  restarts only when you pick this row, never on its own.
+- **Restart to update** checks the staged build carries the release's version,
+  then asks to quit. The swap and the relaunch run only once the quit question
+  is answered Quit; Cancel leaves the install as it was, the next quit is just a
+  quit, and the row is still there. The app restarts only when you pick this
+  row, never on its own.
 - **What's new** shows the release's notes in the what's-new popup; Enter on a
   line opens the release page.
 
@@ -61,8 +64,9 @@ because Electron's `fs` treats an `.asar` as a folder.
 - `src/main/update/release.ts`: GitHub's answer read, newer or not, which
   download, where the install is (updates-decision-1)
 - `src/main/update/install.ts`: download, size check, unpack, the swap
-- `src/main/actions/update/`: `update.check`, `update.download`,
-  `update.restart`, and `update-actions.ts`, the wiring and the schedule
+- `src/main/actions/update/`: `update.check` and the schedule's settings gate,
+  `update.download`, `update.restart`, and `update-actions.ts`, the wiring and
+  the swap the window's `beforeQuit` runs
 - `src/renderer/app/update-view.ts`: the status bar line and the dialog
 
 ## Scenarios
@@ -77,6 +81,11 @@ because Electron's `fs` treats an `.asar` as a folder.
   unpacked and the dialog says why.
 - Given a staged build that does not carry the release's version, when Restart
   is picked, then the install is left as it is and the app does not restart.
+- Given Restart picked, when the quit question is cancelled, then the install is
+  left as it is and a later quit does not restart the app.
+- Given Update picked while the dialog's own check is still asking GitHub, when
+  the check answers, then the download carries on and Update is not offered
+  again.
 - Given a screen joined to another Dashboard, when the key is pressed, then it
   is this machine's app that is checked, not the host's.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { updateNotice, updateRows, updateTitle, type Release } from './update';
+import { updateFooter, updateNotice, updateRows, updateTitle, type Release } from './update';
 
 const RELEASE: Release = { version: '2.45.0', notes: [], url: '', assets: [] };
 
@@ -17,7 +17,14 @@ describe('the update notice and dialog', () => {
     expect(updateNotice({ kind: 'downloading', release: RELEASE }, 'Ctrl+Shift+U')).toBe('');
   });
 
-  it('names the running version without its commit when nothing is newer', () => {
-    expect(updateTitle({ kind: 'none' }, '2.44.0+acf504ceef1b')).toBe('Dashboard v2.44.0 is the newest release');
+  it('names the running version without its commit, and calls it the newest only once the check said so', () => {
+    expect(updateTitle({ kind: 'none' }, '2.44.0+acf504ceef1b', true)).toBe('Dashboard v2.44.0 is the newest release');
+    expect(updateTitle({ kind: 'none' }, '2.44.0+acf504ceef1b', false)).toBe('Dashboard v2.44.0');
+  });
+
+  it('ends each footer line with a full stop', () => {
+    expect(updateFooter(['v2.45.0 has no download for linux arm64; install it by hand', '', 'Escape closes.']))
+      .toBe('v2.45.0 has no download for linux arm64; install it by hand. Escape closes.');
+    expect(updateFooter(['Checking GitHub for a newer release…', 'Escape closes.'])).toBe('Checking GitHub for a newer release… Escape closes.');
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assetFor, installFolder, isNewer, readRelease, releaseFolderUrl, stagingFolder } from './release';
+import { assetFor, installFolder, isNewer, readRelease, releaseFolderUrl, stagingFolder, updateRefusal } from './release';
 
 const DOWNLOAD = 'https://github.com/naeemba/dashboard/releases/download/v2.45.0';
 const ANSWER = {
@@ -66,5 +66,16 @@ describe('installFolder', () => {
 
   it('refuses a development run', () => {
     expect(installFolder('linux', '/repo/node_modules/electron/dist/electron', false)).toHaveProperty('refused');
+  });
+});
+
+describe('updateRefusal', () => {
+  const release = readRelease(ANSWER)!;
+
+  it('refuses a development run before a missing download, and lets an install with its download through', () => {
+    const development = { refused: 'this is a development run' };
+    expect(updateRefusal(development, release, 'linux', 'arm64')).toBe(development);
+    expect(updateRefusal('/opt/dashboard', release, 'linux', 'arm64')).toEqual({ refused: 'v2.45.0 has no download for linux arm64; install it by hand' });
+    expect(updateRefusal('/opt/dashboard', release, 'linux', 'x64')).toBeNull();
   });
 });

@@ -29,14 +29,21 @@ export function updateRows(state: UpdateState): UpdateRow[] {
   }
 }
 
-// The dialog's title. `running` is the build stamp; only its version is said.
-export function updateTitle(state: UpdateState, running: string): string {
+// The dialog's title. `running` is the build stamp; only its version is said. `newest` is the check
+// having answered that nothing is newer: before it answers, or when it refused one, only the running
+// version is named.
+export function updateTitle(state: UpdateState, running: string, newest: boolean): string {
   switch (state.kind) {
     case 'available': return `Dashboard v${state.release.version} is out`;
     case 'downloading': return `Downloading Dashboard v${state.release.version}…`;
     case 'staged': return `Dashboard v${state.release.version} is ready`;
-    case 'none': return `Dashboard v${running.split('+')[0]} is the newest release`;
+    case 'none': return `Dashboard v${running.split('+')[0]}${newest ? ' is the newest release' : ''}`;
   }
+}
+
+// The dialog's footer, its lines joined, each ended with a full stop unless it already has an ending.
+export function updateFooter(lines: string[]): string {
+  return lines.filter((line) => line !== '').map((line) => (/[.…!?]$/.test(line) ? line : `${line}.`)).join(' ');
 }
 
 // What the status bar says, unasked, once there is something to do; empty clears it. `key` is the

@@ -77,6 +77,14 @@ export function assetFor(release: Release, platform: NodeJS.Platform, arch: stri
   return release.assets.find((each) => each.name === name) ?? { refused: `v${release.version} has no ${name} to download` };
 }
 
+// Why this machine cannot install `release`, or null when it can: an install the swap cannot replace (a
+// development run) before a release with no download for it.
+export function updateRefusal(installed: string | Refused, release: Release, platform: NodeJS.Platform, arch: string): Refused | null {
+  if (typeof installed !== 'string') return installed;
+  const found = assetFor(release, platform, arch);
+  return 'refused' in found ? found : null;
+}
+
 // The folder an asset's download lives under: what Squirrel is pointed at.
 export function releaseFolderUrl(found: ReleaseAsset): string {
   return found.url.slice(0, found.url.lastIndexOf('/'));

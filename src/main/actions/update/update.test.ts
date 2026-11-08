@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Release, UpdateState } from '../../../shared/app/update';
 import { bind } from '../action';
-import { updateCheck } from './check';
+import { scheduledCheck, updateCheck } from './check';
 import { updateDownload } from './download';
 import { updateRestart } from './restart';
 
@@ -40,6 +40,30 @@ describe('update.check', () => {
     expect(latest).not.toHaveBeenCalled();
     expect(ports.set).not.toHaveBeenCalled();
   });
+
+  it('leaves a download that started while GitHub was answering alone', async () => {
+    const ports = held({ kind: 'available', release: RELEASE });
+    const latest = async () => {
+      ports.set({ kind: 'downloading', release: RELEASE });
+      ports.set.mockClear();
+      return ANSWER;
+    };
+    await expect(bind(updateCheck, { ...ports, latest, running: '2.44.0+x', refusal: () => null }).call({}))
+      .resolves.toEqual({ output: 'v2.45.0 is already on its way' });
+    expect(ports.set).not.toHaveBeenCalled();
+    expect(ports.state().kind).toBe('downloading');
+  });
+});
+
+describe('the scheduled check', () => {
+  it('asks nothing while the settings row is off, and logs a failure', async () => {
+    const check = vi.fn(async () => { throw new Error('GitHub answered 503'); });
+    const warn = vi.fn();
+    scheduledCheck(() => false, check, warn)();
+    expect(check).not.toHaveBeenCalled();
+    scheduledCheck(() => true, check, warn)();
+    await vi.waitFor(() => expect(warn).toHaveBeenCalledWith('update check failed: GitHub answered 503'));
+  });
 });
 
 describe('update.download', () => {
@@ -67,28 +91,28 @@ describe('update.download', () => {
 });
 
 describe('update.restart', () => {
-  it('swaps, then restarts', async () => {
+  it('checks the staged app, then asks to quit with it armed', async () => {
     const order: string[] = [];
     const restart = bind(updateRestart, {
       ...held({ kind: 'staged', release: RELEASE }),
-      swap: async () => { order.push('swap'); },
-      relaunch: () => { order.push('relaunch'); },
+      verify: async () => { order.push('verify'); },
+      quit: (release) => { order.push(`quit ${release.version}`); },
     });
-    await restart.call({});
-    expect(order).toEqual(['swap', 'relaunch']);
+    await expect(restart.call({})).resolves.toEqual({ output: 'restarting into v2.45.0' });
+    expect(order).toEqual(['verify', 'quit 2.45.0']);
   });
 
-  it('does not restart when the swap fails, and says why', async () => {
+  it('does not ask to quit when the staged app is not the release, and says why', async () => {
     const ports = held({ kind: 'staged', release: RELEASE });
-    const relaunch = vi.fn();
-    const restart = bind(updateRestart, { ...ports, swap: async () => { throw new Error('the staged app does not carry v2.45.0'); }, relaunch });
+    const quit = vi.fn();
+    const restart = bind(updateRestart, { ...ports, verify: async () => { throw new Error('the staged app does not carry v2.45.0'); }, quit });
     await expect(restart.call({})).rejects.toThrow();
-    expect(relaunch).not.toHaveBeenCalled();
+    expect(quit).not.toHaveBeenCalled();
     expect(ports.state()).toMatchObject({ kind: 'staged', failure: 'Not installed: the staged app does not carry v2.45.0' });
   });
 
   it('refuses with nothing downloaded', async () => {
-    const restart = bind(updateRestart, { ...held({ kind: 'available', release: RELEASE }), swap: vi.fn(), relaunch: vi.fn() });
+    const restart = bind(updateRestart, { ...held({ kind: 'available', release: RELEASE }), verify: vi.fn(), quit: vi.fn() });
     await expect(restart.call({})).resolves.toEqual({ refused: 'no update is downloaded to restart into' });
   });
 });

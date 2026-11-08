@@ -1,6 +1,6 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { clampIndex } from '../../shared/app/clamp-index';
-import { UPDATE_ROW_LABELS, updateNotice, updateRows, updateTitle, type UpdateRow, type UpdateState } from '../../shared/app/update';
+import { UPDATE_ROW_LABELS, updateFooter, updateNotice, updateRows, updateTitle, type UpdateRow, type UpdateState } from '../../shared/app/update';
 import { failureText } from '../../shared/errors/failure';
 import { labelled } from './icons';
 import { answerKeys, holdFocus, openOverlay, searchRowElement } from './overlay';
@@ -36,6 +36,8 @@ function keysLine(rows: number): string {
 export function openUpdates(bridge: DashboardBridge, report: (message: string) => void): Promise<void> {
   let selected = 0;
   let message = 'Checking GitHub for a newer release…';
+  // The check answered and nothing was newer, for the title.
+  let newest = false;
   return new Promise<void>((resolve) => {
     // `after` is a sheet opened in this one's place, which the caller waits for too.
     function close(after?: Promise<void>): void {
@@ -85,14 +87,17 @@ export function openUpdates(bridge: DashboardBridge, report: (message: string) =
       }
       const footer = document.createElement('p');
       footer.className = 'help-footer';
-      footer.textContent = lines.filter((line) => line !== '').join(' ');
-      dialog.replaceChildren(labelled('h2', 'dialog-title', 'refresh', updateTitle(current, __BUILD_VERSION__)), list, footer);
+      footer.textContent = updateFooter(lines);
+      dialog.replaceChildren(labelled('h2', 'dialog-title', 'refresh', updateTitle(current, __BUILD_VERSION__, newest)), list, footer);
     }
 
     redraw = render;
     render();
     dialog.focus();
-    bridge.checkUpdate().then(answered, (error: unknown) => say(`Could not check: ${failureText(error)}`));
+    bridge.checkUpdate().then((answer) => {
+      newest = !('refused' in answer);
+      answered(answer);
+    }, (error: unknown) => say(`Could not check: ${failureText(error)}`));
 
     answerKeys(dialog, (key) => {
       const row = updateRows(current)[selected];

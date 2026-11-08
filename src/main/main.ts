@@ -461,7 +461,7 @@ table.handle('settings:write', (_screen, next: Settings) => {
   return shellCommand;
 });
 // The newest release, checked now and every six hours while the settings row allows it (docs/updates).
-updateActions({
+const updates = updateActions({
   table, send: (channel, state) => liveWindow()?.webContents.send(channel, state), running: __BUILD_VERSION__,
   enabled: () => settings.updates.check, log: (draft) => logStore.log(draft),
 });
@@ -741,13 +741,14 @@ function createWindow(): void {
   mainWindow = openAppWindow({
     background: settings.theme.background,
     // One last reading before the shells die, so a conversation started or cleared since the last sweep
-    // is the one the next launch resumes. A reading that fails still quits, on the last sweep's.
+    // is the one the next launch resumes. A reading that fails still quits, on the last sweep's. Then the
+    // update Restart armed, if it was what asked to quit.
     async beforeQuit() {
       const placement = await tokenUsage.placeNow().catch(() => null);
       if (placement !== null) claudeSessions.placed(placement);
+      await updates.beforeQuit();
     },
-    loaded: () => failures.drain(),
-    shellsDieAtQuit: panes.workDiesAtQuit,
+    loaded: () => failures.drain(), shellsDieAtQuit: panes.workDiesAtQuit, quitCancelled: updates.quitCancelled,
   });
   // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
   // that was never finished.

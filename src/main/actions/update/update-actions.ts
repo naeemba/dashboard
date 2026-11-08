@@ -1,21 +1,21 @@
 import { app, autoUpdater } from 'electron';
 import { rmSync } from 'node:fs';
 import path from 'node:path';
-import type { Refused } from '../../../shared/app/bridge';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import type { Release, UpdateState } from '../../../shared/app/update';
 import { failureText } from '../../../shared/errors/failure';
 import type { Channels } from '../../app/channels';
-import { clearQuarantine, download, swapInto, unpack } from '../../update/install';
-import { assetFor, CHECK_EVERY_MS, installFolder, LATEST_RELEASE_URL, releaseFolderUrl, stagingFolder } from '../../update/release';
+import { clearQuarantine, download, swapInto, unpack, verifyStaged } from '../../update/install';
+import { assetFor, CHECK_EVERY_MS, installFolder, LATEST_RELEASE_URL, releaseFolderUrl, stagingFolder, updateRefusal } from '../../update/release';
 import { bind, isRefused, registerActions } from '../action';
-import { updateCheck } from './check';
+import { scheduledCheck, updateCheck } from './check';
 import { updateDownload } from './download';
 import { updateRestart } from './restart';
 
 // Main's wiring for the update actions: the state they move, this platform's stage, swap and restart,
 // and the check on launch and every six hours. Out of main.ts, which is over its 600-line ceiling.
-// Every decision is in release.ts and the three actions.
+// Every decision is in release.ts and the three actions. The restart's swap and relaunch run in the
+// window's beforeQuit, once the quit question has been answered Quit.
 
 export type UpdateMain = {
   table: Channels;
@@ -30,7 +30,16 @@ export type UpdateMain = {
 // A stalled GitHub costs the check, not a dialog that says "Checking" until it is closed.
 const CHECK_TIMEOUT_MS = 15_000;
 
-type Installer = { stage(release: Release): Promise<void>; swap(release: Release): Promise<void>; relaunch(): void };
+type Installer = {
+  stage(release: Release): Promise<void>;
+  verify(release: Release): Promise<void>;
+  swap(release: Release): Promise<void>;
+  // Inside a quit already under way.
+  relaunch(): void;
+};
+
+// For the window: what a confirmed quit runs, and what a cancelled one forgets.
+export type UpdateQuit = { beforeQuit(): Promise<void>; quitCancelled(): void };
 
 async function latest(): Promise<unknown> {
   const response = await fetch(LATEST_RELEASE_URL, {
@@ -38,11 +47,6 @@ async function latest(): Promise<unknown> {
   });
   if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
   return response.json();
-}
-
-function relaunch(): void {
-  app.relaunch();
-  app.quit();
 }
 
 // Windows: Squirrel's Update.exe, the one Electron's autoUpdater drives, pointed at the release's own
@@ -68,6 +72,7 @@ const squirrel: Installer = {
       autoUpdater.checkForUpdates();
     });
   },
+  verify: async () => undefined,
   swap: async () => undefined,
   relaunch: () => autoUpdater.quitAndInstall(),
 };
@@ -89,15 +94,16 @@ function zipInstaller(installed: string): Installer {
         rmSync(zip, { force: true });
       }
     },
+    verify: (release) => verifyStaged(staged, installed, release.version, process.platform),
     async swap(release) {
       await swapInto(staged, installed, staging, release.version, process.platform);
       if (process.platform === 'darwin') await clearQuarantine(installed);
     },
-    relaunch,
+    relaunch: () => app.relaunch(),
   };
 }
 
-export function updateActions(main: UpdateMain): void {
+export function updateActions(main: UpdateMain): UpdateQuit {
   let state: UpdateState = { kind: 'none' };
   const ports = {
     state: () => state,
@@ -105,32 +111,40 @@ export function updateActions(main: UpdateMain): void {
   };
   const installed = installFolder(process.platform, process.execPath, app.isPackaged);
   const installer = process.platform === 'win32' ? squirrel : isRefused(installed) ? null : zipInstaller(installed);
-  const refusal = (release: Release): Refused | null => {
-    if (isRefused(installed)) return installed;
-    const asset = assetFor(release, process.platform, process.arch);
-    return isRefused(asset) ? asset : null;
-  };
+  const refusal = (release: Release) => updateRefusal(installed, release, process.platform, process.arch);
+  // The release Restart was picked for, until the quit question is answered.
+  let armed: Release | null = null;
   // A machine with no installer is refused by the check, so these never run there.
   const unreachable = (): never => { throw new Error('this machine cannot install a release'); };
   const check = bind(updateCheck, { ...ports, latest, running: main.running, refusal });
   const downloadAction = bind(updateDownload, { ...ports, stage: (release) => (installer ?? unreachable()).stage(release) });
   const restart = bind(updateRestart, {
     ...ports,
-    swap: (release) => (installer ?? unreachable()).swap(release),
-    relaunch() {
-      main.log({ level: 'info', kind: 'app', message: 'restarting into the update' });
-      (installer ?? unreachable()).relaunch();
+    verify: (release) => (installer ?? unreachable()).verify(release),
+    quit(release) {
+      armed = release;
+      app.quit();
     },
   });
   registerActions(main.table, [check, downloadAction, restart]);
   main.table.handle('update:read', () => state);
-  // A failed check costs a line in the log, nothing on screen.
-  const scheduled = (): void => {
-    if (!main.enabled()) return;
-    check.call({}).catch((error: unknown) => {
-      main.log({ level: 'warn', kind: 'app', message: `update check failed: ${failureText(error)}` });
-    });
-  };
+  const scheduled = scheduledCheck(main.enabled, () => check.call({}), (message) => main.log({ level: 'warn', kind: 'app', message }));
   scheduled();
   setInterval(scheduled, CHECK_EVERY_MS);
+  return {
+    // A swap that fails here leaves the install as it was (swapInto) and the app quits as asked, unrestarted.
+    async beforeQuit() {
+      if (armed === null || installer === null) return;
+      const release = armed;
+      armed = null;
+      try {
+        await installer.swap(release);
+        main.log({ level: 'info', kind: 'app', message: `restarting into v${release.version}` });
+        installer.relaunch();
+      } catch (error: unknown) {
+        main.log({ level: 'warn', kind: 'app', message: `update not installed: ${failureText(error)}` });
+      }
+    },
+    quitCancelled() { armed = null; },
+  };
 }

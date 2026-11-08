@@ -22,13 +22,19 @@ function remove(folder: string): Promise<unknown> {
 }
 
 // Into `folder` under the asset's own name. A download that is cut short, or that GitHub answers with
-// something else, is a different size from the asset's, and is thrown away rather than unpacked.
+// something else, is a different size from the asset's, and is thrown away rather than unpacked; so is
+// one whose connection dropped partway.
 export async function download(asset: ReleaseAsset, folder: string): Promise<string> {
   mkdirSync(folder, { recursive: true });
   const file = path.join(folder, asset.name);
   const response = await fetch(asset.url);
   if (!response.ok || response.body === null) throw new Error(`GitHub answered ${response.status} for ${asset.name}`);
-  await pipeline(Readable.fromWeb(response.body as ReadableStream), createWriteStream(file));
+  try {
+    await pipeline(Readable.fromWeb(response.body as ReadableStream), createWriteStream(file));
+  } catch (error: unknown) {
+    rmSync(file, { force: true });
+    throw error;
+  }
   const size = statSync(file).size;
   if (size !== asset.size) {
     rmSync(file, { force: true });
@@ -63,17 +69,28 @@ export function carriesVersion(appFolder: string, version: string, platform: Nod
   return run('grep', ['-a', '-q', '-F', `${version}+`, appArchive(appFolder, platform)]).then(() => true, () => false);
 }
 
-// Renamed in, never written over: a running copy pages its code in lazily, and rewriting those bytes
-// underneath it kills it. After the rename the old build is only unlinked, so the running app keeps its
-// own files until it restarts. `staging` goes with the swap, whatever it still held.
-export async function swapInto(app: string, installed: string, staging: string, version: string, platform: NodeJS.Platform): Promise<void> {
+// What the swap checks before it touches the install, and the restart before it asks to quit.
+export async function verifyStaged(app: string, installed: string, version: string, platform: NodeJS.Platform): Promise<void> {
   if (!(await carriesVersion(app, version, platform))) {
     throw new Error(`the staged app does not carry v${version}; ${installed} is unchanged`);
   }
+}
+
+// Renamed in, never written over: a running copy pages its code in lazily, and rewriting those bytes
+// underneath it kills it. After the rename the old build is only unlinked, so the running app keeps its
+// own files until it restarts. A second rename that fails puts the first one back, so the next launch
+// still has an app. `staging` goes with the swap, whatever it still held.
+export async function swapInto(app: string, installed: string, staging: string, version: string, platform: NodeJS.Platform): Promise<void> {
+  await verifyStaged(app, installed, version, platform);
   const previous = path.join(path.dirname(installed), `.${path.basename(installed)}.previous`);
   await remove(previous);
   if (existsSync(installed)) renameSync(installed, previous);
-  renameSync(app, installed);
+  try {
+    renameSync(app, installed);
+  } catch (error: unknown) {
+    if (existsSync(previous)) renameSync(previous, installed);
+    throw error;
+  }
   await Promise.all([remove(previous), remove(staging)]);
 }
 

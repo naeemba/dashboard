@@ -11,6 +11,8 @@ export type AppWindowOptions = {
   background: string;
   // What has to happen after Quit is chosen and before the shells die.
   beforeQuit(): Promise<void>;
+  // Cancel was chosen: whatever was waiting on this quit (an update's restart) is off.
+  quitCancelled(): void;
   // The page has loaded and can be sent a message.
   loaded(): void;
   // Some pane's shell runs in the app this time (no host answered, another Dashboard holds it, or it
@@ -101,7 +103,10 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
         ? 'Every Claude screen stops, and every shell in every open project is killed, including anything still running in one.'
         : 'Every Claude screen stops, and so does the editor. The worker panes\' shells keep running and come back when Dashboard opens again.',
     }).then(async ({ response }) => {
-      if (response !== 1) return;
+      if (response !== 1) {
+        options.quitCancelled();
+        return;
+      }
       await options.beforeQuit();
       window.destroy();
     }).finally(() => {
