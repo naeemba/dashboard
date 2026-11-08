@@ -10,8 +10,7 @@ export function ensureHostToken(settings: Settings, random: () => string): { set
 }
 
 // Main's one line: make the token if there is none and hand `write` the settings that hold it.
-export function keepHostToken(settings: Settings, write: (settings: Settings) => void): Settings {
+export function keepHostToken(settings: Settings, write: (settings: Settings) => void): void {
   const { settings: kept, generated } = ensureHostToken(settings, () => randomBytes(32).toString('base64url'));
   if (generated) write(kept);
-  return kept;
 }

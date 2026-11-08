@@ -22,8 +22,8 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // outside the app and stays its program's.
   { call: 'worktrees.remove', allowed: { 'src/main/main.ts': 1 } },
   { call: "'worktree', 'add'", allowed: { 'src/main/actions/worktree/make.ts': 2, 'src/main/board/create-task-program.ts': 1 } },
-  // settings.write: launch's host token, the settings screen and the remote join.
-  { call: 'writeSettings(settingsFile', allowed: { 'src/main/main.ts': 3 } },
+  // settings.json: its definition, and settings.write's `writeFile` port.
+  { call: 'writeSettings(', allowed: { 'src/main/main.ts': 1, 'src/main/settings/settings-store.ts': 1 } },
   // The wrapper behind pane restart a shell, the one Bypass: yes row left with a channel.
   { call: "'pty:restart'", allowed: { 'src/main/panes/pane-channels.ts': 1 } },
   // What the session actions do, handed to them as ports and called nowhere else: main's start, only
