@@ -1,13 +1,13 @@
 {
   "id": "004d4fef-8da6-414c-8d5a-12a32de05cb0",
   "title": "Closing a project fails: 'An object could not be cloned'",
-  "notes": "v2.44.0 (from #240): the project close key fails on every project with 'Something broke: An object could not be cloned. — the app is still running, part of it may not be.' (and the same line in the log). Reported by the user closing dotfiles, 2026-11-09.\n\nCause: close-project.ts askMain sends names: ports.namedPanes(page) over projects:close, and renderer.ts wires namedPanes to the function that returns whole Pane objects ({ ...pane, name }), with the xterm Terminal and DOM element inside. Electron's structured clone refuses them.\n\nFix: what goes over IPC is PaneName only ({ index, name }). Do the narrowing in close-project.ts (askMain maps to { index, name } before calling closeProject), so it is testable without the DOM, and type the port as returning PaneName[] from a source that cannot hand it a Pane. Add a close-project test with a fake page whose panes carry a function and a non-plain object, asserting the request is structuredClone-able (structuredClone(request) does not throw). Grep the other bridge calls for the same mistake (a renderer object with a terminal or element spread into an IPC request) and fix any found. Docs: projects history line.",
+  "notes": "Shipped in #247: close-project.ts askMain narrows each pane to { index, name } before projects:close, so the IPC structured clone no longer refuses the xterm terminal and element. A test asserts the request survives structuredClone. The other bridge calls were checked and send only scalars. Not checked by hand in the app.",
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-08T21:27:06.769Z",
-  "updatedAt": "2026-11-08T21:32:20.863Z",
+  "updatedAt": "2026-11-08T21:36:05.740Z",
   "branch": "work-board-card-004d4fef-8da6-414c-8d5a-12a",
   "pullRequest": 247,
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 199
 }
