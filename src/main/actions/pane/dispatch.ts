@@ -8,8 +8,9 @@ import { action } from '../action';
 import { isFilledText, isFilledTextOrNull } from './pane-input';
 
 // Every agent the app starts in a pane goes through here: `pane run`, a ship, the review loop, a resume
-// after a restart or from the drawer, and New Claude (workers-decision-8). It decides once whether the pane gets a Claude
-// screen or Claude Code in its terminal, and starts the one it chose. A sixth caller is a row here.
+// after a restart or from the drawer, and New Claude (workers-decision-8). It decides once whether
+// the pane gets a Claude screen or Claude Code in its terminal, and starts the one it chose. A seventh
+// caller is a row here.
 
 export type PaneDispatchInput = {
   // The pane, as `2:3`, and the project whose page it is on.

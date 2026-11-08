@@ -9,7 +9,7 @@ export function registerWorkerChannels(table: Channels, main: Pick<PaneActions, 
   openProjects(): OpenProjects;
 }): void {
   // The two keys and the two halves of the button above the worker list: a shell, or with `claude` a
-  // Claude screen waiting for its first prompt. A refusal (a project with no folder) answers null, as
+  // Claude screen waiting for its first prompt. Whatever pane.open refuses answers null, as
   // the screen has nothing to land on.
   table.handle('pane:add', async (_screen, slot: number, claude = false) => {
     const opened = await main.open.call({ slot, claude });

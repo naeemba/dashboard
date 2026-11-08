@@ -21,7 +21,7 @@ function survivor(index: number): Survivor {
   return { key: paneKey(API, index), pid: 1, file: 'zsh', args: ['claude'], cwd: API, cols: 80, rows: 24, foreground: 'claude', screen: '' };
 }
 
-function restoring(saved: Map<number, PaneConversation>, kept: Survivor[] = [], screens: ScreenBack[] = []) {
+function restoring(saved: Map<number, PaneConversation>, kept: Survivor[] = [], screens: ScreenBack[] = [], failing: string | null = null) {
   const commands = new Map<string, PaneCommand>();
   const dispatched: PaneDispatchInput[] = [];
   const records: WorktreeEntry[] = [];
@@ -45,7 +45,11 @@ function restoring(saved: Map<number, PaneConversation>, kept: Survivor[] = [], 
     reserve: (id, directory) => { commands.set(id, { args: [], directory }); },
     spawn: () => undefined,
     openPanes: (slot) => [...commands.keys()].filter((id) => id.startsWith(`${slot}:`)).map((id) => Number(id.split(':')[1])),
-    dispatch: async (input) => { dispatched.push(input); return { output: 'started' }; },
+    dispatch: async (input) => {
+      dispatched.push(input);
+      if (input.id === failing) throw new Error(`${input.id} would not start`);
+      return { output: 'started' };
+    },
   };
   return { restore: bind(paneRestore, ports), commands, dispatched, records, mainsWorkers, killed, listened };
 }
@@ -88,6 +92,16 @@ describe('pane.restore', () => {
     await restore.call({ slot: 2, projectPath: API, firstPane: null });
     expect(commands.get('2:4')).toEqual({ args: [], directory: API });
     expect(mainsWorkers.get('2:4')).toBe('/work/desk');
+  });
+
+  it('brings back the panes after a resume that fails, then fails with it', async () => {
+    const { restore, dispatched, commands } = restoring(new Map([
+      [1, { session: OURS, directory: API }],
+      [2, { session: MAINS, directory: API }],
+    ]), [], [{ index: 4, directory: API, session: CARDS, dispatcherPath: null }], '2:1');
+    await expect(restore.call({ slot: 2, projectPath: API, firstPane: null })).rejects.toThrow('2:1 would not start');
+    expect(dispatched.map((each) => each.id)).toEqual(['2:1', '2:2']);
+    expect(commands.get('2:4')).toEqual({ args: [], directory: API });
   });
 
   it('has every pane set by the time the call returns, before anything is awaited', () => {

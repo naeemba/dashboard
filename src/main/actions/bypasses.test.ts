@@ -10,8 +10,9 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: 'startPane(', allowed: { 'src/main/actions/pane/dispatch.ts': 2 } },
   // A worker screen starts only as pane.dispatch's screen half.
   { call: 'workerScreens.start', allowed: { 'src/main/main.ts': 1 } },
-  // `claude --resume` typed into a shell: none left, every resume is pane.dispatch's.
-  { call: 'write(resumeLine(', allowed: {} },
+  // A resume is built only as pane.dispatch's worker arguments; none is typed into a shell.
+  { call: "'--resume'", allowed: { 'src/main/workers/dispatch.ts': 1 } },
+  { call: '--resume ${', allowed: {} },
   // A pane's shell spawned and a pane dropped: handed to the pane actions, and the two rows still
   // outside one, `pty:restart` (pane-channels.ts) and project.close (closeProjectSlot).
   { call: 'panes.spawn', allowed: { 'src/main/main.ts': 2 } },

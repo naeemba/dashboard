@@ -38,7 +38,7 @@ export type BoundAction<Result extends { output: string } = { output: string }> 
 
 export function bind<Ports, Input, Result extends { output: string }>(
   definition: Action<Ports, Input, Result>,
-  ports: Ports,
+  ports: NoInfer<Ports>,
 ): BoundAction<Result> {
   return {
     name: definition.name,

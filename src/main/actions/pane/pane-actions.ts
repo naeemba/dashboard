@@ -4,7 +4,7 @@ import { paneFromId } from '../../../shared/panes/terminals';
 import { bind, type BoundAction } from '../action';
 import { paneClose, type PaneClosePorts } from './close';
 import { paneDispatch, type PaneDispatchPorts } from './dispatch';
-import { paneOpen } from './open';
+import { paneOpen, type PaneOpenPorts } from './open';
 import { paneRestore, type PaneRestorePorts } from './restore';
 import { paneSend, type PaneSendPorts } from './send';
 
@@ -13,7 +13,7 @@ import { paneSend, type PaneSendPorts } from './send';
 // command (session-requests.ts), whose ledger of who claimed what they need. The claim on main's worker
 // is tested in pane-actions.test.ts, every other decision in its action's own test.
 export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession'>
-  & PaneClosePorts & PaneSendPorts
+  & Omit<PaneClosePorts, 'project'> & Pick<PaneOpenPorts, 'project'> & PaneSendPorts
   & Omit<PaneRestorePorts, 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & {
     // The session command's answers about the pane, forgotten: it is the new agent's.
     forgetAnswers(id: string): void;

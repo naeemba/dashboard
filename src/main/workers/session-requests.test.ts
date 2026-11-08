@@ -120,6 +120,14 @@ describe('sessionRequests', () => {
     expect(started[0]).toEqual({ id: '2:1', directory: '/work/api', prompt: 'research the cache', as: 'terminal', cardId: null, dispatcherPath: '/work/api' });
   });
 
+  it('answers a run pane.dispatch refused with the refusal, and records no worker', async () => {
+    const { ports, marked } = project({ startWorker: async () => ({ refused: '/work/api is not there' }) });
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    expect(await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] })).toEqual({ ok: false, output: '/work/api is not there' });
+    expect(marked).toEqual([]);
+  });
+
   it('hears a worker screen\'s hooks through notify', async () => {
     const { ports, marked } = project();
     const answer = sessionRequests(ports);
