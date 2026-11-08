@@ -1,0 +1,11 @@
+{
+  "id": "69e0f542-d737-407f-bea9-e68d462ace66",
+  "title": "Remove any attached image from the Claude screen's prompt",
+  "notes": "An image attached to the prompt (pasted or dropped, chat-attachments.ts) can only be taken off by Backspace in an empty prompt, which drops the last one (chat-view.ts dropLast). There is no way to remove one in the middle, nor to see that Backspace does it.\n\nChange: each thumbnail gets a remove control (an x on hover, top right) that removes that image; keyboard first (conventions-rule-1): a key moves the selection onto the thumbnails from the prompt (e.g. Up from an empty first line, or a chat-scope key in actions.ts), the arrows walk them, Delete or Backspace removes the selected one, Escape goes back to the prompt. Backspace on an empty prompt keeps removing the last. A hover title on a thumbnail says how. Same for whatever else the prompt can attach, if anything (files mentioned with @ are text and stay as they are).\n\nDecision (which image a key removes, where the selection goes after) in a small module with a test (workflow-rule-2). Help row and Claude blurb (keys-rule-2). Docs: chat README, history.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T22:20:47.353Z",
+  "updatedAt": "2026-11-08T22:20:47.353Z",
+  "column": "Todo",
+  "order": 11
+}
