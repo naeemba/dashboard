@@ -40,3 +40,9 @@ export type SearchRow<Choice> = {
   // searched needs one — the picker's line that opens a folder dialog.
   className?: string;
 };
+
+// The row a search sheet opens on: the one it is on now, or the top when that is not on the list (a model
+// /model named, skipping permissions, effort left to the settings file).
+export function openingRow<Choice>(rows: SearchRow<Choice>[], current: Choice): number {
+  return Math.max(0, rows.findIndex((row) => row.choice === current));
+}

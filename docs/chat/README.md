@@ -189,7 +189,11 @@ level, onto the row that opened it, and closes the top one; putting a memory
 file away comes back to its row too. A click beside the popup closes it. The
 model key walks the models and the edits key walks asking, accepting, planning
 and auto, both for the next thing Claude does; the foot follows a mode Claude
-moves to by itself, such as accepting edits once a plan is approved. A second
+moves to by itself, such as accepting edits once a plan is approved. A click on
+the model, the mode or the effort in the foot opens a sheet of that setting's
+choices, open on the one it is on: the models the model key walks, the modes the
+edits key walks, or /effort's levels; the arrows walk it, Enter or a click takes
+a row, Escape leaves it as it was. A second
 screen on the same page shows the same conversation, questions and choices, and
 either can answer.
 
@@ -209,7 +213,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`, `chat-screen-click.ts`
-- Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
+- Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`, `foot-choices.ts`,
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`, `chat-task-commands.ts`,
   `chat-agents.ts`, `chat-agents-view.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
@@ -235,6 +239,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given Claude is working, when you send a message, then it waits grey under the conversation until the session takes it, and Up in the empty box takes it back.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you type `/effort high`, when you send it, then the next turn runs at high and the foot says `high effort`; `ultrathink` in a prompt shows in the foot while its turn runs.
+- Given the foot reads `Opus 5.5 · auto mode · default effort`, when you click `auto mode`, then a sheet lists asking before edits, accepting edits, planning and auto mode with auto mode marked and highlighted; Enter on planning puts the session in plan mode and the foot says `planning`. A click on the model lists default, opus, sonnet and haiku, and one on the effort opens the /effort sheet, each on the one it is on.
 - Given you type `/fast` or press Alt+F, when fast mode was off, then the session turns it on and the foot shows `· fast` after the model; again turns it off. `/fast on` and `/fast off` set it rather than toggle, and the foot starts from what the session reports, so one already fast from the settings file shows `· fast` from the first turn.
 - Given you type `@` and part of a path in the box, when the list of the project's files narrows to it, then Tab or Enter puts the picked file in as an @ mention.
 - Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.

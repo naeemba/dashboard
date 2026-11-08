@@ -1,3 +1,4 @@
+import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { DashboardBridge, ChatPreferences } from '../../shared/app/bridge';
 import { askAside } from './chat-btw-view';
 import { EFFORT_LEVELS, effortRows, namedEffort, namedFast, pickedModel, planSends, type ChosenEffort, type ScreenCommand } from '../../shared/chat/chat-commands';
@@ -5,6 +6,7 @@ import { exportConversation } from './chat-export-view';
 import { manageMcp } from './chat-mcp-view';
 import { rewind } from './chat-rewind-view';
 import { branch, chooseModel, copyReply, renameConversation, resume, showEdits } from './chat-screen-commands';
+import { footModeRows, footModelRows, type FootSetting } from '../../shared/chat/foot-choices';
 import { working, type Transcript } from '../../shared/chat/chat-transcript';
 import type { ChatViewOptions } from './chat-view';
 import { searchOverlay } from '../app/overlay';
@@ -21,6 +23,7 @@ export type CommandScreen = {
   transcript(): Transcript;
   askCount(): number;
   model(): string | null;
+  mode(): PermissionMode;
   effort(): ChosenEffort;
   fast(): boolean;
   imageCount(): number;
@@ -108,9 +111,25 @@ function showEfforts(screen: CommandScreen, name: string): void {
   }
   void searchOverlay({
     name: 'chat-effort', placeholder: 'Search effort levels', rows: (query) => effortRows(screen.effort(), query),
-    empty: 'No level matches.', glyph: () => 'claude',
+    empty: 'No level matches.', glyph: () => 'claude', opensOn: screen.effort(),
   }).then((picked) => {
     if (picked !== undefined) screen.configure({ effort: picked });
     screen.focus();
   });
+}
+
+// A click on the model, the mode or the effort in the foot: a sheet of that setting's choices, open on
+// the one it is on. The model sheet is the list the model key walks, not /model's, which asks the session.
+export function showFootSetting(setting: FootSetting, screen: CommandScreen): void {
+  if (setting === 'effort') return showEfforts(screen, '');
+  const picked = setting === 'model'
+    ? searchOverlay({
+      name: 'chat-model', placeholder: 'Search models', rows: (query) => footModelRows(screen.model(), query),
+      empty: 'No model matches.', glyph: () => 'claude', opensOn: screen.model(),
+    }).then((model) => { if (model !== undefined) screen.configure({ model }); })
+    : searchOverlay({
+      name: 'chat-mode', placeholder: 'Search modes', rows: (query) => footModeRows(screen.mode(), query),
+      empty: 'No mode matches.', glyph: () => 'claude', opensOn: screen.mode(),
+    }).then((permissionMode) => { if (permissionMode !== undefined) screen.configure({ permissionMode }); });
+  void picked.then(screen.focus);
 }

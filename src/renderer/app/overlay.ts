@@ -1,7 +1,7 @@
 import { icon, type IconName } from './icons';
 import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
 import { isModified } from '../keys/shortcuts';
-import type { SearchRow } from '../../shared/app/fuzzy';
+import { openingRow, type SearchRow } from '../../shared/app/fuzzy';
 
 // The class every sheet built here carries, so that one name means "a dialog owns the keyboard" and
 // nobody has to keep a list of the dialogs in step by hand. The box inside it carries the same name
@@ -230,6 +230,8 @@ export function searchOverlay<Choice>(options: {
   // For a list that changes while it is open: called once with the way to ask for the rows again,
   // and answers with the way to stop, which closing the dialog calls.
   watch?: (changed: () => void) => () => void;
+  // The choice the highlight starts on, the one a setting is on now; the top row when it is not listed.
+  opensOn?: Choice;
 }): Promise<Choice | undefined> {
   let rows: SearchRow<Choice>[] = [];
   let highlighted = 0;
@@ -309,7 +311,9 @@ export function searchOverlay<Choice>(options: {
         case 'ArrowUp': event.preventDefault(); return move(-1);
       }
     });
-    search();
+    rows = options.rows('');
+    highlighted = openingRow(rows, options.opensOn);
+    draw();
     // A refresh can reorder the rows, so the highlight follows the row it was on, not its place.
     unwatch = options.watch?.(() => {
       const was = rows[highlighted]?.choice;
