@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T17:16:26.574Z",
-  "updatedAt": "2026-11-07T17:16:26.574Z",
-  "column": "Todo",
-  "order": 9
+  "updatedAt": "2026-11-08T14:45:04.374Z",
+  "column": "Doing",
+  "order": 1
 }
