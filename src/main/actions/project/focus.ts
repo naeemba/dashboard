@@ -1,3 +1,4 @@
+import { MANAGER_SLOT } from '../../../shared/manager/manager';
 import { MAIN_INDEX, terminalId } from '../../../shared/panes/terminals';
 import { action } from '../action';
 import { isFilledText, isSlot } from '../pane/pane-input';
@@ -23,8 +24,9 @@ export const projectFocus = action<ProjectFocusPorts, ProjectFocusInput, { outpu
   input: (raw) => read(raw) ?? { refused: 'the pane to land on was not one the app could read' },
   async run(ports, { slot, index, name }) {
     const paneId = terminalId(slot, index ?? MAIN_INDEX);
-    // A banner raised before its project closed lands nowhere.
-    if (!ports.isOpen(slot)) return { refused: `${name ?? paneId} is not open` };
+    // A banner raised before its project closed lands nowhere. The manager is never closed, and
+    // isOpen stays false for it because project.close reads the same port to refuse the manager.
+    if (slot !== MANAGER_SLOT && !ports.isOpen(slot)) return { refused: `${name ?? paneId} is not open` };
     ports.land(paneId);
     return { output: `switched to ${name ?? paneId}` };
   },
