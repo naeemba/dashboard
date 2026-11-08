@@ -1,7 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { failureNotice, failureReporter, failureText, respondToFailure } from './failure';
+import { failureNotice, failureReporter, failureText, respondToFailure, whenFailureRead } from './failure';
 
 describe('failureText', () => {
+  it('tells the listener of each error it reads, with the sentence it read', () => {
+    const reads: [unknown, string][] = [];
+    whenFailureRead((error, text) => reads.push([error, text]));
+    const thrown = new Error('EACCES');
+    failureText(thrown);
+    failureText(undefined);
+    expect(reads).toEqual([[thrown, 'EACCES'], [undefined, 'no reason given']]);
+    whenFailureRead(() => undefined);
+  });
   it('reads an Error as what it says', () => {
     expect(failureText(new Error('EACCES: permission denied'))).toBe('EACCES: permission denied');
   });
