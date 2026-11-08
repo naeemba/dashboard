@@ -39,8 +39,9 @@ Neither door holds any of the logic; each only asks.
 
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
-[`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls that still
-do the work themselves (actions-rule-1, actions-decision-4).
+[`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls and wrappers
+that still do the work themselves; the rows it does not pin are held by the
+rule alone (actions-rule-1, actions-decision-4).
 
 Only card.move has a channel: it is the only action the bridge exposes. A screen
 that needs ship or review registers its channel in the same change.
@@ -79,7 +80,7 @@ what `cardActions` serves.
 Folder: `src/main/actions/`.
 
 - `action.ts` — the action shape and the registry
-- `bypasses.test.ts` — every call that changes state outside an action, and where
+- `bypasses.test.ts` — the calls and wrappers that change state outside an action, and where
 - `card/card-actions.ts` — main's wiring: shipFlow, reviewSweep and the three
   card actions with their ports
 - `card/move.ts`, `card/ship.ts`, `card/review.ts`, `card/card-input.ts`
@@ -94,7 +95,6 @@ Folder: `src/main/actions/`.
 - Given `review.autoLoop` off, when a shipped card's pull request appears, then the card is moved into Review and no review starts until it is moved into Review by hand or `dashboard board review <id>` runs (`review-flow.test.ts`, `column-entry.test.ts`).
 - Given an agent moving its card on its worktree's board, when the move lands, then nothing starts (`column-entry.test.ts`).
 - Given a refused ship, when the board or the command asked, then the card stays where it was put and the answer says why (`move.test.ts`).
-
 - Given a new IPC handler that calls `worktrees.remove` itself, when the tests run, then `bypasses.test.ts` fails naming the file.
 
 ## Known limits

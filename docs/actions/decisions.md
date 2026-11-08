@@ -36,7 +36,8 @@ change touches them; `shipFlow` and `reviewSweep` stay and are called by the
 actions. A conversion of every channel at once is a big diff that changes
 nothing anyone asked for and breaks things nobody is testing; this way each
 conversion rides with a change that needed it, and the registry is proven on
-three actions first.
+three actions first. Its "when a change touches them" is replaced by
+actions-decision-4.
 
 ## actions-decision-4: Every change goes through an action, one noun at a time
 

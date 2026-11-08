@@ -15,7 +15,8 @@ gave a terminal; and a pane that comes back as a plain shell after a restart
 still gets `claude --resume` typed into it, with no screen, no worker hooks, and
 nothing in the log saying an agent started.
 
-`src/main/actions/bypasses.test.ts` names every call that still does the work
-itself and where it is made (`inventory.md`). A new caller fails it. A noun's
-card that moves a call behind its action lowers the count in the same change;
-raising one is this rule being broken.
+`src/main/actions/bypasses.test.ts` names the calls and wrappers that still do
+the work themselves and where each is made (`inventory.md`). A new caller of
+one fails it; a **yes** row in the inventory with no pin there is held by this
+rule alone. A noun's card that moves a call behind its action lowers the count
+in the same change; raising one is this rule being broken.

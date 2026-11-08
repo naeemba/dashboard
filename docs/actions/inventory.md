@@ -4,7 +4,9 @@ Every entry point that changes app state today, by noun and verb, and the
 action each one moves behind (actions-decision-4). Line numbers are as of the
 card that wrote this list; each noun's card corrects its own rows as it moves
 them. **Bypass** marks a row that does the work itself rather than call an
-action; `src/main/actions/bypasses.test.ts` pins the calls that do it.
+action; `src/main/actions/bypasses.test.ts` pins the calls and wrappers it
+lists. A **yes** row with no pin there (the `chat:*` handlers, `pane send`,
+the restart's reopenings) is held by actions-rule-1 alone.
 
 Doors: **IPC** is a channel the screen asks (keys, buttons and clicks all reach
 main this way), **CLI** a `dashboard` command over the session socket,
@@ -39,8 +41,9 @@ the byte stream, not changes of state.
 
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
-| make, a card's | `addWorktree` port, `main.ts:746`, for card.ship | IPC, CLI (card.ship) | behind card.ship already; git runs in main |
-| make, a throwaway | `makeWorktree`, `main.ts:807` → `makeThrowawayWorktree`, `ship/branch-worktree.ts:22` | CLI `pane run --worktree` | yes |
+| make, a card's | `addBranchWorktree`, `ship/ship-flow.ts:88` → `ship/branch-worktree.ts:15`, shared with the throwaway | IPC, CLI (card.ship) | behind card.ship already |
+| make again, a reviewed card's | `addWorktree` port, `main.ts:746`, from `review-flow.ts:154` | sweep, card.review | behind card.review already |
+| make, a throwaway | `makeWorktree`, `main.ts:807` → `makeThrowawayWorktree`, `ship/branch-worktree.ts:22`, through the card's `branch-worktree.ts:15` | CLI `pane run --worktree` | yes |
 | make, /create-task | `create-task-program.ts:71` | the `/create-task` skill's program | outside the app; stays |
 | remove | `worktree:remove`, `ship/worktree-channels.ts:44` → `worktrees.remove` | IPC (worktree dialog's `d`, the manager's list) | yes |
 | remove, a throwaway | `removeWorktree`, `main.ts:811` | CLI `pane release` | yes |

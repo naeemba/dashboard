@@ -14,10 +14,21 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: 'write(resumeLine(', allowed: { 'src/main/main.ts': 2 } },
   // worktree.remove: the card actions' port, `pane release`'s throwaway and the worktree dialog.
   { call: 'worktrees.remove', allowed: { 'src/main/main.ts': 2, 'src/main/ship/worktree-channels.ts': 1 } },
-  // worktree.make: a card's, a throwaway's and /create-task's.
+  // worktree.make: a reviewed card's re-add (main.ts), a ship's and a throwaway's (one line, branch-worktree.ts)
+  // and /create-task's.
   { call: "'worktree', 'add'", allowed: { 'src/main/main.ts': 1, 'src/main/ship/branch-worktree.ts': 1, 'src/main/board/create-task-program.ts': 1 } },
   // settings.write: launch's host token, the settings screen and the remote join.
   { call: 'writeSettings(settingsFile', allowed: { 'src/main/main.ts': 3 } },
+  // The wrappers behind the other Bypass: yes rows, counted with the ports that pass them on, so a new
+  // door into one moves a count. pane claim, add, release and close:
+  { call: 'openWorker', allowed: { 'src/main/main.ts': 4, 'src/main/workers/session-requests.ts': 2, 'src/main/workers/worker-channels.ts': 2 } },
+  { call: 'closeWorker', allowed: { 'src/main/main.ts': 3, 'src/main/workers/session-requests.ts': 2, 'src/main/workers/worker-channels.ts': 2 } },
+  // pane restart a shell, project open, close and focus, session start main.
+  { call: "'pty:restart'", allowed: { 'src/main/panes/pane-channels.ts': 1 } },
+  { call: 'openProject(', allowed: { 'src/main/main.ts': 4, 'src/main/workers/session-requests.ts': 2 } },
+  { call: 'closeProjectSlot(', allowed: { 'src/main/main.ts': 2 } },
+  { call: 'landOnPane(', allowed: { 'src/main/main.ts': 1, 'src/main/panes/pane-channels.ts': 2 } },
+  { call: 'chats.start', allowed: { 'src/main/main.ts': 3 } },
 ];
 
 function sourceFiles(folder: string): string[] {
