@@ -133,7 +133,7 @@ export function openSettings(
     function startEditing(row: SettingsRow): void {
       if (row.kind === 'heading' || row.kind === 'key'
         || row.kind === 'reset-keys' || row.kind === 'reset-all' || row.kind === 'host-token'
-        || row.kind === 'review-auto-loop') return;
+        || row.kind === 'review-auto-loop' || row.kind === 'updates-check') return;
       const input = document.createElement('input');
       input.className = 'settings-edit';
       input.value = row.value;
@@ -207,6 +207,7 @@ export function openSettings(
       if (row.kind === 'heading') return;
       // On or off, so Enter turns it over rather than opening a box.
       if (row.kind === 'review-auto-loop') return commit({ ...settings, review: { autoLoop: !settings.review.autoLoop } });
+      if (row.kind === 'updates-check') return commit({ ...settings, updates: { check: !settings.updates.check } });
       if (row.kind === 'host-token') {
         void navigator.clipboard.writeText(row.value);
         return say('Token copied');

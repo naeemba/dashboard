@@ -20,6 +20,7 @@ export type Action =
   | { kind: 'settings' }
   | { kind: 'worktrees' }
   | { kind: 'whats-new' }
+  | { kind: 'updates' }
 | { kind: 'needs-you-next' }
   | { kind: 'mode-set'; mode: Mode }
   | { kind: 'terminal-focus'; index: number }
@@ -260,6 +261,13 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'needs-you-next', description: 'Go to the next thing waiting on you',
     group: 'app', scope: 'global',
     action: { kind: 'needs-you-next' }, mac: 'Ctrl+Shift+J', other: 'Ctrl+Shift+J',
+  },
+  // Shift for the reason worktrees above gives. G for get: U is IBus's Unicode entry on Linux, and the
+  // dialog checks for a newer release when it opens, whatever the settings row says (docs/updates).
+  {
+    name: 'updates', description: 'Check for a newer release now, and update to it',
+    group: 'app', scope: 'global',
+    action: { kind: 'updates' }, mac: 'Ctrl+Shift+G', other: 'Ctrl+Shift+G',
   },
   {
     name: 'mode-terminals', description: 'Terminals mode', group: 'modes', scope: 'global',
