@@ -30,6 +30,8 @@ Download the build for your system from [Releases](https://github.com/naeemba/da
 - macOS: Control-click Dashboard.app in Applications and choose Open, then Open again. On macOS 15 and later, open it once, then go to System Settings → Privacy & Security and click Open Anyway.
 - Windows: SmartScreen says "Windows protected your PC". Click More info, then Run anyway.
 
+After that the app keeps itself up to date: when a newer release is out the status bar says so, and Ctrl+Shift+G downloads it and restarts into it when you pick Restart. A Linux zip install updates in place wherever you unpacked it. [Updates](docs/updates/README.md) has the rest.
+
 To build and install from this checkout instead:
 
     scripts/rebuild.sh

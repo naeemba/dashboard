@@ -29,7 +29,8 @@ folder with a saved session but no record yet (an update from a build before
 this) gets the whole list. Ctrl+Shift+L opens it with the whole list any time.
 The arrows walk the rows, Page Up and Page Down jump ten, Home and End go to
 the ends, Enter opens the selected pull request on GitHub and leaves the list
-up, Escape closes.
+up, Escape closes. The same popup shows a newer release's notes from the update
+dialog, before it is installed (docs/updates).
 
 The list is read from git when the renderer is built (`vite.changelog.ts`):
 `git log --first-parent --merges` for subjects `Merge pull request #N`, the
