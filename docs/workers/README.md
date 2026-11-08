@@ -3,7 +3,7 @@
 A project's main session dispatches work into worker panes and the `session`
 command lets an agent in a pane talk to the running app: start a worker, say
 it is done, list what runs where. Each pane's Claude conversation is resumed
-after a restart.
+after a restart, by pane.restore (docs/actions).
 
 ## Files
 
@@ -64,6 +64,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a Claude screen opened by hand, when /clear, /resume, /branch or /rewind is typed in it, then each acts on its own conversation as on main's, never touching main's; a /resume of the conversation main is on is refused as still running in main, and a /rewind of the conversation goes on in a copy cut at the prompt.
 - Given Dashboard off Windows, when a card is shipped or its review loop starts, then its agent is a Claude screen in the pane, as a plain `pane run`'s is; on Windows it is Claude Code in the terminal (`dispatch.test.ts`).
 - Given a card's agent or main's worker in a terminal, when the app restarts, then it comes back in the terminal on its conversation; one on a Claude screen comes back as a screen.
+- Given a Claude of yours in a terminal, when the app restarts, then it comes back as the pane's process on its conversation, started by pane.dispatch like every other agent; exiting it leaves an exited pane, and Enter gives a shell (actions-decision-5).
 - Given a Claude screen opened by hand, when the app restarts, then it comes back as a Claude screen on the conversation it was last on, in the screen host off Windows as a worker screen is, and still not main's worker.
 - Given the screen host is not running (Windows, a machine restart, a socket that would not open, another Dashboard holding it), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
 
