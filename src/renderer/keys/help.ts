@@ -50,8 +50,8 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'are gone on restart.',
   claude: 'Claude Code as a page: tables, code, diffs, tool calls folded, which the unfold key '
     + 'opens; the link key follows links. The project\'s main session. A slash lists commands, @ '
-    + 'mentions a file, the agents and workflow keys open agents and '
-    + 'workflows. The foot shows usage and cache warmth; the refresh key rereads it, the context key lists it.',
+    + 'mentions a file, the agents and workflow keys open them. The foot shows usage and cache warmth, '
+    + 'the context key lists it; a click changes its model, mode or effort.',
   sections: 'The manager is five screens under one strip of names; two of these keys walk it from any '
     + 'of them, since the arrows belong to the board and the notes. The refresh key reads the four '
     + 'cards above the strip now rather than at the next half hour.',

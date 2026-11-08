@@ -425,6 +425,10 @@
 }
 
 .chat-foot-effort.ultrathink { color: var(--magenta); }
+/* The model, the mode and the effort each open a sheet of their choices on a click (foot-choices.ts).
+   An underline on hover, which takes no room, so the foot does not move. */
+:is(.chat-foot-model, .chat-foot-mode, .chat-foot-effort) { cursor: pointer; }
+:is(.chat-foot-model, .chat-foot-mode, .chat-foot-effort):hover { text-decoration: underline dotted; }
 .chat-foot-state[data-state='working'] { color: var(--blue); }
 .chat-foot-state[data-state='waiting'] { color: var(--yellow); }
 
