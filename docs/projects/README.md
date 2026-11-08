@@ -116,7 +116,10 @@ runs for as long as the project is open, and a close that counted them could
 never happen. Main's conversation comes back when the project is opened again.
 Nor is a job you put in the background, which leaves the shell at its prompt. So
 a close it allows is still not a promise that nothing was running — which is why
-it asks first, and Enter is what takes the project away.
+it asks first, and Enter is what takes the project away. Main decides the
+refusal, for the key and for `dashboard project close` alike (project.close), and
+asks again with the close itself, so a pane that took an agent while the
+question was up still stops it.
 
 The drawer, the button at the left of the tabs or its key, opens on the left of
 a project's page and pushes the panes aside. It lists two things: the markdown
@@ -156,7 +159,9 @@ Folders: `src/main/projects/`.
 - Every later write — add, set, remove and the app's append: `projects-write.ts`, `projects-write.test.ts`
 - The `project` command: `project-cli.ts`, `project-cli.test.ts`, `project-program.ts`
   (run as `dashboard project`, see [command](../command/README.md))
-- Open and close in main: `project-requests.ts`, `project-requests.test.ts`
+- Open, close and focus: the project actions in `src/main/actions/project/`
+  ([actions](../actions/README.md)); the command's door to them is
+  `project-requests.ts`, `project-requests.test.ts`
 
 ## Scenarios
 

@@ -27,7 +27,7 @@ now.
 | resume from the drawer | pane.open with `resume`, then pane.dispatch | IPC `sessions:resume`, `drawer/drawer-ipc.ts` | no |
 | come back as a screen | pane.restore, `actions/pane/restore.ts` | restart | no |
 | adopt a kept shell | pane.restore | restart | no |
-| claim | pane.claim, `actions/pane/claim.ts`, bound in `session-requests.ts`; opens through pane.open | CLI `pane claim` | no; `--project` opens through `openProject`, project.open's row |
+| claim | pane.claim, `actions/pane/claim.ts`, bound in `session-requests.ts`; opens through pane.open | CLI `pane claim` | no; `--project` opens through project.open |
 | open (add) | pane.open, `actions/pane/open.ts` | IPC `pane:add` (`workers/worker-channels.ts`), the drawer, pane.claim | no |
 | send | pane.send, `actions/pane/send.ts` | CLI `pane send` | no |
 | release | pane.release, `actions/pane/release.ts`, bound in `session-requests.ts`; closes through pane.close | CLI `pane release` | the throwaway's removal is worktree.remove's row |
@@ -59,13 +59,17 @@ door is now. Every door's call is a port in `actions/worktree/worktree-actions.t
 
 ### project
 
+Moved behind the project actions by the project card; the rows say where each
+door is now. Every door's call is in `actions/project/project-actions.ts` or
+`projects/project-requests.ts`.
+
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
-| open | `openProject`, `main.ts:469` | IPC `projects:open` (`main.ts:450`, the picker), CLI `project open` (`project-requests.ts:64`), CLI `pane claim --project` | one function, three doors, no action |
-| close | `closeProjectSlot`, `main.ts:497` | IPC `projects:close` (`main.ts:494`, the close key), CLI `project close` (`project-requests.ts:80`) | the refusal is checked by each door, `closeRefusal`, then the close |
-| focus | `project-requests.ts:71`, `landOnPane` | CLI `project focus`, a notification click | yes |
+| open | project.open, `actions/project/open.ts`; main's `placeProject` its port | IPC `projects:open` (the picker, `registerProjectChannels`), CLI `project open`, CLI `pane claim --project` (`openForClaim`) | no |
+| close | project.close, `actions/project/close.ts`; main's `closeProjectSlot` its port | IPC `projects:close` (the close key, asked twice), CLI `project close` | no: `closeRefusal` is asked only here |
+| focus | project.focus, `actions/project/focus.ts`; `landOnPane` its port | CLI `project focus`, a notification click (`pane-channels.ts`) | no |
 | add, set, remove | `projectEdit`, `projects/project-cli.ts:149`, written by `project-program.ts:34` | CLI `project add/set/remove` | the file alone, app closed or not; stays the command's |
-| list on open | `listOpenedProject`, `main.ts:482` | every open | part of project.open |
+| list on open | `listOpenedProject`, in `placeProject` | every open | part of project.open |
 
 ### session (a main's chat and a pane's conversation)
 
@@ -115,9 +119,9 @@ One row per noun.verb, and what it decides that its callers do not.
 | pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch |
 | worktree.make | card, throwaway or again; the branch it names; whether it fetches and takes the project's queue itself (only a throwaway) |
 | worktree.remove | per door, forced or not, queued or not, logged or not (`removalOf`); the keeper refuses with changes and kills the shells and closes the screens in it |
-| project.open | the dialog or a path, a dead page opened over, its main started or not |
-| project.close | `closeRefusal`, once, for the key and the command |
-| project.focus | which pane to land on |
+| project.open | a missing folder refused, a dead page opened over, its main started or not (`startsMain`); the dialog stays the picker's door's |
+| project.close | `closeRefusal`, once, for the key and the command; only a check before the key's question |
+| project.focus | which pane to land on: main, or the banner's |
 | session.start | whether a main starts at open (`startsAtOpen`) |
 | session.reset, .resume, .branch, .rewind | `keepsItsConversation`: refused on main's worker screen |
 | session.rename | one label for the chat and the drawer |
@@ -134,7 +138,8 @@ two fight over `main.ts`:
 2. **worktree** (done): make and remove behind one action each, the dialog,
    the throwaway and the review on it, and a card's pane written onto its
    record in one place, the keeper's `givePane`.
-3. **project**: open, close and focus, one refusal for the key and the command.
+3. **project** (done): open, close and focus behind one action each, and one
+   refusal for the key and the command.
 4. **session**: start, reset, resume, branch, rewind, rename.
 5. **settings**: settings.write as the one writer.
 
