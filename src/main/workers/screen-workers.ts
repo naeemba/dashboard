@@ -105,14 +105,17 @@ export function screenWorkers(ports: ScreenPorts) {
     ports.notify(id, state, waiting);
   }
 
-  function hooks(id: string): Options['hooks'] {
+  // Heard only while the pane is still this worker's (`saved` is one per worker): a hook of one released
+  // a moment ago, landing after the next worker started at the same number, would read as that one's stop.
+  function hooks(id: string, saved: Saved): Options['hooks'] {
+    const mine = () => live.get(id)?.saved === saved;
     const reporting = (state: WorkerState): HookCallbackMatcher[] => [{ hooks: [async () => {
-      report(id, state);
+      if (mine()) report(id, state);
       return {};
     }] }];
     return {
       Stop: [{ hooks: [async (input) => {
-        report(id, 'done', stopWaiting(input));
+        if (mine()) report(id, 'done', stopWaiting(input));
         return {};
       }] }],
       UserPromptSubmit: reporting('running'),
@@ -126,7 +129,7 @@ export function screenWorkers(ports: ScreenPorts) {
     const resume = back && saved.started !== false;
     const done = back && ports.host.kept(saved.session)?.busy !== true;
     const worker: Worker = {
-      session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done,
+      session: saved.session, name: saved.name, resume, hooks: hooks(id, saved), id, saved, done,
       owner: screenOwner(saved.dispatcherPath) ?? 'main',
       // A screen opened by hand going on in another conversation, or a new one, which a restart resumes.
       carryOnIn(session) {

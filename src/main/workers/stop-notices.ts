@@ -39,7 +39,9 @@ export type StopNotices = {
   state(id: string, state: WorkerState, waiting?: StopWaiting): void;
   // The worker sent main a report: the stop it ends its turn with needs no notice.
   reported(id: string): void;
-  // The pane is no longer that worker's, or it was run again.
+  // The pane is no longer that worker's — released, closed, or run again — and a notice about it that
+  // still waits in main's queue is taken back: main reads a report only when its turn ends, and the
+  // turn that read it is usually the one that merged and released the worker.
   forget(id: string): void;
 };
 
@@ -73,12 +75,17 @@ export function stopNotices(
     pending.delete(id);
   }
 
+  function takeBack(id: string): void {
+    takeBacks.get(id)?.();
+    takeBacks.delete(id);
+  }
+
   function tell(id: string, ms: number, paused = false) {
     pending.set(id, wait(ms, () => {
       pending.delete(id);
       (paused ? pauseNoticed : noticed).add(id);
-      const takeBack = ports.notice(id, paused);
-      if (takeBack) takeBacks.set(id, takeBack);
+      const withdraw = ports.notice(id, paused);
+      if (withdraw) takeBacks.set(id, withdraw);
     }));
   }
 
@@ -109,13 +116,12 @@ export function stopNotices(
       // A report arriving after the stop, as one does when main reads it only after its own turn:
       // its notice is called off, or taken back if it was already queued.
       callOff(id);
-      takeBacks.get(id)?.();
-      takeBacks.delete(id);
+      takeBack(id);
       if (!stopped.has(id)) reports.add(id);
     },
     forget(id) {
       callOff(id);
-      takeBacks.delete(id);
+      takeBack(id);
       reports.delete(id);
       noticed.delete(id);
       pauseNoticed.delete(id);

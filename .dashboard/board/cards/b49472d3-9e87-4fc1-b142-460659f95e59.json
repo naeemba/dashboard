@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-08T15:04:41.528Z",
-  "updatedAt": "2026-11-08T15:05:45.512Z",
-  "column": "Doing",
-  "order": 5
+  "updatedAt": "2026-11-08T15:27:09.511Z",
+  "branch": "work-board-card-b49472d3-9e87-4fc1-b142-460",
+  "pullRequest": 241,
+  "comments": [
+    {
+      "at": "2026-11-08T15:27:09.511Z",
+      "body": "Shipped in PR #241: pane release takes back a stop notice still queued in main's queue (main hears a report only when the turn that read it ends, on the SDK result), and a released screen worker's late hooks no longer count for the next worker at its number. Not done: a main that reads a report without releasing can still take the notice at its turn end."
+    }
+  ],
+  "column": "Done",
+  "order": 195
 }
