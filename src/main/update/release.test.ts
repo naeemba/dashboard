@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { assetFor, installFolder, isNewer, readRelease, releaseFolderUrl, stagingFolder, updateRefusal } from './release';
 
@@ -61,7 +62,8 @@ describe('installFolder', () => {
   it('is the executable\'s folder on Linux and the bundle on a mac', () => {
     expect(installFolder('linux', '/home/me/.local/opt/dashboard/Dashboard', true)).toBe('/home/me/.local/opt/dashboard');
     expect(installFolder('darwin', '/Applications/Dashboard.app/Contents/MacOS/Dashboard', true)).toBe('/Applications/Dashboard.app');
-    expect(stagingFolder('/home/me/.local/opt/dashboard')).toBe('/home/me/.local/opt/.dashboard.update');
+    // The platform's own separator: Windows joins with a backslash.
+    expect(stagingFolder('/home/me/.local/opt/dashboard')).toBe(path.join('/home/me/.local/opt', '.dashboard.update'));
   });
 
   it('refuses a development run', () => {
