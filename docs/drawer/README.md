@@ -39,7 +39,7 @@ Folders: `src/main/drawer/`, `src/renderer/drawer/`, `src/shared/drawer/`.
 - Given the doc viewer on a markdown doc, when you press the arrows or the Page keys, then the doc scrolls; when you press Escape or click the dark margin, then the viewer goes and the keyboard is back in the drawer's filter.
 - Given the doc viewer, when you press Enter or click its Edit row at the top, then the viewer and the drawer go and the file opens in the project's nvim.
 - Given a link in the doc viewer, when you click it, then it opens in the browser; a link to another doc is not followed.
-- Given a session row, when you press Enter, then a new worker pane opens in the folder the session ran in and `claude --resume <id>` is typed into it; the page goes to the terminals view with the keyboard in that pane; a busy pane is never used.
+- Given a session row, when you press Enter, then a new worker pane opens in the folder the session ran in running `claude --resume <id>` as its process, started by pane.dispatch (actions-decision-5); the page goes to the terminals view with the keyboard in that pane; a busy pane is never used.
 - Given the drawer, when you click a row that leaves it open (Load more, a refused resume), then the keyboard stays in the drawer's filter box.
 - Given a session still running in a pane or on the Claude screen, when you press Enter on it, then it is refused and the status bar says where it runs.
 - Given the Claude screen's session has ended, or has not started yet, when you press Enter on the conversation the Claude screen will resume, then it is refused as running on the Claude screen.

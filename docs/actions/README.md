@@ -32,10 +32,22 @@ Neither door holds any of the logic; each only asks.
   again by the sweep once the commit lands, whatever the setting.
 
 - **pane.dispatch**: every agent a pane starts — `pane run`, a ship, the review
-  loop, a resume after a restart, New Claude — screen or terminal, decided once
-  in `paneKind` (workers-decision-8). Main calls its run, `startPane`, directly;
-  the action and its parser wait for a door. A pane that comes back as a plain
-  shell and the drawer's resume still type `claude --resume` into the shell.
+  loop, a resume after a restart or from the drawer, New Claude — screen or
+  terminal, decided once in `paneKind` (workers-decision-8). Every resume is
+  Claude Code run as the pane's process, with its worker hooks when it is
+  main's, an agent-start line in the log and the pane counted working; nothing
+  types `claude --resume` into a shell (actions-decision-5).
+- **pane.open** (`pane:add`, the drawer's resume, `pane claim`): a new worker at
+  the lowest number going, a shell, New Claude or a conversation carried on.
+- **pane.close** (`pane:close`, `pane release`): an open worker dropped, and a
+  card record's claim on it ended.
+- **pane.send** (`pane send`): a screen's prompt, or typed into the shell.
+- **pane.claim** and **pane.release** (`pane claim`, `pane release`): bound by
+  the session command, `session-requests.ts`, on its ledger of who claimed and
+  ran each pane; the asker's right to the pane is checked there first.
+- **pane.restore** (a project opening, the manager once the hosts answer): what
+  each pane the last run left comes back as, a kept shell adopted, a saved
+  conversation through pane.dispatch, a worker screen over its pane.
 
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
@@ -43,8 +55,11 @@ them, the action it moves behind and the order the nouns move in are in
 that still do the work themselves; the rows it does not pin are held by the
 rule alone (actions-rule-1, actions-decision-4).
 
-Only card.move has a channel: it is the only action the bridge exposes. A screen
-that needs ship or review registers its channel in the same change.
+Only card.move has a channel of its own name: it is the only action the bridge
+exposes that way. The pane actions answer on the channels and commands that
+were there before (`pane:add`, `pane:close`, `sessions:resume`, `pane claim`,
+`send`, `release`, `run`); a screen that needs ship or review registers its
+channel in the same change.
 
 The board asks card.move only for a move that changed the column
 (`screenMoveEntry` in `column-entry.ts`), in either direction, as the agreed
@@ -85,8 +100,10 @@ Folder: `src/main/actions/`.
   card actions with their ports
 - `card/move.ts`, `card/ship.ts`, `card/review.ts`, `card/card-input.ts`
 - `card/project-board.ts` — whether a folder's board is a project's own
-- `pane/pane-actions.ts` — main's wiring: pane.dispatch's terminal and screen halves
+- `pane/pane-actions.ts` — main's wiring: dispatch, open, close, send and restore with their ports
 - `pane/dispatch.ts` — pane.dispatch and `paneKind`
+- `pane/open.ts`, `pane/close.ts`, `pane/send.ts`, `pane/claim.ts`, `pane/release.ts`, `pane/restore.ts`
+- `pane/pane-input.ts` — the input checks the pane actions share
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios
@@ -96,6 +113,8 @@ Folder: `src/main/actions/`.
 - Given an agent moving its card on its worktree's board, when the move lands, then nothing starts (`column-entry.test.ts`).
 - Given a refused ship, when the board or the command asked, then the card stays where it was put and the answer says why (`move.test.ts`).
 - Given a new IPC handler that calls `worktrees.remove` itself, when the tests run, then `bypasses.test.ts` fails naming the file.
+- Given a Claude of yours running in a terminal pane, when the app restarts, then it comes back through pane.dispatch on its conversation, not typed into a shell (`restore.test.ts`); it is logged as an agent start, and once you exit it the pane reads exited and Enter gives a shell (checked by hand).
+- Given a conversation in the drawer, when you press Enter on it, then a new worker runs it through pane.dispatch, never a shell typed into (`open.test.ts`).
 
 ## Known limits
 
