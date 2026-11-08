@@ -287,6 +287,22 @@ describe('sessionRequests', () => {
     expect(withdrawn).toEqual(['2 0']);
   });
 
+  // Main hears a report only when the turn that read it ends, and that turn merges and releases.
+  it('takes back a notice still queued when main releases the worker, and tells nothing of it after', async () => {
+    const { ports, told, withdrawn } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(told).toHaveLength(1);
+    await answer({ directory: '/work/api', args: ['release', '2:1'] });
+    expect(withdrawn).toEqual(['2 0']);
+    answer.heard(2, 'api-terminal-2');
+    stayStopped();
+    expect(told).toHaveLength(1);
+  });
+
   it('takes no report signed by another session, or read by another main, for the worker\'s', async () => {
     const { ports, told } = project();
     const answer = sessionRequests(ports);

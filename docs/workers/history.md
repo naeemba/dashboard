@@ -21,3 +21,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-07 #228 — New Claude: the new-pane button splits into New Terminal and New Claude, which opens a Claude screen of your own, not main's worker (workers-decision-7)
 - 2026-11-07 #227 — `pane run` starts a Claude screen by default; `--terminal` asks for Claude Code in the terminal, and Windows keeps the terminal (workers-decision-5)
 - 2026-11-08 #233 — Every agent a pane starts goes through pane.dispatch: a ship and the review loop open a Claude screen off Windows too (workers-decision-8)
+- 2026-11-08 — `pane release` takes back a stop notice still queued for the worker it releases, and a released screen worker's late hook no longer counts as the next one's (workers-decision-1)

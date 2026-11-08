@@ -98,21 +98,24 @@ export function screenWorkers(ports: ScreenPorts) {
   }
 
   // The worker's hooks, beside whatever the user's settings hold, saying what a terminal worker's
-  // workerSettings hooks say. A permission prompt is the screen's ask, which screenSignal reads.
-  function report(id: string, state: WorkerState, waiting?: StopWaiting): void {
+  // workerSettings hooks say. A permission prompt is the screen's ask, which screenSignal reads. Only
+  // while the pane is still this worker's (`saved` is one per worker): a hook of one released a moment
+  // ago, landing after the next worker started at the same number, would read as that one's stop.
+  function report(id: string, saved: Saved, state: WorkerState, waiting?: StopWaiting): void {
     const worker = live.get(id);
-    if (worker) worker.done = state === 'done';
+    if (worker?.saved !== saved) return;
+    worker.done = state === 'done';
     ports.notify(id, state, waiting);
   }
 
-  function hooks(id: string): Options['hooks'] {
+  function hooks(id: string, saved: Saved): Options['hooks'] {
     const reporting = (state: WorkerState): HookCallbackMatcher[] => [{ hooks: [async () => {
-      report(id, state);
+      report(id, saved, state);
       return {};
     }] }];
     return {
       Stop: [{ hooks: [async (input) => {
-        report(id, 'done', stopWaiting(input));
+        report(id, saved, 'done', stopWaiting(input));
         return {};
       }] }],
       UserPromptSubmit: reporting('running'),
@@ -126,7 +129,7 @@ export function screenWorkers(ports: ScreenPorts) {
     const resume = back && saved.started !== false;
     const done = back && ports.host.kept(saved.session)?.busy !== true;
     const worker: Worker = {
-      session: saved.session, name: saved.name, resume, hooks: hooks(id), id, saved, done,
+      session: saved.session, name: saved.name, resume, hooks: hooks(id, saved), id, saved, done,
       owner: screenOwner(saved.dispatcherPath) ?? 'main',
       // A screen opened by hand going on in another conversation, or a new one, which a restart resumes.
       carryOnIn(session) {
@@ -186,7 +189,7 @@ export function screenWorkers(ports: ScreenPorts) {
       const worker = signal && byKey.get(key);
       if (!worker) return;
       if (signal === 'turn-over') worker.done = true;
-      else if (signal !== 'started') report(worker.id, signal);
+      else if (signal !== 'started') report(worker.id, worker.saved, signal);
       else if (!worker.resume) {
         worker.resume = true;
         worker.saved.started = true;

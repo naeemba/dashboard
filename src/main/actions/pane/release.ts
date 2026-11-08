@@ -18,6 +18,8 @@ export type PaneReleasePorts = {
   // pane.close.
   close(id: string): Promise<{ output: string } | Refused>;
   // Everything the command held of the pane let go of, and the throwaway worktree it was given, if any.
+  // That includes its stop notice: one still waiting in main's queue is taken back, since main hears a
+  // report only once the turn that read it ends, and that turn is the one releasing it (workers-decision-1).
   forget(id: string): Throwaway | undefined;
   // Why the worktree is kept, or null when nothing in it would be lost (finished-work.ts).
   unfinished(worktreePath: string): Promise<string | null>;
