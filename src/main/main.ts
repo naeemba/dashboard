@@ -20,7 +20,8 @@ import { EDITOR_INDEX, MAIN_INDEX, paneFromId, terminalId, workersOfSlot } from 
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { paneActions } from './actions/pane/pane-actions';
 import { projectActions, registerProjectChannels } from './actions/project/project-actions';
-import { isRefused } from './actions/action';
+import { actionRequests, isRefused } from './actions/action';
+import { updateActions } from './actions/update/update-actions';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
@@ -76,7 +77,6 @@ import { usageSweep } from './usage/usage-sweep';
 import { entryForCard, withoutPanes } from './ship/worktree-store';
 import type { Settings } from '../shared/settings/settings';
 import { cardActions } from './actions/card/card-actions';
-import { actionRequests } from './actions/action';
 import { worktreeKeeper } from './ship/worktree-keeper';
 import type { OpenProjects, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
@@ -459,6 +459,11 @@ table.handle('settings:write', (_screen, next: Settings) => {
   shellCommand = pickShell(settings, process.env, process.platform);
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
+});
+// The newest release, checked now and every six hours while the settings row allows it (docs/updates).
+updateActions({
+  table, send: (channel, state) => liveWindow()?.webContents.send(channel, state), running: __BUILD_VERSION__,
+  enabled: () => settings.updates.check, log: (draft) => logStore.log(draft),
 });
 registerPaneChannels(table, {
   shells, screens: paneScreens, spawnTerminal: panes.spawn,

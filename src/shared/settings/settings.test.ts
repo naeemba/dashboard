@@ -12,6 +12,12 @@ describe('parseSettings', () => {
     expect(parseSettings({ review: { autoLoop: 'no' } }, false).review).toEqual({ autoLoop: true });
   });
 
+  it('checks for updates unless the file turns it off', () => {
+    expect(parseSettings({}, false).updates).toEqual({ check: true });
+    expect(parseSettings({ updates: { check: false } }, false).updates).toEqual({ check: false });
+    expect(parseSettings({ updates: { check: 'no' } }, false).updates).toEqual({ check: true });
+  });
+
   it('gives the defaults for an empty object, a missing file, or rubbish', () => {
     const defaults = defaultSettings(true);
     expect(parseSettings({}, true)).toEqual(defaults);

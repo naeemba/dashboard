@@ -21,6 +21,7 @@ import type { FileLink } from '../panes/links';
 import type { DispatchedWorker } from '../workers/worker-roster';
 import type { DocEntry, DocReply, DrawerReply, ResumeReply, SessionList } from '../drawer/drawer';
 import type { LastShown, ShownRecord } from './whats-new';
+import type { UpdateState } from './update';
 
 export type Project = { name: string; path: string; missing: boolean };
 
@@ -139,6 +140,12 @@ export type DashboardBridge = {
   openExternal(url: string): void;
   // The what's-new popup's record: what this build carries in, what the app last showed back.
   recordWhatsNew(current: ShownRecord): Promise<LastShown>;
+  // The in-app update (docs/updates): the state main holds, pushed on every change, and its actions.
+  readUpdate(): Promise<UpdateState>;
+  onUpdateChange(listener: (state: UpdateState) => void): void;
+  checkUpdate(): Promise<{ output: string } | Refused>;
+  downloadUpdate(): Promise<{ output: string } | Refused>;
+  restartToUpdate(): Promise<{ output: string } | Refused>;
   // The banner a ringing pane raises. An OS notification belongs to main, the way openExternal does:
   // main is the side macOS knows the app by. The pane's id travels with it so a click on the banner
   // can be answered with the pane it was raised for.
