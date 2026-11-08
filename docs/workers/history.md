@@ -20,3 +20,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-06 #224 — A worker screen asks permission as a terminal worker does: the user's allow rules, then a question in its box; the trial's `gh pr create` refusal was not reproduced (workers-decision-5)
 - 2026-11-07 #228 — New Claude: the new-pane button splits into New Terminal and New Claude, which opens a Claude screen of your own, not main's worker (workers-decision-7)
 - 2026-11-07 — `pane run` starts a Claude screen by default; `--terminal` asks for Claude Code in the terminal, and Windows keeps the terminal (workers-decision-5)
+- 2026-11-08 — Every agent a pane starts goes through pane.dispatch: a ship and the review loop open a Claude screen off Windows too (workers-decision-8)

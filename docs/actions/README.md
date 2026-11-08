@@ -31,6 +31,10 @@ Neither door holds any of the logic; each only asks.
   past Review. One started this way that meets a dirty worktree is started
   again by the sweep once the commit lands, whatever the setting.
 
+- **pane.dispatch**: every agent a pane starts — `pane run`, a ship, the review
+  loop, a resume after a restart, New Claude — screen or terminal, decided once
+  in `paneKind` (workers-decision-8). Main calls it; it has no door yet.
+
 Only card.move has a channel: it is the only action the bridge exposes. A screen
 that needs ship or review registers its channel in the same change.
 
@@ -72,6 +76,8 @@ Folder: `src/main/actions/`.
   card actions with their ports
 - `card/move.ts`, `card/ship.ts`, `card/review.ts`, `card/card-input.ts`
 - `card/project-board.ts` — whether a folder's board is a project's own
+- `pane/pane-actions.ts` — main's wiring: pane.dispatch's terminal and screen halves
+- `pane/dispatch.ts` — pane.dispatch and `paneKind`
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios

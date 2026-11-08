@@ -174,8 +174,9 @@ changes nothing, so a prompt written for the opt-in keeps working.
 
 Windows keeps the terminal by default: it has no screen host (workers-decision-6), so a screen's turn
 there ends with the app, which is the blocker the default waited on. `--screen` still asks for one. The
-condition is `hasScreenHost` in `screen-host-protocol.ts`, which `screenHostSocket` and the parse in
-`session-cli.ts` both read. Telling main in the usage text instead was weighed and rejected: a main
+condition is `hasScreenHost` in `screen-host-protocol.ts`, which `screenHostSocket` and `paneKind` in
+pane.dispatch both read; the parse in `session-cli.ts` only reads which flag was given
+(workers-decision-8). Telling main in the usage text instead was weighed and rejected: a main
 asked to dispatch does not reread its usage, and a worker that dies on a quit is not something a
 sentence prevents.
 
@@ -310,7 +311,8 @@ New Terminal (the old button and `terminal-add`) and New Claude (`terminal-add-c
 How it is built, on the worker screen's own path so nothing forks:
 
 - `pane:add` takes a `claude` flag; `worker-channels.ts` opens the worker as before, then hands it to
-  `screen-workers.ts`'s `openByHand`, which saves it in `screen-workers.json` with a new id from the
+  pane.dispatch with no prompt (workers-decision-8), which starts it through `screen-workers.ts`'s
+  `start`; that saves it in `screen-workers.json` with a new id from the
   session index (so the drawer lists it) and no first prompt. Its session starts on the first prompt
   and runs in the screen host as a worker screen's does (workers-decision-6), so it outlives a restart
   off Windows, and comes back on its conversation when the project opens.
@@ -335,3 +337,30 @@ the saved screen does not follow, so a restart after one resumes the conversatio
 
 Watch for: the session index row is written when the screen opens, as a dispatched worker's is when it
 runs, so a New Claude closed before its first prompt leaves a drawer row with no conversation behind it.
+
+## workers-decision-8: Every agent a pane starts goes through pane.dispatch
+
+**One action, pane.dispatch (`src/main/actions/pane/dispatch.ts`), starts every agent in a pane and
+decides once whether it is a Claude screen or Claude Code in the terminal.** Card ece7e995. #227 made
+a screen the default for `pane run` alone: a ship, the review loop, a resume after a restart and New
+Claude each started their pane their own way, so a card shipped on v2.43 on Linux still opened a
+terminal worker.
+
+`paneKind` is the whole choice: a resume is a terminal (a screen comes back through
+`screen-workers.ts`'s `comeBack`, never here); no prompt is New Claude, a screen; otherwise
+`pane run --screen` or `--terminal` wins, and with neither it is a screen wherever `hasScreenHost`
+(not on Windows). What either half is started with follows from the caller's input: main's worker gets
+its hooks and report-back prompt, a card's agent its plain prompt.
+
+The two halves are in `pane-actions.ts`, main's wiring: `startAgent` in main.ts became its terminal
+half, and `screen-workers.ts`'s `openByHand` folded into `start`. Nothing else calls either. A new
+place that needs an agent in a pane is a caller of pane.dispatch, with its case in `dispatch.test.ts`,
+not a sixth path.
+
+What it changes, on purpose:
+
+- A card's agent and its review loop are Claude screens off Windows. Saved with no dispatcher, they
+  come back after a restart as screens of yours (workers-decision-7), the card's record naming the
+  pane again as a terminal agent's does.
+- A screen's pane stays busy until it is closed, as a terminal agent's does while Claude Code runs, so
+  a ship takes a new pane rather than one whose screen has finished its turn. Closing it frees it.
