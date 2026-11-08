@@ -5,7 +5,7 @@
 import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
-import type { PaneKind } from '../actions/pane/dispatch';
+import type { PaneKind } from './pane-kind';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -64,22 +64,22 @@ function parseRun(words: readonly string[]): Parsed {
   if (typeof id !== 'string') return id;
   let card: string | null = null;
   let worktree = false;
-  let sawScreen = false;
-  let sawTerminal = false;
+  let as: PaneKind | null = null;
   const prompt: string[] = [];
   for (let at = 1; at < words.length; at++) {
     if (words[at] === '--worktree') worktree = true;
-    else if (words[at] === '--screen') sawScreen = true;
-    else if (words[at] === '--terminal') sawTerminal = true;
+    else if (words[at] === '--screen' || words[at] === '--terminal') {
+      const asked = words[at] === '--screen' ? 'screen' : 'terminal';
+      if (as !== null && as !== asked) return refuse('a worker runs as a Claude screen or in the terminal, not both');
+      as = asked;
+    }
     else if (words[at] === '--card') {
       card = words[++at] ?? '';
       if (card === '') return refuse('--card needs the card id, the one `board list` prints');
     } else prompt.push(words[at]);
   }
   if (card !== null && worktree) return refuse('a task runs in its card\'s worktree or a throwaway one, not both');
-  if (sawScreen && sawTerminal) return refuse('a worker runs as a Claude screen or in the terminal, not both');
   if (prompt.join(' ').trim() === '') return refuse('session run needs a prompt for the worker');
-  const as = sawScreen ? 'screen' : sawTerminal ? 'terminal' : null;
   return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, as } };
 }
 

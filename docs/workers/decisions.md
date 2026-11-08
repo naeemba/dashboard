@@ -174,9 +174,9 @@ changes nothing, so a prompt written for the opt-in keeps working.
 
 Windows keeps the terminal by default: it has no screen host (workers-decision-6), so a screen's turn
 there ends with the app, which is the blocker the default waited on. `--screen` still asks for one. The
-condition is `hasScreenHost` in `screen-host-protocol.ts`, which `screenHostSocket` and `paneKind` in
-pane.dispatch both read; the parse in `session-cli.ts` only reads which flag was given
-(workers-decision-8). Telling main in the usage text instead was weighed and rejected: a main
+condition is `hasScreenHost` in `screen-host-protocol.ts`, which `screenHostSocket` reads and
+`defaultPaneKind` in `pane-kind.ts` turns into the default that pane.dispatch starts and main's prompt
+describes; the parse in `session-cli.ts` only reads which flag was given (workers-decision-8). Telling main in the usage text instead was weighed and rejected: a main
 asked to dispatch does not reread its usage, and a worker that dies on a quit is not something a
 sentence prevents.
 
@@ -348,11 +348,13 @@ terminal worker.
 
 `paneKind` is the whole choice: a resume is a terminal (a screen comes back through
 `screen-workers.ts`'s `comeBack`, never here); no prompt is New Claude, a screen; otherwise
-`pane run --screen` or `--terminal` wins, and with neither it is a screen wherever `hasScreenHost`
-(not on Windows). What either half is started with follows from the caller's input: main's worker gets
+`pane run --screen` or `--terminal` wins, and with neither it is `defaultPaneKind`: a screen wherever
+`hasScreenHost` (not on Windows). Main's prompt tells main the same default from the same function. What either half is started with follows from the caller's input: main's worker gets
 its hooks and report-back prompt, a card's agent its plain prompt.
 
-The two halves are in `pane-actions.ts`, main's wiring: `startAgent` in main.ts became its terminal
+The action also claims the pane for the main a worker reports to, so no caller sets `mainsWorkers`
+after it, and decides when a screen's hidden shell is started over (`screenNeedsShell`: only to leave
+an earlier worktree, or where there is none). The ports are in `pane-actions.ts`, main's wiring: `startAgent` in main.ts became its terminal
 half, and `screen-workers.ts`'s `openByHand` folded into `start`. Nothing else calls either. A new
 place that needs an agent in a pane is a caller of pane.dispatch, with its case in `dispatch.test.ts`,
 not a sixth path.

@@ -20,7 +20,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - The app's index of every Claude it started: `session-index.ts`, `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
 - A worker's Claude screen, the `pane run` default off Windows: `session-cli.ts`; `screen-workers.ts`, `../../shared/workers/screen-key.ts`; the session is the [chat](../chat/README.md)'s `chat-sessions.ts`, the pane `src/renderer/app/page.ts` (workers-decision-5)
 - A Claude screen opened by hand with New Claude, and which screen is whose: `screen-owner.ts`, `screen-workers.ts`, `worker-channels.ts`, the button `src/renderer/app/chrome-bars.ts` (workers-decision-7)
-- Every agent a pane starts, screen or terminal, from every caller: the pane.dispatch action, `src/main/actions/pane/dispatch.ts` and `pane-actions.ts` (workers-decision-8, [actions](../actions/README.md))
+- Every agent a pane starts, screen or terminal, from every caller: the pane.dispatch action, `src/main/actions/pane/dispatch.ts` and `pane-actions.ts`, the default `pane-kind.ts` (workers-decision-8, [actions](../actions/README.md))
 - The screen host a worker screen's session runs in, so it outlives the app: `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`, `screen-host-protocol.ts`, `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios

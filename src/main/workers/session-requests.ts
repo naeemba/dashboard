@@ -11,7 +11,7 @@ import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
-import type { PaneKind } from '../actions/pane/dispatch';
+import type { PaneKind } from './pane-kind';
 
 // What main does with a `session` command: every decision, against what main.ts hands over. Nothing
 // here holds a pty or runs git; it asks for those through the ports, so the rules can be tested with a

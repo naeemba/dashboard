@@ -434,7 +434,6 @@ function resumeIn(id: string, projectPath: string, savedIndex: number, resume: P
   }
   const dispatcherPath = comesBackAs === 'worker' ? workerDispatcher(resume, projectPath) : null;
   paneDispatch({ id, projectPath, directory: card?.worktreePath ?? resume.directory, prompt: null, resume: resume.session, cardId: null, dispatcherPath, as: null });
-  if (dispatcherPath !== null) mainsWorkers.set(id, dispatcherPath);
 }
 
 // The panes main's worker is in now, which the `session` command may release and session.json marks so
@@ -572,7 +571,7 @@ const workerScreens = screenWorkers({
 // Every agent a pane starts, of every kind, from every caller (workers-decision-8).
 const { dispatch: paneDispatch } = paneActions({
   platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched,
-  forget: (id) => { mainsWorkers.delete(id); workerAnswers.forget(id); },
+  claim: (id, dispatcherPath) => { workerAnswers.forget(id); if (dispatcherPath === null) mainsWorkers.delete(id); else mainsWorkers.set(id, dispatcherPath); },
   command: (id) => terminalCommands.get(id), setPaneCommand, shells, spawn: panes.spawn,
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,
   log: (draft) => logStore.log(draft), hold: failures.hold,
@@ -674,7 +673,7 @@ function takePane(projectPath: string, index: number, cardId: string): void {
 }
 
 registerWorkerChannels(table, {
-  project: projectIn, openPanes, openWorker, closeWorker, openProjects, openScreen: (id, projectPath) => paneDispatch({ id, projectPath, directory: projectPath, prompt: null, resume: null, cardId: null, dispatcherPath: null, as: 'screen' }),
+  project: projectIn, openPanes, openWorker, closeWorker, openProjects, openScreen: (id, projectPath) => paneDispatch({ id, projectPath, directory: projectPath, prompt: null, resume: null, cardId: null, dispatcherPath: null, as: null }),
 });
 
 function recordWorktree(entry: WorktreeEntry): WorktreeEntry {
@@ -793,7 +792,6 @@ const workerAnswers = sessionRequests({
     if (entry) reviews.forget(entry.cardId);
     if (entry) recordWorktree({ ...entry, pane: index, reviewing: false });
     paneDispatch({ id, projectPath: projectIn(slot)?.path ?? directory, directory, prompt, resume: null, cardId, dispatcherPath, as });
-    mainsWorkers.set(id, dispatcherPath);
   },
   closeWorker,
   // A worker screen takes the text as a prompt; its hidden shell would only swallow it.
