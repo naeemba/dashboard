@@ -95,7 +95,8 @@ tag and rebuilding the local app. `scripts/release.sh <bump>` does all of it; `/
 command that runs the script, in `.claude/commands/` beside `/rebuild`, where project commands live.
 
 - A shell script, not a Node one, beside `rebuild.sh`: it is a row of guards and `gh` and `git` calls.
-  Its refusals were tried by hand (each prints its own reason), not by a test.
+  Its refusals were tried by hand (each prints its own reason), not by a test, until workflow-decision-6
+  moved the two with branches into a tested module.
 - The command sets `disable-model-invocation: true` and says it runs only when the user typed it. A
   release publishes to everyone who downloads the app; nothing chains it onto a merge.
 - The run a dispatch made is the newest dispatched Release run that was not the newest before it:
@@ -113,3 +114,28 @@ command that runs the script, in `.claude/commands/` beside `/rebuild`, where pr
   listed by `updatedAt`, the nearest a card file has to when it moved. Subtasks are part of their
   parent's line. The workflow writes the list, so the script, the command and the Actions tab give the
   same notes.
+
+## workflow-decision-6: release.sh outlasts a GitHub blip, and a resume accepts the release commit
+
+Agreed on 2026-11-08, after cutting v2.43.0 (run 42395223367). `gh run watch` failed with `failed to get
+run: ... EOF` while the run was still building; the failed-leg `gh run view` failed the same way inside a
+`$(...)` under `set -eu`, and the script exited with no `Stopped:` line. Then `--resume` refused with "main
+is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` to main.
+
+- The two decisions with branches live in `scripts/release-checks.mjs`, tested beside it, and the script asks
+  through `scripts/release-checks-step.mjs`: Node is there wherever pnpm is, and the refusal text is
+  written once, where it is decided.
+- `mainRefusal`: a bump still needs main equal to `origin/main`, since it dispatches from there; allowing
+  it behind would release a teammate's merge nobody here has pulled or looked at. A resume lets `origin/main`
+  be ahead of a clean main (an ancestor) and refuses only local commits or a dirty tree; the install's
+  `git merge --ff-only` already pulls to `origin/main`, so no separate fast-forward.
+- `runOutcome`: pending until completed, then green only for `success`. The CI gate and the wait for the
+  Release run both ask it, so they agree on green.
+- The run is polled with `gh run view` every 15 seconds, not watched: `gh run watch`'s exit status is the
+  same for a failed run and a dropped connection, which is how v2.43.0 looked failed while it built.
+- Every GitHub read goes through `retry`, four tries over about twenty seconds. `gh workflow run` is never
+  retried: a dispatch whose answer was lost may have started a run, and a second try would cut a second
+  release.
+- An `EXIT` trap prints `Stopped:` for any failure `stop` did not explain, with a `next` line the script
+  moves along as it goes (nothing dispatched; the run may still be going or the id is wrong; the run
+  finished but its release could not be read; the release is out, resume to install), rather than an `|| stop` on every line that can fail.

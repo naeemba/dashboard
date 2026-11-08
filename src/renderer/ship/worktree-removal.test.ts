@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { DashboardBridge, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
+import type { DashboardBridge, Refused, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
 
 // The sheets are the overlay's; here each question is answered from a list, in the order asked.
 const answers: boolean[] = [];
@@ -18,7 +18,7 @@ const entry: WorktreeEntry = {
   worktreePath: '/work/api.worktrees/fix-login', pane: 1, startedAt: '2026-09-01T00:00:00Z', reviewing: false,
 };
 
-function bridge(...results: WorktreeRemoval[]) {
+function bridge(...results: (WorktreeRemoval | Refused)[]) {
   const removeWorktree = vi.fn(async () => results.shift() ?? { ok: true, message: '', dirty: [] });
   return { bridge: { removeWorktree } as unknown as DashboardBridge, removeWorktree };
 }
@@ -69,5 +69,14 @@ describe('removeWorktreeAsking', () => {
     await removeWorktreeAsking(port, entry, refocus);
     expect(asked).toEqual([expect.any(String), expect.any(String), 'still no']);
     expect(refocus).toHaveBeenCalledTimes(3);
+  });
+
+  // A request main could not read: no forced removal to offer, only main's words.
+  it('says a refusal and asks nothing more', async () => {
+    const { bridge: port, removeWorktree } = bridge({ refused: 'the worktree to remove was not one the app could read' });
+    answers.push(true);
+    await removeWorktreeAsking(port, entry, () => {});
+    expect(asked[1]).toBe('the worktree to remove was not one the app could read');
+    expect(removeWorktree).toHaveBeenCalledTimes(1);
   });
 });

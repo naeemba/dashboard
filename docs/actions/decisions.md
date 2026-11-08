@@ -67,3 +67,14 @@ it from coming back.
 pane.claim and pane.release are bound by the session command rather than in
 `pane-actions.ts`: what they decide is read off its ledger of who claimed and
 ran each pane, and moving the ledger out would give one map two writers.
+
+## actions-decision-6: The dialog's removal waits on the project's queue
+
+**worktree.remove runs the dialog's and `pane release`'s removals on the
+project's git queue, the one ships and reviews hold; the review's runs in the
+queue it already holds.** Before, `d` in the worktree dialog ran `git worktree
+remove` straight away, so a removal pressed while a ship of the same project
+was making its worktree could land on git's index lock and fail in git's own
+words. The cost: `d` waits for a running ship's fetch before it answers. The
+queue is not re-entrant, so a door that holds it already is named in
+`removalOf` rather than queued again, which would wait on itself.

@@ -10,3 +10,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-03 #201 — Install with pnpm and the hoisted linker, so worktrees share one copy of node_modules (workflow-decision-3)
 - 2026-11-06 #221 — Build and publish releases for Linux, Windows and macOS from GitHub Actions (workflow-decision-4)
 - 2026-11-07 #231 — One command to cut a release: scripts/release.sh and /release, with a What's new list from the board (workflow-decision-5)
+- 2026-11-08 #238 — release.sh polls the run and retries GitHub reads, every failure says Stopped:, and --resume accepts the release commit (workflow-decision-6)

@@ -43,7 +43,8 @@ export type PaneRestorePorts = {
   // The pane each card's record named before the launch cleared them.
   panesBeforeLaunch: ReadonlyMap<string, number>;
   realPath(path: string): string;
-  recordWorktree(entry: WorktreeEntry): void;
+  // The card's record names the pane again (worktree-keeper.ts's givePane).
+  givePane(entry: WorktreeEntry, index: number): void;
   mainsWorkers: Pick<Map<string, string>, 'set'>;
   hasCommand(id: string): boolean;
   // What the pane runs, announced to every screen when the pane is new.
@@ -78,7 +79,7 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
       }
       ports.setPaneCommand(id, pane.command);
       ports.listenTo(id, shell, survivor.file);
-      if (pane.card !== undefined) ports.recordWorktree({ ...pane.card, pane: index });
+      if (pane.card !== undefined) ports.givePane(pane.card, index);
       if (pane.worker && saved !== null) ports.mainsWorkers.set(id, workerDispatcher(saved, projectPath));
     }
 
@@ -87,7 +88,7 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
     // is in now. Anything else is a Claude of yours.
     const resume = (id: string, savedIndex: number, conversation: PaneConversation) => {
       const card = agentToResume(ports.worktrees(), ports.panesBeforeLaunch, conversation, projectPath, savedIndex, ports.realPath);
-      if (card !== undefined) ports.recordWorktree({ ...card, pane: paneFromId(id).index });
+      if (card !== undefined) ports.givePane(card, paneFromId(id).index);
       const dispatcherPath = conversation.dispatched === true ? workerDispatcher(conversation, projectPath) : null;
       return ports.dispatch({
         id, projectPath, directory: card?.worktreePath ?? conversation.directory, prompt: null,
@@ -117,7 +118,7 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
       }
       if (back.dispatcherPath !== null) ports.mainsWorkers.set(id, back.dispatcherPath);
       const card = agentToResume(ports.worktrees(), ports.panesBeforeLaunch, back, projectPath, back.index, ports.realPath);
-      if (card !== undefined) ports.recordWorktree({ ...card, pane: back.index });
+      if (card !== undefined) ports.givePane(card, back.index);
     }
 
     const refusals = (await Promise.all(started)).filter(isRefused);
