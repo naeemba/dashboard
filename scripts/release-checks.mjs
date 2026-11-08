@@ -18,11 +18,10 @@ export function mainRefusal(mode, branch, tree, relation) {
   return 'main is not origin/main. Pull or push until they match.';
 }
 
-// What to do once `gh run watch --exit-status` has returned non-zero, given the run's status and
-// conclusion. The watch also fails when GitHub drops the connection ('failed to get run: ... EOF')
-// while the run goes on, so a run that has not completed is watched again, and one that completed
-// green after a dropped watch is installed. Only a completed run that is not green failed.
-export function afterWatch(status, conclusion) {
-  if (status !== 'completed') return 'watch';
-  return conclusion === 'success' ? 'install' : 'failed';
+// Where a GitHub Actions run stands, from `gh run ... --json status,conclusion`: 'pending' until it has
+// completed, then 'green' or 'failed <conclusion>'. The CI gate and the wait for the Release run both
+// ask this, so they agree on what green means.
+export function runOutcome({ status, conclusion }) {
+  if (status !== 'completed') return 'pending';
+  return conclusion === 'success' ? 'green' : `failed ${conclusion}`;
 }

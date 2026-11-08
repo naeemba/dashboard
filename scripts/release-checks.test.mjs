@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterWatch, mainRefusal } from './release-checks.mjs';
+import { mainRefusal, runOutcome } from './release-checks.mjs';
 
 describe('mainRefusal', () => {
   it('lets a bump and a resume through on a clean main equal to origin/main', () => {
@@ -31,19 +31,19 @@ describe('mainRefusal', () => {
   });
 });
 
-describe('afterWatch', () => {
-  it('watches again when the watch dropped while the run goes on', () => {
-    expect(afterWatch('in_progress', '')).toBe('watch');
-    expect(afterWatch('queued', '')).toBe('watch');
-    expect(afterWatch('waiting', '')).toBe('watch');
+describe('runOutcome', () => {
+  it('is pending until the run completes, whatever gh says the conclusion is so far', () => {
+    expect(runOutcome({ status: 'in_progress', conclusion: '' })).toBe('pending');
+    expect(runOutcome({ status: 'queued', conclusion: '' })).toBe('pending');
+    expect(runOutcome({ status: 'waiting', conclusion: '' })).toBe('pending');
   });
 
-  it('installs a run that finished green after a dropped watch', () => {
-    expect(afterWatch('completed', 'success')).toBe('install');
+  it('is green only for a completed success', () => {
+    expect(runOutcome({ status: 'completed', conclusion: 'success' })).toBe('green');
   });
 
-  it('calls a completed run that is not green failed', () => {
-    expect(afterWatch('completed', 'failure')).toBe('failed');
-    expect(afterWatch('completed', 'cancelled')).toBe('failed');
+  it('names the conclusion of a completed run that is not green', () => {
+    expect(runOutcome({ status: 'completed', conclusion: 'failure' })).toBe('failed failure');
+    expect(runOutcome({ status: 'completed', conclusion: 'cancelled' })).toBe('failed cancelled');
   });
 });

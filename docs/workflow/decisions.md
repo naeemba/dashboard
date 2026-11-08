@@ -125,11 +125,17 @@ is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` t
 - The two decisions with branches live in `scripts/release-checks.mjs`, tested beside it, and the script asks
   through `scripts/release-checks-step.mjs`: Node is there wherever pnpm is, and the refusal text is
   written once, where it is decided.
-- `mainRefusal`: a bump still needs main equal to `origin/main`, since it dispatches from there. A resume
-  lets `origin/main` be ahead of a clean main (an ancestor) and refuses only local commits or a dirty tree;
-  the install's `git merge --ff-only` already pulls to `origin/main`, so no separate fast-forward.
-- `afterWatch`: a failed watch asks the run's status. Not completed means the watch dropped, so watch again;
-  completed green means install; anything else completed is the failed-leg stop.
-- Every GitHub read goes through `retry`, four tries over about twenty seconds, and every `$(...)` that can
-  fail ends in `|| stop`, so there is no silent exit. `gh workflow run` is never retried: a dispatch whose
-  answer was lost may have started a run, and a second try would cut a second release.
+- `mainRefusal`: a bump still needs main equal to `origin/main`, since it dispatches from there; allowing
+  it behind would release a teammate's merge nobody here has pulled or looked at. A resume lets `origin/main`
+  be ahead of a clean main (an ancestor) and refuses only local commits or a dirty tree; the install's
+  `git merge --ff-only` already pulls to `origin/main`, so no separate fast-forward.
+- `runOutcome`: pending until completed, then green only for `success`. The CI gate and the wait for the
+  Release run both ask it, so they agree on green.
+- The run is polled with `gh run view` every 15 seconds, not watched: `gh run watch`'s exit status is the
+  same for a failed run and a dropped connection, which is how v2.43.0 looked failed while it built.
+- Every GitHub read goes through `retry`, four tries over about twenty seconds. `gh workflow run` is never
+  retried: a dispatch whose answer was lost may have started a run, and a second try would cut a second
+  release.
+- An `EXIT` trap prints `Stopped:` for any failure `stop` did not explain, with a `next` line the script
+  moves along as it goes (nothing dispatched; the run may still be going; the release is out, resume to
+  install), rather than an `|| stop` on every line that can fail.
