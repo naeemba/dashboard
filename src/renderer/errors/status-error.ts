@@ -1,6 +1,6 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
-import { shouldLogError } from './error-log';
-import { failureNotice } from '../../shared/errors/failure';
+import { errorDraft, rememberRead, shouldLogError, type FailureRead } from './error-log';
+import { failureNotice, whenFailureRead } from '../../shared/errors/failure';
 
 export type StatusError = {
   element: HTMLElement;
@@ -26,6 +26,10 @@ export function createStatusError(bridge: DashboardBridge): StatusError {
   const element = document.createElement('span');
   element.className = 'error';
   let errorOwner = '';
+  // The errors failureText read lately, so the bar's log line carries the stack of the one its sentence
+  // was built from (errors-decision-4).
+  let reads: FailureRead[] = [];
+  whenFailureRead((error, text) => { reads = rememberRead(reads, { error, text, at: Date.now() }); });
 
   function notice(owner: string, message: string): void {
     if (message === '' && errorOwner !== owner) return;
@@ -35,7 +39,7 @@ export function createStatusError(bridge: DashboardBridge): StatusError {
 
   // A clear is never logged, so the owner rule is notice's alone.
   function show(owner: string, message: string): void {
-    if (shouldLogError(message, element.textContent ?? '')) bridge.writeLog({ level: 'error', kind: 'error', message });
+    if (shouldLogError(message, element.textContent ?? '')) bridge.writeLog(errorDraft(message, reads, Date.now()));
     notice(owner, message);
   }
 

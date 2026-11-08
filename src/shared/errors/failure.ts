@@ -19,9 +19,24 @@
 // known, so the launch can decide to go on without that part: a .env that will not load costs the
 // settings in it and nothing else. A failure that reaches here says nothing about what still works.
 
+// Told of every error failureText reads, with the sentence it read it as. The renderer sets it, once:
+// a failure reaches the status bar as a sentence built around failureText, through some fifty callers
+// and their own onError callbacks, and this is how the bar's log line finds the Error behind it without
+// each of them passing it along (errors-decision-4). Main never sets it.
+let failureRead: ((error: unknown, text: string) => void) | undefined;
+export function whenFailureRead(listener: (error: unknown, text: string) => void): void {
+  failureRead = listener;
+}
+
 // How an error of any shape reads. Anything can be thrown, and a rejection carries whatever it was
 // rejected with, so `error.message` is not a field to count on.
 export function failureText(error: unknown): string {
+  const text = readFailure(error);
+  failureRead?.(error, text);
+  return text;
+}
+
+function readFailure(error: unknown): string {
   // An Error with nothing in its message still has a name, and `TypeError` on its own is worth
   // printing. The bare `Error` is not, so that one falls through to the line below.
   if (error instanceof Error) {

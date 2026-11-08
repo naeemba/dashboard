@@ -63,3 +63,32 @@ nothing about what still works, which is why it does not get that choice.
 
 Watch for: the bar holds one line. A thing that fails on every tick writes over
 whatever was there, every tick.
+
+## errors-decision-4: The bar's log line finds its Error through failureText
+
+A failure reaches the status bar as a sentence — `Board not saved: EACCES` —
+built around `failureText(error)` by some fifty callers, each through its own
+`onError` or `report` callback that takes only the sentence. Passing the Error
+along would change every one of those signatures and the wiring in
+`renderer.ts` between them.
+
+Instead `failureText` tells one listener (`whenFailureRead`) of every error it
+reads. The status bar keeps the last eight reads, and when it logs a message it
+attaches the newest read from the last second whose text is in the message.
+Every caller reads the error and shows the sentence in the same breath, so the
+second is generous; a read older than that was for something nobody showed (a
+draft's JSON check) and does not lend its stack to a later message with the
+same words. A thrown string or number adds no detail: the sentence already says
+everything it had. The window's `error` and `unhandledrejection` go through
+`failureNotice`, so they take the same path.
+
+Main never sets the listener. Its failures reach the bar as sentences over
+`failure:show` and are logged by the renderer without a stack; an IPC handler
+that throws is logged by main itself, with the channel and main's stack
+(`channels.ts`, `whenThrown`).
+
+Watch for: the match is by text. A sentence that reshapes the text
+(`firstLine(...)`) gets no stack, one shown more than a second after its read
+loses it, and a generic text (`no reason given`) read by one failure can lend
+its stack to another shown in the same second. Passing the Error through each
+caller's `onError` removes the guess; it can land one caller at a time.

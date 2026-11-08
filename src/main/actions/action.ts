@@ -78,7 +78,7 @@ function withSource(raw: unknown, source: MoveSource): Record<string, unknown> {
 // The screen's door: one channel per action, answering the result or `{ refused }` (errors-rule-2).
 export function registerActions(table: Channels, actions: readonly BoundAction[]): void {
   for (const bound of actions) {
-    table.handle(channelOf(bound.name), (_screen, raw: unknown) => bound.call(withSource(raw, 'user')));
+    table.handle(channelOf(bound.name), (_screen, raw: unknown) => bound.call(withSource(raw, 'user')), bound.name);
   }
 }
 
