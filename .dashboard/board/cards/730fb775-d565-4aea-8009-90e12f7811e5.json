@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-07T18:15:04.281Z",
-  "updatedAt": "2026-11-08T13:27:40.860Z",
+  "updatedAt": "2026-11-08T13:35:55.507Z",
   "branch": "work-board-card-730fb775-d565-4aea-8009-90e",
   "pullRequest": 234,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-08T13:35:55.507Z",
+      "body": "Shipped in #234: docs/actions/inventory.md (inventory, action set, plan), actions-rule-1 and actions-decision-4, bypasses.test.ts pinning every bypass at today's counts, and five per-noun cards in Todo: pane (034f1019), worktree (6be26ff0), project (f40752cd), session (7b330e75), settings (bc80991a). No behaviour change."
+    }
+  ],
+  "column": "Done",
+  "order": 189
 }
