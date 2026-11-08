@@ -9,8 +9,8 @@ import { isModified } from '../keys/shortcuts';
 // One running workflow over the screen, kept up while it runs: its phases with how far each got,
 // and the agents of the phase picked, each with its model, tokens and time. Up and Down walk the
 // phases and, while it runs, a last row that stops it on Enter; a click on a row picks it and does
-// what Enter does there. Escape goes back where it was opened from: the agents key's list when Enter
-// there opened it, else the box, as from the workflow key or a click on the workflow's strip row.
+// what Enter does there. Escape goes back where it was opened from: the agents key's list when it
+// was opened from there or from the workflow's strip row, the box from the workflow key.
 export type WorkflowView = {
   open(task: ChatTask, closed?: () => void): void;
   // The transcript changed: the open panel follows it.
