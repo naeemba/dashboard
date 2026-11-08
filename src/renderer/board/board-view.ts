@@ -444,17 +444,17 @@ export function createBoardView(options: BoardOptions): BoardView {
     // or under way.
     const columns = childColumns(state.board, card.id);
     if (columns.length > 0) {
-      const finished = (columnIndex: number) => isFinishedColumn(state.board, columnIndex);
+      const finished = new Set(columns.filter((columnIndex) => isFinishedColumn(state.board, columnIndex)));
       const bar = document.createElement('p');
       bar.className = 'board-progress';
       for (const columnIndex of columns) {
         const segment = document.createElement('span');
-        segment.className = finished(columnIndex) ? 'done' : isWaitingColumn(state.board, columnIndex) ? 'waiting' : 'underway';
+        segment.className = finished.has(columnIndex) ? 'done' : isWaitingColumn(state.board, columnIndex) ? 'waiting' : 'underway';
         bar.append(segment);
       }
       const count = document.createElement('span');
       count.className = 'board-progress-count';
-      count.textContent = `${columns.filter(finished).length}/${columns.length}`;
+      count.textContent = `${columns.filter((columnIndex) => finished.has(columnIndex)).length}/${columns.length}`;
       bar.append(count);
       item.append(bar);
     }

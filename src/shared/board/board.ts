@@ -202,14 +202,11 @@ export function isWaitingColumn(board: Board, index: number): boolean {
   return index === backlogColumnIndex(board) || index === columnNamed(board, TODO_COLUMN);
 }
 
-// Whether cards in this column are finished: Cancelled, and the last column besides it, which is Done
-// on a board as shipped. By position rather than by Done's name, so renaming the last column does not
-// change what the subtask bar says.
+// Whether cards in this column are finished: Done and Cancelled, by name. The one rule the subtask bar,
+// the manager's counts and its stalled panes all ask, so they cannot disagree about a column.
 export function isFinishedColumn(board: Board, index: number): boolean {
-  const cancelled = columnNamed(board, CANCELLED_COLUMN);
-  if (index === cancelled) return true;
-  const last = board.columns.length - 1;
-  return index === (last === cancelled ? last - 1 : last);
+  const name = board.columns[index]?.name ?? '';
+  return isColumnNamed(name, DONE_COLUMN) || isColumnNamed(name, CANCELLED_COLUMN);
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {

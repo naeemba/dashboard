@@ -406,8 +406,8 @@ describe('isFinishedColumn', () => {
     expect(finished).toEqual([false, false, false, false, false, true, true]);
   });
 
-  it('counts the last column on a board without Cancelled', () => {
-    const board = { columns: [{ name: 'Todo', cards: [] }, { name: 'Shipped', cards: [] }] };
-    expect([isFinishedColumn(board, 0), isFinishedColumn(board, 1)]).toEqual([false, true]);
+  it('goes by name, so a last column called something else is not finished', () => {
+    const board = { columns: [{ name: 'done', cards: [] }, { name: 'Shipped', cards: [] }] };
+    expect([isFinishedColumn(board, 0), isFinishedColumn(board, 1)]).toEqual([true, false]);
   });
 });
