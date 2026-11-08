@@ -6,6 +6,7 @@ import { baseBranch, git } from '../app/git';
 import { isManagerPath } from '../../shared/manager/manager';
 import { blockingChanges, uncommittedCount, workPrompt } from './ship';
 import { entryForCard } from './worktree-store';
+import type { ShipWorktree, ShipWorktreeRequest } from '../actions/worktree/make';
 
 // A card moved into Ship: the worktree, the branch, the board move and the pane. Out of main.ts because
 // main had reached its 600-line ceiling; what it needs from there is the records and the panes, handed
@@ -15,7 +16,7 @@ export type ShipPorts = {
   worktrees(): readonly WorktreeEntry[];
   recordWorktree(entry: WorktreeEntry): WorktreeEntry;
   // worktree.make's card kind: a new branch off origin/<base>, in the folder every worktree goes in.
-  makeWorktree(request: { projectPath: string; title: string; cardId: string; base: string }): Promise<{ branch: string; worktreePath: string }>;
+  makeWorktree(request: ShipWorktreeRequest): Promise<ShipWorktree>;
   // A free worker for the card's agent, or a new one; main.ts says how it picks.
   attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult>;
   agentRunsIn(slot: number, pane: number | null): boolean;

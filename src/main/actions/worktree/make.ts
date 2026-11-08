@@ -28,6 +28,11 @@ export type WorktreeMakePorts = {
 
 export type MadeWorktree = { output: string; branch: string; worktreePath: string };
 
+// What card.ship asks for and gets back: the card kind of the input and the answer, so a field added
+// here reaches the ship's port without another copy to keep in step.
+export type ShipWorktreeRequest = Omit<Extract<WorktreeMakeInput, { kind: 'card' }>, 'kind'>;
+export type ShipWorktree = Pick<MadeWorktree, 'branch' | 'worktreePath'>;
+
 function read(raw: Record<string, unknown>): WorktreeMakeInput | null {
   const { kind, projectPath } = raw;
   if (!isFilledText(projectPath)) return null;

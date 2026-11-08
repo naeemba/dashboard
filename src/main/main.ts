@@ -646,11 +646,11 @@ const { reviews, actions: cardActionList } = cardActions({
   agentWorksIn,
   shellLivesIn,
   recordWorktree: worktrees.record,
-  makeWorktree: worktree.forShip,
+  makeWorktree: worktree.makeForShip,
   attachPane,
   dropDeadWorktrees: worktrees.dropDead,
   removeWorktree: worktree.removeForReview,
-  addWorktree: worktree.again,
+  addWorktree: worktree.makeAgain,
   startReview: (entry, slot, prompt) => attachPane(worktrees.record(entry), slot, prompt),
   queue: shipInProject,
   boardLog,
@@ -713,7 +713,7 @@ const workerAnswers = sessionRequests({
     if (entry?.projectPath !== projectPath) return undefined;
     return { worktreePath: entry.worktreePath, working: agentRunsIn(slotOfProject(projectPath), entry.pane) };
   },
-  makeWorktree: worktree.throwaway,
+  makeWorktree: worktree.makeThrowaway,
   unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
   removeWorktree: worktree.removeForRelease,
 });

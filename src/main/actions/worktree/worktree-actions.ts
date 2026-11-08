@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/app/bridge';
 import { baseBranch, git } from '../../app/git';
 import { bind, isRefused, type BoundAction } from '../action';
-import { worktreeMake, type MadeWorktree } from './make';
+import { worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
 import { worktreeRemove, type WorktreeRemovePorts } from './remove';
 
 // Main's wiring for the worktree actions, and each door's call into them as its port takes it. Out of
@@ -26,13 +26,13 @@ export function worktreeActions(main: WorktreeRemovePorts) {
   return {
     remove,
     // card.ship's, with the project's queue held and origin fetched.
-    forShip: (request: { projectPath: string; title: string; cardId: string; base: string }) => made(make.call({ kind: 'card', ...request })),
+    makeForShip: (request: ShipWorktreeRequest): Promise<ShipWorktree> => made(make.call({ kind: 'card', ...request })),
     // `pane run --worktree`'s.
-    async throwaway(projectPath: string, title: string): Promise<string> {
+    async makeThrowaway(projectPath: string, title: string): Promise<string> {
       return (await made(make.call({ kind: 'throwaway', projectPath, title }))).worktreePath;
     },
     // card.review's, with the queue held: the branch checked out again, and the old folder removed.
-    again: ({ projectPath, worktreePath, branch }: WorktreeEntry) => made(make.call({ kind: 'again', projectPath, worktreePath, branch })),
+    makeAgain: ({ projectPath, worktreePath, branch }: WorktreeEntry) => made(make.call({ kind: 'again', projectPath, worktreePath, branch })),
     removeForReview: (worktreePath: string) => removed(remove.call({ worktreePath, from: 'review' })),
     // pane.release's, once unfinishedWork has said there is nothing in it to lose. A refusal is a failure
     // the release reports.
