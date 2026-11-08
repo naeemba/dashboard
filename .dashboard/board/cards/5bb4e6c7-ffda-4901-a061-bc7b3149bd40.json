@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T17:16:26.574Z",
-  "updatedAt": "2026-11-08T14:45:04.374Z",
-  "column": "Doing",
-  "order": 1
+  "updatedAt": "2026-11-08T15:04:51.624Z",
+  "branch": "work-board-card-5bb4e6c7-ffda-4901-a061-bc7",
+  "pullRequest": 238,
+  "comments": [
+    {
+      "at": "2026-11-08T15:04:51.624Z",
+      "body": "Shipped in #238: release.sh polls the run with retried gh reads instead of trusting gh run watch, an EXIT trap makes every failure print Stopped: with the next step, and --resume accepts origin/main ahead by the release commit. Decisions in scripts/release-checks.mjs (mainRefusal, runOutcome), tested; docs/workflow scenarios, workflow-decision-6, history."
+    }
+  ],
+  "column": "Done",
+  "order": 192
 }

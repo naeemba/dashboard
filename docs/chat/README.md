@@ -136,7 +136,7 @@ that started it, with its tool calls, tokens, time and last tool so far; a task
 leaves the strip when it ends. It lists only what started while the screen was
 open, since a saved session keeps none of it. The task key picks a row in the
 strip, the next each press and none after the last; a click picks the row and
-opens its agent's conversation. The stop key stops the picked task, and the
+opens its agent's conversation, or a workflow's panel. The stop key stops the picked task, and the
 background key sends it to the background so the turn goes on without waiting
 for it; with no row picked, the background key sends every foreground task
 there, as Ctrl+B does in the terminal.
@@ -156,8 +156,23 @@ click in it does what it does in the main log: an image or PDF opens over it,
 and a pane link puts the conversation away and lands on the pane. An agent that
 has said nothing yet opens empty and fills as it goes; only the last 20 agents'
 conversations are kept, besides any still running, and a session that ends lists
-what it was running as ended. A workflow or background command has no
-conversation to open, and says so (chat-decision-15).
+what it was running as ended. A background command has no conversation to
+open, and says so; Enter on a workflow opens its panel, whose Escape comes back
+to the list (chat-decision-15).
+
+A running workflow's strip row also carries a bar and how many of its agents
+have ended of those started, `▰▰▰▱▱▱▱▱▱▱ 3/10 agents`, beside its tokens and
+elapsed time. The workflow key (Alt+P) opens the picked workflow, or the first
+one in the strip with none picked, as does a click on its row: its phases, each marked done (✓), running (●)
+or not started (○) with its agents ended of started, and under the picked phase
+its agents with their model, tool calls, tokens and time. The arrows walk the
+phases and a last row, Stop the workflow, which Enter stops; a click on a row
+picks it and does what Enter does. The panel keeps up while the workflow runs,
+and once it ends says so and drops the stop row. The session sends this as a
+`workflow_progress` list on each task_progress about the workflow, a field the
+Agent SDK's types leave out; a session that sends none shows the row without a
+bar and the panel without phases. There is no pause: the SDK can stop a task but
+offers no way to pause one (chat-decision-16).
 
 The row under the box holds what Claude Code's status line does: on the left the
 model, whether edits are asked about or accepted, the effort level (default
@@ -266,6 +281,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given a request fails and the session retries it, or a plan limit nears or is hit, when the session says so, then a notice line in the thread says the error and the wait, or which limit and when it resets; the same limit line shows once.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
 - Given Claude ran an agent, when its call is on screen, then the call's line reads `Agent List X11 and read hostname 3 tools · 33.1K tokens · 5s`, counting while the agent runs and kept after it ends or the conversation is read back.
+- Given a workflow is running, when you press Alt+P, then a panel lists its phases with their marks and counts and the picked phase's agents with model, tokens and time; Up and Down walk the phases, Enter on Stop the workflow stops it, and Escape goes back to the box; a click on the workflow's strip row opens the same panel, whose Escape goes to the Alt+A list.
 - Given an agent is running or has finished this conversation, when you press Alt+A, then a list shows it, running ones first, finished ones with `completed`, their count and the first line of their report; Enter opens its conversation, which grows as the agent works, Escape goes back to the list, and a click on its strip row opens the same view (chat-decision-15).
 - Given a turn's agent writes, when it sends each message, then the working line's `↓ N tokens` grows by what it wrote, four characters a token (chat-decision-15).
 - Given a half-written prompt in the box, when you press Alt+S, then the box empties and Up from the empty box brings the draft back before any sent prompt; the last 10 stashed are kept until they are sent.

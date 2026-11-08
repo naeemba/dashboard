@@ -76,7 +76,7 @@ export type InkCommand = 'pen' | 'eraser' | 'color' | 'width' | 'undo' | 'clear'
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'agents' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context' | 'refresh-usage';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'agents' | 'workflow' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context' | 'refresh-usage';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -689,6 +689,10 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-agents', description: 'List the agents running and finished this conversation; Enter opens one\'s conversation',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'agents' }, mac: 'Alt+A', other: 'Alt+A',
+  },
+  {
+    name: 'claude-workflow', description: 'Show the picked workflow\'s phases and agents, or the first one running; Enter on its last row stops it',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'workflow' }, mac: 'Alt+P', other: 'Alt+P',
   },
   // Ctrl+S, the terminal's stash key, opens the project picker here (chat-decision-9).
   {

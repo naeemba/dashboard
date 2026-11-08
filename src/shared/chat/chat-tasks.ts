@@ -1,5 +1,6 @@
 import { isRecord, stringOrEmpty as text } from '../app/is-record';
 import { formatTokens } from '../usage/usage';
+import { NO_PROGRESS, workflowBar, workflowProgress, type WorkflowProgress } from './chat-workflow';
 
 // The agents, workflows and background commands Claude has running, as the strip over the box lists
 // them. The session streams them as system messages — task_started, task_progress, task_updated,
@@ -23,6 +24,8 @@ export type ChatTask = {
   seconds: number;
   lastTool: string | null;
   summary: string | null;
+  // A workflow's phases and agents (chat-workflow.ts), or null for a task that is not a workflow.
+  workflow: WorkflowProgress | null;
 };
 
 export type ChatTasks = readonly ChatTask[];
@@ -43,6 +46,9 @@ export function messageUsage(message: Record<string, unknown>, known: AgentUsage
 
 const isAgent = (message: Record<string, unknown>): boolean => message.task_type === 'local_agent' || text(message.subagent_type) !== '';
 
+// background_tasks_changed and task_started both name a workflow's task_type `local_workflow`.
+const workflowOf = (message: Record<string, unknown>): WorkflowProgress | null => (message.task_type === 'local_workflow' ? NO_PROGRESS : null);
+
 // A task the strip leaves out: Claude Code's own housekeeping, which it marks as not being activity.
 function quiet(message: Record<string, unknown>): boolean {
   return message.ambient === true || message.skip_transcript === true;
@@ -60,8 +66,9 @@ function merged(task: ChatTask, message: Record<string, unknown>): ChatTask {
   const kind = text(message.subagent_type) || text(message.workflow_name) || task.kind;
   const parent = text(message.parent_task_id) || task.parent;
   const agent = task.agent || isAgent(message);
-  if (description === task.description && kind === task.kind && parent === task.parent && agent === task.agent) return task;
-  return { ...task, description, kind, parent, agent };
+  const workflow = task.workflow ?? workflowOf(message);
+  if (description === task.description && kind === task.kind && parent === task.parent && agent === task.agent && workflow === task.workflow) return task;
+  return { ...task, description, kind, parent, agent, workflow };
 }
 
 function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
@@ -74,6 +81,7 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
     backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, agent: isAgent(message), tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
+    workflow: workflowOf(message),
   }];
 }
 
@@ -84,6 +92,7 @@ function progressed(tasks: ChatTasks, message: Record<string, unknown>): ChatTas
     description: text(message.description) || task.description,
     lastTool: text(message.last_tool_name) || task.lastTool,
     summary: text(message.summary) || task.summary,
+    workflow: workflowProgress(message.workflow_progress) ?? task.workflow,
   }));
 }
 
@@ -131,7 +140,7 @@ export function taskOrder(tasks: ChatTasks): { task: ChatTask; depth: number }[]
 
 // One row's text after its description: what kind of task, then what it has done so far.
 export function taskDetail(task: ChatTask): string {
-  return [task.kind, ...usageParts(task), ...(task.lastTool ? [task.lastTool] : [])].join(' · ');
+  return [task.kind, task.workflow && workflowBar(task.workflow), ...usageParts(task), task.lastTool].filter(Boolean).join(' · ');
 }
 
 // What an agent has done, as its strip row and the Agent call that started it both say it: its tool
@@ -178,6 +187,16 @@ export function stopTarget(task: ChatTask | 'ended' | null): StopTarget {
   if (task === null) return { kind: 'refused', reason: 'No task picked. The task key picks one in the strip over the box.' };
   if (task === 'ended') return { kind: 'refused', reason: TASK_ENDED };
   return { kind: 'one', taskId: task.id };
+}
+
+export type WorkflowTarget = { kind: 'open'; task: ChatTask } | { kind: 'refused'; reason: string };
+
+// What the workflow key opens: the picked task when it is a workflow, else the first workflow the
+// strip lists.
+export function workflowTarget(tasks: ChatTasks, picked: ChatTask | 'ended' | null): WorkflowTarget {
+  if (picked !== null && picked !== 'ended' && picked.workflow) return { kind: 'open', task: picked };
+  const first = taskOrder(tasks).find(({ task }) => task.workflow)?.task;
+  return first ? { kind: 'open', task: first } : { kind: 'refused', reason: 'No workflow is running.' };
 }
 
 export type BackgroundTarget = { kind: 'all' } | { kind: 'one'; toolUseId: string } | { kind: 'refused'; reason: string };
