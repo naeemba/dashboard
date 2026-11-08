@@ -26,9 +26,11 @@ settings row says. Its rows depend on where the update is:
 - **What's new** shows the release's notes in the what's-new popup; Enter on a
   line opens the release page.
 
-The arrows walk the rows, Enter picks one, Escape closes. A download or a swap
-that failed is said on the dialog, and on the status bar, and the row is there
-to try again.
+The arrows walk the rows, Enter picks one, Escape closes. A download that
+failed, or a staged build that is not the release, is said on the dialog and on
+the status bar, and the row is there to try again. A swap that fails at the
+quit leaves the install as it was, logs why, and the app quits without
+restarting.
 
 The settings screen's Updates row (`updates.check`, default on) turns the
 launch and six-hourly check off. The key still checks when pressed.
@@ -82,6 +84,9 @@ because Electron's `fs` treats an `.asar` as a folder.
   unpacked and the dialog says why.
 - Given a staged build that does not carry the release's version, when Restart
   is picked, then the install is left as it is and the app does not restart.
+- Given Restart picked and the quit answered Quit, when the swap fails, then
+  the install is left as it is, the log says why, and the app quits without
+  restarting.
 - Given Restart picked, when the quit question is cancelled, then the install is
   left as it is and a later quit does not restart the app.
 - Given Update picked while the dialog's own check is still asking GitHub, when
