@@ -52,7 +52,8 @@ export const sessionRename = action<SessionRenamePorts, SessionRenameInput, { ou
     try {
       await ports.retitle(sessionId, title, folder);
     } catch (error) {
-      // The row has the name by now; say what did not, rather than read as nothing renamed.
+      // Say what took the name and what did not: a row that has it, or nothing at all.
+      if (refused !== null) return { refused: `Could not rename to ${title}: ${failureText(error)}` };
       return { refused: `Renamed to ${title} in the drawer, but /resume still lists it by its old name: ${failureText(error)}` };
     }
     return { output: `Renamed to ${title}.` };

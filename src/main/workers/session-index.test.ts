@@ -61,7 +61,7 @@ describe('renamed', () => {
     const next = renamed(index, PROJECT, ID, '  drawer work ');
     expect(typeof next === 'string' ? next : next[PROJECT][0].label).toBe('drawer work');
     expect(renamed(index, PROJECT, ID, '   ')).toMatch(/needs a name/);
-    expect(renamed(index, PROJECT, OTHER, 'x')).toMatch(/not in this project/);
+    expect(renamed(index, PROJECT, OTHER, 'x')).toMatch(/not in the drawer/);
   });
 });
 

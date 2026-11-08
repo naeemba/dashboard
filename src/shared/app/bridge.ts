@@ -159,7 +159,7 @@ export type DashboardBridge = {
   listDocs(projectPath: string, open: readonly string[]): Promise<DocEntry[]>;
   readDoc(projectPath: string, file: string): Promise<DocReply>;
   listSessions(projectPath: string, count: number): Promise<SessionList>;
-  renameSession(projectPath: string, id: string, label: string): Promise<DrawerReply>;
+  renameSession(id: string, label: string): Promise<DrawerReply>;
   resumeSession(slot: number, id: string): Promise<ResumeReply>;
   // Ctrl+G: the Claude box written to a file and opened in the page's nvim, answering the way
   // openScrollback does; and the text saved there since the box last read it, or null.

@@ -75,8 +75,8 @@ export function registerSessionChannels(table: Channels, actions: SessionActions
   table.handle('chat:rename', async (_screen, slot: number, title: string): Promise<string | null> => (
     refusedOrNull(await actions.rename.call({ slot, title }))?.refused ?? null
   ));
-  // The drawer's F2. Its project is not needed: a conversation's id finds its row in any project.
-  table.handle('sessions:rename', async (_screen, _projectPath: string, id: string, label: string): Promise<DrawerReply> => (
+  // The drawer's F2: a conversation's id finds its row in any project.
+  table.handle('sessions:rename', async (_screen, id: string, label: string): Promise<DrawerReply> => (
     refusedOrNull(await actions.rename.call({ id, label }))
   ));
 }
