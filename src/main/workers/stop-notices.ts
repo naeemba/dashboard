@@ -84,8 +84,8 @@ export function stopNotices(
     pending.set(id, wait(ms, () => {
       pending.delete(id);
       (paused ? pauseNoticed : noticed).add(id);
-      const takeBack = ports.notice(id, paused);
-      if (takeBack) takeBacks.set(id, takeBack);
+      const withdraw = ports.notice(id, paused);
+      if (withdraw) takeBacks.set(id, withdraw);
     }));
   }
 

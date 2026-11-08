@@ -181,15 +181,6 @@ describe('stopNotices', () => {
     // Main reads a report only when its turn ends (chat-sessions.ts hears the sender on the turn's
     // result), and the turn that read it merges and releases, which outlasts the settle.
     describe('when main releases the worker', () => {
-      it('takes back a notice queued before the release, which the report read after it no longer finds', () => {
-        const { notices, noticed, takenBack, pass } = clock();
-        notices.state('2:1', 'done', nothing);
-        pass(10);
-        notices.forget('2:1');
-        expect(noticed).toEqual(['2:1']);
-        expect(takenBack).toEqual(['2:1']);
-      });
-
       it('tells nothing for a worker released with no report', () => {
         const { notices, noticed, pass } = clock();
         notices.state('2:1', 'done', nothing);

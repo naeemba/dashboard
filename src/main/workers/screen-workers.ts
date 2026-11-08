@@ -98,24 +98,24 @@ export function screenWorkers(ports: ScreenPorts) {
   }
 
   // The worker's hooks, beside whatever the user's settings hold, saying what a terminal worker's
-  // workerSettings hooks say. A permission prompt is the screen's ask, which screenSignal reads. Only
-  // while the pane is still this worker's (`saved` is one per worker): a hook of one released a moment
-  // ago, landing after the next worker started at the same number, would read as that one's stop.
-  function report(id: string, saved: Saved, state: WorkerState, waiting?: StopWaiting): void {
+  // workerSettings hooks say. A permission prompt is the screen's ask, which screenSignal reads.
+  function report(id: string, state: WorkerState, waiting?: StopWaiting): void {
     const worker = live.get(id);
-    if (worker?.saved !== saved) return;
-    worker.done = state === 'done';
+    if (worker) worker.done = state === 'done';
     ports.notify(id, state, waiting);
   }
 
+  // Heard only while the pane is still this worker's (`saved` is one per worker): a hook of one released
+  // a moment ago, landing after the next worker started at the same number, would read as that one's stop.
   function hooks(id: string, saved: Saved): Options['hooks'] {
+    const mine = () => live.get(id)?.saved === saved;
     const reporting = (state: WorkerState): HookCallbackMatcher[] => [{ hooks: [async () => {
-      report(id, saved, state);
+      if (mine()) report(id, state);
       return {};
     }] }];
     return {
       Stop: [{ hooks: [async (input) => {
-        report(id, saved, 'done', stopWaiting(input));
+        if (mine()) report(id, 'done', stopWaiting(input));
         return {};
       }] }],
       UserPromptSubmit: reporting('running'),
@@ -189,7 +189,7 @@ export function screenWorkers(ports: ScreenPorts) {
       const worker = signal && byKey.get(key);
       if (!worker) return;
       if (signal === 'turn-over') worker.done = true;
-      else if (signal !== 'started') report(worker.id, worker.saved, signal);
+      else if (signal !== 'started') report(worker.id, signal);
       else if (!worker.resume) {
         worker.resume = true;
         worker.saved.started = true;
