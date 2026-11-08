@@ -13,9 +13,10 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // A resume is built only as pane.dispatch's worker arguments; none is typed into a shell.
   { call: "'--resume'", allowed: { 'src/main/workers/dispatch.ts': 1 } },
   { call: '--resume ${', allowed: {} },
-  // A pane's shell spawned and a pane dropped: handed to the pane actions, and the two rows still
-  // outside one, `pty:restart` (pane-channels.ts) and project.close (closeProjectSlot).
+  // A pane's shell spawned: the pane actions' `spawn` and `pty:restart`'s `spawnTerminal`, the one row
+  // still outside an action.
   { call: 'panes.spawn', allowed: { 'src/main/main.ts': 2 } },
+  // A pane dropped: the definition and its call in closeProjectSlot, project.close's `close`.
   { call: 'dropPane(', allowed: { 'src/main/main.ts': 2 } },
   // worktree.remove and worktree.make: only the actions and the remove's port. /create-task's make runs
   // outside the app and stays its program's.
@@ -24,13 +25,14 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // settings.write: launch's host token, the settings screen and the remote join.
   { call: 'writeSettings(settingsFile', allowed: { 'src/main/main.ts': 3 } },
   // The wrappers behind the other Bypass: yes rows, counted with the ports that pass them on, so a new
-  // door into one moves a count. pane restart a shell, project open (pane.claim's --project among its
-  // doors), close and focus, session start main.
+  // door into one moves a count. pane restart a shell, session start main.
   { call: "'pty:restart'", allowed: { 'src/main/panes/pane-channels.ts': 1 } },
-  { call: 'openProject(', allowed: { 'src/main/main.ts': 4, 'src/main/workers/session-requests.ts': 1, 'src/main/actions/pane/claim.ts': 2 } },
-  { call: 'closeProjectSlot(', allowed: { 'src/main/main.ts': 2 } },
-  { call: 'landOnPane(', allowed: { 'src/main/main.ts': 1, 'src/main/panes/pane-channels.ts': 2 } },
   { call: 'chats.start', allowed: { 'src/main/main.ts': 3 } },
+  // What project.open, project.close and project.focus do, handed to them as ports and called nowhere
+  // else: each definition, and landOnPane's one port.
+  { call: 'placeProject(', allowed: { 'src/main/main.ts': 1 } },
+  { call: 'closeProjectSlot(', allowed: { 'src/main/main.ts': 1 } },
+  { call: 'landOnPane(', allowed: { 'src/main/main.ts': 1, 'src/main/panes/pane-channels.ts': 1 } },
 ];
 
 function sourceFiles(folder: string): string[] {

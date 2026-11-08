@@ -60,6 +60,18 @@ Neither door holds any of the logic; each only asks.
   and logged (all but the review's, which writes on the card). The keeper does
   the rest: refused once with changes, shells killed and screens closed.
 
+- **project.open** (`projects:open`, `project open`, `pane claim --project`):
+  waits for the pane and screen hosts, refuses a folder that is not there,
+  opens over a dead page, and starts main and waits for it only for the
+  command. The picker's folder dialog and path check stay its
+  door's, `project-actions.ts`.
+- **project.close** (`projects:close`, `project close`): `closeRefusal`, asked
+  here alone. The close key asks it twice, `onlyCheck` before its question and
+  again with the close, naming the panes by the page's names; the command
+  names them by default and asks no question.
+- **project.focus** (`project focus`, a notification's click): the window to
+  the front on the project's main, or on the pane the banner named.
+
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
 [`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls and wrappers
@@ -67,9 +79,10 @@ that still do the work themselves; the rows it does not pin are held by the
 rule alone (actions-rule-1, actions-decision-4).
 
 Only card.move has a channel of its own name: it is the only action the bridge
-exposes that way. The pane actions answer on the channels and commands that
-were there before (`pane:add`, `pane:close`, `sessions:resume`, `pane claim`,
-`send`, `release`, `run`); a screen that needs ship or review registers its
+exposes that way. The pane and project actions answer on the channels and commands
+that were there before (`pane:add`, `pane:close`, `sessions:resume`,
+`projects:open`, `projects:close`, `pane claim`, `send`, `release`, `run`,
+`project open`, `close`, `focus`); a screen that needs ship or review registers its
 channel in the same change.
 
 The board asks card.move only for a move that changed the column

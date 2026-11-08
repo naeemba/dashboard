@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { closeRefusal, type ClosingPane } from './close-refusal';
+import { closeRefusal, closingPanes, type ClosingPane } from './close-refusal';
+import type { PaneUse } from './pane-reading';
 
 // A shell sitting at its own prompt: nothing running in it, so it holds nothing open.
 const pane = (name: string, use: Partial<ClosingPane> = {}): ClosingPane => ({
@@ -34,5 +35,31 @@ describe('closeRefusal', () => {
 
   it('says nothing about a project whose folder went away, which has no panes at all', () => {
     expect(closeRefusal('web', [])).toBe('');
+  });
+});
+
+describe('closingPanes', () => {
+  const use: PaneUse = { index: 0, exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false };
+
+  it('names each reading with the pane it belongs to', () => {
+    const named = closingPanes([use, { ...use, index: 3, foreground: 'npm' }], [{ index: 0, name: 'main' }, { index: 3, name: 'terminal 4' }]);
+    expect(named).toEqual([{ ...use, name: 'main' }, { ...use, index: 3, foreground: 'npm', name: 'terminal 4' }]);
+  });
+
+  // Workers come and go, so the two lists can line up by position and still be about different panes.
+  it('pairs by pane number, not by place in the list', () => {
+    const named = closingPanes([{ ...use, index: 2, foreground: 'npm' }], [{ index: 0, name: 'main' }, { index: 2, name: 'terminal 3' }]);
+    expect(named.map((pane) => pane.name)).toEqual(['terminal 3']);
+  });
+
+  // main reads the terminals and the page names its editor as well.
+  it('leaves out a name with no reading', () => {
+    const named = closingPanes([use], [{ index: 0, name: 'main' }, { index: -1, name: 'nvim' }]);
+    expect(named.map((pane) => pane.name)).toEqual(['main']);
+  });
+
+  // The one that used to throw, which stopped Ctrl+Q on a dead page before it could ask anything.
+  it('gives back nothing for a page whose folder has gone, which names no panes at all', () => {
+    expect(closingPanes([use, { ...use, index: 1 }], [])).toEqual([]);
   });
 });

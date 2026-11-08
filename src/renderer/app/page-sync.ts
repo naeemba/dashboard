@@ -27,7 +27,6 @@ export type PageSyncPorts = {
 };
 
 export type PageSync = {
-  removePage(slot: number): void;
   applyProjects(open: OpenProjects): void;
   // Which host the pages on screen were built from; LOCAL_SCREEN for this machine's own.
   host(): string;
@@ -43,8 +42,8 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
     page.board?.close();
   }
 
-  // Takes a project's page off the screen and out of the list. What the close key does after main has
-  // agreed, and what applyProjects does for a project another screen closed.
+  // Takes a project's page off the screen and out of the list, for a project main's list no longer
+  // holds — closed here or on another screen.
   function removePage(slot: number): void {
     const page = ports.pages()[positionOfSlot(slot)];
     if (!page || !isProjectPage(page)) return;
@@ -99,5 +98,5 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
   ports.onProjectsChange(applyProjects);
   ports.onHostChange(hosts.change);
 
-  return { removePage, applyProjects, host: hosts.host };
+  return { applyProjects, host: hosts.host };
 }

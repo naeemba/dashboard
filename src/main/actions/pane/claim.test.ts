@@ -7,8 +7,7 @@ describe('pane.claim', () => {
     const claimed: string[] = [];
     const claim = bind(paneClaim, {
       findProject: () => ({ ok: false, message: 'unused' }),
-      folderExists: () => true,
-      openProject: () => 2,
+      openProject: async () => 2,
       open: async () => ({ refused: '/work/api is not there' }),
       claimedBy: (id) => { claimed.push(id); },
     });

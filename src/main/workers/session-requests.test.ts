@@ -30,8 +30,7 @@ function project(overrides: Partial<SessionPorts> = {}) {
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
     openSlots: () => [{ slot: 2, name: 'api' }],
     findProject: (word) => ({ ok: false, message: `no project is called ${word}` }),
-    folderExists: () => true,
-    openProject: () => 2,
+    openProject: async () => 2,
     openPanes: () => open,
     agentIn: (id) => agents.has(id),
     busyWith: (id) => (agents.has(id) ? 'an agent' : null),
@@ -460,8 +459,9 @@ function pages() {
     projectPath: (slot) => paths.get(slot),
     openSlots: () => [...paths].map(([slot, folder]) => ({ slot, name: folder.split('/')[2] })),
     findProject: (word) => (known[word] ? { ok: true, name: word, path: known[word] } : { ok: false, message: `no project is called ${word}` }),
-    folderExists: (folder) => folder !== '/work/gone',
-    openProject: (folder) => {
+    // project.open's refusal, which it decides (open.test.ts).
+    openProject: async (folder, name) => {
+      if (folder === '/work/gone') return { refused: `${name}'s folder, ${folder}, does not exist` };
       const open = [...paths].find(([, each]) => each === folder);
       if (open) return open[0];
       opened.push(folder);
@@ -551,7 +551,7 @@ describe('sessionRequests across projects', () => {
   it('refuses a name projects.yaml does not give, and a project whose folder is gone', async () => {
     const { ask } = pages();
     expect(await ask(['claim', '--project', 'zzz'])).toEqual({ ok: false, output: 'no project is called zzz' });
-    expect(await ask(['claim', '--project', 'gone'])).toEqual({ ok: false, output: 'gone is at /work/gone, which is not a folder' });
+    expect(await ask(['claim', '--project', 'gone'])).toEqual({ ok: false, output: "gone's folder, /work/gone, does not exist" });
   });
 
   it('keeps a pane another project claimed out of reach of every other asker', async () => {

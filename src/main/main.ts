@@ -3,7 +3,7 @@ import { app, BrowserWindow, dialog } from 'electron';
 import { whenLaunchedAgain } from './app/launch-gate';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { existingProjects, pickedFolder, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
+import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { runProgram } from './app/git';
 import { realPath } from './app/real-path';
@@ -16,9 +16,10 @@ import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, terminalId, workersOfSlot } from '../shared/panes/terminals';
+import { EDITOR_INDEX, MAIN_INDEX, paneFromId, terminalId, workersOfSlot } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { paneActions } from './actions/pane/pane-actions';
+import { projectActions, registerProjectChannels } from './actions/project/project-actions';
 import { isRefused } from './actions/action';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
 import { projectRequests } from './projects/project-requests';
@@ -77,7 +78,7 @@ import type { Settings } from '../shared/settings/settings';
 import { cardActions } from './actions/card/card-actions';
 import { actionRequests } from './actions/action';
 import { worktreeKeeper } from './ship/worktree-keeper';
-import type { OpenProjects, ProjectOpen, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
+import type { OpenProjects, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
 import { worktreeRecordAtLaunch } from './ship/worktree-record-at-launch';
 
@@ -378,29 +379,10 @@ const mainsWorkers = new Map<string, string>();
 
 // Directories that have gone away are dropped rather than offered, so the list only holds openable projects.
 table.handle('recent-projects:read', () => existingProjects(readRecentPaths(recentsFile)));
-// A null path opens the folder dialog; a path from the picker skips it, and is refused unless it is a
-// folder (pickedFolder). A refusal is answered, not thrown: a throw reaches the screen behind Electron's
-// "Error invoking remote method" prefix.
-table.handle('projects:open', async (screen, projectPath: string | null): Promise<ProjectOpen> => {
-  // The launch's restore opens every project here, and one opened before the pane host has said what it
-  // kept would start fresh shells in panes that already have one; before the screen host has, a worker
-  // screen it still runs would be counted done.
-  await Promise.all([shellHost.ready, workerScreens.host.ready]);
-  if (projectPath === null) {
-    const refused = folderDialogRefusal(screen);
-    if (refused !== null) return { refused };
-    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
-    if (canceled) return null;
-    projectPath = filePaths[0];
-  }
-  const folder = pickedFolder(projectPath);
-  return 'refused' in folder ? folder : openProject(folder.path);
-});
-// A project opened from its path, unless it is open already, and the slot it is in either way. The
-// picker's open, `pane claim --project` and `project open` all come here, and so should anything else
-// that opens a project from main, so every way in starts its shells, watches its board and remembers
-// it alike.
-function openProject(projectPath: string): { index: number; open: OpenProjects } {
+// project.open's `place`: a project opened from its path, unless it is open already, and the slot it is
+// in either way. Only project.open calls it, so every way in starts its shells, watches its board and
+// remembers it alike.
+function placeProject(projectPath: string): number {
   const picked = projectFromPath(projectPath);
   const matchIndex = slotOfProject(picked.path);
   const index = matchIndex === -1 ? projects.length : matchIndex;
@@ -414,20 +396,16 @@ function openProject(projectPath: string): { index: number; open: OpenProjects }
   // so losing the history entry or the projects.yaml one must not fail the open and strand them on a
   // slot the renderer has no page for.
   if (!picked.missing) { rememberRecentPath(recentsFile, picked.path); listOpenedProject(picked.path); }
-  const open = openProjects();
-  sendToRenderer('projects:change', open);
-  return { index, open };
+  sendToRenderer('projects:change', openProjects());
+  return index;
 }
-// Closing a project. Its panes and editor are killed and forgotten, and its slot is emptied. Nothing is
-// answered: whether anything was running in it was read off the panes themselves, which only the
-// renderer can see, and it has already refused or gone ahead by the time this arrives.
-// The worktree records naming a pane in it give that pane up, for the reason the launch above clears
-// every pane on read: no shell of this project survives the close, so a record still naming pane 2
-// would put a branch under a pane that is a plain shell of some other project — and would hold its
-// card in flight, unable to be shipped again, with nothing left running to finish it.
-table.on('projects:close', (_screen, slot: number) => closeProjectSlot(slot));
-// The close itself, from the key once it has agreed or from `dashboard project close` once
-// project-requests.ts has. Every screen takes the page down on the list it is sent.
+// project.close's `close`, once it has agreed. Its panes and editor are killed and forgotten, and its
+// slot is emptied. The worktree records naming a pane in it give that pane up, for the reason the
+// launch above clears every pane on read: no shell of this project survives the close, so a record
+// still naming pane 2 would put a branch under a pane that is a plain shell of some other project —
+// and would hold its card in flight, unable to be shipped again, with nothing left running to
+// finish it.
+// Every screen takes the page down on the list it is sent.
 function closeProjectSlot(slot: number): void {
   const closing = projects[slot];
   // A slot that holds nothing has already been closed, and there is nothing of it left to kill.
@@ -485,7 +463,10 @@ table.handle('settings:write', (_screen, next: Settings) => {
   writeSettings(settingsFile, settings, isMac);
   return shellCommand;
 });
-registerPaneChannels(table, { shells, screens: paneScreens, spawnTerminal: panes.spawn, window: liveWindow });
+registerPaneChannels(table, {
+  shells, screens: paneScreens, spawnTerminal: panes.spawn,
+  land: (paneId) => { void project.focus.call(paneFromId(paneId)); },
+});
 // The Claude screen's sessions. chat-sessions.ts holds what one is; main hands over the way to every
 // screen and which project a slot holds.
 const workerScreens = screenWorkers({
@@ -664,11 +645,32 @@ registerWorktreeChannels(table, { worktrees, remove: worktree.remove });
 // last picked.
 const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
 
+// The project actions, and the picker's and the close key's door to them (project-actions.ts).
+const project = projectActions({
+  ready: async () => { await Promise.all([shellHost.ready, workerScreens.host.ready]); },
+  slotOf: slotOfProject,
+  missingIn: (slot) => projects[slot]?.missing === true,
+  folderExists: (folder) => !projectFromPath(folder).missing,
+  place: placeProject,
+  startMain: chats.startMain,
+  isOpen: (slot) => projects[slot] !== undefined,
+  panesOf: paneUsesIn,
+  close: closeProjectSlot,
+  land: (paneId) => landOnPane(liveWindow(), paneId),
+});
+registerProjectChannels(table, project, {
+  async chooseFolder(screen) {
+    const refused = folderDialogRefusal(screen);
+    if (refused !== null) return { refused };
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+    return canceled ? null : filePaths[0];
+  },
+  openProjects,
+});
 // The `session` command. Every decision is session-requests.ts's; what is handed over here is the panes
 // and the git that only main holds. Git runs on the project's queue, the one ships and reviews hold.
-// `dashboard project open` and `close` come in on the same socket; project-requests.ts tells them from
-// the session command's and decides them.
-const folderExists = (folder: string) => !projectFromPath(folder).missing;
+// `dashboard project open`, `close` and `focus` come in on the same socket; project-requests.ts tells
+// them from the session command's and hands them to the project actions.
 const workerAnswers = sessionRequests({
   slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
   projectPath: (slot) => projectIn(slot)?.path,
@@ -677,8 +679,7 @@ const workerAnswers = sessionRequests({
     return project === undefined ? [] : [{ slot, name: project.name }];
   }),
   findProject: projectNamedInFile,
-  folderExists,
-  openProject: (folder) => openProject(folder).index,
+  openProject: project.openForClaim,
   openPanes,
   agentIn,
   busyWith(id) {
@@ -719,20 +720,9 @@ const workerAnswers = sessionRequests({
 });
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
-const answerSession = projectRequests({
-  slotOf: slotOfProject,
-  missingIn: (slot) => projects[slot]?.missing === true,
-  folderExists,
-  open: (projectPath) => openProject(projectPath).index,
-  startMain: chats.startMain,
-  // Named the way the close key names them, less any name you gave a pane: those are the screen's.
-  panesOf: (slot) => paneUsesIn(slot).map((use) => ({ ...use, name: paneLabel(use.index) })),
-  close: closeProjectSlot,
-  // A notification click's landing, on the project's main pane.
-  focus: (slot) => landOnPane(liveWindow(), terminalId(slot, MAIN_INDEX)),
-}, actionRequests(cardActionList, workerAnswers));
-// Every answer waits for the pane host, for the reason projects:open does: `project open` and
-// `pane claim --project` open projects too.
+const answerSession = projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers));
+// Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
+// kept would get a fresh shell over one it already has. project.open waits for the screen host as well.
 const sessions = listenForSessions(
   sessionSocket,
   __BUILD_VERSION__,

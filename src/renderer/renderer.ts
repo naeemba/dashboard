@@ -498,7 +498,7 @@ function setPage(project: Project, slot: number, open: readonly number[]): void 
   fitPage(page);
 }
 
-const { removePage, applyProjects, host } = createPageSync({
+const { applyProjects, host } = createPageSync({
   pages: () => pages, positionOfSlot, projectPages, activeIndex: () => activeIndex, follow: (index) => { activeIndex = index; },
   setPage, syncPanes: builder.syncPanes, addTerminals: builder.addTerminals, landOn, renderStatus, onProjectsChange: bridge.onProjectsChange, onHostChange: bridge.onHostChange,
   // While away every save went to the host, which keeps only its own window's, so main still holds this
@@ -515,10 +515,9 @@ const { removePage, applyProjects, host } = createPageSync({
   },
 });
 
-// Closing a project, refused and asked about in close-project.ts.
+// Closing a project: project.close in main refuses; close-project.ts relays it and asks the question.
 const closeProject = createProjectCloser({
-  readPanes: (projectPath) => bridge.readPanes(projectPath),
-  closeProject: (slot) => bridge.closeProject(slot),
+  closeProject: (request) => bridge.closeProject(request),
   pages: () => pages,
   positionOfSlot,
   activeIndex: () => activeIndex,
@@ -526,9 +525,6 @@ const closeProject = createProjectCloser({
   showNotice,
   confirm: confirmOverlay,
   showPage,
-  removePage,
-  landOn,
-  renderStatus,
 });
 
 // Moves the project on screen to a position, the way you would drag a tab. Slots and shells are

@@ -3,15 +3,35 @@ import { isWorker } from './terminals';
 
 // Whether a project can be closed, and the sentence saying why not. Closing takes every shell and the
 // editor away at once and there is no undo for it, so the one thing worth stopping it for is a pane
-// with something running in it. Two doors close a project — the close key, in the renderer's
-// close-project.ts, and `dashboard project close`, answered in main's project-requests.ts — and both
-// ask this, so neither can refuse over something the other's message does not say.
+// with something running in it. Two doors close a project — the close key and `dashboard project
+// close` — and project.close (src/main/actions/project/close.ts) asks this for both, so neither can
+// refuse over something the other's message does not say.
 
 // What this reads off a pane, which is pane-reading.ts's reading with the pane's name on it. A dev
 // server, a tail or vim in a pane holds the project open, the same way it holds a pane back from a
 // ship. What it cannot see is a job you put in the background — runsAProgram in pane-reading.ts
 // says why.
 export type ClosingPane = PaneUse & { name: string };
+
+// A page's name for one of its panes, by pane number.
+export type PaneName = { index: number; name: string };
+
+// The readings main answers with, paired with the names the page has for its panes by pane number:
+// workers come and go, so neither list's positions are pane numbers. A reading with no name is left
+// out, and so is a name with no reading — the page names its editor, which main does not read, and a
+// page whose folder has gone has no panes and no editor at all.
+//
+// What leaving a reading out costs, if this reached for a name that is not there instead: press Ctrl+Q
+// on a page reading `Directory not found: /work/api` and the close fails before the dialog — no
+// refusal in the status bar, no question, no page removed. That key is the only way to take a dead
+// page off the tab strip.
+export function closingPanes(uses: readonly PaneUse[], names: readonly PaneName[]): ClosingPane[] {
+  const byIndex = new Map(names.map((named) => [named.index, named.name]));
+  return uses.flatMap((use) => {
+    const name = byIndex.get(use.index);
+    return name === undefined ? [] : [{ ...use, name }];
+  });
+}
 
 // The refusal, or an empty string when nothing is in the way.
 //

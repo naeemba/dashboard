@@ -1,9 +1,10 @@
 import { baseName } from '../app/base-name';
 import { isWorker } from './terminals';
 
-// What can be read off one of a project's panes, and what three screens make of it. Nothing here
-// touches a file or a git command, which is the point: main takes the reading off the pty, and the
-// command screen and the close ask for it over `panes:read` and decide with these same functions. Kept
+// What can be read off one of a project's panes, and what its readers make of it. Nothing here
+// touches a file or a git command, which is the point: main takes the reading off the pty, the command
+// screen and pane-sends.ts ask for it over `panes:read`, and project.close in main reads it directly,
+// all deciding with these same functions. Kept
 // out of ship.ts for that reason — ship.ts reaches for node:path and board-store.ts, and a renderer
 // that imports it drags the main process's board writer into its own bundle.
 

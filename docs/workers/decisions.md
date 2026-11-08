@@ -119,7 +119,7 @@ running Claude Code; a plain shell worker does not.
 `pane claim --project <name|aka>` takes only an exact name or aka from `~/.dashboard/projects.yaml`, in
 any case. A fuzzy match is a guess, and a guess here starts a worker in the wrong checkout; the refusal
 lists what the word comes close to so the asker can say it again. A closed project is opened through
-main.ts's `openProject`, the function the picker's open uses, so it starts, watches its board and goes in
+project.open, the action the picker's open uses, so it starts, watches its board and goes in
 the recent list the same way. The pane belongs to the page it is on: its worker is named for that
 project, works in it and takes that project's cards and worktrees. Only its report goes elsewhere, to the
 main that claimed it. The claimer and the pane's own project may both run and release it; nobody else.

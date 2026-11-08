@@ -86,8 +86,8 @@ its own side. `eslint.config.test.ts` pins each of those.
   `whats-new-view.ts`
 - Font loaded before the first pane: `font-preload.ts`
 - Pages and projects: `page.ts`, `page-reconcile.ts`, `page-sync.ts`,
-  `projects.ts`, `picker.ts`, `close-project.ts`, `close-refusal.ts` (in `src/shared/panes/`, since
-  `dashboard project close` asks it from main too), `chrome-bars.ts`, `status.ts`
+  `projects.ts`, `picker.ts`, `close-project.ts` (asks main's project.close),
+  `close-refusal.ts` (in `src/shared/panes/`), `chrome-bars.ts`, `status.ts`
 - Restore: `session.ts`, `session-store.ts`
 - Atomic write, and a write skipped when the bytes match (`replaceFileIfChanged`): `replace-file.ts`
 - Whether a socket is listening (the nvim server, the `dashboard` command finding the app): `can-connect.ts`
