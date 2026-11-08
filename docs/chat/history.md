@@ -45,3 +45,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-05 #215 — Agents key (Alt+A), each agent's conversation, and subagent tokens on the Agent call and the working line
 - 2026-11-07 #229 — `dashboard project open` starts the project's main session and waits until it is reachable
 - 2026-11-07 #232 — Every Claude screen takes the app's 7px scrollbar, and main's fills its column like a worker's
+- 2026-11-08 #237 — A running workflow's bar on its strip row, and its phases and agents behind Alt+P
