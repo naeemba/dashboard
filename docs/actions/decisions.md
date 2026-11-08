@@ -29,7 +29,8 @@ none answers.
 
 **Only card.move, card.ship, card.review and pane.dispatch are actions so
 far.** pane.dispatch came with the change that needed one start for every pane
-agent (workers-decision-8) and is called by main, with no door yet. The other
+agent (workers-decision-8). Main calls its run, `startPane`, directly; the
+action and its parser wait for a door. The other
 pane and project requests stay where they are and move into `src/main/actions/` when a
 change touches them; `shipFlow` and `reviewSweep` stay and are called by the
 actions. A conversion of every channel at once is a big diff that changes

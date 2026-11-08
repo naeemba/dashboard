@@ -33,7 +33,8 @@ Neither door holds any of the logic; each only asks.
 
 - **pane.dispatch**: every agent a pane starts — `pane run`, a ship, the review
   loop, a resume after a restart, New Claude — screen or terminal, decided once
-  in `paneKind` (workers-decision-8). Main calls it; it has no door yet.
+  in `paneKind` (workers-decision-8). Main calls its run, `startPane`, directly;
+  the action and its parser wait for a door.
 
 Only card.move has a channel: it is the only action the bridge exposes. A screen
 that needs ship or review registers its channel in the same change.
