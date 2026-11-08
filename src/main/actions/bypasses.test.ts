@@ -24,10 +24,15 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: "'worktree', 'add'", allowed: { 'src/main/actions/worktree/make.ts': 2, 'src/main/board/create-task-program.ts': 1 } },
   // settings.write: launch's host token, the settings screen and the remote join.
   { call: 'writeSettings(settingsFile', allowed: { 'src/main/main.ts': 3 } },
-  // The wrappers behind the other Bypass: yes rows, counted with the ports that pass them on, so a new
-  // door into one moves a count. pane restart a shell, session start main.
+  // The wrapper behind pane restart a shell, the one Bypass: yes row left with a channel.
   { call: "'pty:restart'", allowed: { 'src/main/panes/pane-channels.ts': 1 } },
-  { call: 'chats.start', allowed: { 'src/main/main.ts': 3 } },
+  // What the session actions do, handed to them as ports and called nowhere else: main's start, only
+  // through session.start, and a conversation's title, only through session.rename, which writes the
+  // drawer's label with it.
+  { call: 'chats.start', allowed: {} },
+  { call: 'chats.actionPorts', allowed: { 'src/main/main.ts': 1 } },
+  { call: 'renameSession(', allowed: { 'src/main/actions/session/session-actions.ts': 1 } },
+  { call: 'sessions.rename', allowed: { 'src/main/actions/session/session-actions.ts': 1 } },
   // What project.open, project.close and project.focus do, handed to them as ports and called nowhere
   // else: each definition, and landOnPane's one port.
   { call: 'placeProject(', allowed: { 'src/main/main.ts': 1 } },

@@ -1,6 +1,5 @@
-import type { EffortLevel, ModelInfo, Options, PermissionResult, Query, RewindFilesResult, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
+import type { EffortLevel, ModelInfo, Options, PermissionResult, Query, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
 import { mainPrompt, mainSessionName } from '../workers/dispatch';
-import { stillRunning } from '../workers/session-index';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { peerSender } from '../../shared/chat/chat-events';
@@ -19,8 +18,7 @@ import { closedAtQuit, sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
-import { renameTarget } from '../../shared/chat/chat-rename';
-import { conversationAfterRewind, forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindChoice, type RewindPoint } from '../../shared/chat/chat-rewind';
+import { forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindPoint } from '../../shared/chat/chat-rewind';
 import { fileCandidates } from '../nvim/file-open';
 import { homedir } from 'node:os';
 import { failureText } from '../../shared/errors/failure';
@@ -31,6 +29,8 @@ import { nameMemoryFiles } from '../drawer/measured-memory';
 import { inputQueue, type InputQueue } from './input-queue';
 import type { HostedParams } from '../workers/screen-host-protocol';
 import type { ScreenOwner } from '../workers/screen-owner';
+import { keepsItsConversation, WORKER_KEEPS_ITS_CONVERSATION } from '../actions/session/conversation-ports';
+import type { ChatActionPorts } from '../actions/session/session-actions';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started the first time the page's Claude screen is shown (its measure asks), on the
@@ -80,13 +80,6 @@ export type ChatHost = {
   // The session in `slot` read a message another session sent it, by that session's name: a worker's report.
   heard(slot: number, sender: string): void;
 };
-
-// Why /clear, /resume, /branch and /rewind are refused on main's worker screen, which keeps the
-// conversation the app started it on. A screen opened by hand is yours and takes all four.
-const keepsItsConversation = (worker: ScreenSession | undefined): boolean => worker?.owner === 'main';
-const WORKER_KEEPS_ITS_CONVERSATION = 'A worker screen stays on the conversation it was started on.';
-// Why /branch is refused before the page has a conversation to copy.
-const NOTHING_TO_BRANCH = 'Nothing to branch yet: send a prompt first.';
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
 type SideQuestions = { askSideQuestion(question: string): Promise<{ response: string } | null> };
@@ -233,15 +226,6 @@ export function workerSessionStart(worker: ScreenSession): { resume: string } | 
   return worker.resume ? { resume: worker.session } : { sessionId: worker.session };
 }
 
-// Where a conversation /resume picked runs now, or null: a worker pane, or for a screen opened by hand
-// in the project's folder, main, whose conversations its /resume lists too.
-export function runningElsewhere(
-  sessionId: string, paneRunningIt: string | null, worker: ScreenSession | undefined, mainsConversation: string | undefined,
-): string | null {
-  if (paneRunningIt !== null) return paneRunningIt;
-  return worker !== undefined && sessionId === mainsConversation ? 'main' : null;
-}
-
 // What a change of conversation does: the id to go on in, undefined for a new conversation, or a cut a
 // /rewind left. `before` is the screen read before any await, `now` the one read at the change: a
 // screen closed since does nothing, rather than be read again as main's page. A screen opened by hand
@@ -271,7 +255,7 @@ export function liveConversation(worker: ScreenSession | undefined, remembered: 
 export function registerChatSessions(
   table: Channels,
   host: ChatHost,
-): { open(slot: number, adopt?: string): void; startMain(slot: number): Promise<string>; start(slot: number): void; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): string; withdraw(slot: number, id: string): Promise<boolean> } {
+): { open(slot: number, adopt?: string): void; actionPorts: ChatActionPorts; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): string; withdraw(slot: number, id: string): Promise<boolean> } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -520,17 +504,6 @@ export function registerChatSessions(
   }
   table.handle('chat:withdraw', (_screen, slot: number, id: string): Promise<boolean> => withdraw(slot, id));
 
-  // /rename: the SDK writes the name into the conversation's file, where /resume's summary reads it
-  // first. The refusal, or null once renamed.
-  table.handle('chat:rename', async (_screen, slot: number, title: string): Promise<string | null> => {
-    const projectPath = host.projectPath(slot);
-    const target = renameTarget(onScreen(slot), title);
-    if ('refused' in target) return target.refused;
-    const { renameSession } = await import('@anthropic-ai/claude-agent-sdk');
-    await renameSession(target.sessionId, target.title, { dir: projectPath });
-    return null;
-  });
-
   // /btw: a question answered from the conversation so far and never added to it (chat-decision-8).
   // Null for no answer.
   table.handle('chat-side-question:ask', async (_screen, slot: number, question: string): Promise<string | null> => {
@@ -588,19 +561,6 @@ export function registerChatSessions(
       pending.resolve(result);
       host.send(slot, { kind: 'ask-gone', id });
     }, () => undefined);
-  });
-
-  table.handle('chat:configure', async (_screen, slot: number, change: ChatPreferences) => {
-    preferences.set(slot, { ...preferences.get(slot), ...change });
-    if (change.fast !== undefined) reportedFast.delete(slot);
-    host.send(slot, { kind: 'configured', change });
-    const session = await sessions.get(slot);
-    if (!session) return;
-    if ('model' in change) await session.query.setModel(change.model ?? undefined);
-    if (change.permissionMode) await session.query.setPermissionMode(change.permissionMode);
-    // The session's flag layer, as /effort and /fast set it.
-    const flags = flagSettingsOf(change);
-    if (Object.keys(flags).length > 0) await session.query.applyFlagSettings(flags);
   });
 
   // What the status line shows: how full the context window is, read from the last response rather
@@ -668,34 +628,6 @@ export function registerChatSessions(
     }, () => undefined);
   }
 
-  // A new conversation: the running one is closed, the page forgets its id (a screen opened by hand
-  // saves a new one of its own), and a fresh session starts at once, so a worker's report still has a
-  // main to arrive at. The old transcript stays on disk for whatever lists sessions later. Every screen
-  // is told, so none keeps showing the closed one.
-  table.handle('chat:reset', async (_screen, slot: number): Promise<{ refused: string } | null> => {
-    const projectPath = host.projectPath(slot);
-    const worker = host.worker(slot);
-    if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
-    if (projectPath === undefined) stop(slot);
-    else await changeConversation(slot, projectPath, worker, undefined);
-    return null;
-  });
-
-  // An earlier conversation picked in /resume: the running one is closed, the page (or a screen opened
-  // by hand) goes on in the picked one, and a session resuming it starts at once. Every screen reads it
-  // back. One a worker pane runs is refused, as the drawer refuses one the Claude screen runs, and so is
-  // main's on a screen opened by hand.
-  table.handle('chat:resume', async (_screen, slot: number, sessionId: string): Promise<{ refused: string } | null> => {
-    const projectPath = host.projectPath(slot);
-    if (projectPath === undefined) return null;
-    const worker = host.worker(slot);
-    if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
-    const refused = stillRunning(undefined, runningElsewhere(sessionId, host.runningInPane(sessionId), worker, remembered[projectPath]));
-    if (refused !== null) return { refused };
-    await changeConversation(slot, projectPath, worker, sessionId);
-    return null;
-  });
-
   // The page, or the screen opened by hand `worker` names, goes on in another conversation, as
   // nextConversation says. `worker` is the one read before any await.
   async function changeConversation(
@@ -729,43 +661,10 @@ export function registerChatSessions(
     await changeConversation(slot, projectPath, worker, sessionId);
   }
 
-  // /branch: the conversation is copied into a new one and the page goes on in the copy the way
-  // /resume goes on in a picked one, so the original is left as it was and stays in /resume's list. A
-  // rewind not yet carried on is kept: the copy stops at its cut.
-  table.handle('chat:branch', async (_screen, slot: number, title: string): Promise<{ refused: string } | null> => {
-    const worker = host.worker(slot);
-    if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
-    const projectPath = host.projectPath(slot);
-    const current = projectPath === undefined ? undefined : conversationOf(slot, projectPath);
-    if (projectPath === undefined || current === undefined) return { refused: NOTHING_TO_BRANCH };
-    await forkInto(slot, projectPath, worker, current, worker ? undefined : rewound.get(projectPath), title);
-    return null;
-  });
-
   // The prompts /rewind lists. Refused on main's worker screen before either sheet opens.
   table.handle('chat-prompts:read', async (_screen, slot: number): Promise<RewindPoint[] | { refused: string }> => (
     keepsItsConversation(host.worker(slot)) ? { refused: WORKER_KEEPS_ITS_CONVERSATION } : rewindPoints(await conversation(slot))
   ));
-
-  // A prompt picked in /rewind. The code goes back first, counted by a dry run, and a rewind that
-  // cannot put it back leaves the conversation alone too. The conversation goes back by closing the
-  // session and starting one that resumes up to the message before the prompt; before the first one
-  // there is nothing to resume, which is a new conversation. Every screen reads it back.
-  table.handle('chat:rewind', async (_screen, slot: number, point: RewindPoint, choice: RewindChoice): Promise<RewindFilesResult | null> => {
-    const projectPath = host.projectPath(slot);
-    const worker = host.worker(slot);
-    if (projectPath === undefined || keepsItsConversation(worker)) return null;
-    let restored: RewindFilesResult | null = null;
-    if (choice.code) {
-      const { query } = await running(slot, projectPath);
-      const preview = await query.rewindFiles(point.id, { dryRun: true });
-      restored = preview.canRewind ? { ...preview, ...(await query.rewindFiles(point.id)) } : preview;
-    }
-    const conversationRewind = conversationAfterRewind(point, choice, restored);
-    if (conversationRewind === 'keep') return restored;
-    await changeConversation(slot, projectPath, worker, conversationRewind === 'forget' ? undefined : { cutAt: conversationRewind.cutAt });
-    return restored;
-  });
 
   // The session's MCP servers for /mcp, and the one picked reconnected, disabled or enabled. Both start
   // a session that has ended, as the slash list does, since only a running one has servers.
@@ -781,9 +680,8 @@ export function registerChatSessions(
     await changeMcpServer((await running(slot, projectPath)).query, name, action);
   });
 
-  // The page's session started if it is not running, answered with its name once it has initialised:
-  // Claude Code has registered that name by then, so another session's SendMessage reaches it.
-  // `dashboard project open` waits on it (project-requests.ts).
+  // session.start's `start`: the page's session started if it is not running, answered with its name
+  // once it has initialised.
   async function startMain(slot: number): Promise<string> {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) throw new Error('the page has no project folder');
@@ -793,7 +691,7 @@ export function registerChatSessions(
 
   return {
     // A project opening sets up what its main session will start on, without starting it: that waits
-    // for the screen, a prompt or start(). `adopt` is the conversation the terminal main left;
+    // for the screen, a prompt or session.start. `adopt` is the conversation the terminal main left;
     // mainSessionStart says what wins.
     open(slot, adopt) {
       const projectPath = host.projectPath(slot);
@@ -802,9 +700,29 @@ export function registerChatSessions(
       if (opening.resume !== remembered[projectPath]) remember(projectPath, opening.resume);
       preferences.set(slot, opening.preferences);
     },
-    startMain,
-    // The page's session started now, for a worker's SendMessage to arrive at (chat-start.ts).
-    start: (slot) => { startMain(slot).catch(() => undefined); },
+    // What the session actions ask of the page's session (actions/session/session-actions.ts).
+    actionPorts: {
+      start: startMain,
+      projectPath: host.projectPath,
+      worker: host.worker,
+      stop,
+      change: changeConversation,
+      runningInPane: host.runningInPane,
+      mainsConversation: (projectPath) => remembered[projectPath],
+      conversationOf,
+      cutPending: (projectPath) => rewound.get(projectPath),
+      fork: forkInto,
+      rewindFiles: async (slot, projectPath, pointId, dryRun) => (
+        (await running(slot, projectPath)).query.rewindFiles(pointId, dryRun ? { dryRun } : undefined)
+      ),
+      onScreen,
+      choose(slot, change) {
+        preferences.set(slot, { ...preferences.get(slot), ...change });
+        if (change.fast !== undefined) reportedFast.delete(slot);
+        host.send(slot, { kind: 'configured', change });
+      },
+      session: (slot) => sessions.get(slot)?.then((session) => session.query),
+    },
     // A closed project's choices go with it: a project opened later into the same slot starts on
     // the defaults.
     stop: (slot) => { stop(slot); preferences.delete(slot); reportedFast.delete(slot); },

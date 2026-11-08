@@ -25,7 +25,10 @@ export type SessionIndexStore = {
   placed(placement: SessionPlacement): void;
   page(projectPath: string, count: number): SessionList;
   find(projectPath: string, id: string): SessionRecord | undefined;
-  rename(projectPath: string, id: string, label: string): string | null;
+  // The row for a conversation in whichever project holds it: ids are UUIDs, so at most one does.
+  row(id: string): SessionRecord | undefined;
+  // The conversation's row relabelled, or why not. session.rename is the one caller.
+  rename(id: string, label: string): string | null;
   used(projectPath: string, id: string): void;
   // Where the conversation runs now, as a person names it, or null.
   runningIn(id: string): string | null;
@@ -92,8 +95,10 @@ export function sessionIndexStore(file: string, onScreen: (id: string) => string
     },
     page: (projectPath, count) => sessionPage(index, projectPath, count),
     find: (projectPath, id) => index[projectPath]?.find((row) => row.id === id),
-    rename(projectPath, id, label) {
-      const next = renamed(index, projectPath, id, label);
+    row: (id) => Object.values(index).flat().find((row) => row.id === id),
+    rename(id, label) {
+      const projectPath = Object.keys(index).find((key) => index[key]?.some((row) => row.id === id));
+      const next = renamed(index, projectPath ?? '', id, label);
       if (typeof next === 'string') return next;
       save(next);
       return null;
