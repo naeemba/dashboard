@@ -1,0 +1,11 @@
+{
+  "id": "5a0062dc-0eef-43da-b12e-7a793f83ceeb",
+  "title": "A Cancelled column for cards that will not be done",
+  "notes": "The user does not like deleting cards; a card that will not be done should be kept, in a Cancelled column.\n\n- Every board gets a Cancelled column after Done: a CANCELLED_COLUMN constant beside DONE_COLUMN in src/shared/board/board.ts, added to a board's columns.json on read when missing (no hand edits; an old board.json board too), with its own glyph in icons.ts COLUMN_GLYPHS.\n- A move into Cancelled goes through card.move (actions-rule-1) and starts nothing: add its row to column-entry.ts's transition table. Moving out of Cancelled is allowed like any column (unlike Done's lock, board-decision-3); say why in a decision.\n- The delete key on a card moves it to Cancelled instead of deleting it. Only a card already in Cancelled is deleted for good, after the existing confirm. The help row and blurb say so (keys-rule-2).\n- The board command: board move <id> Cancelled works and is listed in the usage; board list shows Cancelled cards like Done ones.\n- Filters or counts that treat Done as finished treat Cancelled the same way (e.g. the release notes' What's new must not list Cancelled cards: check scripts/release-notes.mjs, which reads Done).\n- A cancelled card with a worktree keeps it; the worktree dialog can remove it as now.\n\nTests: the column added on read, the transition row, the delete-moves-to-Cancelled decision, release notes ignoring Cancelled. Docs: board README, decisions, history.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-08T16:29:38.849Z",
+  "updatedAt": "2026-11-08T16:29:38.849Z",
+  "column": "Doing",
+  "order": 2
+}
