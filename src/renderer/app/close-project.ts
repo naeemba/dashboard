@@ -1,5 +1,6 @@
 import type { Page } from './page';
 import type { ProjectClose, Refused } from '../../shared/app/bridge';
+import type { PaneName } from '../../shared/panes/close-refusal';
 import { isProjectPage, positionAfterClose } from '../../shared/manager/manager';
 
 // The close key's flow. Whether the project may go, and the sentence saying why not, are project.close's
@@ -14,7 +15,7 @@ export type ProjectCloserPorts = {
   pages: () => readonly Page[];
   positionOfSlot: (slot: number) => number;
   activeIndex: () => number;
-  namedPanes: (page: Page) => { index: number; name: string }[];
+  namedPanes: (page: Page) => PaneName[];
   showNotice: (owner: string, message: string) => void;
   confirm: (message: string, keysLine: string) => Promise<boolean>;
   showPage: (index: number) => void;
@@ -89,11 +90,11 @@ export function createProjectCloser(ports: ProjectCloserPorts): (slot: number) =
       // may have gone in that time — a folder deleted, a close from elsewhere — so what leaves the list is
       // found afresh here. Whatever page holds this slot is a project page, because the slot is the same
       // one the check at the top answered for and isProjectPage reads nothing else.
-      const closingPage = ports.pages()[ports.positionOfSlot(slot)];
-      if (!closingPage) return;
-      // The page's place in the list, found before the close: once main has closed it, the list it pushes
-      // may take the page out before the answer gets here.
+      // Its place is taken before the close: once main has closed it, the list it pushes may take the page
+      // out before the answer gets here.
       const closingPosition = ports.positionOfSlot(slot);
+      const closingPage = ports.pages()[closingPosition];
+      if (!closingPage) return;
       // Asked again with the close, for the same reason: the answer was given over a quiet project, and
       // a pane that took an agent or a question while the dialog was up is one main refuses over.
       const late = await askMain(closingPage, false);

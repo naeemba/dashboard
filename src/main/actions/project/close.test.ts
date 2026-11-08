@@ -10,7 +10,6 @@ function setUp(panes: PaneUse[]) {
   const ports: ProjectClosePorts = {
     isOpen: (slot) => slot === 4,
     panesOf: () => panes,
-    labelOf: (index) => `terminal ${index + 1}`,
     close: vi.fn(),
   };
   return { ports, close: bind(projectClose, ports) };

@@ -654,7 +654,6 @@ const project = projectActions({
   startMain: chats.startMain,
   isOpen: (slot) => projects[slot] !== undefined,
   panesOf: paneUsesIn,
-  labelOf: (index) => paneLabel(index),
   close: closeProjectSlot,
   land: (paneId) => landOnPane(liveWindow(), paneId),
 });
@@ -679,7 +678,7 @@ const workerAnswers = sessionRequests({
     return project === undefined ? [] : [{ slot, name: project.name }];
   }),
   findProject: projectNamedInFile,
-  openProject: (folder, name) => project.openForClaim(folder, name),
+  openProject: project.openForClaim,
   openPanes,
   agentIn,
   busyWith(id) {
@@ -721,8 +720,8 @@ const workerAnswers = sessionRequests({
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 const answerSession = projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers));
-// Every answer waits for the pane host, for the reason projects:open does: `project open` and
-// `pane claim --project` open projects too.
+// Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
+// kept would get a fresh shell over one it already has. project.open waits for the screen host as well.
 const sessions = listenForSessions(
   sessionSocket,
   __BUILD_VERSION__,

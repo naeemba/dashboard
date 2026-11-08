@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { sessionReply, type BoundAction } from '../actions/action';
 import type { SessionReply, SessionRequest } from '../workers/session-cli';
-import { answered, refused } from '../workers/session-cli';
+import { refused } from '../workers/session-cli';
 import { APP_VERBS, PROJECT_REQUEST } from './project-cli';
 
 // The command's door to the project actions: `dashboard project open`, `close` and `focus`. They arrive
@@ -29,10 +29,8 @@ export function projectRequests(
     }
     const projectPath = resolve(folder);
     if (verb === 'open') return sessionReply(await ports.open.call({ projectPath, name, from: 'command' }));
+    // -1 for a project that is not open, which each action refuses.
     const slot = ports.slotOf(projectPath);
-    if (slot === -1) return refused(`${name} is not open`);
-    if (verb === 'close') return sessionReply(await ports.close.call({ slot, name }));
-    await ports.focus.call({ slot });
-    return answered(`switched to ${name}`);
+    return sessionReply(await (verb === 'close' ? ports.close : ports.focus).call({ slot, name }));
   };
 }

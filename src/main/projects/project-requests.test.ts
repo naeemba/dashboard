@@ -23,7 +23,6 @@ function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], m
     startMain: vi.fn(async (slot: number) => `main-${slot}`),
     isOpen: (slot: number) => Object.values(open).includes(slot),
     panesOf: () => panes,
-    labelOf: (index: number) => `terminal ${index + 1}`,
     close: vi.fn(),
     land: vi.fn(),
   } satisfies ProjectActionsMain;

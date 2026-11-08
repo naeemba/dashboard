@@ -115,7 +115,8 @@ export type WorktreeList = { entries: WorktreeEntry[]; paneDirectories: Record<s
 // What `projects:open` answers: the slot and the list, null for a cancelled dialog, or why not.
 export type ProjectOpen = { index: number; open: OpenProjects } | { refused: string } | null;
 
-// What the close key asks project.close: the page's names for its panes, and whether only to check.
+// What the close key asks project.close: the project's name for its refusal, the page's names for its
+// panes (any you gave one among them), and whether only to check, before its question, closing nothing.
 export type ProjectClose = { slot: number; name: string; names: PaneName[]; onlyCheck: boolean };
 
 export type DashboardBridge = {

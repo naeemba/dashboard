@@ -13,9 +13,10 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // A resume is built only as pane.dispatch's worker arguments; none is typed into a shell.
   { call: "'--resume'", allowed: { 'src/main/workers/dispatch.ts': 1 } },
   { call: '--resume ${', allowed: {} },
-  // A pane's shell spawned and a pane dropped: handed to the pane actions, `pty:restart`
-  // (pane-channels.ts), the one row still outside one, and project.close's `close` (closeProjectSlot).
+  // A pane's shell spawned: the pane actions' `spawn` and `pty:restart`'s `spawnTerminal`, the one row
+  // still outside an action.
   { call: 'panes.spawn', allowed: { 'src/main/main.ts': 2 } },
+  // A pane dropped: the definition and its call in closeProjectSlot, project.close's `close`.
   { call: 'dropPane(', allowed: { 'src/main/main.ts': 2 } },
   // worktree.remove and worktree.make: only the actions and the remove's port. /create-task's make runs
   // outside the app and stays its program's.

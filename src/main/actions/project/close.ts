@@ -1,5 +1,8 @@
 import { closeRefusal, closingPanes, type PaneName } from '../../../shared/panes/close-refusal';
+import type { ProjectClose } from '../../../shared/app/bridge';
+import { isRecord } from '../../../shared/app/is-record';
 import type { PaneUse } from '../../../shared/panes/pane-reading';
+import { paneLabel } from '../../../shared/panes/terminals';
 import { action } from '../action';
 import { isFilledText, isSlot } from '../pane/pane-input';
 
@@ -8,23 +11,14 @@ import { isFilledText, isSlot } from '../pane/pane-input';
 // go is closeRefusal's, asked here and nowhere else, so neither door can close over something the
 // other would have refused.
 
-export type ProjectCloseInput = {
-  slot: number;
-  // The project as the door names it in a refusal: the page's name, or the word projects.yaml has.
-  name: string;
-  // The page's names for its panes, any you gave one among them; null for the command, which names
-  // them the way the close key does by default.
-  names: PaneName[] | null;
-  // Only whether it may close, answered before the close key's question: nothing is closed.
-  onlyCheck: boolean;
-};
+// The close key's request (`ProjectClose`), or the command's: `name` is the word projects.yaml has, and
+// `names` null, so its panes are named the way the close key names them by default.
+export type ProjectCloseInput = Omit<ProjectClose, 'names'> & { names: PaneName[] | null };
 
 export type ProjectClosePorts = {
   isOpen(slot: number): boolean;
   // The project's terminals as main reads them, editor left out: it runs nvim the whole time it is open.
   panesOf(slot: number): PaneUse[];
-  // A pane's name when nobody has given it one.
-  labelOf(index: number): string;
   // Shells, editor, main's session and page gone, and every record naming one of its panes let go.
   close(slot: number): void;
 };
@@ -37,8 +31,7 @@ function read(raw: Record<string, unknown>): ProjectCloseInput | null {
 }
 
 function isPaneName(value: unknown): value is PaneName {
-  const named = value as PaneName;
-  return typeof value === 'object' && value !== null && Number.isInteger(named.index) && typeof named.name === 'string';
+  return isRecord(value) && Number.isInteger(value.index) && typeof value.name === 'string';
 }
 
 export const projectClose = action<ProjectClosePorts, ProjectCloseInput, { output: string }>('project.close', {
@@ -49,8 +42,8 @@ export const projectClose = action<ProjectClosePorts, ProjectCloseInput, { outpu
     // The command's refusal and nothing else: no question. The cost: an unsaved buffer in the project's
     // editor, which the refusal never reads, goes with the rest, where the key would have asked first.
     const uses = ports.panesOf(slot);
-    const named = names ?? uses.map((use) => ({ index: use.index, name: ports.labelOf(use.index) }));
-    const refusal = closeRefusal(name, closingPanes(uses, named));
+    const closing = names === null ? uses.map((use) => ({ ...use, name: paneLabel(use.index) })) : closingPanes(uses, names);
+    const refusal = closeRefusal(name, closing);
     if (refusal !== '') return { refused: refusal };
     if (onlyCheck) return { output: `${name} may close` };
     ports.close(slot);
