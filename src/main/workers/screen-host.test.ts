@@ -33,7 +33,6 @@ function fakeSdk() {
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 30));
 const hook = (options: Options, event: string, input: object) => options.hooks?.[event as 'Stop']?.[0].hooks[0](input as HookInput, undefined, { signal });
 
-let folder = '';
 const accepted: net.Socket[] = [];
 let listener: net.Server | undefined;
 afterEach(() => {
@@ -42,7 +41,7 @@ afterEach(() => {
 });
 
 function hostSocket(): string {
-  folder = temporaryFolder('screen-host-');
+  const folder = temporaryFolder('screen-host-');
   return screenHostSocket(process.platform, folder) ?? '';
 }
 
@@ -133,7 +132,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   });
 
   it('answers null when no host can be reached, so the session runs in the app', async () => {
-    folder = temporaryFolder('screen-host-');
+    const folder = temporaryFolder('screen-host-');
     let launched = 0;
     const app = screenHost({ socket: path.join(folder, 'none.sock'), launch: () => { launched += 1; }, connectTries: 0 });
     await app.ready;
