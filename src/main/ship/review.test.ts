@@ -49,7 +49,7 @@ describe('intoReview', () => {
   it('moves the card into Review', () => {
     const moved = intoReview(boardWithCard(), CARD);
     expect(moved?.columns.map((column) => column.cards.map((card) => card.id)))
-      .toEqual([[], [], [], [], [CARD], []]);
+      .toEqual([[], [], [], [], [CARD], [], []]);
   });
 
   // Null rather than the board unchanged, so the caller writes nothing: the file's bytes and its

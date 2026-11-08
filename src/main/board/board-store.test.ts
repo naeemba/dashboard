@@ -120,6 +120,7 @@ describe('parseBoard', () => {
       { name: 'Later', cards: [{ id: '1', title: 'a', notes: 'n', priority: 'medium', parent: null }] },
       { name: 'Ship', cards: [] },
       { name: 'Review', cards: [] },
+      { name: 'Cancelled', cards: [] },
     ]);
   });
 
@@ -246,25 +247,25 @@ describe('parseBoard', () => {
   // A blank title counts as no title: kept, it would be a card you cannot see but can still select.
   it('drops a column with no name and a card with no title', () => {
     const board = parseBoard('{"columns":[{"cards":[]},{"name":"Todo","cards":[{"id":"1"},{"id":"2","title":"  "},{"id":"3","title":"a"}]}]}');
-    expect(columnNames(board)).toEqual(['Backlog', 'Todo', 'Ship', 'Review']);
+    expect(columnNames(board)).toEqual(['Backlog', 'Todo', 'Ship', 'Review', 'Cancelled']);
     expect(board.columns[1].cards.map((card) => card.title)).toEqual(['a']);
   });
 
   it('gives an old board Backlog in front of Todo and keeps Ship after Todo', () => {
     const text = JSON.stringify({ columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }, { name: 'Done', cards: [] }] });
-    expect(columnNames(parseBoard(text))).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(parseBoard(text))).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
   });
 
   it('puts Ship after Todo on a board that already has Backlog in front of it', () => {
     const names = ['Backlog', 'Todo', 'Doing', 'Done'];
     const text = JSON.stringify({ columns: names.map((name) => ({ name, cards: [] })) });
-    expect(columnNames(parseBoard(text))).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(parseBoard(text))).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
   });
 
   it('fills in a missing cards array and missing notes', () => {
     const board = parseBoard('{"columns":[{"name":"Todo"},{"name":"Doing","cards":[{"id":"1","title":"a"}]}]}');
     expect(board.columns[1].cards).toEqual([]);
-    expect(columnNames(board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review']);
+    expect(columnNames(board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Cancelled']);
     expect(board.columns[3].cards[0].notes).toBe('');
   });
 
@@ -347,7 +348,7 @@ describe('peekBoard', () => {
 
 describe('readBoard', () => {
   it('returns an empty board when the project has no .dashboard folder', () => {
-    expect(columnNames(readBoard(project()).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(readBoard(project()).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
   });
 
   it('reads back what writeBoard wrote', () => {
@@ -355,13 +356,13 @@ describe('readBoard', () => {
     writeBoard(path, {
       columns: [{ name: 'Later', cards: [{ id: '1', title: 'a', notes: '', priority: 'medium', parent: null }] }],
     });
-    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Later', 'Ship', 'Review']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Later', 'Ship', 'Review', 'Cancelled']);
   });
 
   it('survives a damaged file', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
   });
 
   // A missing file is not damage: there is nothing to salvage, so no .broken file appears.
@@ -403,7 +404,7 @@ describe('readBoard', () => {
     expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json'))).toBe(false);
     const second = readBoard(path);
     expect(second.brokenFiles).toEqual([]);
-    expect(columnNames(second.board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(second.board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
   });
 
   it('gives a three-column board read from disk its Ship and Review columns', () => {
@@ -411,7 +412,7 @@ describe('readBoard', () => {
     writeRaw(path, JSON.stringify({
       columns: [{ name: 'Todo', cards: [] }, { name: 'Doing', cards: [] }, { name: 'Done', cards: [] }],
     }));
-    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done']);
+    expect(columnNames(readBoard(path).board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
   });
 });
 
@@ -487,9 +488,9 @@ describe('the manager\'s own board', () => {
   // No repository behind the manager, so nothing a card could be shipped into.
   it('has no Ship column, new or read from the file', () => {
     inFakeHome(() => {
-      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Backlog', 'Todo', 'Doing', 'Review', 'Done']);
+      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Backlog', 'Todo', 'Doing', 'Review', 'Done', 'Cancelled']);
       writeBoard(manager, readBoard(manager).board);
-      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Backlog', 'Todo', 'Doing', 'Review', 'Done']);
+      expect(readBoard(manager).board.columns.map((column) => column.name)).toEqual(['Backlog', 'Todo', 'Doing', 'Review', 'Done', 'Cancelled']);
     });
   });
 

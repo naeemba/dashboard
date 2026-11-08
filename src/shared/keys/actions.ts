@@ -440,7 +440,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'board', scope: 'board', action: { kind: 'board-add' }, mac: 'N', other: 'N',
   },
   {
-    name: 'board-delete', description: 'Delete the card and its subtasks, after a confirmation',
+    name: 'board-delete', description: 'Move the card to Cancelled; in Cancelled, delete it and its subtasks after a confirmation',
     group: 'board', scope: 'board', action: { kind: 'board-delete' }, mac: 'D', other: 'D',
   },
   {

@@ -97,7 +97,12 @@ export const TODO_COLUMN = 'Todo';
 // columns its file holds.
 export const DONE_COLUMN = 'Done';
 
-const DEFAULT_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];
+// Where a card that will not be done is kept rather than deleted (board-decision-4): last, after Done.
+// The delete key on a card moves it here, and only a card already here is deleted for good. Named
+// because everything that treats Done as finished treats this the same way.
+export const CANCELLED_COLUMN = 'Cancelled';
+
+const DEFAULT_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN, CANCELLED_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };
@@ -180,6 +185,11 @@ export function withBacklogColumn(board: Board): Board {
   return withColumn(board, BACKLOG_COLUMN, 0);
 }
 
+// The same repair for Cancelled, put in last. One already there, wherever it sits, stays.
+export function withCancelledColumn(board: Board): Board {
+  return withColumn(board, CANCELLED_COLUMN, board.columns.length);
+}
+
 // Where a card nobody has placed belongs: Backlog, wherever it sits, and the first column on a board
 // without one.
 export function backlogColumnIndex(board: Board): number {
@@ -190,6 +200,16 @@ export function backlogColumnIndex(board: Board): number {
 // as waiting rather than under way.
 export function isWaitingColumn(board: Board, index: number): boolean {
   return index === backlogColumnIndex(board) || index === columnNamed(board, TODO_COLUMN);
+}
+
+// Whether cards in this column are finished: Cancelled, and the last column besides it, which is Done
+// on a board as shipped. By position rather than by Done's name, so renaming the last column does not
+// change what the subtask bar says.
+export function isFinishedColumn(board: Board, index: number): boolean {
+  const cancelled = columnNamed(board, CANCELLED_COLUMN);
+  if (index === cancelled) return true;
+  const last = board.columns.length - 1;
+  return index === (last === cancelled ? last - 1 : last);
 }
 
 export function moveSelection(board: Board, selection: Selection, direction: Direction): Selection {

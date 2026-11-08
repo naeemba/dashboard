@@ -1,6 +1,6 @@
 import { timeOf } from '../app/age';
 import {
-  DONE_COLUMN, REVIEW_COLUMN, columnNamed, pullRequestLabel, type Board, type Card,
+  CANCELLED_COLUMN, DONE_COLUMN, REVIEW_COLUMN, columnNamed, pullRequestLabel, type Board, type Card,
 } from '../board/board';
 import { isAlerting, takesAnswer, type ManagerRow, type PaneSummary } from './manager';
 import type { WorktreeEntry } from '../app/bridge';
@@ -73,12 +73,14 @@ function worktreeNeeds(
 ): Need[] {
   // Asked of the worktree record, not the card's column: the agent moves its card on the worktree's
   // own board, and the project's board still has it wherever the ship put it back. A Review card is
-  // listed as one already, and a Done card's pane is finished, not stalled.
+  // listed as one already, and a Done or Cancelled card's pane is finished, not stalled.
   const review = new Set(columnCards(board, REVIEW_COLUMN).map((card) => card.id));
+  const cancelled = new Set(columnCards(board, CANCELLED_COLUMN).map((card) => card.id));
   const done = new Map(columnCards(board, DONE_COLUMN).map((card) => [card.id, card]));
   return row.worktrees.flatMap((entry): Need[] => {
     const pane = entry.pane === null ? undefined : row.panes.find((candidate) => candidate.index === entry.pane);
-    const working = !entry.reviewing && !review.has(entry.cardId) && !done.has(entry.cardId);
+    const working = !entry.reviewing && !review.has(entry.cardId) && !done.has(entry.cardId)
+      && !cancelled.has(entry.cardId);
     if (working && isStalled(pane, now)) {
       return [{ ...base, subject: entry.title, kind: 'stalled', since: pane.lastPrintedAt, target: { kind: 'pane', index: pane.index } }];
     }

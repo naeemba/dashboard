@@ -24,5 +24,8 @@ into Ship ships the card to an agent in a worktree, and one into Review starts i
 and review start them without a move; review is how to start a loop with the review.autoLoop setting
 off. On a worktree's board a move is only a move. Everything else edits the board's files alone.
 
+A card that will not be done is kept, not deleted: \`board move <id> Cancelled\` puts it in the
+Cancelled column after Done, which starts nothing.
+
 --notes replaces the card's description. To record what you found, use \`comment\`: it appends to the
 card's trail and takes nothing away. \`show\` prints one card with its description and its trail.`;

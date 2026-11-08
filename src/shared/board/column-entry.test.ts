@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BACKLOG_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from './board';
+import { BACKLOG_COLUMN, CANCELLED_COLUMN, DONE_COLUMN, REVIEW_COLUMN, SHIP_COLUMN, TODO_COLUMN } from './board';
 import { MANAGER_PROJECT } from '../manager/manager';
 import { columnEntry, MOVE_SOURCES, screenMoveEntry, type ColumnEntry, type MoveSource } from './column-entry';
 
@@ -19,7 +19,7 @@ const ROWS: [string, MoveSource, boolean, ColumnEntry][] = [
   [REVIEW_COLUMN, 'automatic', true, 'review'],
   [REVIEW_COLUMN, 'automatic', false, 'nothing'],
 ];
-const QUIET_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, 'Doing', DONE_COLUMN];
+const QUIET_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, 'Doing', DONE_COLUMN, CANCELLED_COLUMN];
 
 describe('columnEntry', () => {
   for (const [column, source, autoLoop, entry] of ROWS) {
