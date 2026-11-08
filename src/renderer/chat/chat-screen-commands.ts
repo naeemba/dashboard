@@ -1,5 +1,5 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
-import { copyTarget, modelRows, namedModel, resumeRows } from '../../shared/chat/chat-commands';
+import { copyTarget, currentModel, modelRows, namedModel, resumeRows } from '../../shared/chat/chat-commands';
 import { editsHeading, sessionEdits } from './chat-diff';
 import { diffBlock } from './chat-entries';
 import type { ChatEntry } from '../../shared/chat/chat-transcript';
@@ -51,7 +51,7 @@ export async function chooseModel(bridge: DashboardBridge, slot: number, name: s
     if (!name) {
       return await searchOverlay({
         name: 'chat-model', placeholder: 'Search models', rows: (query) => modelRows(models, current, query),
-        empty: 'No model matches.', glyph: () => 'claude',
+        empty: 'No model matches.', glyph: () => 'claude', opensOn: currentModel(models, current),
       });
     }
     const named = namedModel(models, name);

@@ -12,7 +12,8 @@ import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { createLiveBlock } from './chat-live-view';
 import { permissionTitle } from './chat-permission';
 import { revealed } from './chat-reveal';
-import { runScreenCommand, type CommandScreen } from './chat-screen-dispatch';
+import { runScreenCommand, showFootSetting, type CommandScreen } from './chat-screen-dispatch';
+import { footSetting, MODE_LABELS, MODELS, MODES } from '../../shared/chat/foot-choices';
 import { FOOT_CONTEXT, FOOT_WORKERS, footSides, piece } from './chat-foot-view';
 import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
@@ -70,17 +71,6 @@ export type ChatView = {
   // The title of the question the session is waiting on, or null. Having one is main's bell, and the
   // title is what the manager's row prints under main, as a worker's row prints its last line.
   question(): string | null;
-};
-
-// What the model key walks. Null is whatever the session's own settings choose.
-const MODELS: (string | null)[] = [null, 'opus', 'sonnet', 'haiku'];
-// What the edits key walks, in the Claude Code terminal's order. Auto is on it because main starts in
-// it, and a walk that could not come back would leave main asking before every edit and dispatch. A
-// mode that is not here, skipping permissions, is shown, and the key walks on from the top.
-const MODES: PermissionMode[] = ['default', 'acceptEdits', 'plan', 'auto'];
-const MODE_LABELS: Record<PermissionMode, string> = {
-  default: 'asking before edits', acceptEdits: 'accepting edits', plan: 'planning',
-  auto: 'auto mode', bypassPermissions: 'skipping permissions', dontAsk: 'refusing what is not allowed',
 };
 
 const PAINT_MS = 80;
@@ -202,6 +192,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
     const target = event.target instanceof Element ? event.target : null;
     if (target?.closest(`.${FOOT_WORKERS}`)) openWorkers();
     if (target?.closest(`.${FOOT_CONTEXT}`)) showContext();
+    const setting = target ? footSetting(target.classList) : null;
+    if (setting) showFootSetting(setting, commandScreen);
   });
 
   // While a turn runs, the line over the box says so and counts, as Claude Code's spinner line does.
@@ -600,6 +592,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     transcript: () => transcript,
     askCount: () => asks.length,
     model: () => model,
+    mode: () => mode,
     effort: () => effort,
     fast: () => fast,
     imageCount: () => attachments.list().length,

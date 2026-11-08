@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { asksUltrathink, commandMenu, copyCount, copyTarget, replyText, effortRows, footEffort, namedEffort, namedFast, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, modelRows, namedModel, nextInEntry, pressNext, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
+import { asksUltrathink, commandMenu, copyCount, copyTarget, replyText, effortRows, footEffort, namedEffort, namedFast, completion, droppedFiles, fileMention, localCommandOutput, mentionInsertion, currentModel, modelRows, namedModel, nextInEntry, pressNext, pickedModel, planSends, resumeRows, screenCommand, shellExchange, tabFill, typedCommand, type CommandRow } from './chat-commands';
 import type { ChatEntry } from './chat-transcript';
 
 const row = (name: string, extra: Partial<CommandRow> = {}): CommandRow => ({ name, description: name, argumentHint: '', ...extra });
@@ -138,6 +138,13 @@ describe('modelRows', () => {
     expect(modelRows(models, 'claude-opus-5-5', '').map((each) => each.name)).toEqual(['Default', '● Opus', 'Haiku']);
     expect(modelRows(models, 'haiku', '').map((each) => each.name)).toEqual(['Default', 'Opus', '● Haiku']);
     expect(modelRows(models, null, '').some((each) => each.name.startsWith('●'))).toBe(false);
+  });
+
+  it('opens on the row the screen is on, by alias or full id, and on none when nothing is named', () => {
+    expect(currentModel(models, 'claude-opus-5-5')).toBe('opus');
+    expect(currentModel(models, 'haiku')).toBe('haiku');
+    expect(currentModel(models, null)).toBeUndefined();
+    expect(currentModel(models, 'claude-sonnet-5')).toBeUndefined();
   });
 
   it('keeps only what matches what is typed, and picks by value', () => {
