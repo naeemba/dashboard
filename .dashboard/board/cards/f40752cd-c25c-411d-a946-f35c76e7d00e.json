@@ -5,7 +5,9 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T13:25:39.432Z",
-  "updatedAt": "2026-11-08T15:03:08.309Z",
-  "column": "Doing",
-  "order": 4
+  "updatedAt": "2026-11-08T15:18:53.882Z",
+  "branch": "work-board-card-f40752cd-c25c-411d-a946-f35",
+  "pullRequest": 240,
+  "column": "Review",
+  "order": 0
 }
