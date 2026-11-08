@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-08T16:19:49.565Z",
-  "updatedAt": "2026-11-08T16:49:30.137Z",
+  "updatedAt": "2026-11-08T17:23:02.068Z",
   "branch": "work-board-card-bdebf6c2-a06b-42ae-9856-bf2",
   "pullRequest": 246,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-08T17:23:02.068Z",
+      "body": "Shipped in #246: a status bar notice when a newer GitHub release is out, a Ctrl+Shift+G dialog (Update, Restart to update, What's new), the Linux and macOS zip swap and Squirrel on Windows, all through update.* actions, and an Updates settings row written through settings:write (settings.write had not landed). Hand-checked on Linux by swapping the real v2.44.0 into a throwaway folder. The relaunch, Windows and macOS are not checked."
+    }
+  ],
+  "column": "Done",
+  "order": 198
 }
