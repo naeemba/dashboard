@@ -5,7 +5,15 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-08T16:35:35.947Z",
-  "updatedAt": "2026-11-08T16:35:51.856Z",
-  "column": "Doing",
-  "order": 3
+  "updatedAt": "2026-11-08T17:00:43.045Z",
+  "branch": "work-board-card-9e92dc4c-a776-452e-b159-d88",
+  "pullRequest": 244,
+  "comments": [
+    {
+      "at": "2026-11-08T17:00:43.045Z",
+      "body": "Shipped in #244: pnpm test runs in its own TMPDIR/TEMP/TMP folder (vitest.temporary-folder-guard.ts), removed at the end, and the run fails naming any leftover. Every test takes folders from temporaryFolder() (src/main/testing/temporary-folder.ts); eslint refuses mkdtemp in a test. One run left 206 folders before, 0 after. No production code changed."
+    }
+  ],
+  "column": "Done",
+  "order": 198
 }

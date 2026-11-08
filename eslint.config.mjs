@@ -74,4 +74,12 @@ export default defineConfig(
     folders: ['main', 'renderer', 'preload'], folderMessage: 'Shared code imports only shared code.',
     packages: [...nodeOnly, ...domOnly], builtins: unprefixedBuiltins, packageMessage: 'Shared code runs in both processes.',
   }) },
+  // A test's folder comes from temporaryFolder() (workflow-rule-4). The core rule, not the typescript one
+  // above, so this adds to the process boundaries instead of replacing them for test files.
+  { files: ['src/**/*.test.ts', 'src/**/*-fixture.ts'], rules: { 'no-restricted-imports': ['error', {
+    paths: ['node:fs', 'fs', 'node:fs/promises', 'fs/promises'].map((name) => ({
+      name, importNames: ['mkdtemp', 'mkdtempSync'],
+      message: 'Take a test folder from temporaryFolder() in src/main/testing/temporary-folder.ts; it removes it after the file.',
+    })),
+  }] } },
 );

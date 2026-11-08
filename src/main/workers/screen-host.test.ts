@@ -1,7 +1,5 @@
 import type { HookInput, Options, PermissionResult, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
-import { mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { inputQueue, type InputQueue } from '../chat/input-queue';
@@ -10,6 +8,7 @@ import { hostedQuery, screenHost } from './screen-host-client';
 import { acceptApps } from '../panes/host-socket';
 import { screenHostServer, type StartSession } from './screen-host-server';
 import { screenHostSocket, type FromScreenHost, type ToScreenHost } from './screen-host-protocol';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 const KEY = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const signal = new AbortController().signal;
@@ -34,17 +33,15 @@ function fakeSdk() {
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 30));
 const hook = (options: Options, event: string, input: object) => options.hooks?.[event as 'Stop']?.[0].hooks[0](input as HookInput, undefined, { signal });
 
-let folder = '';
 const accepted: net.Socket[] = [];
 let listener: net.Server | undefined;
 afterEach(() => {
   listener?.close();
   for (const socket of accepted.splice(0)) socket.destroy();
-  rmSync(folder, { recursive: true, force: true });
 });
 
 function hostSocket(): string {
-  folder = mkdtempSync(path.join(os.tmpdir(), 'screen-host-'));
+  const folder = temporaryFolder('screen-host-');
   return screenHostSocket(process.platform, folder) ?? '';
 }
 
@@ -135,7 +132,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   });
 
   it('answers null when no host can be reached, so the session runs in the app', async () => {
-    folder = mkdtempSync(path.join(os.tmpdir(), 'screen-host-'));
+    const folder = temporaryFolder('screen-host-');
     let launched = 0;
     const app = screenHost({ socket: path.join(folder, 'none.sock'), launch: () => { launched += 1; }, connectTries: 0 });
     await app.ready;

@@ -1,9 +1,9 @@
-import { appendFileSync, chmodSync, existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { appendFileSync, chmodSync, existsSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LogDraft, LogEntry } from '../../shared/app/log-entry';
 import { logStore } from './log-store';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
 const posixModesOnly = it.skipIf(process.platform === 'win32');
@@ -28,8 +28,7 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 
 let directory: string;
-beforeEach(() => { directory = mkdtempSync(path.join(tmpdir(), 'log-store-')); });
-afterEach(() => { rmSync(directory, { recursive: true, force: true }); });
+beforeEach(() => { directory = temporaryFolder('log-store-'); });
 
 const info = (message: string) => ({ level: 'info', kind: 'app', message }) as const;
 

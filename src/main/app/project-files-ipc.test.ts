@@ -1,7 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { addCard, columnNamed, emptyBoard, renameCard, selectionOf, type Board } from '../../shared/board/board';
 import { readBoard, writeBoard } from '../board/board-store';
 import { runBoardCommand } from '../board/board-cli';
@@ -9,13 +6,10 @@ import type { BoardChanges } from '../board/board-changes';
 import type { BoardWatchers } from '../board/board-watch';
 import { channels } from './channels';
 import { registerProjectFiles } from './project-files-ipc';
-
-const directories: string[] = [];
-afterEach(() => { directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })); });
+import { temporaryFolder } from '../testing/temporary-folder';
 
 function wired() {
-  const projectPath = mkdtempSync(path.join(tmpdir(), 'project-files-'));
-  directories.push(projectPath);
+  const projectPath = temporaryFolder('project-files-');
   const table = channels();
   const told: string[][] = [];
   const boards = { watch: () => undefined, wrote: () => undefined } as unknown as BoardWatchers;

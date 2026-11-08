@@ -1,5 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY, BOARD_FOLDER_PATH, readBoard, writeBoard } from '../board/board-store';
@@ -7,11 +6,12 @@ import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shar
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from './review-flow';
 import { intoReview } from './review';
 import type { WorktreeEntry } from '../../shared/app/bridge';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
 
 function folder(): string {
-  return mkdtempSync(join(tmpdir(), 'dashboard-review-'));
+  return temporaryFolder('dashboard-review-');
 }
 
 // One card in Backlog. Another id gives a board that parses and has cards on it, none of them this card:

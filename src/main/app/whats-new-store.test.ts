@@ -1,18 +1,14 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { channels } from './channels';
 import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 import { SESSION_FILE } from './session';
 import { registerWhatsNew } from './whats-new-store';
-
-const directories: string[] = [];
-afterEach(() => { directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })); });
+import { temporaryFolder } from '../testing/temporary-folder';
 
 function store(session = false) {
-  const userData = mkdtempSync(path.join(tmpdir(), 'whats-new-store-'));
-  directories.push(userData);
+  const userData = temporaryFolder('whats-new-store-');
   if (session) writeFileSync(path.join(userData, SESSION_FILE), '{}');
   const table = channels();
   registerWhatsNew(table, userData);

@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
+import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -16,7 +16,7 @@ describe('docOrder', () => {
 
 describe('listDocs', () => {
   it('lists the markdown under docs/, with paths the row can print', async () => {
-    const project = mkdtempSync(path.join(tmpdir(), 'docs-list-'));
+    const project = temporaryFolder('docs-list-');
     mkdirSync(path.join(project, 'docs', 'board'), { recursive: true });
     writeFileSync(path.join(project, 'docs', 'README.md'), '');
     writeFileSync(path.join(project, 'docs', 'board', 'README.md'), '');
@@ -32,11 +32,11 @@ describe('listDocs', () => {
   });
 
   it('lists nothing for a project with no docs folder', async () => {
-    expect(await listDocs(mkdtempSync(path.join(tmpdir(), 'docs-list-')), [], [])).toEqual([]);
+    expect(await listDocs(temporaryFolder('docs-list-'), [], [])).toEqual([]);
   });
 
   it("on the manager's page lists its roots and reads only the folders opened, inside them", async () => {
-    const home = mkdtempSync(path.join(tmpdir(), 'docs-home-'));
+    const home = temporaryFolder('docs-home-');
     mkdirSync(path.join(home, '.claude', 'commands'), { recursive: true });
     mkdirSync(path.join(home, 'Workspace'));
     mkdirSync(path.join(home, 'dotfiles', 'rules'), { recursive: true });
@@ -107,7 +107,7 @@ describe('imageUrls', () => {
 
 describe('readDoc', () => {
   it('reads a doc with its images and refuses a file outside the docs folder', async () => {
-    const project = mkdtempSync(path.join(tmpdir(), 'docs-read-'));
+    const project = temporaryFolder('docs-read-');
     mkdirSync(path.join(project, 'docs'));
     writeFileSync(path.join(project, 'docs', 'README.md'), '# Docs ![a](a.png) ![b](gone.png)');
     writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
@@ -118,7 +118,7 @@ describe('readDoc', () => {
   });
 
   it('reads a YAML or JSON doc as text, with no images looked for', async () => {
-    const project = mkdtempSync(path.join(tmpdir(), 'docs-read-'));
+    const project = temporaryFolder('docs-read-');
     mkdirSync(path.join(project, 'docs'));
     writeFileSync(path.join(project, 'docs', 'a.png'), 'png');
     writeFileSync(path.join(project, 'docs', 'cards.yaml'), 'shot: ![a](a.png)\n');
@@ -126,7 +126,7 @@ describe('readDoc', () => {
   });
 
   it('reads a memory file the measure named, and only that one, with no images', async () => {
-    const home = mkdtempSync(path.join(tmpdir(), 'docs-memory-'));
+    const home = temporaryFolder('docs-memory-');
     writeFileSync(path.join(home, 'CLAUDE.md'), '# Rules ![a](a.png)');
     writeFileSync(path.join(home, 'a.png'), 'png');
     writeFileSync(path.join(home, 'other.md'), 'no');
@@ -136,7 +136,7 @@ describe('readDoc', () => {
   });
 
   it('keeps the images of a memory file that is also one of the docs', async () => {
-    const project = mkdtempSync(path.join(tmpdir(), 'docs-memory-'));
+    const project = temporaryFolder('docs-memory-');
     mkdirSync(path.join(project, 'docs'));
     const file = path.join(project, 'docs', 'CLAUDE.md');
     writeFileSync(file, '![a](a.png)');
