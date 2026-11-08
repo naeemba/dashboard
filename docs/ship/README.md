@@ -9,7 +9,7 @@ worktree list shows every git worktree of a project and removes them.
 
 Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 
-- Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`, `branch-worktree.ts`
+- Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`
 - Review: `review.ts`, `review-flow.ts`
 - Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`, `worktree-scan.ts`,
   `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
@@ -18,7 +18,10 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 Started by the card.ship and card.review actions (docs/actions), which are what
 a move into Ship or Review, and `dashboard board ship` and `review`, call. The
 agent itself, and the review's, is started by pane.dispatch: a Claude screen
-off Windows, Claude Code in the terminal on it (workers-decision-8).
+off Windows, Claude Code in the terminal on it (workers-decision-8). Every
+worktree, a ship's, a review's or a throwaway's, is made by worktree.make and
+removed by worktree.remove; the record naming a card's pane is written by the
+keeper's `givePane`, whichever door started the agent.
 
 ## Scenarios
 

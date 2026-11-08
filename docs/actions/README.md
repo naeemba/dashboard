@@ -49,6 +49,17 @@ Neither door holds any of the logic; each only asks.
   each pane the last run left comes back as, a kept shell adopted, a saved
   conversation through pane.dispatch, a worker screen over its pane.
 
+- **worktree.make** (a ship, a review, `pane run --worktree`): a card's branch
+  off origin's base, a reviewed card's branch checked out again, or a
+  throwaway named after its prompt, each made only there. Only
+  the throwaway takes the project's queue and fetches; the ship and the review
+  hold the queue already, and it is not re-entrant.
+- **worktree.remove** (`worktree:remove`, `pane release`, the review):
+  `removalOf` says, per door, whether it is forced (only the dialog's, after
+  you said yes), queued on the project (all but the review's, which holds it)
+  and logged (all but the review's, which writes on the card). The keeper does
+  the rest: refused once with changes, shells killed and screens closed.
+
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
 [`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls and wrappers
@@ -104,6 +115,8 @@ Folder: `src/main/actions/`.
 - `pane/dispatch.ts` — pane.dispatch and `paneKind`
 - `pane/open.ts`, `pane/close.ts`, `pane/send.ts`, `pane/claim.ts`, `pane/release.ts`, `pane/restore.ts`
 - `pane/pane-input.ts` — the input checks the pane actions share
+- `worktree/worktree-actions.ts` — main's wiring: make and remove, and each door's port into them
+- `worktree/make.ts`, `worktree/remove.ts`
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios
@@ -113,6 +126,8 @@ Folder: `src/main/actions/`.
 - Given an agent moving its card on its worktree's board, when the move lands, then nothing starts (`column-entry.test.ts`).
 - Given a refused ship, when the board or the command asked, then the card stays where it was put and the answer says why (`move.test.ts`).
 - Given a new IPC handler that calls `worktrees.remove` itself, when the tests run, then `bypasses.test.ts` fails naming the file.
+- Given a removal from the worktree dialog while a ship of the same project is running git, when you press `d`, then the removal waits for the ship rather than racing it onto git's lock (`remove.test.ts`).
+- Given a card's `pane run` into a pane another card's record still names, when it starts, then that record gives the pane up and the card's names it (`worktree-keeper.test.ts`).
 - Given a Claude of yours running in a terminal pane, when the app restarts, then it comes back through pane.dispatch on its conversation, not typed into a shell (`restore.test.ts`); it is logged as an agent start, and once you exit it the pane reads exited and Enter gives a shell (checked by hand).
 - Given a conversation in the drawer, when you press Enter on it, then a new worker runs it through pane.dispatch, never a shell typed into (`open.test.ts`).
 

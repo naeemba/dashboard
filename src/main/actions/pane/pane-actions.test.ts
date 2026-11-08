@@ -19,7 +19,7 @@ function wired(startScreen: () => void = () => undefined) {
     endClaim: () => undefined, changed: () => undefined, screenPrompt: () => false, typeIntoShell: () => undefined,
     kept: () => [], listenTo: () => undefined, takeResume: () => null, owedResumes: () => [], moveResume: () => undefined,
     screensBack: () => [], worktrees: () => [], panesBeforeLaunch: new Map(), realPath: (folder) => folder,
-    recordWorktree: () => undefined,
+    givePane: () => undefined,
   });
   return { dispatch, mainsWorkers };
 }
