@@ -74,6 +74,7 @@ describe('screenWorkers', () => {
     const released = screens.session(screenKey('2:1'))?.hooks ?? {};
     screens.drop('2:1');
     screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    await released.PostToolUse?.[0].hooks[0]({ hook_event_name: 'PostToolUse' } as never, undefined, hookOptions);
     await released.Stop?.[0].hooks[0]({ hook_event_name: 'Stop', background_tasks: [], session_crons: [] } as never, undefined, hookOptions);
     expect(said.filter((line) => line.startsWith('2:1 '))).toEqual([]);
     expect(screens.working('2:1')).toBe(true);
