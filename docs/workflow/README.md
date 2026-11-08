@@ -5,7 +5,7 @@ gets a module and a test, and the build stamps its commit instead of every card
 bumping the version. Owns `.gitattributes`, the CI and release workflows (the release notes and download links in
 `scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` (its decisions in `scripts/release-checks.mjs`, tested beside it) and the
 `/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build
-hooks, the test run's temporary-folder guard (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, tested beside it, its count in
+hooks, the test run's temporary-folder guard and its eslint rule (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, tested beside it, its count in
 `vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
 in `scripts/running-app.mjs`, tested beside it), written in Node so the same
 hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
@@ -18,7 +18,7 @@ The three in `CLAUDE.md`. `pnpm test` runs in a temporary folder of its own: the
 `os.tmpdir()` (a test's, the code under test's, a git or node it spawns) lands inside it. When the run ends
 it removes that folder, and fails the run naming what was left in it by the name it was made with,
 `dashboard-review- ×62`. A test that needs a folder takes it from `temporaryFolder(prefix)` in
-`src/main/testing/temporary-folder.ts`, which removes it after the test file. A leftover the code under
+`src/main/testing/temporary-folder.ts`, which removes it after the test file (workflow-rule-4). A leftover the code under
 test made is that code's bug, not the test's: it would stay in a user's `/tmp` too, so fix the code rather
 than wrapping it. Node's own compile caches are not counted. Before the guard, a test run left about 200
 folders in `/tmp`, and on 2026-11-08 they filled its 16G and stopped every worker.

@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readWorktrees } from './worktree-store';
@@ -18,7 +18,7 @@ function entry(worktreePath: string, cardId: string): WorktreeEntry {
 }
 
 function keeperWith(entries: WorktreeEntry[], commands: Map<string, PaneCommand>) {
-  const file = join(mkdtempSync(join(folder, 'record-')), 'worktrees.json');
+  const file = join(temporaryFolder('dashboard-keeper-record-'), 'worktrees.json');
   const sent: WorktreeList[] = [];
   const keeper = worktreeKeeper({ file, entries, commands, shells: new Map(), closeScreensIn: () => undefined, announce: (list) => sent.push(list) });
   return { keeper, file, sent };
