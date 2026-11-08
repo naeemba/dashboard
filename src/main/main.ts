@@ -63,6 +63,7 @@ import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
 import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
 import { settingsActions } from './actions/settings/settings-actions';
+import type { Settings } from '../shared/settings/settings';
 import { oneAtATime } from './ship/ship';
 import {
   freePane,
@@ -149,11 +150,12 @@ const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFI
 // Read before the window exists: the background colour paints the first frame, and the shell command
 // spawns the first pane. Both are needed before the renderer has run a line.
 const isMac = process.platform === 'darwin';
+const shellFor = (chosen: Settings) => pickShell(chosen, process.env, process.platform);
 let settings = readSettings(settingsFile, isMac);
-let shellCommand = pickShell(settings, process.env, process.platform);
+let shellCommand = shellFor(settings);
 const settingsDoors = settingsActions(table, {
   writeFile: (next) => writeSettings(settingsFile, next, isMac),
-  pickShell: (next) => pickShell(next, process.env, process.platform),
+  pickShell: shellFor,
   keep(next, shell) { settings = next; shellCommand = shell; },
 });
 keepHostToken(settings, (made) => { void settingsDoors.write.call({ settings: made }); });

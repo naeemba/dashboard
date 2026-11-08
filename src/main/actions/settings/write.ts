@@ -1,4 +1,3 @@
-import { isRecord } from '../../../shared/app/is-record';
 import type { Settings } from '../../../shared/settings/settings';
 import { action } from '../action';
 
@@ -15,7 +14,9 @@ export type SettingsWritePorts = {
 
 export const settingsWrite = action<SettingsWritePorts, { settings: Settings }, { output: string; shellCommand: string }>('settings.write', {
   words: [],
-  input: ({ settings }) => (isRecord(settings) ? { settings: settings as Settings } : { refused: 'the settings were not ones the app could read' }),
+  // Only the settings screen, main's own launch and the remote join call it, each with a whole Settings;
+  // the old handler took it unchecked too.
+  input: ({ settings }) => ({ settings: settings as Settings }),
   async run(ports, { settings }) {
     // Panes already running keep the shell they started with. Nothing here kills one: there are
     // long-running jobs in them, and a settings change is not a reason to lose one.

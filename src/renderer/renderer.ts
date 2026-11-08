@@ -631,7 +631,7 @@ function showHelp(): void {
 function showSettings(): void {
   openSettings(settings, isMac, (next) => {
     settings = next;
-    void bridge.saveSettings(next).then((shell) => { if (typeof shell === 'string') shellCommand = shell; });
+    void bridge.saveSettings(next).then((shell) => { shellCommand = shell; });
     applyAppearance();
   }).then(() => {
     showPage(activeIndex);

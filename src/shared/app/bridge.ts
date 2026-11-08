@@ -227,8 +227,8 @@ export type DashboardBridge = {
   // both before it builds a pane and they are decided together.
   getSettings(): Promise<{ settings: Settings; shellCommand: string }>;
   // Answers with the shell main resolved from the new settings, which is the one a dropped path is
-  // quoted for, or settings.write's refusal of what was not settings.
-  saveSettings(settings: Settings): Promise<string | Refused>;
+  // quoted for.
+  saveSettings(settings: Settings): Promise<string>;
   // A card that changed column, handed to main's card.move: the move and what entering the column
   // starts — a ship, a review loop, or nothing.
   moveCard(request: CardMoveRequest): Promise<CardMoveAnswer>;
