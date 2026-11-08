@@ -19,9 +19,9 @@ export type PaneClaimInput = {
 
 export type PaneClaimPorts = {
   findProject(word: string): ProjectNamed;
-  folderExists(path: string): boolean;
-  // Opens the project at the path unless it is open already, and answers with its slot either way.
-  openProject(path: string): number;
+  // project.open: the project at the path opened unless it is open already, and its slot either way,
+  // or why not (its folder is not there).
+  openProject(path: string, name: string): Promise<number | Refused>;
   // pane.open: a shell in the project's folder.
   open(slot: number): Promise<{ index: number } | Refused>;
   // The page that may run and release the pane from now on besides its own, or null for its own alone.
@@ -36,8 +36,9 @@ export const paneClaim = action<PaneClaimPorts, PaneClaimInput, { output: string
     if (project !== null) {
       const found = ports.findProject(project);
       if (!found.ok) return { refused: found.message };
-      if (!ports.folderExists(found.path)) return { refused: `${found.name} is at ${found.path}, which is not a folder` };
-      target = ports.openProject(found.path);
+      const opened = await ports.openProject(found.path, found.name);
+      if (isRefused(opened)) return opened;
+      target = opened;
     }
     const opened = await ports.open(target);
     if (isRefused(opened)) return opened;

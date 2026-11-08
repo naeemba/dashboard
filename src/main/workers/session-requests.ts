@@ -32,9 +32,8 @@ export type SessionPorts = {
   openSlots(): readonly { slot: number; name: string }[];
   // The project ~/.dashboard/projects.yaml gives that name or aka (project-named.ts's projectNamed).
   findProject(word: string): ProjectNamed;
-  folderExists(path: string): boolean;
-  // Opens the project at the path unless it is open already, and answers with its slot either way.
-  openProject(path: string): number;
+  // project.open's, for a claim's --project: its slot, or why not.
+  openProject(path: string, name: string): Promise<number | Refused>;
   // The project's open terminals, ascending, main first.
   openPanes(slot: number): readonly number[];
   agentIn(id: string): boolean;
