@@ -10,6 +10,7 @@ import type { ChatEvent, ImageType } from '../chat/chat-transcript';
 import type { ScannedWorktree } from '../ship/git-worktrees';
 import type { Board } from '../board/board';
 import type { ColumnEntry } from '../board/column-entry';
+import type { PullRequestStatus } from '../board/pull-request-status';
 import type { MarketName, MarketsSnapshot } from '../markets/markets';
 import type { PaneUse } from '../panes/pane-reading';
 import type { PaneName } from '../panes/close-refusal';
@@ -72,6 +73,9 @@ export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionIn
 // file — was moved to by this read, and empty when nothing needed salvaging, including the ordinary case
 // of no board yet.
 export type BoardRead = { board: Board; brokenFiles: string[] };
+// What the board screen reads: the above, and each card's pull request glyph by id, for the cards
+// that have one (pull-request-status.ts).
+export type BoardShown = BoardRead & { pullRequests: Record<string, PullRequestStatus> };
 
 // What a hand-over answers: whether the file is in front of you, and what the status bar says.
 export type Handover = { ok: boolean; message: string };
@@ -213,7 +217,7 @@ export type DashboardBridge = {
   // The saved projects are open again, or have failed to. What `--remote` waits for before it joins a
   // host, so the restore's own opens are not relayed to it.
   sessionRestored(): void;
-  readBoard(projectPath: string): Promise<BoardRead>;
+  readBoard(projectPath: string): Promise<BoardShown>;
   // A read that changes nothing on disk, for the manager's counts: null when there is nothing to
   // count. board-store.ts says why the manager may not use readBoard.
   peekBoard(projectPath: string): Promise<Board | null>;

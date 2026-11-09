@@ -7,6 +7,7 @@ import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, remem
 import { baseName } from '../shared/app/base-name';
 import { runProgram } from './app/git';
 import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
+import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
 import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
 import { realPath } from './app/real-path';
 import { registerWorktreeChannels } from './ship/worktree-channels';
@@ -530,7 +531,10 @@ try {
 } catch (error: unknown) {
   failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
 }
-registerProjectFiles(table, boards, boardLog, boardSync, tellOthers, (projectPath) => setImmediate(() => void pullRequests.check(projectPath)));
+// Each card's pull request glyph, from the answers card.follow gets: a glyph that changes is a
+// board:change, so the board on screen reads it again.
+const pullRequestGlyphs = pullRequestStatuses();
+registerProjectFiles(table, boards, boardLog, boardSync, tellOthers, (projectPath) => setImmediate(() => void pullRequests.check(projectPath)), pullRequestGlyphs.of);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -663,7 +667,11 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList } = car
   boardSync,
   autoLoop: () => settings.review.autoLoop,
   log: (draft) => logStore.log(draft),
-  pullRequestOf: (projectPath, branch) => runProgram('gh', pullRequestListArguments(branch), projectPath, { timeout: 20_000 }).then(latestPullRequest),
+  pullRequestOf: async (projectPath, branch) => {
+    const pull = latestPullRequest(await runProgram('gh', pullRequestListArguments(branch), projectPath, { timeout: 20_000 }));
+    if (pullRequestGlyphs.record(projectPath, branch, pull === null ? null : pullRequestStatus(pull))) sendToRenderer('board:change', projectPath);
+    return pull;
+  },
 });
 // Every open project's cards asked about their pull requests on a slow timer; a report asks for the
 // project of the main it reaches, the manager's for every project, and the board on screen for its own

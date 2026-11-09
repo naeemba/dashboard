@@ -19,9 +19,11 @@ export const DONE_FOLLOWED_MS = 24 * 60 * 60 * 1000;
 // the app knows it has said one already, so they never change: the title after them may.
 const SAID = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed without merging' } as const;
 
-// `gh pr list` for one branch, every state, newest first, with what the comments name.
+// `gh pr list` for one branch, every state, newest first, with what the comments name and what the
+// card's glyph is read from (pull-request-status.ts).
 export function pullRequestListArguments(branch: string): string[] {
-  return ['pr', 'list', '--head', branch, '--state', 'all', '--json', 'number,state,title,url', '--limit', '20'];
+  const fields = 'number,state,title,url,statusCheckRollup,reviewDecision,mergeable';
+  return ['pr', 'list', '--head', branch, '--state', 'all', '--json', fields, '--limit', '20'];
 }
 
 // The pull request a branch stands for, from `gh pr list`'s JSON: an open one first, since a branch
@@ -51,6 +53,11 @@ export function pullRequestComment(pull: PullRequest, backToDoing = false): stri
   return `${saidPrefix(pull.number, pull.state)}: ${pull.title} ${pull.url}${back}`;
 }
 
+// Whether the card's merge is on it: the last thing its pull request does.
+export function merged(card: Card): boolean {
+  return card.pullRequest !== undefined && said(card, card.pullRequest, 'MERGED');
+}
+
 function said(card: Card, pullRequest: number, state: PullRequestState): boolean {
   const prefix = saidPrefix(pullRequest, state);
   return (card.comments ?? []).some((comment) => comment.body.startsWith(prefix));
@@ -75,7 +82,7 @@ function lastSaid(card: Card, pullRequest: number): PullRequestState | undefined
 export function followedBranch(card: Card, column: string, worktreeBranch: string | undefined, now: number): string | undefined {
   const branch = card.branch ?? worktreeBranch;
   if (branch === undefined || isColumnNamed(column, CANCELLED_COLUMN)) return undefined;
-  if (card.pullRequest !== undefined && said(card, card.pullRequest, 'MERGED')) return undefined;
+  if (merged(card)) return undefined;
   if (!isColumnNamed(column, DONE_COLUMN)) return branch;
   const changed = card.updatedAt === undefined ? Number.NaN : Date.parse(card.updatedAt);
   return now - changed < DONE_FOLLOWED_MS ? branch : undefined;

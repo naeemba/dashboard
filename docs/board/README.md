@@ -132,7 +132,7 @@ card to an agent, by a ship, the review, `pane run --card` or a restore at
 launch, writes its branch on it and moves it into Doing, unless it is in Doing
 or past it already. From then on the
 app asks `gh pr list --head <branch>` about it, one call per card, when a worker
-reports, when the board is shown, and every two minutes, and records the number
+reports, when the board is shown, and every minute, and records the number
 it finds:
 
 - open: the card goes into Review, as the app's own move, so the review loop
@@ -155,6 +155,12 @@ pull request after a closed first is followed. Asked about: a card with a branch
 on its card or its worktree's record, that is not in Cancelled, whose merge is
 not on it yet, and that, if it is in Done, changed in the last day. A card with
 no branch, a research card, is never asked about; main moves it as before.
+After the number the card shows one glyph from the same answer
+(board-decision-7): ◌ checks running, ✗ a check failed, ✓ approved, ● mergeable,
+◆ merged, in that order of what wins. An open pull request conflicting or
+waiting on a review shows none. The glyph is held in memory, not written on the
+card, so a restart shows none until the next check; merged is read from the
+card's merge line, since a merged card is never asked about again.
 `gh` missing, logged out or offline moves nothing and writes nothing, and logs
 one warning per project (`board` kind) until a check goes through. A board
 shown again within 30 seconds of the last check asks nothing.
@@ -260,6 +266,9 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 - The column from the pull request: `pull-request-column.ts` (its decisions),
   `pull-request-sweep.ts` (when), the card.follow and card.start actions in
   `src/main/actions/card/`, each beside its `.test.ts`
+- The glyph from the pull request: `src/main/board/pull-request-status.ts` (what
+  gh's answer says, and the store main holds), `src/shared/board/pull-request-status.ts`
+  (the glyphs and the card's line)
 - The git sync: `board-sync.ts` (its decisions), `board-sync-git.ts` (the git),
   `board-sync-queue.ts` (the app's one sync per project), each beside its `.test.ts`
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
@@ -328,6 +337,7 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a card in Ship, when its agent starts, then it is in Doing with its branch on it (`start.test.ts`).
 - Given a shipped card in Doing, when gh says its branch's pull request is open, then it is in Review with the number and one line naming the pull request; merged, it is in Done with a second line; closed unmerged from Review, it is back in Doing (`pull-request-column.test.ts`, `follow.test.ts`).
 - Given a card moved to Done while its pull request is still open, when the app next checks, then it is back in Review.
+- Given a card whose pull request has a check running, when it fails, then the card's glyph turns from ◌ to ✗ within a minute without the board being touched (`pull-request-status.test.ts`).
 - Given gh is offline, when the app checks, then no card moves, nothing is written, and the log has one warning until a check goes through (`pull-request-sweep.test.ts`).
 - Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.
 - Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the branch, HEAD and working tree are as they were.
