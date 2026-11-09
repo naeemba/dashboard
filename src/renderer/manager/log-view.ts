@@ -46,6 +46,8 @@ export function createLogView(options: LogOptions): LogView {
   element.append(input, file, list, empty);
   // Cloned into every row; the list's one listener answers it.
   const copyButton = iconOnlyButton('log-copy', 'copy', 'Copy as JSON', () => {});
+  // Out of the Tab order, as the manager's Remove button is: the list is walked with the arrows.
+  copyButton.tabIndex = -1;
 
   // Oldest first, as the file holds them; drawn reversed.
   let entries: LogEntry[] = [];
@@ -91,7 +93,10 @@ export function createLogView(options: LogOptions): LogView {
 
   function copySelected(): void {
     const entry = shown[selected];
-    if (entry === undefined) return;
+    if (entry !== undefined) copyEntry(entry);
+  }
+
+  function copyEntry(entry: LogEntry): void {
     navigator.clipboard.writeText(copiedEntry(entry)).then(
       () => options.onNotice('Entry copied as JSON.'),
       (error: unknown) => options.onError(`Entry not copied: ${failureText(error)}`),
@@ -99,12 +104,13 @@ export function createLogView(options: LogOptions): LogView {
   }
 
   // The drawer's JSON viewer, the entry pretty-printed and its stack one frame to a line. Escape puts
-  // it away and the keyboard returns to the box; the copy key copies the entry from there too.
+  // it away and the keyboard returns to the box; the copy key copies the entry from there too — the one
+  // opened, not whatever a line arriving has moved the selection onto since.
   function openSelected(): void {
     const entry = shown[selected];
     if (entry === undefined) return;
     dataOverlay('', JSON.stringify(shownEntry(entry)), 'json', null, {
-      binding: options.binding('log-copy'), label: 'copies', run: copySelected,
+      binding: options.binding('log-copy'), label: 'copies', run: () => copyEntry(entry),
     });
   }
 

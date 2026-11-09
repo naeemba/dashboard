@@ -538,8 +538,7 @@ body *:not(.pane, .pane *) {
 }
 
 .log-row:hover .log-copy,
-.log-row.highlighted .log-copy,
-.log-copy:focus-visible {
+.log-row.highlighted .log-copy {
   opacity: 1;
 }
 
