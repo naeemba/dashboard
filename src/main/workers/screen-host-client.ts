@@ -29,7 +29,7 @@ type Listener = (message: FromScreenHost) => void;
 
 const ANSWER_WAIT_MS = 5000;
 const HOST_STOPPED = 'The screen host stopped';
-export const HOST_NOT_ANSWERING = 'The screen host is running but did not answer, and may still be running this worker: try again in a moment';
+export const HOST_NOT_ANSWERING = 'The screen host is running for another Dashboard, or did not answer, and may still be running this worker: it was not started a second time';
 
 // `connectTries` is how long a launched host is waited for (reachHost); a test passes 0.
 export function screenHost(options: { socket: string | null; launch(): void; connectTries?: number }): ScreenHost {

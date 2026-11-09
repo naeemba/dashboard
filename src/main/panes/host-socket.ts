@@ -1,5 +1,6 @@
 import net from 'node:net';
-import { hostProof, line, lineReader } from './pane-host-protocol';
+import { canConnect } from '../app/can-connect';
+import { hostProof, line, lineReader, prepareHostSocket } from './pane-host-protocol';
 
 // The socket code the pane host and the screen host share: an app reaching a host, starting it when
 // nothing answers, and a host taking one app at a time. Kept apart from pane-host-server.ts and
@@ -19,6 +20,17 @@ export async function reachHost(socketPath: string, launch: () => void, tries = 
     socket = await attempt(socketPath);
   }
   return socket;
+}
+
+// Whether a host starting may listen on the socket. Not while another host answers on it: taking the
+// socket from a live one leaves what it runs (shells, worker screens' sessions) where no app can reach
+// it, and the next start of each runs a second copy. `before` runs once the socket is this host's to
+// take, before it is.
+export async function claimHostSocket(platform: string, socket: string, before = (): void => undefined): Promise<boolean> {
+  if (await canConnect(socket)) return false;
+  before();
+  prepareHostSocket(platform, socket);
+  return true;
 }
 
 export function attempt(socketPath: string): Promise<net.Socket | null> {

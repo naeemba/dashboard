@@ -154,6 +154,7 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Given another user on the same Windows machine, when they open the pane host's pipe, then they hear no screen and the app keeps its panes.
 - Given another user on the same Windows machine listening on the pane host's pipe name before it starts, when the app connects, then it hears only `hello`, since it cannot answer the nonce with the token's proof, whether it answers `panes`, answers `busy`, closes or says nothing; the status bar says shells die with the app this run, and the next launch uses a new name.
 - Given a pane the pane host kept, when its project is closed or the pane is closed, then its shell is killed.
+- Given a pane host already running, when a second one starts on the same socket (two launches at once), then the second exits and leaves the socket to the first, so no shell is left where no app can reach it (workers-decision-6).
 - Given no `node` on the login shell's PATH (on Windows, the PATH), when the app starts, then the status bar says shells die with the app this run, and the panes work as before.
 - Given no pane host this run, when you close the window, then the quit question says every shell is killed.
 - Given the installed app running, when a development build on the same user data starts, then the installed app keeps its panes and the development build runs its shells itself.

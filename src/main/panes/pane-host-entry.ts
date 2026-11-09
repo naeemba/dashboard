@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import net from 'node:net';
-import { prepareHostSocket } from './pane-host-protocol';
-import { acceptApps } from './host-socket';
+import { acceptApps, claimHostSocket } from './host-socket';
 import { paneHostServer } from './pane-host-server';
 import { spawnShell } from './pane-shell';
 
@@ -14,8 +13,9 @@ const FOREGROUND_POLL_MS = 500;
 
 const server = paneHostServer(spawnShell, () => process.exit(0));
 
-function listen(): void {
-  prepareHostSocket(process.platform, socketPath);
+// A host already answering keeps the socket and its shells; the app that launched this one reaches it.
+async function listen(): Promise<void> {
+  if (!(await claimHostSocket(process.platform, socketPath))) process.exit(0);
   net.createServer(acceptApps(server, tokenFile === undefined ? undefined : readFileSync(tokenFile, 'utf8')))
     // A path too long for a socket (a unix socket's is about a hundred bytes), or a folder it cannot
     // write: the app hears no host, and runs its shells itself.
@@ -23,5 +23,5 @@ function listen(): void {
     .listen(socketPath);
 }
 
-listen();
+void listen();
 setInterval(() => server.pollForeground(), FOREGROUND_POLL_MS);

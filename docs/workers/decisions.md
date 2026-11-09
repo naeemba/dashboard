@@ -361,7 +361,11 @@ How it is built:
   is dead (`dead-host.ts`). Only then: Linux hands no pid out again while a group still carries it, so
   a dead pid's group is the old host's leftovers and nothing else. A host starting also leaves the
   socket alone while another answers on it, rather than taking it and running a second copy of each
-  worker its app asks for.
+  worker its app asks for (`claimHostSocket` in `host-socket.ts`, which the pane host's start uses too,
+  so two pane hosts started together leave no shells where no app can reach them).
+- Not done: the orphans are ended at the next start of a worker or a host, not the moment the host
+  dies, so a killed host's sessions can finish their turns unseen until then. Tying each CLI's life to
+  the host's (a parent-death signal, or stopping its scope) is the follow-up.
 - With no host, a worker runs in the app only once nothing answers on the socket, and after the same
   kill. A host that answers but would not take this app (a second Dashboard on the same user data, or a
   host too slow to say what it kept) may be running that very worker: the start is refused, the screen

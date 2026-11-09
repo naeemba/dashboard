@@ -1,7 +1,6 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { canConnect } from '../app/can-connect';
 import { readText } from '../app/missing-file';
-import { prepareHostSocket } from '../panes/pane-host-protocol';
 
 // What a screen host that died leaves running: its sessions. The Agent SDK starts each worker's Claude
 // in the host's process group (the host starts detached, so the group is its pid), and nothing tells
@@ -52,20 +51,17 @@ export function recordedPid(file: string): number | null {
   return Number.isInteger(pid) && pid > 1 ? pid : null;
 }
 
-// Whether a worker's session may start where the host was: not while a host answers on the socket,
-// which may be running it, and otherwise once what the last host left is ended. The host's own start
-// and the app about to run a worker itself both ask.
-export async function endDeadHostUnlessAnswering(socket: string): Promise<boolean> {
-  if (await canConnect(socket)) return false;
+// The real ports, for a host starting (claimHostSocket's `before`) and for the app about to run a
+// worker itself.
+export function endDeadHostAt(socket: string): void {
   endDeadHost({ recorded: () => recordedPid(hostPidFile(socket)), kill: (pid, signal) => process.kill(pid, signal) });
-  return true;
 }
 
-// Whether a host starting may listen on the socket. Taking it from a live host would leave that one's
-// sessions running where no app can reach them, and the next start of each worker run a second copy.
-export async function claimHostSocket(platform: string, socket: string): Promise<boolean> {
-  if (!(await endDeadHostUnlessAnswering(socket))) return false;
-  prepareHostSocket(platform, socket);
+// Whether the app may run a worker's session itself: not while a host answers on the socket, which
+// may be running it, and otherwise once what the last host left is ended.
+export async function endDeadHostUnlessAnswering(socket: string): Promise<boolean> {
+  if (await canConnect(socket)) return false;
+  endDeadHostAt(socket);
   return true;
 }
 
