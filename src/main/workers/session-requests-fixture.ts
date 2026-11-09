@@ -63,6 +63,8 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       'card-3': { worktreePath: '/work/api.worktrees/card-three', working: true },
     })[cardId],
     makeWorktree: async () => '/work/api.worktrees/fix-the-tests',
+    exists: () => true,
+    prune: async () => undefined,
     unfinished: async () => null,
     removeWorktree: async (worktreePath, projectPath) => { removed.push(`${worktreePath} from ${projectPath}`); },
     hasKeyboard: (id) => keyboard.has(id),
