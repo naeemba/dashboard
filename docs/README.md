@@ -34,6 +34,7 @@ commits cite the id.
 | [updates](updates/README.md) | A newer release said on the status bar, downloaded and installed from the UI |
 | [keys](keys/README.md) | The shortcut table, modes, help dialog and which-key strip |
 | [errors](errors/README.md) | Refusals, failures nothing caught, failures at launch |
+| [processes](processes/README.md) | The systemd scope each pane runs in, and the agents and panes slices |
 
 ## Cross-cutting
 
