@@ -1,6 +1,6 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { sourceFiles } from './src/main/testing/source-files';
 
 // conventions-rule-3: any `display` in our CSS beats the browser's own `[hidden] { display: none }`,
 // so a class that sets one needs a `.name[hidden]` rule, or an element with it set `hidden` stays on
@@ -43,9 +43,7 @@ function hiddenRuleProblems(css: string): string[] {
   ];
 }
 
-const stylesheets = readdirSync('src', { recursive: true, encoding: 'utf8' })
-  .filter((file) => file.endsWith('.css'))
-  .map((file) => path.join('src', file).split(path.sep).join('/'));
+const stylesheets = sourceFiles('src', '.css');
 
 describe('a class that sets display', () => {
   it('has a [hidden] rule in its stylesheet, and every [hidden] rule has its class', () => {
