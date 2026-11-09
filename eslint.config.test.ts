@@ -74,3 +74,20 @@ describe('test folders', () => {
     expect(await folderErrors('src/main/testing/temporary-folder.ts', "import { mkdtempSync } from 'node:fs';")).toEqual([]);
   });
 });
+
+// Pins conventions-rule-4: 600 code lines a file, and comments and blank lines are free.
+describe('file size', () => {
+  const sizeErrors = async (source: string): Promise<string[]> => {
+    const [result] = await eslint.lintText(source, { filePath: 'src/main/probe.ts' });
+    return result.messages.map((message) => message.ruleId ?? '').filter((ruleId) => ruleId === 'max-lines');
+  };
+  const code = (lines: number): string => Array.from({ length: lines }, (_, index) => `export const line${index} = ${index};`).join('\n');
+
+  it('fails a file of 601 code lines', async () => {
+    expect(await sizeErrors(code(601))).toEqual(['max-lines']);
+  });
+
+  it('allows 600 code lines under any amount of explanation', async () => {
+    expect(await sizeErrors(`${'// why\n\n'.repeat(300)}/*\n${'reason\n'.repeat(100)}*/\n${code(600)}`)).toEqual([]);
+  });
+});

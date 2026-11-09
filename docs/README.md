@@ -42,7 +42,7 @@ Rules that hold for every feature. `CLAUDE.md` states each in one line.
 
 | Folder | What it is |
 |---|---|
-| [conventions](conventions/README.md) | Keyboard first, `dir="auto"`, `hidden` against the stylesheet |
+| [conventions](conventions/README.md) | Keyboard first, `dir="auto"`, `hidden` against the stylesheet, 600 code lines a file |
 | [workflow](workflow/README.md) | Never restart the app, a decision gets a test, the build stamps its commit |
 
 Profiling of the whole app, how to rerun it on a demo instance, and what each
