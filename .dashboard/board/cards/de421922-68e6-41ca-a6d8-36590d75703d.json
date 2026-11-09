@@ -5,13 +5,13 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:56.580Z",
-  "updatedAt": "2026-11-09T19:21:30.530Z",
+  "updatedAt": "2026-11-09T19:42:34.627Z",
   "comments": [
     {
       "at": "2026-11-09T15:42:27.744Z",
       "body": "Review of #270: for each rule eslint carries (app-rule-2, workflow-rule-4, errors-rule-1 after card 1), keep one line in CLAUDE.md, never an eslint-disable for it; nothing refuses an inline disable."
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Done",
+  "order": 224
 }
