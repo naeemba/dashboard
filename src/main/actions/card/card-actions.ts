@@ -11,7 +11,7 @@ import { isProjectBoard } from './project-board';
 import { isLinkedWorktree } from '../../board/linked-worktree';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { entryForCard } from '../../ship/worktree-store';
-import { isFollowed, type PullRequest } from '../../board/pull-request-column';
+import { followedBranch, type PullRequest } from '../../board/pull-request-column';
 import { pullRequestSweep, type PullRequestSweep } from '../../board/pull-request-sweep';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
 import { bind, registerActions, type BoundAction } from '../action';
@@ -40,7 +40,7 @@ export type CardActions = {
   reviews: ReviewSweep;
   // Every card's column set from its pull request: the app's to run, so no verb of the command.
   pullRequests: PullRequestSweep;
-  // card.start, for `pane run --card`: a ship calls it itself.
+  // card.start, for main's one place a card's agent is given its pane.
   start: BoundAction;
   actions: BoundAction[];
 };
@@ -56,16 +56,20 @@ export function cardActions(main: CardActionsMain): CardActions {
     else writeBoard(projectPath, board);
     void published(projectPath);
   };
+  // The app's own writes, logged so the watcher does not take them for the command's.
+  const writeShown = (projectPath: string, board: Board) => writeAndSync(projectPath, board, true);
+  // Without salvage: a write follows, and a card file that does not parse is refused (readBoard).
+  const read = (projectPath: string) => readBoard(projectPath, false);
 
   const reviews: ReviewSweep = reviewSweep({
     ...main,
-    writeBoard: (projectPath, board) => writeAndSync(projectPath, board, true),
+    writeBoard: writeShown,
     arrived: (entry: WorktreeEntry) => move.call({ projectPath: entry.projectPath, id: entry.cardId, column: REVIEW_COLUMN, source: 'automatic' }),
   });
   const shipCard = shipFlow({ ...main, forgetReview: (cardId) => reviews.forget(cardId) });
 
   const move = bind(cardMove, {
-    read: (projectPath) => readBoard(projectPath, false),
+    read,
     // A move from the command is written plainly, so the watcher logs it as the command's, as it did
     // when the command wrote the file itself.
     write: (projectPath, board, source) => writeAndSync(projectPath, board, source === 'automatic'),
@@ -76,18 +80,16 @@ export function cardActions(main: CardActionsMain): CardActions {
     review: (input) => review.call(input),
   });
   const ship = bind(cardShip, {
-    read: (projectPath) => readBoard(projectPath, false).board,
+    read: (projectPath) => read(projectPath).board,
     slotOf: main.slotOf,
     ship: async (request): Promise<ShipResult> => {
       const result = await shipCard(request);
       main.log(shipEntry(request, result));
-      if (result.ok) await start.call({ projectPath: request.projectPath, id: request.cardId, branch: result.entry.branch });
       return result;
     },
   });
   const review = bind(cardReview, { review: ({ id }) => reviews.review(id) });
-  const read = (projectPath: string) => readBoard(projectPath, false);
-  const start = bind(cardStart, { read, write: (projectPath, board) => writeAndSync(projectPath, board, true) });
+  const start = bind(cardStart, { read, write: writeShown });
   const worktreeBranch = (projectPath: string, id: string) => {
     const entry = entryForCard(main.worktrees(), id);
     return entry?.projectPath === projectPath ? entry.branch : undefined;
@@ -96,7 +98,7 @@ export function cardActions(main: CardActionsMain): CardActions {
     read,
     worktreeBranch,
     pullRequestOf: main.pullRequestOf,
-    write: (projectPath, board) => writeAndSync(projectPath, board, true),
+    write: writeShown,
     move: (input) => move.call(input),
     now: Date.now,
   });
@@ -104,7 +106,7 @@ export function cardActions(main: CardActionsMain): CardActions {
     followed(projectPath) {
       const { board } = read(projectPath);
       return board.columns.flatMap((column) => column.cards
-        .filter((card) => isFollowed(card, column.name, card.branch ?? worktreeBranch(projectPath, card.id), Date.now()))
+        .filter((card) => followedBranch(card, column.name, worktreeBranch(projectPath, card.id), Date.now()) !== undefined)
         .map((card) => card.id));
     },
     // A refusal is a card the board no longer has, or a file that does not parse: the card is left

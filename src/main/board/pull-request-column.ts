@@ -1,5 +1,5 @@
 import {
-  addComment, CANCELLED_COLUMN, DOING_COLUMN, DONE_COLUMN, isColumnNamed, REVIEW_COLUMN, selectionOf, setBranch, setPullRequest,
+  addComment, isPullRequestNumber, CANCELLED_COLUMN, DOING_COLUMN, DONE_COLUMN, isColumnNamed, REVIEW_COLUMN, selectionOf, setBranch, setPullRequest,
   type Board, type Card,
 } from '../../shared/board/board';
 
@@ -14,6 +14,10 @@ export type PullRequest = { number: number; state: PullRequestState; title: stri
 // catch a card moved to Done before its pull request merged, which is how kamandsystem #19 sat in Done
 // unmerged; short enough that the app's first run does not ask `gh` about every card ever finished.
 export const DONE_FOLLOWED_MS = 24 * 60 * 60 * 1000;
+
+// The three things the app says on a card, one per pull request and state. The first words are how
+// the app knows it has said one already, so they never change: the title after them may.
+const SAID = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed without merging' } as const;
 
 // `gh pr list` for one branch, every state, newest first, with what the comments name.
 export function pullRequestListArguments(branch: string): string[] {
@@ -32,13 +36,9 @@ export function latestPullRequest(json: string): PullRequest | null {
 function isPullRequest(value: unknown): value is PullRequest {
   if (typeof value !== 'object' || value === null) return false;
   const { number, state, title, url } = value as Record<string, unknown>;
-  return Number.isInteger(number) && (state === 'OPEN' || state === 'MERGED' || state === 'CLOSED')
+  return isPullRequestNumber(number) && typeof state === 'string' && Object.hasOwn(SAID, state)
     && typeof title === 'string' && typeof url === 'string';
 }
-
-// The three things the app says on a card, one per pull request and state. The first words are how
-// the app knows it has said one already, so they never change: the title after them may.
-const SAID = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed without merging' } as const;
 
 function saidPrefix(pullRequest: number, state: PullRequestState): string {
   return `Pull request #${pullRequest} ${SAID[state]}`;
@@ -57,13 +57,15 @@ function said(card: Card, pullRequest: number, state: PullRequestState): boolean
 // Whether the app asks `gh` about this card at all. Not without a branch: a research card has none and
 // main moves it as it always has. Not in Cancelled: it will not be done (board-decision-4). Not once
 // its merge is on it: that is the last thing a pull request does. And a Done card only for a day after
-// it last changed (DONE_FOLLOWED_MS). `branch` is the card's own, or its worktree's.
-export function isFollowed(card: Card, column: string, branch: string | undefined, now: number): boolean {
-  if (branch === undefined || isColumnNamed(column, CANCELLED_COLUMN)) return false;
-  if (card.pullRequest !== undefined && said(card, card.pullRequest, 'MERGED')) return false;
-  if (!isColumnNamed(column, DONE_COLUMN)) return true;
+// it last changed (DONE_FOLLOWED_MS). The branch asked about, the card's own or else its worktree
+// record's, or undefined when the card is not followed.
+export function followedBranch(card: Card, column: string, worktreeBranch: string | undefined, now: number): string | undefined {
+  const branch = card.branch ?? worktreeBranch;
+  if (branch === undefined || isColumnNamed(column, CANCELLED_COLUMN)) return undefined;
+  if (card.pullRequest !== undefined && said(card, card.pullRequest, 'MERGED')) return undefined;
+  if (!isColumnNamed(column, DONE_COLUMN)) return branch;
   const changed = card.updatedAt === undefined ? Number.NaN : Date.parse(card.updatedAt);
-  return now - changed < DONE_FOLLOWED_MS;
+  return now - changed < DONE_FOLLOWED_MS ? branch : undefined;
 }
 
 // What a pull request does to its card. `board` is the card with the number, the branch and the line

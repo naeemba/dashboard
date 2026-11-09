@@ -1,7 +1,7 @@
-import { selectionOf, type Board } from '../../../shared/board/board';
+import { pullRequestLabel, selectionOf, type Board } from '../../../shared/board/board';
 import type { CardMoveResult, Refused } from '../../../shared/app/bridge';
 import { brokenFilesRefusal } from '../../board/board-cli';
-import { followStep, isFollowed, type PullRequest } from '../../board/pull-request-column';
+import { followedBranch, followStep, type PullRequest } from '../../board/pull-request-column';
 import { action, isRefused } from '../action';
 import { cardInput, type CardInput } from './card-input';
 import type { CardMoveInput } from './move';
@@ -32,8 +32,8 @@ export const cardFollow = action<CardFollowPorts, CardInput, { output: string }>
     const at = selectionOf(before.board, id);
     if (at === null) return { refused: `no card with id ${id}` };
     const card = before.board.columns[at.column].cards[at.card];
-    const branch = card.branch ?? ports.worktreeBranch(projectPath, id);
-    if (branch === undefined || !isFollowed(card, before.board.columns[at.column].name, branch, ports.now())) {
+    const branch = followedBranch(card, before.board.columns[at.column].name, ports.worktreeBranch(projectPath, id), ports.now());
+    if (branch === undefined) {
       return { output: `"${card.title}" is not followed` };
     }
     const pull = await ports.pullRequestOf(projectPath, branch);
@@ -41,7 +41,7 @@ export const cardFollow = action<CardFollowPorts, CardInput, { output: string }>
     const { board } = ports.read(projectPath);
     const step = followStep(board, id, branch, pull);
     if (step.board !== null) ports.write(projectPath, step.board);
-    if (step.column === null) return { output: pull === null ? `${branch} has no pull request` : `"${card.title}" follows #${pull.number}` };
+    if (step.column === null) return { output: pull === null ? `${branch} has no pull request` : `"${card.title}" follows ${pullRequestLabel(pull.number)}` };
     const moved = await ports.move({ projectPath, id, column: step.column, source: 'automatic' });
     return isRefused(moved) ? moved : { output: moved.output };
   },

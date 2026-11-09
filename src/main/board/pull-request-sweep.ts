@@ -13,7 +13,7 @@ export const FOLLOW_TIMER_MS = 2 * 60 * 1000;
 export const FOLLOW_GAP_MS = 30 * 1000;
 
 export type PullRequestSweepPorts = {
-  // The cards of the project worth asking about now (isFollowed), by id.
+  // The cards of the project worth asking about now (followedBranch), by id.
   followed(projectPath: string): string[];
   // card.follow for one card. Throws when gh cannot answer: missing, logged out or offline.
   follow(projectPath: string, id: string): Promise<unknown>;

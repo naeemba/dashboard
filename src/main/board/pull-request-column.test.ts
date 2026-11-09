@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardById, columnNamed, emptyBoard, type Board, type Card } from '../../shared/board/board';
 import {
-  DONE_FOLLOWED_MS, followStep, isFollowed, latestPullRequest, pullRequestComment, type PullRequest,
+  DONE_FOLLOWED_MS, followedBranch, followStep, latestPullRequest, pullRequestComment, type PullRequest,
 } from './pull-request-column';
 
 const NOW = Date.parse('2026-11-09T12:00:00Z');
@@ -36,14 +36,16 @@ describe('latestPullRequest', () => {
   });
 });
 
-describe('isFollowed', () => {
+describe('followedBranch', () => {
   const followed = (column: string, fields: Partial<Card> = {}, branch: string | undefined = 'fix-login') =>
-    isFollowed(card(boardWith(column, fields))!, column, branch, NOW);
-  const branchless = isFollowed(card(boardWith('Doing'))!, 'Doing', undefined, NOW);
+    followedBranch(card(boardWith(column, { branch, ...fields }))!, column, undefined, NOW) !== undefined;
+  const branchless = followedBranch(card(boardWith('Doing'))!, 'Doing', undefined, NOW);
 
   it('asks about a card with a branch, never one without or one cancelled', () => {
     expect(followed('Doing')).toBe(true);
-    expect(branchless).toBe(false);
+    expect(branchless).toBeUndefined();
+    expect(followedBranch(card(boardWith('Doing'))!, 'Doing', 'from-the-record', NOW)).toBe('from-the-record');
+    expect(followedBranch(card(boardWith('Doing', { branch: 'own' }))!, 'Doing', 'from-the-record', NOW)).toBe('own');
     expect(followed('Cancelled')).toBe(false);
   });
 

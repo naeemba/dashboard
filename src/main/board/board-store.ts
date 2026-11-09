@@ -113,7 +113,8 @@ and leaves out a \`.broken\` file set aside and a write's temporary file.
   \`Doing\` when its agent starts, into \`Review\` when the pull request on its
   branch opens, into \`Done\` when it merges, back to \`Doing\` when it closes
   unmerged, with one comment naming the pull request each time. An agent working
-  a card does not move it. Into \`Review\`, the app throws that card's worktree
+  a card does not move it; it records the number with \`board set <id>
+  --pull-request <n>\`, which is what starts the review once it goes quiet. Into \`Review\`, the app throws that card's worktree
   away and makes a fresh one on the pull request's branch with an agent
   reviewing it.
 - A card's column on the \`main\` branch says what has been merged, and \`Review\`
