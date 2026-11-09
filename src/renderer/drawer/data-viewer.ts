@@ -1,6 +1,7 @@
 import { icon } from '../app/icons';
 import { viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
+import { matchesBinding } from '../../shared/keys/binding';
 import { dataKey, dataKeysLine, dataStep, dataView, shownLines, startClosed, type DataRow } from './data-folds';
 import type { DataKind } from '../../shared/drawer/drawer';
 import { editRow } from './doc-viewer';
@@ -10,13 +11,17 @@ import { editRow } from './doc-viewer';
 // that fold; Enter edits on the first and folds or unfolds on the others, Right and Left unfold and fold,
 // A folds or unfolds them all. A click on a fold line moves the highlight there and folds it, as Enter
 // does (conventions-rule-1). What folds, what is open and what each key does is data-folds.ts's.
-export function dataOverlay(name: string, text: string, kind: DataKind, edit: (() => void) | null): void {
+// `copy`, the manager's log popup, is a key of the caller's that the viewer hears and names on its keys line.
+export type ViewerCopy = { binding: string; run(): void };
+export function dataOverlay(
+  name: string, text: string, kind: DataKind, edit: (() => void) | null, copy?: ViewerCopy,
+): void {
   const view = dataView(text, kind);
   const hasFolds = view.folds.size > 0;
   let closed: ReadonlySet<number> = startClosed(view);
   let current: DataRow | null = edit === null ? (view.folds.keys().next().value ?? null) : 'edit';
 
-  const keysLine = dataKeysLine(hasFolds, edit !== null);
+  const keysLine = dataKeysLine(hasFolds, edit !== null) + (copy === undefined ? '' : ` · ${copy.binding} copies`);
   const top = edit === null ? keysRow(keysLine) : editRow(name, keysLine);
   const body = document.createElement('pre');
   body.className = 'data-viewer-text';
@@ -94,6 +99,10 @@ export function dataOverlay(name: string, text: string, kind: DataKind, edit: ((
   const close = viewerOverlay('doc-viewer', shown, {
     enter: current === null ? undefined : () => (current === 'edit' ? editing() : step('toggle')),
     keys: (event) => {
+      if (copy !== undefined && matchesBinding(event, copy.binding)) {
+        event.preventDefault();
+        return copy.run();
+      }
       const action = dataKey(event.key, isModified(event), hasFolds);
       if (action === 'ignore') return;
       event.preventDefault();
