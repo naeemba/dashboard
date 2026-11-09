@@ -78,7 +78,7 @@ export type InkCommand = 'pen' | 'eraser' | 'color' | 'width' | 'undo' | 'clear'
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'agents' | 'workflow' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context' | 'refresh-usage';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'agents' | 'workflow' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context' | 'refresh-usage' | 'attachments';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -686,6 +686,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-history', description: 'Search the prompts sent in this project\'s recent conversations',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'history' }, mac: 'Ctrl+R', other: 'Ctrl+R',
+  },
+  // Alt+D, for delete: the arrows walk the images attached to the prompt and Delete takes one off.
+  {
+    name: 'claude-attachments', description: 'Select the images attached to the prompt: the arrows walk them, Delete or Backspace removes one, Enter shows it, Escape goes back',
+    group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'attachments' }, mac: 'Alt+D', other: 'Alt+D',
   },
   // The task strip's keys. Ctrl+B, the terminal's background key, is the board's mode key here (chat-decision-5).
   {

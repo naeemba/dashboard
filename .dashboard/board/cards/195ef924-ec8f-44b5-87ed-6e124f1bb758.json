@@ -1,0 +1,11 @@
+{
+  "id": "195ef924-ec8f-44b5-87ed-6e124f1bb758",
+  "title": "Audit 2: test that every input and textarea gets dir = 'auto'",
+  "notes": "A vitest test counts createElement('input')/('textarea') and dir = 'auto' in src/ and fails when they differ: conventions-rule-2's two grep lines as code.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:54.871Z",
+  "updatedAt": "2026-11-09T15:49:41.439Z",
+  "column": "Doing",
+  "order": 9
+}

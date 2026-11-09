@@ -5,6 +5,11 @@ command lets an agent in a pane talk to the running app: start a worker, say
 it is done, list what runs where. Each pane's Claude conversation is resumed
 after a restart, by pane.restore (docs/actions).
 
+Main and every worker, in a terminal or on a Claude screen, are told about the
+board in their system prompt (`BOARD_INSTRUCTIONS` in `dispatch.ts`) and run the
+board guard hook beside their own, so none of them hand-edits a card or moves a
+shipped one (board-decision-8).
+
 ## Files
 
 Folders: `src/main/workers/`, `src/shared/workers/`.

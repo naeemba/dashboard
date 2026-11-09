@@ -112,6 +112,26 @@ finished, so a board whose finished column has another name (`Shipped`) shows
 its subtasks as under way. That is the price of one rule the bar, the manager's
 counts and its stalled panes all share.
 
+## board-decision-9: A card's pull request glyph is read with its column and held in memory
+
+**The glyph (checks running, failed, approved, mergeable, merged) comes from the
+same `gh pr list` card.follow asks, with three more fields, and is never written
+on the card.** A second lookup would be a second `gh` call per card per check.
+Written on the card, a glyph that changes as each check finishes would be a
+commit pushed to origin every minute a pull request is building. In memory, a
+restart shows nothing until the next check, a minute at most; merged is the one
+read from the card, from the merge line board-decision-6 writes, since a merged
+card is never asked about again.
+
+**One glyph, in this order: merged, a failed check, a running one, approved,
+mergeable.** A failed check is what needs you first, and approved over
+mergeable because an approval is news and mergeable alone is not. An open pull
+request that is conflicting or waiting on a review shows none.
+
+**Checked every minute, not two.** The glyph is worth reading only if it is near
+the truth; the column's moves come sooner too, for one `gh` call per card in
+flight per minute.
+
 ## board-decision-6: A card's column follows its pull request, and the app says so
 
 **The app moves a shipped card: into Doing when its agent starts, into Review
@@ -124,7 +144,7 @@ the merge. Agents moved cards to Done on main before the merge, and kamandsystem
 This supersedes board-rule-2's ordering: the rule (Review while open, Done after
 the merge) stands, and the app keeps it. Folds in card b0234b28's lookup (the
 number found from the branch through `gh`); its glyph of check and review state
-is not part of this.
+is board-decision-9.
 
 **Each state moves the card when it differs from the last line about that pull
 request, and the line on the card is the record of that.** A reopen counts as a
@@ -134,13 +154,14 @@ person: a card dragged back to Doing for a fix while its pull request stays open
 would jump to Review two minutes later. The one exception is Done with a pull
 request open, which is moved back every time, since that card is the bug above.
 
-**Asked when a worker reports, when the board is shown, and every two minutes;
+**Asked when a worker reports, when the board is shown, and every two minutes
+(every minute since board-decision-9);
 never twice in 30 seconds.** Showing the board re-reads it after each write, the
 app's own included, and asking `gh` on each read would be a call per card per
 keystroke. A Done card is asked about for a day after it last changed, enough to
 catch an early Done and few enough that the first run does not ask about every
 card ever finished. What it costs: one `gh` call per card in flight per check,
-and a merged pull request reaches Done up to two minutes after the merge when
+and a merged pull request reaches Done up to a minute after the merge when
 nobody reports and nobody looks.
 
 **`gh` failing is silence, not a state.** Missing, logged out or offline, nothing
@@ -188,3 +209,98 @@ landed Done through the branch, and now it lands it in the checkout only. And a
 ship still commits its Ship move on the new branch when origin did not have it
 yet; card.move waits for the sync before the ship so that origin has it, which
 leaves that commit empty and skipped.
+
+## board-decision-7: A card with a pull request open sits in Review, and the app keeps it there
+
+
+**A card with a pull request open sits in `Review`, not `Done`, and the app
+puts it there** (board-decision-6). A column on `main` says what has been
+merged; `Review` is the exception — a pull request open and nothing has checked
+it. Otherwise the board says a feature is finished and checked while nobody has
+looked at it, and `Review` sits empty in front of the person whose job it is to
+look. This was board-rule-2, a line in `CLAUDE.md` that beat a global
+instruction to move a card to Done once its pull request was ready; since the
+app moves the card from the pull request's state, neither instruction is
+anyone's to remember, and both are gone (board-decision-8). What follows is why
+the order matters.
+
+**The move into `Done` comes after the merge, and is one `board move`.** The
+`board` command writes a board git tracks on origin's main itself, and brings
+the project's checkout up to it (board-decision-5), from the project or from a
+card's worktree alike. So a card moved to Done before the merge is main saying
+Done for a pull request that may still be refused: kamandsystem #19 sat in Done
+unmerged exactly like that.
+
+What this replaced: the move went on the branch first, so the merge would carry
+it into main, then the app's board was moved after. A branch-only Done was the
+only way to get Done onto main when nothing but a merge wrote main, and the
+order mattered: moved after the merge, main went on committing `Review` for a
+feature that shipped weeks ago, while the only copy saying `Done` was an
+uncommitted change in one person's checkout. With the command writing main,
+the branch's board carries nothing about the card, and the order is merge, then
+move. `reviewPrompt` in `review.ts` is where it is written down, and
+`review.test.ts` pins it.
+
+## board-decision-8: The board is kept by a hook and the app's own instructions, not CLAUDE.md
+
+**An agent cannot hand-edit the board: a PreToolUse hook refuses an Edit, Write
+or NotebookEdit of a file under `.dashboard/board/` (or the older
+`.dashboard/board.json`), and a shell command that redirects, tees or `sed -i`s
+into one, with a message naming the board command.** Before, a line in the
+global `CLAUDE.md` said to use the command and never edit the JSON; an agent
+that forgot wrote a card missing a field, and the app repaired it silently on
+the next read (board-rule-1). A hook holds whatever the agent read. A board
+file read, or put back from git (`git checkout origin/main -- .dashboard/`, how
+a conflict on the board is resolved), goes through. An `mv` of a temporary file
+over a card, a script, or an editor in a pane still does: matching those means
+parsing the shell, and the guard is a guard rail, not a sandbox.
+
+**One decision, one command, three doors.** `board-guard.ts` decides from the
+tool's name and input, with the test, and every door runs the same `node
+"$HOME/.claude/dashboard/board.js" guard`: a terminal worker from its
+`--settings`, a Claude screen (main's and a worker's, hosted or not) from the
+session's settings, and any other Claude from `~/.claude/settings.json`. One
+string, so a session that has it from two of those runs it once: Claude Code
+drops identical commands. A command hook rather than an SDK callback because a
+hosted screen's hooks are told to the app, never asked, so a callback could not
+refuse anything there. It names the board command as `$DASHBOARD_BOARD` inside a
+pane the app opened and as its own path outside one. What it costs: a node
+start per Edit, Write and shell command, and a dev run's sessions use the copy
+the installed app last put there.
+
+**A Claude the app did not start gets it from `~/.claude/settings.json`.** At
+each launch the installed app copies its board program to
+`~/.claude/dashboard/board.js` and adds one PreToolUse entry running `node
+"$HOME/.claude/dashboard/board.js" guard`, only when no entry already runs that
+command. Nothing else in the file is rewritten: every other key and hook stays
+as it was, the file keeps its mode, a linked `settings.json` stays a link and
+the entry lands in the file it points at, and a file that is not JSON, or whose
+hooks are not the shape Claude Code reads, is refused with one warning in the
+log and left alone. `$HOME` rather than an absolute path, so a settings file
+shared between machines through a dotfiles repo needs one entry, not one per
+machine. What it costs: removing the entry by hand is undone at the next
+launch; keep it out by keeping the app from launching, or delete the hook's
+command file, which turns the entry into a non-blocking error.
+
+**What an agent has to know is in the instructions the app gives it.**
+`BOARD_INSTRUCTIONS` in `dispatch.ts` is appended to the system prompt of main
+and of every worker, terminal or screen, resumed or not: the command exists and
+prints its usage, a hand edit is refused, `board comment` records a finding
+where `board set --notes` would replace the description, and the app moves a
+card with a branch from its pull request, so an agent moves none and records no
+pull request. The global `CLAUDE.md` section that said all this, and this
+repo's board-rule-2, are deleted.
+
+**An agent records no pull request: the review starts from the one the app
+found.** The sweep that hands a finished card to a reviewer used to learn the
+agent was done only from the number it wrote on its worktree's board. It now
+also takes the number card.follow wrote on the project's board, while the card
+sits in Review or past it (`followedPullRequest` in `review.ts`); in Done the
+number is the one that merged, and the sweep needs it to clear that card's
+worktree. Not before Review, nor in Cancelled: a card sent back to Doing when
+its pull request closed unmerged keeps that number, and a fresh ship of it has
+opened nothing yet. The project's number comes first, and on a card before
+Review a worktree number equal to the project card's own is not counted: it
+came in with the base, so it is that closed pull request. What it costs: the
+review starts when card.follow next asks `gh`, up to two minutes after the pull
+request opens, rather than the moment an agent writes the number.
