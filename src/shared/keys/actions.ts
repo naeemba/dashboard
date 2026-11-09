@@ -65,6 +65,7 @@ export type Action =
   | { kind: 'command-cancel' }
   | { kind: 'log-select'; direction: 'up' | 'down' }
   | { kind: 'log-open' }
+  | { kind: 'log-copy' }
   | { kind: 'log-filter-reset' }
   | { kind: 'notes-ink-toggle' }
   | { kind: 'ink'; command: InkCommand }
@@ -613,15 +614,20 @@ export const ACTIONS: readonly ActionEntry[] = [
     mac: 'Escape', other: 'Escape',
   },
   // The log section. Bare arrows, a bare Enter and Escape, heard on this screen only, for the command
-  // screen's reason. No letter key at all: the filter box holds the keyboard and takes every letter.
+  // screen's reason. No bare letter at all: the filter box holds the keyboard and takes every letter,
+  // so the copy key is the Claude screen's Alt+C. The entry's popup hears it too.
   ...(['up', 'down'] as const).map((direction): ActionEntry => ({
     name: `log-select-${direction}`, description: `Move the selection ${direction}`,
     group: 'log', scope: 'log', action: { kind: 'log-select', direction },
     mac: ARROW_KEYS[direction], other: ARROW_KEYS[direction],
   })),
   {
-    name: 'log-open', description: 'Unfold the entry, or fold it again',
+    name: 'log-open', description: 'Open the entry in a popup, formatted',
     group: 'log', scope: 'log', action: { kind: 'log-open' }, mac: 'Enter', other: 'Enter',
+  },
+  {
+    name: 'log-copy', description: 'Copy the entry as JSON',
+    group: 'log', scope: 'log', action: { kind: 'log-copy' }, mac: 'Alt+C', other: 'Alt+C',
   },
   {
     name: 'log-filter-reset', description: 'Empty the filter',

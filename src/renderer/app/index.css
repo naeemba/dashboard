@@ -501,24 +501,46 @@ body *:not(.pane, .pane *) {
   font-size: 12px;
 }
 
-/* One line each until unfolded, so a long message does not push the rest of the page off screen.
-   Block rather than the command row's flex: an ellipsis needs the text in a block, not a flex item.
-   A line, not the command row's card: a page of entries is the point, and a card each fits fifteen.
-   The command list's highlight still outranks this, so the selected line keeps its tint. */
+/* One line each, so a long message does not push the rest of the page off screen; Enter or a click
+   opens the whole entry in a popup. The text is a block inside the flex row, since an ellipsis needs
+   a block, with the copy button at the row's end. A line, not the command row's card: a page of
+   entries is the point, and a card each fits fifteen. The command list's highlight still outranks
+   this, so the selected line keeps its tint. */
 .log-list .log-row {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   padding: 2px 8px;
   border: 0;
   background: none;
+}
+
+.log-text {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.log-list .log-row.unfolded {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+/* Faint until the row is pointed at or selected, so a page of them does not read as a column of icons. */
+.log-copy {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0.3;
+}
+
+.log-row:hover .log-copy,
+.log-row.highlighted .log-copy,
+.log-copy:focus-visible {
+  opacity: 1;
 }
 
 .log-row.level-error {

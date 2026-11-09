@@ -3,11 +3,16 @@ import type { DashboardBridge } from '../../shared/app/bridge';
 import { clampIndex, heldIndex } from '../../shared/app/clamp-index';
 import { failureText } from '../../shared/errors/failure';
 import { LOG_READ_COUNT, matchesLogFilter, type LogEntry } from '../../shared/app/log-entry';
+import { iconOnlyButton } from '../app/icons';
+import { dataOverlay } from '../drawer/data-viewer';
+import { copiedEntry, shownEntry } from './log-popup';
 
 export type LogOptions = {
   bridge: DashboardBridge;
   // The status bar's error span, under this section's own owner.
   onError(message: string): void;
+  // What a key is bound to now, so the popup hears the copy key in force.
+  binding(actionName: string): string;
 };
 
 export type LogView = {
@@ -41,18 +46,17 @@ export function createLogView(options: LogOptions): LogView {
   // Oldest first, as the file holds them; drawn reversed.
   let entries: LogEntry[] = [];
   // Keyed on the fields, not the object: arriving re-reads the file into fresh objects, and the selection
-  // and the unfolded rows have to survive that. In a fixed order, because an entry that arrived live and
-  // the same entry read back from the file hold their properties in different orders.
+  // has to survive that. In a fixed order, because an entry that arrived live and the same entry read
+  // back from the file hold their properties in different orders.
   const keyOf = (entry: LogEntry): string =>
     JSON.stringify([entry.time, entry.level, entry.kind, entry.project ?? '', entry.message]);
-  const unfolded = new Set<string>();
   let selected = 0;
   let shown: LogEntry[] = [];
   let readFailed = false;
 
   // Which entries pass the filter, newest first. A new line goes in at the top and moves every row
   // under it down one, so the selection follows the entry it was on rather than staying at its
-  // position — otherwise Enter would unfold whatever slid into the row you picked. A changed filter
+  // position — otherwise Enter would open whatever slid into the row you picked. A changed filter
   // is a new list and starts at the top instead.
   function refilter(follow: boolean): void {
     const previous = shown[selected];
@@ -67,15 +71,27 @@ export function createLogView(options: LogOptions): LogView {
       const row = document.createElement('li');
       row.className = `log-row level-${entry.level}`;
       row.classList.toggle('highlighted', index === selected);
-      row.classList.toggle('unfolded', unfolded.has(keyOf(entry)));
       const project = entry.project === undefined ? '' : `  ${entry.project}`;
-      row.textContent = `${new Date(entry.time).toLocaleString()}  ${entry.level}  ${entry.kind}${project}  ${entry.message}`;
-      // A click is the selection moving there, then what Enter does there. The keyboard goes back to the
-      // box, which a click on the section itself would otherwise have taken it from.
-      row.addEventListener('click', () => {
+      const text = document.createElement('span');
+      text.className = 'log-text';
+      text.textContent = `${new Date(entry.time).toLocaleString()}  ${entry.level}  ${entry.kind}${project}  ${entry.message}`;
+      // A click is the selection moving there, then what Enter does there, or on the button what the
+      // copy key does. The keyboard goes back to the box, which a click on the section itself would
+      // otherwise have taken it from; the popup takes it from there.
+      const select = (): void => {
         selected = index;
-        toggle();
+        draw(false);
         input.focus();
+      };
+      const copy = iconOnlyButton('log-copy', 'copy', 'Copy as JSON', () => {
+        select();
+        copySelected();
+      });
+      row.append(text, copy);
+      row.addEventListener('click', (event) => {
+        if (event.target instanceof Node && copy.contains(event.target)) return;
+        select();
+        openSelected();
       });
       return row;
     }));
@@ -85,13 +101,22 @@ export function createLogView(options: LogOptions): LogView {
     if (scroll) list.children[selected]?.scrollIntoView({ block: 'nearest' });
   }
 
-  function toggle(): void {
+  function copySelected(): void {
     const entry = shown[selected];
     if (entry === undefined) return;
-    const key = keyOf(entry);
-    if (unfolded.has(key)) unfolded.delete(key);
-    else unfolded.add(key);
-    draw(true);
+    navigator.clipboard.writeText(copiedEntry(entry)).catch((error: unknown) => {
+      options.onError(`Entry not copied: ${failureText(error)}`);
+    });
+  }
+
+  // The drawer's JSON viewer, the entry pretty-printed and its stack one frame to a line. Escape puts
+  // it away and the keyboard returns to the box; the copy key copies the entry from there too.
+  function openSelected(): void {
+    const entry = shown[selected];
+    if (entry === undefined) return;
+    dataOverlay('', JSON.stringify(shownEntry(entry)), 'json', null, {
+      binding: options.binding('log-copy'), run: copySelected,
+    });
   }
 
   input.addEventListener('input', () => {
@@ -135,7 +160,8 @@ export function createLogView(options: LogOptions): LogView {
         selected = clampIndex(selected + (action.direction === 'up' ? -1 : 1), shown.length - 1);
         draw(true);
       }
-      if (action.kind === 'log-open') toggle();
+      if (action.kind === 'log-open') openSelected();
+      if (action.kind === 'log-copy') copySelected();
       if (action.kind === 'log-filter-reset') {
         input.value = '';
         refilter(false);
