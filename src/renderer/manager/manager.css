@@ -469,3 +469,14 @@
   margin-top: auto;
   font-size: 11px;
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.manager-chips[hidden],
+.manager-trend[hidden],
+.manager-worktree-names[hidden],
+.manager-figures[hidden],
+.manager-figure[hidden],
+.manager-day-names[hidden],
+.manager-activity-detail[hidden] {
+  display: none;
+}

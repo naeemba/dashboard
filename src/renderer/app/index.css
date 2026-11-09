@@ -631,3 +631,18 @@ body *:not(.xterm, .xterm *) {
 .workers > .pane.folded > .chat {
   display: none;
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.workers[hidden],
+.pane-controls[hidden],
+.ink-strip[hidden],
+.ink-canvas[hidden],
+.manager-version[hidden],
+.manager-marker[hidden],
+.command-mark[hidden],
+.section-strip[hidden],
+.section-name[hidden],
+.command-label[hidden],
+.log-copy[hidden] {
+  display: none;
+}

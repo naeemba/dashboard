@@ -751,3 +751,28 @@
   background: var(--surface-overlay);
   color: var(--muted);
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.main-chat[hidden],
+.chat[hidden],
+.chat-more[hidden],
+.chat-copy[hidden],
+.chat-image[hidden],
+.chat-pdf[hidden],
+.chat-step-tool[hidden],
+.chat-ask-row[hidden],
+.chat-attached[hidden],
+.chat-attached-image[hidden],
+.chat-foot[hidden],
+.chat-foot-side[hidden],
+.chat-foot-model[hidden],
+.chat-meter[hidden],
+.chat-foot-refresh[hidden],
+.chat-task-summary[hidden],
+.chat-spinner[hidden],
+.chat-menu-row[hidden],
+.chat-agent-dialog[hidden],
+.chat-workflow-phase[hidden],
+.chat-workflow-agent[hidden] {
+  display: none;
+}

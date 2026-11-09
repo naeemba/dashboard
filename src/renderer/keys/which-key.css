@@ -76,3 +76,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.which-key-row[hidden],
+.which-key-key[hidden] {
+  display: none;
+}

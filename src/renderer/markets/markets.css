@@ -248,3 +248,18 @@
 @media (prefers-reduced-motion: reduce) {
   .markets-refresh.busy svg { animation: none; opacity: 0.5; }
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.markets[hidden],
+.markets-card[hidden],
+.markets-head[hidden],
+.markets-badge[hidden],
+.markets-body[hidden],
+.markets-figure[hidden],
+.markets-sky[hidden],
+.markets-chips[hidden],
+.markets-chip[hidden],
+.markets-stats[hidden],
+.markets-refresh[hidden] {
+  display: none;
+}

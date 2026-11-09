@@ -205,3 +205,10 @@
 .terminal {
   color: var(--muted);
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.projects[hidden],
+.project[hidden],
+.mode-option[hidden] {
+  display: none;
+}

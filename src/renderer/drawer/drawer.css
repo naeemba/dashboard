@@ -176,3 +176,10 @@
   margin-bottom: 8px;
   color: var(--red);
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.drawer-row[hidden],
+.doc-viewer-dialog[hidden],
+.data-line[hidden] {
+  display: none;
+}
