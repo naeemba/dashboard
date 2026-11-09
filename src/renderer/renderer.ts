@@ -101,7 +101,7 @@ const tabStrip = createTabStrip((index) => showPage(index));
 const modeSwitch = createModeSwitch((mode) => setMode(mode));
 const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
-const statusError = createStatusError(bridge);
+const statusError = createStatusError(bridge, () => settings);
 const showError = statusError.show;
 const showNotice = statusError.notice;
 watchUpdates(bridge, (message) => showNotice('update', message), () => bindingName(settings, 'updates'));

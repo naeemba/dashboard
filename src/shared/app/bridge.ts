@@ -148,8 +148,9 @@ export type DashboardBridge = {
   restartToUpdate(): Promise<{ output: string } | Refused>;
   // The banner a ringing pane raises. An OS notification belongs to main, the way openExternal does:
   // main is the side macOS knows the app by. The pane's id travels with it so a click on the banner
-  // can be answered with the pane it was raised for.
-  notify(title: string, body: string, paneId: string): void;
+  // can be answered with the pane it was raised for. A status-bar error has no pane: its banner only
+  // brings the window forward.
+  notify(title: string, body: string, paneId?: string): void;
   // A click on that banner, coming back with the id it was raised for.
   onNotificationClick(listener: (paneId: string) => void): void;
   // Ctrl+`: the focused pane's scrollback, on its way to the project's nvim. The text travels rather

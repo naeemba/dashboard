@@ -1,10 +1,17 @@
 import type { LogDraft } from '../../shared/app/log-entry';
 import { errorDetail } from '../../shared/app/log-error';
+import { isRepeatFailure } from '../../shared/app/log-entry';
 
-// Whether a status-bar message goes in the log. A failure on a timer says the same sentence every few
-// seconds; logging each repaint would fill the file with one line. A clear is not an error at all.
-export function shouldLogError(message: string, onScreen: string): boolean {
-  return message !== '' && message !== onScreen;
+// Whether a status-bar message goes in the log: once a minute per sentence. A failure on a timer says
+// the same sentence every few seconds, and now that a message goes by itself the bar no longer holds
+// it to compare against; logging each repaint would fill the file with one line. A clear is nothing.
+export function logsStatusMessage(lastLogged: Map<string, number>, message: string, at: number): boolean {
+  return message !== '' && !isRepeatFailure(lastLogged, message, at);
+}
+
+// A notice's line: info, under the owner that wrote it, so a refusal seen once is still on record.
+export function noticeDraft(owner: string, message: string): LogDraft {
+  return { level: 'info', kind: 'app', action: owner, message };
 }
 
 // An error failureText read, and when.
@@ -24,8 +31,8 @@ export function rememberRead(reads: readonly FailureRead[], read: FailureRead): 
 // The line the bar's error writes to main: the sentence, and the Error behind it when one was read
 // just now and the sentence is built around it. Newest first, so the read the caller just made wins.
 // A thrown string or number has nothing the sentence does not already say, so it adds no detail.
-export function errorDraft(message: string, reads: readonly FailureRead[], now: number): LogDraft {
-  const draft: LogDraft = { level: 'error', kind: 'error', message };
+export function errorDraft(owner: string, message: string, reads: readonly FailureRead[], now: number): LogDraft {
+  const draft: LogDraft = { level: 'error', kind: 'error', action: owner, message };
   const read = reads.findLast((each) => now - each.at <= FAILURE_READ_WINDOW_MS && message.includes(each.text));
   if (read === undefined || typeof read.error !== 'object' || read.error === null) return draft;
   return { ...draft, error: errorDetail(read.error) };

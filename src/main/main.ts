@@ -41,7 +41,7 @@ import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
-import { landOnPane, registerPaneChannels, typeIntoPane } from './panes/pane-channels';
+import { landOnPane, raiseWindow, registerPaneChannels, typeIntoPane } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
 import { registerSessionChannels, sessionActions } from './actions/session/session-actions';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
@@ -466,6 +466,7 @@ const updates = updateActions({
 registerPaneChannels(table, {
   shells, screens: paneScreens, spawnTerminal: panes.spawn,
   land: (paneId) => { void project.focus.call(paneFromId(paneId)); },
+  raise: () => raiseWindow(liveWindow()),
 });
 // The Claude screen's sessions. chat-sessions.ts holds what one is; main hands over the way to every
 // screen and which project a slot holds.
