@@ -12,8 +12,8 @@ export type HeldByMain = HeldForRemote & {
 };
 
 // After the join replay a screen gets the same pushes as everyone. A screen that leaves stops voting
-// on pane sizes, so the shells are resized to whoever is left, and its layout no longer keeps a pane open. No port in the settings means the host
-// is off, and nothing listens.
+// on pane sizes, so the shells are resized to whoever is left, and its layout no longer keeps a pane
+// open. No port in the settings means the host is off, and nothing listens.
 export function startHost(held: HeldByMain): RemoteHost | null {
   const { port, bind } = held.settings().host;
   return port === null ? null : startRemoteHost(port, bind, {
