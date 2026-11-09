@@ -12,13 +12,23 @@ const runCommand = promisify(execFile);
 // change that is not staged leaves the leading column blank. A leading trim takes that blank away on
 // the first line only, which shifts its path one character left — and a reader that counts columns
 // then gets a path that is not the one git named. Only the trailing newline is ours to drop.
-export async function git(gitArguments: string[], cwd: string): Promise<string> {
-  return runProgram('git', gitArguments, cwd);
+//
+// `timeout` kills git after that many milliseconds, for a fetch or a push that would otherwise wait on
+// a dead network for minutes; `environment` is laid over the process's own.
+export type GitOptions = { timeout?: number; environment?: Record<string, string> };
+
+export async function git(gitArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {
+  return runProgram('git', gitArguments, cwd, options);
 }
 
 // The same for another program, which so far is gh asking whether a branch has a pull request.
-export async function runProgram(program: string, programArguments: string[], cwd: string): Promise<string> {
-  const { stdout } = await runCommand(program, programArguments, { cwd, maxBuffer: 64 * 1024 * 1024 });
+export async function runProgram(program: string, programArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {
+  const { stdout } = await runCommand(program, programArguments, {
+    cwd,
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: options.timeout,
+    env: options.environment === undefined ? undefined : { ...process.env, ...options.environment },
+  });
   return stdout.trimEnd();
 }
 
