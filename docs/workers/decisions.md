@@ -359,7 +359,10 @@ How it is built:
   sessions in one pane, both working. So the host writes its pid beside its socket
   (`screens-1.sock.pid`), and a host starting kills the group of the one recorded there if that pid
   is dead (`dead-host.ts`). Only then: Linux hands no pid out again while a group still carries it, so
-  a dead pid's group is the old host's leftovers and nothing else. A host starting also leaves the
+  a dead pid's group is the old host's leftovers and nothing else. The file names the boot too, and is
+  removed once acted on, so a number from before a reboot, or one already used, is never signalled; what
+  is left is the leftovers ending by themselves and the pid coming round to a process whose own group
+  outlives it, all before the next worker starts. A host starting also leaves the
   socket alone while another answers on it, rather than taking it and running a second copy of each
   worker its app asks for (`claimHostSocket` in `host-socket.ts`, which the pane host's start uses too,
   so two pane hosts started together leave no shells where no app can reach them).
@@ -369,7 +372,7 @@ How it is built:
 - With no host, a worker runs in the app only once nothing answers on the socket, and after the same
   kill. A host that answers but would not take this app (a second Dashboard on the same user data, or a
   host too slow to say what it kept) may be running that very worker: the start is refused, the screen
-  says so, and the next prompt tries again.
+  says so, main is told the worker stopped (so it can dispatch again), and the next prompt tries again.
 - It is run by the `node` a login shell finds, as the pane host is, so the Agent SDK is bundled into
   `screen-host-entry.mjs` (node cannot read it inside the asar) as an ES module, since the SDK reads
   `import.meta.url` as it loads. The CLI binary is the app's unpacked one, named in the options.
