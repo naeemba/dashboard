@@ -1,0 +1,11 @@
+{
+  "id": "9c3276e5-21c8-4ffd-acc6-bfe1829c6c95",
+  "title": "Audit 7: test that every renderer key handler checks isModified first",
+  "notes": "A test walks src/renderer/ for keydown listeners reading event.key and wants isModified (or isBareCharacter) first; keys-rule-1's exceptions are a named list in the test.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:55.654Z",
+  "updatedAt": "2026-11-09T15:32:55.654Z",
+  "column": "Backlog",
+  "order": 47
+}

@@ -16,7 +16,7 @@ function wired() {
   const changes = { seen: () => undefined, wrote: (_path: string, _board: unknown, write: () => void) => write() } as unknown as BoardChanges;
   const synced: string[] = [];
   const boardSync = { sync: async (path: string) => { synced.push(path); } };
-  registerProjectFiles(table, boards, changes, boardSync, (screen, channel, changed) => told.push([screen, channel, changed]), () => undefined);
+  registerProjectFiles(table, boards, changes, boardSync, (screen, channel, changed) => told.push([screen, channel, changed]), () => undefined, () => ({ card: 'approved' }));
   return { table, told, synced, projectPath };
 }
 
@@ -27,6 +27,11 @@ describe('registerProjectFiles', () => {
     const { table, told, projectPath } = wired();
     await table.invoke('couch', 'board:write', [projectPath, emptyBoard(), emptyBoard()]);
     expect(told).toEqual([['couch', 'board:change', projectPath]]);
+  });
+
+  it('reads the board with its cards\' pull request glyphs', async () => {
+    const { table, projectPath } = wired();
+    expect(await table.invoke('local', 'board:read', [projectPath])).toMatchObject({ pullRequestStatuses: { card: 'approved' } });
   });
 
   it('sends a board the screen wrote to origin behind the write', async () => {

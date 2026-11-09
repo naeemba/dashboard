@@ -1,0 +1,11 @@
+{
+  "id": "248833d4-2f38-42be-b7be-8ad11ae71474",
+  "title": "Audit 9: hook that refuses quitting, killing or restarting the running app",
+  "notes": "A PreToolUse Bash hook, installed by the app like the board guard (#262), refuses pkill/killall of Dashboard or electron, osascript quit and open -a Dashboard, and says to report that a rebuild is needed. no-running-app.mjs already covers package and make. workflow-rule-1.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:55.976Z",
+  "updatedAt": "2026-11-09T15:32:55.976Z",
+  "column": "Backlog",
+  "order": 49
+}

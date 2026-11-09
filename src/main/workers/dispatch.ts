@@ -4,6 +4,7 @@ import { paneLabel } from '../../shared/panes/terminals';
 import { slug } from '../../shared/app/slug';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { defaultPaneKind } from './pane-kind';
+import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -28,6 +29,20 @@ export function mainSessionName(projectPath: string): string {
 export function workerSessionName(projectPath: string, index: number): string {
   return `${projectSlug(projectPath)}-${paneLabel(index).replace(' ', '-')}`;
 }
+
+// What every session the app starts is told about the board, appended to Claude Code's own system
+// prompt: main's and every worker's. It is here rather than in a CLAUDE.md, where it was a rule each
+// agent had to remember (board-decision-8); the guard refuses the hand edit whatever the agent read.
+export const BOARD_INSTRUCTIONS = [
+  'The project\'s kanban board is changed only through its command, `node "$DASHBOARD_BOARD"`, which prints'
+    + ' its usage when run with nothing after it; an edit of the files under .dashboard/board/ is refused.',
+  'Record what you found on a card with `board comment <id> "<text>"`; `board set --notes` replaces the'
+    + ' card\'s description.',
+  'A card with a branch has its column moved by the app from its pull request: Doing when its agent starts,'
+    + ' Review when the pull request opens, Done when it merges, Doing again when it closes unmerged. Do not'
+    + ' move one yourself or record its pull request; the app finds it from the branch. A card with no'
+    + ' branch, such as research, is moved by whoever works it.',
+].join('\n');
 
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
@@ -72,6 +87,9 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     'The app closes a finished worker\'s pane itself: once its card is Done or Cancelled, or once you'
       + ' have read its report and sent it nothing for a while. Text you `send` an agent tells it to'
       + ' report to you too.',
+    '',
+    BOARD_INSTRUCTIONS,
+    'So a worker you dispatch on a card is never asked to move it either.',
   ].join('\n');
 }
 
@@ -81,7 +99,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
 // runs, which the hook's input tells apart (stop-notices.ts). permission_prompt is the one Notification
 // that needs a person; the app marks the pane and raises a banner. A prompt submitted, or a tool that
 // has run (so any permission was granted), is the worker back at work, which takes either mark off.
-// None of them reads the pane's screen.
+// None of them reads the pane's screen. PreToolUse is the board guard (board-guard.ts).
 export function workerSettings(id: string): string {
   const notify = (state: string) => ({ type: 'command', command: `node "$DASHBOARD_SESSION" notify ${id} ${state}` });
   // The space after the brace is outside every string, which is what makes Windows PowerShell wrap the
@@ -93,6 +111,7 @@ export function workerSettings(id: string): string {
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
       UserPromptSubmit: [{ hooks: [notify('running')] }],
       PostToolUse: [{ hooks: [notify('running')] }],
+      ...BOARD_GUARD_HOOKS,
     },
   }).slice(1);
 }
@@ -100,6 +119,11 @@ export function workerSettings(id: string): string {
 // What a worker is handed, in a terminal or on a Claude screen: the task, and who to tell once it is done.
 export function workerPrompt(prompt: string, dispatcherPath: string): string {
   return `${prompt}\n\nSendMessage to ${mainSessionName(dispatcherPath)} when done, saying what you did.`;
+}
+
+// What a worker runs under, started or resumed: auto mode, its hooks and the board instructions.
+function workerFlags(id: string): string[] {
+  return ['--permission-mode', 'auto', '--settings', workerSettings(id), '--append-system-prompt', BOARD_INSTRUCTIONS];
 }
 
 // The prompt is the argument, never typed into a session already running: what a live prompt box
@@ -112,8 +136,7 @@ export function workerArguments(
   return claudeArguments(shellCommand, [
     '--session-id', session,
     '--name', workerSessionName(projectPath, index),
-    '--permission-mode', 'auto',
-    '--settings', workerSettings(id),
+    ...workerFlags(id),
     workerPrompt(prompt, dispatcherPath),
   ]);
 }
@@ -121,5 +144,5 @@ export function workerArguments(
 // A worker main dispatched, resumed after a restart in pane `id`: the same flags it was started with, so
 // it still works unasked and its hooks report to the pane it is in now rather than the one it was in.
 export function workerResumeArguments(shellCommand: string, id: string, session: string): string[] {
-  return claudeArguments(shellCommand, ['--resume', session, '--permission-mode', 'auto', '--settings', workerSettings(id)]);
+  return claudeArguments(shellCommand, ['--resume', session, ...workerFlags(id)]);
 }

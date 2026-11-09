@@ -1,5 +1,5 @@
 import type { EffortLevel, ModelInfo, Options, PermissionResult, Query, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
-import { mainPrompt, mainSessionName } from '../workers/dispatch';
+import { BOARD_INSTRUCTIONS, mainPrompt, mainSessionName } from '../workers/dispatch';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { peerSender } from '../../shared/chat/chat-events';
@@ -34,6 +34,7 @@ import type { HostedParams, HostedSession } from '../workers/screen-host-protoco
 import type { ScreenOwner } from '../workers/screen-owner';
 import { keepsItsConversation, WORKER_KEEPS_ITS_CONVERSATION } from '../actions/session/conversation-ports';
 import type { ChatActionPorts } from '../actions/session/session-actions';
+import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 
 // The Claude screen's half in main: one Agent SDK session per project page, the project's main
 // session. It is started the first time the page's Claude screen is shown (its measure asks), on the
@@ -317,13 +318,15 @@ export function registerChatSessions(
         // chose, the dispatch prompt, and the name its workers SendMessage it by. Thinking is asked
         // for as a summary, the text the pane folds into the conversation; left to the default, a
         // newer model's thinking arrives empty. The flag alone leaves whether to think to the settings.
-        // A worker screen runs as a terminal worker does: auto mode, its own name, no dispatch prompt.
+        // A worker screen runs as a terminal worker does: auto mode, its own name, the board instructions.
         permissionMode: preferences.get(slot)?.permissionMode ?? (worker ? 'auto' : undefined),
         extraArgs: { name, 'thinking-display': 'summarized' },
         // Every settings file loads, on main's screen and a worker's, as in the terminal, so the
         // user's allow rules apply before auto mode decides (workers-decision-5).
         settingSources: ['user', 'project', 'local'],
         hooks: worker?.hooks,
+        // The board guard, as a command hook so a hosted worker's session runs it too (board-guard.ts).
+        settings: { hooks: BOARD_GUARD_HOOKS },
         env: environment,
         includePartialMessages: true,
         // Every hook's start and answer, not only SessionStart's: the working line names the one
@@ -336,7 +339,7 @@ export function registerChatSessions(
         // has promptSuggestionEnabled: false.
         promptSuggestions: true,
         pathToClaudeCodeExecutable: executable,
-        systemPrompt: { type: 'preset', preset: 'claude_code', append: worker ? undefined : mainPrompt(projectPath) },
+        systemPrompt: { type: 'preset', preset: 'claude_code', append: worker ? BOARD_INSTRUCTIONS : mainPrompt(projectPath) },
         canUseTool: (toolName, toolInput, options) => ask(slot, asks, {
           toolName,
           input: toolInput,

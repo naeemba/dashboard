@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { replaceFileIfChanged } from '../app/replace-file';
 import { installCreateTask } from '../board/create-task-install';
+import { installBoardGuard } from '../board/board-guard-install';
 import { failureLine } from '../command/failure-line';
 import { ADOPT_DOCS_SKILL } from './adopt-docs-skill';
 import { skillFolder } from './skill-folder';
@@ -16,6 +17,8 @@ export function installSkills(home: string, buildFolder: string): string[] {
   const lines: string[] = [];
   const createTask = installCreateTask(home, path.join(buildFolder, 'create-task-cli-entry.js'));
   if (createTask !== null) lines.push(createTask);
+  const guard = installBoardGuard(home, path.join(buildFolder, 'board-cli-entry.js'));
+  if (guard !== null) lines.push(guard);
   try {
     replaceFileIfChanged(adoptDocsSkillFile(home), ADOPT_DOCS_SKILL);
   } catch (error: unknown) {
