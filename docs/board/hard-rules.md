@@ -48,33 +48,8 @@ the screen was rebuilt from it. What writing the whole board cost: an agent ran
 before the watcher's reload, and the card was back in Doing with nothing on
 screen saying so. `project-files-ipc.test.ts` reproduces it.
 
-## board-rule-2: A card with a pull request open goes in `Review`, not `Done`
+## board-rule-2: retired
 
-**A card with a pull request open goes in `Review`, not `Done`.** A column on
-`main` says what has been merged; `Review` is the exception — a pull request
-open and nothing has checked it. This beats the global instruction to move a
-card to Done once the PR is ready, which is written for boards with no Review
-column. Otherwise the board says a feature is finished and checked while nobody
-has looked at it, and `Review` sits empty in front of the person whose job it is
-to look.
-
-**The app keeps this itself** (board-decision-6): it moves a card into Review
-when its pull request opens and into Done when it merges, so neither move is an
-agent's to remember. What follows is why the order matters.
-
-**The move into `Done` comes after the merge, and is one `board move`.** The
-`board` command writes a board git tracks on origin's main itself, and brings
-the project's checkout up to it (board-decision-5), from the project or from a
-card's worktree alike. So a card moved to Done before the merge is main saying
-Done for a pull request that may still be refused: kamandsystem #19 sat in Done
-unmerged exactly like that.
-
-What this replaced: the move went on the branch first, so the merge would carry
-it into main, then the app's board was moved after. A branch-only Done was the
-only way to get Done onto main when nothing but a merge wrote main, and the
-order mattered: moved after the merge, main went on committing `Review` for a
-feature that shipped weeks ago, while the only copy saying `Done` was an
-uncommitted change in one person's checkout. With the command writing main,
-the branch's board carries nothing about the card, and the order is merge, then
-move. `reviewPrompt` in `review.ts` is where it is written down, and
-`review.test.ts` pins it.
+Now board-decision-7. It told agents where to put a card with a pull request
+open; the app makes that move itself, so it is a decision about what the app
+does, not a rule anyone has to keep.
