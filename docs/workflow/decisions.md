@@ -152,14 +152,18 @@ agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
   and Claude), is a pane or screen host anywhere, or is electron out of a checkout named `dashboard*`.
   So `killall node` is refused while the pane host runs and `pkill -f vitest` goes through. On a mac,
   with no `/proc`, the pattern is refused when it names Dashboard, electron, node or claude;
-- a `kill` of a literal pid or process group (`-<pid>`) that is the app's, and `kill -1`;
+- a `kill` of a literal pid or process group (`-<pid>`) that is the app's, and a `-1` in a pid's place
+  (`kill -9 -1`; `kill -1 <pid>` is a SIGHUP and is judged by its pid);
 - `systemctl stop`, `kill` or `restart` of `agents.slice` or `panes.slice`;
 - `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
 - a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, or `find` with
   `-delete` or `-exec`, naming the installed build, or a `>` or `tee` into it.
 
-Each verb counts only at the start of a simple command (behind `sudo`, `command`, `env`, `exec` or a
-path), so a commit message, a PR body or a grep that names one goes through.
+Each verb counts only at the start of a simple command (behind a `(` or `{`, `sudo` with its flags,
+`command`, `exec`, `nohup`, `nice`, `timeout <duration>`, `env` with its assignments, or a path), so a
+commit message, a PR body or a grep that names one goes through. Commands split at `;`, `&`, `|` and
+newlines outside quotes only, so `pkill -f "vite|node"` is judged by its whole pattern, and the quoted
+body of `sh -c` or `bash -c` is judged as a command line of its own.
 
 `scripts/rebuild.sh`, `scripts/release.sh`, `pnpm run package` and anything into `out/` or `.vite/` go
 through: the hook reads the agent's command, not what a script runs, and the scripts swap a build in beside
@@ -172,6 +176,6 @@ the checkout. Reading the installed build (`ls`, `node "$DASHBOARD_COMMAND"`) go
   `~/.claude/settings.json`. A second command would have been a second entry in every user's settings and
   a second process per Bash call.
 - **It reads the command's text**, as the board guard does. A script of your own, a command built at run
-  time or a `python -c` still gets through, and a heredoc line that starts with one of the verbs is
-  refused; the hook is a guard rail, not a sandbox.
+  time, a `python -c` or an `xargs`/`find -exec` that runs `pkill` still gets through, and a heredoc line
+  that starts with one of the verbs is refused; the hook is a guard rail, not a sandbox.
 - **The refusal says what to do instead**: say the installed app needs a rebuild and restart, and stop.

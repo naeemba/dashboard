@@ -13,8 +13,8 @@
 // What goes through: scripts/rebuild.sh and scripts/release.sh, which swap a new build in beside the
 // running one without stopping it, and any build into out/ or .vite/ (no-running-app.mjs refuses
 // that while an app runs out of the checkout).
-// ponytail: it reads the command's text. A script of your own, a `$(…)` built at run time or a
-// `python -c` still gets through, and a heredoc line that starts with a verb is refused; matching
+// ponytail: it reads the command's text. A script of your own, a `$(…)` built at run time, a
+// `python -c` or an `xargs`/`find -exec` running pkill still gets through, and a heredoc line that starts with a verb is refused; matching
 // those means running the shell, and this is a guard rail.
 
 import { hookRefusal, SHELL_REDIRECT, textField } from '../board/hook-answer';
@@ -61,16 +61,41 @@ const RUNNING_APP_REASON = 'This would quit, kill, restart or replace the Dashbo
   + 'scripts/rebuild.sh installs a new build beside the running one without touching it.';
 
 // A command line's pipelines, split at `;`, `&&`, `||`, `&` and newlines, and a pipeline's simple
-// commands, split at `|` too.
-const pipelines = (command: string) => command.split(/&&|\|\||[;&\n]/).map((part) => part.trim());
-const simpleCommands = (command: string) => command.split(/&&|\|\||[;|&\n]/).map((part) => part.trim());
+// commands, split at `|` too. A separator inside quotes is part of its word: `pkill -f "vite|node"`.
+function split(command: string, atPipes: boolean): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let quote = '';
+  for (let index = 0; index < command.length; index += 1) {
+    const character = command[index];
+    const doubled = (character === '|' || character === '&') && command[index + 1] === character;
+    const cuts = character === ';' || character === '\n' || character === '&' || (character === '|' && (atPipes || doubled));
+    if (quote || !cuts) {
+      if (quote === character) quote = '';
+      else if (!quote && (character === '"' || character === "'")) quote = character;
+      current += character;
+      continue;
+    }
+    parts.push(current.trim());
+    current = '';
+    if (doubled) index += 1;
+  }
+  return [...parts, current.trim()];
+}
+const pipelines = (command: string) => split(command, false);
+const simpleCommands = (command: string) => split(command, true);
 
-// The verb and its words when `part` runs one of `verbs` (behind sudo, command, env, exec or a path).
+// A command's words, without their quotes or the `)` or `}` closing a subshell or group.
+const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
+
+// What may stand before a verb: a subshell or group opening, then sudo (with its flags), command,
+// exec, nohup, nice, `timeout <duration>` or env (with its assignments), in any order.
+const PREFIX = String.raw`(?:[({]\s*)?(?:(?:sudo(?:\s+-\S+(?:\s+[^-\s]\S*)?)*|command|exec|nohup|nice|timeout\s+\S+|env(?:\s+\w+=\S*)*)\s+)*`;
+
+// The verb and its words when `part` runs one of `verbs` (behind PREFIX or a path).
 function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
-  const match = new RegExp(String.raw`^(?:(?:sudo|command|env|exec|nohup)\s+)*(?:\S*/)?(${verbs})(?:\s+(.*))?$`).exec(part);
-  if (!match) return null;
-  const words = (match[2] ?? '').split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']$/g, ''));
-  return { verb: match[1], words };
+  const match = new RegExp(String.raw`^${PREFIX}(?:\S*/)?(${verbs})(?:\s+(.*))?$`).exec(part);
+  return match ? { verb: match[1], words: wordsOf(match[2] ?? '') } : null;
 }
 
 type Selector = { pattern: string; full: boolean; regex: boolean }
@@ -102,14 +127,16 @@ function picks(selector: Selector, process: RunningProcess): boolean {
 }
 
 // The pids a `kill` names, a process group (`-<pid>` after the signal or `--`) as its leader's pid, or
-// 'everything' for `-1`, every process the user owns.
+// 'everything' for `-1` in a pid's place, every process the user owns (`kill -1 <pid>` is SIGHUP).
 function killedPids(words: string[]): number[] | 'everything' {
-  if (words.includes('-1')) return 'everything';
   const pids: number[] = [];
   let signalled = false;
   for (let index = 0; index < words.length; index += 1) {
     const word = words[index];
-    if (/^-?\d+$/.test(word) && (signalled || !word.startsWith('-'))) pids.push(Math.abs(Number(word)));
+    if (/^-?\d+$/.test(word) && (signalled || !word.startsWith('-'))) {
+      if (word === '-1') return 'everything';
+      pids.push(Math.abs(Number(word)));
+    }
     else if (word === '-s' || word === '-n') index += 1;
     if (word.startsWith('-') || /^\d+$/.test(word)) signalled = true;
   }
@@ -120,8 +147,8 @@ function killedPids(words: string[]): number[] | 'everything' {
 function foundAndKilled(pipeline: string): Selector[] {
   const kills = simpleCommands(pipeline).some((part) => invocation(part, 'kill') || /^(?:sudo\s+)?xargs\b.*\bkill\b/.test(part));
   if (!kills) return [];
-  return [...pipeline.matchAll(/(?:^|[|(`]\s*)(?:sudo\s+)?(pgrep|pidof)\b([^|;&)`]*)/g)]
-    .flatMap((match) => selectors(match[1], match[2].trim().split(/\s+/).filter(Boolean)));
+  return [...pipeline.matchAll(/(?:^|[|(`]\s*)(?:sudo\s+)?(pgrep|pidof)\b((?:"[^"]*"|'[^']*'|[^|;&)`"'])*)/g)]
+    .flatMap((match) => selectors(match[1], wordsOf(match[2])));
 }
 
 export function stopsRunningApp(command: string, listProcesses: ProcessList): boolean {
@@ -137,6 +164,9 @@ export function stopsRunningApp(command: string, listProcesses: ProcessList): bo
 
   if (pipelines(command).some((pipeline) => foundAndKilled(pipeline).some(hitsApp))) return true;
   return simpleCommands(command).some((part) => {
+    // `sh -c '…'` runs its quoted body as a command line of its own.
+    const body = invocation(part, 'sh|bash|zsh|dash') && /\s-\w*c\s+(["'])(.*)\1/.exec(part);
+    if (body && stopsRunningApp(body[2], listProcesses)) return true;
     const finder = invocation(part, 'pkill|killall');
     if (finder) return selectors(finder.verb, finder.words).some(hitsApp);
     const kill = invocation(part, 'kill');

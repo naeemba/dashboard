@@ -60,6 +60,19 @@ describe('stopsRunningApp', () => {
     `find ~/.local/opt/dashboard -name '*.log' -delete`,
     'echo x > ~/.local/opt/dashboard/resources/app.asar',
     'cat x | tee /Applications/Dashboard.app/Contents/Info.plist',
+    'pkill -f "vitest|node"',
+    'kill $(pgrep -f "vitest|node")',
+    "killall -r 'vim|node'",
+    'pkill -u me node',
+    'killall -u me node',
+    'killall -r Dash',
+    'systemctl --user restart panes.slice',
+    'timeout 5 pkill node',
+    '(pkill node)',
+    'sudo -u me pkill node',
+    'env FOO=1 pkill node',
+    'bash -c "pkill -f Dashboard"',
+    "sh -c 'killall node'",
   ])('refuses %s', (command) => {
     expect(stopsRunningApp(command, onLinux)).toBe(true);
   });
@@ -88,6 +101,9 @@ describe('stopsRunningApp', () => {
     'git commit -m "Refuse rm -rf ~/.local/opt/dashboard in the guard"',
     'gh pr create --title x --body "runs pkill naming Dashboard"',
     'grep -rn killall /home/me/dashboard/src',
+    'kill -1 5000',
+    'pkill -f "("',
+    'git commit -m "Refuse kill 4242; pkill node in the guard"',
   ])('lets %s through', (command) => {
     expect(stopsRunningApp(command, onLinux)).toBe(false);
   });
