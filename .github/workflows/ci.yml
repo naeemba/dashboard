@@ -20,7 +20,7 @@ jobs:
       # workflow-rule-3, before the install; the runner's own node is enough.
       - name: Refuse a moved version
         if: github.event_name == 'pull_request'
-        run: node scripts/version-unchanged.mjs "$(git show HEAD^1:package.json)"
+        run: node scripts/version-unchanged-step.mjs "$(git show HEAD^1:package.json)"
       # Version from packageManager; before setup-node, whose pnpm cache needs it.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
