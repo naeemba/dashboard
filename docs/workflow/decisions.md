@@ -160,9 +160,10 @@ agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
   `-delete` or `-exec`, naming the installed build, or a `>` or `tee` into it.
 
 Each verb counts only at the start of a simple command (behind a `(` or `{`, `sudo` with its flags,
-`command`, `exec`, `nohup`, `nice`, `timeout <duration>`, `env` with its assignments, or a path), so a
+`command`, `exec`, `nohup`, `nice` or `timeout <duration>` with their flags, `env` with its assignments, or a path), so a
 commit message, a PR body or a grep that names one goes through. Commands split at `;`, `&`, `|` and
-newlines outside quotes only, so `pkill -f "vite|node"` is judged by its whole pattern, and the quoted
+newlines outside quotes only, so `pkill -f "vite|node"` is judged by its whole pattern; a `\` escape and
+a `#` comment open no quote, so `# it's stuck` on one line does not hide the `pkill` on the next; the quoted
 body of `sh -c` or `bash -c` is judged as a command line of its own.
 
 `scripts/rebuild.sh`, `scripts/release.sh`, `pnpm run package` and anything into `out/` or `.vite/` go
@@ -176,6 +177,7 @@ the checkout. Reading the installed build (`ls`, `node "$DASHBOARD_COMMAND"`) go
   `~/.claude/settings.json`. A second command would have been a second entry in every user's settings and
   a second process per Bash call.
 - **It reads the command's text**, as the board guard does. A script of your own, a command built at run
-  time, a `python -c` or an `xargs`/`find -exec` that runs `pkill` still gets through, and a heredoc line
-  that starts with one of the verbs is refused; the hook is a guard rail, not a sandbox.
+  time, a `python -c` or an `xargs`/`find -exec` that runs `pkill` still gets through, a heredoc line
+  that starts with one of the verbs is refused, and a lone `'` in a heredoc body (`Don't`) opens a quote
+  that hides every command after it; the hook is a guard rail, not a sandbox.
 - **The refusal says what to do instead**: say the installed app needs a rebuild and restart, and stop.

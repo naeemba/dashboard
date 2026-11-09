@@ -14,8 +14,9 @@
 // running one without stopping it, and any build into out/ or .vite/ (no-running-app.mjs refuses
 // that while an app runs out of the checkout).
 // ponytail: it reads the command's text. A script of your own, a `$(…)` built at run time, a
-// `python -c` or an `xargs`/`find -exec` running pkill still gets through, and a heredoc line that starts with a verb is refused; matching
-// those means running the shell, and this is a guard rail.
+// `python -c` or an `xargs`/`find -exec` running pkill still gets through, a heredoc line that starts
+// with a verb is refused, and a lone `'` in a heredoc body (`Don't`) hides every command after it;
+// matching those means running the shell, and this is a guard rail.
 
 import { hookRefusal, SHELL_REDIRECT, textField } from '../board/hook-answer';
 
@@ -62,12 +63,24 @@ const RUNNING_APP_REASON = 'This would quit, kill, restart or replace the Dashbo
 
 // A command line's pipelines, split at `;`, `&&`, `||`, `&` and newlines, and a pipeline's simple
 // commands, split at `|` too. A separator inside quotes is part of its word: `pkill -f "vite|node"`.
+// Outside single quotes a `\` escapes the next character (`it\'s`), and outside quotes a `#` starting a
+// word comments out the rest of its line, so an apostrophe in either opens no quote.
 function split(command: string, atPipes: boolean): string[] {
   const parts: string[] = [];
   let current = '';
   let quote = '';
   for (let index = 0; index < command.length; index += 1) {
     const character = command[index];
+    if (character === '\\' && quote !== "'") {
+      current += command.slice(index, index + 2);
+      index += 1;
+      continue;
+    }
+    if (character === '#' && !quote && /(?:^|\s)$/.test(current)) {
+      const end = command.indexOf('\n', index);
+      index = (end === -1 ? command.length : end) - 1;
+      continue;
+    }
     const doubled = (character === '|' || character === '&') && command[index + 1] === character;
     const cuts = character === ';' || character === '\n' || character === '&' || (character === '|' && (atPipes || doubled));
     if (quote || !cuts) {
@@ -89,8 +102,10 @@ const simpleCommands = (command: string) => split(command, true);
 const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
 
 // What may stand before a verb: a subshell or group opening, then sudo (with its flags), command,
-// exec, nohup, nice, `timeout <duration>` or env (with its assignments), in any order.
-const PREFIX = String.raw`(?:[({]\s*)?(?:(?:sudo(?:\s+-\S+(?:\s+[^-\s]\S*)?)*|command|exec|nohup|nice|timeout\s+\S+|env(?:\s+\w+=\S*)*)\s+)*`;
+// exec, nohup, nice (with its flags), `timeout <duration>` (with its flags) or env (with its
+// assignments), in any order.
+const FLAGS = String.raw`(?:\s+-\S+(?:\s+[^-\s]\S*)?)*`;
+const PREFIX = String.raw`(?:[({]\s*)?(?:(?:sudo${FLAGS}|command|exec|nohup|nice${FLAGS}|timeout${FLAGS}\s+\S+|env(?:\s+\w+=\S*)*)\s+)*`;
 
 // The verb and its words when `part` runs one of `verbs` (behind PREFIX or a path).
 function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
