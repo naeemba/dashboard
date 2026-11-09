@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { chromeArguments, configurationFile } from './chat-chrome';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { temporaryFolder } from '../testing/temporary-folder';
+import { chromeArguments, chromeArgumentsFor, chromeFromEnvironment, configurationFile } from './chat-chrome';
 
 describe('chromeArguments', () => {
   it('passes --chrome when the config turns Claude in Chrome on by default', () => {
@@ -25,5 +28,27 @@ describe('configurationFile', () => {
     expect(configurationFile({ CLAUDE_CONFIG_DIR: '/c' }, '/home/ann')).toBe('/c/.claude.json');
     expect(configurationFile({}, '/home/ann')).toBe('/home/ann/.claude.json');
     expect(configurationFile({ CLAUDE_CONFIG_DIR: '' }, '/home/ann')).toBe('/home/ann/.claude.json');
+  });
+});
+
+describe('chromeFromEnvironment', () => {
+  it('reads CLAUDE_CODE_ENABLE_CFC as on, off, or not said', () => {
+    expect(chromeFromEnvironment({ CLAUDE_CODE_ENABLE_CFC: '1' })).toBe(true);
+    expect(chromeFromEnvironment({ CLAUDE_CODE_ENABLE_CFC: 'true' })).toBe(true);
+    expect(chromeFromEnvironment({ CLAUDE_CODE_ENABLE_CFC: '0' })).toBe(false);
+    expect(chromeFromEnvironment({ CLAUDE_CODE_ENABLE_CFC: 'false' })).toBe(false);
+    expect(chromeFromEnvironment({})).toBeUndefined();
+    expect(chromeFromEnvironment({ CLAUDE_CODE_ENABLE_CFC: 'maybe' })).toBeUndefined();
+  });
+});
+
+describe('chromeArgumentsFor', () => {
+  it('lets CLAUDE_CODE_ENABLE_CFC override the config either way, and falls back to it', async () => {
+    const folder = temporaryFolder('chat-chrome-');
+    await writeFile(path.join(folder, '.claude.json'), '{"claudeInChromeDefaultEnabled": true}');
+    expect(await chromeArgumentsFor({ CLAUDE_CODE_ENABLE_CFC: '0' }, folder)).toEqual({});
+    expect(await chromeArgumentsFor({}, folder)).toEqual({ chrome: null });
+    expect(await chromeArgumentsFor({ CLAUDE_CODE_ENABLE_CFC: '1' }, path.join(folder, 'none'))).toEqual({ chrome: null });
+    expect(await chromeArgumentsFor({}, path.join(folder, 'none'))).toEqual({});
   });
 });
