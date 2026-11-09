@@ -1,5 +1,82 @@
 # Changelog
 
+## v2.46.0 (2026-11-09)
+
+### What's new
+
+- The manager's log page: copy button per entry, and a click opens the entry formatted in a popup
+- Opening a shell or monitor task on the Claude screen shows its output
+- Notices and errors on the status bar go away by themselves, are logged, and notify
+- Run each pane and agent session in its own systemd scope: slices, the scope decision, panes
+- Stop a pane's systemd scope when the pane closes or is released
+- The board command keeps the board in step with git itself
+- Scope the Claude sessions the SDK starts and the manager's tasks
+- Stop every scope a pane leaves: on project close and when a dispatch replaces a pane's shell
+- Stop the old scope when a shell restarts (pty:restart) or a kept shell is not adopted on restore
+- Every worker reports to the main that gave it work, and the app closes finished worker panes
+- A card's column follows its pull request; the app writes the ship comment
+- Enforce the board with a hook and the app's session instructions, then delete the CLAUDE.md board rules
+- Pull request status on the Ship card, found from the branch through gh
+- unicode-bidi: plaintext skips worker Claude screens
+- Audit every CLAUDE.md rule: move what a tool or hook can carry, delete it from CLAUDE.md
+- Remove any attached image from the Claude screen's prompt
+- Show each pane's and session's memory from its systemd scope
+- pane release prints 'session release failed: spawn git ENOENT'
+- Audit 2: test that every input and textarea gets dir = 'auto'
+- Claude screens get Claude in Chrome when the user has it on
+- Audit 1: lint String(error) outside the failure files, and fix board-view.ts
+- Audit 4: test that adopt-docs-skill.ts carries the CLAUDE.md docs pattern
+- A main that read a worker's report but kept it running still gets a false stop notice
+- Audit 5: CI fails a pull request that moves package.json version
+- Audit 3: test that every IPC channel is <noun>:<verb>
+- Audit 7: test that every renderer key handler checks isModified first
+- Audit 6: eslint max-lines at 600 code lines
+- Audit 8: test that every display class has its [hidden] rule
+- Audit 12: shrink the seeded .dashboard/CLAUDE.md to the board command
+- Audit 9: hook that refuses quitting, killing or restarting the running app
+- Two sessions run in one worker pane
+- Resuming a conversation opens the kind it was: a screen stays a screen
+- Audit 13: delete the CLAUDE.md rules the audit moved or found already enforced
+- Audit 11: load the final-message rule once, from its hook (dotfiles)
+
+### What's Changed
+* The log page: a click opens an entry formatted, a key copies it by @naeemba in https://github.com/naeemba/dashboard/pull/250
+* Opening a shell or monitor task on the Claude screen shows its output by @naeemba in https://github.com/naeemba/dashboard/pull/251
+* Status-bar messages fade, are logged, and an error notifies while away by @naeemba in https://github.com/naeemba/dashboard/pull/252
+* Run each pane's shell in a systemd scope of its own by @naeemba in https://github.com/naeemba/dashboard/pull/253
+* Stop a pane's systemd scope when the pane closes or is released by @naeemba in https://github.com/naeemba/dashboard/pull/255
+* The board command keeps the board in step with git itself by @naeemba in https://github.com/naeemba/dashboard/pull/254
+* Run Claude screens' sessions and the manager's tasks in their own systemd scopes by @naeemba in https://github.com/naeemba/dashboard/pull/256
+* Stop every scope a pane leaves: on project close and when a dispatch replaces a pane's shell by @naeemba in https://github.com/naeemba/dashboard/pull/257
+* Stop the old scope when a shell restarts or a kept shell is not taken back by @naeemba in https://github.com/naeemba/dashboard/pull/260
+* Report handed-over work to its main, and close finished worker panes by @naeemba in https://github.com/naeemba/dashboard/pull/258
+* A card's column follows its pull request, and the app writes the ship comment by @naeemba in https://github.com/naeemba/dashboard/pull/261
+* Enforce the board with a hook and session instructions, retire board-rule-2 by @naeemba in https://github.com/naeemba/dashboard/pull/262
+* Bidi plaintext reaches a worker's Claude screen by @naeemba in https://github.com/naeemba/dashboard/pull/263
+* A card shows its pull request's checks and review as one glyph by @naeemba in https://github.com/naeemba/dashboard/pull/266
+* Audit every CLAUDE.md rule: keep, move to a tool, or delete by @naeemba in https://github.com/naeemba/dashboard/pull/270
+* Remove any attached image from the Claude screen's prompt by @naeemba in https://github.com/naeemba/dashboard/pull/264
+* Release a worker whose throwaway worktree a merge already removed by @naeemba in https://github.com/naeemba/dashboard/pull/267
+* Test that every input and textarea gets dir = 'auto' by @naeemba in https://github.com/naeemba/dashboard/pull/273
+* Claude screens get Claude in Chrome when the user has it on by @naeemba in https://github.com/naeemba/dashboard/pull/271
+* Lint String(error) outside the failure files, and fix board-view.ts by @naeemba in https://github.com/naeemba/dashboard/pull/274
+* Hold a worker's stop notice while its main is mid-turn by @naeemba in https://github.com/naeemba/dashboard/pull/265
+* Test that every IPC channel is <noun>:<verb> (app-rule-1) by @naeemba in https://github.com/naeemba/dashboard/pull/275
+* Test that /adopt-docs carries the CLAUDE.md docs pattern by @naeemba in https://github.com/naeemba/dashboard/pull/276
+* Audit 5: CI fails a pull request that moves package.json version by @naeemba in https://github.com/naeemba/dashboard/pull/277
+* eslint: refuse a file over 600 code lines (Audit 6) by @naeemba in https://github.com/naeemba/dashboard/pull/278
+* Show each pane's and session's memory from its systemd scope by @naeemba in https://github.com/naeemba/dashboard/pull/268
+* Audit 7: test that every renderer key handler checks isModified first by @naeemba in https://github.com/naeemba/dashboard/pull/280
+* Audit 8: test that every display class has its [hidden] rule by @naeemba in https://github.com/naeemba/dashboard/pull/279
+* Shrink the seeded .dashboard/CLAUDE.md to the board command by @naeemba in https://github.com/naeemba/dashboard/pull/282
+* Refuse quitting, killing or replacing the running app in the board guard hook by @naeemba in https://github.com/naeemba/dashboard/pull/281
+* One session per worker pane when the screen host dies by @naeemba in https://github.com/naeemba/dashboard/pull/283
+* Resuming a conversation opens the kind it was: a screen stays a screen by @naeemba in https://github.com/naeemba/dashboard/pull/284
+* Audit 13: delete the CLAUDE.md rules a check now holds by @naeemba in https://github.com/naeemba/dashboard/pull/285
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.45.0...v2.46.0
+
 ## v2.45.0 (2026-11-08)
 
 ### What's new
