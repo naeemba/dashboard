@@ -6,10 +6,15 @@ import { finishedCardIn, finishedColumnOf, releaseVerdict, type WorkerLook } fro
 const TEN_MINUTES = 10 * 60 * 1000;
 
 // A worker main handed work, whose turn ended with nothing running, its report read ten minutes ago.
-const finished: WorkerLook = {
-  handedToMain: true, hasKeyboard: false, state: 'done', paused: false, finishedCard: null, reportRead: true, quietMs: TEN_MINUTES,
+// `card` is the column its card is in when finished.
+type Look = Omit<WorkerLook, 'finishedCard'> & { card: string | null };
+const finished: Look = {
+  handedToMain: true, hasKeyboard: false, state: 'done', paused: false, card: null, reportRead: true, quietMs: TEN_MINUTES,
 };
-const verdict = (change: Partial<WorkerLook>, closeAfterMs = TEN_MINUTES) => releaseVerdict({ ...finished, ...change }, closeAfterMs);
+const verdict = (change: Partial<Look>, closeAfterMs = TEN_MINUTES) => {
+  const { card, ...look } = { ...finished, ...change };
+  return releaseVerdict({ ...look, finishedCard: () => card }, closeAfterMs);
+};
 
 describe('releaseVerdict', () => {
   it('closes a worker that reported, was read, and was sent nothing for the grace period', () => {
@@ -25,30 +30,36 @@ describe('releaseVerdict', () => {
   });
 
   it('closes a worker whose card is done or cancelled once its turn ends, report or not', () => {
-    expect(verdict({ finishedCard: 'Done', reportRead: false, quietMs: 0 })).toEqual({ release: true, reason: 'card done' });
-    expect(verdict({ finishedCard: 'Cancelled', reportRead: false, quietMs: 0 })).toEqual({ release: true, reason: 'card cancelled' });
+    expect(verdict({ card: 'Done', reportRead: false, quietMs: 0 })).toEqual({ release: true, reason: 'card done' });
+    expect(verdict({ card: 'Cancelled', reportRead: false, quietMs: 0 })).toEqual({ release: true, reason: 'card cancelled' });
   });
 
   it('with the grace period off, closes only for the card', () => {
     expect(verdict({}, 0)).toEqual({ release: false, why: 'closing on a report is off' });
-    expect(verdict({ finishedCard: 'Done' }, 0)).toEqual({ release: true, reason: 'card done' });
+    expect(verdict({ card: 'Done' }, 0)).toEqual({ release: true, reason: 'card done' });
   });
 
   it('never closes a pane no main handed work, even with its card done', () => {
-    expect(verdict({ handedToMain: false, finishedCard: 'Done' })).toEqual({ release: false, why: 'no main handed it work' });
+    expect(verdict({ handedToMain: false, card: 'Done' })).toEqual({ release: false, why: 'no main handed it work' });
   });
 
   it('never closes the pane with the keyboard', () => {
-    expect(verdict({ hasKeyboard: true, finishedCard: 'Done' })).toEqual({ release: false, why: 'it has the keyboard' });
+    expect(verdict({ hasKeyboard: true, card: 'Done' })).toEqual({ release: false, why: 'it has the keyboard' });
   });
 
   it('never closes a worker blocked on a question or paused on its own background work', () => {
-    expect(verdict({ state: 'blocked', finishedCard: 'Done' })).toEqual({ release: false, why: 'it is waiting on a question' });
-    expect(verdict({ paused: true, finishedCard: 'Done' })).toEqual({ release: false, why: 'it is waiting on its own background work' });
+    expect(verdict({ state: 'blocked', card: 'Done' })).toEqual({ release: false, why: 'it is waiting on a question' });
+    expect(verdict({ paused: true, card: 'Done' })).toEqual({ release: false, why: 'it is waiting on its own background work' });
+  });
+
+  it('reads the card only once nothing else has kept the pane', () => {
+    let asked = 0;
+    releaseVerdict({ ...finished, state: 'running', finishedCard: () => { asked += 1; return 'Done'; } }, TEN_MINUTES);
+    expect(asked).toBe(0);
   });
 
   it('never closes a worker still at work, even with its card done', () => {
-    expect(verdict({ state: 'running', finishedCard: 'Done' })).toEqual({ release: false, why: 'it is at work' });
+    expect(verdict({ state: 'running', card: 'Done' })).toEqual({ release: false, why: 'it is at work' });
   });
 });
 

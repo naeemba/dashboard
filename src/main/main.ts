@@ -734,7 +734,10 @@ const workerAnswers = sessionRequests({
   unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
   removeWorktree: worktree.removeForRelease,
   hasKeyboard: claudeSessions.hasKeyboard,
-  finishedCard: (id) => finishedCardIn(worktrees.entries(), projectIn(paneFromId(id).slot)?.path, paneFromId(id).index, peekBoard),
+  finishedCard(id) {
+    const { slot, index } = paneFromId(id);
+    return finishedCardIn(worktrees.entries(), projectIn(slot)?.path, index, boardLog.latest);
+  },
   closeAfterMs: () => settings.workers.closeAfterMinutes * 60_000,
   released(id, reason, output) {
     logStore.log({ level: 'info', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `${output}: ${reason}` });

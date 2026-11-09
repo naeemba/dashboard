@@ -54,8 +54,8 @@ export type SessionPorts = {
   // pane.close.
   close(id: string): Promise<{ output: string } | Refused>;
   // pane.send: the text as a screen's prompt, or typed into the pane's shell with Enter after it. Sent
-  // by the main of `dispatcherPath`; `handedTo` names it when the pane's agent became its worker.
-  send(id: string, text: string, dispatcherPath: string): Promise<{ output: string; handedTo: string | null } | Refused>;
+  // by the main of `dispatcherPath`; `handed` when the pane's agent became its worker.
+  send(id: string, text: string, dispatcherPath: string): Promise<{ output: string; handed: boolean } | Refused>;
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
   // Answers with the id `withdraw` takes it back by while it still waits in the queue.
@@ -67,7 +67,8 @@ export type SessionPorts = {
   unfinished(worktreePath: string): Promise<string | null>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
   // What closeFinished asks of a worker beside what is held here (auto-release.ts): whether its page
-  // puts the keyboard back on it, and the column its card is in when that is Done or Cancelled.
+  // puts the keyboard back on it, and the column its card is in when that is Done or Cancelled, asked
+  // only once nothing else has kept the pane open.
   hasKeyboard(id: string): boolean;
   finishedCard(id: string): string | null;
   // The grace period after a report read, from the settings; 0 closes a worker only for its card.
@@ -135,10 +136,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // report, and what it was asked. Kept apart from `dispatchers`, which is who may run the pane, not
   // who did.
   const dispatched = new Map<string, { dispatcher: number; about: string }>();
-  // When work was last handed to each worker, a report from it last read, and its turn last ended: the
-  // grace period closeFinished waits out runs from the last of them. Gone with the pane's worker.
-  const times = new Map<string, { sent?: number; read?: number; stopped?: number }>();
-  const stamp = (id: string, moment: 'sent' | 'read' | 'stopped') => times.set(id, { ...times.get(id), [moment]: Date.now() });
+  // For each worker, since when it has been quiet — the last of work handed to it, a report from it
+  // read, its turn ending — and whether a report was read since work was last handed to it: what
+  // closeFinished's grace period runs on. Gone with the pane's worker.
+  const quiet = new Map<string, { since: number; reportRead: boolean }>();
+  const quietFrom = (id: string, reportRead: boolean) => quiet.set(id, { since: Date.now(), reportRead });
   // Only main's worker: one it ran or sent work, or a card's agent; a Claude opened by hand and never
   // sent work reports to nobody. The main that claimed it hears, which is another project's when
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
@@ -177,6 +179,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     ...ports,
     claimedBy(id, slot) {
       dispatched.delete(id);
+      quiet.delete(id);
       if (slot === null) dispatchers.delete(id);
       else dispatchers.set(id, slot);
     },
@@ -215,7 +218,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const started = await ports.startWorker(id, { directory, prompt, as, cardId: card, dispatcherPath });
     if (isRefused(started)) return refused(started.refused);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
-    times.set(id, { sent: Date.now() });
+    quietFrom(id, false);
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory} ${paneLink(id)}`);
@@ -229,7 +232,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       notices.forget(id);
       dispatchers.delete(id);
       dispatched.delete(id);
-      times.delete(id);
+      quiet.delete(id);
       const throwaway = throwaways.get(id);
       throwaways.delete(id);
       return throwaway;
@@ -240,36 +243,38 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // it one, and at work from now, as its prompt hook will say, so nothing closes it on its last stop.
   async function send(id: string, slot: number, dispatcherPath: string, text: string): Promise<{ output: string } | Refused> {
     const sent = await ports.send(id, text, dispatcherPath);
-    if (isRefused(sent) || sent.handedTo === null) return sent;
+    if (isRefused(sent) || !sent.handed) return sent;
     if (!dispatched.has(id)) dispatched.set(id, { dispatcher: slot, about: workerAbout(text) });
-    stamp(id, 'sent');
+    quietFrom(id, false);
     notify(id, 'running');
     return sent;
   }
 
+  // Every open pane of every open page, main's included.
+  const openPaneIds = (): string[] => ports.openSlots()
+    .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)));
+
   // What auto-release.ts decides a worker's close on.
   function look(id: string): WorkerLook {
     const said = states.get(id);
-    const { sent = 0, read, stopped = 0 } = times.get(id) ?? {};
+    const { since = 0, reportRead = false } = quiet.get(id) ?? {};
     return {
       handedToMain: mainsWorker(id),
       hasKeyboard: ports.hasKeyboard(id),
       state: said?.state ?? 'running',
       paused: isPaused(said?.waiting),
-      finishedCard: ports.finishedCard(id),
-      reportRead: read !== undefined && read >= sent,
-      quietMs: Date.now() - Math.max(sent, read ?? 0, stopped),
+      finishedCard: () => ports.finishedCard(id),
+      reportRead,
+      quietMs: Date.now() - since,
     };
   }
 
   // One at a time, so two releases never race over one throwaway worktree. A refusal leaves the pane
   // as it is, and the next sweep decides again.
   async function closeFinished(): Promise<void> {
-    const workerPanes = ports.openSlots()
-      .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)))
-      .filter(mainsWorker);
-    for (const id of workerPanes) {
-      const verdict = releaseVerdict(look(id), ports.closeAfterMs());
+    const closeAfterMs = ports.closeAfterMs();
+    for (const id of openPaneIds().filter(mainsWorker)) {
+      const verdict = releaseVerdict(look(id), closeAfterMs);
       if (!verdict.release) continue;
       const released = await release.call({ id });
       if (!isRefused(released)) ports.released(id, verdict.reason, released.output);
@@ -318,7 +323,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
     if (state === 'running') states.delete(id);
     else states.set(id, { state, waiting });
-    if (state === 'done') stamp(id, 'stopped');
+    if (state === 'done') quietFrom(id, quiet.get(id)?.reportRead ?? false);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
     return answered('');
@@ -354,18 +359,17 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     workers,
     notify,
     closeFinished,
-    forget: (id: string) => { dispatched.delete(id); times.delete(id); notices.forget(id); },
+    forget: (id: string) => { dispatched.delete(id); quiet.delete(id); notices.forget(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two
     // projects in folders of one name give their workers one name.
     heard(reader: number, sender: string) {
-      const id = ports.openSlots()
-        .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)))
+      const id = openPaneIds()
         .find((each) => nameOfPane(each) === sender && mainsWorker(each)
           && (dispatched.get(each)?.dispatcher ?? paneFromId(each).slot) === reader);
       if (id === undefined) return;
       notices.reported(id);
-      stamp(id, 'read');
+      quietFrom(id, true);
     },
   });
 }

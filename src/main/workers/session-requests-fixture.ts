@@ -50,11 +50,11 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       return { output: '' };
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
-    send: async (id, text, dispatcherPath) => {
+    send: async (id, text) => {
       typed.push(`${id} ${text}`);
-      const handedTo = agents.has(id) ? dispatcherPath : null;
-      if (handedTo !== null) workers.add(id);
-      return { output: `typed into ${id}`, handedTo };
+      const handed = agents.has(id);
+      if (handed) workers.add(id);
+      return { output: `typed into ${id}`, handed };
     },
     tell: (slot, text) => String(told.push(`${slot} ${text}`) - 1),
     withdraw: (slot, messageId) => { withdrawn.push(`${slot} ${messageId}`); },

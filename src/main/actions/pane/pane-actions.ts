@@ -33,7 +33,7 @@ export type PaneActions = {
   dispatch: BoundAction;
   open: BoundAction<{ output: string; index: number }>;
   close: BoundAction;
-  send: BoundAction<{ output: string; handedTo: string | null }>;
+  send: BoundAction<{ output: string; handed: boolean }>;
   restore: BoundAction;
 };
 

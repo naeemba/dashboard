@@ -27,8 +27,8 @@ export type PaneSendPorts = {
   typeIntoShell(id: string, text: string): void;
 };
 
-// `handedTo` is the main the pane reports to now that it was handed this work, or null.
-export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; handedTo: string | null }>('pane.send', {
+// `handed`: the pane's agent is the sending main's worker now.
+export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; handed: boolean }>('pane.send', {
   words: [],
   input: ({ id, text, dispatcherPath = null }) => (isFilledText(id) && typeof text === 'string' && isFilledTextOrNull(dispatcherPath)
     ? { id, text, dispatcherPath } : { refused: 'no pane or text was given' }),
@@ -37,6 +37,6 @@ export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; h
     if (handedTo !== null) ports.handTo(id, handedTo);
     const typed = handedTo === null ? text : workerPrompt(text, handedTo);
     if (!ports.screenPrompt(id, typed)) ports.typeIntoShell(id, typed);
-    return { output: `typed into ${id}`, handedTo };
+    return { output: `typed into ${id}`, handed: handedTo !== null };
   },
 });

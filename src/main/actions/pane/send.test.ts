@@ -22,7 +22,7 @@ const reportLine = '\n\nSendMessage to main-api when done, saying what you did.'
 describe('pane.send', () => {
   it('hands the text to a screen as its prompt, and types it into the shell only when there is none', async () => {
     const { send, typed, prompted } = panes();
-    expect(await send.call({ id: '2:1', text: 'run the tests', dispatcherPath: null })).toEqual({ output: 'typed into 2:1', handedTo: null });
+    expect(await send.call({ id: '2:1', text: 'run the tests', dispatcherPath: null })).toEqual({ output: 'typed into 2:1', handed: false });
     await send.call({ id: '2:2', text: 'run the tests', dispatcherPath: null });
     expect(prompted).toEqual(['2:1 run the tests']);
     expect(typed).toEqual(['2:2 run the tests']);
@@ -30,7 +30,7 @@ describe('pane.send', () => {
 
   it('makes an agent a main sends work the main\'s worker, and tells it to report there', async () => {
     const { send, typed, prompted, handed } = panes();
-    expect(await send.call({ id: '2:1', text: 'fix it', dispatcherPath: '/work/api' })).toEqual({ output: 'typed into 2:1', handedTo: '/work/api' });
+    expect(await send.call({ id: '2:1', text: 'fix it', dispatcherPath: '/work/api' })).toEqual({ output: 'typed into 2:1', handed: true });
     await send.call({ id: '2:3', text: 'fix it', dispatcherPath: '/work/api' });
     expect(handed).toEqual(['2:1 /work/api', '2:3 /work/api']);
     expect(prompted).toEqual([`2:1 fix it${reportLine}`]);
@@ -39,7 +39,7 @@ describe('pane.send', () => {
 
   it('types a main\'s text into a shell as it is, and hands nothing over', async () => {
     const { send, typed, handed } = panes();
-    expect(await send.call({ id: '2:2', text: 'npm test', dispatcherPath: '/work/api' })).toEqual({ output: 'typed into 2:2', handedTo: null });
+    expect(await send.call({ id: '2:2', text: 'npm test', dispatcherPath: '/work/api' })).toEqual({ output: 'typed into 2:2', handed: false });
     expect(typed).toEqual(['2:2 npm test']);
     expect(handed).toEqual([]);
   });

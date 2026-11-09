@@ -58,4 +58,15 @@ describe('boardChanges', () => {
     changes.changed('/work/shop');
     expect(logged).toHaveLength(1);
   });
+  it('answers the board it last saw, reading the disk only for one it never saw', () => {
+    let reads = 0;
+    let onDisk = inTodo;
+    const changes = boardChanges(() => undefined, () => { reads += 1; return onDisk; });
+    expect(changes.latest('/work/shop')).toBe(inTodo);
+    expect(changes.latest('/work/shop')).toBe(inTodo);
+    expect(reads).toBe(1);
+    onDisk = inDoing;
+    changes.changed('/work/shop');
+    expect(changes.latest('/work/shop')).toBe(inDoing);
+  });
 });
