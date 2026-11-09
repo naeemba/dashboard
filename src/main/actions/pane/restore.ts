@@ -33,7 +33,8 @@ export type ScreenBack = { index: number; directory: string; session: string; di
 export type PaneRestorePorts = {
   // The shells the pane host kept for the project (pane-host-client.ts).
   kept(projectPath: string): { survivor: Survivor; shell: PaneShell }[];
-  listenTo(id: string, shell: PaneShell, file: string): void;
+  // `unit` is the systemd scope the host started it in, when it has one.
+  listenTo(id: string, shell: PaneShell, file: string, unit: string | undefined): void;
   takeResume(projectPath: string, index: number, id: string): PaneConversation | null;
   owedResumes(projectPath: string): number[];
   moveResume(fromId: string, toId: string): void;
@@ -78,7 +79,7 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
         continue;
       }
       ports.setPaneCommand(id, pane.command);
-      ports.listenTo(id, shell, survivor.file);
+      ports.listenTo(id, shell, survivor.file, survivor.unit);
       if (pane.card !== undefined) ports.givePane(pane.card, index);
       if (pane.worker && saved !== null) ports.mainsWorkers.set(id, workerDispatcher(saved, projectPath));
     }

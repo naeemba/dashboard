@@ -5,7 +5,9 @@ import { paneKey } from './pane-host-protocol';
 import { screenCopyWhile, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
 import { foregroundName, spawnShell, type PaneShell } from './pane-shell';
-import type { PaneCommand } from '../../shared/panes/pane-reading';
+import { runsAnAgent, type PaneCommand } from '../../shared/panes/pane-reading';
+import { baseName } from '../../shared/app/base-name';
+import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import type { Screens } from '../../shared/remote-host/screens';
 
 // Every pane's shell as main holds it: a worker's spawned through the pane host or taken back from it
@@ -19,6 +21,8 @@ export function paneShells(main: {
   environment: Record<string, string>;
   temporary: string;
   shellCommand(): string;
+  // The command as it starts inside its systemd scope, or as it is (processes/scope-support.ts).
+  scoped(request: ScopeRequest): ScopedCommand;
   projectPath(slot: number): string | undefined;
   send(channel: string, ...payload: unknown[]): void;
   // Whether anything will read a pane's screen copy: pane-screen-copy.ts's screenCopyWhile.
@@ -34,6 +38,9 @@ export function paneShells(main: {
   // foreground against this, so switching the setting cannot make five panes sitting at prompts read
   // as running a program and refuse every ship after it.
   const startedWith = new Map<string, string>();
+  // The systemd scope each pane's shell runs in, for whatever stops or reads the scope later. A pane
+  // started unscoped (scopes unavailable, an older pane host) has none.
+  const scopeUnits = new Map<string, string>();
 
   function spawn(id: string): void {
     const entry = main.commands.get(id);
@@ -52,13 +59,20 @@ export function paneShells(main: {
     // The editor runs in this process, never the host: no launch could reach its nvim again
     // (adopted-pane.ts), so kept it would only hold its buffers and swap file until the next launch.
     const spawnPane = entry.args === 'editor' ? spawnShell : main.host.spawn;
+    const { slot, index } = paneFromId(id);
+    const projectPath = main.projectPath(slot) ?? '';
+    // An agent's pane is the one running Claude Code as its command (pane.dispatch's terminal half).
+    // A screen's Claude runs in the screen host; the shell under it is a plain one.
+    const scoped = main.scoped({
+      kind: runsAnAgent(entry) ? 'agent' : 'shell', id: `${baseName(projectPath)}-${index}`, file: shellCommand, args: paneArguments,
+    });
     let shell: PaneShell;
     try {
       const { cols, rows } = sizeOfPane(main.screens, id);
-      const { slot, index } = paneFromId(id);
       shell = spawnPane({
-        key: paneKey(main.projectPath(slot) ?? '', index),
+        key: paneKey(projectPath, index),
         file: shellCommand, args: paneArguments, cwd: entry.directory, env: main.environment, cols, rows,
+        scope: scoped.unit === null ? undefined : { unit: scoped.unit, file: scoped.file, args: scoped.args },
       });
     } catch {
       // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
@@ -68,13 +82,15 @@ export function paneShells(main: {
       main.send('pty:exit', id, 127);
       return;
     }
-    listenTo(id, shell, shellCommand);
+    listenTo(id, shell, shellCommand, scoped.unit ?? undefined);
   }
 
   // A pane's shell from now on, spawned or kept by the pane host through a restart. Every pane's shell
   // comes through here, so the one line recording what it started with covers every pane there is.
-  function listenTo(id: string, shell: PaneShell, shellUsed: string): void {
+  function listenTo(id: string, shell: PaneShell, shellUsed: string, unit: string | undefined): void {
     startedWith.set(id, shellUsed);
+    if (unit === undefined) scopeUnits.delete(id);
+    else scopeUnits.set(id, unit);
     const copy = screenCopyWhile(main.keepsScreens, () => shell);
     screenCopies.set(id, copy);
     shell.onData((data) => { copy.push(data); main.send('pty:data', id, data); });
@@ -114,6 +130,7 @@ export function paneShells(main: {
     shell?.kill();
     screenCopies.delete(id);
     startedWith.delete(id);
+    scopeUnits.delete(id);
   }
 
   // Whether quitting now kills a shell you could lose work in: a worker pane running in this process
@@ -123,7 +140,7 @@ export function paneShells(main: {
     return [...shells].some(([id, shell]) => diesAtQuit(shell) && paneFromId(id).index !== EDITOR_INDEX);
   }
 
-  return { shells, screenCopies, startedWith, spawn, listenTo, foregroundOf, drop, workDiesAtQuit };
+  return { shells, screenCopies, startedWith, scopeUnits, spawn, listenTo, foregroundOf, drop, workDiesAtQuit };
 }
 
 // A shell this process runs itself, which will-quit kills. One the pane host runs is left for the next
