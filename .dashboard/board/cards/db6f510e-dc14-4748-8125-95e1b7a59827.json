@@ -1,0 +1,11 @@
+{
+  "id": "db6f510e-dc14-4748-8125-95e1b7a59827",
+  "title": "renderer.ts project-close comment points at CLAUDE.md instead of keys-decision-2",
+  "notes": "src/renderer/renderer.ts:678 says Ctrl+Q is listed on the manager's board, command and notes screens though it does nothing there, and that 'CLAUDE.md's help section says why'. CLAUDE.md's help rule (keys-rule-2) never said why; keys-decision-2 in docs/keys/decisions.md does. Cost: someone wondering whether the dead key in Ctrl+H is a bug finds no reason in CLAUDE.md and 'fixes' the help, undoing a settled decision. Point the comment at keys-decision-2. Issue: https://github.com/naeemba/dashboard/issues/286 Review: https://github.com/naeemba/dashboard/pull/285",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-09T19:34:48.857Z",
+  "updatedAt": "2026-11-09T19:34:48.858Z",
+  "column": "Backlog",
+  "order": 42
+}
