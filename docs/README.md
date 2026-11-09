@@ -9,6 +9,9 @@ Every rule and decision has a stable id, `<feature>-rule-N` and
 `<feature>-decision-N`, never renumbered. History lines, pull requests and
 commits cite the id.
 
+A hard rule's one line is in `CLAUDE.md`, unless its entry names the test,
+lint or CI step that holds it.
+
 ## Features
 
 | Feature | What it is |

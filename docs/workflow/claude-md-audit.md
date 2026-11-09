@@ -33,7 +33,7 @@ Verdicts:
 | No Self-Reference | keep | `attribution` in `settings.json` already empties the commit and PR trailers. A hook refusing the word "Claude" would refuse this repo, which names Claude screens and the Claude Agent SDK on purpose. | — |
 | Run /simplify after code changes | keep | judgement (what counts as trivial); main's dispatch prompt also asks for it | — |
 | Shell state does not survive a tool call | keep | how the harness works; nothing refuses a lone `export` | — |
-| zsh: never name a variable `path` | move | the `PreToolUse` Bash hook that already blocks spin loops (`block-spin-loops.js`) refuses a `path=`, `local path=` or `typeset path=` assignment and says why | The command runs, every later command in it is `command not found`, and the agent reads that as a missing tool. |
+| zsh: never name a variable `path` | move | the `PreToolUse` Bash hook that already blocks spin loops (`guard-bash-commands.js`, was `block-spin-loops.js`) refuses a `path=`, `local path=` or `typeset path=` assignment and says why | The command runs, every later command in it is `command not found`, and the agent reads that as a missing tool. |
 | zsh: quote globs, `$pipestatus`, brace before a colon | keep | too many legal shapes to refuse without false hits | — |
 | Codegraph in a worktree | keep | a fallback for a missing index; there is nothing to refuse. Its answers come from main's code, not the worktree branch's, and that cost is accepted | — |
 | Bash goes through rtk | keep | one line explaining a hook's output; nothing to enforce | — |
@@ -90,3 +90,5 @@ Cheap checks first, then the hooks, then the one card that deletes what the othe
 11. Load the final-message rule once, from its hook (dotfiles)
 12. Shrink the seeded `.dashboard/CLAUDE.md` to the board command
 13. Delete from CLAUDE.md every rule the cards above moved, and the ones already enforced (workflow-rule-4, processes-rule-1, processes-rule-2, app-rule-2), keeping the one "never an `eslint-disable`" line for each rule eslint carries
+
+Cards 1 to 13 are done; card 13's result is workflow-decision-8.

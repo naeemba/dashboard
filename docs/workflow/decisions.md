@@ -181,3 +181,17 @@ the checkout. Reading the installed build (`ls`, `node "$DASHBOARD_COMMAND"`) go
   that starts with one of the verbs is refused, and a lone `'` in a heredoc body (`Don't`) opens a quote
   that hides every command after it; the hook is a guard rail, not a sandbox.
 - **The refusal says what to do instead**: say the installed app needs a rebuild and restart, and stop.
+
+## workflow-decision-8: A rule a check holds leaves CLAUDE.md, and keeps its id
+
+Agreed on 2026-11-09, card 13 of the CLAUDE.md audit. Once a test, a lint rule or a CI step refuses a
+broken rule and says why, its line in `CLAUDE.md` only repeated it, so it is deleted; the audit's
+project table (`claude-md-audit.md`) names each rule and its check. workflow-rule-1 keeps the half its
+hook cannot read: a script of your own.
+
+- **A rule eslint carries keeps one line**: never an `eslint-disable` for it (app-rule-2,
+  workflow-rule-4, conventions-rule-4's `max-lines`, errors-rule-1's `String(error)`), for the reason in the audit's rows.
+- **The entry stays in `hard-rules.md` under its id**, naming its check, and `docs/README.md` says
+  a hard rule may be held there instead of in `CLAUDE.md`. Code, tests and history lines cite the
+  ids; moving each entry to `decisions.md` under a new id would have broken every citation for a
+  change of heading.

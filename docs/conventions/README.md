@@ -6,9 +6,8 @@ a file. Owns `text-direction.test.ts`, which holds conventions-rule-2,
 `hidden-rule.test.ts`, which holds conventions-rule-3, and the `max-lines` rule
 in `eslint.config.mjs` and `stylesheet-size.test.ts`, which hold
 conventions-rule-4 for code and stylesheets.
-`CLAUDE.md` carries the first three in one line each and points at their id
-here; the file-size rule is eslint's, and `docs/workflow/claude-md-audit.md`
-says what CLAUDE.md keeps of it.
+`CLAUDE.md` carries keyboard first in one line and points at its id here; the
+other three are held by their checks and not repeated there (workflow-decision-8).
 
 ## Scenarios
 

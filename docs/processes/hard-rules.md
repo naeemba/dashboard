@@ -1,6 +1,6 @@
 # Processes: hard rules
 
-The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
+The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what breaking it looked like.
 
 ## processes-rule-1: A process that runs as long as a pane or an agent starts in its scope
 
@@ -21,6 +21,7 @@ started it, which is the freeze this feature exists to end.
 
 The launch writes `agents.slice` and `panes.slice` only when missing. A user
 who raised `MemoryMax` in the file by hand, or in a drop-in, keeps it.
+`install-slices.test.ts` fails when a slice that is there gets written.
 
 What breaking it looks like: the app rewrites the file at every launch. You
 raise agents.slice's MemoryMax to 24G for a heavy week; the next launch puts it
