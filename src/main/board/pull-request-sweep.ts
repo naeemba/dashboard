@@ -4,8 +4,9 @@ import { failureText } from '../../shared/errors/failure';
 // board is shown, and on a slow timer, all through `check`. pull-request-column.ts says which cards and
 // what an answer does; card.follow does it.
 
-// The slow timer, for a pull request merged or closed while nobody reported and nobody looked.
-export const FOLLOW_TIMER_MS = 2 * 60 * 1000;
+// The slow timer, for a pull request merged or closed while nobody reported and nobody looked, and
+// for the card's glyph to follow a check that finished (pull-request-status.ts).
+export const FOLLOW_TIMER_MS = 60 * 1000;
 // A check asked for within this long of the last one is skipped. Showing the board re-reads it after
 // every write, the app's own included, and each read asking gh again would be a gh call per card per
 // keystroke. What is skipped is caught by the timer.

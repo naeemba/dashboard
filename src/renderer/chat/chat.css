@@ -358,6 +358,43 @@
   font-size: 12px;
 }
 
+.chat-attached-image {
+  position: relative;
+  display: flex;
+  border-radius: 5px;
+}
+
+.chat-attached-image:focus {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+.chat-attached-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: none;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--white);
+  cursor: pointer;
+  place-items: center;
+}
+
+.chat-attached-remove .icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.chat-attached-image:hover .chat-attached-remove,
+.chat-attached-image:focus .chat-attached-remove {
+  display: grid;
+}
+
 .chat-attached img {
   width: 64px;
   height: 64px;

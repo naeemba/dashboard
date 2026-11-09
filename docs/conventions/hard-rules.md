@@ -26,7 +26,7 @@ outline is off in the CSS, so nothing on screen says where the keyboard went.
 ## conventions-rule-2: Every box you type into carries `dir="auto"`
 
 **A new `<input>` or `<textarea>` gets `input.dir = 'auto'` in the same change
-that adds it.** Everything outside a pane is `unicode-bidi: plaintext`, which
+that adds it.** Everything outside a terminal is `unicode-bidi: plaintext`, which
 fixes reading order but not the caret. Without it you type a Persian card title
 and the text runs away from the cursor, ending punctuation lands on the wrong
 side, and Home and End go to the opposite ends of what you see.
