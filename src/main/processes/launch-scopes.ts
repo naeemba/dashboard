@@ -9,9 +9,9 @@ import { processesInstallSlices, systemdUserFolder } from '../actions/processes/
 import { commandOutput } from '../panes/shell-directory-lookup';
 import { processScopes, type ProcessScopes, type Probe } from './scope-support';
 
-// The app's scopes with their real ports: the two probes, the slice files and daemon-reload. The
-// probe's and the file's branches are tested in launch-scopes.test.ts against real processes and a
-// real folder; everything they hand over to is tested beside it.
+// The app's scopes with their real ports: the two probes, the slice files, daemon-reload and stopping
+// a pane's scope. The probe's and the file's branches are tested in launch-scopes.test.ts against real
+// processes and a real folder; everything they hand over to is tested beside it.
 
 const runCommand = promisify(execFile);
 // daemon-reload and a queued stop answer in milliseconds; one stuck must not hold a launch or a close.

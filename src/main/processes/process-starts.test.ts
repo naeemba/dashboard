@@ -13,7 +13,8 @@ const STARTS_PROCESSES = [
   // The pane and screen hosts themselves: one process for every pane, left where the app runs on
   // purpose; only what they start is scoped.
   'src/main/panes/pane-host-client.ts',
-  // The scope check's two probes and daemon-reload.
+  // The scope check's two probes, daemon-reload and stopping a pane's scope at its close; each ends in
+  // seconds.
   'src/main/processes/launch-scopes.ts',
   // The app started from the `dashboard` command, which is the app, not an agent.
   'src/main/command/start-app.ts',
