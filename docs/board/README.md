@@ -128,8 +128,9 @@ is committed. Every other reason is asked once and the comment is the end of it.
 ### The column follows the pull request
 
 Nobody has to move a shipped card: the app does it (board-decision-6). Handing a
-card to an agent, by a ship or `pane run --card`, writes its branch on it and
-moves it into Doing, unless it is in Doing or past it already. From then on the
+card to an agent, by a ship, the review, `pane run --card` or a restore at
+launch, writes its branch on it and moves it into Doing, unless it is in Doing
+or past it already. From then on the
 app asks `gh pr list --head <branch>` about it, one call per card, when a worker
 reports, when the board is shown, and every two minutes, and records the number
 it finds:
@@ -139,11 +140,15 @@ it finds:
   Done goes back to Review every time while its pull request is open: Done says
   merged.
 - merged: into Done.
-- closed without merging: back to Doing from Review or Done.
+- closed without merging: back to Doing from Review or Done; from anywhere else
+  the line is written and the card stays, without `; back to Doing`.
 
 Each of those is said once on the card, naming the pull request, its title and
 its link (`Pull request #12 opened: …`), and the move is made only that first
-time, so a card you move on afterwards stays where you put it. An open pull
+time, so a card you move on afterwards stays where you put it. A pull request
+closed and then reopened counts as opened again, since the last line about it
+is the close. Only a project's own board is followed: a worktree opened as a
+page is not, so its tracked card files stay clean. An open pull
 request is preferred over a newer closed one on the same branch, so a second
 pull request after a closed first is followed. Asked about: a card with a branch,
 on its card or its worktree's record, that is not in Cancelled, whose merge is

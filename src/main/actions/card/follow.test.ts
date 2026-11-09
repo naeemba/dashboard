@@ -37,6 +37,17 @@ describe('card.follow', () => {
     expect(cardById(board(), 'card')?.pullRequest).toBe(12);
   });
 
+  it('lands on the board as it is after gh answers, keeping a change made meanwhile', async () => {
+    const fake = fakePorts(boardWith('Doing', { branch: 'fix-login' }), {
+      pullRequestOf: async () => {
+        fake.ports.write('/work/api', boardWith('Doing', { branch: 'fix-login', notes: 'edited during gh' }));
+        return OPEN;
+      },
+    });
+    await cardFollow.run(fake.ports, input);
+    expect(cardById(fake.board(), 'card')).toMatchObject({ notes: 'edited during gh', pullRequest: 12 });
+  });
+
   it('finds the branch on the worktree record for a card that has none', async () => {
     const { ports, seen } = fakePorts(boardWith('Doing'), { worktreeBranch: () => 'from-the-record' });
     await cardFollow.run(ports, input);

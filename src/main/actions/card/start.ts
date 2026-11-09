@@ -23,7 +23,8 @@ export function startedBoard(board: Board, id: string, branch: string): Board | 
   return next === board ? null : next;
 }
 
-// A card whose agent the app has just started, by a ship or `pane run --card`: into Doing with its
+// A card whose agent the app has just started, from every door that gives it a pane (`giveCardPane`
+// in main.ts: a ship, the review, `pane run --card`, a restore): into Doing with its
 // branch on it, so main's board says it is being worked without the agent being told to move it.
 export const cardStart = action<CardStartPorts, CardStartInput, { output: string }>('card.start', {
   words: ['id', 'branch'],
@@ -38,6 +39,8 @@ export const cardStart = action<CardStartPorts, CardStartInput, { output: string
     if (brokenFiles.length > 0) return { refused: brokenFilesRefusal(brokenFiles) };
     const started = startedBoard(board, id, branch);
     if (started !== null) ports.write(projectPath, started);
-    return { output: started === null ? `card ${id} is already under way` : `card ${id} is in Doing on ${branch}` };
+    if (started === null) return { output: `card ${id} is already under way` };
+    const at = selectionOf(started, id)!;
+    return { output: `card ${id} is in ${started.columns[at.column].name} on ${branch}` };
   },
 });

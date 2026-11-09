@@ -60,6 +60,8 @@ export function cardActions(main: CardActionsMain): CardActions {
   const writeShown = (projectPath: string, board: Board) => writeAndSync(projectPath, board, true);
   // Without salvage: a write follows, and a card file that does not parse is refused (readBoard).
   const read = (projectPath: string) => readBoard(projectPath, false);
+  const projectBoard = (projectPath: string) =>
+    isProjectBoard(projectPath, main.worktrees().map((entry) => entry.worktreePath), realPath, isLinkedWorktree);
 
   const reviews: ReviewSweep = reviewSweep({
     ...main,
@@ -74,7 +76,7 @@ export function cardActions(main: CardActionsMain): CardActions {
     // when the command wrote the file itself.
     write: (projectPath, board, source) => writeAndSync(projectPath, board, source === 'automatic'),
     published,
-    projectBoard: (projectPath) => isProjectBoard(projectPath, main.worktrees().map((entry) => entry.worktreePath), realPath, isLinkedWorktree),
+    projectBoard,
     autoLoop: main.autoLoop,
     ship: (input) => ship.call(input),
     review: (input) => review.call(input),
@@ -103,6 +105,7 @@ export function cardActions(main: CardActionsMain): CardActions {
     now: Date.now,
   });
   const pullRequests = pullRequestSweep({
+    projectBoard,
     followed(projectPath) {
       const { board } = read(projectPath);
       return board.columns.flatMap((column) => column.cards

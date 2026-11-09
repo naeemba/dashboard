@@ -40,6 +40,8 @@ describe('card.start', () => {
     await expect(cardStart.run(ports, input)).resolves.toEqual({ output: 'card card is in Doing on fix-login' });
     await expect(cardStart.run(ports, input)).resolves.toEqual({ output: 'card card is already under way' });
     expect(writes).toHaveLength(1);
+    board = boardWith('Done');
+    await expect(cardStart.run(ports, input)).resolves.toEqual({ output: 'card card is in Done on fix-login' });
     expect(cardStart.input({ projectPath: '/work/api', id: 'card', branch: ' ' })).toEqual({ refused: 'a started card needs its branch' });
   });
 });

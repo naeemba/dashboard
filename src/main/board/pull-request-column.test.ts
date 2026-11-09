@@ -18,7 +18,7 @@ function pull(state: PullRequest['state'], number = 12): PullRequest {
 }
 
 function said(state: PullRequest['state'], number = 12) {
-  return { body: pullRequestComment(pull(state, number)) };
+  return { body: pullRequestComment(pull(state, number), state === 'CLOSED') };
 }
 
 function card(board: Board | null): Card | undefined {
@@ -97,9 +97,18 @@ describe('followStep', () => {
       expect(step.column).toBe('Doing');
       expect(card(step.board)?.comments?.at(-1)?.body).toMatch(/^Pull request #12 closed without merging: .*; back to Doing$/);
     }
-    expect(followStep(boardWith('Todo', fields), 'card', 'fix-login', pull('CLOSED')).column).toBeNull();
+    const todo = followStep(boardWith('Todo', fields), 'card', 'fix-login', pull('CLOSED'));
+    expect(todo.column).toBeNull();
+    expect(card(todo.board)?.comments?.at(-1)?.body).toBe('Pull request #12 closed without merging: Fix the login race https://github.com/o/r/pull/12');
     const closed = { ...fields, comments: [said('CLOSED')] };
     expect(followStep(boardWith('Done', closed), 'card', 'fix-login', pull('CLOSED'))).toEqual({ board: null, column: null });
+  });
+
+  it('moves a card back into Review when its closed pull request reopens', () => {
+    const fields = { pullRequest: 12, branch: 'fix-login', comments: [said('OPEN'), said('CLOSED')] };
+    const step = followStep(boardWith('Doing', fields), 'card', 'fix-login', pull('OPEN'));
+    expect(step.column).toBe('Review');
+    expect(card(step.board)?.comments?.at(-1)?.body).toMatch(/^Pull request #12 opened: /);
   });
 
   it('follows a second pull request on the same branch', () => {

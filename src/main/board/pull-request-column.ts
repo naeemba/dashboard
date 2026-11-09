@@ -44,14 +44,27 @@ function saidPrefix(pullRequest: number, state: PullRequestState): string {
   return `Pull request #${pullRequest} ${SAID[state]}`;
 }
 
-export function pullRequestComment(pull: PullRequest): string {
-  const back = pull.state === 'CLOSED' ? '; back to Doing' : '';
+// `backToDoing` only when the card is moving there: a closed pull request on a card in Todo says so
+// and leaves it.
+export function pullRequestComment(pull: PullRequest, backToDoing = false): string {
+  const back = backToDoing ? '; back to Doing' : '';
   return `${saidPrefix(pull.number, pull.state)}: ${pull.title} ${pull.url}${back}`;
 }
 
 function said(card: Card, pullRequest: number, state: PullRequestState): boolean {
   const prefix = saidPrefix(pullRequest, state);
   return (card.comments ?? []).some((comment) => comment.body.startsWith(prefix));
+}
+
+// The state the newest line about this pull request said, or undefined before any. A pull request
+// closed and reopened says opened again, since the last line about it is the close.
+function lastSaid(card: Card, pullRequest: number): PullRequestState | undefined {
+  const states = Object.keys(SAID) as PullRequestState[];
+  for (const comment of [...(card.comments ?? [])].reverse()) {
+    const state = states.find((each) => comment.body.startsWith(saidPrefix(pullRequest, each)));
+    if (state !== undefined) return state;
+  }
+  return undefined;
 }
 
 // Whether the app asks `gh` about this card at all. Not without a branch: a research card has none and
@@ -72,9 +85,10 @@ export function followedBranch(card: Card, column: string, worktreeBranch: strin
 // written, or null when none of that changed; `column` is where card.move takes it, or null to leave it.
 export type FollowStep = { board: Board | null; column: string | null };
 
-// Each state moves the card once, the first time the app sees it, and says so on the card, so a
-// person who moves the card on afterwards is not overruled every tick. One exception: an open pull
-// request takes a card out of Done every time, since Done says merged.
+// Each state moves the card once, when it differs from the last line said about that pull request,
+// and says so on the card, so a person who moves the card on afterwards is not overruled every tick.
+// A reopened pull request is a new open. One exception: an open pull request takes a card out of
+// Done every time, since Done says merged.
 //
 // - open: into Review.
 // - merged: into Done.
@@ -84,12 +98,13 @@ export function followStep(board: Board, cardId: string, branch: string, pull: P
   if (at === null || pull === null) return { board: null, column: null };
   const card = board.columns[at.column].cards[at.card];
   const column = board.columns[at.column].name;
-  const first = !said(card, pull.number, pull.state);
+  const first = lastSaid(card, pull.number) !== pull.state;
+  const into = target(column, pull.state, first);
   let next = board;
   if (card.pullRequest !== pull.number) next = setPullRequest(next, at, pull.number).board;
   if (card.branch === undefined) next = setBranch(next, at, branch).board;
-  if (first) next = addComment(next, at, pullRequestComment(pull)).board;
-  return { board: next === board ? null : next, column: target(column, pull.state, first) };
+  if (first) next = addComment(next, at, pullRequestComment(pull, into === DOING_COLUMN)).board;
+  return { board: next === board ? null : next, column: into };
 }
 
 function target(column: string, state: PullRequestState, first: boolean): string | null {

@@ -1,5 +1,4 @@
 import { failureText } from '../../shared/errors/failure';
-import { isManagerPath } from '../../shared/manager/manager';
 
 // When the app asks gh about a project's cards (board-decision-6): when a worker reports, when the
 // board is shown, and on a slow timer, all through `check`. pull-request-column.ts says which cards and
@@ -13,6 +12,9 @@ export const FOLLOW_TIMER_MS = 2 * 60 * 1000;
 export const FOLLOW_GAP_MS = 30 * 1000;
 
 export type PullRequestSweepPorts = {
+  // Whether the folder's board is a project's own (isProjectBoard): not the manager's, and not a
+  // worktree's copy, whose writes would dirty a file tracked on the card's branch.
+  projectBoard(projectPath: string): boolean;
   // The cards of the project worth asking about now (followedBranch), by id.
   followed(projectPath: string): string[];
   // card.follow for one card. Throws when gh cannot answer: missing, logged out or offline.
@@ -32,7 +34,7 @@ export function pullRequestSweep(ports: PullRequestSweepPorts): PullRequestSweep
   const warned = new Set<string>();
 
   async function check(projectPath: string): Promise<void> {
-    if (isManagerPath(projectPath) || running.has(projectPath)) return;
+    if (!ports.projectBoard(projectPath) || running.has(projectPath)) return;
     const now = ports.now();
     if (now - (checked.get(projectPath) ?? -Infinity) < FOLLOW_GAP_MS) return;
     checked.set(projectPath, now);

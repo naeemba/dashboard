@@ -51,9 +51,9 @@ and leaves out a `.broken` file set aside and a write's temporary file.
   branch opens, into `Done` when it merges, back to `Doing` when it closes
   unmerged, with one comment naming the pull request each time. An agent working
   a card does not move it; it records the number with `board set <id>
-  --pull-request <n>`, which is what starts the review once it goes quiet. Into `Review`, the app throws that card's worktree
-  away and makes a fresh one on the pull request's branch with an agent
-  reviewing it.
+  --pull-request <n>`, which is what starts the review once it goes quiet.
+  Into `Review`, the app throws that card's worktree away and makes a fresh
+  one on the pull request's branch with an agent reviewing it.
 - A card's column on the `main` branch says what has been merged, and `Review`
   is the one exception — a card there has a pull request open and nothing has
   checked it. On a board git tracks, the `board` command writes the card on
