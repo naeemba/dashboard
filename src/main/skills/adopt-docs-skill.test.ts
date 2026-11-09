@@ -16,21 +16,25 @@ function expectSkillToCarry(text: string, source: string): void {
   expect(carried, `${source} changed: copy it into ADOPT_DOCS_SKILL in adopt-docs-skill.ts`).toBe(true);
 }
 
-function between(text: string, start: string, end: string): string {
+function between(text: string, start: string, end: string, source: string): string {
   const from = text.indexOf(start);
   const to = text.indexOf(end, from);
-  if (from < 0 || to < 0) throw new Error(`no text from "${start}" to "${end}"`);
+  if (from < 0 || to < 0) {
+    throw new Error(`${source}: no text from "${start}" to "${end}"; copy the new text into ADOPT_DOCS_SKILL in adopt-docs-skill.ts`);
+  }
   return text.slice(from, to);
 }
 
 describe('ADOPT_DOCS_SKILL', () => {
   it('carries the docs rule from CLAUDE.md', () => {
     const claude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
-    expectSkillToCarry(between(claude, 'Feature docs live in', '\n\n'), 'The docs rule in CLAUDE.md');
+    const source = 'The docs rule in CLAUDE.md';
+    expectSkillToCarry(between(claude, 'Feature docs live in', '\n\n', source), source);
   });
 
   it('carries the preamble of docs/README.md', () => {
     const index = readFileSync(join(root, 'docs', 'README.md'), 'utf8');
-    expectSkillToCarry(between(index, '# Docs', '## Features'), 'The preamble of docs/README.md');
+    const source = 'The preamble of docs/README.md';
+    expectSkillToCarry(between(index, '# Docs', '## Features', source), source);
   });
 });
