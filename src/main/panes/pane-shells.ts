@@ -135,6 +135,11 @@ export function paneShells(main: {
     scopeUnits.delete(id);
   }
 
+  // The scope of every pane of the project that has one, the editor's included: what project.close stops.
+  function scopesIn(slot: number): string[] {
+    return [...scopeUnits].filter(([id]) => paneFromId(id).slot === slot).map(([, unit]) => unit);
+  }
+
   // Whether quitting now kills a shell you could lose work in: a worker pane running in this process
   // this time (no host, another Dashboard holds it, or it died). The editor is always one, and starts
   // fresh either way.
@@ -142,7 +147,7 @@ export function paneShells(main: {
     return [...shells].some(([id, shell]) => diesAtQuit(shell) && paneFromId(id).index !== EDITOR_INDEX);
   }
 
-  return { shells, screenCopies, startedWith, scopeUnits, spawn, listenTo, foregroundOf, drop, workDiesAtQuit };
+  return { shells, screenCopies, startedWith, scopeUnits, scopesIn, spawn, listenTo, foregroundOf, drop, workDiesAtQuit };
 }
 
 // A shell this process runs itself, which will-quit kills. One the pane host runs is left for the next

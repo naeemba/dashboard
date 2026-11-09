@@ -78,6 +78,14 @@ describe('paneShells', () => {
     expect(made.scopeUnits.has(WORKER)).toBe(false);
   });
 
+  it('hands project.close the scope of every pane of the project, the editor\'s included, and no other project\'s', () => {
+    const made = shells();
+    made.spawn(EDITOR);
+    made.spawn(AGENT);
+    made.listenTo(terminalId(1, 1), fakeShell(true), '/bin/zsh', 'pane-other-1.scope');
+    expect(made.scopesIn(0).sort()).toEqual(['agent-dashboard-2.scope', 'shell-dashboard--1.scope']);
+  });
+
   it('says work dies at quit only for a worker running in this process', () => {
     const made = shells();
     made.listenTo(EDITOR, fakeShell(), '/bin/zsh', undefined);

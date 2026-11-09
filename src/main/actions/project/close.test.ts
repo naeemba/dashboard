@@ -6,11 +6,13 @@ import { projectClose, type ProjectClosePorts } from './close';
 const idle: PaneUse = { index: 1, exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false };
 
 // The command's close is tested through its door in project-requests.test.ts.
-function setUp(panes: PaneUse[]) {
+function setUp(panes: PaneUse[], units: string[] = [], stopScope: (unit: string) => Promise<void> = async () => undefined) {
   const ports: ProjectClosePorts = {
     isOpen: (slot) => slot === 4,
     panesOf: () => panes,
+    scopesOf: (slot) => (slot === 4 ? units : []),
     close: vi.fn(),
+    stopScope: vi.fn(stopScope),
   };
   return { ports, close: bind(projectClose, ports) };
 }
@@ -36,5 +38,28 @@ describe('project.close', () => {
     const { close } = setUp([idle]);
     await expect(close.call({ slot: 9, name: 'web' })).resolves.toEqual({ refused: 'web is not open' });
     await expect(close.call({ slot: 4, name: 'web', names: [{ index: 'one' }] })).resolves.toEqual({ refused: 'the project to close was not one the app could read' });
+  });
+
+  it('stops every scope its panes ran in once the project is closed, and only then', async () => {
+    const { ports, close } = setUp([idle], ['pane-web-1-a.scope', 'pane-web--1-b.scope']);
+    vi.mocked(ports.stopScope).mockImplementation(async () => { expect(ports.close).toHaveBeenCalled(); });
+    await expect(close.call({ slot: 4, name: 'web' })).resolves.toEqual({ output: 'closed web' });
+    expect(vi.mocked(ports.stopScope).mock.calls).toEqual([['pane-web-1-a.scope'], ['pane-web--1-b.scope']]);
+  });
+
+  it('says which scope it could not stop, and still closes and stops the rest', async () => {
+    const { ports, close } = setUp([idle], ['pane-web-1-a.scope', 'pane-web-2-b.scope'], async (unit) => {
+      if (unit === 'pane-web-1-a.scope') throw new Error('timed out');
+    });
+    await expect(close.call({ slot: 4, name: 'web' })).resolves.toEqual({ output: 'closed web; pane-web-1-a.scope was not stopped: timed out' });
+    expect(ports.close).toHaveBeenCalledWith(4);
+    expect(ports.stopScope).toHaveBeenCalledWith('pane-web-2-b.scope');
+  });
+
+  it('stops nothing when it refuses or only checks', async () => {
+    const { ports, close } = setUp([{ ...idle, foreground: 'npm' }], ['pane-web-1-a.scope']);
+    await close.call({ slot: 4, name: 'web' });
+    await close.call({ slot: 4, name: 'web', names: [], onlyCheck: true });
+    expect(ports.stopScope).not.toHaveBeenCalled();
   });
 });
