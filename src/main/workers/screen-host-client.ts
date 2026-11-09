@@ -5,12 +5,15 @@ import { inputQueue } from '../chat/input-queue';
 import { launchPaneHost } from '../panes/pane-host-client';
 import { attempt, reachHost } from '../panes/host-socket';
 import { line, lineReader } from '../panes/pane-host-protocol';
+import { endDeadHostAt } from './dead-host';
 import { screenHostSocket, type AskCallback, type FromScreenHost, type HostedParams, type HostedSession, type KeptSession, type ToScreenHost } from './screen-host-protocol';
 
 // The app's half of the screen host: a worker screen's session run there, behind a Query that passes
 // every call over the socket, so chat-sessions.ts drives it as it drives one of its own. With no host
-// (Windows, a socket that will not open, another Dashboard holding it) a worker screen runs in the app
-// as it did before, and dies with it. workers-decision-6 says why.
+// (Windows, a socket that will not open) a worker screen runs in the app as it did before, and dies
+// with it, once what a host that died left running is ended. Never while a host answers that would not
+// take this app (another Dashboard holding it, or one too slow to say what it kept): it may be running
+// that very worker. workers-decision-6 says why.
 
 export type ScreenHost = {
   // Settled once a host already running has said which sessions it kept, or once there is none.
@@ -26,14 +29,16 @@ type Listener = (message: FromScreenHost) => void;
 
 const ANSWER_WAIT_MS = 5000;
 const HOST_STOPPED = 'The screen host stopped';
+export const HOST_NOT_ANSWERING = 'The screen host is running but did not answer, and may still be running this worker: try again in a moment';
 
 // `connectTries` is how long a launched host is waited for (reachHost); a test passes 0.
-export function screenHost(options: { socket: string | null; launch(): void; connectTries?: number }): ScreenHost {
+// `endDeadHost` kills what a host that died left running (dead-host.ts).
+export function screenHost(options: { socket: string | null; launch(): void; endDeadHost(): void; connectTries?: number }): ScreenHost {
   let connection: net.Socket | null = null;
   let kept = new Map<string, KeptSession>();
   const listeners = new Map<string, Listener>();
-  // One try at the host per run, shared by every worker starting at once: two would each launch a host,
-  // and the second would take the socket from the first. Tried again only once a host it had went.
+  // One try at the host at a time, shared by every worker starting at once. Tried again by the next
+  // start once it failed, or once a host it had went.
   let reaching: Promise<boolean> | null = null;
   const send = (message: ToScreenHost): void => { connection?.write(line(message)); };
 
@@ -85,8 +90,24 @@ export function screenHost(options: { socket: string | null; launch(): void; con
     if (connection !== null) return Promise.resolve(true);
     const socketPath = options.socket;
     if (socketPath === null) return Promise.resolve(false);
-    reaching ??= reachHost(socketPath, options.launch, options.connectTries).then((socket) => socket !== null && greet(socket));
-    return reaching;
+    const tried: Promise<boolean> = reaching ?? reachHost(socketPath, options.launch, options.connectTries)
+      .then((socket) => socket !== null && greet(socket))
+      .then((reached) => {
+        if (!reached && reaching === tried) reaching = null;
+        return reached;
+      });
+    reaching = tried;
+    return tried;
+  }
+
+  // Where no host took this app: refused while one answers on the socket, otherwise run in the app.
+  async function inApp(): Promise<null> {
+    if (options.socket === null) return null;
+    const answering = await attempt(options.socket);
+    answering?.destroy();
+    if (answering !== null) throw new Error(HOST_NOT_ANSWERING);
+    options.endDeadHost();
+    return null;
   }
 
   const ready = join();
@@ -95,7 +116,7 @@ export function screenHost(options: { socket: string | null; launch(): void; con
     kept: (key) => kept.get(key),
     async query(key, params) {
       await ready;
-      if (!(await reach())) return null;
+      if (!(await reach())) return inApp();
       const taken = kept.get(key);
       kept.delete(key);
       const unit = taken === undefined ? params.scope?.unit ?? null : taken.unit ?? null;
@@ -199,5 +220,9 @@ export function hostedQuery(key: string, params: HostedParams, send: (message: T
 export function workerScreenHost(userData: string, buildFolder: string, home: string): ScreenHost {
   const socket = screenHostSocket(process.platform, userData);
   const entry = path.join(buildFolder, 'screen-host-entry.mjs');
-  return screenHost({ socket, launch: () => { if (socket !== null) launchPaneHost(process.env.SHELL, entry, socket, home); } });
+  return screenHost({
+    socket,
+    launch: () => { if (socket !== null) launchPaneHost(process.env.SHELL, entry, socket, home); },
+    endDeadHost: () => { if (socket !== null) endDeadHostAt(socket); },
+  });
 }
