@@ -54,3 +54,31 @@ instead.
 No test can catch this. Vitest runs in node here, with no DOM; jsdom is not
 installed. Even in a DOM test environment the user-agent stylesheet is absent,
 so `hidden = true` would read back as hidden whatever the CSS says.
+
+## conventions-rule-4: 600 code lines a file
+
+**`max-lines` in `eslint.config.mjs` refuses a file over 600 lines of code.**
+Comments and blank lines do not count (`skipComments`, `skipBlankLines`), so a
+file is never split by deleting or moving its explanation: 260 lines of logic
+under 330 lines of reasoning passes. Over the limit means the file does more
+than one job; split it along that seam, not into `foo-part2.ts`.
+
+The exceptions are generated files, lockfiles, vendored code and data-only files
+(fixtures, long literal tables). Each one is a `files` override beside the rule
+in `eslint.config.mjs` with its reason in a comment, and a file left over the
+limit on purpose is also a decision in its feature's `decisions.md`. There are
+none yet. An override list that grows without reasons is the rule gone again:
+a 900-line `renderer.ts` passes `eslint .` and nobody notices.
+
+`eslint.config.test.ts` pins it: 601 code lines fail, 600 under a page of
+comments pass. Nothing stops an inline `eslint-disable max-lines`; never write
+one.
+
+eslint reads only `.ts` and `.mjs`, so `stylesheet-size.test.ts` holds the
+stylesheets: every `src/**/*.css` at or under 600 lines once `/* … */` and blank
+lines are gone. Without it `chat.css`, at 594, would cross the limit with both
+eslint and CI green.
+
+What it looked like before: the limit lived only in the global instructions, so
+a file grew one card at a time with nothing refusing it. `board-view.ts` reached
+599 code lines and `renderer.ts` 587.
