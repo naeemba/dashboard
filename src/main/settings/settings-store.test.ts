@@ -68,7 +68,7 @@ describe('writeSettings', () => {
     const path = file();
     writeSettings(path, { ...defaultSettings(true), font: { name: 'Menlo', size: 14 } }, true);
     expect(JSON.parse(readFileSync(path, 'utf8')))
-      .toEqual({ font: { name: 'Menlo', size: 14 }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {} });
+      .toEqual({ font: { name: 'Menlo', size: 14 }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {}, workers: {} });
   });
 
   it('writes a key you chose, a key you cleared, and a colour you changed', () => {
@@ -101,7 +101,7 @@ describe('tidySettingsFile', () => {
     writeFileSync(path, JSON.stringify({ ...shipped, font: { name: 'Menlo', size: shipped.font.size } }));
     tidySettingsFile(path, true);
     expect(JSON.parse(readFileSync(path, 'utf8')))
-      .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {} });
+      .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {}, workers: {} });
   });
 
   // The rule is "this is what we ship, so leave it out", not "this line is called shellCommand". Nothing
