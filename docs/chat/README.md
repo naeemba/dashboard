@@ -39,8 +39,13 @@ while Claude is working: the message waits grey under the conversation until the
 turn gets to it, and Up in the empty box takes the last one waiting back to
 edit. Paste an image or drop one on the screen to attach it; any other file or
 folder dropped goes in the box as an @ mention, so Claude reads it — a thumbnail
-of each sits over the box, up to 5 MB of images a prompt, and Backspace in an
-empty box takes the last one off. A click on an image, or the image key, shows
+of each sits over the box, up to 5 MB of images a prompt. The x on a hovered
+thumbnail takes that one off, and Backspace in an empty box takes the last one
+off. From the keyboard, the attachments key (Alt+D) selects the last thumbnail:
+the arrows walk them, Delete or Backspace takes the selected one off (Delete
+keeps the place, Backspace steps back, as a caret does;
+`chat-attachment-keys.ts` decides), Enter shows it full size, and Escape goes
+back to the box, as it does once the last one is gone. A click on an image, or the image key, shows
 it full size: the selected entry's first one, or with nothing selected the first
 one attached. Write @ and a path to point Claude at a file; @ opens a list of
 the project's files that narrows as you type, and Tab or Enter puts the one
@@ -238,7 +243,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`, `chat-task-commands.ts`,
   `chat-agents.ts`, `chat-agents-view.ts`,
   `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
-  `chat-screen-dispatch.ts`, `chat-attachments.ts`,
+  `chat-screen-dispatch.ts`, `chat-attachments.ts`, `chat-attachment-keys.ts`,
   `chat-line-editing.ts`,
   `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
   `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,

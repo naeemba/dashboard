@@ -646,8 +646,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       // Escape closes an open command list first, as in Claude Code. Otherwise always sent: this screen
       // may not know of a turn another one started, and interrupting an idle session does nothing.
-      if (command === 'interrupt' && menu.open()) menu.update('', []);
+      // Escape on a selected thumbnail goes back to the prompt.
+      if (command === 'interrupt' && attachments.selecting()) prompt.focus();
+      else if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
+      if (command === 'attachments' && !attachments.select()) options.onNotice('No image is attached to the prompt.');
       if (command === 'suggestion') acceptSuggestion();
       if (command === 'editor') editPrompt();
       if (command === 'history') showHistory();
