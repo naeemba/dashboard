@@ -25,6 +25,8 @@ settings, skills, hooks and MCP servers, the same as claude typed in a pane, as
 the project's main session. It starts the first time you show this screen,
 when a worker reports to it, or when `dashboard project open` opens the project,
 so a page the app restores at launch and you never look at runs no Claude.
+On Linux its Claude runs in a systemd scope of its own under agents.slice,
+`agent-main-<project>-<random>.scope` (docs/processes).
 
 The boxes take the terminal's readline keys: deleting the word before the caret,
 back to the start of the line or on to its end keeps what went, and the yank key
@@ -226,7 +228,7 @@ scrolling shows plain text for a moment first.
 
 Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 
-- Main's half: `chat-sessions.ts`, `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
+- Main's half: `chat-sessions.ts`, `claude-process.ts` (the CLI it starts, in its systemd scope), `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`,
   `chat-start.ts`
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,

@@ -5,17 +5,18 @@ import { slug } from '../../shared/app/slug';
 // own, and processes-decision-1 why the per-scope caps are what they are.
 
 // An agent is a Claude the app started (in a pane's terminal, or a session): it goes under
-// agents.slice, capped on its own. A shell is the user's own pane or the editor: under panes.slice,
-// uncapped.
-export type ScopeKind = 'agent' | 'shell';
+// agents.slice, capped on its own. A task is one of the manager's commands across projects (builds,
+// tests): under agents.slice with the same caps, named `task-*` so it reads apart from a session. A
+// shell is the user's own pane or the editor: under panes.slice, uncapped.
+export type ScopeKind = 'agent' | 'task' | 'shell';
 
 // What one agent may hold before the kernel reclaims from it (high) and before it is killed (max).
 // The slice's own caps are in its unit file (install-slices.ts), where a drop-in tunes them.
 const AGENT_MEMORY_HIGH = '6G';
 const AGENT_MEMORY_MAX = '8G';
 
-const SLICES: Record<ScopeKind, string> = { agent: 'agents.slice', shell: 'panes.slice' };
-const PREFIXES: Record<ScopeKind, string> = { agent: 'agent', shell: 'pane' };
+const SLICES: Record<ScopeKind, string> = { agent: 'agents.slice', task: 'agents.slice', shell: 'panes.slice' };
+const PREFIXES: Record<ScopeKind, string> = { agent: 'agent', task: 'task', shell: 'pane' };
 
 // What the edge knows: whether scopes work on this machine at all, a fresh random suffix, and
 // whether a unit name is already in use.
@@ -42,7 +43,7 @@ export function scopedCommand(request: ScopeRequest, support: ScopeSupport): Sco
     file: 'systemd-run',
     args: [
       '--user', '--scope', '--collect', '--quiet', `--slice=${SLICES[request.kind]}`, `--unit=${unit}`,
-      ...(request.kind === 'agent' ? ['-p', `MemoryHigh=${AGENT_MEMORY_HIGH}`, '-p', `MemoryMax=${AGENT_MEMORY_MAX}`] : []),
+      ...(request.kind !== 'shell' ? ['-p', `MemoryHigh=${AGENT_MEMORY_HIGH}`, '-p', `MemoryMax=${AGENT_MEMORY_MAX}`] : []),
       '--', request.file, ...request.args,
     ],
     unit,
@@ -57,6 +58,13 @@ function freeUnit(request: ScopeRequest, support: ScopeSupport): string | null {
     if (!support.taken(unit)) return unit;
   }
   return null;
+}
+
+// The same scope running another command: systemd-run's own options up to its `--`, then `file` and
+// `args`. For a command known only once something else builds it (the Agent SDK's, claude-process.ts).
+export function retargeted(scope: ScopedCommand, file: string, args: readonly string[]): ScopedCommand {
+  if (scope.unit === null) return { file, args: [...args], unit: null };
+  return { file: scope.file, args: [...scope.args.slice(0, scope.args.indexOf('--') + 1), file, ...args], unit: scope.unit };
 }
 
 const SLUG_LIMIT = 40;

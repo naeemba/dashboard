@@ -16,9 +16,9 @@ const signal = new AbortController().signal;
 // The SDK's query as the host sees it: what it was started with, the messages the test makes it
 // stream, and whether it was closed.
 function fakeSdk() {
-  const sessions: { options: Options; prompts: SDKUserMessage[]; stream: InputQueue<unknown>; closed: boolean }[] = [];
-  const start: StartSession = ({ prompt, options }) => {
-    const session = { options, prompts: [] as SDKUserMessage[], stream: inputQueue<unknown>(), closed: false };
+  const sessions: { options: Options; scope: unknown; prompts: SDKUserMessage[]; stream: InputQueue<unknown>; closed: boolean }[] = [];
+  const start: StartSession = ({ prompt, options, scope }) => {
+    const session = { options, scope, prompts: [] as SDKUserMessage[], stream: inputQueue<unknown>(), closed: false };
     sessions.push(session);
     void (async () => { for await (const each of prompt) session.prompts.push(each); })();
     return {
@@ -73,6 +73,15 @@ function appSession(heard: string[]) {
 }
 
 describe.skipIf(process.platform === 'win32')('the screen host', () => {
+  it('starts the session in the scope the app chose for it', async () => {
+    const sdk = fakeSdk();
+    const app = screenHost({ socket: await host(sdk.start), launch: () => undefined });
+    const scope = { file: 'systemd-run', args: ['--user', '--scope', '--unit=agent-shop-3-k4f2.scope', '--', '/bin/claude'], unit: 'agent-shop-3-k4f2.scope' };
+    await app.query(KEY, { ...appSession([]), scope });
+    await settle();
+    expect(sdk.sessions[0].scope).toEqual(scope);
+  });
+
   it('keeps a turn going while no app is connected, and hands the next app what it missed', async () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);

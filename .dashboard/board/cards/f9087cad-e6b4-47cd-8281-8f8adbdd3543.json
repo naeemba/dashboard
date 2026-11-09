@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T11:16:06.160Z",
-  "updatedAt": "2026-11-09T11:59:08.975Z",
-  "column": "Doing",
-  "order": 0
+  "updatedAt": "2026-11-09T12:30:47.655Z",
+  "branch": "work-board-card-f9087cad-e6b4-47cd-8281-8f8",
+  "pullRequest": 256,
+  "comments": [
+    {
+      "at": "2026-11-09T12:30:47.655Z",
+      "body": "Shipped in #256: Claude screens' sessions (in the app and the screen host) run in agent-<session>-*.scope and the manager's tasks in task-<project>-*.scope under agents.slice, through one scoped spawn; task-runner.ts left the spawn guard. The unit is not recorded on the session or task yet (a re-attached screen-host session keeps its first unit)."
+    }
+  ],
+  "column": "Done",
+  "order": 206
 }

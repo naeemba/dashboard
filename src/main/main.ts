@@ -505,7 +505,7 @@ registerDrawer(table, {
 });
 const chats = registerChatSessions(table, {
   send: (slot, event) => { sendToRenderer('chat:receive', slot, event); workerScreens.observe(slot, event); },
-  projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'),
+  projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'), scoped: async (request) => { await scopes.ready; return scopes.scoped(request); },
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
   heard: (slot, sender) => workerAnswers.heard(slot, sender),
@@ -656,7 +656,7 @@ registerWorktreeChannels(table, { worktrees, remove: worktree.remove });
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
 // last picked.
-const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand });
+const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand, scoped: async (request) => { await scopes.ready; return scopes.scoped(request); } });
 
 // The project actions, and the picker's and the close key's door to them (project-actions.ts).
 const project = projectActions({

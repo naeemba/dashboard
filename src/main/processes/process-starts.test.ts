@@ -16,6 +16,8 @@ const STARTS_PROCESSES = [
   // The scope check's two probes, daemon-reload and stopping a pane's scope at its close; each ends in
   // seconds.
   'src/main/processes/launch-scopes.ts',
+  // The manager's tasks and the Agent SDK's Claude, each command put in its scope before it gets here.
+  'src/main/processes/spawn-scoped.ts',
   // The app started from the `dashboard` command, which is the app, not an agent.
   'src/main/command/start-app.ts',
   // Git, nvim's remote calls, ps and lsof, an update's unpacking, the login shell's PATH: each ends in
@@ -28,9 +30,6 @@ const STARTS_PROCESSES = [
   'src/main/panes/shell-directory-lookup.ts',
   'src/main/update/install.ts',
   'src/main/chat/chat-sessions.ts',
-  // The manager's tasks, which run builds and tests, and the Agent SDK's sessions, which start inside
-  // the SDK and import nothing here: both scoped by the card after this one.
-  'src/main/manager/task-runner.ts',
 ];
 
 // Any quoted mention, so a dynamic import, a require or double quotes cannot slip past.
@@ -42,9 +41,26 @@ function sourceFiles(folder: string): string[] {
     .map((file) => path.join(folder, file).split(path.sep).join('/'));
 }
 
+// spawn-scoped.ts takes any command shaped like a scoped one, so a file that imports it starts a
+// process just as surely as one that names child_process. Each hands it the answer of scopes.scoped or
+// retargeted; a new file is a row here, under the same reason.
+const STARTS_THROUGH_SCOPE = [
+  // The manager's tasks, each command from scopes.scoped.
+  'src/main/manager/task-runner.ts',
+  // The Agent SDK's Claude, retargeted into the scope main chose.
+  'src/main/chat/claude-process.ts',
+];
+
+const IMPORTS_SPAWN_SCOPED = /from ['"][./]*(processes\/)?spawn-scoped['"]/;
+
 describe('what starts a process', () => {
   it('is only the files allowed to, each for its reason', () => {
     const starting = sourceFiles('src').filter((file) => STARTS.test(readFileSync(file, 'utf8')));
     expect(starting.sort()).toEqual(STARTS_PROCESSES.sort());
+  });
+
+  it('through spawn-scoped is only the files allowed to', () => {
+    const starting = sourceFiles('src').filter((file) => IMPORTS_SPAWN_SCOPED.test(readFileSync(file, 'utf8')));
+    expect(starting.sort()).toEqual(STARTS_THROUGH_SCOPE.sort());
   });
 });

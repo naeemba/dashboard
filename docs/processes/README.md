@@ -14,12 +14,23 @@ node, vitest, jest, tsc, next) ran in the one scope the desktop launched
 Dashboard into, 15.4G of RAM with no caps, so a 12G jest run swapped the whole
 desktop and nothing could say which session it was.
 
-Now every pane's shell starts in a scope of its own:
+Now every pane's shell, every Claude the Agent SDK starts and every one of the
+manager's tasks starts in a scope of its own:
 
 - An agent's pane (Claude Code run as the pane's command, as pane.dispatch's
   terminal half starts it) runs in `agent-<project>-<pane>-<random>.scope` under
   `agents.slice`, with its own `MemoryHigh=6G` and `MemoryMax=8G`
   (processes-decision-1).
+- A Claude screen's session, a page's main or a worker screen, runs in
+  `agent-<session name>-<random>.scope` under `agents.slice` with the same caps:
+  `agent-main-dashboard-k4f2.scope` for dashboard's main, the worker's own name
+  for a worker screen. Main picks the scope when the session starts and the
+  SDK's spawn runs the CLI through it, in the app or in the screen host
+  (processes-decision-5). A session that fails ends with the last of the CLI's
+  stderr (or systemd-run's refusal) in its error, as an unscoped one does.
+- A command the manager runs across projects runs in
+  `task-<project>-<random>.scope` under `agents.slice` with an agent's caps: a
+  build or a test suite is what grows to an agent's size.
 - Every other pane, the user's own shells and the editor, and the plain shell
   under a Claude screen, runs in `pane-<project>-<pane>-<random>.scope` under
   `panes.slice`, uncapped.
@@ -41,7 +52,10 @@ where the desktop put them.
 
 The scope's full name is kept for each pane (`scopeUnits` in `pane-shells.ts`)
 and travels with a shell the pane host keeps through a restart, so whatever
-stops or reads a scope later finds it again.
+stops or reads a scope later finds it again. A session's and a task's unit is
+not kept yet: a session the screen host already holds keeps the unit it first
+started in, not the one main asks for again, so the card that stops scopes
+records the unit the host answers with.
 
 When a pane closes, by its close key or `pane release`, pane.close kills its
 shell and then runs `systemctl --user stop --no-block <unit>`, so a dev server
@@ -57,8 +71,9 @@ At launch the app checks once that `systemd-run` is installed and that
 `systemctl --user is-system-running` answers that the manager is up (`degraded`
 counts: most desktops are). Until it has answered, and for the whole run if it
 says no, every pane starts unscoped, with one warning in the log saying why.
-Every pane waits on the check the way it waits on the pane host, so a pane
-opened at launch is not unscoped for being early (processes-decision-4).
+Every pane waits on the check the way it waits on the pane host, and every
+session and task waits on it too, so nothing started at launch is unscoped for
+being early (processes-decision-4).
 
 The same launch writes `agents.slice` and `panes.slice` into
 `$XDG_CONFIG_HOME/systemd/user` (`~/.config/systemd/user`) when either is
@@ -74,8 +89,11 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - The decisions: `scope.ts` (the command and its unit name), `scope-support.ts`
   (whether scopes work here, and every name handed out)
 - The edge: `launch-scopes.ts` (the probes, the slice files, daemon-reload,
-  stopping a pane's scope)
+  stopping a pane's scope), `spawn-scoped.ts` (the one spawn a task and the
+  SDK's Claude start through)
 - The stop: `src/main/actions/pane/close.ts` (which unit, and when)
+- The SDK's Claude: `src/main/chat/claude-process.ts` (which binary, and its
+  spawn routed through the scope)
 - The slices: `install-slices.ts`, the action and both unit files' text
 - The guard: `process-starts.test.ts` (processes-rule-1)
 
@@ -86,6 +104,12 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   MemoryHigh 6G and MemoryMax 8G.
 - Given the same, when a terminal or the editor opens, then its shell is in a
   `pane-*.scope` under panes.slice.
+- Given the same, when a page's Claude screen starts its session, then
+  `systemctl --user status 'agent-main-*'` lists the CLI in its scope; a worker
+  screen's CLI is in its own `agent-*` scope, started by the screen host.
+- Given the same, when the command screen runs `pnpm test` in three projects,
+  then each runs in a `task-<project>-*.scope` under agents.slice and goes
+  away when it ends.
 - Given three agents each running a test suite, when you run `systemd-cgls
   --user`, then each agent's processes are in its own scope and Dashboard's main
   process is under neither slice.
@@ -105,8 +129,11 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 
 - A pane host started by an older build ignores the scope on the spawn request:
   panes stay unscoped until that host exits, once every pane it holds is closed.
-- The manager's tasks and the Agent SDK's sessions (main's Claude screen, the
-  worker screens) are not scoped yet; the card after this one does them.
+- A screen host started by an older build ignores the scope main sends with a
+  worker screen: that host's sessions run unscoped until it exits, once no app
+  is connected and none of its sessions runs.
+- A session's and a task's scope is not stopped by the app: a task's ends with
+  its command, a session's with its CLI, and what either detached outlives it.
 - Closing a project drops its panes without pane.close, so their scopes are
   not stopped and what their shells detached outlives the project's page.
 - A pane whose shell is replaced in place (a dispatch into a pane that already
