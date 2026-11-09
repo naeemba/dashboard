@@ -39,8 +39,9 @@ the session of the main that dispatched it (the claimer's, for a pane claimed wi
 worker's name, its pane, and that it stopped without a report. It goes through the session's own queue
 (chat-decision-7), so a main mid-turn reads it after the turn. That is the report main can count on when
 a worker forgot to write or died before it could. The worker's own prompt still ends by telling it to
-SendMessage main, since the hook knows nothing of what the worker did. A card's agent a ship started and
-a Claude opened by hand never tell main: neither is main's worker.
+SendMessage main, since the hook knows nothing of what the worker did. A card's agent a ship or the
+review loop started reports to its project's main like any worker (see "Work handed over is reported"
+below); a Claude opened by hand tells nobody until a main sends it work.
 
 **A turn end is not a stop.** A worker's turn also ends while it waits on its own background work — a
 review subagent, `/pr-loop`, CI — and the next notification wakes it. Telling main at every Stop hook
@@ -108,7 +109,40 @@ a restart forgets it and it is left for the manager's list to remove.
 holding main's worker now: a session run adds the pane, and the agent exiting, anything else started in
 the pane, or the pane closing takes it out. session.json marks those panes `dispatched`, so after a
 restart they come back as main's workers, resumed as the pane's agent with the worker's flags, and no
-other conversation does: a card's agent a ship started, or a Claude you opened by hand, is refused.
+other conversation does: a Claude you opened by hand and no main ever sent work is refused.
+
+**Work handed over is reported, however it arrived.** The report line, `SendMessage to main-<project>
+when done`, used to be added only by `pane run`. Work that reached a pane any other way carried no
+line and no dispatcher: `pane send` into a pane, a ship, the review loop. A worker on another project
+(2026-11-09) finished a pull request and told nobody, then said nothing marked the task as coming
+from another session. Now pane.dispatch gives a ship's and the review loop's agent its project's main
+as dispatcher, and pane.send makes an agent a main sends text the main's worker and adds the line to
+the text (send.ts holds the rule: only to an agent, since a shell would run the line). So the stop
+notices, their withdrawal and the false-notice rules above cover these panes too. Text sent to a
+shell is typed as it is and hands nothing over.
+
+What this costs: a ship's agent on a Claude screen is main's, so /clear, /resume, /branch and /rewind
+are refused in it as in any worker screen, and main may release it. A screen you opened by hand and
+main then sent work keeps its owner (screen-owner.ts) and, after a restart, comes back as yours, not
+main's worker: screen-workers.json is not rewritten on a send.
+
+**The app closes finished workers.** Mains were told to `pane release` a worker once they had its
+report and often did not; the user closed finished panes by hand. auto-release.ts decides, every half
+minute, whether each pane holding main's worker is closed through pane.release (actions-rule-1),
+which keeps a worktree with no pull request as before. It is closed only once its turn has ended with
+nothing in flight or scheduled, and then when its card (the worktree record naming the pane) is Done or
+Cancelled on the project's own board, or when main has read a report from it since work was last sent
+and nothing was sent, read or stopped for `workers.closeAfterMinutes` (settings.json, default 10, 0
+for the card only). Never a pane no main handed work, the pane a page puts the keyboard back on (a
+zoomed pane always is), a worker blocked on a question or paused on its own background work. Each close
+is logged with pane.release's answer and shown as a passing notice, `Closed pane 2:3: card done`.
+
+The card's Done is read on the project's board, not the worktree's: a card agent moving its own copy
+to Done while it waits for CI is still at work, and it is its turn ending, not the column, that lets
+the pane go.
+
+Watch for: a worker brought back by a restart has said nothing to its hooks yet, so it reads as at work
+and is not closed until it runs and stops again.
 
 Watch for: worker numbers stay put while others close, and a new one takes the lowest number free,
 so it can appear in the middle of the list. Workers come back after a restart only when they were
@@ -362,7 +396,8 @@ terminal worker.
 `screen-workers.ts`'s `comeBack`, never here); no prompt is New Claude, a screen; otherwise
 `pane run --screen` or `--terminal` wins, and with neither it is `defaultPaneKind`: a screen wherever
 `hasScreenHost` (not on Windows). Main's prompt tells main the same default from the same function. What either half is started with follows from the caller's input: main's worker gets
-its hooks and report-back prompt, a card's agent its plain prompt.
+its hooks and report-back prompt, and since 2026-11-09 so does a card's agent, which reports to its
+project's main (workers-decision-1).
 
 The action also claims the pane for the main a worker reports to, so no caller sets `mainsWorkers`
 after it, and decides when a screen's hidden shell is started over (`screenNeedsShell`: wherever it
@@ -376,8 +411,8 @@ not a sixth path.
 
 What it changes, on purpose:
 
-- A card's agent and its review loop are Claude screens off Windows. Saved with no dispatcher, they
-  come back after a restart as screens of yours (workers-decision-7), the card's record naming the
-  pane again as a terminal agent's does.
+- A card's agent and its review loop are Claude screens off Windows. Saved with their project as
+  dispatcher since 2026-11-09, they come back after a restart as main's worker screens, the card's
+  record naming the pane again as a terminal agent's does.
 - A screen's pane stays busy until it is closed, as a terminal agent's does while Claude Code runs, so
   a ship takes a new pane rather than one whose screen has finished its turn. Closing it frees it.
