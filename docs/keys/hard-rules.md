@@ -47,6 +47,13 @@ These exceptions read a key before the guard, all on purpose:
 
 If a handler reads a modified key anywhere else, it is stealing it.
 
+`key-modifiers.test.ts` holds every renderer handler to this. It reads each
+`keydown` listener, `onkeydown` and viewer `keys` option, and fails one whose
+first `event.key` comes before its `isModified` or `isBareCharacter`. Its
+exceptions are a named list, one row per handler above; a new exception is a row
+there and a bullet here. A handler passed by name fails too, because the test
+cannot read it. Write it inline.
+
 A new project view is a row in `PROJECT_MODES`, a row in `ACTIONS`, a view built
 in `page.ts`, a branch in `focusMode`, a branch in `modeLabel`, and a name and
 blurb in `src/renderer/keys/help.ts`.

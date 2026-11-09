@@ -158,12 +158,13 @@ export function enclosingHeader(view: DataView, line: number): number | null {
   return [...view.folds.values()].filter((fold) => fold.header < line && line <= fold.to).at(-1)?.header ?? null;
 }
 
-// What a key does in the viewer; a modified key does nothing here (keys-rule-1). With nothing that
-// folds the arrows are left to scroll the doc, as they do in the markdown viewer.
+// What an unmodified key does in the viewer; the viewer hands a modified key back before asking
+// (keys-rule-1). With nothing that folds the arrows are left to scroll the doc, as they do in the
+// markdown viewer.
 type DataKey = 'next' | 'previous' | 'open' | 'close' | 'all' | 'ignore';
 
-export function dataKey(key: string, modified: boolean, folds: boolean): DataKey {
-  if (modified || !folds) return 'ignore';
+export function dataKey(key: string, folds: boolean): DataKey {
+  if (!folds) return 'ignore';
   switch (key) {
     case 'ArrowDown': return 'next';
     case 'ArrowUp': return 'previous';
