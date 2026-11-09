@@ -1,8 +1,9 @@
 # Conventions
 
 Cross-cutting rules every screen outside a terminal is held to: keyboard first,
-`dir="auto"` on every box, and `hidden` against the stylesheet. Owns no files;
-`CLAUDE.md` carries each rule in one line and points at its id here.
+`dir="auto"` on every box, and `hidden` against the stylesheet. Owns
+`text-direction.test.ts`, which holds conventions-rule-2; `CLAUDE.md` carries
+each rule in one line and points at its id here.
 
 ## Scenarios
 
