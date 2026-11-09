@@ -29,7 +29,7 @@ now.
 | claim | pane.claim, `actions/pane/claim.ts`, bound in `session-requests.ts`; opens through pane.open | CLI `pane claim` | no; `--project` opens through project.open |
 | open (add) | pane.open, `actions/pane/open.ts` | IPC `pane:add` (`workers/worker-channels.ts`), the drawer, pane.claim | no |
 | send | pane.send, `actions/pane/send.ts` | CLI `pane send` | no |
-| release | pane.release, `actions/pane/release.ts`, bound in `session-requests.ts`; closes through pane.close | CLI `pane release` | the throwaway's removal is worktree.remove's row |
+| release | pane.release, `actions/pane/release.ts`, bound in `session-requests.ts`; closes through pane.close | CLI `pane release`, the finished-worker sweep (`auto-release.ts`) | the throwaway's removal is worktree.remove's row |
 | close | pane.close, `actions/pane/close.ts` | IPC `pane:close`, pane.release | no |
 | agent exited | `releaseAgentPane`, `main.ts` | the shell's exit | yes, and stays an event, not a request |
 | restart a shell | pane.restart, `actions/pane/restart.ts` | IPC `pty:restart` (Enter on an exited pane), pane.dispatch's shell started over | no |
@@ -136,7 +136,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | pane.dispatch | screen or terminal, worker or yours, new or resumed (`paneKind`); every resume, including the shell's and the drawer's, so no caller types `claude --resume` |
 | pane.claim | which project and pane, who claimed it |
 | pane.open | the lowest free index, a shell or New Claude |
-| pane.send | screen prompt or shell bytes |
+| pane.send | screen prompt or shell bytes; an agent a main sends work becomes its worker, told to report there |
 | pane.release | whether the pane is the asker's, and whether its throwaway worktree goes |
 | pane.close | that the pane is a worker; ends a card record's claim on it |
 | pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch; a kept shell not taken back has its scope stopped |

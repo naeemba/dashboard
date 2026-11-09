@@ -30,6 +30,10 @@ export type Settings = {
   // notify: whether an error on the status bar raises a desktop notification while the window is not
   // in front (docs/errors).
   errors: { notify: boolean };
+  // closeAfterMinutes: how long a worker that reported, and whose report main read, sits idle before
+  // the app closes its pane (auto-release.ts); 0 closes one only when its card is finished. In the file
+  // by hand only.
+  workers: { closeAfterMinutes: number };
 };
 
 // The on/off settings: each a section of the file holding one boolean, read by parseSettings and turned
@@ -51,6 +55,13 @@ const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
 export const DEFAULT_WEATHER_PLACE = 'Tehran';
 
 const DEFAULT_HOST_BIND = '127.0.0.1';
+
+const DEFAULT_CLOSE_AFTER_MINUTES = 10;
+
+// A whole number of minutes, none or more, the range parseSettings holds closeAfterMinutes to.
+function isMinutes(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
 // would not read it, and a settings screen row for it would edit nothing.
@@ -88,6 +99,7 @@ export function defaultSettings(isMac: boolean): Settings {
     review: { autoLoop: true },
     updates: { check: true },
     errors: { notify: true },
+    workers: { closeAfterMinutes: DEFAULT_CLOSE_AFTER_MINUTES },
   };
 }
 
@@ -145,6 +157,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedFont = asRecord(raw.font);
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
+  const storedWorkers = asRecord(raw.workers);
   // A toggle the file holds as a boolean, or the shipped one.
   const toggle = (name: ToggleName): boolean => {
     const stored = asRecord(raw[name])[TOGGLES[name]];
@@ -184,6 +197,9 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     review: { autoLoop: toggle('review') },
     updates: { check: toggle('updates') },
     errors: { notify: toggle('errors') },
+    workers: {
+      closeAfterMinutes: isMinutes(storedWorkers.closeAfterMinutes) ? storedWorkers.closeAfterMinutes : defaults.workers.closeAfterMinutes,
+    },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 

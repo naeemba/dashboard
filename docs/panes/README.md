@@ -38,8 +38,12 @@ A worker it starts runs in auto mode, ends by sending main a message, and says
 so on its pane either way: a yellow edge while it waits on a permission, which
 rings like a bell and raises a notification, and a green one when its turn is
 over. Going to the pane clears the edge, and so does the worker getting back to
-work. Main only runs a worker in, or closes, a pane it started or one with
-nothing running in it.
+work. Main only runs a worker in, or closes, a pane it started, one it sent
+work, or one with nothing running in it. The app closes a worker's pane itself
+once its card is finished, or a while after main has read its report, and says
+so on the status bar; never the pane you are in on any screen, a pane on the
+manager page, or one waiting on a question or on its own background work
+(workers-decision-1).
 
 The button at the right end of the title row is two halves, [New Terminal | New
 Claude], each with its key. New Terminal opens a plain shell at the bottom of

@@ -9,6 +9,8 @@ export type BoardChanges = {
   seen(projectPath: string, board: Board): void;
   wrote(projectPath: string, board: Board, write: () => void): void;
   changed(projectPath: string): void;
+  // The project's board as last read, written or changed, or as it is on disk when this has not seen it.
+  latest(projectPath: string): Board | null;
 };
 
 export function boardChanges(log: (draft: LogDraft) => void, peek: (projectPath: string) => Board | null): BoardChanges {
@@ -32,6 +34,14 @@ export function boardChanges(log: (draft: LogDraft) => void, peek: (projectPath:
       const before = last.get(projectPath) ?? peek(projectPath) ?? undefined;
       write();
       record(projectPath, before, board, 'card', '');
+    },
+    // Read from disk once and kept: every change after it comes through `wrote` or `changed`.
+    latest(projectPath) {
+      const known = last.get(projectPath);
+      if (known) return known;
+      const board = peek(projectPath);
+      if (board) last.set(projectPath, board);
+      return board;
     },
     changed: (projectPath) => {
       const board = peek(projectPath);

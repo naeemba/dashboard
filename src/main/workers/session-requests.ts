@@ -8,12 +8,13 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { doneReport } from '../../shared/workers/done-report';
+import { closedReport, doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import type { PaneKind } from './pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
 import { paneClaim } from '../actions/pane/claim';
 import { paneRelease } from '../actions/pane/release';
+import { releaseVerdict, type WorkerLook } from './auto-release';
 
 // What main does with a `session` command: who is asking and what they may touch, against what main.ts
 // hands over. Every change to a pane is a pane action (actions/pane/): claim and release are bound here,
@@ -52,8 +53,9 @@ export type SessionPorts = {
   startWorker(id: string, start: WorkerStart): Promise<{ output: string } | Refused>;
   // pane.close.
   close(id: string): Promise<{ output: string } | Refused>;
-  // pane.send: the text as a screen's prompt, or typed into the pane's shell with Enter after it.
-  send(id: string, text: string): Promise<{ output: string } | Refused>;
+  // pane.send: the text as a screen's prompt, or typed into the pane's shell with Enter after it. Sent
+  // by the main of `dispatcherPath`; `handed` when the pane's agent became its worker.
+  send(id: string, text: string, dispatcherPath: string): Promise<{ output: string; handed: boolean } | Refused>;
   mark(id: string, state: WorkerState): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
   // Answers with the id `withdraw` takes it back by while it still waits in the queue.
@@ -64,6 +66,15 @@ export type SessionPorts = {
   makeWorktree(projectPath: string, title: string): Promise<string>;
   unfinished(worktreePath: string): Promise<string | null>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
+  // What closeFinished asks of a worker beside what is held here (auto-release.ts): whether its page
+  // puts the keyboard back on it, and the column its card is in when that is Done or Cancelled, asked
+  // only once nothing else has kept the pane open.
+  hasKeyboard(id: string): boolean;
+  finishedCard(id: string): string | null;
+  // The grace period after a report read, from the settings; 0 closes a worker only for its card.
+  closeAfterMs(): number;
+  // A worker closed by closeFinished, why, and what pane.release answered: logged and shown.
+  released(id: string, reason: string, output: string): void;
 };
 
 // Which open project a folder belongs to: its checkout, or anywhere in the folder its worktrees go,
@@ -101,6 +112,8 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   heard(slot: number, sender: string): void;
   // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
   notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply;
+  // Every finished worker pane released, each for the reason auto-release.ts gives. Run on a timer.
+  closeFinished(): Promise<void>;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -123,14 +136,20 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // report, and what it was asked. Kept apart from `dispatchers`, which is who may run the pane, not
   // who did.
   const dispatched = new Map<string, { dispatcher: number; about: string }>();
-  // Only a worker main started: a card's agent a ship started reports through the board, and a Claude
-  // opened by hand reports to nobody. The main that claimed it hears, which is another project's when
+  // For each worker, since when it has been quiet — the last of work handed to it, a report from it
+  // read, its turn ending — and whether a report was read since work was last handed to it: what
+  // closeFinished's grace period runs on. Gone with the pane's worker.
+  const quiet = new Map<string, { since: number; reportRead: boolean }>();
+  const quietFrom = (id: string, reportRead: boolean) => quiet.set(id, { since: Date.now(), reportRead });
+  // Only main's worker: one it ran or sent work, or a card's agent; a Claude opened by hand and never
+  // sent work reports to nobody. The main that claimed it hears, which is another project's when
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
   // to something else by then.
+  const mainOf = (id: string): number => dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
   const notices = stopNotices({
     notice(id, paused) {
       if (!mainsWorker(id)) return;
-      const slot = dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
+      const slot = mainOf(id);
       const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused));
       return () => ports.withdraw(slot, messageId);
     },
@@ -161,6 +180,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     ...ports,
     claimedBy(id, slot) {
       dispatched.delete(id);
+      quiet.delete(id);
       if (slot === null) dispatchers.delete(id);
       else dispatchers.set(id, slot);
     },
@@ -199,6 +219,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const started = await ports.startWorker(id, { directory, prompt, as, cardId: card, dispatcherPath });
     if (isRefused(started)) return refused(started.refused);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
+    quietFrom(id, false);
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory} ${paneLink(id)}`);
@@ -212,11 +233,60 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       notices.forget(id);
       dispatchers.delete(id);
       dispatched.delete(id);
+      quiet.delete(id);
       const throwaway = throwaways.get(id);
       throwaways.delete(id);
       return throwaway;
     },
   });
+
+  // Text main sends an agent is work handed to it (pane.send): listed as main's worker if no run made
+  // it one, and at work from now, as its prompt hook will say, so nothing closes it on its last stop.
+  async function send(id: string, slot: number, dispatcherPath: string, text: string): Promise<{ output: string } | Refused> {
+    const sent = await ports.send(id, text, dispatcherPath);
+    if (isRefused(sent) || !sent.handed) return sent;
+    if (!dispatched.has(id)) dispatched.set(id, { dispatcher: slot, about: workerAbout(text) });
+    quietFrom(id, false);
+    notify(id, 'running');
+    return sent;
+  }
+
+  // Every open pane of every open page, main's included.
+  const openPaneIds = (): string[] => ports.openSlots()
+    .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)));
+
+  // What auto-release.ts decides a worker's close on.
+  function look(id: string): WorkerLook {
+    const said = states.get(id);
+    const { since = 0, reportRead = false } = quiet.get(id) ?? {};
+    return {
+      handedToMain: mainsWorker(id),
+      hasKeyboard: ports.hasKeyboard(id),
+      state: said?.state ?? 'running',
+      paused: isPaused(said?.waiting),
+      finishedCard: () => ports.finishedCard(id),
+      reportRead,
+      quietMs: Date.now() - since,
+    };
+  }
+
+  // One at a time, so two releases never race over one throwaway worktree. A refusal leaves the pane
+  // as it is, and the next sweep decides again. Release takes back the worker's stop notice, so a
+  // worker closed for its card before main read a report from it is told to main here instead.
+  async function closeFinished(): Promise<void> {
+    const closeAfterMs = ports.closeAfterMs();
+    for (const id of openPaneIds().filter(mainsWorker)) {
+      const seen = look(id);
+      const verdict = releaseVerdict(seen, closeAfterMs);
+      if (!verdict.release) continue;
+      const slot = mainOf(id);
+      const name = nameOfPane(id);
+      const released = await release.call({ id });
+      if (isRefused(released)) continue;
+      ports.released(id, verdict.reason, released.output);
+      if (!seen.reportRead) ports.tell(slot, closedReport(name, id, verdict.reason));
+    }
+  }
 
   // Send and release are refused a pane the asker may not touch before the action is asked.
   async function onWorker(id: string, slot: number, act: () => Promise<{ output: string } | Refused>): Promise<SessionReply> {
@@ -260,6 +330,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
     if (state === 'running') states.delete(id);
     else states.set(id, { state, waiting });
+    if (state === 'done') quietFrom(id, quiet.get(id)?.reportRead ?? false);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
     return answered('');
@@ -284,7 +355,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       switch (command.kind) {
         case 'claim': return sessionReply(await claim.call({ slot, project: command.project }));
         case 'list': return list(slot, command.all);
-        case 'send': return await onWorker(command.id, slot, () => ports.send(command.id, command.text));
+        case 'send': return await onWorker(command.id, slot, () => send(command.id, slot, projectPath ?? '', command.text));
         case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, command.as);
         case 'release': return await onWorker(command.id, slot, () => release.call({ id: command.id }));
       }
@@ -294,16 +365,18 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }, {
     workers,
     notify,
-    forget: (id: string) => { dispatched.delete(id); notices.forget(id); },
+    closeFinished,
+    forget: (id: string) => { dispatched.delete(id); quiet.delete(id); notices.forget(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two
     // projects in folders of one name give their workers one name.
     heard(reader: number, sender: string) {
-      const id = ports.openSlots()
-        .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)))
+      const id = openPaneIds()
         .find((each) => nameOfPane(each) === sender && mainsWorker(each)
-          && (dispatched.get(each)?.dispatcher ?? paneFromId(each).slot) === reader);
-      if (id !== undefined) notices.reported(id);
+          && mainOf(each) === reader);
+      if (id === undefined) return;
+      notices.reported(id);
+      quietFrom(id, true);
     },
   });
 }

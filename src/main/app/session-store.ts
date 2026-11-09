@@ -5,6 +5,8 @@ import { sessionToWrite, type PaneConversation } from '../workers/claude-resume'
 import { resumeLedger, type SessionPlacement } from '../workers/resume-ledger';
 import { readSession, writeSession } from './session';
 import type { Session } from '../../shared/app/bridge';
+import { paneFromId, terminalId } from '../../shared/panes/terminals';
+import { MANAGER_SLOT } from '../../shared/manager/manager';
 
 // session.json, read once at launch and written by main alone. The renderer sends the layout whenever it
 // changes, as it always has; main writes it with which Claude Code conversation each pane is running,
@@ -25,6 +27,12 @@ type ClaudeSessions = {
   moveResume(fromId: string, toId: string): void;
   // Where every live session is, from a sweep or from Quit.
   placed(placement: SessionPlacement): void;
+  // Whether a page of any screen's layout puts the keyboard back on this pane: the one you are in, or
+  // were last in on that page. A zoomed pane is always that one. Every manager pane counts: no layout
+  // names the manager page's pane, so the one you are typing in there cannot be told from the rest.
+  hasKeyboard(id: string): boolean;
+  // A couch that left: its last layout no longer keeps a pane's keyboard.
+  forgetScreen(screen: string): void;
 };
 
 // `dispatcherOf` is main's record of the panes holding its workers and whose main dispatched each, saved
@@ -35,6 +43,8 @@ export function sessionStore(
   const saved = readSession(file);
   const ledger = resumeLedger(saved.pages, existsSync);
   let layout: Session | null = null;
+  // Every screen's latest layout, the host window's and each couch's, for hasKeyboard alone.
+  const screenLayouts = new Map<string, Session>();
   let lastWritten = '';
 
   function write(): void {
@@ -49,6 +59,7 @@ export function sessionStore(
   // because nothing another screen sends replaces it.
   table.handle('session:read', () => layout ?? saved);
   table.on('session:write', (screen, next: Session) => {
+    screenLayouts.set(screen, next);
     // A couch layout must not overwrite the desk's: the file is the host window's.
     if (screen !== LOCAL_SCREEN) return;
     layout = next;
@@ -63,5 +74,8 @@ export function sessionStore(
       ledger.place(placement);
       write();
     },
+    forgetScreen: (screen) => { screenLayouts.delete(screen); },
+    hasKeyboard: (id) => paneFromId(id).slot === MANAGER_SLOT || [...screenLayouts.values()]
+      .some(({ pages }) => pages.some((page) => terminalId(slotOf(page.path), page.focused) === id)),
   };
 }
