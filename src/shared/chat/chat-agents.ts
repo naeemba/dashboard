@@ -1,5 +1,7 @@
 import { isRecord, stringOrEmpty as text } from '../app/is-record';
 import { ranked, type SearchRow } from '../app/fuzzy';
+import type { Refused } from '../app/bridge';
+import { printableLines } from '../manager/tasks';
 import { messageUsage, taskDetail, taskOrder, type AgentUsage, type ChatTask, type ChatTasks } from './chat-tasks';
 
 // The agents, workflows and background commands that ended this conversation, for the agents key's
@@ -25,16 +27,39 @@ export function keptConversations<T>(agents: Record<string, T>, tasks: ChatTasks
   return Object.fromEntries(Object.entries(agents).filter(([id]) => !dropped.has(id)));
 }
 
-export type AgentConversation = { kind: 'open'; id: string } | { kind: 'refused'; reason: string };
+export type TaskOpening =
+  | { kind: 'workflow' }
+  | { kind: 'conversation'; id: string }
+  | { kind: 'output'; taskId: string }
+  | { kind: 'refused'; reason: string };
 
-// The conversation the agents key opens for a task. An agent still running that has said nothing yet
-// opens empty and fills as it goes; a finished one without a conversation ran before the screen opened
-// or was dropped for newer ones.
-export function agentConversation(task: ChatTask | FinishedTask, agents: Record<string, unknown>): AgentConversation {
+// What opening a task in the agents list or the strip does, by its kind: a workflow opens its panel,
+// an agent its conversation, and anything else, a background shell command or a Monitor, the output
+// it has written. An agent still running that has said nothing yet opens empty and fills as it goes;
+// a finished one without a conversation ran before the screen opened or was dropped for newer ones.
+export function taskOpening(task: ChatTask | FinishedTask, agents: Record<string, unknown>): TaskOpening {
+  if (task.workflow) return { kind: 'workflow' };
+  if (!task.agent) return { kind: 'output', taskId: task.id };
   const name = task.description || task.kind;
-  if (!task.agent || task.toolUseId === null) return { kind: 'refused', reason: `${name} has no conversation to show: only an agent has one.` };
-  if (task.toolUseId in agents || !('status' in task)) return { kind: 'open', id: task.toolUseId };
+  if (task.toolUseId === null) return { kind: 'refused', reason: `${name} has no conversation to show: the session did not name the call that started it.` };
+  if (task.toolUseId in agents || !('status' in task)) return { kind: 'conversation', id: task.toolUseId };
   return { kind: 'refused', reason: `${name} has no conversation to show: only the last ${KEPT_CONVERSATIONS} agents' are kept, from when the screen opened.` };
+}
+
+// What `chat-task:output` answers: the end of a shell or Monitor task's output, the last 8 KiB the
+// session keeps, or why it cannot be read.
+export type TaskOutputRead = { output: string; truncated: boolean } | Refused;
+
+export type TaskOutputShown = { kind: 'text'; text: string } | { kind: 'refused'; reason: string };
+
+// What the output viewer shows for one read: the output as plain lines, escape codes gone, with a
+// first line saying when the start was cut. A running task that has printed nothing yet shows empty
+// and fills as it goes; an ended one with nothing to read printed nothing, or its file is gone.
+export function taskOutputShown(name: string, read: TaskOutputRead, running: boolean): TaskOutputShown {
+  if ('refused' in read) return { kind: 'refused', reason: `${name}'s output cannot be read: ${read.refused}` };
+  if (read.output === '' && !running) return { kind: 'refused', reason: `${name} has no output to show: it printed nothing, or its output file is gone.` };
+  const text = printableLines(read.output).join('\n');
+  return { kind: 'text', text: read.truncated ? `… only the last 8 KiB is kept\n${text}` : text };
 }
 
 // The count an Agent call's result ends with, `<usage>subagent_tokens: 33075 tool_uses: 3

@@ -18,6 +18,7 @@ import { closedAtQuit, sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
+import type { TaskOutputRead } from '../../shared/chat/chat-agents';
 import { forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindPoint } from '../../shared/chat/chat-rewind';
 import { fileCandidates } from '../nvim/file-open';
 import { homedir } from 'node:os';
@@ -550,6 +551,17 @@ export function registerChatSessions(
 
   table.handle('chat-task:background', async (_screen, slot: number, toolUseId?: string): Promise<boolean> => {
     return (await sessions.get(slot))?.query.backgroundTasks(toolUseId) ?? false;
+  });
+
+  // A shell or Monitor task's output for the agents list's viewer, which asks again while it is open.
+  // Reading changes nothing, so this is a channel, not an action. Claude Code answers get_task_output
+  // for a running task and once more after it ends; the SDK's Query has the call but not its type.
+  table.handle('chat-task:output', async (_screen, slot: number, taskId: string): Promise<TaskOutputRead> => {
+    const query: Query & { getTaskOutput?: (id: string) => Promise<{ output: string; truncated: boolean }> } | undefined = (await sessions.get(slot))?.query;
+    if (!query) return { refused: 'the session has ended.' };
+    if (!query.getTaskOutput) return { refused: 'this version of Claude Code cannot read a task\'s output.' };
+    const { output, truncated } = await query.getTaskOutput(taskId);
+    return { output, truncated };
   });
 
   // Every screen is told the question is gone, so the one it was not answered on stops showing it.

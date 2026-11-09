@@ -337,3 +337,25 @@ There is no pause: the SDK offers `stopTask` and nothing that pauses a task, so 
 stops the workflow. That row is never the default selection: opened before any phase has arrived, it
 is the only row, and the first phase takes the selection once it does. The panel holds its selection
 by each phase's index from the stream, not its title, since a script may name two phases alike.
+
+## chat-decision-17: A shell or Monitor task's output is read with get_task_output, not from its file
+
+Opening a background shell command or a Monitor in the agents list, or from its strip row, shows the
+end of its output (`taskOpening` and `taskOutputShown` in `chat-agents.ts`). It is read through the
+SDK's `get_task_output` control request (`chat-task:output` in `chat-sessions.ts`), asked again each
+second while the viewer is open and the task runs, and once more after it ends. Checked against the
+Agent SDK 0.3.316 and the CLI bundled with it on 2026-11-09:
+
+- The task events name the output file only on `task_notification`, when the task has ended. A
+  running task's events carry no path, so reading the file would mean guessing where the CLI writes
+  it, and a running command is the case the viewer is for.
+- `get_task_output` answers for a shell or Monitor task, running or ended, with the last 8 KiB the
+  command wrote, the tail the terminal's `/tasks` detail view reads; an ended task whose file is gone
+  reads as empty, which the viewer says in one sentence naming the task. The SDK's `Query` has
+  `getTaskOutput` but its types leave it out, so main checks it is there before calling it.
+- Only the last 8 KiB is shown, with a first line saying the start was cut. A longer read is a file
+  the CLI does not name while the task runs.
+
+Every task that is neither an agent nor a workflow opens this way. The CLI refuses a kind it keeps
+no output for, and the view says so with the task's name.
+

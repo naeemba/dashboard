@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentConversation, agentRows, finishedAfter, KEPT_CONVERSATIONS, resultUsage, type FinishedTask } from './chat-agents';
+import { agentRows, taskOpening, taskOutputShown, finishedAfter, KEPT_CONVERSATIONS, resultUsage, type FinishedTask } from './chat-agents';
 import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 
 // Shaped as Claude Code 2.1.318 sent them for one Agent call.
@@ -86,27 +86,59 @@ describe('agentRows', () => {
   });
 });
 
-describe('agentConversation', () => {
+describe('taskOpening', () => {
   const agent = fold([started]).tasks[0];
   const workflow = fold([{ type: 'system', subtype: 'task_started', task_id: 'w', tool_use_id: 'call-w', description: 'Spec', task_type: 'local_workflow', workflow_name: 'spec' }]).tasks[0];
   const command = fold([{ type: 'system', subtype: 'task_started', task_id: 'b', tool_use_id: 'call-b', description: 'npm test', task_type: 'local_bash' }]).tasks[0];
+  const monitor = fold([{ type: 'system', subtype: 'background_tasks_changed', tasks: [{ task_id: 'm', task_type: 'monitor_mcp', description: 'eval batch progress lines' }] }]).tasks[0];
 
   it('opens an agent that has said something', () => {
-    expect(agentConversation(agent, { 'call-a': [] })).toEqual({ kind: 'open', id: 'call-a' });
+    expect(taskOpening(agent, { 'call-a': [] })).toEqual({ kind: 'conversation', id: 'call-a' });
   });
 
   it('opens a running agent that has said nothing yet, to fill as it goes', () => {
-    expect(agentConversation(agent, {})).toEqual({ kind: 'open', id: 'call-a' });
+    expect(taskOpening(agent, {})).toEqual({ kind: 'conversation', id: 'call-a' });
   });
 
   it('refuses a finished agent whose conversation is not kept, and says how many are', () => {
-    const answer = agentConversation({ ...agent, status: 'completed' }, {});
+    const answer = taskOpening({ ...agent, status: 'completed' }, {});
     expect(answer).toMatchObject({ kind: 'refused' });
     expect(answer.kind === 'refused' && answer.reason).toContain(`last ${KEPT_CONVERSATIONS} agents'`);
   });
 
-  it('refuses a workflow and a background command, which have no conversation', () => {
-    expect(agentConversation(workflow, { 'call-w': [] })).toMatchObject({ kind: 'refused' });
-    expect(agentConversation(command, {})).toMatchObject({ kind: 'refused' });
+  it('opens a workflow\'s panel, even with a conversation under its call', () => {
+    expect(taskOpening(workflow, { 'call-w': [] })).toEqual({ kind: 'workflow' });
+  });
+
+  it('opens a background command\'s and a monitor\'s output, running or finished, by task id', () => {
+    expect(taskOpening(command, {})).toEqual({ kind: 'output', taskId: 'b' });
+    expect(taskOpening({ ...command, status: 'completed' }, {})).toEqual({ kind: 'output', taskId: 'b' });
+    expect(taskOpening(monitor, {})).toEqual({ kind: 'output', taskId: 'm' });
+  });
+});
+
+describe('taskOutputShown', () => {
+  it('shows the output as plain lines, escape codes and redrawn progress gone', () => {
+    expect(taskOutputShown('npm test', { output: '\u001B[32mok\u001B[0m\n10%\r100%\n', truncated: false }, true))
+      .toEqual({ kind: 'text', text: 'ok\n100%\n' });
+  });
+
+  it('says the start was cut when only the end is kept', () => {
+    const shown = taskOutputShown('npm test', { output: 'last', truncated: true }, false);
+    expect(shown).toEqual({ kind: 'text', text: '… only the last 8 KiB is kept\nlast' });
+  });
+
+  it('shows a running task that has printed nothing yet empty, to fill as it goes', () => {
+    expect(taskOutputShown('npm test', { output: '', truncated: false }, true)).toEqual({ kind: 'text', text: '' });
+  });
+
+  it('refuses an ended task with nothing to read, naming it', () => {
+    const shown = taskOutputShown('npm test', { output: '', truncated: false }, false);
+    expect(shown.kind === 'refused' && shown.reason).toBe('npm test has no output to show: it printed nothing, or its output file is gone.');
+  });
+
+  it('names the task in main\'s refusal', () => {
+    const shown = taskOutputShown('npm test', { refused: 'the session has ended.' }, true);
+    expect(shown.kind === 'refused' && shown.reason).toBe('npm test\'s output cannot be read: the session has ended.');
   });
 });
