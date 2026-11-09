@@ -5,13 +5,13 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:56.136Z",
-  "updatedAt": "2026-11-09T17:11:41.766Z",
+  "updatedAt": "2026-11-09T21:09:56.424Z",
   "comments": [
     {
       "at": "2026-11-09T17:11:41.640Z",
       "body": "Shipped as naeemba/dotfiles#73 (open, ready, not merged). block-spin-loops.js is renamed guard-bash-commands.js: one process runs a list of guards. The new guard refuses path=, path+=, local/typeset/declare/export/readonly/integer path=, and for/select path in at command start, skipping heredoc bodies; the refusal says zsh ties path to PATH. After merging, re-run ./install.sh so ~/.claude/scripts links the new file. Until then the hook points at a missing file and neither guard runs. Still allowed through: read path, getopts ab path. The audit doc row still says block-spin-loops.js; card 13 can fix that. The CLAUDE.md line is kept for card 13."
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 226
 }
