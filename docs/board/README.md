@@ -337,7 +337,7 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a card in Ship, when its agent starts, then it is in Doing with its branch on it (`start.test.ts`).
 - Given a shipped card in Doing, when gh says its branch's pull request is open, then it is in Review with the number and one line naming the pull request; merged, it is in Done with a second line; closed unmerged from Review, it is back in Doing (`pull-request-column.test.ts`, `follow.test.ts`).
 - Given a card moved to Done while its pull request is still open, when the app next checks, then it is back in Review.
-- Given a card whose pull request has a check running, when it fails, then the card's glyph turns from ◌ to ✗ within a minute without the board being touched (`pull-request-status.test.ts`).
+- Given a card whose pull request has a check running, when it fails, then the card's glyph turns from ◌ to ✗ within a minute without the board being touched (`pull-request-status.test.ts` checks that `record` reports the change; main sending `board:change` on it is checked by hand).
 - Given gh is offline, when the app checks, then no card moves, nothing is written, and the log has one warning until a check goes through (`pull-request-sweep.test.ts`).
 - Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.
 - Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the branch, HEAD and working tree are as they were.
