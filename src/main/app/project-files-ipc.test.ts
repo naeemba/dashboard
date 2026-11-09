@@ -31,7 +31,7 @@ describe('registerProjectFiles', () => {
 
   it('reads the board with its cards\' pull request glyphs', async () => {
     const { table, projectPath } = wired();
-    expect(await table.invoke('local', 'board:read', [projectPath])).toMatchObject({ pullRequests: { card: 'approved' } });
+    expect(await table.invoke('local', 'board:read', [projectPath])).toMatchObject({ pullRequestStatuses: { card: 'approved' } });
   });
 
   it('sends a board the screen wrote to origin behind the write', async () => {

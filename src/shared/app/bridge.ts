@@ -75,7 +75,7 @@ export type ChatSessions = { current: string | null; sessions: Pick<SDKSessionIn
 export type BoardRead = { board: Board; brokenFiles: string[] };
 // What the board screen reads: the above, and each card's pull request glyph by id, for the cards
 // that have one (pull-request-status.ts).
-export type BoardShown = BoardRead & { pullRequests: Record<string, PullRequestStatus> };
+export type BoardShown = BoardRead & { pullRequestStatuses: Record<string, PullRequestStatus> };
 
 // What a hand-over answers: whether the file is in front of you, and what the status bar says.
 export type Handover = { ok: boolean; message: string };

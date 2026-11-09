@@ -168,7 +168,7 @@ export function createBoardView(options: BoardOptions): BoardView {
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
   // Each card's pull request glyph, from main with the board it was read with.
-  let pullRequests: BoardShown['pullRequests'] = {};
+  let pullRequestStatuses: BoardShown['pullRequestStatuses'] = {};
   // The line that says where a dragged card would land.
   const dropMarker = createDropMarker();
   // The id of the card a left press landed on, or null. Held by id rather than by node because the
@@ -225,7 +225,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const boardRead = options.bridge.readBoard(options.projectPath);
     try {
       const read = await boardRead;
-      pullRequests = read.pullRequests;
+      pullRequestStatuses = read.pullRequestStatuses;
       next = fresh ? loadBoard(state, read.board) : reloadBoard(state, read.board);
       // The old file is still on disk under this name, so the cards are not gone — just not shown.
       if (read.brokenFiles.length > 0) message = `Damaged board files kept as ${read.brokenFiles.join(', ')}`;
@@ -437,7 +437,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       // The number goes into the box bare: you type 14, and flightParts is what puts the # back.
       item.append(renderEditor(editing, String(card[editing] ?? '')));
     } else {
-      const flight = flightLine(card, pullRequests[card.id]);
+      const flight = flightLine(card, pullRequestStatuses[card.id]);
       if (flight !== '') {
         item.append(labelled('p', 'board-flight', card.pullRequest === undefined ? 'branch' : 'pullRequest', flight));
       }

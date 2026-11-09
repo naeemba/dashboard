@@ -533,8 +533,8 @@ try {
 }
 // Each card's pull request glyph, from the answers card.follow gets: a glyph that changes is a
 // board:change, so the board on screen reads it again.
-const pullRequestGlyphs = pullRequestStatuses();
-registerProjectFiles(table, boards, boardLog, boardSync, tellOthers, (projectPath) => setImmediate(() => void pullRequests.check(projectPath)), pullRequestGlyphs.of);
+const knownPullRequestStatuses = pullRequestStatuses();
+registerProjectFiles(table, boards, boardLog, boardSync, tellOthers, (projectPath) => setImmediate(() => void pullRequests.check(projectPath)), knownPullRequestStatuses.of);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -669,7 +669,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList } = car
   log: (draft) => logStore.log(draft),
   pullRequestOf: async (projectPath, branch) => {
     const pull = latestPullRequest(await runProgram('gh', pullRequestListArguments(branch), projectPath, { timeout: 20_000 }));
-    if (pullRequestGlyphs.record(projectPath, branch, pull === null ? null : pullRequestStatus(pull))) sendToRenderer('board:change', projectPath);
+    if (knownPullRequestStatuses.record(projectPath, branch, pull === null ? null : pullRequestStatus(pull))) sendToRenderer('board:change', projectPath);
     return pull;
   },
 });

@@ -20,7 +20,7 @@ export function registerProjectFiles(
   // The board on screen: its cards are asked about their pull requests (pull-request-sweep.ts).
   shown: (projectPath: string) => void,
   // Each card's pull request glyph, held in main (pull-request-status.ts).
-  pullRequests: (projectPath: string, board: Board) => Record<string, PullRequestStatus>,
+  pullRequestStatuses: (projectPath: string, board: Board) => Record<string, PullRequestStatus>,
 ): void {
   // Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
   // is a convenience — writing the two explanation files — so a read-only project folder must not cost
@@ -31,7 +31,7 @@ export function registerProjectFiles(
       const read = openBoard(projectPath);
       changes.seen(projectPath, read.board);
       shown(projectPath);
-      return { ...read, pullRequests: pullRequests(projectPath, read.board) };
+      return { ...read, pullRequestStatuses: pullRequestStatuses(projectPath, read.board) };
     } finally {
       // After the read, which is what creates .dashboard on a project that has never had a board — and
       // in a finally, because a read that throws still leaves a folder worth watching. Skip it there and
