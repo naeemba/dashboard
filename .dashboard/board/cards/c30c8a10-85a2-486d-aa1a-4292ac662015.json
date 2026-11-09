@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T21:29:55.475Z",
-  "updatedAt": "2026-11-09T09:29:05.391Z",
+  "updatedAt": "2026-11-09T09:30:14.988Z",
   "comments": [
     {
       "at": "2026-11-09T09:29:05.391Z",
       "body": "Cancelled 2026-11-09: Reza is reviewing this work instead."
+    },
+    {
+      "at": "2026-11-09T09:30:14.988Z",
+      "body": "Back in Doing 2026-11-09: the cancel was meant for another pane."
     }
   ],
-  "column": "Cancelled",
+  "column": "Doing",
   "order": 0
 }
