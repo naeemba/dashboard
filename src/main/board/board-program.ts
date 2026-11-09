@@ -91,14 +91,18 @@ function answer(result: CommandResult): number {
   return 0;
 }
 
-// `board guard`, a PreToolUse hook (board-guard.ts): the hook's input on stdin, a refusal on stdout or
-// nothing. It names the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app
-// opened and this program's own path outside one.
-function guard(): number {
-  const input = JSON.parse(readFileSync(0, 'utf8')) as { tool_name?: unknown; tool_input?: unknown };
-  const command = process.env.DASHBOARD_BOARD === undefined ? process.argv[1] : '$DASHBOARD_BOARD';
+// `board guard`, a PreToolUse hook (board-guard.ts): the hook's input in, the refusal to print or ''.
+// It names the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
+// (`boardVariable` set) and this program's own path outside one.
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string): string {
+  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown };
+  const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
   const refused = boardGuard(String(input.tool_name), input.tool_input, command);
-  if (refused !== undefined) process.stdout.write(JSON.stringify(refused));
+  return refused === undefined ? '' : JSON.stringify(refused);
+}
+
+function guard(): number {
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1]));
   return 0;
 }
 

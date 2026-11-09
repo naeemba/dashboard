@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addCard, emptyBoard } from '../../shared/board/board';
 import { BOARD_FOLDER_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
-import { runBoardProgram } from './board-program';
+import { guardAnswer, runBoardProgram } from './board-program';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { syncBoard } from './board-sync-git';
 import { boardOn, clone, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
@@ -102,5 +102,18 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
     expect(String(stderr.mock.calls.at(-1)?.[0])).toContain('not on origin');
     const card = readBoard(checkout, false).board.columns.flatMap((column) => column.cards).find((entry) => entry.id === 'card');
     expect(card?.comments?.map((comment) => comment.body)).toEqual(['hello']);
+  });
+});
+
+describe('board guard', () => {
+  const write = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/p/.dashboard/board/cards/a.json' } });
+
+  it('names $DASHBOARD_BOARD in a pane the app opened, and its own path outside one', () => {
+    expect(guardAnswer(write, '/app/board.js', '/home/me/.claude/dashboard/board.js')).toContain('node \\"$DASHBOARD_BOARD\\"');
+    expect(guardAnswer(write, undefined, '/home/me/.claude/dashboard/board.js')).toContain('node \\"/home/me/.claude/dashboard/board.js\\"');
+  });
+
+  it('prints nothing for a call it lets through', () => {
+    expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js')).toBe('');
   });
 });

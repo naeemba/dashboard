@@ -71,6 +71,15 @@ describe('installBoardGuard', () => {
     expect(statSync(join(dotfiles, 'settings.json')).mode & 0o777).toBe(0o600);
   });
 
+  it('leaves a link to a settings file that is not there a link, and writes nothing', () => {
+    const home = temporaryFolder('board-guard-home-');
+    const missing = join(temporaryFolder('board-guard-dotfiles-'), 'settings.json');
+    mkdirSync(join(home, '.claude'));
+    symlinkSync(missing, join(home, '.claude', 'settings.json'));
+    expect(installBoardGuard(home, build())).toBe(`board guard not added to ${join(home, '.claude', 'settings.json')}: it links to ${missing}, which is not there`);
+    expect(lstatSync(join(home, '.claude', 'settings.json')).isSymbolicLink()).toBe(true);
+  });
+
   it('leaves a settings file it refuses exactly as it was', () => {
     const home = temporaryFolder('board-guard-home-');
     mkdirSync(join(home, '.claude'));

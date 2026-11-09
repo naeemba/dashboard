@@ -13,7 +13,7 @@ import { isRecord } from '../../shared/app/is-record';
 const FILE_FIELDS: Record<string, string> = { Edit: 'file_path', Write: 'file_path', NotebookEdit: 'notebook_path' };
 
 // What a hook's matcher has to let through for this to see every call it refuses.
-export const GUARDED_TOOLS = [...Object.keys(FILE_FIELDS), 'Bash'].join('|');
+const GUARDED_TOOLS = [...Object.keys(FILE_FIELDS), 'Bash'].join('|');
 
 // The one command every door runs: the copy of the board program the app installs under ~/.claude
 // (board-guard-install.ts). One string everywhere, so a session that has it from the user's
@@ -22,11 +22,9 @@ export const GUARD_COMMAND = 'node "$HOME/.claude/dashboard/board.js" guard';
 
 // The hook as a settings file names it: the user's settings.json, a terminal worker's --settings
 // (dispatch.ts) and a Claude screen's (chat-sessions.ts), beside the user's own hooks.
-export function guardEntry(command: string) {
-  return { matcher: GUARDED_TOOLS, hooks: [{ type: 'command' as const, command }] };
-}
+export const GUARD_ENTRY = { matcher: GUARDED_TOOLS, hooks: [{ type: 'command' as const, command: GUARD_COMMAND }] };
 
-export const BOARD_GUARD_HOOKS = { PreToolUse: [guardEntry(GUARD_COMMAND)] };
+export const BOARD_GUARD_HOOKS = { PreToolUse: [GUARD_ENTRY] };
 
 // A card file, the columns file, or the older board.json, at any depth and with either separator.
 // `.dashboard/notes.md` and `.dashboard/CLAUDE.md` are not the board and stay editable.

@@ -1,10 +1,10 @@
-import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { lstatSync, readFileSync, readlinkSync, realpathSync, statSync } from 'node:fs';
 import { readText } from '../app/missing-file';
 import { isRecord } from '../../shared/app/is-record';
 import path from 'node:path';
 import { replaceFile, replaceFileIfChanged } from '../app/replace-file';
 import { failureLine } from '../command/failure-line';
-import { GUARD_COMMAND, guardEntry } from './board-guard';
+import { GUARD_COMMAND, GUARD_ENTRY } from './board-guard';
 
 // The board guard for a Claude the app did not start: a terminal of your own, another editor's
 // agent. At each launch the app copies this build's board program to ~/.claude/dashboard/board.js and,
@@ -39,7 +39,7 @@ export function withBoardGuard(current: string | null): { text: string | null } 
   const preToolUse = hooks.PreToolUse ?? [];
   if (!Array.isArray(preToolUse)) return { refused: 'its PreToolUse hooks are not a list' };
   if (preToolUse.some(runsGuard)) return { text: null };
-  const next = { ...settings, hooks: { ...hooks, PreToolUse: [...preToolUse, guardEntry(GUARD_COMMAND)] } };
+  const next = { ...settings, hooks: { ...hooks, PreToolUse: [...preToolUse, GUARD_ENTRY] } };
   return { text: `${JSON.stringify(next, null, 2)}\n` };
 }
 
@@ -56,6 +56,11 @@ export function installBoardGuard(home: string, builtBoard: string): string | nu
     // Through the link: a settings.json linked into a dotfiles repo stays a link, and the entry lands
     // in the file it points at.
     const current = readText(linked);
+    // A link to nothing yet (dotfiles not cloned or moved) is refused: writing would put a regular
+    // file where the link was, and Claude Code would go on reading it once the dotfiles are back.
+    if (current === null && lstatSync(linked, { throwIfNoEntry: false })?.isSymbolicLink()) {
+      return `board guard not added to ${linked}: it links to ${readlinkSync(linked)}, which is not there`;
+    }
     const file = current === null ? linked : realpathSync(linked);
     const next = withBoardGuard(current);
     if ('refused' in next) return `board guard not added to ${linked}: ${next.refused}`;
