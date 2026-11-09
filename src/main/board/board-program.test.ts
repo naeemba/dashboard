@@ -91,8 +91,10 @@ describe('the board command on a board git tracks', () => {
     git(checkout, 'add', '-A');
     git(checkout, 'commit', '--quiet', '-m', 'board');
     git(checkout, 'push', '--quiet', 'origin', 'main');
-    // The sync's scratch folder goes under TMPDIR; one that does not exist makes mkdtempSync throw.
-    vi.stubEnv('TMPDIR', join(temporaryFolder('board-program-missing-'), 'missing'));
+    // The sync's scratch folder goes under the temp folder; one that does not exist makes mkdtempSync
+    // throw. TMPDIR is what os.tmpdir() reads off Windows, TEMP and TMP what it reads on it.
+    const missing = join(temporaryFolder('board-program-missing-'), 'missing');
+    for (const name of ['TMPDIR', 'TEMP', 'TMP']) vi.stubEnv(name, missing);
     vi.spyOn(process, 'cwd').mockReturnValue(checkout);
     vi.spyOn(process.stdout, 'write').mockReturnValue(true);
     const stderr = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
