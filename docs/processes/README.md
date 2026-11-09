@@ -76,7 +76,8 @@ in place (a terminal agent into a pane that had a shell, or a screen whose
 shell had to move folder) stops the old shell's scope once the new shell has
 its own; each start is named afresh, so the stop never reaches the new one.
 Enter on a pane whose shell exited (pane.restart, behind `pty:restart`) does
-the same: the new shell starts, then the dead one's scope is stopped. A shell
+the same: the new shell starts, then the dead one's scope is stopped, also
+when no new shell starts (a stale `SHELL_COMMAND`). A shell
 the pane host kept through a restart that pane.restore does not take back (the
 editor's) is killed and its scope stopped after. A failure in any of these
 three is a warning in the log, since nobody reads the answer.

@@ -4,18 +4,22 @@ import { bind } from '../action';
 import { paneRestart } from './restart';
 
 // `before` is the pane's scope before the spawn, `after` the one the spawn hands it.
-function restarting({ running = false, before, after, stopScope = async () => undefined }: {
-  running?: boolean; before?: string; after?: string; stopScope?: (unit: string) => Promise<void>;
+// `starts: false` is a spawn that starts nothing and leaves the scope as it was.
+function restarting({ running = false, starts = true, before, after, stopScope = async () => undefined }: {
+  running?: boolean; starts?: boolean; before?: string; after?: string; stopScope?: (unit: string) => Promise<void>;
 }) {
+  let shellRuns = running;
   const units = new Map<string, string>();
   if (before !== undefined) units.set('2:3', before);
   const done: string[] = [];
   const logged: LogDraft[] = [];
   const restart = bind(paneRestart, {
-    running: () => running,
+    running: () => shellRuns,
     scopeOf: (id) => units.get(id),
     spawn: (id) => {
       done.push(`spawn ${id}`);
+      if (!starts) return;
+      shellRuns = true;
       if (after === undefined) units.delete(id);
       else units.set(id, after);
     },
@@ -39,6 +43,12 @@ describe('pane.restart', () => {
     const none = restarting({ after: 'pane-api-3-new.scope' });
     await none.restart.call({ id: '2:3' });
     expect(none.done).toEqual(['spawn 2:3']);
+  });
+
+  it('stops the old scope when the spawn starts no shell', async () => {
+    const { restart, done } = restarting({ starts: false, before: 'pane-api-3-old.scope' });
+    await restart.call({ id: '2:3' });
+    expect(done).toEqual(['spawn 2:3', 'stop pane-api-3-old.scope']);
   });
 
   it('refuses a pane whose shell runs, and starts nothing over it', async () => {

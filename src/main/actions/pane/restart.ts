@@ -7,7 +7,9 @@ import { isFilledText } from './pane-input';
 // A pane's shell started again where it ran: Enter on a pane whose shell exited (`pty:restart`), and a
 // dispatch starting a pane's shell over once it has killed the old one. The old shell's scope is
 // stopped once the new shell has one of its own (each start is named afresh, so the stop never reaches
-// the new one), so what the old shell detached ends with it, as a close ends it.
+// the new one), so what the old shell detached ends with it, as a close ends it. A spawn that started
+// nothing (no command, or a shell that would not start) leaves the old unit in `scopeOf`, so the stop
+// goes by whether a shell runs now, not by whether the unit changed.
 
 // `scopeOf` reads the old shell's scope before the spawn and the new one's after it.
 export type PaneRestartPorts = Pick<PaneClosePorts, 'scopeOf' | 'stopScope'> & {
@@ -25,7 +27,8 @@ export const paneRestart = action<PaneRestartPorts, { id: string }, { output: st
     if (ports.running(id)) return { refused: `${id} has a shell running` };
     const replaced = ports.scopeOf(id);
     ports.spawn(id);
-    const notStopped = replaced === undefined || replaced === ports.scopeOf(id) ? null : await stopOrWarn(ports, replaced, 'pane.restart', id);
+    const keptByNewShell = ports.running(id) && replaced === ports.scopeOf(id);
+    const notStopped = replaced === undefined || keptByNewShell ? null : await stopOrWarn(ports, replaced, 'pane.restart', id);
     return { output: notStopped === null ? `restarted ${id}` : `restarted ${id}; ${notStopped}` };
   },
 });
