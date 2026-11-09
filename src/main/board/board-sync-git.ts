@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
@@ -6,7 +5,7 @@ import type { Board } from '../../shared/board/board';
 import { rebaseBoardChange, sameBoard } from '../../shared/board/board-merge';
 import { failureText } from '../../shared/errors/failure';
 import { isManagerPath } from '../../shared/manager/manager';
-import { baseBranch, git, NO_HOOKS } from '../app/git';
+import { baseBranch, git, gitNow, NO_HOOKS } from '../app/git';
 import { realPath } from '../app/real-path';
 import { BROKEN_SUFFIX } from './board-files';
 import { BOARD_PATHSPECS, peekBoard, readBoard, writeBoard } from './board-store';
@@ -212,8 +211,4 @@ async function updateCheckout(checkout: string, branch: string, target: string):
     writeBoard(checkout, local);
     return { stay: `the fast-forward failed: ${gitMessage(error)}` };
   }
-}
-
-function gitNow(gitArguments: string[], cwd: string): string {
-  return execFileSync('git', gitArguments, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trimEnd();
 }

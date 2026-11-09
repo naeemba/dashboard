@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { defaultBranch, noDefaultBranchMessage } from './default-branch';
 
@@ -27,6 +27,12 @@ export async function git(gitArguments: string[], cwd: string, options: GitOptio
 }
 
 // The same for another program, which so far is gh asking whether a branch has a pull request.
+// The same, blocking: for the few local calls whose caller must not be interleaved with another write
+// in this process (the board sync's fast-forward). Never for anything that touches the network.
+export function gitNow(gitArguments: string[], cwd: string): string {
+  return execFileSync('git', gitArguments, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 }).trimEnd();
+}
+
 export async function runProgram(program: string, programArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {
   const { stdout } = await runCommand(program, programArguments, {
     cwd,
