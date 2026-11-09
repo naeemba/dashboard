@@ -1,7 +1,12 @@
 import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
-import { asksApp, BOARD_REQUEST, brokenFilesRefusal, runBoardCommandOnLatest } from './board-cli';
+import { asksApp, BOARD_REQUEST, brokenFilesRefusal, readsBoard, runBoardCommand, runBoardCommandOnLatest, type CommandResult } from './board-cli';
+import { syncBoard, type BoardSync } from './board-sync-git';
+import { notSyncedWarning } from './board-sync';
+import { rebaseBoardChange } from '../../shared/board/board-merge';
+import { failureText } from '../../shared/errors/failure';
+import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
@@ -36,17 +41,50 @@ async function run(words: readonly string[]): Promise<number> {
     return 1;
   }
 
-  // Run against the board as it stands a moment before the write, not the one opened above:
-  // runBoardCommandOnLatest says why.
-  const result = runBoardCommandOnLatest(read.board, commandArguments, () => readBoard(project, false).board);
+  // A board git tracks is read and written on origin's default branch, and this checkout brought up to
+  // it (board-sync-git.ts). The id is made once, so an `add` retried on a fresh fetch is one card. A
+  // sync that throws is one more way of not reaching origin: the board is written here, with the warning.
+  const id = crypto.randomUUID();
+  const makeId = () => id;
+  if (readsBoard(commandArguments)) {
+    // Each board the command ran on and what it answered; the last is what went up, when a lost race retried.
+    const tries: { before: Board; result: CommandResult }[] = [];
+    const sync = await syncBoard(project, (board) => {
+      const result = runBoardCommand(board, commandArguments, makeId);
+      tries.push({ before: board, result });
+      return result.ok && result.board !== null ? result.board : board;
+    }).catch((error: unknown): BoardSync => ({ synced: false, warning: notSyncedWarning(failureText(error)) }));
+    const onOrigin = tries.at(-1);
+    if (sync.synced && onOrigin !== undefined) {
+      const { before, result } = onOrigin;
+      // A checkout the sync could not move holds the edit as well, as it did before there was a sync:
+      // the same change, not the command run again, whose new timestamps the next sync would publish as
+      // a second comment.
+      if (sync.checkout === 'stale' && result.ok && result.board !== null) {
+        writeBoard(project, rebaseBoardChange(before, result.board, readBoard(project, false).board));
+      }
+      return answer(result);
+    }
+    if (!sync.synced && sync.warning !== null) process.stderr.write(`${sync.warning}\n`);
+  }
+  return answer(writeHere(project, read.board, commandArguments, makeId));
+}
+
+// The command run on this folder's board and written here. Against the board as it stands a moment
+// before the write, not the one opened: runBoardCommandOnLatest says why. Written before the line is
+// printed, so a failed write is what you see rather than a success message about a change that is not
+// on disk.
+function writeHere(project: string, opened: Board, commandArguments: readonly string[], makeId: () => string): CommandResult {
+  const result = runBoardCommandOnLatest(opened, commandArguments, () => readBoard(project, false).board, makeId);
+  if (result.ok && result.board !== null) writeBoard(project, result.board);
+  return result;
+}
+
+function answer(result: CommandResult): number {
   if (!result.ok) {
     process.stderr.write(`${result.message}\n`);
     return 1;
   }
-
-  // Written before the line is printed, so a failed write is what you see rather than a success
-  // message about a change that is not on disk.
-  if (result.board !== null) writeBoard(project, result.board);
   process.stdout.write(`${result.output}\n`);
   return 0;
 }

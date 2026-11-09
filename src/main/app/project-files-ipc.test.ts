@@ -14,8 +14,10 @@ function wired() {
   const told: string[][] = [];
   const boards = { watch: () => undefined, wrote: () => undefined } as unknown as BoardWatchers;
   const changes = { seen: () => undefined, wrote: (_path: string, _board: unknown, write: () => void) => write() } as unknown as BoardChanges;
-  registerProjectFiles(table, boards, changes, (screen, channel, changed) => told.push([screen, channel, changed]));
-  return { table, told, projectPath };
+  const synced: string[] = [];
+  const boardSync = { sync: async (path: string) => { synced.push(path); } };
+  registerProjectFiles(table, boards, changes, boardSync, (screen, channel, changed) => told.push([screen, channel, changed]));
+  return { table, told, synced, projectPath };
 }
 
 describe('registerProjectFiles', () => {
@@ -25,6 +27,12 @@ describe('registerProjectFiles', () => {
     const { table, told, projectPath } = wired();
     await table.invoke('couch', 'board:write', [projectPath, emptyBoard(), emptyBoard()]);
     expect(told).toEqual([['couch', 'board:change', projectPath]]);
+  });
+
+  it('sends a board the screen wrote to origin behind the write', async () => {
+    const { table, synced, projectPath } = wired();
+    await table.invoke('local', 'board:write', [projectPath, emptyBoard(), emptyBoard()]);
+    expect(synced).toEqual([projectPath]);
   });
 
   it('tells every screen but the writer that a page of notes changed', async () => {

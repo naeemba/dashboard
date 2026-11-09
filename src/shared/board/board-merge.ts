@@ -9,12 +9,17 @@ import { neighbourRow, selectionOf, type Board, type Card, type CardComment, typ
 // So the save is treated as the card-by-card difference between `base` and `next`, and that
 // difference is applied to `latest`, the board read a moment before the write — the same idea as
 // runBoardCommandOnLatest on the command's side. Whatever the save did not touch stays as `latest`
-// has it. Where both touched the same field the save wins, since it is the newer of the two.
+// has it. Where both changed the same field of one card, or both moved it, the card with the newer
+// `updatedAt` wins that field (the save on a tie), and comments are the union of both trails.
+//
+// The board's git sync replays a checkout's uncommitted board onto origin's with this too
+// (board-sync-git.ts), where `next` can be a copy many commits old: there a save that always won would
+// put a stale card's column back over the newer one origin holds (board-decision-5).
 //
 // A `latest` of null is a file that is gone or will not parse: nothing on disk to keep, so `next` is
 // written as it is. Replaying onto an empty board instead would drop every card the save did not touch.
 //
-// ponytail: field-level, last writer wins, with no lock between the read and the write. A card deleted
+// ponytail: field-level, newest card wins, with no lock between the read and the write. A card deleted
 // on one side and edited on the other stays deleted.
 export function rebaseBoardChange(base: Board, next: Board, latest: Board | null): Board {
   if (latest === null || sameBoard(base, latest)) return next;
@@ -46,7 +51,10 @@ export function rebaseBoardChange(base: Board, next: Board, latest: Board | null
       const leftOnDisk = found !== null && result.columns[found.column].name !== column.name;
       const moved = !was || was.column !== column.name
         || (!leftOnDisk && stayedAbove(baseOrder, card.id, stayed) !== stayedAbove(order, card.id, stayed));
-      if (found && !moved) {
+      // Both took the card to a different column: the newer move stays where the disk has it.
+      const diskMovedLater = Boolean(was && found && onDisk && leftOnDisk
+        && result.columns[found.column].name !== was.column && newer(onDisk, card));
+      if (found && (!moved || diskMovedLater)) {
         result.columns[found.column].cards[found.card] = edited;
         continue;
       }
@@ -81,18 +89,41 @@ function removeAt(board: Board, at: Selection): void {
   board.columns[at.column].cards.splice(at.card, 1);
 }
 
-// The fields the save changed, laid over the card as it is on disk. Comments are appended and never
-// rewritten, so the save's new ones go after whatever the command added rather than replacing them.
+// The fields the save changed, laid over the card as it is on disk. A field the disk changed too goes
+// to the newer card, and `updatedAt` is the later of the two.
+//
+// Comments are appended and never rewritten, so the trail is the disk's with every one of the save's
+// it lacks after it, one comment being one (at, body). Counting from the base instead, as this once
+// did, adds the save's comments a second time when the disk already has them: the git sync replays a
+// checkout's comment onto origin, and until that checkout catches up the next replay would again.
 function editedCard(was: Card, now: Card, onDisk: Card): Card {
   const merged: Record<string, unknown> = { ...onDisk };
+  const diskWins = newer(onDisk, now);
   for (const key of new Set([...Object.keys(was), ...Object.keys(now)]) as Set<keyof Card>) {
-    if (key === 'comments' || JSON.stringify(was[key]) === JSON.stringify(now[key])) continue;
+    if (key === 'comments' || key === 'updatedAt' || same(was[key], now[key])) continue;
+    if (diskWins && !same(was[key], onDisk[key])) continue;
     if (now[key] === undefined) delete merged[key];
     else merged[key] = now[key];
   }
-  const added: CardComment[] = (now.comments ?? []).slice(was.comments?.length ?? 0);
+  if (!diskWins && now.updatedAt !== undefined) merged.updatedAt = now.updatedAt;
+  const known = new Set((onDisk.comments ?? []).map(commentKey));
+  const added: CardComment[] = (now.comments ?? []).filter((comment) => !known.has(commentKey(comment)));
   if (added.length > 0) merged.comments = [...(onDisk.comments ?? []), ...added];
   return merged as Card;
+}
+
+// Whether the disk's card was changed after the save's: ISO strings sort as the times they name. A
+// card with no date loses to one with a date, and a tie goes to the save.
+function newer(onDisk: Card, now: Card): boolean {
+  return (onDisk.updatedAt ?? '') > (now.updatedAt ?? '');
+}
+
+function same(first: unknown, second: unknown): boolean {
+  return JSON.stringify(first) === JSON.stringify(second);
+}
+
+function commentKey(comment: CardComment): string {
+  return JSON.stringify([comment.at ?? null, comment.body]);
 }
 
 // The nearest card above `id` in `ids` that is one of `stayed`, or null for none.

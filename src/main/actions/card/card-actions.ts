@@ -4,6 +4,7 @@ import type { LogDraft } from '../../../shared/app/log-entry';
 import { shipEntry } from '../../../shared/app/log-entry';
 import { REVIEW_COLUMN, type Board } from '../../../shared/board/board';
 import type { BoardChanges } from '../../board/board-changes';
+import type { BoardSyncQueue } from '../../board/board-sync-queue';
 import { readBoard, writeBoard } from '../../board/board-store';
 import { realPath } from '../../app/real-path';
 import { isProjectBoard } from './project-board';
@@ -21,6 +22,8 @@ export type CardActionsMain = Omit<ShipPorts, 'forgetReview'>
   & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived'> & {
     table: Channels;
     boardLog: BoardChanges;
+    // Every board write here goes to origin behind it (board-sync-queue.ts).
+    boardSync: BoardSyncQueue;
     // settings.review.autoLoop, read at each move so a change on the settings screen holds at once.
     autoLoop(): boolean;
     log(draft: LogDraft): void;
@@ -30,10 +33,17 @@ export function cardActions(main: CardActionsMain): { reviews: ReviewSweep; acti
   // The sweep's own writes go through the move log, so the watcher's read-back finds the board it
   // already holds and does not log the sweep's move as the `board` command's.
   const writeLogged = (projectPath: string, board: Board) => main.boardLog.wrote(projectPath, board, () => writeBoard(projectPath, board));
+  const published = (projectPath: string) => main.boardSync.sync(projectPath);
+  // Every write here, then to origin behind it.
+  const writeAndSync = (projectPath: string, board: Board, logged: boolean) => {
+    if (logged) writeLogged(projectPath, board);
+    else writeBoard(projectPath, board);
+    void published(projectPath);
+  };
 
   const reviews: ReviewSweep = reviewSweep({
     ...main,
-    writeBoard: writeLogged,
+    writeBoard: (projectPath, board) => writeAndSync(projectPath, board, true),
     arrived: (entry: WorktreeEntry) => move.call({ projectPath: entry.projectPath, id: entry.cardId, column: REVIEW_COLUMN, source: 'automatic' }),
   });
   const shipCard = shipFlow({ ...main, forgetReview: (cardId) => reviews.forget(cardId) });
@@ -42,7 +52,8 @@ export function cardActions(main: CardActionsMain): { reviews: ReviewSweep; acti
     read: (projectPath) => readBoard(projectPath, false),
     // A move from the command is written plainly, so the watcher logs it as the command's, as it did
     // when the command wrote the file itself.
-    write: (projectPath, board, source) => (source === 'automatic' ? writeLogged(projectPath, board) : writeBoard(projectPath, board)),
+    write: (projectPath, board, source) => writeAndSync(projectPath, board, source === 'automatic'),
+    published,
     projectBoard: (projectPath) => isProjectBoard(projectPath, main.worktrees().map((entry) => entry.worktreePath), realPath, isLinkedWorktree),
     autoLoop: main.autoLoop,
     ship: (input) => ship.call(input),
