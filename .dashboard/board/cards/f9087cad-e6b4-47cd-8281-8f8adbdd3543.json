@@ -5,7 +5,9 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T11:16:06.160Z",
-  "updatedAt": "2026-11-09T11:59:08.975Z",
-  "column": "Doing",
-  "order": 0
+  "updatedAt": "2026-11-09T12:12:11.795Z",
+  "branch": "work-board-card-f9087cad-e6b4-47cd-8281-8f8",
+  "pullRequest": 256,
+  "column": "Review",
+  "order": 1
 }
