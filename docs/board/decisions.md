@@ -126,8 +126,10 @@ the merge) stands, and the app keeps it. Folds in card b0234b28's lookup (the
 number found from the branch through `gh`); its glyph of check and review state
 is not part of this.
 
-**Each state moves the card once, the first time it is seen, and the line on the
-card is the record of that.** Following the state every tick would undo a
+**Each state moves the card when it differs from the last line about that pull
+request, and the line on the card is the record of that.** A reopen counts as a
+new open: a pull request closed and reopened was left in Doing with nothing to
+send it back. Following the state every tick would undo a
 person: a card dragged back to Doing for a fix while its pull request stays open
 would jump to Review two minutes later. The one exception is Done with a pull
 request open, which is moved back every time, since that card is the bug above.

@@ -21,7 +21,8 @@ export type CardFollowPorts = {
 };
 
 // A card's column set from its pull request (board-decision-6): found from its branch through gh, the
-// number recorded, a line said once per state, and the move made through card.move as the app's own.
+// number recorded, a line said when the state differs from the last one about that pull request,
+// and the move made through card.move as the app's own.
 // pull-request-column.ts holds every decision; this reads, asks and writes.
 export const cardFollow = action<CardFollowPorts, CardInput, { output: string }>('card.follow', {
   words: ['id'],

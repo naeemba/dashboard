@@ -143,9 +143,10 @@ it finds:
 - closed without merging: back to Doing from Review or Done; from anywhere else
   the line is written and the card stays, without `; back to Doing`.
 
-Each of those is said once on the card, naming the pull request, its title and
-its link (`Pull request #12 opened: …`), and the move is made only that first
-time, so a card you move on afterwards stays where you put it. A pull request
+Each of those is said on the card when it differs from the last line about that
+pull request, naming the pull request, its title and its link (`Pull request #12
+opened: …`), and the move is made only then, so a card you move on afterwards
+stays where you put it. A pull request
 closed and then reopened counts as opened again, since the last line about it
 is the close. Only a project's own board is followed: a worktree opened as a
 page is not, so its tracked card files stay clean. An open pull
