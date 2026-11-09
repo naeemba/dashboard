@@ -1,0 +1,17 @@
+{
+  "id": "c5b8a687-bb59-4240-9325-5893c94c0ad2",
+  "title": "Two sessions run in one worker pane",
+  "notes": "2026-11-09: card 7e7219dd's worktree (pane 0:3) had two Claude sessions named dashboard-terminal-4 at once: [bcbe2b] started first and busy, [af80ae] started 4 minutes later, which found the other and committed cd32e2ff before standing down. At the same time ListAgents showed other worker names freshly started and idle (dashboard-terminal-2 [c0a14a], dashboard-terminal-3 [0bbf8c]) for panes that had just been released or merged. Suspects: pane 0:3 was released after #273 merged and claimed again at once for Audit 6 (same pane number, same worker name), and the old screen session lived on in the screen host and was resumed or kept answering under the pane's name; or a restore resumed a worker whose screen-host session was still running (#226 + #235). Find which, with a test of the decision that lets a second session start for a pane, and make it impossible: one live session per pane, the old one stopped (and its scope, #255) before a new one starts. Docs: workers README, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T16:12:43.137Z",
+  "updatedAt": "2026-11-09T16:19:28.820Z",
+  "comments": [
+    {
+      "at": "2026-11-09T16:19:28.820Z",
+      "body": "User, 2026-11-09: the machine ran out of memory and CPU just before (eight workers running tests at once, no systemd scopes installed yet). Likely path: earlyoom (tuned to kill node first) or the OOM killer took the screen host's node process or its socket, the app fell back to running the worker in-app (workers-decision-6: no host -> in the app) while the host's session lived on, giving two sessions per pane. Check that fallback: it must not start a second session while a host session for that pane may still be alive."
+    }
+  ],
+  "column": "Todo",
+  "order": 5
+}

@@ -1,6 +1,6 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { sourceFiles } from '../testing/source-files';
 
 // processes-rule-1: a process that runs as long as a pane or an agent starts in its systemd scope
 // (scope-support.ts). The files that can start a process at all, by naming what starts one, each
@@ -34,12 +34,6 @@ const STARTS_PROCESSES = [
 
 // Any quoted mention, so a dynamic import, a require or double quotes cannot slip past.
 const STARTS = /['"](node:)?child_process['"]|['"]node-pty['"]/;
-
-function sourceFiles(folder: string): string[] {
-  return readdirSync(folder, { recursive: true, encoding: 'utf8' })
-    .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
-    .map((file) => path.join(folder, file).split(path.sep).join('/'));
-}
 
 // spawn-scoped.ts takes any command shaped like a scoped one, so a file that imports it starts a
 // process just as surely as one that names child_process. Each hands it the answer of scopes.scoped or

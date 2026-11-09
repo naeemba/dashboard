@@ -94,10 +94,30 @@ forgets the worker's stop notices, and forgetting withdraws one still in main's 
 pane or a close does. A screen worker's hooks count only while the pane is still that worker's, so a
 hook of one released a moment ago never reads as the stop of the next one at its number.
 
-Watch for: a report main reads only after it has already taken the notice into a turn. The notice
-cannot be withdrawn then, and main reads both. Since the report is heard only at the end of main's
-turn, a main that reads a report and does not release the worker (#219, 2026-11-06) can still take
-the notice the moment that turn ends, before the app has heard its result.
+A main that reads a report and does not release the worker (#219, 2026-11-06) still got the notice:
+queued during its turn, main took it the moment the turn ended, before the app had read the result
+that names the report, and a prompt main has taken cannot be withdrawn. So a notice due while main is
+mid-turn is held, not queued, and decided when the turn ends: dropped if that turn read the worker's
+report, told otherwise. Main's session is started with `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS`, which
+puts `session_state_changed` on the stream: `running` (or `requires_action`, a permission wait) as a
+turn begins, `idle` after its `result`. Checked 2026-11-09 with the agent SDK 0.3.316 and a throwaway
+session: `running` came before the turn's init and `idle` 3 ms after its result. chat-sessions.ts reads the result's sender first and the idle after it, so the
+report is heard before the held notice is decided. A session that ends counts as idle, so nothing is
+held for a main that is gone. The sweep that closes finished workers skips a worker whose main
+is mid-turn for the same reason: a close told then, "closed without a report read", would reach main
+after the very turn that read the report. A worker screen runs without the variable; nothing waits on
+its turns.
+
+Watch for: `idle` comes only once main has nothing left to do, so a main that goes from one queued
+prompt straight into the next holds the notice through all of them. Main is told late, never twice.
+`idle` also waits on main's background work: the CLI holds a turn's result back while a background
+agent or a Monitor runs, so a main whose reply has ended can stay mid-turn for as long as that work
+does, or for good. A main mid-turn for `PAUSE_CEILING_MS` counts as idle: every notice held for it is
+told then, one due later is queued behind the turn, and the close sweep no longer skips it: late, never
+silent. The ceiling counts from the turn's start, one clock, so a notice due late in the turn is not
+held a ceiling of its own past one told before it. A
+session state the CLI stops sending leaves nothing held: the notice is queued as before and taken
+back only if main has not yet taken it.
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and
