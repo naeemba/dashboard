@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:55.499Z",
-  "updatedAt": "2026-11-09T16:32:51.388Z",
+  "updatedAt": "2026-11-09T20:55:38.739Z",
   "branch": "work-board-card-7e7219dd-9c87-437a-b9d0-9a4",
   "pullRequest": 278,
+  "comments": [
+    {
+      "at": "2026-11-09T20:55:38.739Z",
+      "body": "Pull request #278 merged: eslint: refuse a file over 600 code lines (Audit 6) https://github.com/naeemba/dashboard/pull/278"
+    }
+  ],
   "column": "Done",
   "order": 219
 }
