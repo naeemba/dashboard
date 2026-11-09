@@ -34,8 +34,9 @@ export type Card = {
   // board claims to have been created the first time this version opened it.
   createdAt?: string;
   updatedAt?: string;
-  // The branch the work is on, and the pull request it opened. Typed, not fetched — asking `gh` for
-  // the number brings auth, the network and a question about when it refreshes.
+  // The branch the work is on, and the pull request it opened. Typed, or written by the app: a ship
+  // records the branch, and the app finds the pull request from it through `gh`
+  // (pull-request-column.ts).
   branch?: string;
   pullRequest?: number;
   // The card's comment trail, oldest first, or absent when nothing has been said. Absent rather than
@@ -92,6 +93,10 @@ export const BACKLOG_COLUMN = 'Backlog';
 // What has been picked to work on next. Named for isWaitingColumn, which finds it by name.
 export const TODO_COLUMN = 'Todo';
 
+// Where a card is while its agent works it. The app moves a card here when it hands it to an agent, and
+// back here when its pull request closes unmerged (pull-request-column.ts).
+export const DOING_COLUMN = 'Doing';
+
 // Named because withReviewColumn puts Review in front of it, because isFinishedColumn finds it by name
 // (the subtask bar, the manager's counts and its stalled panes), and for Done's lock in done-lock.ts.
 // Renaming it changes all of those.
@@ -102,7 +107,7 @@ export const DONE_COLUMN = 'Done';
 // because everything that treats Done as finished treats this the same way.
 export const CANCELLED_COLUMN = 'Cancelled';
 
-const DEFAULT_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN, CANCELLED_COLUMN];
+const DEFAULT_COLUMNS = [BACKLOG_COLUMN, TODO_COLUMN, SHIP_COLUMN, DOING_COLUMN, REVIEW_COLUMN, DONE_COLUMN, CANCELLED_COLUMN];
 
 export function emptyBoard(): Board {
   return { columns: DEFAULT_COLUMNS.map((name) => ({ name, cards: [] })) };

@@ -6,6 +6,8 @@ import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { runProgram } from './app/git';
+import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
+import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
 import { realPath } from './app/real-path';
 import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
@@ -498,7 +500,7 @@ const pane = paneActions({
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
-  worktrees: worktrees.entries, panesBeforeLaunch: agentPanesBeforeLaunch, realPath, givePane: worktrees.givePane,
+  worktrees: worktrees.entries, panesBeforeLaunch: agentPanesBeforeLaunch, realPath, givePane: giveCardPane,
 });
 registerDrawer(table, {
   sessions: sessionIndex, open: pane.open,
@@ -509,7 +511,7 @@ const chats = registerChatSessions(table, {
   projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'), scoped: async (request) => { await scopes.ready; return scopes.scoped(request); },
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
-  heard: (slot, sender) => workerAnswers.heard(slot, sender),
+  heard: (slot, sender) => { workerAnswers.heard(slot, sender); followPullRequests(slot); },
 });
 // Every change to a session, from every door (session-actions.ts).
 const session = sessionActions({ chat: chats.actionPorts, sessions: sessionIndex, projectAt: projectIn, dispatchers: () => mainsWorkers.values() });
@@ -528,7 +530,7 @@ try {
 } catch (error: unknown) {
   failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
 }
-registerProjectFiles(table, boards, boardLog, boardSync, tellOthers);
+registerProjectFiles(table, boards, boardLog, boardSync, tellOthers, (projectPath) => setImmediate(() => void pullRequests.check(projectPath)));
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -601,6 +603,14 @@ function paneReadingsIn(slot: number): PaneReading[] {
   });
 }
 
+// A card's agent given its pane, from every door that starts one (a ship, the review, `pane run
+// --card`, a restore), and the card into Doing with its branch unless it is there or past it.
+function giveCardPane(entry: WorktreeEntry, index: number): WorktreeEntry {
+  const given = worktrees.givePane(entry, index);
+  void cardStart.call({ projectPath: entry.projectPath, id: entry.cardId, branch: entry.branch });
+  return given;
+}
+
 // Give the worktree a pane: a free worker, or a new one. Split out because it is also the whole of a
 // second ship of a card whose worktree exists but never got one.
 async function attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult> {
@@ -617,7 +627,7 @@ async function attachPane(entry: WorktreeEntry, slot: number, prompt: string): P
     };
   }
   const index = freePaneIn(slot);
-  const given = worktrees.givePane(entry, index);
+  const given = giveCardPane(entry, index);
   const projectPath = projectIn(slot)?.path ?? entry.projectPath;
   const started = await pane.dispatch.call({ id: terminalId(slot, index), projectPath, directory: entry.worktreePath, prompt, resume: null, cardId: entry.cardId, dispatcherPath: projectPath, as: null });
   if (isRefused(started)) return { ok: false, message: started.refused };
@@ -634,7 +644,7 @@ const worktree = worktreeActions({ remove: worktrees.remove, queue: shipInProjec
 // A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
 // card actions in actions/card/, bound here to their channels and, below, to the session socket.
 // What is handed over is only what this file knows — the records, the pages, the panes, the setting.
-const { reviews, actions: cardActionList } = cardActions({
+const { reviews, pullRequests, start: cardStart, actions: cardActionList } = cardActions({
   table,
   worktrees: worktrees.entries,
   slotOf: slotOfProject,
@@ -653,7 +663,16 @@ const { reviews, actions: cardActionList } = cardActions({
   boardSync,
   autoLoop: () => settings.review.autoLoop,
   log: (draft) => logStore.log(draft),
+  pullRequestOf: (projectPath, branch) => runProgram('gh', pullRequestListArguments(branch), projectPath, { timeout: 20_000 }).then(latestPullRequest),
 });
+// Every open project's cards asked about their pull requests on a slow timer; a report asks for the
+// project of the main it reaches, the manager's for every project, and the board on screen for its own
+// (pull-request-sweep.ts).
+function followPullRequests(slot?: number): void {
+  const project = slot === undefined || slot === MANAGER_SLOT ? undefined : projectIn(slot);
+  for (const open of project === undefined ? projects : [project]) if (open !== undefined) void pullRequests.check(open.path);
+}
+setInterval(() => followPullRequests(), FOLLOW_TIMER_MS).unref();
 registerWorktreeChannels(table, { worktrees, remove: worktree.remove });
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
@@ -714,7 +733,7 @@ const workerAnswers = sessionRequests({
     const { slot, index } = paneFromId(id);
     if (entry) {
       reviews.forget(entry.cardId);
-      worktrees.givePane({ ...entry, reviewing: false }, index);
+      giveCardPane({ ...entry, reviewing: false }, index);
     } else {
       worktrees.takePane(projectIn(slot)?.path ?? '', index, '');
     }

@@ -58,6 +58,10 @@ column. Otherwise the board says a feature is finished and checked while nobody
 has looked at it, and `Review` sits empty in front of the person whose job it is
 to look.
 
+**The app keeps this itself** (board-decision-6): it moves a card into Review
+when its pull request opens and into Done when it merges, so neither move is an
+agent's to remember. What follows is why the order matters.
+
 **The move into `Done` comes after the merge, and is one `board move`.** The
 `board` command writes a board git tracks on origin's main itself, and brings
 the project's checkout up to it (board-decision-5), from the project or from a

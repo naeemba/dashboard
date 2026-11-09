@@ -109,11 +109,14 @@ and leaves out a \`.broken\` file set aside and a write's temporary file.
   Dashboard app to make a git worktree for that card, check out a branch named
   after it, and start an agent in one of the project's panes. Put a card there
   only when you mean to start it.
-- The \`Review\` column is the app's own. Once the agent working a card has put a
-  pull request number on it, the app moves the card there, throws that card's
-  worktree away and makes a fresh one on the pull request's branch with an agent
-  reviewing it. Nothing happens if you move a card there yourself: it is where
-  the app puts things, not a button.
+- A shipped card's column follows its pull request, and the app moves it: into
+  \`Doing\` when its agent starts, into \`Review\` when the pull request on its
+  branch opens, into \`Done\` when it merges, back to \`Doing\` when it closes
+  unmerged, with one comment naming the pull request each time. An agent working
+  a card does not move it; it records the number with \`board set <id>
+  --pull-request <n>\`, which is what starts the review once it goes quiet.
+  Into \`Review\`, the app throws that card's worktree away and makes a fresh
+  one on the pull request's branch with an agent reviewing it.
 - A card's column on the \`main\` branch says what has been merged, and \`Review\`
   is the one exception — a card there has a pull request open and nothing has
   checked it. On a board git tracks, the \`board\` command writes the card on
@@ -144,8 +147,8 @@ and leaves out a \`.broken\` file set aside and a write's temporary file.
   edited in place; everything said about the card over its life goes here instead, so recording a
   finding cannot take out what somebody else wrote.
 - \`branch\` is the git branch the work is on, or absent. \`pullRequest\` is the pull request's number,
-  a whole number above zero written without the \`#\`, or absent. Both are typed in — \`b\` edits the
-  branch and \`r\` the pull request — and nothing fetches or refreshes them.
+  a whole number above zero written without the \`#\`, or absent. A ship writes the branch and the app
+  finds the pull request from it through \`gh\`; \`b\` edits the branch and \`r\` the pull request.
 
 ## The \`board\` command
 

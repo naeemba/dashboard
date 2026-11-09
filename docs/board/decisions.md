@@ -112,6 +112,41 @@ finished, so a board whose finished column has another name (`Shipped`) shows
 its subtasks as under way. That is the price of one rule the bar, the manager's
 counts and its stalled panes all share.
 
+## board-decision-6: A card's column follows its pull request, and the app says so
+
+**The app moves a shipped card: into Doing when its agent starts, into Review
+when its pull request opens, into Done when it merges, back to Doing when it
+closes unmerged; and writes one line on the card for each.** Before, agents were
+told when to move a card, by two instructions that disagreed: the global one said
+Done once the pull request was ready, board-rule-2 said Review, then Done after
+the merge. Agents moved cards to Done on main before the merge, and kamandsystem
+#19 then failed to merge while main said Done. Now no instruction has to say it.
+This supersedes board-rule-2's ordering: the rule (Review while open, Done after
+the merge) stands, and the app keeps it. Folds in card b0234b28's lookup (the
+number found from the branch through `gh`); its glyph of check and review state
+is not part of this.
+
+**Each state moves the card when it differs from the last line about that pull
+request, and the line on the card is the record of that.** A reopen counts as a
+new open: a pull request closed and reopened was left in Doing with nothing to
+send it back. Following the state every tick would undo a
+person: a card dragged back to Doing for a fix while its pull request stays open
+would jump to Review two minutes later. The one exception is Done with a pull
+request open, which is moved back every time, since that card is the bug above.
+
+**Asked when a worker reports, when the board is shown, and every two minutes;
+never twice in 30 seconds.** Showing the board re-reads it after each write, the
+app's own included, and asking `gh` on each read would be a call per card per
+keystroke. A Done card is asked about for a day after it last changed, enough to
+catch an early Done and few enough that the first run does not ask about every
+card ever finished. What it costs: one `gh` call per card in flight per check,
+and a merged pull request reaches Done up to two minutes after the merge when
+nobody reports and nobody looks.
+
+**`gh` failing is silence, not a state.** Missing, logged out or offline, nothing
+moves and nothing is written, and the log says so once per project until a check
+goes through. A card with no branch is never asked about.
+
 ## board-decision-5: The board command keeps a git-tracked board in step with origin itself
 
 **Every write to a board git tracks lands on origin's default branch, from the

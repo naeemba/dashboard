@@ -125,6 +125,40 @@ git will not give up a worktree with a change in it, so the app asks again
 every few seconds and the review starts on its own the moment that change
 is committed. Every other reason is asked once and the comment is the end of it.
 
+### The column follows the pull request
+
+Nobody has to move a shipped card: the app does it (board-decision-6). Handing a
+card to an agent, by a ship, the review, `pane run --card` or a restore at
+launch, writes its branch on it and moves it into Doing, unless it is in Doing
+or past it already. From then on the
+app asks `gh pr list --head <branch>` about it, one call per card, when a worker
+reports, when the board is shown, and every two minutes, and records the number
+it finds:
+
+- open: the card goes into Review, as the app's own move, so the review loop
+  starts the way it does when the sweep moves it (autoLoop decides). A card in
+  Done goes back to Review every time while its pull request is open: Done says
+  merged.
+- merged: into Done.
+- closed without merging: back to Doing from Review or Done; from anywhere else
+  the line is written and the card stays, without `; back to Doing`.
+
+Each of those is said on the card when it differs from the last line about that
+pull request, naming the pull request, its title and its link (`Pull request #12
+opened: …`), and the move is made only then, so a card you move on afterwards
+stays where you put it. A pull request
+closed and then reopened counts as opened again, since the last line about it
+is the close. Only a project's own board is followed: a worktree opened as a
+page is not, so its tracked card files stay clean. An open pull
+request is preferred over a newer closed one on the same branch, so a second
+pull request after a closed first is followed. Asked about: a card with a branch,
+on its card or its worktree's record, that is not in Cancelled, whose merge is
+not on it yet, and that, if it is in Done, changed in the last day. A card with
+no branch, a research card, is never asked about; main moves it as before.
+`gh` missing, logged out or offline moves nothing and writes nothing, and logs
+one warning per project (`board` kind) until a check goes through. A board
+shown again within 30 seconds of the last check asks nothing.
+
 A board too long to read is searched rather than walked: / opens a box over it,
 typing narrows the list to the cards whose titles match and then the cards with
 the word written on them somewhere — in a description or in the trail, with the
@@ -223,6 +257,9 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   folder's bytes go), `card-order.ts` (a card's place in its column), `board-watch.ts`,
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
   onto the file as it is now)
+- The column from the pull request: `pull-request-column.ts` (its decisions),
+  `pull-request-sweep.ts` (when), the card.follow and card.start actions in
+  `src/main/actions/card/`, each beside its `.test.ts`
 - The git sync: `board-sync.ts` (its decisions), `board-sync-git.ts` (the git),
   `board-sync-queue.ts` (the app's one sync per project), each beside its `.test.ts`
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
@@ -288,6 +325,10 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a board written before Cancelled existed, when the app or the command reads it, then it has an empty Cancelled column last.
 - Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.
 - Given a card's pull request is open, when its agent finishes, then the card goes in Review, not Done.
+- Given a card in Ship, when its agent starts, then it is in Doing with its branch on it (`start.test.ts`).
+- Given a shipped card in Doing, when gh says its branch's pull request is open, then it is in Review with the number and one line naming the pull request; merged, it is in Done with a second line; closed unmerged from Review, it is back in Doing (`pull-request-column.test.ts`, `follow.test.ts`).
+- Given a card moved to Done while its pull request is still open, when the app next checks, then it is back in Review.
+- Given gh is offline, when the app checks, then no card moves, nothing is written, and the log has one warning until a check goes through (`pull-request-sweep.test.ts`).
 - Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.
 - Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the branch, HEAD and working tree are as they were.
 - Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs, then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
