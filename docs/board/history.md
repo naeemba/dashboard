@@ -19,3 +19,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #261 — A card's column follows its pull request through gh, and the app writes the line naming it (board-decision-6)
 - 2026-11-09 #266 — A card shows its pull request's checks and review as one glyph (board-decision-7)
 - 2026-11-09 #254 — Every write to a git-tracked board lands on origin's main, and the checkout is brought up to it (board-decision-5)
+- 2026-11-09 #262 — A hook refuses an agent's hand edit of the board, and the app tells its sessions what to know; board-rule-2 becomes a decision (board-decision-7, board-decision-8)

@@ -1,0 +1,11 @@
+{
+  "id": "8768f826-7cfc-48b9-9805-a7b41ac23f2e",
+  "title": "Add the missing #258 to its workers history line",
+  "notes": "docs/workers/history.md:25, the #258 line has no pull request number, though the file's header asks for date, pull request, why. Cost: someone looking for why finished workers close themselves can't follow the line back to its PR. Issue: https://github.com/naeemba/dashboard/issues/269 Review: https://github.com/naeemba/dashboard/pull/267#discussion_r4514518235",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-09T15:31:59.502Z",
+  "updatedAt": "2026-11-09T15:31:59.502Z",
+  "column": "Backlog",
+  "order": 41
+}

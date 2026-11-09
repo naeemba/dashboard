@@ -10,6 +10,10 @@ logs one warning line and costs only that skill. A dev run (`pnpm start`) instal
 | `/create-task` | Files one card on the project's board, on its default branch | [board](../board/README.md#create-task) |
 | `/adopt-docs` | Moves a repository's docs into the `docs/<feature>/` pattern and opens one pull request | below |
 
+The same launch puts the board guard under `~/.claude/dashboard/` and adds its hook to
+`~/.claude/settings.json` when it is missing, touching nothing else there
+([board](../board/README.md#agents-and-the-board), board-decision-8).
+
 ## /adopt-docs
 
 Run inside any repository, `/adopt-docs` reads the code, the existing docs and the merged pull

@@ -4,6 +4,7 @@
   "notes": "On a card in Ship or Doing, one key removes its worktree, deletes the branch, and moves the card back to Todo, after a confirmation like delete. Refuses when the worktree has uncommitted changes, saying so; force needs a second confirmation. Open: whether a pane still running in that worktree blocks the discard or is killed first.",
   "priority": "medium",
   "parent": null,
-  "column": "Todo",
-  "order": 6
+  "updatedAt": "2026-11-09T15:13:01.023Z",
+  "column": "Cancelled",
+  "order": 4
 }

@@ -1,0 +1,11 @@
+{
+  "id": "2aaa7b90-7625-4007-93a5-c1489da50b02",
+  "title": "Audit 3: test that every IPC channel is <noun>:<verb>",
+  "notes": "A test over the channel table's handled() and listened() names (src/main/app/channels.ts) with one noun:verb pattern. app-rule-1.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:55.034Z",
+  "updatedAt": "2026-11-09T15:32:55.034Z",
+  "column": "Backlog",
+  "order": 43
+}

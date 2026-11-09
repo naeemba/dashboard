@@ -129,7 +129,7 @@ Every pane the app opens carries `DASHBOARD_BOARD`, the path to a command that e
     node "$DASHBOARD_BOARD" set 0f6a2c5e-... --branch fix-resize-race --pull-request 14
     node "$DASHBOARD_BOARD" comment 0f6a2c5e-... "what was found"
 
-`list` prints the column, priority and id of every card; the others take that id. Run it with no arguments for the whole usage. It is how an agent working a card moves its own card: into `Review` when the pull request is open, into `Done` on the branch before the merge, instead of editing JSON by hand.
+`list` prints the column, priority and id of every card; the others take that id. Run it with no arguments for the whole usage. It is the only way an agent changes the board: a hook refuses its hand edit of the files. A shipped card's column follows its pull request and the app moves it, so an agent working one moves nothing (docs/board).
 
 While a card is being edited, the input owns the keyboard: Ctrl+T, Ctrl+2, and every other global shortcut are dead until the edit ends. A title ends on Enter or Escape. A description ends on Escape only — Enter there is a newline, since a description is written as lines.
 

@@ -10,6 +10,8 @@ import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
+import { boardGuard } from './board-guard';
+import { readFileSync } from 'node:fs';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
 // file and a line of output out, and the exit code back. Every decision it could make is made there
@@ -89,6 +91,21 @@ function answer(result: CommandResult): number {
   return 0;
 }
 
+// `board guard`, a PreToolUse hook (board-guard.ts): the hook's input in, the refusal to print or ''.
+// It names the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
+// (`boardVariable` set) and this program's own path outside one.
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string): string {
+  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown };
+  const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
+  const refused = boardGuard(String(input.tool_name), input.tool_input, command);
+  return refused === undefined ? '' : JSON.stringify(refused);
+}
+
+function guard(): number {
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1]));
+  return 0;
+}
+
 // One door out for every failure: a line on stderr and exit 1, the same shape a refused command
 // already uses. The reads and the write are the paths that throw — a board that cannot be read, a
 // board that cannot be replaced — and without this those two are the only ones that answer an agent
@@ -96,6 +113,7 @@ function answer(result: CommandResult): number {
 // command/failure-line.ts, shared by every program the dashboard command runs.
 export async function runBoardProgram(commandArguments: readonly string[]): Promise<number> {
   try {
+    if (commandArguments[0] === 'guard') return guard();
     return await run(commandArguments);
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);

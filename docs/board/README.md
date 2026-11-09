@@ -255,6 +255,20 @@ where it is as before, and the app logs one
 warning per project (`board` kind) until a sync goes through; the command prints
 it on each run. A board git does not track, and the manager's, are untouched.
 
+## Agents and the board
+
+An agent changes the board only through the `board` command: a PreToolUse hook
+refuses its Edit or Write of a card file, and a shell redirect into one, and
+says which command to run instead. Every Claude the app starts carries the hook,
+and at each launch the installed app adds it to `~/.claude/settings.json` when
+it is not there, so a Claude in a terminal of your own gets it too; nothing
+else in that file is touched, and a file it cannot read as settings is left
+alone with a warning in the log (board-decision-8). The app's own sessions are
+told what to know about the board in their system prompt, not in a
+`CLAUDE.md`: the command, `board comment` for a finding, and that the app moves
+a shipped card and finds its pull request, so an agent does neither. A person
+editing the files in an editor is not stopped.
+
 ## Files
 
 Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
@@ -273,6 +287,9 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-sync-queue.ts` (the app's one sync per project), each beside its `.test.ts`
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
   `board-usage.ts`, `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
+- The guard: `board-guard.ts` (which tools and paths are refused), `board-guard-install.ts`
+  (the program and the entry under `~/.claude`), each beside its `.test.ts`; `board guard` in
+  `board-program.ts` is the hook's command
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
   (what the app writes under `~/.claude` at launch), each beside its `.test.ts`
@@ -351,3 +368,8 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given an installed `create-task.js` with mode 0644, when the app launches, then it is 0755 and runs as a command, its bytes not rewritten.
 - Given the remote's hook declines the push, when `create-task.js` runs, then it prints git's sentence and pushes once, not twice.
 - Given `--dry-run`, when `create-task.js` runs, then the remote's main is unchanged.
+- Given an agent in any pane the app opened, when it tries an Edit, Write or a `>` redirect into `.dashboard/board/cards/<id>.json`, then the call is refused with a message naming `node "$DASHBOARD_BOARD"`, and a `cat` or a `git checkout -- .dashboard/` of the same file goes through (`board-guard.test.ts`).
+- Given a `~/.claude/settings.json` linked into a dotfiles repo with hooks of its own, when the installed app launches, then one board guard entry is added to the file the link points at, the link, the mode and every other entry are as they were, and a second launch writes nothing (`board-guard-install.test.ts`).
+- Given a `~/.claude/settings.json` that links to a file not there yet, when the installed app launches, then it stays a link, nothing is written, and the log says what it links to (`board-guard-install.test.ts`).
+- Given an agent that opened its pull request and recorded nothing, when card.follow has moved its card into Review and the agent goes quiet, then the review starts on that pull request, and on that one rather than an earlier pull request's number left on its worktree's board (`review-flow.test.ts`).
+- Given a card re-shipped after its pull request closed unmerged, when its agent goes quiet before card.follow sees the new pull request, then no review starts on the old number its worktree's board came in with (`review-flow.test.ts`).
