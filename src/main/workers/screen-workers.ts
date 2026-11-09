@@ -199,10 +199,12 @@ export function screenWorkers(ports: ScreenPorts) {
       const worker = signal && byKey.get(key);
       if (!worker) return;
       if (signal === 'turn-over') {
+        const atWork = !worker.done;
         worker.done = true;
-        // A session that failed, a start the screen host refused among them, ran no Stop hook and took
-        // no prompt: main is told it stopped, or it waits on a report that never comes.
-        if (event.kind === 'ended' && event.error !== null) report(worker.id, 'done');
+        // A session that failed at work, a start the screen host refused among them, ran no Stop hook and
+        // took no prompt: main is told it stopped, or it waits on a report that never comes. A finished
+        // worker already reported, so the host dying under it says nothing more.
+        if (atWork && event.kind === 'ended' && event.error !== null) report(worker.id, 'done');
       } else if (signal !== 'started') report(worker.id, signal);
       else if (!worker.resume) {
         worker.resume = true;

@@ -84,6 +84,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given the screen host is not running (Windows, a machine restart, a socket that would not open), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
 - Given the screen host was killed (earlyoom, the OOM killer) while its workers were mid-turn, when a worker's pane starts its session again, then the sessions the dead host left running are killed first and the worker carries on in one session, never two (workers-decision-6).
 - Given a screen host that answers but will not take the app (another Dashboard holding it, or too slow to say what it kept), when a worker screen starts, then it is refused on the screen rather than run a second time in the app, main is told the worker stopped, and the next prompt tries again (workers-decision-6).
+- Given a worker screen that already sent main its report, when the screen host dies under it, then main is told nothing more about that worker.
 - Given a pane already running a worker screen, when pane.dispatch starts another screen there, then the first one's session is stopped before the new one starts.
 
 ## Open questions
