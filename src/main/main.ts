@@ -668,7 +668,7 @@ const project = projectActions({
   startMain: session.startedMain,
   isOpen: (slot) => projects[slot] !== undefined,
   panesOf: paneUsesIn,
-  close: closeProjectSlot,
+  close: closeProjectSlot, scopesOf: panes.scopesIn, stopScope, log: (draft) => logStore.log(draft),
   land: (paneId) => landOnPane(liveWindow(), paneId),
 });
 registerProjectChannels(table, project, {

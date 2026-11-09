@@ -23,6 +23,12 @@ export type PaneClosePorts = {
   stopScope(unit: string): Promise<void>;
 };
 
+// What a scope left running is called, wherever a stop of one fails: a pane closed, a project closed,
+// a shell started over.
+export function notStoppedText(unit: string, error: unknown): string {
+  return `${unit} was not stopped: ${failureText(error)}`;
+}
+
 export const paneClose = action<PaneClosePorts, { id: string }, { output: string }>('pane.close', {
   words: [],
   input: ({ id }) => (isFilledText(id) ? { id } : { refused: 'no pane was given' }),
@@ -40,7 +46,7 @@ export const paneClose = action<PaneClosePorts, { id: string }, { output: string
         await ports.stopScope(unit);
       } catch (error: unknown) {
         // The pane is gone either way; what it left running is said, not hidden.
-        return { output: `closed ${id}; ${unit} was not stopped: ${failureText(error)}` };
+        return { output: `closed ${id}; ${notStoppedText(unit, error)}` };
       }
     }
     return { output: `closed ${id}` };
