@@ -10,8 +10,8 @@ import { isPaused, type StopWaiting } from '../../shared/workers/worker-roster';
 // anything in either is a pause, and nobody is told until a later stop finds both empty, or until
 // PAUSE_CEILING_MS for a pause nothing ever wakes. Once per stop, and not at all for a stop the
 // worker's own report already covers. A notice due while main is mid-turn waits for that turn to end,
-// so a report the turn read drops it; one main reads only after the notice was queued takes it back
-// (workers-decision-1).
+// so a report the turn read drops it, or PAUSE_CEILING_MS for a turn that never ends; one main reads
+// only after the notice was queued takes it back (workers-decision-1).
 //
 // A hook that sends neither — an older Claude Code, or an older command — leaves only the grace
 // period: main is told once the worker has stayed out of `running` for all of it.
@@ -33,8 +33,8 @@ export type StopNoticePorts = {
   // for a report main reads only after it was queued.
   notice(id: string, paused: boolean): (() => void) | void;
   // Whether the main the worker's notice goes to is mid-turn. A notice due then is held until that
-  // turn ends: queued, main takes it the moment the turn ends, before the app has read whether the
-  // turn read the worker's report, and it can no longer be taken back.
+  // turn ends, or for the ceiling at most: queued, main takes it the moment the turn ends, before the
+  // app has read whether the turn read the worker's report, and it can no longer be taken back.
   midTurn(id: string): boolean;
 };
 
@@ -77,8 +77,9 @@ export function stopNotices(
   const pauseNoticed = new Set<string>();
   // How to take back the notice of the stop the worker is in now, until it works again.
   const takeBacks = new Map<string, () => void>();
-  // Due while the worker's main was mid-turn, each with whether it is the pause's notice.
-  const held = new Map<string, boolean>();
+  // Due while the worker's main was mid-turn, each with whether it is the pause's notice and the
+  // ceiling that tells it anyway: `idle` waits on main's background work too, which may never end.
+  const held = new Map<string, { paused: boolean; stop: () => void }>();
 
   function callOff(id: string): void {
     pending.get(id)?.();
@@ -90,6 +91,11 @@ export function stopNotices(
     takeBacks.delete(id);
   }
 
+  function release(id: string): void {
+    held.get(id)?.stop();
+    held.delete(id);
+  }
+
   function say(id: string, paused: boolean): void {
     const withdraw = ports.notice(id, paused);
     if (withdraw) takeBacks.set(id, withdraw);
@@ -97,12 +103,15 @@ export function stopNotices(
 
   function tell(id: string, ms: number, paused = false) {
     // A pause still held is not news once a later stop is the one to tell.
-    held.delete(id);
+    release(id);
     pending.set(id, wait(ms, () => {
       pending.delete(id);
       (paused ? pauseNoticed : noticed).add(id);
-      if (ports.midTurn(id)) held.set(id, paused);
-      else say(id, paused);
+      if (!ports.midTurn(id)) return say(id, paused);
+      held.set(id, { paused, stop: wait(ceilingMs, () => {
+        held.delete(id);
+        say(id, paused);
+      }) });
     }));
   }
 
@@ -112,7 +121,7 @@ export function stopNotices(
       // woke and worked in between: either way this one decides again.
       callOff(id);
       if (state !== 'done') {
-        held.delete(id);
+        release(id);
         noticed.delete(id);
         pauseNoticed.delete(id);
         stopped.delete(id);
@@ -135,22 +144,22 @@ export function stopNotices(
       // its notice is called off, or taken back if it was already queued.
       callOff(id);
       takeBack(id);
-      held.delete(id);
+      release(id);
       if (!stopped.has(id)) reports.add(id);
     },
     forget(id) {
       callOff(id);
       takeBack(id);
-      held.delete(id);
+      release(id);
       reports.delete(id);
       noticed.delete(id);
       pauseNoticed.delete(id);
       stopped.delete(id);
     },
     turnOver() {
-      for (const [id, paused] of held) {
+      for (const [id, { paused }] of held) {
         if (ports.midTurn(id)) continue;
-        held.delete(id);
+        release(id);
         say(id, paused);
       }
     },

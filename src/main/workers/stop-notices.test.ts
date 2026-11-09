@@ -244,6 +244,34 @@ describe('stopNotices', () => {
         notices.turnOver();
         expect(noticed).toEqual([]);
       });
+
+      it('tells only the stop when a held pause is followed by a stop in the same turn', () => {
+        const { notices, noticed, paused, busy, pass } = clock();
+        busy.add('2:1');
+        notices.state('2:1', 'done', { background: 1, scheduled: 0 });
+        pass(1000);
+        notices.state('2:1', 'done', nothing);
+        pass(10);
+        busy.delete('2:1');
+        notices.turnOver();
+        expect(noticed).toEqual(['2:1']);
+        expect(paused).toEqual([]);
+      });
+
+      // `idle` waits on main's background work too, which may run for as long as it likes.
+      it('tells a held notice anyway once it has waited the ceiling for a turn that never ends', () => {
+        const { notices, noticed, busy, pass } = clock();
+        busy.add('2:1');
+        notices.state('2:1', 'done', nothing);
+        pass(10);
+        pass(999);
+        expect(noticed).toEqual([]);
+        pass(1);
+        expect(noticed).toEqual(['2:1']);
+        busy.delete('2:1');
+        notices.turnOver();
+        expect(noticed).toEqual(['2:1']);
+      });
     });
   });
 });

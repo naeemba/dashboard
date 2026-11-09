@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project } from './session-requests-fixture';
-import { closedReport } from '../../shared/workers/done-report';
+import { closedReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 
 // What closeFinished does with what the session command heard; auto-release.test.ts holds every case
 // of the verdict itself.
@@ -80,6 +80,24 @@ describe('closeFinished', () => {
     await answer.closeFinished();
     expect(closed).toEqual(['2:1']);
     expect(told).toEqual([]);
+  });
+
+  // `idle` waits on main's background work too, which may never end.
+  it('releases a finished worker anyway once its main has been mid-turn for the ceiling', async () => {
+    const { ports, closed, finishedCards } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'fix the tests'] });
+    answer.mainTurn(2, true);
+    answer.notify('2:1', 'done', NOTHING_WAITING);
+    finishedCards.set('2:1', 'Done');
+    vi.advanceTimersByTime(PAUSE_CEILING_MS - 1);
+    answer.mainTurn(2, true);
+    await answer.closeFinished();
+    expect(closed).toEqual([]);
+    vi.advanceTimersByTime(1);
+    await answer.closeFinished();
+    expect(closed).toEqual(['2:1']);
   });
 
   it('tells main nothing of a worker it read a report from', async () => {

@@ -109,7 +109,11 @@ after the very turn that read the report. A worker screen runs without the varia
 its turns.
 
 Watch for: `idle` comes only once main has nothing left to do, so a main that goes from one queued
-prompt straight into the next holds the notice through all of them. Main is told late, never twice. A
+prompt straight into the next holds the notice through all of them. Main is told late, never twice.
+`idle` also waits on main's background work: the CLI holds a turn's result back while a background
+agent or a Monitor runs, so a main whose reply has ended can stay mid-turn for as long as that work
+does, or for good. A notice is held for `PAUSE_CEILING_MS` at most and then told anyway, and a main
+mid-turn that long no longer holds the close sweep off: late, never silent. A
 session state the CLI stops sending leaves nothing held: the notice is queued as before and taken
 back only if main has not yet taken it.
 

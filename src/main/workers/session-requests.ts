@@ -8,7 +8,7 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { closedReport, doneReport } from '../../shared/workers/done-report';
+import { closedReport, doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import type { PaneKind } from './pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
@@ -149,10 +149,12 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
   // to something else by then.
   const mainOf = (id: string): number => dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
-  // The mains mid-turn now, by slot.
-  const busyMains = new Set<number>();
+  // The mains mid-turn now, by slot, with when the turn began. One mid-turn past PAUSE_CEILING_MS
+  // counts as idle: `idle` waits on main's background work too, which may never end.
+  const busyMains = new Map<number, number>();
+  const midTurn = (slot: number) => Date.now() - (busyMains.get(slot) ?? -Infinity) < PAUSE_CEILING_MS;
   const notices = stopNotices({
-    midTurn: (id) => busyMains.has(mainOf(id)),
+    midTurn: (id) => midTurn(mainOf(id)),
     notice(id, paused) {
       if (!mainsWorker(id)) return;
       const slot = mainOf(id);
@@ -284,7 +286,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   async function closeFinished(): Promise<void> {
     const closeAfterMs = ports.closeAfterMs();
     for (const id of openPaneIds().filter(mainsWorker)) {
-      if (busyMains.has(mainOf(id))) continue;
+      if (midTurn(mainOf(id))) continue;
       const seen = look(id);
       const verdict = releaseVerdict(seen, closeAfterMs);
       if (!verdict.release) continue;
@@ -388,7 +390,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       quietFrom(id, true);
     },
     mainTurn(slot: number, midTurn: boolean) {
-      if (midTurn) return void busyMains.add(slot);
+      if (midTurn) return void busyMains.set(slot, busyMains.get(slot) ?? Date.now());
       busyMains.delete(slot);
       notices.turnOver();
     },
