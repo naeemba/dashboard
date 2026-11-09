@@ -67,6 +67,15 @@ describe('screenWorkers', () => {
     expect(screens.working('2:2')).toBeUndefined();
   });
 
+  it('stops the worker already in the pane before it starts another there', () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    screens.start('2:1', '/work/api', '/work/api', { ...START, session: 'next' }, null, '/work/api');
+    expect(said.slice(2)).toEqual([`stop ${screenKey('2:1')}`, 'changed', `tell ${screenKey('2:1')} fix it`]);
+    expect(screens.paneRunning(SESSION)).toBeUndefined();
+    expect(screens.paneRunning('next')).toBe('2:1');
+  });
+
   it('takes no hook from a worker the pane has let go of, even once another worker runs at its number', async () => {
     const { screens, said } = workers();
     screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');

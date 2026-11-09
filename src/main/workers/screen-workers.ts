@@ -154,9 +154,11 @@ export function screenWorkers(ports: ScreenPorts) {
   return {
     host: ports.host,
     // A worker screen: main's, a card's agent, or one of yours (New Claude, `dispatcherPath` null and
-    // no prompt). Only pane.dispatch calls it (workers-decision-8).
+    // no prompt). Only pane.dispatch calls it (workers-decision-8). One already in the pane is stopped
+    // first: left, its session would take the new worker's prompt, and its own turn would go on.
     start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string | null): void {
       const { index } = paneFromId(id);
+      drop(id);
       add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: false }, false);
       save();
       // Drawn first, so the screen is there for the prompt to land on.
