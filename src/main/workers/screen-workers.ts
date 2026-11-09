@@ -173,8 +173,11 @@ export function screenWorkers(ports: ScreenPorts) {
     },
     has: (id: string): boolean => live.has(id),
     // `pane send` to a worker screen: the text as its next prompt. False for a pane that is not one.
+    // A sent prompt puts the worker back at work, so a session that then fails to start is reported.
     send(id: string, text: string): boolean {
-      if (!live.has(id)) return false;
+      const worker = live.get(id);
+      if (!worker) return false;
+      worker.done = false;
       ports.tell(screenKey(id), text);
       return true;
     },
