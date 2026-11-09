@@ -1,0 +1,11 @@
+{
+  "id": "7ed93ef1-97fd-425a-9227-b95413bd07a8",
+  "title": "Opening a shell or monitor task on the Claude screen shows its output",
+  "notes": "In the Claude screen's tasks list (Alt+A) or its strip, opening a background task that is not an agent (a shell command run in the background, a Monitor) refuses with '<name> has no conversation to show: only an agent has one.' (chat-agents.ts agentConversation; seen by the user on 'eval batch progress lines', 2026-11-09). Claude Code's terminal shows such a task's output instead.\n\nChange: opening a shell or monitor task shows its output in the drawer's viewer (or the same popup the agents view uses), read from the task's output file the SDK names (find it in the task events: output file path / task_notification), following it live while the task runs, with the last lines in view; Escape closes. An agent still opens its conversation; a workflow still opens #237's panel. If a task's output cannot be found (finished before the screen opened, file gone), say so in one sentence that names the task.\n\nDecision (what opening a task of each kind does) stays in chat-agents.ts or a module beside it, with tests for each kind (workflow-rule-2). Reading the file is main's (a channel or an action if it changes state; reading does not). Docs: chat README, history; help blurb if the Alt+A line names what Enter does (keys-rule-2).",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-09T10:05:12.348Z",
+  "updatedAt": "2026-11-09T10:05:12.348Z",
+  "column": "Doing",
+  "order": 0
+}

@@ -1,0 +1,11 @@
+{
+  "id": "082e210b-b69d-4cfd-9198-33ed3943f918",
+  "title": "Notices and errors on the status bar go away by themselves, are logged, and notify",
+  "notes": "A notice on the status bar (statusError.notice, src/renderer/errors/status-error.ts) stays until its owner clears it. Many owners never do: a refusal from the Claude screen (e.g. '<task> has no conversation to show', chat-view.ts onNotice) stays on screen until the app restarts (user, 2026-11-09). Notices are also not logged (status-error.ts: 'notice ... logs nothing'), so a refusal seen once is gone from the record.\n\nChange:\n- A notice fades after a while (e.g. 8 s, longer for a longer message), or sooner on Escape or a click on it; an error (show) stays longer (e.g. 20 s) and is dismissible the same way. An owner that clears its message still can; a newer message replaces an older one as now. Keyboard first: Escape dismisses without leaving the view (conventions-rule-1); check it does not steal Escape from a dialog or a pane.\n- Every notice and error goes to the log (level info for a notice, error for an error) with its owner as the entry's source/action, through log:write (#248 fields), at most once a minute per sentence (log-ipc already throttles).\n- An error while the window is not focused raises a desktop notification (Electron Notification), at most one per sentence per minute; a click focuses the window. A settings row turns these off.\n\nDecisions (how long a message stays, when to notify) in small modules with tests (workflow-rule-2). Docs: errors README and decisions, history; help if Escape gains a meaning (keys-rule-2).",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-09T10:05:12.444Z",
+  "updatedAt": "2026-11-09T10:05:12.444Z",
+  "column": "Todo",
+  "order": 12
+}
