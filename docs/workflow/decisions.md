@@ -139,3 +139,45 @@ is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` t
 - An `EXIT` trap prints `Stopped:` for any failure `stop` did not explain, with a `next` line the script
   moves along as it goes (nothing dispatched; the run may still be going or the id is wrong; the run
   finished but its release could not be read; the release is out, resume to install), rather than an `|| stop` on every line that can fail.
+
+## workflow-decision-7: The running app is kept by a hook that rides the board guard
+
+Agreed on 2026-11-09, card 9 of the CLAUDE.md audit (`claude-md-audit.md`). workflow-rule-1 was a line an
+agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
+
+- a `pkill`, `killall`, or `kill` fed by `pgrep` or `pidof`, that would hit one of the app's processes:
+  each pattern is matched against `/proc` the way the command would match it (`-f` against the command
+  line, otherwise the process's name), and a process is the app's when its command line is out of the
+  installed build (`~/.local/opt/dashboard/`, `Dashboard.app/`, which covers its pane host, screen host
+  and Claude), is a pane or screen host anywhere, or is electron out of a checkout named `dashboard*`.
+  So `killall node` is refused while the pane host runs and `pkill -f vitest` goes through. On a mac,
+  with no `/proc`, the pattern is refused when it names Dashboard, electron, node or claude;
+- a `kill` of a literal pid or process group (`-<pid>`) that is the app's, and a `-1` in a pid's place
+  (`kill -9 -1`; `kill -1 <pid>` is a SIGHUP and is judged by its pid);
+- `systemctl stop`, `kill` or `restart` of `agents.slice` or `panes.slice`;
+- `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
+- a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, or `find` with
+  `-delete` or `-exec`, naming the installed build, or a `>` or `tee` into it.
+
+Each verb counts only at the start of a simple command (behind a `(` or `{`, `sudo` with its flags,
+`command`, `exec`, `nohup`, `nice` or `timeout <duration>` with their flags, `env` with its assignments, or a path), so a
+commit message, a PR body or a grep that names one goes through. Commands split at `;`, `&`, `|` and
+newlines outside quotes only, so `pkill -f "vite|node"` is judged by its whole pattern; a `\` escape and
+a `#` comment open no quote, so `# it's stuck` on one line does not hide the `pkill` on the next; the quoted
+body of `sh -c` or `bash -c` is judged as a command line of its own.
+
+`scripts/rebuild.sh`, `scripts/release.sh`, `pnpm run package` and anything into `out/` or `.vite/` go
+through: the hook reads the agent's command, not what a script runs, and the scripts swap a build in beside
+the running one without stopping it. `no-running-app.mjs` still stops a package while an app runs out of
+the checkout. Reading the installed build (`ls`, `node "$DASHBOARD_COMMAND"`) goes through.
+
+- **The same program and doors as the board guard** (board-decision-8): `board guard` asks the board's
+  question and then this one (`src/main/workflow/running-app-guard.ts`), so every door that already runs
+  `node "$HOME/.claude/dashboard/board.js" guard` refuses both, and the install adds nothing new to
+  `~/.claude/settings.json`. A second command would have been a second entry in every user's settings and
+  a second process per Bash call.
+- **It reads the command's text**, as the board guard does. A script of your own, a command built at run
+  time, a `python -c` or an `xargs`/`find -exec` that runs `pkill` still gets through, a heredoc line
+  that starts with one of the verbs is refused, and a lone `'` in a heredoc body (`Don't`) opens a quote
+  that hides every command after it; the hook is a guard rail, not a sandbox.
+- **The refusal says what to do instead**: say the installed app needs a rebuild and restart, and stop.

@@ -293,7 +293,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-usage.ts`, `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
 - The guard: `board-guard.ts` (which tools and paths are refused), `board-guard-install.ts`
   (the program and the entry under `~/.claude`), each beside its `.test.ts`; `board guard` in
-  `board-program.ts` is the hook's command
+  `board-program.ts` is the hook's command, and asks the running-app guard too (workflow-decision-7);
+  `hook-answer.ts` is what the two guards share
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
   (what the app writes under `~/.claude` at launch), each beside its `.test.ts`
