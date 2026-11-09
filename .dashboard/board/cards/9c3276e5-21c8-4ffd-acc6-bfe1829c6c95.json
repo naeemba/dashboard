@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:55.654Z",
-  "updatedAt": "2026-11-09T16:22:49.471Z",
+  "updatedAt": "2026-11-09T16:32:04.981Z",
   "branch": "work-board-card-9c3276e5-21c8-4ffd-acc6-bfe",
   "pullRequest": 280,
-  "column": "Review",
-  "order": 3
+  "comments": [
+    {
+      "at": "2026-11-09T16:32:04.981Z",
+      "body": "Shipped in #280: key-modifiers.test.ts parses every renderer keydown listener, onkeydown and viewer keys option with the TypeScript parser and fails one that reads the key before isModified/isBareCharacter; keys-rule-1's exceptions (search box Tab, board filter, notes, drawer) are a named list, armed settings and the manager list pass as written. data-viewer and status-error now guard first. Ready to merge; the CLAUDE.md line stays for Audit 13."
+    }
+  ],
+  "column": "Done",
+  "order": 218
 }
