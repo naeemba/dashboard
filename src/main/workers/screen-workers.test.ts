@@ -100,6 +100,14 @@ describe('screenWorkers', () => {
     expect(said.at(-1)).toBe('2:1 running');
   });
 
+  it('tells main a worker whose session failed, a refused start among them, has stopped', () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    screens.observe(screenKey('2:1'), { kind: 'ended', error: 'The screen host is running for another Dashboard' });
+    expect(screens.working('2:1')).toBe(false);
+    expect(said.at(-1)).toBe('2:1 done');
+  });
+
   it('marks a question as blocked, and resumes the conversation once the session has started it', () => {
     const { screens, said } = workers();
     screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');

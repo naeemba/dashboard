@@ -55,7 +55,8 @@ export type ScreenPorts = {
 // What a screen event says about its worker: a question waiting on you, the question gone, the
 // session's conversation written, which is what a later start resumes rather than starts fresh, or its
 // turn over. The Stop hook does not run for a turn you interrupt or a session that dies, and the SDK's
-// result and the session's end come either way; they end the turn without telling main anything.
+// result and the session's end come either way; they end the turn without telling main anything,
+// except an end with an error (observe).
 export function screenSignal(event: ChatEvent): WorkerState | 'started' | 'turn-over' | null {
   if (event.kind === 'ask') return 'blocked';
   if (event.kind === 'ask-gone') return 'running';
@@ -197,8 +198,12 @@ export function screenWorkers(ports: ScreenPorts) {
       const signal = screenSignal(event);
       const worker = signal && byKey.get(key);
       if (!worker) return;
-      if (signal === 'turn-over') worker.done = true;
-      else if (signal !== 'started') report(worker.id, signal);
+      if (signal === 'turn-over') {
+        worker.done = true;
+        // A session that failed, a start the screen host refused among them, ran no Stop hook and took
+        // no prompt: main is told it stopped, or it waits on a report that never comes.
+        if (event.kind === 'ended' && event.error !== null) report(worker.id, 'done');
+      } else if (signal !== 'started') report(worker.id, signal);
       else if (!worker.resume) {
         worker.resume = true;
         worker.saved.started = true;
