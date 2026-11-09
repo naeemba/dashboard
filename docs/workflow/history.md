@@ -12,4 +12,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-07 #231 — One command to cut a release: scripts/release.sh and /release, with a What's new list from the board (workflow-decision-5)
 - 2026-11-08 #238 — release.sh polls the run and retries GitHub reads, every failure says Stopped:, and --resume accepts the release commit (workflow-decision-6)
 - 2026-11-08 #244 — Tests run in a temporary folder of their own and fail on leftovers, after their folders filled /tmp
-- 2026-11-09 — CI fails a pull request that moves package.json version (workflow-rule-3)
+- 2026-11-09 #277 — CI fails a pull request that moves package.json version (workflow-rule-3)
