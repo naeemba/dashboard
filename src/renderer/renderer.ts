@@ -35,6 +35,7 @@ import { terminalStatus, type StatusPage } from './app/status';
 import type { WorktreeList, Project, Session, WorktreeEntry } from '../shared/app/bridge';
 import { createPageSync } from './app/page-sync';
 import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
+import type { MemorySnapshot } from '../shared/processes/scope-memory';
 import { bindingName, defaultSettings, type Settings } from '../shared/settings/settings';
 import { openSettings } from './settings/settings-view';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './app/overlay';
@@ -158,6 +159,9 @@ function applyUsage(next: UsageSnapshot): void {
   usage = next;
   renderStatus(true);
 }
+// What each pane's scopes hold, pushed by main's memory sweep every few seconds on Linux; drawn the same way.
+let memory: MemorySnapshot = {};
+function applyMemory(next: MemorySnapshot): void { memory = next; renderStatus(true); }
 
 function applyWorktrees(list: WorktreeList): void {
   worktrees = list.entries;
@@ -192,6 +196,7 @@ function statusPage(page: Page): StatusPage {
     focusedName: paneName(focusedPane(page) ?? {}),
     editorName: paneName(page.editor ?? {}),
     focusedTokens: usage.panes[terminalId(page.slot, page.focused)] ?? 0,
+    focusedMemory: memory[terminalId(page.slot, page.focused)],
   };
 }
 
@@ -239,7 +244,7 @@ function currentManagerRows(): ManagerRow[] {
       tail: () => paneTail(pane.terminal),
       lastPrinted: () => paneLastLine(pane.terminal),
     }))],
-  })), usage, worktrees);
+  })), usage, worktrees, memory);
 }
 
 // The manager page is pushed before the first call, so there is always a page to draw.
@@ -890,6 +895,7 @@ async function start(): Promise<void> {
   // logs on it answers with nothing and every row simply has no number against it.
   void bridge.readUsage().then(applyUsage, () => undefined);
   bridge.onUsageChange(applyUsage);
+  void bridge.readMemory().then(applyMemory, () => undefined); bridge.onMemoryChange(applyMemory);
   const loaded = await bridge.getSettings();
   settings = loaded.settings;
   settingsLoaded = true;

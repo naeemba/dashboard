@@ -67,6 +67,13 @@ export function retargeted(scope: ScopedCommand, file: string, args: readonly st
   return { file: scope.file, args: [...scope.args.slice(0, scope.args.indexOf('--') + 1), file, ...args], unit: scope.unit };
 }
 
+// The slice a unit this file named runs under, read back off its prefix; null for a name this file
+// never hands out. The memory readout reads the scope's cgroup files under it.
+export function sliceOf(unit: string): string | null {
+  const kind = (Object.keys(PREFIXES) as ScopeKind[]).find((each) => unit.startsWith(`${PREFIXES[each]}-`) && unit.endsWith('.scope'));
+  return kind === undefined ? null : SLICES[kind];
+}
+
 const SLUG_LIMIT = 40;
 
 // The id as a unit name can carry it: slug's letters, digits and dashes, cut to SLUG_LIMIT.

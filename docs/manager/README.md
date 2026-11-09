@@ -55,6 +55,14 @@ open project up — the three windows, the week as one bar a day with its letter
 under it, and how many worktrees are out, how many of those hold uncommitted
 work, and how many git could not answer for.
 
+On Linux each pane also carries what its systemd scopes hold, in its Memory
+column (`2.1 GB`, spelled as the worktree Size column is), read every five
+seconds: a worker screen's hidden shell and its session added up, main's session
+on main's row. Near an agent's 6G MemoryHigh it turns yellow and names the cap
+(`5.1 GB of 6.0 GB`). A pane with no scope recorded (a mac, Windows, a pane host
+from before scopes) shows nothing. The status bar ends on the same figure for
+the focused pane. docs/processes says where it is read from.
+
 Beside each project's name is what its board holds, one pill per column, leaving
 Done out. Under it, open or shut, is every worktree git knows of for that
 project — the ones made for its cards first, then any made elsewhere, by an

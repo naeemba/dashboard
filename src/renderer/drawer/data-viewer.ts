@@ -103,7 +103,8 @@ export function dataOverlay(
         event.preventDefault();
         return extra.run();
       }
-      const action = dataKey(event.key, isModified(event), hasFolds);
+      if (isModified(event)) return;
+      const action = dataKey(event.key, hasFolds);
       if (action === 'ignore') return;
       event.preventDefault();
       step(action);

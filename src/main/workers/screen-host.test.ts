@@ -77,9 +77,24 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const sdk = fakeSdk();
     const app = screenHost({ socket: await host(sdk.start), launch: () => undefined });
     const scope = { file: 'systemd-run', args: ['--user', '--scope', '--unit=agent-shop-3-k4f2.scope', '--', '/bin/claude'], unit: 'agent-shop-3-k4f2.scope' };
-    await app.query(KEY, { ...appSession([]), scope });
+    expect((await app.query(KEY, { ...appSession([]), scope }))?.unit).toBe('agent-shop-3-k4f2.scope');
     await settle();
     expect(sdk.sessions[0].scope).toEqual(scope);
+  });
+
+  it('answers the unit a session it kept started in, not the one the next app asks for', async () => {
+    const sdk = fakeSdk();
+    const socketPath = await host(sdk.start);
+    const scope = (unit: string) => ({ file: 'systemd-run', args: [`--unit=${unit}`, '--', '/bin/claude'], unit });
+    await screenHost({ socket: socketPath, launch: () => undefined }).query(KEY, { ...appSession([]), scope: scope('agent-shop-3-k4f2.scope') });
+    await settle();
+    accepted[0].destroy();
+    await settle();
+    const second = screenHost({ socket: socketPath, launch: () => undefined });
+    await second.ready;
+    expect(second.kept(KEY)?.unit).toBe('agent-shop-3-k4f2.scope');
+    expect((await second.query(KEY, { ...appSession([]), scope: scope('agent-shop-3-zz99.scope') }))?.unit).toBe('agent-shop-3-k4f2.scope');
+    expect(sdk.sessions).toHaveLength(1);
   });
 
   it('keeps a turn going while no app is connected, and hands the next app what it missed', async () => {
@@ -88,7 +103,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const first = screenHost({ socket: socketPath, launch: () => undefined });
     const heardFirst: string[] = [];
     const before = appSession(heardFirst);
-    const query = await first.query(KEY, before);
+    const query = (await first.query(KEY, before))?.query;
     expect(query).not.toBeNull();
     before.prompt.push({ type: 'user', message: { role: 'user', content: 'fix it' }, parent_tool_use_id: null });
     await settle();
@@ -106,9 +121,9 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
 
     const second = screenHost({ socket: socketPath, launch: () => undefined });
     await second.ready;
-    expect(second.kept(KEY)).toEqual({ key: KEY, busy: true });
+    expect(second.kept(KEY)).toEqual({ key: KEY, busy: true, unit: null });
     const heard: string[] = [];
-    const after = await second.query(KEY, appSession(heard));
+    const after = (await second.query(KEY, appSession(heard)))?.query;
     await settle();
     expect(sdk.sessions).toHaveLength(1);
     expect(heard).toEqual(['ask Bash', 'hook {"hook_event_name":"Stop"}']);
@@ -167,9 +182,9 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
 
     const second = screenHost({ socket: socketPath, launch: () => undefined });
     await second.ready;
-    expect(second.kept(KEY)).toEqual({ key: KEY, busy: false });
+    expect(second.kept(KEY)).toEqual({ key: KEY, busy: false, unit: null });
     const heard: string[] = [];
-    const after = await second.query(KEY, appSession(heard));
+    const after = (await second.query(KEY, appSession(heard)))?.query;
     await settle();
     expect(heard).toEqual(['hook {"hook_event_name":"PostToolUse"}', 'hook {"hook_event_name":"Stop","last_assistant_message":"done"}']);
     expect((await after?.[Symbol.asyncIterator]().next())?.value).toEqual({ type: 'result', subtype: 'error_during_execution' });
@@ -179,7 +194,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     let launched = 0;
     const socketPath = await host(fakeSdk().start);
     const app = screenHost({ socket: socketPath, launch: () => { launched += 1; }, connectTries: 0 });
-    const query = await app.query(KEY, appSession([]));
+    const query = (await app.query(KEY, appSession([])))?.query;
     await settle();
     listener?.close();
     accepted[0].destroy();
@@ -192,7 +207,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const socketPath = hostSocket();
     let launched = 0;
     const app = screenHost({ socket: socketPath, launch: () => { launched += 1; void listen(socketPath, fakeSdk().start); } });
-    const query = await app.query(KEY, appSession([]));
+    const query = (await app.query(KEY, appSession([])))?.query;
     expect(launched).toBe(1);
     listener?.close();
     accepted[0].destroy();
@@ -220,11 +235,11 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);
     const app = screenHost({ socket: socketPath, launch: () => undefined });
-    const old = await app.query(KEY, appSession([]));
+    const old = (await app.query(KEY, appSession([])))?.query;
     await settle();
     const oldMessages = old?.[Symbol.asyncIterator]();
     old?.close();
-    const fresh = await app.query(KEY, appSession([]));
+    const fresh = (await app.query(KEY, appSession([])))?.query;
     expect((await oldMessages?.next())?.done).toBe(true);
     await settle();
     expect(sdk.sessions).toHaveLength(2);

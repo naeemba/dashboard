@@ -9,7 +9,7 @@ const NOW = Date.parse('2026-10-01T12:00:00Z');
 const minutesAgo = (minutes: number) => NOW - minutes * 60_000;
 
 const pane = (index: number, state: PaneSummary['state'], lastPrintedAt: number): PaneSummary => ({
-  index, name: `terminal ${index + 1}`, state, lastPrintedAt, tokens: 0, tail: () => [], lastPrinted: () => '',
+  index, name: `terminal ${index + 1}`, state, lastPrintedAt, tokens: 0, memory: undefined, tail: () => [], lastPrinted: () => '',
 });
 
 const card = (id: string, updatedAt?: string, pullRequest?: number): Card => ({
