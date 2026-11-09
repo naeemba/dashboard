@@ -1,9 +1,11 @@
 import { closeRefusal, closingPanes, type PaneName } from '../../../shared/panes/close-refusal';
 import type { ProjectClose } from '../../../shared/app/bridge';
+import type { LogDraft } from '../../../shared/app/log-entry';
 import { isRecord } from '../../../shared/app/is-record';
 import type { PaneUse } from '../../../shared/panes/pane-reading';
 import { paneLabel } from '../../../shared/panes/terminals';
 import { action } from '../action';
+import { notStoppedText } from '../pane/close';
 import { isFilledText, isSlot } from '../pane/pane-input';
 
 // A project closed: by the close key, which asks this once before its question and again with the
@@ -19,8 +21,14 @@ export type ProjectClosePorts = {
   isOpen(slot: number): boolean;
   // The project's terminals as main reads them, editor left out: it runs nvim the whole time it is open.
   panesOf(slot: number): PaneUse[];
+  // The systemd scope of each of its panes' shells, the editor's included: those started unscoped have none.
+  scopesOf(slot: number): string[];
   // Shells, editor, main's session and page gone, and every record naming one of its panes let go.
   close(slot: number): void;
+  // pane.close's stop: every process left in the scope ended. A scope already gone is not a failure.
+  stopScope(unit: string): Promise<void>;
+  // A scope left running is a warning here too: the close key reads only a refusal, never the output.
+  log(draft: LogDraft): void;
 };
 
 function read(raw: Record<string, unknown>): ProjectCloseInput | null {
@@ -46,7 +54,14 @@ export const projectClose = action<ProjectClosePorts, ProjectCloseInput, { outpu
     const refusal = closeRefusal(name, closing);
     if (refusal !== '') return { refused: refusal };
     if (onlyCheck) return { output: `${name} may close` };
+    // Read before the close, which forgets them; stopped after it, as pane.close stops one, so what a
+    // shell detached (a dev server) goes with the project. The project is closed either way; a scope
+    // left running is said in the answer and the log, not hidden.
+    const units = ports.scopesOf(slot);
     ports.close(slot);
-    return { output: `closed ${name}` };
+    const stops = await Promise.allSettled(units.map((unit) => ports.stopScope(unit)));
+    const notStopped = stops.flatMap((stop, at) => (stop.status === 'rejected' ? [notStoppedText(units[at], stop.reason)] : []));
+    for (const message of notStopped) ports.log({ level: 'warn', kind: 'project', action: 'project.close', message, context: { slot } });
+    return { output: [`closed ${name}`, ...notStopped].join('; ') };
   },
 });

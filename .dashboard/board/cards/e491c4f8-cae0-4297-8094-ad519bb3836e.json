@@ -1,0 +1,11 @@
+{
+  "id": "e491c4f8-cae0-4297-8094-ad519bb3836e",
+  "title": "Stop the old scope when a shell restarts (pty:restart) or a kept shell is not adopted on restore",
+  "notes": "Left by #257 (docs/processes open questions). (1) A shell started again through pty:restart gets a new scope and the old one keeps running. (2) A kept shell that pane.restore does not adopt is killed but its scope is never stopped. Both leave a dev server or watcher running. Route both through the same stopScope port pane.close and project.close use, through the pane actions (actions-rule-1); decision tests; hand check on throwaway scopes only. Docs: docs/processes, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T13:06:33.171Z",
+  "updatedAt": "2026-11-09T13:06:50.191Z",
+  "column": "Doing",
+  "order": 2
+}

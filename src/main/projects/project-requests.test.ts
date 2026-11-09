@@ -23,7 +23,7 @@ function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], m
     startMain: vi.fn(async (slot: number) => `main-${slot}`),
     isOpen: (slot: number) => Object.values(open).includes(slot),
     panesOf: () => panes,
-    close: vi.fn(),
+    close: vi.fn(), scopesOf: () => [], stopScope: async () => undefined, log: vi.fn(),
     land: vi.fn(),
   } satisfies ProjectActionsMain;
   const otherwise = vi.fn(async () => ({ ok: true, output: 'session' }));

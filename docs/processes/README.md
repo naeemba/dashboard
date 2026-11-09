@@ -67,6 +67,17 @@ failure still closes the pane, and the close's answer names the unit left
 running. A pane with no scope recorded (unscoped, a mac, Windows) stops
 nothing.
 
+Two other ways a pane's shell goes stop its scope the same way. Closing a
+project (project.close) reads the scope of every pane it has, the editor's
+included, drops the panes and then stops each scope; a unit it could not stop
+is named after `closed <project>` and is a warning in the log, since the close
+key shows only a refusal. A dispatch that starts a pane's shell over
+in place (a terminal agent into a pane that had a shell, or a screen whose
+shell had to move folder) stops the old shell's scope once the new shell has
+its own; each start is named afresh, so the stop never reaches the new one. A
+failure there is a warning in the log, since the dispatch has already
+answered.
+
 At launch the app checks once that `systemd-run` is installed and that
 `systemctl --user is-system-running` answers that the manager is up (`degraded`
 counts: most desktops are). Until it has answered, and for the whole run if it
@@ -91,7 +102,9 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - The edge: `launch-scopes.ts` (the probes, the slice files, daemon-reload,
   stopping a pane's scope), `spawn-scoped.ts` (the one spawn a task and the
   SDK's Claude start through)
-- The stop: `src/main/actions/pane/close.ts` (which unit, and when)
+- The stop: `src/main/actions/pane/close.ts` (which unit, and when),
+  `src/main/actions/project/close.ts` (every pane's of a closed project),
+  `src/main/actions/pane/pane-actions.ts` (`shellIn`, a shell started over)
 - The SDK's Claude: `src/main/chat/claude-process.ts` (which binary, and its
   spawn routed through the scope)
 - The slices: `install-slices.ts`, the action and both unit files' text
@@ -122,6 +135,11 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   then the pane knows its scope's name again.
 - Given an agent pane that ran `sleep 1000 &` and disowned it, when the pane is
   released or closed, then the sleep is gone and its scope is inactive.
+- Given a project whose pane ran `sleep 1000 &` and disowned it, when the
+  project closes, then the sleep is gone and the pane's scope is inactive.
+- Given a shell pane that ran `sleep 1000 &` and disowned it, when an agent is
+  dispatched into it as a terminal, then the sleep is gone, the old `pane-*`
+  scope is inactive, and the agent runs in a new `agent-*` scope.
 - Given a pane whose scope already ended, when it closes, then it closes as any
   pane does and nothing is reported.
 
@@ -134,11 +152,11 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   is connected and none of its sessions runs.
 - A session's and a task's scope is not stopped by the app: a task's ends with
   its command, a session's with its CLI, and what either detached outlives it.
-- Closing a project drops its panes without pane.close, so their scopes are
-  not stopped and what their shells detached outlives the project's page.
-- A pane whose shell is replaced in place (a dispatch into a pane that already
-  had a shell) starts a new scope; the old one is not stopped, so what that
-  shell detached keeps running until it ends on its own.
+- A pane started again after its shell exited (`pty:restart`) gets a new
+  scope; what the dead shell detached stays in the old one until it ends.
+- A shell the pane host kept that pane.restore does not take back is killed,
+  but its scope is not stopped: what it detached runs until it ends or you log
+  out.
 - Only this run's names are checked before one is handed out. A name a previous
   run's pane host still holds collides about once in 36^4 starts of the same
   pane; that pane's `systemd-run` then exits 1 ("already loaded"), and Enter
