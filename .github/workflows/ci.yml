@@ -14,6 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A pull request checks out its merge commit; its first parent, the base, is for the version check.
+          fetch-depth: 2
+      # workflow-rule-3, before the install; the runner's own node is enough.
+      - name: Refuse a moved version
+        if: github.event_name == 'pull_request'
+        run: node scripts/version-unchanged.mjs "$(git show HEAD^1:package.json)"
       # Version from packageManager; before setup-node, whose pnpm cache needs it.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
