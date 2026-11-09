@@ -11,6 +11,8 @@ export type LogOptions = {
   bridge: DashboardBridge;
   // The status bar's error span, under this section's own owner.
   onError(message: string): void;
+  // The same span for what is not a failure: that the entry is on the clipboard.
+  onNotice(message: string): void;
   // What a key is bound to now, so the popup hears the copy key in force.
   binding(actionName: string): string;
 };
@@ -42,6 +44,8 @@ export function createLogView(options: LogOptions): LogView {
   list.className = 'command-list log-list';
   const empty = document.createElement('p');
   element.append(input, file, list, empty);
+  // Cloned into every row; the list's one listener answers it.
+  const copyButton = iconOnlyButton('log-copy', 'copy', 'Copy as JSON', () => {});
 
   // Oldest first, as the file holds them; drawn reversed.
   let entries: LogEntry[] = [];
@@ -75,24 +79,8 @@ export function createLogView(options: LogOptions): LogView {
       const text = document.createElement('span');
       text.className = 'log-text';
       text.textContent = `${new Date(entry.time).toLocaleString()}  ${entry.level}  ${entry.kind}${project}  ${entry.message}`;
-      // A click is the selection moving there, then what Enter does there, or on the button what the
-      // copy key does. The keyboard goes back to the box, which a click on the section itself would
-      // otherwise have taken it from; the popup takes it from there.
-      const select = (): void => {
-        selected = index;
-        draw(false);
-        input.focus();
-      };
-      const copy = iconOnlyButton('log-copy', 'copy', 'Copy as JSON', () => {
-        select();
-        copySelected();
-      });
-      row.append(text, copy);
-      row.addEventListener('click', (event) => {
-        if (event.target instanceof Node && copy.contains(event.target)) return;
-        select();
-        openSelected();
-      });
+      // Clicks are heard once, on the list, rather than by a listener on each of a thousand rows.
+      row.append(text, copyButton.cloneNode(true));
       return row;
     }));
     empty.hidden = shown.length > 0;
@@ -104,9 +92,10 @@ export function createLogView(options: LogOptions): LogView {
   function copySelected(): void {
     const entry = shown[selected];
     if (entry === undefined) return;
-    navigator.clipboard.writeText(copiedEntry(entry)).catch((error: unknown) => {
-      options.onError(`Entry not copied: ${failureText(error)}`);
-    });
+    navigator.clipboard.writeText(copiedEntry(entry)).then(
+      () => options.onNotice('Entry copied as JSON.'),
+      (error: unknown) => options.onError(`Entry not copied: ${failureText(error)}`),
+    );
   }
 
   // The drawer's JSON viewer, the entry pretty-printed and its stack one frame to a line. Escape puts
@@ -115,9 +104,24 @@ export function createLogView(options: LogOptions): LogView {
     const entry = shown[selected];
     if (entry === undefined) return;
     dataOverlay('', JSON.stringify(shownEntry(entry)), 'json', null, {
-      binding: options.binding('log-copy'), run: copySelected,
+      binding: options.binding('log-copy'), label: 'copies', run: copySelected,
     });
   }
+
+  // A click on a row is the selection moving there, then what Enter does there, or on its button what
+  // the copy key does. The keyboard goes back to the box, which a click on the section itself would
+  // otherwise have taken it from; the popup takes it from there.
+  list.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const row = event.target.closest('.log-row');
+    const index = row === null ? -1 : [...list.children].indexOf(row);
+    if (index < 0) return;
+    selected = index;
+    draw(false);
+    input.focus();
+    if (event.target.closest('.log-copy')) copySelected();
+    else openSelected();
+  });
 
   input.addEventListener('input', () => {
     refilter(false);

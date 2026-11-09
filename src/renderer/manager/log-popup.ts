@@ -15,22 +15,15 @@ export function stackLines(stack: string): string[] {
 
 function shownError(error: LogError): ShownError {
   const { stack, cause, ...rest } = error;
-  return {
-    ...rest,
-    ...(stack === undefined ? {} : { stack: stackLines(stack) }),
-    ...(cause === undefined ? {} : { cause: shownError(cause) }),
-  };
+  return { ...rest, stack: stack === undefined ? undefined : stackLines(stack), cause: cause && shownError(cause) };
 }
 
 // The entry for the popup: the row's own fields first, in the order the row reads them, then
-// everything else. An older entry has only those first five and shows only those.
+// everything else. An older entry has only those first five and shows only those: a field it lacks is
+// undefined here, and the JSON the popup is handed leaves it out.
 export function shownEntry(entry: LogEntry): Record<string, unknown> {
   const { time, level, kind, project, message, error, ...rest } = entry;
-  return {
-    time, level, kind, project, message,
-    ...(error === undefined ? {} : { error: shownError(error) }),
-    ...rest,
-  };
+  return { time, level, kind, project, message, error: error && shownError(error), ...rest };
 }
 
 // What the copy button and key put on the clipboard: the whole entry as JSON, two-space indented.
