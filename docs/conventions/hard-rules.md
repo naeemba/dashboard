@@ -31,10 +31,9 @@ fixes reading order but not the caret. Without it you type a Persian card title
 and the text runs away from the cursor, ending punctuation lands on the wrong
 side, and Home and End go to the opposite ends of what you see.
 
-No test or lint rule covers this. The check is that these two agree:
-
-    grep -rn "createElement('input')\|createElement('textarea')" src/ | wc -l
-    grep -rn "dir = 'auto'" src/ | wc -l
+`text-direction.test.ts` holds it: file by file, the lines that create an
+`input` or `textarea` and the lines that set `dir = 'auto'` must agree, so a new
+box without it fails `pnpm test` with that file's name.
 
 ## conventions-rule-3: `hidden` only hides what the stylesheet left alone
 
