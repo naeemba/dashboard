@@ -26,6 +26,10 @@ export type PaneReleasePorts = {
   // removes the branch's worktree, and git spawned into a folder that is gone fails as `spawn git
   // ENOENT`, which read as the release failing when it had worked.
   exists(worktreePath: string): boolean;
+  // `git worktree prune` from the project: a folder deleted by hand leaves git's registration behind,
+  // which keeps its branch checked out nowhere. Only registrations whose folder is gone are touched, so
+  // after a merge's own removal it does nothing.
+  prune(projectPath: string): Promise<void>;
   // Why the worktree is kept, or null when nothing in it would be lost (finished-work.ts).
   unfinished(worktreePath: string): Promise<string | null>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
@@ -44,7 +48,10 @@ export const paneRelease = action<PaneReleasePorts, { id: string }, { output: st
     const throwaway = ports.forget(id);
     if (throwaway === undefined) return { output: `released ${id}${closeNote}` };
     const folder = baseName(throwaway.worktreePath);
-    if (!ports.exists(throwaway.worktreePath)) return { output: `released ${id}; ${folder} was already removed${closeNote}` };
+    if (!ports.exists(throwaway.worktreePath)) {
+      await ports.prune(throwaway.projectPath);
+      return { output: `released ${id}; ${folder} was already removed${closeNote}` };
+    }
     const reason = await ports.unfinished(throwaway.worktreePath);
     if (reason !== null) return { output: `released ${id}${closeNote}; kept ${throwaway.worktreePath}: ${reason}` };
     await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);

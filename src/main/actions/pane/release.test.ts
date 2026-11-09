@@ -11,6 +11,7 @@ describe('pane.release', () => {
       close: async (id) => ({ refused: `${id} is not open` }),
       forget: (id) => { forgotten.push(id); return undefined; },
       exists: () => true,
+      prune: async () => undefined,
       unfinished: async () => null,
       removeWorktree: async () => undefined,
     });
@@ -26,6 +27,7 @@ describe('pane.release', () => {
         close: async (id) => ({ output: `closed ${id}; x.scope was not stopped: timed out` }),
         forget: () => throwaway,
         exists: () => true,
+        prune: async () => undefined,
         unfinished: async () => unfinished,
         removeWorktree: async () => undefined,
       });
@@ -38,7 +40,8 @@ describe('pane.release', () => {
 
   // A merge with `gh pr merge --delete-branch` removes the branch's worktree before main releases its
   // worker: asking git about that folder would fail as `spawn git ENOENT`.
-  it('neither asks about nor removes a throwaway whose folder is already gone', async () => {
+  // A folder deleted by hand is still registered with git, which keeps its branch checked out: pruned.
+  it('neither asks about nor removes a throwaway whose folder is already gone, but prunes it', async () => {
     const asked: string[] = [];
     const release = bind(paneRelease, {
       busyWith: () => null,
@@ -46,10 +49,11 @@ describe('pane.release', () => {
       close: async (id) => ({ output: `closed ${id}` }),
       forget: () => ({ worktreePath: '/w/work-1', projectPath: '/p' }),
       exists: () => false,
+      prune: async (projectPath) => { asked.push(`prune ${projectPath}`); },
       unfinished: async (worktreePath) => { asked.push(`unfinished ${worktreePath}`); return null; },
       removeWorktree: async (worktreePath) => { asked.push(`remove ${worktreePath}`); },
     });
     expect(await release.call({ id: '2:2' })).toEqual({ output: 'released 2:2; work-1 was already removed' });
-    expect(asked).toEqual([]);
+    expect(asked).toEqual(['prune /p']);
   });
 });
