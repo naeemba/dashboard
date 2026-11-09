@@ -1,7 +1,7 @@
 import { isPaneConversation, resumable } from './claude-resume';
 import { isRecord } from '../../shared/app/is-record';
 import type { SessionList, SessionRecord } from '../../shared/drawer/drawer';
-import { isPaneKindOrNull, type PaneKind } from '../../shared/panes/pane-kind';
+import { isPaneKind, type PaneKind } from '../../shared/panes/pane-kind';
 
 // The app's own record of every Claude conversation it started, by project, which is what the drawer
 // lists and resumes from. Kept in the app's user data, never in .dashboard/: sessions are one person's
@@ -19,7 +19,7 @@ function isSessionRecord(value: unknown): value is SessionRecord {
   return isPaneConversation({ session: id, directory })
     && typeof label === 'string' && label !== ''
     && (card === null || typeof card === 'string')
-    && (kind === undefined || (kind !== null && isPaneKindOrNull(kind)))
+    && (kind === undefined || isPaneKind(kind))
     && isNumber(startedAt) && isNumber(lastUsedAt);
 }
 
