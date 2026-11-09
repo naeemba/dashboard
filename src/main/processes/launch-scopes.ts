@@ -16,6 +16,9 @@ import { processScopes, type ProcessScopes, type Probe } from './scope-support';
 const runCommand = promisify(execFile);
 // daemon-reload answers in milliseconds; one stuck must not hold the launch for long.
 const RELOAD_TIMEOUT_MS = 3_000;
+// What `systemctl stop` exits with for a unit that is not loaded: a scope already ended and collected,
+// or one a pane host from before scopes never started. Either way there is nothing left to stop.
+const NOT_LOADED = 5;
 
 // commandOutput keeps what a non-zero exit printed (`degraded`); a missing program printed nothing.
 export const probe: Probe = async (file, args) => (await commandOutput(file, args))?.trim() || null;
@@ -28,6 +31,17 @@ export function writeNew(file: string, text: string): boolean {
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
     throw error;
+  }
+}
+
+// A pane's scope stopped: systemd ends every process left in it, SIGTERM then SIGKILL. --no-block
+// queues the stop and returns, so a dev server that ignores SIGTERM does not hold the close for the
+// 90 seconds systemd gives it.
+export async function stopScope(unit: string): Promise<void> {
+  try {
+    await runCommand('systemctl', ['--user', 'stop', '--no-block', unit], { timeout: RELOAD_TIMEOUT_MS });
+  } catch (error: unknown) {
+    if ((error as { code?: unknown }).code !== NOT_LOADED) throw error;
   }
 }
 

@@ -112,7 +112,8 @@ was printed can take the first word of an indented row under it.
 On Linux each pane's shell runs in a systemd scope of its own, an agent's under
 agents.slice with a memory cap and every other under panes.slice, so one
 agent's test run cannot swap the desktop; [processes](../processes/README.md)
-says how, and what the pane keeps of it.
+says how, and what the pane keeps of it. Closing or releasing a pane stops its
+scope, so a dev server an agent detached there ends with the pane.
 
 ## Files
 
