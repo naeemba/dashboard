@@ -27,7 +27,7 @@ function boardWithCard(pullRequest: number | null, id = CARD): Board {
 }
 
 // A project and the worktree beside it, each with a board of its own: the project's is what the sweep
-// moves the card on, and the worktree's is what the agent wrote its pull request number into.
+// moves the card on, and the worktree's is where a number that came in with the base sits.
 function flight(pullRequest: number | null): { entry: WorktreeEntry; projectPath: string } {
   const projectPath = folder();
   const worktreePath = folder();
@@ -120,7 +120,18 @@ describe('reviewSweep', () => {
     expect(log.started[0].prompt).toContain('/pr-loop 15');
   });
 
-  // The pull request number is the whole signal. Until it is there the agent is still working, and a
+  // A re-ship after #12 closed unmerged: the project's card back out of Review still carries 12, and the
+  // worktree cut from the base has it too. That is the closed pull request, not a finished agent.
+  it('does not review a worktree number the project card already carries', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, boardWithCard(12));
+    const { ports: made, log } = ports(entry);
+    await sweepWith(made).run();
+    expect(log.started).toEqual([]);
+    expect(columnOfCard(projectPath)).toBe('Backlog');
+  });
+
+  // The pull request number is the whole signal. Until there is one the agent is still working, and a
   // sweep that took its worktree away would take the work with it.
   it('leaves a card whose agent has not opened a pull request alone', async () => {
     const { entry, projectPath } = flight(null);

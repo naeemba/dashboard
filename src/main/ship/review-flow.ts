@@ -53,11 +53,12 @@ export type ReviewPorts = {
   arrived: (entry: WorktreeEntry) => Promise<unknown>;
 };
 
-// The pull request on a worktree's own board, or null when the agent has not opened one yet. That
-// number is the whole signal: an agent that has opened a pull request has done the work, whatever
-// column it left the card in and whatever it said about it, and one that never gets that far never
-// writes the field — so a card that failed is left alone rather than reviewed. The worktree's own
-// board is where to look, because it is the copy the agent has been editing all along.
+// The pull request this card's work opened, or null while there is none yet. That number is the whole
+// signal: a card that has a pull request has done the work, whatever column it was left in, and one
+// that never gets that far has none, so a card that failed is left alone rather than reviewed. Two
+// sources, in this order: the number card.follow found from the branch and put on the project's card
+// while it sits in Review (followedPullRequest), then any number already on the worktree's own board.
+// Agents no longer write one there, so a worktree number only arrives with the base the ship cut from.
 //
 // peekBoard rather than readBoard: readBoard moves a board file it cannot parse aside, and in a
 // worktree that file is tracked and committed. A sweep running on a timer must not delete a branch's
@@ -71,17 +72,19 @@ export type ReviewPorts = {
 // per in-flight worktree on a five-second timer for the whole life of the app, to spare a refusal
 // that costs nothing when nothing is stuck. swapWorktree is where the window is handled instead.
 //
-// The one card.follow found from the branch and put on the project's board (followedPullRequest) comes
-// first, so an agent has nothing to record but its pull request. First, because a number on the
-// worktree's board can be an earlier pull request's: card.follow keeps it on a card it sends back to
-// Doing, and a re-ship cuts the worktree from a base that carries it. Reviewing that one would run
-// `/pr-loop` at a closed pull request and leave the new one unreviewed.
+// The followed number comes first because a number on the worktree's board can be an earlier pull
+// request's: card.follow keeps it on a card it sends back to Doing, and a re-ship cuts the worktree from
+// a base that carries it. For the same reason a worktree number equal to the project card's own is not
+// counted: nobody writes one there, so it can only be that closed pull request, and reviewing it would
+// run `/pr-loop` at it in the window before card.follow sees the new one.
 // `project` is the project's board as the caller already read it, or null.
 function finishedIn(entry: WorktreeEntry, project: Board | null): number | null {
   const followed = project === null ? null : followedPullRequest(project, entry.cardId);
   if (followed !== null) return followed;
   const board = peekBoard(entry.worktreePath);
-  return board === null ? null : cardById(board, entry.cardId)?.pullRequest ?? null;
+  const written = board === null ? null : cardById(board, entry.cardId)?.pullRequest ?? null;
+  if (written === null) return null;
+  return project !== null && cardById(project, entry.cardId)?.pullRequest === written ? null : written;
 }
 
 // The project's board, or null when it cannot be read at all. Null is not "no card here": a board the
@@ -224,8 +227,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const board = boardOf(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return;
-    // A card that has already been through this. The number on the branch's board is written once and
-    // stays written, so it goes on saying "finished" long after the review that read it merged the
+    // A card that has already been through this. The number on the branch's board, once there, stays
+    // there, so it goes on saying "finished" long after the review that read it merged the
     // pull request. The project's board is what tells the two apart; review.ts holds why it is the
     // only thing that can. A card past Review is finished with its worktree too, so that is removed
     // here, once: the review pane cannot remove the folder it is standing in, and without this every

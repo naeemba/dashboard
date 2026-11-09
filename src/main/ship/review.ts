@@ -22,9 +22,9 @@ export function intoReview(board: Board, cardId: string): Board | null {
 }
 
 // The pull request card.follow found for this card, from the project's board: the number, only while the
-// card sits in Review, which is where an open pull request put it (board-decision-6). The sweep's other
-// sign that a card is finished, beside the number an agent wrote on its worktree's board, so an agent
-// that only opened its pull request is reviewed too. Not from any other column: a card back in Doing
+// card sits in Review, which is where an open pull request put it (board-decision-6). The sweep's first
+// sign that a card is finished, ahead of any number already on its worktree's board, so an agent that
+// only opened its pull request is reviewed too. Not from any other column: a card back in Doing
 // after its pull request closed unmerged keeps that number, and a fresh ship of it has opened nothing yet.
 export function followedPullRequest(board: Board, cardId: string): number | null {
   const at = selectionOf(board, cardId);

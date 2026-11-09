@@ -276,6 +276,8 @@ agent was done only from the number it wrote on its worktree's board. It now
 also takes the number card.follow wrote on the project's board, while the card
 sits in Review (`followedPullRequest` in `review.ts`). Not from another column:
 a card sent back to Doing when its pull request closed unmerged keeps that
-number, and a fresh ship of it has opened nothing yet. What it costs: the
+number, and a fresh ship of it has opened nothing yet. The project's number
+comes first, and a worktree number equal to the project card's own is not
+counted: it came in with the base, so it is that closed pull request. What it costs: the
 review starts when card.follow next asks `gh`, up to two minutes after the pull
 request opens, rather than the moment an agent writes the number.
