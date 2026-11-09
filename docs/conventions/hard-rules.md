@@ -51,6 +51,9 @@ three blank cells. `.view[hidden]` in `index.css` is the same trap the other way
 round — there the `display` is on purpose, so the views hide with `visibility`
 instead.
 
-No test can catch this. Vitest runs in node here, with no DOM; jsdom is not
-installed. Even in a DOM test environment the user-agent stylesheet is absent,
-so `hidden = true` would read back as hidden whatever the CSS says.
+`hidden-rule.test.ts` reads every stylesheet and fails on a bare class (`.chat`, not
+`.chat-log img`) that sets a `display` with no `.name[hidden]` rule in the same file. It
+cannot see which elements are ever hidden, so every such class gets one, grouped at the foot
+of its stylesheet. `view-` and `page-` classes are left out: `.view[hidden], .page[hidden]`
+hide them with visibility, and a `display: none` would make their terminals measure zero.
+Vitest has no DOM here, so the test reads the CSS rather than an element.
