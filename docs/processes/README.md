@@ -68,12 +68,14 @@ open project's panes and sessions, under
 the slice read back off the unit's prefix (`sliceOf` in `scope.ts`), and its
 `memory.high` for the cap the kernel holds it to now. A scope that has ended
 has neither file and is left out; a sweep that changes nothing on screen sends
-nothing. The
+nothing, and a window that opens, reloads or connects as a second screen asks
+for the last reading (`memory:read`) rather than waiting for a figure to move. A
+sweep that throws is held on the status bar and the next one runs anyway. The
 figures are added up by the pane the window draws: a pane's shell under its own
 id, a worker screen's session under its pane, a page's main session on main.
-The manager's pane rows show it in a Memory column (`2.1G`) and the status bar
+The manager's pane rows show it in a Memory column (`2.1 GB`) and the status bar
 ends on the focused pane's. From 80% of a scope's MemoryHigh (an agent's is 6G) the figure
-names the cap (`5.1G of 6G`) and the row's turns yellow: past MemoryHigh the
+names the cap (`5.1 GB of 6.0 GB`) and the row's turns yellow: past MemoryHigh the
 kernel slows the agent. Off Linux nothing is read and nothing is shown.
 
 When a pane closes, by its close key or `pane release`, pane.close kills its
@@ -178,7 +180,7 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - Given an agent pane running a test suite, when you open the manager, then
   its row's Memory column shows its scope's memory.current within five seconds,
   and the status bar on that pane ends on the same figure.
-- Given an agent whose scope holds 5G, then its figure reads `5.0G of 6G`, in
+- Given an agent whose scope holds 5G, then its figure reads `5.0 GB of 6.0 GB`, in
   yellow on the manager.
 - Given a worker screen the screen host kept through a restart, when the app
   opens again, then its row shows the memory of the scope it first started in.

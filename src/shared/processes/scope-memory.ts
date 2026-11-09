@@ -1,3 +1,5 @@
+import { formatSize } from '../ship/git-worktrees';
+
 // What each pane's and session's systemd scope holds in memory, as main reads it from the scope's
 // memory.current (src/main/processes/memory-sweep.ts) and the manager's rows and the status bar print
 // it. docs/processes/README.md says which scopes count toward which pane.
@@ -15,28 +17,20 @@ export type MemorySnapshot = Record<string, PaneMemory>;
 // slows it, so the mark goes up while there is still room to act on it.
 const NEAR_HIGH = 0.8;
 
-const GIB = 1024 ** 3;
-const MIB = 1024 ** 2;
-
-// `2.1G`, `640M`.
-export function formatMemory(bytes: number): string {
-  if (bytes >= GIB) return `${(bytes / GIB).toFixed(1)}G`;
-  return `${Math.max(1, Math.round(bytes / MIB))}M`;
-}
-
 export function nearHigh(memory: PaneMemory | undefined): memory is { bytes: number; high: number } {
   return memory !== undefined && memory.high !== null && memory.bytes >= memory.high * NEAR_HIGH;
 }
 
-// What the window draws of a snapshot, so a sweep that moved nothing on screen sends nothing.
+// What the window draws of a snapshot, so a sweep that moved nothing on screen sends nothing. Sorted
+// by id, since the sweep fills the snapshot in whatever order its reads finish.
 export function drawnMemory(snapshot: MemorySnapshot): string {
-  return JSON.stringify(Object.entries(snapshot).map(([id, memory]) => [id, memoryText(memory), nearHigh(memory)]));
+  return JSON.stringify(Object.entries(snapshot).sort(([left], [right]) => left.localeCompare(right)).map(([id, memory]) => [id, memoryText(memory), nearHigh(memory)]));
 }
 
-// What a row or the status bar prints: the figure, and the cap beside it once it is near (`5.1G of
-// 6G`), so the mark says how close rather than only that it is.
+// What a row or the status bar prints: the figure in the worktree Size column's spelling, and the cap
+// beside it once it is near (`5.1 GB of 6.0 GB`), so the mark says how close rather than only that it is.
 export function memoryText(memory: PaneMemory | undefined): string {
   if (memory === undefined) return '';
-  const figure = formatMemory(memory.bytes);
-  return nearHigh(memory) ? `${figure} of ${Math.round(memory.high / GIB)}G` : figure;
+  const figure = formatSize(memory.bytes);
+  return nearHigh(memory) ? `${figure} of ${formatSize(memory.high)}` : figure;
 }

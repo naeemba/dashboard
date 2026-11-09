@@ -79,6 +79,7 @@ const bridge: DashboardBridge = {
   readMarket: (market) => ipcRenderer.invoke('markets:read', market),
   onUsageChange: (listener) =>
     ipcRenderer.on('usage:change', (_event, usage) => listener(usage)),
+  readMemory: () => ipcRenderer.invoke('memory:read'),
   onMemoryChange: (listener) =>
     ipcRenderer.on('memory:change', (_event, memory) => listener(memory)),
   onFailure: (listener) =>

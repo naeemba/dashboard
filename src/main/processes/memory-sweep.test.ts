@@ -2,7 +2,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { readMemory, recordedUnits, userServiceCgroup } from './memory-sweep';
+import type { MemorySnapshot } from '../../shared/processes/scope-memory';
+import { memorySweep, readMemory, recordedUnits, runningUnits, userServiceCgroup } from './memory-sweep';
 
 const AGENT_HIGH = 6 * 1024 ** 3;
 
@@ -57,5 +58,55 @@ describe('recordedUnits', () => {
   it('keeps only open projects', () => {
     expect(recordedUnits([['3:1', 'pane-a'], ['4:1', 'pane-b']], [[4, 'agent-main']], paneOf, (slot) => slot === 3))
       .toEqual([['3:1', 'pane-a']]);
+  });
+});
+
+describe('runningUnits', () => {
+  it('leaves out a session with no unit and one whose start failed', async () => {
+    const sessions: [number, Promise<{ unit: string | null }>][] = [
+      [1, Promise.resolve({ unit: 'agent-a.scope' })], [2, Promise.resolve({ unit: null })], [3, Promise.reject(new Error('no claude'))],
+    ];
+    expect(await runningUnits(sessions)).toEqual([[1, 'agent-a.scope']]);
+  });
+});
+
+describe('memorySweep', () => {
+  // A sweep over one scope, with its ticks run by hand. Each tick waits for the next to be scheduled.
+  function sweep(root: string, units: () => Promise<[string, string][]>, platform: NodeJS.Platform = 'linux') {
+    const published: MemorySnapshot[] = [];
+    const failures: unknown[] = [];
+    let next: (() => void) | undefined;
+    let scheduled: () => void = () => undefined;
+    const later = (tick: () => void): void => { next = tick; scheduled(); };
+    const ticked = (): Promise<void> => new Promise((resolve) => { scheduled = resolve; });
+    const first = ticked();
+    const latest = memorySweep({ root, units, publish: (snapshot) => published.push(snapshot), sweepFailed: (error) => failures.push(error) }, platform, later);
+    const tick = async (): Promise<void> => { const done = ticked(); next?.(); await done; };
+    return { published, failures, latest, first, tick };
+  }
+
+  it('publishes a reading once, not again while nothing on screen moved, and answers the first read with it', async () => {
+    const root = cgroups({ 'panes.slice/pane-shop-1-a1b2.scope': [1024, 'max'] });
+    const run = sweep(root, async () => [['3:1', 'pane-shop-1-a1b2.scope']]);
+    await run.first;
+    await run.tick();
+    expect(run.published).toEqual([{ '3:1': { bytes: 1024, high: null } }]);
+    expect(run.latest()).toEqual({ '3:1': { bytes: 1024, high: null } });
+  });
+
+  it('holds a sweep that threw and still sweeps again', async () => {
+    let calls = 0;
+    const run = sweep(cgroups({}), async () => { calls += 1; throw new Error('bad id'); });
+    await run.first;
+    await run.tick();
+    expect(run.failures).toHaveLength(2);
+    expect(calls).toBe(2);
+  });
+
+  it('reads nothing off Linux', () => {
+    let calls = 0;
+    const run = sweep(cgroups({}), async () => { calls += 1; return []; }, 'darwin');
+    expect(calls).toBe(0);
+    expect(run.latest()).toEqual({});
   });
 });

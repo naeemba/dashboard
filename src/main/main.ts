@@ -515,12 +515,13 @@ const chats = registerChatSessions(table, {
   heard: (slot, sender) => { workerAnswers.heard(slot, sender); followPullRequests(slot); },
 });
 // What each open project's pane and session scopes hold, every few seconds, for the manager's rows and
-// the status bar (docs/processes).
-memorySweep({
+// the status bar (docs/processes). The handler is the window's first read; everything after it arrives
+// unasked on memory:change.
+table.handle('memory:read', memorySweep({
   root: userServiceCgroup(process.getuid?.() ?? 0),
   units: async () => recordedUnits(panes.scopeUnits, await chats.units(), workerScreens.paneOf, (slot) => projectIn(slot) !== undefined),
-  publish: (snapshot) => sendToRenderer('memory:change', snapshot),
-});
+  publish: (snapshot) => sendToRenderer('memory:change', snapshot), sweepFailed: (error: unknown) => failures.hold(`Memory figures not updated: ${failureText(error)}`),
+}));
 // Every change to a session, from every door (session-actions.ts).
 const session = sessionActions({ chat: chats.actionPorts, sessions: sessionIndex, projectAt: projectIn, dispatchers: () => mainsWorkers.values() });
 registerSessionChannels(table, session);

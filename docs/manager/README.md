@@ -47,19 +47,21 @@ worktrees under a project each have their column names above them.
 Every project also carries three token figures at the end of its row, each with
 its name: the last five hours, this week counting from Monday, and all time. A
 pane running a Claude Code agent carries what that agent has cost, in its Tokens
-column. On Linux each pane also carries what its systemd scopes hold, in its
-Memory column (`2.1G`), read every five seconds: a worker screen's hidden shell
-and its session added up, main's session on main's row. Near an agent's 6G
-MemoryHigh it turns yellow and names the cap (`5.1G of 6G`). A pane with no
-scope recorded (a mac, Windows, a pane host from before scopes) shows nothing.
-The status bar ends on the same figure for the focused pane. docs/processes
-says where it is read from. They are read out of Claude Code's own logs on this machine and refresh
+column. They are read out of Claude Code's own logs on this machine and refresh
 every half minute. The first reading after a launch goes through every log there
 is, so with years of them the figures can take twenty seconds to appear; the
 panes and typing do not wait for it. The four figures along the top add every
 open project up — the three windows, the week as one bar a day with its letter
 under it, and how many worktrees are out, how many of those hold uncommitted
 work, and how many git could not answer for.
+
+On Linux each pane also carries what its systemd scopes hold, in its Memory
+column (`2.1 GB`, spelled as the worktree Size column is), read every five
+seconds: a worker screen's hidden shell and its session added up, main's session
+on main's row. Near an agent's 6G MemoryHigh it turns yellow and names the cap
+(`5.1 GB of 6.0 GB`). A pane with no scope recorded (a mac, Windows, a pane host
+from before scopes) shows nothing. The status bar ends on the same figure for
+the focused pane. docs/processes says where it is read from.
 
 Beside each project's name is what its board holds, one pill per column, leaving
 Done out. Under it, open or shut, is every worktree git knows of for that

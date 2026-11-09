@@ -23,6 +23,7 @@ import { forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindPoint } from 
 import { fileCandidates } from '../nvim/file-open';
 import { homedir } from 'node:os';
 import { failureText } from '../../shared/errors/failure';
+import { runningUnits } from '../processes/memory-sweep';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
 import { claudeExecutable, scopedQuery } from './claude-process';
@@ -739,10 +740,7 @@ export function registerChatSessions(
       for (const [slot, session] of [...sessions]) void session.then((running) => { if (closedAtQuit(running)) stop(slot); }, () => undefined);
     },
     // The scope of every session running now, by slot or screen key.
-    async units(): Promise<[number, string][]> {
-      const running = await Promise.all([...sessions].map(async ([slot, session]) => [slot, (await session.catch(() => null))?.unit]));
-      return running.filter((entry): entry is [number, string] => entry[1] != null);
-    },
+    units: () => runningUnits(sessions),
     // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
     tell: (slot, text) => send(slot, [{ type: 'text', text }]),
     // One of those taken back while it still waits in the queue: a worker's report read after its notice.

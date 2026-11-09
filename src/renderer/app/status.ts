@@ -40,7 +40,7 @@ export type StatusPage = {
   // where the one pane's figure belongs.
   focusedTokens: number;
   // What the focused pane's systemd scopes hold, or undefined for none recorded (shared/processes).
-  focusedMemory?: PaneMemory;
+  focusedMemory: PaneMemory | undefined;
 };
 
 // The manager is where a launch with nothing saved lands, and with no project open there is nothing on

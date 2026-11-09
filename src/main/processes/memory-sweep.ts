@@ -26,6 +26,13 @@ export function recordedUnits(
   return [...paneUnits, ...sessions].filter(([id]) => isOpen(paneFromId(id).slot));
 }
 
+// The scope of every session running now, by slot or screen key. One with no unit (unscoped, or
+// kept by a screen host from before units were sent) and one whose start failed are left out.
+export async function runningUnits(sessions: Iterable<[number, Promise<{ unit: string | null }>]>): Promise<[number, string][]> {
+  const running = await Promise.all([...sessions].map(async ([key, session]) => [key, (await session.catch(() => null))?.unit] as const));
+  return running.filter((entry): entry is [number, string] => entry[1] != null);
+}
+
 // `units` is every scope recorded for an open project's panes and sessions, by terminal id: a pane
 // can have two (a worker screen's shell and its session), and they are added up.
 export async function readMemory(root: string, units: Iterable<[string, string]>): Promise<MemorySnapshot> {
@@ -51,18 +58,34 @@ export async function readMemory(root: string, units: Iterable<[string, string]>
   return snapshot;
 }
 
+export type MemorySweepPorts = {
+  root: string;
+  units(): Promise<[string, string][]>;
+  // Tell the window. Called only for a sweep that moved something on screen.
+  publish(snapshot: MemorySnapshot): void;
+  // A sweep that threw, held on the bar the way the token sweep's is (main.ts).
+  sweepFailed(error: unknown): void;
+};
+
+function sweepLater(tick: () => void): void {
+  setTimeout(tick, MEMORY_SWEEP_MS).unref();
+}
+
 // The sweep: nothing at all off Linux, where no scope is ever recorded. Published only when what the
-// window draws of it changed, so an idle machine sends nothing.
-export function memorySweep(ports: { root: string; units(): Promise<[string, string][]>; publish(snapshot: MemorySnapshot): void }): void {
-  if (process.platform !== 'linux') return;
-  let drawn = drawnMemory({});
-  const tick = (): void => {
-    ports.units().then((units) => readMemory(ports.root, units)).then((snapshot) => {
-      const next = drawnMemory(snapshot);
-      if (next === drawn) return;
-      drawn = next;
-      ports.publish(snapshot);
-    }, () => undefined).finally(() => { setTimeout(tick, MEMORY_SWEEP_MS).unref(); });
-  };
-  tick();
+// window draws of it changed, so an idle machine sends nothing; what it returns is the window's first read,
+// so a window that opens after the last change still has every figure. A test passes its own platform
+// and runs `later`'s tick by hand.
+export function memorySweep(ports: MemorySweepPorts, platform: NodeJS.Platform = process.platform, later = sweepLater): () => MemorySnapshot {
+  let latest: MemorySnapshot = {};
+  if (platform !== 'linux') return () => latest;
+  let drawn = drawnMemory(latest);
+  const tick = (): Promise<void> => ports.units().then((units) => readMemory(ports.root, units)).then((snapshot) => {
+    latest = snapshot;
+    const next = drawnMemory(snapshot);
+    if (next === drawn) return;
+    drawn = next;
+    ports.publish(snapshot);
+  }).catch(ports.sweepFailed).finally(() => { later(() => void tick()); });
+  void tick();
+  return () => latest;
 }

@@ -161,7 +161,7 @@ function applyUsage(next: UsageSnapshot): void {
 }
 // What each pane's scopes hold, pushed by main's memory sweep every few seconds on Linux; drawn the same way.
 let memory: MemorySnapshot = {};
-bridge.onMemoryChange((next) => { memory = next; renderStatus(true); });
+function applyMemory(next: MemorySnapshot): void { memory = next; renderStatus(true); }
 
 function applyWorktrees(list: WorktreeList): void {
   worktrees = list.entries;
@@ -895,6 +895,7 @@ async function start(): Promise<void> {
   // logs on it answers with nothing and every row simply has no number against it.
   void bridge.readUsage().then(applyUsage, () => undefined);
   bridge.onUsageChange(applyUsage);
+  void bridge.readMemory().then(applyMemory, () => undefined); bridge.onMemoryChange(applyMemory);
   const loaded = await bridge.getSettings();
   settings = loaded.settings;
   settingsLoaded = true;

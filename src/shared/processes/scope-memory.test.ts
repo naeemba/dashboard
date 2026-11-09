@@ -1,19 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { drawnMemory, formatMemory, memoryText, nearHigh } from './scope-memory';
+import { drawnMemory, memoryText, nearHigh } from './scope-memory';
 
 const GIB = 1024 ** 3;
 const MIB = 1024 ** 2;
-
-describe('formatMemory', () => {
-  it('prints gigabytes to one place and megabytes whole', () => {
-    expect(formatMemory(2.1 * GIB)).toBe('2.1G');
-    expect(formatMemory(640 * MIB)).toBe('640M');
-  });
-
-  it('prints at least 1M for a scope holding anything', () => {
-    expect(formatMemory(4096)).toBe('1M');
-  });
-});
 
 describe('nearHigh', () => {
   it('marks a capped scope from 80% of its MemoryHigh', () => {
@@ -29,8 +18,9 @@ describe('nearHigh', () => {
 
 describe('memoryText', () => {
   it('names the cap beside the figure once it is near', () => {
-    expect(memoryText({ bytes: 2.1 * GIB, high: 6 * GIB })).toBe('2.1G');
-    expect(memoryText({ bytes: 5.1 * GIB, high: 6 * GIB })).toBe('5.1G of 6G');
+    expect(memoryText({ bytes: 2.1 * GIB, high: 6 * GIB })).toBe('2.1 GB');
+    expect(memoryText({ bytes: 640 * MIB, high: null })).toBe('640 MB');
+    expect(memoryText({ bytes: 5.1 * GIB, high: 6 * GIB })).toBe('5.1 GB of 6.0 GB');
     expect(memoryText(undefined)).toBe('');
   });
 });
@@ -39,5 +29,11 @@ describe('drawnMemory', () => {
   it('is the same for two readings that draw the same, and differs once a figure moves', () => {
     expect(drawnMemory({ '3:1': { bytes: 2.10 * GIB, high: null } })).toBe(drawnMemory({ '3:1': { bytes: 2.11 * GIB, high: null } }));
     expect(drawnMemory({ '3:1': { bytes: 2.1 * GIB, high: null } })).not.toBe(drawnMemory({ '3:1': { bytes: 2.3 * GIB, high: null } }));
+  });
+
+  it('does not depend on the order the reads finished in', () => {
+    const one = { bytes: GIB, high: null };
+    const two = { bytes: 2 * GIB, high: null };
+    expect(drawnMemory({ '3:1': one, '3:2': two })).toBe(drawnMemory({ '3:2': two, '3:1': one }));
   });
 });

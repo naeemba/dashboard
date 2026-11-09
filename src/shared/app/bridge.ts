@@ -286,8 +286,9 @@ export type DashboardBridge = {
   // rejection, so the card can print why.
   readMarket<K extends MarketName>(market: K): Promise<MarketsSnapshot[K]>;
   onUsageChange(listener: (usage: UsageSnapshot) => void): void;
-  // What each pane's and session's systemd scope holds, pushed every few seconds on Linux and never
-  // elsewhere (docs/processes).
+  // What each pane's and session's systemd scope holds, read once on the way up and then pushed when a
+  // figure on screen moves, every few seconds on Linux and never elsewhere (docs/processes).
+  readMemory(): Promise<MemorySnapshot>;
   onMemoryChange(listener: (memory: MemorySnapshot) => void): void;
   // One line about something that broke on main's side of the wire. What reaches here and why the app
   // is still up to hear it are failure.ts's.
