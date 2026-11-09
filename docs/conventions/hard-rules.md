@@ -52,8 +52,10 @@ round — there the `display` is on purpose, so the views hide with `visibility`
 instead.
 
 `hidden-rule.test.ts` reads every stylesheet and fails on a bare class (`.chat`, not
-`.chat-log img`) that sets a `display` with no `.name[hidden]` rule in the same file. It
-cannot see which elements are ever hidden, so every such class gets one, grouped at the foot
-of its stylesheet. `view-` and `page-` classes are left out: `.view[hidden], .page[hidden]`
-hide them with visibility, and a `display: none` would make their terminals measure zero.
-Vitest has no DOM here, so the test reads the CSS rather than an element.
+`.chat-log img`) that sets a `display` with no `.name[hidden]` rule in the same file, and on
+a `.name[hidden]` whose class sets no `display` there, so a deleted class does not leave its
+rule behind. It cannot see which elements are ever hidden, so every such class gets one,
+grouped at the foot of its stylesheet. The classes on a `.view` or `.page` are a named list
+in the test: `.view[hidden], .page[hidden]` hide them with visibility, and a `display: none`
+would make their terminals measure zero. Vitest has no DOM here, so the test reads the CSS
+rather than an element.

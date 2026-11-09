@@ -45,10 +45,6 @@
   background: var(--hover);
 }
 
-.chat-live[hidden] {
-  display: none;
-}
-
 .chat-user {
   color: var(--brightWhite);
   background: var(--surface-raised);
