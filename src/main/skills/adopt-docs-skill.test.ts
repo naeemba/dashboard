@@ -7,6 +7,11 @@ import { ADOPT_DOCS_SKILL } from './adopt-docs-skill';
 // the skill's four-space indent differ, so the texts are compared word by word.
 const root = process.cwd();
 
+// A Windows checkout ends lines with \r\n, which hides the blank line that ends a paragraph.
+function readRepositoryFile(...parts: string[]): string {
+  return readFileSync(join(root, ...parts), 'utf8').replace(/\r\n/g, '\n');
+}
+
 function words(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
@@ -27,13 +32,13 @@ function between(text: string, start: string, end: string, source: string): stri
 
 describe('ADOPT_DOCS_SKILL', () => {
   it('carries the docs rule from CLAUDE.md', () => {
-    const claude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
+    const claude = readRepositoryFile('CLAUDE.md');
     const source = 'The docs rule in CLAUDE.md';
     expectSkillToCarry(between(claude, 'Feature docs live in', '\n\n', source), source);
   });
 
   it('carries the preamble of docs/README.md', () => {
-    const index = readFileSync(join(root, 'docs', 'README.md'), 'utf8');
+    const index = readRepositoryFile('docs', 'README.md');
     const source = 'The preamble of docs/README.md';
     expectSkillToCarry(between(index, '# Docs', '## Features', source), source);
   });
