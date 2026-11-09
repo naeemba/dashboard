@@ -5,6 +5,7 @@ import type { ChatEntry, Transcript } from '../../shared/chat/chat-transcript';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { foldOf, redrawEntries, type DrawnEntry } from './chat-entries';
 import { screenClick } from './chat-screen-click';
+import { nearBottom } from './chat-scroll';
 import type { ChatViewOptions } from './chat-view';
 import { searchOverlay, viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
@@ -88,7 +89,7 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
       const list = transcript().agents[id] ?? [];
       if (list === drawnList) return;
       const box = log.parentElement;
-      const stick = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+      const stick = !box || nearBottom(box);
       drawnList = list;
       redrawEntries(drawn, list, selected, (element) => log.append(element), (fresh) => fresh.fill());
       if (stick && box) box.scrollTop = box.scrollHeight;

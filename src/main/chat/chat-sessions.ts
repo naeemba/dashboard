@@ -18,7 +18,7 @@ import { closedAtQuit, sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
 import { pdfRefusal, type PdfRead } from '../../shared/chat/chat-pdf';
-import type { TaskOutputRead } from '../../shared/chat/chat-agents';
+import { taskOutputRefusal, type TaskOutputRead } from '../../shared/chat/chat-agents';
 import { forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindPoint } from '../../shared/chat/chat-rewind';
 import { fileCandidates } from '../nvim/file-open';
 import { homedir } from 'node:os';
@@ -559,8 +559,7 @@ export function registerChatSessions(
   type OutputQuery = Query & { getTaskOutput?: (id: string) => Promise<TaskOutputRead> };
   table.handle('chat-task:output', async (_screen, slot: number, taskId: string): Promise<TaskOutputRead> => {
     const query: OutputQuery | undefined = (await sessions.get(slot))?.query;
-    if (!query) return { refused: 'the session has ended.' };
-    if (!query.getTaskOutput) return { refused: 'this version of Claude Code cannot read a task\'s output.' };
+    if (!query?.getTaskOutput) return { refused: taskOutputRefusal(query) };
     return query.getTaskOutput(taskId);
   });
 

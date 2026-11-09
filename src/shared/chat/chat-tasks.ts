@@ -19,6 +19,8 @@ export type ChatTask = {
   toolUseId: string | null;
   // An agent, whose own conversation the agents key opens; a workflow or background command has none.
   agent: boolean;
+  // A background shell command or a Monitor, the only kinds whose output get_task_output reads.
+  output: boolean;
   tools: number;
   tokens: number;
   seconds: number;
@@ -46,6 +48,8 @@ export function messageUsage(message: Record<string, unknown>, known: AgentUsage
 
 const isAgent = (message: Record<string, unknown>): boolean => message.task_type === 'local_agent' || text(message.subagent_type) !== '';
 
+const hasOutput = (message: Record<string, unknown>): boolean => message.task_type === 'local_bash' || message.task_type === 'monitor_mcp';
+
 // background_tasks_changed and task_started both name a workflow's task_type `local_workflow`.
 const workflowOf = (message: Record<string, unknown>): WorkflowProgress | null => (message.task_type === 'local_workflow' ? NO_PROGRESS : null);
 
@@ -66,9 +70,10 @@ function merged(task: ChatTask, message: Record<string, unknown>): ChatTask {
   const kind = text(message.subagent_type) || text(message.workflow_name) || task.kind;
   const parent = text(message.parent_task_id) || task.parent;
   const agent = task.agent || isAgent(message);
+  const output = task.output || hasOutput(message);
   const workflow = task.workflow ?? workflowOf(message);
-  if (description === task.description && kind === task.kind && parent === task.parent && agent === task.agent && workflow === task.workflow) return task;
-  return { ...task, description, kind, parent, agent, workflow };
+  if (description === task.description && kind === task.kind && parent === task.parent && agent === task.agent && output === task.output && workflow === task.workflow) return task;
+  return { ...task, description, kind, parent, agent, output, workflow };
 }
 
 function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks {
@@ -80,7 +85,7 @@ function started(tasks: ChatTasks, message: Record<string, unknown>): ChatTasks 
   }
   return [...tasks, {
     id, description: text(message.description), kind: kindOf(message), parent: text(message.parent_task_id) || null,
-    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, agent: isAgent(message), tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
+    backgrounded: message.is_backgrounded === true, toolUseId: text(message.tool_use_id) || null, agent: isAgent(message), output: hasOutput(message), tools: 0, tokens: 0, seconds: 0, lastTool: null, summary: null,
     workflow: workflowOf(message),
   }];
 }

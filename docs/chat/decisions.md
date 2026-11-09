@@ -353,9 +353,14 @@ Agent SDK 0.3.316 and the CLI bundled with it on 2026-11-09:
   command wrote, the tail the terminal's `/tasks` detail view reads; an ended task whose file is gone
   reads as empty, which the viewer says in one sentence naming the task. The SDK's `Query` has
   `getTaskOutput` but its types leave it out, so main checks it is there before calling it.
-- Only the end is shown, with a first line saying the start was cut; the line names no size, since the CLI answers only whether it cut. A longer read is a file
-  the CLI does not name while the task runs.
+- Only the end is shown, with a first line saying the start was cut and how much the command wrote
+  in all, from the answer's `total_bytes`. A longer read is a file the CLI does not name while the
+  task runs.
 
-Every task that is neither an agent nor a workflow opens this way. The CLI refuses a kind it keeps
-no output for, and the view says so with the task's name.
+Only a task whose `task_type` is `local_bash` or `monitor_mcp` opens this way (`output` on
+`ChatTask`). The CLI refuses `get_task_output` for any other kind, an MCP call or a remote agent,
+and that refusal would reach the view as a thrown error, so `taskOpening` refuses those first with a
+sentence naming the task. Whether to ask again after a read is `followAfter`'s, and whether the task
+runs is asked before each read (`readTaskOutput`), so the read after it ends holds what it printed as
+it exited.
 

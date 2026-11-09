@@ -161,7 +161,8 @@ comes back to the list (chat-decision-15). Enter on a background shell command o
 a Monitor, or a click on its strip row, opens its output in the same sheet: the
 last 8 KiB it printed, escape codes gone, followed live while it runs with the
 last lines in view, and Escape goes back to the list. An ended one whose output
-is gone says so, naming the task (chat-decision-17).
+is gone says so, naming the task; any other kind, an MCP call say, says it has
+nothing to show (chat-decision-17).
 
 A running workflow's strip row also carries a bar and how many of its agents
 have ended of those started, `▰▰▰▱▱▱▱▱▱▱ 3/10 agents`, beside its tokens and

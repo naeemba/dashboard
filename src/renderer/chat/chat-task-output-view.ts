@@ -1,7 +1,8 @@
-import { taskOutputShown, type FinishedTask, type TaskOutputRead } from '../../shared/chat/chat-agents';
+import { followAfter, readTaskOutput, type FinishedTask, type OutputRead, type TaskOutputRead } from '../../shared/chat/chat-agents';
 import type { ChatTask } from '../../shared/chat/chat-tasks';
 import { failureText } from '../../shared/errors/failure';
 import { viewerOverlay } from '../app/overlay';
+import { nearBottom } from './chat-scroll';
 
 // How often the open viewer asks again while its task runs.
 const FOLLOW_MS = 1000;
@@ -16,16 +17,13 @@ export type OutputPorts = {
 
 // A background shell command's or a Monitor's output over the screen, the end the session keeps, asked
 // again each second while the task runs so it follows the command with its last lines in view, and
-// once more after it ends. Escape closes it. What one read shows, or why not, is taskOutputShown's.
+// once more after it ends. Escape closes it. What one read shows and whether to ask again are
+// readTaskOutput's and followAfter's; this keeps the sheet and the timer.
 export async function openTaskOutput(task: ChatTask | FinishedTask, ports: OutputPorts): Promise<void> {
   const name = task.description || task.kind;
-  async function next(): Promise<{ running: boolean; shown: ReturnType<typeof taskOutputShown> }> {
-    // Asked before the read, so the read after the task ends is the last one.
-    const running = ports.running();
-    return { running, shown: taskOutputShown(name, await ports.read(), running) };
-  }
+  const next = () => readTaskOutput(name, ports.read, ports.running);
 
-  let first: Awaited<ReturnType<typeof next>>;
+  let first: OutputRead;
   try {
     first = await next();
   } catch (error) {
@@ -45,7 +43,7 @@ export async function openTaskOutput(task: ChatTask | FinishedTask, ports: Outpu
   function draw(text: string): void {
     if (text === output.textContent) return;
     const box = sheet.parentElement;
-    const stick = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    const stick = !box || nearBottom(box);
     output.textContent = text;
     if (stick && box) box.scrollTop = box.scrollHeight;
   }
@@ -61,14 +59,15 @@ export async function openTaskOutput(task: ChatTask | FinishedTask, ports: Outpu
   });
   draw(first.shown.text);
 
-  // A read that fails or is refused once the viewer is open keeps what it shows and stops following.
-  function follow(running: boolean): void {
-    if (!running) return;
+  // A read that fails once the viewer is open keeps what it shows and stops following.
+  function follow(again: boolean): void {
+    if (!again) return;
     timer = setTimeout(() => {
-      next().then(({ running: still, shown }) => {
-        if (!open || shown.kind === 'refused') return;
-        draw(shown.text);
-        follow(still);
+      next().then((read) => {
+        if (!open) return;
+        const step = followAfter(read);
+        if (step.draw !== null) draw(step.draw);
+        follow(step.again);
       }, () => undefined);
     }, FOLLOW_MS);
   }
