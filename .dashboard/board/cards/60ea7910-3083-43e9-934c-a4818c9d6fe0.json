@@ -1,0 +1,11 @@
+{
+  "id": "60ea7910-3083-43e9-934c-a4818c9d6fe0",
+  "title": "Stop a pane's systemd scope when the pane closes or is released",
+  "notes": "Part 3 of 4 (after part 1 merges): stop a pane's scope when the pane closes or is released.\n\npane.close and pane.release (src/main/actions/pane/) stop the pane's recorded scope with `systemctl --user stop <unit>` after the shell ends, so a dev server or watcher the agent detached goes too (today it outlives the pane). A scope that is already gone is fine. Through the pane actions only (actions-rule-1). A scope survives an app restart like the pane host's shells; pane.restore re-reads its unit name. No scope recorded (fallback, Windows, macOS): nothing to stop.\nTests: the decision (which unit to stop, when, none recorded) pure with tests; the systemctl call behind a port. Hand check: start `sleep 1000 &` disowned in an agent pane, release the pane, the sleep is gone. Docs: docs/processes, panes README, history.\nEngineering bar: clean, testable, readable.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T11:16:06.240Z",
+  "updatedAt": "2026-11-09T11:16:06.240Z",
+  "column": "Todo",
+  "order": 14
+}

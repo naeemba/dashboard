@@ -1,0 +1,11 @@
+{
+  "id": "f9087cad-e6b4-47cd-8281-8f8adbdd3543",
+  "title": "Scope the Claude sessions the SDK starts and the manager's tasks",
+  "notes": "Part 2 of 4 (after part 1 merges): scope the Claude sessions the SDK starts, and the manager's tasks.\n\n- Main's sessions and worker screens' sessions (screen host, #226) start claude through the Agent SDK in chat-sessions.ts (pathToClaudeCodeExecutable, ~line 344). Use the SDK's spawnClaudeCodeProcess hook to start it through scopedCommand(kind 'agent', the session's slot or pane id). First confirm the screen host's sessions go through this same code; if they start elsewhere, wrap that too.\n- task-runner.ts (the manager's tasks across projects): scoped as 'agent' (they run builds and tests) under agents.slice, unit task-<slug>-<random>.\n- Each scope's unit name recorded where card 3 and 4 can find it (the session's record).\n- Remove these sites from the spawn guard's allowed count (lower, never raise).\nTests: the hook's argument building and the fallback, through the pure module. Hand check: main's claude and a worker screen's claude each in their own agent-*.scope. Docs: docs/processes, chat README, history.\nEngineering bar: clean, testable, readable; decisions pure and tested, side effects thin.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T11:16:06.160Z",
+  "updatedAt": "2026-11-09T11:16:06.160Z",
+  "column": "Todo",
+  "order": 13
+}

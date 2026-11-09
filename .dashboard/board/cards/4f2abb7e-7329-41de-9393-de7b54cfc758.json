@@ -1,0 +1,11 @@
+{
+  "id": "4f2abb7e-7329-41de-9393-de7b54cfc758",
+  "title": "Show each pane's and session's memory from its systemd scope",
+  "notes": "Part 4 of 4 (optional, after parts 1-3): show each pane's and session's memory.\n\nRead memory.current of the recorded scope (/sys/fs/cgroup/user.slice/user-<uid>.slice/user@<uid>.service/agents.slice/<unit>/memory.current) every few seconds, only for open projects, and show it in the manager's pane list and the status bar (e.g. '2.1G'), with a mark near the per-scope MemoryHigh. Nothing shown when no scope is recorded. Reading is cheap: one small file per scope.\nTests: the formatting and threshold decisions pure with tests. Docs: docs/processes, manager README, help blurb if the list gains a column (keys-rule-2).",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-09T11:16:06.324Z",
+  "updatedAt": "2026-11-09T11:16:06.324Z",
+  "column": "Todo",
+  "order": 15
+}
