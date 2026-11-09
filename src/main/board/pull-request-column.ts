@@ -8,7 +8,12 @@ import {
 // pull-request-sweep.ts says when.
 
 export type PullRequestState = 'OPEN' | 'MERGED' | 'CLOSED';
-export type PullRequest = { number: number; state: PullRequestState; title: string; url: string };
+// The last three are what the card's glyph is read from (pull-request-status.ts), as gh sent them:
+// only that file reads them, and it checks each.
+export type PullRequest = {
+  number: number; state: PullRequestState; title: string; url: string;
+  statusCheckRollup?: unknown; reviewDecision?: unknown; mergeable?: unknown;
+};
 
 // A Done card is asked about for this long after it last changed, then never again. Long enough to
 // catch a card moved to Done before its pull request merged, which is how kamandsystem #19 sat in Done

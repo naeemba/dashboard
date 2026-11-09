@@ -15,7 +15,7 @@ const RUNNING = new Set(['PENDING', 'EXPECTED']);
 export function pullRequestStatus(pull: PullRequest): PullRequestStatus | null {
   if (pull.state === 'MERGED') return 'merged';
   if (pull.state === 'CLOSED') return null;
-  const { statusCheckRollup, reviewDecision, mergeable } = pull as Record<string, unknown>;
+  const { statusCheckRollup, reviewDecision, mergeable } = pull;
   const checks = (Array.isArray(statusCheckRollup) ? statusCheckRollup : []).map(checkState);
   if (checks.includes('failed')) return 'failed';
   if (checks.includes('running')) return 'running';
@@ -54,8 +54,11 @@ export function pullRequestStatuses(): PullRequestStatuses {
     of(projectPath, board) {
       const shown: Record<string, PullRequestStatus> = {};
       for (const card of allCards(board)) {
-        const status = merged(card) ? 'merged' : card.branch === undefined ? null : known.get(key(projectPath, card.branch)) ?? null;
-        if (status !== null) shown[card.id] = status;
+        if (merged(card)) shown[card.id] = 'merged';
+        else if (card.branch !== undefined) {
+          const status = known.get(key(projectPath, card.branch));
+          if (status) shown[card.id] = status;
+        }
       }
       return shown;
     },
