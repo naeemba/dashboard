@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:55.346Z",
-  "updatedAt": "2026-11-09T16:19:15.724Z",
+  "updatedAt": "2026-11-09T20:55:33.693Z",
   "branch": "work-board-card-54bfe7fe-26b7-404d-880c-194",
   "pullRequest": 277,
   "comments": [
     {
       "at": "2026-11-09T16:19:15.724Z",
       "body": "Shipped in #277: CI step 'Refuse a moved version' (scripts/version-unchanged.mjs + step, tested) fails a pull request whose merge commit's package.json version differs from its base. Push-to-main runs (Release's commit) skip it. CLAUDE.md line left for Audit 13."
+    },
+    {
+      "at": "2026-11-09T20:55:33.693Z",
+      "body": "Pull request #277 merged: Audit 5: CI fails a pull request that moves package.json version https://github.com/naeemba/dashboard/pull/277"
     }
   ],
   "column": "Done",

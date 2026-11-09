@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:54.731Z",
-  "updatedAt": "2026-11-09T16:05:43.652Z",
+  "updatedAt": "2026-11-09T20:55:29.642Z",
   "branch": "work-board-card-59e95590-0bd3-4d99-83c6-f4a",
   "pullRequest": 274,
   "comments": [
     {
       "at": "2026-11-09T16:05:43.652Z",
       "body": "Shipped in #274: eslint refuses String(error) and ${error} outside failure.ts and failure-line.ts, pinned in eslint.config.test.ts. board-view.ts now prints through failureText, so its exemption is gone. The CLAUDE.md line stays, minus the board-view exemption, for Audit 13 to delete."
+    },
+    {
+      "at": "2026-11-09T20:55:29.642Z",
+      "body": "Pull request #274 merged: Lint String(error) outside the failure files, and fix board-view.ts https://github.com/naeemba/dashboard/pull/274"
     }
   ],
   "column": "Done",
