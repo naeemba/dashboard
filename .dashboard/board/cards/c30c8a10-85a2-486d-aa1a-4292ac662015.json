@@ -5,7 +5,9 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T21:29:55.475Z",
-  "updatedAt": "2026-11-09T09:30:14.988Z",
+  "updatedAt": "2026-11-09T09:39:42.480Z",
+  "branch": "work-board-card-c30c8a10-85a2-486d-aa1a-429",
+  "pullRequest": 250,
   "comments": [
     {
       "at": "2026-11-09T09:29:05.391Z",
@@ -16,6 +18,6 @@
       "body": "Back in Doing 2026-11-09: the cancel was meant for another pane."
     }
   ],
-  "column": "Doing",
+  "column": "Review",
   "order": 0
 }
