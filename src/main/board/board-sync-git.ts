@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import type { Board } from '../../shared/board/board';
 import { rebaseBoardChange, sameBoard } from '../../shared/board/board-merge';
 import { failureText } from '../../shared/errors/failure';
@@ -162,8 +162,9 @@ async function checkoutPending(
   ]);
   if (!publishesCheckout(onBranch, branch)) return null;
   // Unparsable where it is, or renamed to `.broken` by the app's read, which git sees as a deletion.
+  // Named as git names them, with `/`, on every platform: the same paths `setAside` holds.
   const setAside = (deleted ?? '').split('\n').filter((file) => file !== '' && existsSync(join(checkout, `${file}${BROKEN_SUFFIX}`)));
-  const refusal = damagedBoardRefusal([...readBoard(checkout, false).brokenFiles.map((file) => relative(checkout, file)), ...setAside]);
+  const refusal = damagedBoardRefusal([...readBoard(checkout, false).brokenFiles.map((file) => relative(checkout, file).split(sep).join('/')), ...setAside]);
   if (refusal !== null) return { refusal };
   const local = peekBoard(checkout);
   if (local === null || head === null) return null;
