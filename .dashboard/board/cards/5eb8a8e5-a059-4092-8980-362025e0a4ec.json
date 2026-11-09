@@ -1,0 +1,11 @@
+{
+  "id": "5eb8a8e5-a059-4092-8980-362025e0a4ec",
+  "title": "Resuming a conversation opens the kind it was: a screen stays a screen",
+  "notes": "2026-11-09: insta-experiences' main restarted a crashed worker's conversation and got Claude Code in a terminal (/opt/claude-code/bin/claude --resume 2f5ed351…), not a Claude screen. #233's paneKind rule makes every resume a terminal (pane.dispatch: 'a resume is a terminal'), so the drawer's resume and any resume a main asks for leave the screen. Change: a resume opens what the conversation was last run as (a screen if it ran on a screen, a terminal if in a terminal; the session index or the transcript records which), and a conversation of unknown kind opens as pane run's default (a screen off Windows). Through pane.dispatch only; decision tests for each case. Docs: workers decisions, drawer README, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T16:23:56.063Z",
+  "updatedAt": "2026-11-09T16:23:56.063Z",
+  "column": "Todo",
+  "order": 6
+}
