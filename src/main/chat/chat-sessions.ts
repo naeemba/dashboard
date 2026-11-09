@@ -14,6 +14,7 @@ import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
 import { exportTarget } from './chat-export-target';
+import { chromeArgumentsFor } from './chat-chrome';
 import { closedAtQuit, sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
@@ -291,6 +292,8 @@ export function registerChatSessions(
 
   async function start(slot: number, projectPath: string): Promise<Session> {
     const { query } = await import('@anthropic-ai/claude-agent-sdk');
+    // Read while the shell's PATH and the scope are awaited; it never rejects.
+    const chrome = chromeArgumentsFor(host.environment, homedir());
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
     const environment = { ...host.environment, PATH: await shellPath };
     const executable = claudeExecutable();
@@ -317,7 +320,8 @@ export function registerChatSessions(
         // newer model's thinking arrives empty. The flag alone leaves whether to think to the settings.
         // A worker screen runs as a terminal worker does: auto mode, its own name, the board instructions.
         permissionMode: preferences.get(slot)?.permissionMode ?? (worker ? 'auto' : undefined),
-        extraArgs: { name, 'thinking-display': 'summarized' },
+        // Claude in Chrome when the user's config turns it on, which only the interactive CLI reads (chat-chrome.ts).
+        extraArgs: { name, 'thinking-display': 'summarized', ...await chrome },
         // Every settings file loads, on main's screen and a worker's, as in the terminal, so the
         // user's allow rules apply before auto mode decides (workers-decision-5).
         settingSources: ['user', 'project', 'local'],

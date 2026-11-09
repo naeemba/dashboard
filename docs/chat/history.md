@@ -49,4 +49,5 @@ One line per merged change: date, pull request, why.
 - 2026-11-08 #237 — A running workflow's bar on its strip row, and its phases and agents behind Alt+P
 - 2026-11-09 #251 — Opening a background shell command or Monitor shows its output, followed live (chat-decision-17)
 - 2026-11-09 #256 — The session's Claude runs in a systemd scope of its own, a worker screen's too (processes-decision-5)
+- 2026-11-09 #271 — Claude screens get Claude in Chrome when Claude Code's config turns it on by default
 - 2026-11-09 #264 — Remove any attached image from the prompt: an x on each thumbnail, Alt+D walks them
