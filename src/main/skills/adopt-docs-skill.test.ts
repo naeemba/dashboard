@@ -5,7 +5,7 @@ import { ADOPT_DOCS_SKILL } from './adopt-docs-skill';
 
 // skills-decision-2: the skill copies this repository's docs pattern word for word. Line breaks and
 // the skill's four-space indent differ, so the texts are compared word by word.
-const root = join(__dirname, '..', '..', '..');
+const root = process.cwd();
 
 function words(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
