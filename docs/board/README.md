@@ -156,7 +156,7 @@ on its card or its worktree's record, that is not in Cancelled, whose merge is
 not on it yet, and that, if it is in Done, changed in the last day. A card with
 no branch, a research card, is never asked about; main moves it as before.
 After the number the card shows one glyph from the same answer
-(board-decision-7): ◌ checks running, ✗ a check failed, ✓ approved, ● mergeable,
+(board-decision-9): ◌ checks running, ✗ a check failed, ✓ approved, ● mergeable,
 ◆ merged, in that order of what wins. An open pull request conflicting or
 waiting on a review shows none. The glyph is held in memory, not written on the
 card, so a restart shows none until the next check; merged is read from the

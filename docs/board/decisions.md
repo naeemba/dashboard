@@ -112,7 +112,7 @@ finished, so a board whose finished column has another name (`Shipped`) shows
 its subtasks as under way. That is the price of one rule the bar, the manager's
 counts and its stalled panes all share.
 
-## board-decision-7: A card's pull request glyph is read with its column and held in memory
+## board-decision-9: A card's pull request glyph is read with its column and held in memory
 
 **The glyph (checks running, failed, approved, mergeable, merged) comes from the
 same `gh pr list` card.follow asks, with three more fields, and is never written
@@ -144,7 +144,7 @@ the merge. Agents moved cards to Done on main before the merge, and kamandsystem
 This supersedes board-rule-2's ordering: the rule (Review while open, Done after
 the merge) stands, and the app keeps it. Folds in card b0234b28's lookup (the
 number found from the branch through `gh`); its glyph of check and review state
-is board-decision-7.
+is board-decision-9.
 
 **Each state moves the card when it differs from the last line about that pull
 request, and the line on the card is the record of that.** A reopen counts as a
@@ -155,7 +155,7 @@ would jump to Review two minutes later. The one exception is Done with a pull
 request open, which is moved back every time, since that card is the bug above.
 
 **Asked when a worker reports, when the board is shown, and every two minutes
-(every minute since board-decision-7);
+(every minute since board-decision-9);
 never twice in 30 seconds.** Showing the board re-reads it after each write, the
 app's own included, and asking `gh` on each read would be a call per card per
 keystroke. A Done card is asked about for a day after it last changed, enough to
