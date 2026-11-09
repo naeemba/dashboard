@@ -19,7 +19,7 @@ import {
   syncCommitMessage,
   type CheckoutStep,
 } from './board-sync';
-import { lostRace } from './create-task';
+import { lostRace, NO_HOOKS } from './create-task';
 
 // The board's git sync: every write to a board git tracks lands on origin's default branch, and the
 // project's checkout is brought up to it. The decisions are board-sync.ts's; this is the git and the
@@ -37,32 +37,30 @@ import { lostRace } from './create-task';
 // the program is killed half way.
 
 const REMOTE = 'origin';
-// The project's hooks are for its code: a pre-push `npm test` on every card move is minutes of waiting,
-// a post-merge `npm install` on every fast-forward worse.
-const NO_HOOKS = ['-c', 'core.hooksPath=/dev/null'];
 
 export type BoardEdit = (board: Board) => Board;
 
-// What a write ends in. Synced: `board` is on origin now, and `checkout` says where that leaves the
+// What a write ends in. Synced: the board is on origin now, and `checkout` says where that leaves the
 // folder asked about: `current`, it holds that board on disk too (it was up to date or was
 // fast-forwarded); `stale`, it is the project's checkout but could not be moved (checkoutStep says
 // why), so a caller with an edit writes it there as well; `elsewhere`, it is a worktree, whose board is
 // its branch's and is left alone. Not synced: the caller
 // writes the board where it is, as before there was a sync, and says the warning when there is one.
 // A board git does not track has no warning: there is nothing for it to be in step with.
-export type BoardSync = { synced: true; board: Board; checkout: 'current' | 'stale' | 'elsewhere' } | { synced: false; warning: string | null };
+export type BoardSync = { synced: true; checkout: 'current' | 'stale' | 'elsewhere' } | { synced: false; warning: string | null };
 
 export async function syncBoard(folder: string, edit: BoardEdit = (board) => board): Promise<BoardSync> {
   if (isManagerPath(folder)) return { synced: false, warning: null };
   const top = await answer(['rev-parse', '--show-toplevel'], folder);
-  if (top === null || (await answer(['ls-files', '--', ...BOARD_PATHSPECS], top) ?? '') === '') return { synced: false, warning: null };
-  let branch: string;
-  try {
-    branch = await baseBranch(top);
-  } catch (error: unknown) {
-    return notSynced(failureText(error));
-  }
-  const checkout = await checkoutOf(top);
+  if (top === null) return { synced: false, warning: null };
+  const [tracked, branch, checkout, gitDirectory] = await Promise.all([
+    answer(['ls-files', '--', ...BOARD_PATHSPECS], top),
+    baseBranch(top).catch((error: unknown) => new Error(failureText(error))),
+    checkoutOf(top),
+    git(['rev-parse', '--absolute-git-dir'], top),
+  ]);
+  if ((tracked ?? '') === '') return { synced: false, warning: null };
+  if (branch instanceof Error) return notSynced(branch.message);
 
   for (let attempt = 1; ; attempt += 1) {
     try {
@@ -73,9 +71,9 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
     const tip = await git(['rev-parse', '--verify', `refs/remotes/${REMOTE}/${branch}^{commit}`], top);
     const scratch = mkdtempSync(join(tmpdir(), 'board-sync-'));
     try {
-      const origin = await boardAt(top, tip, join(scratch, 'origin'));
+      const origin = await boardAt(gitDirectory, tip, join(scratch, 'origin'));
       if ('refusal' in origin) return notSynced(origin.refusal);
-      const pending = await checkoutPending(checkout, branch, tip, origin.board, join(scratch, 'base'));
+      const pending = await checkoutPending(checkout, gitDirectory, branch, tip, origin.board, join(scratch, 'base'));
       const next = edit(pending === null ? origin.board : rebaseBoardChange(pending.base, pending.local, origin.board));
       let target = tip;
       if (!sameBoard(origin.board, next)) {
@@ -89,7 +87,7 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         target = commit;
       }
       const step = await updateCheckout(checkout, branch, target);
-      return { synced: true, board: next, checkout: checkout !== top ? 'elsewhere' : typeof step === 'string' ? 'current' : 'stale' };
+      return { synced: true, checkout: checkout !== top ? 'elsewhere' : typeof step === 'string' ? 'current' : 'stale' };
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
@@ -101,7 +99,7 @@ function notSynced(reason: string): BoardSync {
 }
 
 async function answer(gitArguments: string[], cwd: string): Promise<string | null> {
-  return git(gitArguments, cwd).then((out) => out, () => null);
+  return git(gitArguments, cwd).catch(() => null);
 }
 
 // git's own sentence when it gave one, which is what lostRace reads.
@@ -121,26 +119,18 @@ async function checkoutOf(top: string): Promise<string> {
   return realPath(main) === realPath(top) ? top : main;
 }
 
-// The environment that points git at a scratch work tree and index of its own, against the repository's
-// objects and refs.
-type Scratch = { work: string; environment: Record<string, string> };
+// A scratch work tree and index of its own, against the repository's objects and refs, and git run there.
+type Scratch = { work: string; git(gitArguments: string[]): Promise<string> };
 
 // The board at `ref`, read the way the app reads any board, from its files written into `folder`.
-async function boardAt(repository: string, ref: string, folder: string): Promise<{ board: Board; scratch: Scratch } | { refusal: string }> {
+async function boardAt(gitDirectory: string, ref: string, folder: string): Promise<{ board: Board; scratch: Scratch } | { refusal: string }> {
   const work = join(folder, 'work');
   mkdirSync(work, { recursive: true });
-  const scratch: Scratch = {
-    work,
-    environment: {
-      GIT_DIR: await git(['rev-parse', '--absolute-git-dir'], repository),
-      GIT_WORK_TREE: work,
-      GIT_INDEX_FILE: join(folder, 'index'),
-    },
-  };
-  const inScratch = (gitArguments: string[]) => git(gitArguments, work, { environment: scratch.environment });
-  await inScratch(['read-tree', ref]);
-  if ((await inScratch(['ls-files', '--', ...BOARD_PATHSPECS])) === '') return { refusal: `${ref.slice(0, 8)} has no board` };
-  await inScratch(['checkout', '--quiet', '--', ...BOARD_PATHSPECS]);
+  const environment = { GIT_DIR: gitDirectory, GIT_WORK_TREE: work, GIT_INDEX_FILE: join(folder, 'index') };
+  const scratch: Scratch = { work, git: (gitArguments) => git(gitArguments, work, { environment }) };
+  await scratch.git(['read-tree', ref]);
+  if ((await scratch.git(['ls-files', '--', ...BOARD_PATHSPECS])) === '') return { refusal: `${ref.slice(0, 8)} has no board` };
+  await scratch.git(['checkout', '--quiet', '--', ...BOARD_PATHSPECS]);
   const read = readBoard(work, false);
   if (read.brokenFiles.length > 0) return { refusal: `board files at ${ref.slice(0, 8)} do not parse` };
   return { board: read.board, scratch };
@@ -149,23 +139,22 @@ async function boardAt(repository: string, ref: string, folder: string): Promise
 // The commit of `board` on top of `parent`, made in the scratch folder its parent's board was read
 // into. -A, so a card removed or a board leaving board.json is a removal in the commit.
 async function commitBoard(scratch: Scratch, board: Board, parent: string, message: string): Promise<string> {
-  const inScratch = (gitArguments: string[]) => git(gitArguments, scratch.work, { environment: scratch.environment });
   writeBoard(scratch.work, board);
-  await inScratch(['add', '-A', '--', ...BOARD_PATHSPECS]);
-  const tree = await inScratch(['write-tree']);
-  return inScratch(['commit-tree', tree, '-p', parent, '-m', message]);
+  await scratch.git(['add', '-A', '--', ...BOARD_PATHSPECS]);
+  const tree = await scratch.git(['write-tree']);
+  return scratch.git(['commit-tree', tree, '-p', parent, '-m', message]);
 }
 
 // The checkout's own board edits, as the base its board was edited from (the board at its HEAD) and the
 // board in its working tree; null when there are none or they are not the default branch's to publish.
 async function checkoutPending(
-  checkout: string, branch: string, tip: string, origin: Board, folder: string,
+  checkout: string, gitDirectory: string, branch: string, tip: string, origin: Board, folder: string,
 ): Promise<{ base: Board; local: Board } | null> {
-  if (!publishesCheckout(await answer(['symbolic-ref', '--short', '-q', 'HEAD'], checkout), branch)) return null;
+  const [onBranch, head] = await Promise.all([answer(['symbolic-ref', '--short', '-q', 'HEAD'], checkout), answer(['rev-parse', 'HEAD'], checkout)]);
+  if (!publishesCheckout(onBranch, branch)) return null;
   const local = peekBoard(checkout);
-  const head = await answer(['rev-parse', 'HEAD'], checkout);
   if (local === null || head === null) return null;
-  const base = head === tip ? { board: origin } : await boardAt(checkout, head, folder);
+  const base = head === tip ? { board: origin } : await boardAt(gitDirectory, head, folder);
   if ('refusal' in base || sameBoard(base.board, local)) return null;
   return { base: base.board, local };
 }
@@ -179,13 +168,19 @@ async function checkoutPending(
 // the edits the checkout had are replayed onto what it lands on. A fast-forward that fails anyway puts
 // the checkout's board back as it was.
 async function updateCheckout(checkout: string, branch: string, target: string): Promise<CheckoutStep> {
-  const head = await answer(['rev-parse', 'HEAD'], checkout);
+  const [head, onBranch, porcelain, behind] = await Promise.all([
+    answer(['rev-parse', 'HEAD'], checkout),
+    answer(['symbolic-ref', '--short', '-q', 'HEAD'], checkout),
+    answer(['status', '--porcelain'], checkout),
+    // Exit 0, nothing printed, when HEAD is an ancestor of the target.
+    answer(['merge-base', '--is-ancestor', 'HEAD', target], checkout),
+  ]);
   const step = checkoutStep({
-    branch: await answer(['symbolic-ref', '--short', '-q', 'HEAD'], checkout),
+    branch: onBranch,
     defaultBranch: branch,
     current: head === target,
-    behind: head !== null && (await answer(['merge-base', '--is-ancestor', head, target], checkout)) !== null,
-    porcelain: (await answer(['status', '--porcelain'], checkout)) ?? '',
+    behind: head !== null && behind !== null,
+    porcelain: porcelain ?? '',
   });
   if (step !== 'fast-forward') return step;
   const local = peekBoard(checkout);

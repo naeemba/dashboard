@@ -1,4 +1,5 @@
 import { failureText } from '../../shared/errors/failure';
+import { oneAtATime } from '../ship/ship';
 import { notSyncedWarning } from './board-sync';
 import type { BoardSync } from './board-sync-git';
 
@@ -20,7 +21,7 @@ export function boardSyncQueue(
   syncBoard: (projectPath: string) => Promise<BoardSync>,
   warn: (projectPath: string, message: string) => void,
 ): BoardSyncQueue {
-  const last = new Map<string, Promise<void>>();
+  const inTurn = oneAtATime();
   const queued = new Map<string, Promise<void>>();
   const warned = new Set<string>();
 
@@ -43,9 +44,8 @@ export function boardSyncQueue(
     sync(projectPath) {
       const waiting = queued.get(projectPath);
       if (waiting) return waiting;
-      const next = (last.get(projectPath) ?? Promise.resolve()).then(() => once(projectPath));
+      const next = inTurn(projectPath, () => once(projectPath));
       queued.set(projectPath, next);
-      last.set(projectPath, next);
       return next;
     },
   };

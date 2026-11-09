@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { emptyBoard } from '../../shared/board/board';
 import type { BoardSync } from './board-sync-git';
 import { boardSyncQueue } from './board-sync-queue';
 
-const synced: BoardSync = { synced: true, board: emptyBoard(), checkout: 'current' };
+const synced: BoardSync = { synced: true, checkout: 'current' };
 const offline: BoardSync = { synced: false, warning: 'offline' };
 
 // A sync that finishes only when the test says so.
