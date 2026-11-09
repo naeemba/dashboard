@@ -124,10 +124,10 @@ project.focus, which needs one.
 The quiet-minute rule is the bar's alone, not `log:write`'s: other writers
 repeat a line on purpose (an agent started twice is two lines).
 
-One line does not fade: the update announcement (`Dashboard vX.Y.Z is out`)
-says how things stand, and with a check every six hours an 8-second line would
-go by while nobody is looking. Its caller asks for `stays`; a click or Escape
-still clears it.
+The update lines do not fade: the announcements (`Dashboard vX.Y.Z is out`
+and `Dashboard vX.Y.Z is ready · … to restart into it`) say how things stand,
+and with a check every six hours an 8-second line would go by while nobody is
+looking. Their caller asks for `stays`; a click or Escape still clears them.
 
 Watch for: a progress notice fades while its work goes on. A ship that takes a
 minute says `shipping…` for 8 seconds, then nothing until it ends. And a failure

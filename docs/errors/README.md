@@ -19,9 +19,10 @@ dialog it was pressed in. Every notice is logged as info and every error as
 error, with the owner that wrote it as the entry's action, each sentence once,
 and again only after it has been quiet for a minute. An error while the window
 is not in front also raises a desktop notification, by the same rule; a click
-on it brings the window forward. The update line (`Dashboard vX.Y.Z is out`)
-does not fade; a click or Escape still clears it. The settings screen's Errors row turns those off
-(`errors.notify`).
+on it brings the window forward. The settings screen's Errors row turns those
+banners off (`errors.notify`). The update lines (`Dashboard vX.Y.Z is out` and
+`Dashboard vX.Y.Z is ready · … to restart into it`) do not fade; a click or
+Escape still clears them.
 
 ## Scenarios
 

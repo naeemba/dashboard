@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isOn } from '../../shared/settings/settings';
 import { settingsRows, stepSelection, toggled } from './settings-rows';
 import { ACTIONS } from '../../shared/keys/actions';
-import { bindKey, defaultSettings, parseSettings } from '../../shared/settings/settings';
+import { bindKey, defaultSettings, isOn, parseSettings } from '../../shared/settings/settings';
 
 const settings = defaultSettings(true);
 const rows = settingsRows(settings);
