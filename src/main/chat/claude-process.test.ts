@@ -4,15 +4,16 @@ import { scopedQuery, withScope } from './claude-process';
 
 describe('withScope', () => {
   const options: Options = { cwd: '/work/shop' };
+  const tail = { text: '', closed: Promise.resolve() };
 
   it("leaves the SDK's own spawn alone when there is no scope", () => {
-    expect(withScope(options, undefined)).toBe(options);
-    expect(withScope(options, { file: '/sdk/claude', args: [], unit: null })).toBe(options);
+    expect(withScope(options, undefined, tail)).toBe(options);
+    expect(withScope(options, { file: '/sdk/claude', args: [], unit: null }, tail)).toBe(options);
   });
 
   it.skipIf(process.platform === 'win32')('starts the process through the scope, its stdin and stdout piped', async () => {
     // `env --` stands in for systemd-run: it runs what follows its `--`, as the scope does.
-    const spawnHook = withScope(options, { file: 'env', args: ['--', 'ignored'], unit: 'agent-test-0000.scope' }).spawnClaudeCodeProcess;
+    const spawnHook = withScope(options, { file: 'env', args: ['--', 'ignored'], unit: 'agent-test-0000.scope' }, tail).spawnClaudeCodeProcess;
     const child = spawnHook?.({ command: 'cat', args: [], cwd: '/', env: {}, signal: new AbortController().signal }) as SpawnedProcess;
     let output = '';
     child.stdout.on('data', (chunk: Buffer) => { output += chunk.toString(); });

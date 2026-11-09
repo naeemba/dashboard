@@ -35,7 +35,7 @@ type StderrTail = { text: string; closed: Promise<void> };
 // it (the CLI itself, or node and the CLI's script) and every flag it built. With no scope (unavailable,
 // not Linux, a caller from before scopes) the options are left alone and the SDK spawns as it always
 // did. stderr is drained into `tail` as it comes, so a full pipe never stalls the CLI.
-export function withScope(options: Options, scope: ScopedCommand | undefined, tail?: StderrTail): Options {
+export function withScope(options: Options, scope: ScopedCommand | undefined, tail: StderrTail): Options {
   if (scope?.unit == null) return options;
   return {
     ...options,
@@ -43,9 +43,9 @@ export function withScope(options: Options, scope: ScopedCommand | undefined, ta
       const child = spawnScoped(retargeted(scope, started.command, started.args), {
         cwd: started.cwd, env: started.env, signal: started.signal, stdio: ['pipe', 'pipe', 'pipe'],
       });
-      if (tail) tail.closed = new Promise((resolve) => child.stderr?.once('close', resolve));
+      tail.closed = new Promise((resolve) => child.stderr?.once('close', resolve));
       child.stderr?.on('data', (chunk: Buffer) => {
-        if (tail) tail.text = (tail.text + chunk.toString()).slice(-STDERR_LIMIT);
+        tail.text = (tail.text + chunk.toString()).slice(-STDERR_LIMIT);
       });
       return child as SpawnedProcess;
     },
