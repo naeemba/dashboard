@@ -41,7 +41,7 @@ export const processesInstallSlices = action<InstallSlicesPorts, { folder: strin
   input: ({ folder }) => (isFilledText(folder) ? { folder } : { refused: 'no systemd folder was given' }),
   async run(ports, { folder }) {
     const written = Object.entries(SLICE_UNITS)
-      .filter(([name, text]) => ports.writeNew(path.join(folder, name), text))
+      .filter(([name, text]) => ports.writeNew(path.posix.join(folder, name), text))
       .map(([name]) => name);
     if (written.length === 0) return { output: 'the slices were already installed', written };
     await ports.reload();
@@ -49,7 +49,7 @@ export const processesInstallSlices = action<InstallSlicesPorts, { folder: strin
   },
 });
 
-// Where systemd looks for the user's own units.
+// Where systemd looks for the user's own units. A systemd path is POSIX on every host, so the joins are too.
 export function systemdUserFolder(environment: Readonly<Record<string, string | undefined>>, home: string): string {
-  return path.join(environment.XDG_CONFIG_HOME || path.join(home, '.config'), 'systemd', 'user');
+  return path.posix.join(environment.XDG_CONFIG_HOME || path.posix.join(home, '.config'), 'systemd', 'user');
 }
