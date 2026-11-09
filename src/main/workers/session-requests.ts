@@ -8,7 +8,7 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { closedReport, doneReport } from '../../shared/workers/done-report';
+import { closedReport, doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import type { PaneKind } from './pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
@@ -113,6 +113,9 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // The main session in `slot` read a message from the session called `sender`: when that is a worker
   // that main dispatched, its next stop needs no notice.
   heard(slot: number, sender: string): void;
+  // The main session in `slot` began a turn, or ended one after its result was read: a worker's stop
+  // notice due in between waits for the end, so the report that turn read drops it.
+  mainTurn(slot: number, running: boolean): void;
   // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
   notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply;
   // Every finished worker pane released, each for the reason auto-release.ts gives. Run on a timer.
@@ -149,7 +152,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
   // to something else by then.
   const mainOf = (id: string): number => dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
+  // The mains mid-turn now, by slot, each with whether the turn has run PAUSE_CEILING_MS and the
+  // timer that says so. One past it counts as idle, and every notice held for it is told then:
+  // `idle` waits on main's background work too, which may never end. One clock for the turn, so a
+  // notice is held no longer than the turn's ceiling, whenever it came due.
+  const busyMains = new Map<number, { overCeiling: boolean; stop: () => void }>();
+  const midTurn = (slot: number) => busyMains.get(slot)?.overCeiling === false;
   const notices = stopNotices({
+    midTurn: (id) => midTurn(mainOf(id)),
     notice(id, paused) {
       if (!mainsWorker(id)) return;
       const slot = mainOf(id);
@@ -275,10 +285,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // One at a time, so two releases never race over one throwaway worktree. A refusal leaves the pane
   // as it is, and the next sweep decides again. Release takes back the worker's stop notice, so a
-  // worker closed for its card before main read a report from it is told to main here instead.
+  // worker closed for its card before main read a report from it is told to main here instead. Not
+  // while its main is mid-turn: the turn may have read the report, heard only at its end, and a close
+  // told meanwhile is taken the moment it ends (workers-decision-1).
   async function closeFinished(): Promise<void> {
     const closeAfterMs = ports.closeAfterMs();
     for (const id of openPaneIds().filter(mainsWorker)) {
+      if (midTurn(mainOf(id))) continue;
       const seen = look(id);
       const verdict = releaseVerdict(seen, closeAfterMs);
       if (!verdict.release) continue;
@@ -380,6 +393,17 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (id === undefined) return;
       notices.reported(id);
       quietFrom(id, true);
+    },
+    mainTurn(slot: number, running: boolean) {
+      if (running) {
+        if (busyMains.has(slot)) return;
+        const turn = { overCeiling: false, stop: () => clearTimeout(timer) };
+        const timer = setTimeout(() => { turn.overCeiling = true; notices.turnOver(); }, PAUSE_CEILING_MS);
+        return void busyMains.set(slot, turn);
+      }
+      busyMains.get(slot)?.stop();
+      busyMains.delete(slot);
+      notices.turnOver();
     },
   });
 }

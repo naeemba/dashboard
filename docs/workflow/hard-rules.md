@@ -57,6 +57,11 @@ two cards that started on the same number still landed on the same number, so
 it told nothing apart anyway. Leave `version` alone in a card's pull request;
 move it only when cutting a release.
 
+CI enforces it: on a pull request, `scripts/version-unchanged.mjs` compares the
+merge commit's `version` with its base's and fails the run when they differ,
+naming both. A branch behind a release passes, since its merge takes the base's
+number. Release's own commit goes straight to main, where the step is skipped.
+
 ## workflow-rule-4: A test's folder comes from temporaryFolder()
 
 A test that needs a folder takes it from `temporaryFolder(prefix)` in

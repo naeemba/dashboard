@@ -22,3 +22,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-06 #220 — A what's-new popup lists the pull requests an update brought
 - 2026-11-07 #232 — One themed scrollbar, 7px thumb, for everything but a terminal, a worker's Claude screen included
 - 2026-11-09 #248 — Log entries carry an error's stack, cause, source, build and context; old ones still read (app-decision-2)
+- 2026-11-09 #275 — A test holds every IPC channel name to <noun>:<verb> (app-rule-1)

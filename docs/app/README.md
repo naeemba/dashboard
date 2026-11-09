@@ -98,7 +98,7 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 its own side. `eslint.config.test.ts` pins each of those.
 
 - Process and window: `index.html` and its test, `main.ts`, `launch-gate.ts`, `renderer.ts`,
-  `preload.ts`, `bridge.ts`, `channels.ts`, `app-window.ts`
+  `preload.ts`, `bridge.ts`, `channels.ts`, `channel-names.test.ts` (app-rule-1), `app-window.ts`
 - Build: `vite.build-version.ts`, `vite.changelog.ts` and their tests at the
   repository root, declared in `forge.env.d.ts`
 - What's new: `whats-new.ts` (in `src/shared/app/`), `whats-new-store.ts`,
