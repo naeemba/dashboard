@@ -26,8 +26,14 @@ function boardWithCard(pullRequest: number | null, id = CARD): Board {
   return pullRequest === null ? withCard : setPullRequest(withCard, { column: 0, card: 0 }, pullRequest).board;
 }
 
+// The project's card in Done with the pull request card.follow put on it, the one that merged.
+function inDone(pullRequest: number): Board {
+  const board = boardWithCard(pullRequest);
+  return moveCardById(board, CARD, 5) ?? board;
+}
+
 // A project and the worktree beside it, each with a board of its own: the project's is what the sweep
-// moves the card on, and the worktree's is what the agent wrote its pull request number into.
+// moves the card on, and the worktree's is where a number that came in with the base sits.
 function flight(pullRequest: number | null): { entry: WorktreeEntry; projectPath: string } {
   const projectPath = folder();
   const worktreePath = folder();
@@ -109,7 +115,29 @@ describe('reviewSweep', () => {
     expect(log.started[0].prompt).toContain('/pr-loop 12');
   });
 
-  // The pull request number is the whole signal. Until it is there the agent is still working, and a
+  // card.follow's number on the project's board, with the card in Review: an agent that recorded
+  // nothing is reviewed, and one whose worktree carries an earlier pull request's number is reviewed
+  // on the new one.
+  it.each([[null], [12]])('reviews the pull request card.follow found, worktree number %s', async (written) => {
+    const { entry, projectPath } = flight(written);
+    writeBoard(projectPath, intoReview(boardWithCard(15), CARD) as Board);
+    const { ports: made, log } = ports(entry);
+    await sweepWith(made).run();
+    expect(log.started[0].prompt).toContain('/pr-loop 15');
+  });
+
+  // A re-ship after #12 closed unmerged: the project's card back out of Review still carries 12, and the
+  // worktree cut from the base has it too. That is the closed pull request, not a finished agent.
+  it('does not review a worktree number the project card already carries', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, boardWithCard(12));
+    const { ports: made, log } = ports(entry);
+    await sweepWith(made).run();
+    expect(log.started).toEqual([]);
+    expect(columnOfCard(projectPath)).toBe('Backlog');
+  });
+
+  // The pull request number is the whole signal. Until there is one the agent is still working, and a
   // sweep that took its worktree away would take the work with it.
   it('leaves a card whose agent has not opened a pull request alone', async () => {
     const { entry, projectPath } = flight(null);
@@ -143,12 +171,13 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
   });
 
-  // A review that ended the way it was meant to: the pull request merged and the card in Done. The
-  // pull request number stays written on the branch's board, so the card's own column is the only
-  // thing saying the review already happened — and once it has, the worktree has nothing left to do.
+  // A review that ended the way it was meant to: the pull request merged and the card in Done, still
+  // carrying its number, and the worktree carrying the same one from a base card.follow's board commit
+  // came in with. The card's own column is the only thing saying the review already happened — and once
+  // it has, the worktree has nothing left to do.
   it('removes the worktree of a card the review moved past Review, without reviewing it again', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    writeBoard(projectPath, inDone(12));
     const { ports: made, log } = ports({ ...entry, reviewing: true });
     const sweep = sweepWith(made);
     await sweep.run();
@@ -156,6 +185,16 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
     expect(log.started).toEqual([]);
     expect(columnOfCard(projectPath)).toBe('Done');
+  });
+
+  // The usual case: nothing on the worktree's board, only the number card.follow put on the card.
+  it('removes the worktree of a card in Done whose worktree board has no number', async () => {
+    const { entry, projectPath } = flight(null);
+    writeBoard(projectPath, inDone(15));
+    const { ports: made, log } = ports({ ...entry, reviewing: true });
+    await sweepWith(made).run();
+    expect(log.removed).toEqual([entry.worktreePath]);
+    expect(log.started).toEqual([]);
   });
 
   // Cancelled is past Review on a board as shipped, but a cancelled card may be taken back up: its
@@ -174,7 +213,7 @@ describe('reviewSweep', () => {
   // then kills the shell mid-sentence.
   it('waits for the review agent to stop before removing a finished worktree', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    writeBoard(projectPath, inDone(12));
     let working = true;
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { agentWorksIn: () => working });
     const sweep = sweepWith(made);
@@ -190,7 +229,7 @@ describe('reviewSweep', () => {
   // the last one is closed, and then goes.
   it('keeps a finished worktree while a shell still stands in it', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    writeBoard(projectPath, inDone(12));
     let open = true;
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: async () => open });
     const sweep = sweepWith(made);
@@ -207,7 +246,7 @@ describe('reviewSweep', () => {
   // kept when it is already gone.
   it('removes a finished worktree once when a run starts before the last one has asked', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    writeBoard(projectPath, inDone(12));
     let answer: (lives: boolean) => void = () => undefined;
     const asked = new Promise<boolean>((resolve) => { answer = resolve; });
     const { ports: made, log } = ports({ ...entry, reviewing: true }, { shellLivesIn: () => asked });
@@ -233,7 +272,7 @@ describe('reviewSweep', () => {
   // not ask git again every five seconds for an answer that will not change by itself.
   it('says once on the card why a finished worktree was kept', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    writeBoard(projectPath, inDone(12));
     const { ports: made, log } = ports(entry, {
       removeWorktree: async (worktreePath) => {
         log.removed.push(worktreePath);
@@ -340,9 +379,8 @@ describe('reviewSweep', () => {
       .toEqual(['No review worktree: uncommitted changes in ship-it, waiting for the commit']);
   });
 
-  // The bug this was written for. `/work-card` writes the pull request number onto the branch's board
-  // and commits it a moment later, and a tick landing between those two finds the number there and
-  // board.json uncommitted. Marked for good, the pull request sits in Review with nobody reviewing it
+  // The bug this was written for. `/work-card` opens the pull request and keeps going, and a tick
+  // landing while its last fix commit is still being made finds the worktree dirty. Marked for good, the pull request sits in Review with nobody reviewing it
   // until the app restarts — which is a card nobody notices for a day.
   it('tries a dirty worktree again on the next tick, and reviews it once the commit lands', async () => {
     const { entry, projectPath } = flight(12);
@@ -350,7 +388,7 @@ describe('reviewSweep', () => {
     const { ports: made, log } = ports(entry, {
       removeWorktree: async () => (committed
         ? { ok: true, message: '', dirty: [] }
-        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+        : { ok: false, message: '', dirty: ['src/app.ts'] }),
     });
     const sweep = sweepWith(made);
     await sweep.run();
@@ -509,7 +547,7 @@ describe('reviewSweep', () => {
 
   it('refuses a review by hand for a card past Review', async () => {
     const { entry, projectPath } = flight(12);
-    writeBoard(projectPath, moveCardById(boardWithCard(null), CARD, 5) ?? boardWithCard(null));
+    writeBoard(projectPath, inDone(12));
     const { ports: made, log } = ports(entry);
     await expect(reviewSweep(made).review(CARD)).resolves.toEqual({ refused: '"Ship it" is past Review; its review has run' });
     expect(log.removed).toEqual([]);

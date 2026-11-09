@@ -1,0 +1,11 @@
+{
+  "id": "54bfe7fe-26b7-404d-880c-194b08f3e6c0",
+  "title": "Audit 5: CI fails a pull request that moves package.json version",
+  "notes": "A CI step compares package.json version with the base branch and fails a pull request that changed it, except the release workflow's commit. workflow-rule-3.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:55.346Z",
+  "updatedAt": "2026-11-09T15:32:55.346Z",
+  "column": "Backlog",
+  "order": 45
+}

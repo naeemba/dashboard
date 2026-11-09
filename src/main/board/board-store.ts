@@ -113,10 +113,10 @@ and leaves out a \`.broken\` file set aside and a write's temporary file.
   \`Doing\` when its agent starts, into \`Review\` when the pull request on its
   branch opens, into \`Done\` when it merges, back to \`Doing\` when it closes
   unmerged, with one comment naming the pull request each time. An agent working
-  a card does not move it; it records the number with \`board set <id>
-  --pull-request <n>\`, which is what starts the review once it goes quiet.
-  Into \`Review\`, the app throws that card's worktree away and makes a fresh
-  one on the pull request's branch with an agent reviewing it.
+  a card neither moves it nor records the number: the app finds the pull request
+  from the branch, and starts the review once the agent goes quiet. Into
+  \`Review\`, the app throws that card's worktree away and makes a fresh one on
+  the pull request's branch with an agent reviewing it.
 - A card's column on the \`main\` branch says what has been merged, and \`Review\`
   is the one exception — a card there has a pull request open and nothing has
   checked it. On a board git tracks, the \`board\` command writes the card on
@@ -163,12 +163,13 @@ how many comments each card has — the id is the one \`show\`, \`move\`, \`set\
 \`show\` prints one card in full, including its comment trail, which is the part \`list\` has no room
 for.
 
-Prefer it to editing this file by hand: a refusal comes back as a message and nothing is written,
-where a hand edit that gets a field wrong is repaired silently on the next read.
+Use it, not a hand edit: a refusal comes back as a message and nothing is written, where a hand edit
+that gets a field wrong is repaired silently on the next read. An agent's Edit or Write of a file under
+\`board/\`, or a shell redirect into one, is refused by the \`board guard\` hook the app installs.
 
-Edit the files directly if you like — the app notices. It watches this folder while a board is on
-screen, so a card moved from the command line or by hand shows up where you are looking, with the
-selection left on the card it was on. The app rewrites a card's whole file when it changes that card
+A person editing the files in an editor is not stopped — the app notices. It watches this folder
+while a board is on screen, so a card moved from the command line or by hand shows up where you are
+looking, with the selection left on the card it was on. The app rewrites a card's whole file when it changes that card
 and drops any field not listed above.
 `;
 
