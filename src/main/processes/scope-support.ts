@@ -42,6 +42,7 @@ export type ProcessScopes = {
 
 export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
   let available = false;
+  // For collisions only, never a list of the scopes there are: systemd has that, under the two slices.
   // ponytail: only the names this run handed out; a name a previous run's pane host still holds
   // collides one time in 36^4 for the same pane, and that start's systemd-run exits with an error.
   const issued = new Set<string>();
@@ -54,10 +55,11 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
   async function check(): Promise<void> {
     // Not worth a line where scopes were never going to be: every Mac and Windows launch.
     if (ports.platform !== 'linux') return;
-    const refusal = scopeRefusal(
-      await ports.probe('systemd-run', ['--version']),
-      await ports.probe('systemctl', ['--user', 'is-system-running']),
-    );
+    const [systemdRun, managerState] = await Promise.all([
+      ports.probe('systemd-run', ['--version']),
+      ports.probe('systemctl', ['--user', 'is-system-running']),
+    ]);
+    const refusal = scopeRefusal(systemdRun, managerState);
     if (refusal !== null) {
       ports.warn(`Panes and agents run without systemd scopes: ${refusal}`);
       return;

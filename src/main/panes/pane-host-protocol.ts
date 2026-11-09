@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { chmodSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import type { ScopedCommand } from '../processes/scope';
 
 // What the app and the pane host say to each other: one JSON message per line over a unix socket,
 // or a named pipe on Windows.
@@ -129,7 +130,7 @@ export type SpawnRequest = {
   key: string;
   file: string;
   args: string[];
-  scope?: { unit: string; file: string; args: string[] };
+  scope?: ScopedCommand;
   cwd: string;
   env: Record<string, string>;
   cols: number;

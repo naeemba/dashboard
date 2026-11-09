@@ -1,3 +1,5 @@
+import { slug } from '../../shared/app/slug';
+
 // Which systemd scope a process the app starts runs in, as a command: the decision only, nothing
 // spawned or asked here. docs/processes/README.md says why each pane and agent gets a scope of its
 // own, and processes-decision-1 why the per-scope caps are what they are.
@@ -9,8 +11,8 @@ export type ScopeKind = 'agent' | 'shell';
 
 // What one agent may hold before the kernel reclaims from it (high) and before it is killed (max).
 // The slice's own caps are in its unit file (install-slices.ts), where a drop-in tunes them.
-export const AGENT_MEMORY_HIGH = '6G';
-export const AGENT_MEMORY_MAX = '8G';
+const AGENT_MEMORY_HIGH = '6G';
+const AGENT_MEMORY_MAX = '8G';
 
 const SLICES: Record<ScopeKind, string> = { agent: 'agents.slice', shell: 'panes.slice' };
 const PREFIXES: Record<ScopeKind, string> = { agent: 'agent', shell: 'pane' };
@@ -59,9 +61,8 @@ function freeUnit(request: ScopeRequest, support: ScopeSupport): string | null {
 
 const SLUG_LIMIT = 40;
 
-// The id as a unit name can carry it: letters, digits and dashes, lowercase, no longer than
-// SLUG_LIMIT. `dashboard:3` and `Dashboard 3` both come out `dashboard-3`.
+// The id as a unit name can carry it: slug's letters, digits and dashes, cut to SLUG_LIMIT.
+// `dashboard:3` and `Dashboard 3` both come out `dashboard-3`.
 export function scopeSlug(id: string): string {
-  const slug = id.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, SLUG_LIMIT).replace(/^-+|-+$/g, '');
-  return slug === '' ? 'unnamed' : slug;
+  return slug(id).slice(0, SLUG_LIMIT).replace(/-+$/, '') || 'unnamed';
 }

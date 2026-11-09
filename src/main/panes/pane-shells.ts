@@ -6,7 +6,7 @@ import { screenCopyWhile, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
 import { foregroundName, spawnShell, type PaneShell } from './pane-shell';
 import { runsAnAgent, type PaneCommand } from '../../shared/panes/pane-reading';
-import { baseName } from '../../shared/app/base-name';
+import { projectSlug } from '../workers/dispatch';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import type { Screens } from '../../shared/remote-host/screens';
 
@@ -64,7 +64,7 @@ export function paneShells(main: {
     // An agent's pane is the one running Claude Code as its command (pane.dispatch's terminal half).
     // A screen's Claude runs in the screen host; the shell under it is a plain one.
     const scoped = main.scoped({
-      kind: runsAnAgent(entry) ? 'agent' : 'shell', id: `${baseName(projectPath)}-${index}`, file: shellCommand, args: paneArguments,
+      kind: runsAnAgent(entry) ? 'agent' : 'shell', id: `${projectSlug(projectPath)}-${index}`, file: shellCommand, args: paneArguments,
     });
     let shell: PaneShell;
     try {
@@ -72,7 +72,7 @@ export function paneShells(main: {
       shell = spawnPane({
         key: paneKey(projectPath, index),
         file: shellCommand, args: paneArguments, cwd: entry.directory, env: main.environment, cols, rows,
-        scope: scoped.unit === null ? undefined : { unit: scoped.unit, file: scoped.file, args: scoped.args },
+        scope: scoped.unit === null ? undefined : scoped,
       });
     } catch {
       // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
