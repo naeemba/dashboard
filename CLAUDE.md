@@ -59,12 +59,9 @@ app.
   file that enforces the refusal; the file that prints the message calls it.
   Never a second copy of the condition, in code or in a comment.
   `blockingChanges` exempts `.dashboard/` on purpose; `changedFiles` does not.
-  An error shown to a person goes through `failureText`. This prints nothing:
-
-      grep -rn "String(error)" src/ | grep -v 'failure.ts\|failure-line.ts\|board-view.ts'
-
-  `board-view.ts` is exempted only until fixed; adding a
-  file to that list without fixing it is the rule being broken. (errors-rule-1)
+  An error shown to a person goes through `failureText`; `pnpm exec eslint .`
+  refuses `String(error)` outside `failure.ts` and `failure-line.ts`, and adding
+  a file to that list is the rule being broken. (errors-rule-1)
 - **An IPC handler that refuses answers the refusal as a value** (`{ refused }`)
   and throws only for failures. (errors-rule-2)
 - **The help dialog is part of the change.** A key, mode or screen change

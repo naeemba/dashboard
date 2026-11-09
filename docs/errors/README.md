@@ -9,6 +9,7 @@ before the first window gets a box and an exit.
 Folders: `src/shared/errors/`, `src/renderer/errors/`.
 
 - `failure.ts`, `status-error.ts`, `error-log.ts`, `status-message.ts`
+- The `String(error)` lint (errors-rule-1): `eslint.config.mjs`, `eslint.config.test.ts`
 
 ## On screen
 
@@ -45,5 +46,3 @@ Escape still clears them.
   whatever was there, every tick (errors-decision-3).
 - A progress notice (`shipping "Fix login"…`) fades after 8 seconds even when
   the work is still going (errors-decision-5).
-- `board-view.ts` still prints `String(error)` and is
-  exempted from the check until fixed (errors-rule-1).
