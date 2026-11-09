@@ -70,6 +70,8 @@ describe('followedPullRequest', () => {
     expect(followedPullRequest(withNumber(columnNamed(boardWithCard(), CANCELLED_COLUMN)), CARD)).toBeNull();
     expect(followedPullRequest(moveCardById(boardWithCard(), CARD, 4) as Board, CARD)).toBeNull();
     expect(followedPullRequest(withNumber(4), 'not-on-the-board')).toBeNull();
+    const noReview = { columns: [{ name: 'Done', cards: [{ id: CARD, title: 'a', notes: '', priority: 'medium' as const, parent: null, pullRequest: 12 }] }] };
+    expect(followedPullRequest(noReview, CARD)).toBeNull();
   });
 });
 

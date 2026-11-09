@@ -379,9 +379,8 @@ describe('reviewSweep', () => {
       .toEqual(['No review worktree: uncommitted changes in ship-it, waiting for the commit']);
   });
 
-  // The bug this was written for. `/work-card` writes the pull request number onto the branch's board
-  // and commits it a moment later, and a tick landing between those two finds the number there and
-  // board.json uncommitted. Marked for good, the pull request sits in Review with nobody reviewing it
+  // The bug this was written for. `/work-card` opens the pull request and keeps going, and a tick
+  // landing while its last fix commit is still being made finds the worktree dirty. Marked for good, the pull request sits in Review with nobody reviewing it
   // until the app restarts — which is a card nobody notices for a day.
   it('tries a dirty worktree again on the next tick, and reviews it once the commit lands', async () => {
     const { entry, projectPath } = flight(12);
@@ -389,7 +388,7 @@ describe('reviewSweep', () => {
     const { ports: made, log } = ports(entry, {
       removeWorktree: async () => (committed
         ? { ok: true, message: '', dirty: [] }
-        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+        : { ok: false, message: '', dirty: ['src/app.ts'] }),
     });
     const sweep = sweepWith(made);
     await sweep.run();

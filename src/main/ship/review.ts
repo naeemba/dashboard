@@ -50,8 +50,8 @@ export function isCancelled(board: Board, cardId: string): boolean {
 //
 // What asking the record instead costs. `reviewing` on it is a sentence about a pane, so it is cleared
 // when the pane goes and a restart wipes it off every card. Without this, the first tick after that
-// restart finds a card sitting in Done with a pull request number still on the branch's board, pulls it
-// back into Review, re-cuts the worktree and runs `/pr-loop` at a pull request that merged last week.
+// restart finds a card sitting in Done with its pull request number on the card, pulls it back into
+// Review, re-cuts the worktree and runs `/pr-loop` at a pull request that merged last week.
 //
 // Null is the third answer, for a card this board does not mention, and it means "I cannot say" rather
 // than "review it". Such a card cannot be one made on the branch: every worktree the sweep walks was cut

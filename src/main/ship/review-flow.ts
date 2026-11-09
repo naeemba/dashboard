@@ -225,11 +225,12 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const board = boardOf(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return;
-    // A card that has already been through this. The pull request number, once there, stays there, so it goes on saying "finished" long after the review that read it merged the
-    // pull request. The project's board is what tells the two apart; review.ts holds why it is the
-    // only thing that can. A card past Review is finished with its worktree too, so that is removed
-    // here, once: the review pane cannot remove the folder it is standing in, and without this every
-    // shipped card leaves one beside the project for good.
+    // A card that has already been through this. The pull request number, once there, stays there, so
+    // it goes on saying "finished" long after the review that read it merged the pull request. The
+    // project's board is what tells the two apart; review.ts holds why it is the only thing that can.
+    // A card past Review is finished with its worktree too, so that is removed here, once: the review
+    // pane cannot remove the folder it is standing in, and without this every shipped card leaves one
+    // beside the project for good.
     // A cancelled card keeps its worktree until the worktree dialog removes it (board-decision-4), and
     // is never reviewed. Not marked, so moving it out of Cancelled lets the next tick pick it up.
     // ponytail: a board read per project and one per cancelled worktree every tick; mark it if that ever shows.
@@ -269,8 +270,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // command that dropped one card off a board that still has others. Either is the deletion
     // as far as this line is concerned, and one tick — five seconds — is all it takes to land in
     // between. The card is then back in Ship reading `shipped · fix-login · terminal 3`, with its
-    // worktree still on disk, and no review
-    // ever starts for it again until you restart the app or ship the card again. The mark stays anyway:
+    // worktree still on disk, and no review ever starts for it again until you restart the app or ship
+    // the card again. The mark stays anyway:
     // asking the board whether the card has come back is the read the mark exists to avoid, so there is
     // no cheap version of this that covers it. If it becomes worth more than this paragraph, `forget`
     // is already exported and `board:change` already fires in main for every open project's folder.
