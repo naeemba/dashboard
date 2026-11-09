@@ -1,5 +1,4 @@
 import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
-import { BOARD_PATHSPECS } from '../board/board-store';
 import { posixQuoted } from '../../shared/panes/shell';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
@@ -90,43 +89,18 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 
 // What the review pane is asked to do. One prompt rather than a bare `/pr-loop`, because the loop
 // stops at a report and the card wants the pull request landed — and because that last move, into
-// Done, lands on two boards in an order that matters.
+// Done, has to come after the merge.
 //
-// The branch's board is the one the merge carries into main, so it is moved and pushed first, while
-// the pull request is still open. The project's board is the running app's own copy, and it is moved
-// after, once the merge has actually happened — before that there is nothing to show.
-//
-// Done in the other order, the merge carries whatever the branch happened to say, which is `Review`,
-// and main goes on committing `Review` for a card that landed weeks ago. The only copy that says
-// `Done` is then an uncommitted change in somebody's checkout, and it never becomes true for anyone
-// else. This project's own board was found in exactly that state: `origin/main` saying `Review` for
-// a merged card, the working tree saying `Done`, and the two never converging.
+// The `board` command writes a board git tracks on origin's main itself and brings the project's
+// checkout up to it (board-sync-git.ts), so one move after the merge is the card on main and on screen.
+// Before the merge it would be main saying Done for a pull request that may yet be refused, which is
+// how kamandsystem #19 sat in Done unmerged. The branch's own board is not moved: nothing the merge
+// carries is about the card any more (board-rule-2).
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
-// from the folder it wakes up in: the worktree is a checkout of the branch, and its own .dashboard
-// board is the branch's copy.
-export function reviewPrompt(
-  cardId: string, pullRequest: number, projectPath: string, title: string,
-): string {
+// from the folder it wakes up in.
+export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
-  // One command, so the move and the commit that makes it real cannot be separated. A board written
-  // and left uncommitted is the whole of the bug above, and it is also what the sweep trips over when
-  // it comes to take a worktree away.
-  //
-  // Safe to run twice, the way commitShipMove is and for the reason it gives: a card already in Done
-  // stages nothing, and the commit would stop the chain before the push and before the merge — so a
-  // review pane restarted after getting this far would leave a landable pull request sitting there,
-  // reporting that git said no. Both halves name the board file, so a worktree that has been lived in
-  // cannot have the agent's own staged work swept into a commit about a card. -A takes in board.json's
-  // removal when the move is the write that takes the board into its folder.
-  const file = `-- ${BOARD_PATHSPECS.map(posixQuoted).join(' ')}`;
-  const commit = `git commit -m ${posixQuoted(`board: "${title}" is done`)} ${file}`;
-  const land = [
-    `node "$DASHBOARD_BOARD" move ${cardId} Done`,
-    `git add -A ${file}`,
-    `{ git diff --cached --quiet ${file} || ${commit}; }`,
-    'git push',
-  ].join(' && ');
   return [
     `Review pull request #${pullRequest} and land it. It came from card ${cardId} on the board of ${projectPath}.`,
     '',
@@ -134,26 +108,17 @@ export function reviewPrompt(
     '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
     '   conflict with the base branch, land it in this order and no other:',
     '',
-    `   a. \`${land}\``,
-    '',
-    "      That is this branch's board, the one under this pane, and it is what the merge carries",
-    '      into main. The column has to be right before the merge, not after: move it afterwards and',
-    '      main commits `Review` for a card that has landed, and the only copy saying `Done` is an',
-    "      uncommitted change in a checkout nobody else has.",
-    '',
-    `   b. \`gh pr merge ${pullRequest} --merge\`. Do not approve it: you are the author, and GitHub`,
+    `   a. \`gh pr merge ${pullRequest} --merge\`. Do not approve it: you are the author, and GitHub`,
     '      refuses an approval from the author. The pull request does not need one to merge.',
     '',
-    `   c. \`${board} move ${cardId} Done\``,
+    `   b. \`${board} move ${cardId} Done\``,
     '',
-    "      That is the project's own board — the running app's copy, not this branch's — and it is",
-    '      what the card looks like on screen. Only after the merge, because before it there is',
-    '      nothing to show. It now says what (a) just put on main, which is the point of that order.',
+    "      The board command writes the card on origin's main and brings the project's checkout up to",
+    '      it, so this one move is the card on main and on screen. Only after the merge: moved before',
+    '      it, main says Done for a pull request that may still be refused.',
     '',
     '3. Any other ending — the loop stopped short, the merge was refused, the pull request conflicts —',
-    "   is where you stop, and the card stays in Review on the project's board. If you already got",
-    '   as far as (a), leave that commit where it is rather than undoing it: a column on a branch is',
-    '   a claim about that branch and comes true only if it merges. Say what happened on the card:',
+    "   is where you stop, and the card stays in Review. Say what happened on the card:",
     `   \`${board} comment ${cardId} "<what happened>"\`.`,
     '',
     'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',

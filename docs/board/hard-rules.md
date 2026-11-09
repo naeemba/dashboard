@@ -58,16 +58,19 @@ column. Otherwise the board says a feature is finished and checked while nobody
 has looked at it, and `Review` sits empty in front of the person whose job it is
 to look.
 
-**The move into `Done` happens on the branch first, and only then is the pull
-request merged.** The branch's board is the copy the merge carries into `main`,
-so a card moved after the merge never reaches `main` at all. Move it afterwards
-and `main` goes on committing `Review` for a feature that shipped weeks ago,
-while the only copy saying `Done` is an uncommitted change in one person's
-checkout — true on screen, true nowhere else, and never converging. This repo's
-own board was found exactly like that: `origin/main` saying `Review` for a
-merged card and the working tree saying `Done`.
+**The move into `Done` comes after the merge, and is one `board move`.** The
+`board` command writes a board git tracks on origin's main itself, and brings
+the project's checkout up to it (board-decision-5), from the project or from a
+card's worktree alike. So a card moved to Done before the merge is main saying
+Done for a pull request that may still be refused: kamandsystem #19 sat in Done
+unmerged exactly like that.
 
-The app's board is moved too, after the merge, because it is what is on screen
-and nothing on screen changes when a merge happens on a server. Both moves, in
-that order: branch, merge, app. `reviewPrompt` in `review.ts` is where it is
-written down, and `review.test.ts` pins the order.
+What this replaced: the move went on the branch first, so the merge would carry
+it into main, then the app's board was moved after. A branch-only Done was the
+only way to get Done onto main when nothing but a merge wrote main, and the
+order mattered: moved after the merge, main went on committing `Review` for a
+feature that shipped weeks ago, while the only copy saying `Done` was an
+uncommitted change in one person's checkout. With the command writing main,
+the branch's board carries nothing about the card, and the order is merge, then
+move. `reviewPrompt` in `review.ts` is where it is written down, and
+`review.test.ts` pins it.
