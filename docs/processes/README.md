@@ -153,6 +153,9 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   its command, a session's with its CLI, and what either detached outlives it.
 - A pane started again after its shell exited (`pty:restart`) gets a new
   scope; what the dead shell detached stays in the old one until it ends.
+- A shell the pane host kept that pane.restore does not take back is killed,
+  but its scope is not stopped: what it detached runs until it ends or you log
+  out.
 - Only this run's names are checked before one is handed out. A name a previous
   run's pane host still holds collides about once in 36^4 starts of the same
   pane; that pane's `systemd-run` then exits 1 ("already loaded"), and Enter

@@ -7,14 +7,15 @@ const idle: PaneUse = { index: 1, exited: false, foreground: 'zsh', shell: '/bin
 
 // The command's close is tested through its door in project-requests.test.ts.
 function setUp(panes: PaneUse[], units: string[] = [], stopScope: (unit: string) => Promise<void> = async () => undefined) {
+  const stops = vi.fn(stopScope);
   const ports: ProjectClosePorts = {
     isOpen: (slot) => slot === 4,
     panesOf: () => panes,
     scopesOf: (slot) => (slot === 4 ? units : []),
     close: vi.fn(),
-    stopScope: vi.fn(stopScope),
+    stopScope: stops,
   };
-  return { ports, close: bind(projectClose, ports) };
+  return { ports, stops, close: bind(projectClose, ports) };
 }
 
 describe('project.close', () => {
@@ -41,10 +42,10 @@ describe('project.close', () => {
   });
 
   it('stops every scope its panes ran in once the project is closed, and only then', async () => {
-    const { ports, close } = setUp([idle], ['pane-web-1-a.scope', 'pane-web--1-b.scope']);
-    vi.mocked(ports.stopScope).mockImplementation(async () => { expect(ports.close).toHaveBeenCalled(); });
+    const { ports, stops, close } = setUp([idle], ['pane-web-1-a.scope', 'pane-web--1-b.scope']);
+    stops.mockImplementation(async () => { expect(ports.close).toHaveBeenCalled(); });
     await expect(close.call({ slot: 4, name: 'web' })).resolves.toEqual({ output: 'closed web' });
-    expect(vi.mocked(ports.stopScope).mock.calls).toEqual([['pane-web-1-a.scope'], ['pane-web--1-b.scope']]);
+    expect(stops.mock.calls).toEqual([['pane-web-1-a.scope'], ['pane-web--1-b.scope']]);
   });
 
   it('says which scope it could not stop, and still closes and stops the rest', async () => {

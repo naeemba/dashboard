@@ -8,8 +8,13 @@ const RUN: PaneDispatchInput = {
   resume: null, cardId: null, dispatcherPath: '/work/desk', as: null,
 };
 
+// The pane's scope before the dispatch.
+const replacing = () => new Map([['2:3', 'pane-api-3-old.scope']]);
+
 // `units` is each pane's scope as main holds it; a spawn hands the pane the next one in `spawned`.
-function wired(startScreen: () => void = () => undefined, units = new Map<string, string>(), spawned: string[] = [], stopScope: (unit: string) => Promise<void> = async () => undefined) {
+function wired({ startScreen = () => undefined, units = new Map<string, string>(), spawned = [], stopScope = async () => undefined }: {
+  startScreen?: () => void; units?: Map<string, string>; spawned?: string[]; stopScope?: (unit: string) => Promise<void>;
+} = {}) {
   const mainsWorkers = new Map<string, string>();
   const stops = vi.fn(stopScope);
   const logged: LogDraft[] = [];
@@ -38,31 +43,31 @@ describe('paneActions', () => {
   });
 
   it('rejects to the caller when a start fails, so its own catch reports it', async () => {
-    const { dispatch } = wired(() => { throw new Error('no screen'); });
+    const { dispatch } = wired({ startScreen: () => { throw new Error('no screen'); } });
     await expect(dispatch.call(RUN)).rejects.toThrow('no screen');
   });
 
   it('stops the scope of the shell a terminal agent replaces, once the new one has its own', async () => {
-    const { dispatch, stops } = wired(undefined, new Map([['2:3', 'pane-api-3-old.scope']]), ['agent-api-3-new.scope']);
+    const { dispatch, stops } = wired({ units: replacing(), spawned: ['agent-api-3-new.scope'] });
     await dispatch.call({ ...RUN, as: 'terminal' });
     expect(stops.mock.calls).toEqual([['pane-api-3-old.scope']]);
   });
 
   it('stops the replaced scope when the new shell starts unscoped, and nothing when there was none', async () => {
-    const replaced = wired(undefined, new Map([['2:3', 'pane-api-3-old.scope']]), []);
+    const replaced = wired({ units: replacing() });
     await replaced.dispatch.call({ ...RUN, as: 'terminal' });
     expect(replaced.stops).toHaveBeenCalledWith('pane-api-3-old.scope');
-    const none = wired(undefined, new Map(), ['agent-api-3-new.scope']);
+    const none = wired({ spawned: ['agent-api-3-new.scope'] });
     await none.dispatch.call({ ...RUN, as: 'terminal' });
     expect(none.stops).not.toHaveBeenCalled();
   });
 
   it('leaves a scope alone when the shell is not replaced, and logs a stop that fails', async () => {
     // A screen into a pane whose shell already stands in the folder keeps the shell and its scope.
-    const kept = wired(undefined, new Map([['2:3', 'pane-api-3-old.scope']]), ['pane-api-3-new.scope']);
+    const kept = wired({ units: replacing() });
     await kept.dispatch.call({ ...RUN, as: 'screen' });
     expect(kept.stops).not.toHaveBeenCalled();
-    const failing = wired(undefined, new Map([['2:3', 'pane-api-3-old.scope']]), ['agent-api-3-new.scope'], async () => { throw new Error('timed out'); });
+    const failing = wired({ units: replacing(), spawned: ['agent-api-3-new.scope'], stopScope: async () => { throw new Error('timed out'); } });
     await failing.dispatch.call({ ...RUN, as: 'terminal' });
     await vi.waitFor(() => expect(failing.logged.at(-1)?.message).toBe('pane-api-3-old.scope was not stopped: timed out'));
   });

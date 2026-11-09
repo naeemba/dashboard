@@ -1,10 +1,10 @@
 import { closeRefusal, closingPanes, type PaneName } from '../../../shared/panes/close-refusal';
 import type { ProjectClose } from '../../../shared/app/bridge';
 import { isRecord } from '../../../shared/app/is-record';
-import { failureText } from '../../../shared/errors/failure';
 import type { PaneUse } from '../../../shared/panes/pane-reading';
 import { paneLabel } from '../../../shared/panes/terminals';
 import { action } from '../action';
+import { notStoppedText } from '../pane/close';
 import { isFilledText, isSlot } from '../pane/pane-input';
 
 // A project closed: by the close key, which asks this once before its question and again with the
@@ -57,7 +57,7 @@ export const projectClose = action<ProjectClosePorts, ProjectCloseInput, { outpu
     const units = ports.scopesOf(slot);
     ports.close(slot);
     const stops = await Promise.allSettled(units.map((unit) => ports.stopScope(unit)));
-    const notStopped = stops.flatMap((stop, at) => (stop.status === 'rejected' ? [`${units[at]} was not stopped: ${failureText(stop.reason)}`] : []));
+    const notStopped = stops.flatMap((stop, at) => (stop.status === 'rejected' ? [notStoppedText(units[at], stop.reason)] : []));
     return { output: [`closed ${name}`, ...notStopped].join('; ') };
   },
 });

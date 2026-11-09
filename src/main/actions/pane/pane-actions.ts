@@ -1,9 +1,8 @@
 import { agentStartEntry, type LogDraft } from '../../../shared/app/log-entry';
-import { failureText } from '../../../shared/errors/failure';
 import type { PaneCommand } from '../../../shared/panes/pane-reading';
 import { paneFromId } from '../../../shared/panes/terminals';
 import { bind, type BoundAction } from '../action';
-import { paneClose, type PaneClosePorts } from './close';
+import { notStoppedText, paneClose, type PaneClosePorts } from './close';
 import { paneDispatch, type PaneDispatchPorts } from './dispatch';
 import { paneOpen, type PaneOpenPorts } from './open';
 import { paneRestore, type PaneRestorePorts } from './restore';
@@ -51,7 +50,7 @@ export function paneActions(main: PaneActionsMain): PaneActions {
     main.spawn(id);
     if (replaced === undefined || replaced === main.scopeOf(id)) return;
     main.stopScope(replaced).catch((error: unknown) => {
-      main.log({ level: 'warn', kind: 'pane', action: 'pane.dispatch', message: `${replaced} was not stopped: ${failureText(error)}` });
+      main.log({ level: 'warn', kind: 'pane', action: 'pane.dispatch', message: notStoppedText(replaced, error) });
     });
   }
   const plainShell = (id: string, directory: string) => shellIn(id, directory, []);
