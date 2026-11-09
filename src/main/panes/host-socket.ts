@@ -59,7 +59,8 @@ export function acceptApps<To extends { type: string }>(server: AppServer<To>, t
       if (message.type !== 'hello') return void socket.destroy();
       // One app at a time. An app that went has had its end closed by the kernel, so a second one
       // arriving while one is connected is a second Dashboard on the same user data: it is turned away
-      // and runs its own, rather than taking what the host keeps for the first one out from under it.
+      // rather than taking what the host keeps for the first one out from under it. The pane host's app
+      // then runs its shells itself; the screen host's refuses its worker screens (workers-decision-6).
       // The proof goes with a busy too: on Windows an unproven busy is an impostor's.
       const proof = token !== undefined && message.nonce !== undefined ? hostProof(token, message.nonce) : undefined;
       if (current !== null) {

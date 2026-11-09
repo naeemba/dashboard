@@ -22,4 +22,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-02 #195 — A program's words are escaped for Windows PowerShell 5.1, which passes double quotes through bare
 - 2026-11-04 #204 — The pane host runs on Windows, over a named pipe named after a secret token, so panes survive a restart there too
 - 2026-11-07 #228 — The new-pane button is two halves, New Terminal and New Claude, each with its key (workers-decision-7)
-- 2026-11-09 — A pane host starting leaves the socket to one already answering on it (workers-decision-6)
+- 2026-11-09 #283 — A pane host starting leaves the socket to one already answering on it (workers-decision-6)
