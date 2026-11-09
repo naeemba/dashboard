@@ -6,12 +6,13 @@ import type { Screens } from '../../shared/remote-host/screens';
 
 // What a pane sends the main process: its keystrokes, its size, a request to restart its shell, and a
 // banner for it. Main-process wiring only, out of main.ts because main had reached its 600-line
-// ceiling. Main hands over what only it holds — the live shells, the recorded sizes, how to spawn one,
+// ceiling. Main hands over what only it holds — the live shells, the recorded sizes, pane.restart,
 // and the way to the renderer.
 export function registerPaneChannels(table: Channels, main: {
   shells: Map<string, PaneShell>;
   screens: Screens;
-  spawnTerminal(id: string): void;
+  // pane.restart: the pane's shell started again unless one runs, its old scope stopped.
+  restart(id: string): void;
   // project.focus, on the pane the banner named.
   land(paneId: string): void;
   // The window to the front, for a banner that named no pane (a status-bar error).
@@ -36,7 +37,7 @@ export function registerPaneChannels(table: Channels, main: {
   });
   // Recorded whether or not a shell is listening, because the pane that has none is exactly the pane
   // about to get one: a pane whose shell exited, the editor before nvim is started, a pane a ship is
-  // about to take. The record is what spawnTerminal spawns at; sizeOfPane holds why.
+  // about to take. The record is what pane.restart spawns at; sizeOfPane holds why.
   table.on('pty:resize', (screen, id: string, cols: number, rows: number) => {
     main.screens.resize(screen, id, { cols, rows });
     fitShell(main.shells, main.screens, id);
@@ -44,9 +45,7 @@ export function registerPaneChannels(table: Channels, main: {
   const pauses = outputPauses(main.shells);
   table.on('pty:pause', pauses.pause);
   table.on('pty:resume', pauses.resume);
-  table.on('pty:restart', (_screen, id: string) => {
-    if (!main.shells.has(id)) main.spawnTerminal(id);
-  });
+  table.on('pty:restart', (_screen, id: string) => main.restart(id));
 }
 
 // A screen that leaves stops voting on the size of every pane it drew, so each shell goes to what the

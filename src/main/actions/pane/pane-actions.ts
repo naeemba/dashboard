@@ -2,9 +2,10 @@ import { agentStartEntry, type LogDraft } from '../../../shared/app/log-entry';
 import type { PaneCommand } from '../../../shared/panes/pane-reading';
 import { paneFromId } from '../../../shared/panes/terminals';
 import { bind, type BoundAction } from '../action';
-import { notStoppedText, paneClose, type PaneClosePorts } from './close';
+import { paneClose, type PaneClosePorts } from './close';
 import { paneDispatch, type PaneDispatchPorts } from './dispatch';
 import { paneOpen, type PaneOpenPorts } from './open';
+import { paneRestart } from './restart';
 import { paneRestore, type PaneRestorePorts } from './restore';
 import { paneSend, type PaneSendPorts } from './send';
 
@@ -35,26 +36,19 @@ export type PaneActions = {
   close: BoundAction;
   send: BoundAction<{ output: string; handed: boolean }>;
   restore: BoundAction;
+  restart: BoundAction;
 };
 
 export function paneActions(main: PaneActionsMain): PaneActions {
+  const restart = bind(paneRestart, { ...main, running: (id) => main.shells.has(id) });
   // The pane's shell started over in the folder, running `args`. The pane keeps its id; the old shell
   // is killed first, since two processes writing to one id is what retargeting a live pane would leave.
-  // Its scope is stopped once the new shell has one of its own (each start is named afresh), so what
-  // the old shell detached ends with it, as a close ends it.
+  // pane.restart starts the new one and stops the old one's scope; its spawn is done when `call` returns.
   function shellIn(id: string, directory: string, args: string[]): void {
-    const replaced = main.scopeOf(id);
     main.setPaneCommand(id, { args, directory });
     main.shells.get(id)?.kill();
     main.shells.delete(id);
-    main.spawn(id);
-    if (replaced === undefined || replaced === main.scopeOf(id)) return;
-    const { slot, index } = paneFromId(id);
-    main.stopScope(replaced).catch((error: unknown) => {
-      main.log({
-        level: 'warn', kind: 'pane', action: 'pane.dispatch', message: notStoppedText(replaced, error), context: { slot, pane: index },
-      });
-    });
+    void restart.call({ id });
   }
   const plainShell = (id: string, directory: string) => shellIn(id, directory, []);
 
@@ -89,6 +83,7 @@ export function paneActions(main: PaneActionsMain): PaneActions {
       mainsWorkerIn: (id) => main.mainsWorkers.has(id),
       handTo: (id, dispatcherPath) => main.mainsWorkers.set(id, dispatcherPath),
     }),
+    restart,
     restore: bind(paneRestore, {
       ...main,
       hasCommand: (id) => main.commands.has(id),

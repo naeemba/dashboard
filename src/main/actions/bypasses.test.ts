@@ -13,9 +13,8 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   // A resume is built only as pane.dispatch's worker arguments; none is typed into a shell.
   { call: "'--resume'", allowed: { 'src/main/workers/dispatch.ts': 1 } },
   { call: '--resume ${', allowed: {} },
-  // A pane's shell spawned: the pane actions' `spawn` and `pty:restart`'s `spawnTerminal`, the one row
-  // still outside an action.
-  { call: 'panes.spawn', allowed: { 'src/main/main.ts': 2 } },
+  // A pane's shell spawned: only the pane actions' `spawn`.
+  { call: 'panes.spawn', allowed: { 'src/main/main.ts': 1 } },
   // A pane dropped: the definition and its call in closeProjectSlot, project.close's `close`.
   { call: 'dropPane(', allowed: { 'src/main/main.ts': 2 } },
   // worktree.remove and worktree.make: only the actions and the remove's port. /create-task's make runs
@@ -24,7 +23,7 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: "'worktree', 'add'", allowed: { 'src/main/actions/worktree/make.ts': 2, 'src/main/board/create-task-program.ts': 1 } },
   // settings.json: its definition, and settings.write's `writeFile` port.
   { call: 'writeSettings(', allowed: { 'src/main/main.ts': 1, 'src/main/settings/settings-store.ts': 1 } },
-  // The wrapper behind pane restart a shell, the one Bypass: yes row left with a channel.
+  // The channel behind Enter on an exited pane, pane.restart's door.
   { call: "'pty:restart'", allowed: { 'src/main/panes/pane-channels.ts': 1 } },
   // What the session actions do, handed to them as ports and called nowhere else: main's start, only
   // through session.start, and a conversation's title, only through session.rename, which writes the

@@ -473,7 +473,7 @@ const updates = updateActions({
   enabled: () => settings.updates.check, log: (draft) => logStore.log(draft),
 });
 registerPaneChannels(table, {
-  shells, screens: paneScreens, spawnTerminal: panes.spawn,
+  shells, screens: paneScreens, restart: (id) => { void pane.restart.call({ id }); },
   land: (paneId) => { void project.focus.call(paneFromId(paneId)); },
   raise: () => raiseWindow(liveWindow()),
 });
