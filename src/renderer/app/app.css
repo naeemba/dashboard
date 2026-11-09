@@ -88,3 +88,10 @@ kbd {
 :not(.xterm, .xterm *)::-webkit-scrollbar-thumb:hover {
   background-color: var(--muted);
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.icon[hidden],
+.keycaps[hidden],
+.dialog-title[hidden] {
+  display: none;
+}

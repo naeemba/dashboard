@@ -260,7 +260,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   `chat-context.ts`, `chat-context-levels.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`), `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
   `src/shared/usage/cache-warmth.ts`); the popup it opens is `src/renderer/app/anchored-popup.ts`
   with `popup-placement.ts`
-- Styles: `chat.css`
+- Styles: `chat.css`; the foot row and its context popup in `chat-foot.css`
 
 ## Scenarios
 

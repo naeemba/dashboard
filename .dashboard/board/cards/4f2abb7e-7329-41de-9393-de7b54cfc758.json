@@ -5,7 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-09T11:16:06.324Z",
-  "updatedAt": "2026-11-09T15:12:47.839Z",
-  "column": "Doing",
-  "order": 5
+  "updatedAt": "2026-11-09T15:47:32.908Z",
+  "branch": "work-board-card-4f2abb7e-7329-41de-9393-de7",
+  "pullRequest": 268,
+  "comments": [
+    {
+      "at": "2026-11-09T15:47:32.908Z",
+      "body": "Shipped in #268: each pane's and session's scope memory on the manager's Memory column and the status bar, cap named near MemoryHigh; the screen host answers each kept session's unit."
+    }
+  ],
+  "column": "Done",
+  "order": 212
 }

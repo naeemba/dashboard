@@ -610,3 +610,14 @@
 .anchored-list li {
   padding: 4px 8px;
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.overlay[hidden],
+.overlay-dialog[hidden],
+.card-detail-comment[hidden],
+.settings-row[hidden],
+.settings-swatch[hidden],
+.filter-row[hidden],
+.diff-viewer-dialog[hidden] {
+  display: none;
+}

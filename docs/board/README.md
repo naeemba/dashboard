@@ -208,7 +208,11 @@ Every pane also carries DASHBOARD_COMMAND, the path to a command whose board
 words list cards and move them from a shell: run `node "$DASHBOARD_COMMAND"
 board` in a project to see what it takes, or DASHBOARD_BOARD, the older path to
 the same program, with no word in front. It is how an agent working a card moves
-its own, and .dashboard/CLAUDE.md in each project spells it out.
+its own. The .dashboard/CLAUDE.md the app seeds into each project says only
+that: what the folder holds, that the board is changed through the command, and
+`node "$DASHBOARD_BOARD"` to print what it takes. It is written once, when it is
+missing, so a project seeded with the older text that spelled out the card
+format keeps it, and an edited copy stays edited.
 
 ## Kept in step with git
 

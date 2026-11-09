@@ -291,6 +291,16 @@ card with a branch from its pull request, so an agent moves none and records no
 pull request. The global `CLAUDE.md` section that said all this, and this
 repo's board-rule-2, are deleted.
 
+**The seeded `.dashboard/CLAUDE.md` names the command and stops.** It used to
+spell out the card file field by field and quote the command's usage, which was
+for an agent editing cards by hand; the guard now refuses that edit, so an agent
+that read the format, edited a card and was refused lost a turn. It says what
+the folder holds and to run `node "$DASHBOARD_BOARD"`, whose usage is the one
+copy of the rest (`board-usage.ts`). Seeding never rewrites a file that is
+there, so a project with the old text keeps it: it still names the command,
+and the guard catches the edit it describes. What it costs: a person reading a
+card file finds its fields described nowhere but the code (`board.ts`).
+
 **An agent records no pull request: the review starts from the one the app
 found.** The sweep that hands a finished card to a reviewer used to learn the
 agent was done only from the number it wrote on its worktree's board. It now

@@ -447,7 +447,7 @@ describe('seedBoardDirectory', () => {
   it('writes the two explanation files', () => {
     const path = project();
     seedBoardDirectory(path);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('board.json');
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('node "$DASHBOARD_BOARD"');
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'README.md'), 'utf8')).toContain('.dashboard');
   });
 

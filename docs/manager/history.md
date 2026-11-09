@@ -21,3 +21,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-04 #202 — The section strip takes no keyboard focus
 - 2026-11-09 #250 — A log entry opens formatted in a popup, stack one frame to a line, and copies as JSON
 - 2026-11-09 #256 — A command run across projects runs in a systemd scope per project under agents.slice (processes-decision-5)
+- 2026-11-09 #268 — Each pane's Memory column and the status bar's figure, read from its systemd scopes

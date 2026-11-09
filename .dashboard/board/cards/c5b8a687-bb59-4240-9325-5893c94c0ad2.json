@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T16:12:43.137Z",
-  "updatedAt": "2026-11-09T16:24:33.738Z",
+  "updatedAt": "2026-11-09T16:55:40.416Z",
   "comments": [
     {
       "at": "2026-11-09T16:19:28.820Z",
@@ -18,8 +18,12 @@
     {
       "at": "2026-11-09T16:24:33.738Z",
       "body": "Correction to the previous comment: parent pid 1 is not evidence of a duplicate. Pid 965649 is the live worker that just reported PR #276 (its message socket is 965649.sock), so these SDK processes are reparented live sessions (the screen host detaches them, or the host restarted). Check which of them have a second session for the same pane before concluding anything."
+    },
+    {
+      "at": "2026-11-09T16:55:40.416Z",
+      "body": "Found, 2026-11-09: earlyoom SIGKILLed the screen host (pid 2397562) and the pane host at 19:39:42 (journalctl -u earlyoom). A host's SDK claude processes share its process group and get no signal when it dies, so they ran on with parent pid 1 (comment #2's four). The next start for the pane launched a new host, which knew nothing of them and resumed the same conversation: two sessions per pane. Second path, same outcome: a host that starts removes the socket before listening, so a host launched while another lived (an app connect that missed under load) took its socket and ran a second copy of each worker it was asked for. Reproduced both on a demo host (temp HOME, user data and socket, a fake claude): 2 live sessions for one pane each time. Fix: a host starting first checks no host answers on the socket, then kills the process group of the host recorded in a pid file when that pid is dead; the app's in-app fallback refuses while a host answers and ends a dead host's group before it runs one in the app."
     }
   ],
-  "column": "Todo",
-  "order": 5
+  "column": "Doing",
+  "order": 20
 }

@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-09T15:50:22.810Z",
-  "updatedAt": "2026-11-09T15:50:22.811Z",
-  "column": "Backlog",
-  "order": 54
+  "updatedAt": "2026-11-09T16:46:00.769Z",
+  "comments": [
+    {
+      "at": "2026-11-09T16:46:00.769Z",
+      "body": "Same fix as 8768f826 (issue #269): one line in docs/workers/history.md. Tracked there."
+    }
+  ],
+  "column": "Cancelled",
+  "order": 7
 }

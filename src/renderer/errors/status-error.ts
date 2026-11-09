@@ -77,7 +77,7 @@ export function createStatusError(bridge: DashboardBridge, notifies: () => boole
   element.addEventListener('click', dismiss);
   // Capture, so a dialog that stops the key still lets the bar see it.
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !isModified(event)) dismiss();
+    if (!isModified(event) && event.key === 'Escape') dismiss();
   }, true);
 
   // Failures nobody caught, from either side of the wire, under one owner so they never clear a board's

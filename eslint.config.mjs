@@ -77,6 +77,10 @@ export default defineConfig(
   { rules: { '@typescript-eslint/consistent-type-definitions': ['error', 'type'] } },
   // One blank line apart at most; a stray second one is noise a diff then carries.
   { rules: { 'no-multiple-empty-lines': ['error', { max: 1 }] } },
+  // 600 code lines a file (conventions-rule-4). Comments and blank lines do not count, so a file is
+  // never split by deleting its explanation. An exception is a `files` override with its reason
+  // (docs/conventions/hard-rules.md).
+  { rules: { 'max-lines': ['error', { max: 600, skipComments: true, skipBlankLines: true }] } },
   // Process boundaries (app-rule-2). The folder a file sits in says which process runs it, and an
   // import across that line either drags Node into the renderer or the DOM into main. A type
   // import of a package is erased, so it passes; any import of another process's file fails, a

@@ -30,13 +30,6 @@
   gap: 12px;
 }
 
-/* The overview and the body are grids, and a grid beats the browser's own `[hidden]`. Without this,
-   close every project and the tiles and both panels stay on screen over nothing. */
-.manager-overview[hidden],
-.manager-body[hidden] {
-  display: none;
-}
-
 .manager-tile {
   padding: 14px 16px;
   border: 1px solid var(--manager-line);
@@ -259,7 +252,12 @@
 
 .manager-pane,
 .manager-group-pane {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 8ch 13ch 8ch;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 8ch 13ch 8ch 16ch;
+}
+
+/* A scope near its MemoryHigh, where the kernel starts slowing the agent down. */
+.manager-memory-near {
+  color: var(--yellow);
 }
 
 .manager-worktree,
@@ -468,4 +466,17 @@
 .manager-version {
   margin-top: auto;
   font-size: 11px;
+}
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.manager-overview[hidden],
+.manager-body[hidden],
+.manager-chips[hidden],
+.manager-trend[hidden],
+.manager-worktree-names[hidden],
+.manager-figures[hidden],
+.manager-figure[hidden],
+.manager-day-names[hidden],
+.manager-activity-detail[hidden] {
+  display: none;
 }

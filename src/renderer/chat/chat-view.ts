@@ -1,4 +1,5 @@
 import './chat.css';
+import './chat-foot.css';
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from '../../shared/keys/actions';
 import type { ChatContent, DashboardBridge, ChatPreferences } from '../../shared/app/bridge';
