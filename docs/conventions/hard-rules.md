@@ -41,7 +41,7 @@ same file, so a new box without it fails `pnpm test` with its file and name. A
 `element.hidden = true` hides by way of the browser's own `[hidden] { display:
 none }`, and any `display` in our CSS beats it. **So whenever a class gets a
 `display`, every element that class hides with the attribute needs a
-`.thing[hidden] { display: none }` beside it.**
+`.thing[hidden] { display: none }` in the same stylesheet, in its foot block.**
 
 What it looks like: the manager's column names and its total joined the rows'
 `display: flex` so they would line up with them. Close every project and the
@@ -51,9 +51,18 @@ three blank cells. `.view[hidden]` in `index.css` is the same trap the other way
 round — there the `display` is on purpose, so the views hide with `visibility`
 instead.
 
-No test can catch this. Vitest runs in node here, with no DOM; jsdom is not
-installed. Even in a DOM test environment the user-agent stylesheet is absent,
-so `hidden = true` would read back as hidden whatever the CSS says.
+`hidden-rule.test.ts` reads every stylesheet and fails on a bare class (`.chat`, not
+`.chat-log img`) that sets a `display` with no `.name[hidden]` rule in the same file, and on
+a `.name[hidden]` whose class sets no `display` there, so a deleted class does not leave its
+rule behind. It cannot see which elements are ever hidden, so every such class gets one,
+grouped at the foot of its stylesheet, where it wins source order over a `.parent .thing
+{ display: flex }` written above it. The view classes that hold panes (`.view-terminals`,
+`.view-nvim`, `.view-notes`, `.view-manager`) are exempt, in `HIDDEN_BY_VISIBILITY`:
+`.view[hidden], .page[hidden]` hide them with visibility, and a `display: none` would make
+their panes measure zero. A row that stops setting `display` or gains a `[hidden]` rule fails
+the test, and a missing rule on a `.view-` or `.page-` class points at that list. Vitest has no DOM
+here, so the test reads
+the CSS rather than an element.
 
 ## conventions-rule-4: 600 code lines a file
 
@@ -76,8 +85,9 @@ one.
 
 eslint reads only `.ts` and `.mjs`, so `stylesheet-size.test.ts` holds the
 stylesheets: every `src/**/*.css` at or under 600 lines once `/* … */` and blank
-lines are gone. Without it `chat.css`, at 594, would cross the limit with both
-eslint and CI green.
+lines are gone. Without it `chat.css`, then at 594, would have crossed the limit
+with both eslint and CI green; the `[hidden]` rules did cross it, and split its
+foot row into `chat-foot.css`.
 
 What it looked like before: the limit lived only in the global instructions, so
 a file grew one card at a time with nothing refusing it. `board-view.ts` reached

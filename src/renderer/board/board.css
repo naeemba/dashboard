@@ -322,3 +322,18 @@ textarea.board-edit {
 .cards-project.active h2 {
   color: var(--brightWhite);
 }
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.board[hidden],
+.board-columns[hidden],
+.board-filter-bar[hidden],
+.board-filter-reset[hidden],
+.board-sort[hidden],
+.board-parent[hidden],
+.board-comments[hidden],
+.board-flight[hidden],
+.board-shipped[hidden],
+.board-progress[hidden],
+.board-edit[hidden] {
+  display: none;
+}

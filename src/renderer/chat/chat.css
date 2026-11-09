@@ -45,10 +45,6 @@
   background: var(--hover);
 }
 
-.chat-live[hidden] {
-  display: none;
-}
-
 .chat-user {
   color: var(--brightWhite);
   background: var(--surface-raised);
@@ -314,10 +310,6 @@
   outline: none;
 }
 
-.chat-ask[hidden] {
-  display: none;
-}
-
 .chat-ask-title {
   margin: 0 0 6px;
   color: var(--brightWhite);
@@ -426,136 +418,6 @@
   border-color: var(--blue);
 }
 
-/* One row under the box: the model, mode and state on the left, the meters and version on the right.
-   It wraps onto a second row on a narrow screen rather than squeezing. */
-.chat-foot {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 6px 16px;
-  padding: 2px 2px 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.chat-foot-side {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 14px;
-}
-
-/* The model with a dot in its family's colour, as the terminal colours its name. */
-.chat-foot-model {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--white);
-}
-
-.chat-foot-model::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--tone);
-}
-
-.chat-foot-effort.ultrathink { color: var(--magenta); }
-/* The model, the mode and the effort each open a sheet of their choices on a click (foot-choices.ts).
-   An underline on hover, which takes no room, so the foot does not move. */
-:is(.chat-foot-model, .chat-foot-mode, .chat-foot-effort) { cursor: pointer; }
-:is(.chat-foot-model, .chat-foot-mode, .chat-foot-effort):hover { text-decoration: underline dotted; }
-.chat-foot-state[data-state='working'] { color: var(--blue); }
-.chat-foot-state[data-state='waiting'] { color: var(--yellow); }
-
-/* The workers count opens the workers popup on a click, so it reads as something to press. */
-.chat-foot-workers {
-  cursor: pointer;
-  text-decoration: underline dotted;
-}
-.chat-foot-workers:hover { color: var(--white); }
-
-/* The context meter opens the context popup on a click, the same way. */
-.chat-foot-context { cursor: pointer; }
-.chat-foot-context:hover .chat-meter-label { color: var(--white); }
-
-/* A row of the context popup: what it is, a thin bar in its colour filled to its share of the window,
-   its tokens and that share. The columns line up from row to row. */
-.chat-context-dialog .anchored-list li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 60px 52px 48px;
-}
-.chat-context-name {
-  overflow: hidden;
-  color: var(--brightWhite);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.chat-context-detail { color: var(--muted); }
-.chat-context-dialog .chat-meter-bar {
-  width: auto;
-  height: 3px;
-}
-.chat-context-tokens, .chat-context-share {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-/* A meter: its name, a short bar filled to how much is used, the percentage in the same colour, then
-   anything else worth saying, quieter. */
-.chat-meter {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.chat-meter-bar {
-  width: 44px;
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to right, var(--tone) var(--used), var(--line) var(--used));
-}
-
-.chat-meter-value {
-  color: var(--tone);
-  font-variant-numeric: tabular-nums;
-}
-
-/* After the meters, the button that reads them again; it turns while the read runs. */
-.chat-foot-refresh {
-  display: grid;
-  place-items: center;
-  padding: 2px;
-  border: 0;
-  border-radius: 4px;
-  color: var(--muted);
-  background: none;
-  cursor: pointer;
-}
-.chat-foot-refresh:hover,
-.chat-foot-refresh:focus-visible { color: var(--white); }
-.chat-foot-refresh.busy { cursor: default; }
-.chat-foot-refresh .icon svg {
-  width: 12px;
-  height: 12px;
-}
-.chat-foot-refresh.busy svg { animation: chat-spin 1s linear infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .chat-foot-refresh.busy svg { animation: none; opacity: 0.5; }
-}
-
-.chat-foot-cache {
-  color: var(--tone);
-  font-variant-numeric: tabular-nums;
-}
-
-.chat-meter-detail, .chat-foot-version {
-  opacity: 0.75;
-}
-
 /* Over the box while a turn runs: a turning mark, what Claude is doing, how long and how much. */
 .chat-working {
   display: flex;
@@ -564,10 +426,6 @@
   padding: 4px 2px 8px;
   color: var(--muted);
   font-size: 12px;
-}
-
-.chat-working[hidden] {
-  display: none;
 }
 
 .chat-tasks {
@@ -579,10 +437,6 @@
   padding: 4px 2px;
   border-top: 1px solid var(--line);
   font-size: 12px;
-}
-
-.chat-tasks[hidden] {
-  display: none;
 }
 
 .chat-task.selected {
@@ -641,10 +495,6 @@
   background: var(--surface-raised);
 }
 
-.chat-menu[hidden] {
-  display: none;
-}
-
 .chat-menu-row {
   display: flex;
   align-items: baseline;
@@ -693,10 +543,6 @@
   overflow-y: auto;
   padding: 4px 8px;
   color: var(--muted);
-}
-
-.chat-queued[hidden] {
-  display: none;
 }
 
 .chat-queued-prompt {
@@ -750,4 +596,29 @@
   padding: 8px 0;
   background: var(--surface-overlay);
   color: var(--muted);
+}
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.main-chat[hidden],
+.chat-ask[hidden],
+.chat-working[hidden],
+.chat-tasks[hidden],
+.chat-menu[hidden],
+.chat-queued[hidden],
+.chat[hidden],
+.chat-more[hidden],
+.chat-copy[hidden],
+.chat-image[hidden],
+.chat-pdf[hidden],
+.chat-step-tool[hidden],
+.chat-ask-row[hidden],
+.chat-attached[hidden],
+.chat-attached-image[hidden],
+.chat-task-summary[hidden],
+.chat-spinner[hidden],
+.chat-menu-row[hidden],
+.chat-agent-dialog[hidden],
+.chat-workflow-phase[hidden],
+.chat-workflow-agent[hidden] {
+  display: none;
 }

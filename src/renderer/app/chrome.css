@@ -79,17 +79,13 @@
 }
 
 /* The two new-pane keys' twin, [New Terminal | New Claude], at the right end of the title row and out
-   of its drag region. flex beats the browser's own [hidden], so the rule below it puts that back. */
+   of its drag region. flex beats the browser's own [hidden]; the foot of this file puts that back. */
 .add-pane {
   display: flex;
   flex: none;
   margin: 0 8px 0 auto;
   height: 22px;
   -webkit-app-region: no-drag;
-}
-
-.add-pane[hidden] {
-  display: none;
 }
 
 .add-pane button {
@@ -116,15 +112,11 @@
 }
 
 /* A project's views, along the left of the status bar. inline-flex beats the browser's own [hidden],
-   so the manager's page, which has no such views, needs the rule beside it. */
+   so the manager's page, which has no such views, needs the rule at the foot of this file. */
 .mode-switch {
   display: inline-flex;
   flex: none;
   gap: 2px;
-}
-
-.mode-switch[hidden] {
-  display: none;
 }
 
 .mode-option {
@@ -204,4 +196,13 @@
 /* The pane number is a detail about the current project, not another project in the list. */
 .terminal {
   color: var(--muted);
+}
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.add-pane[hidden],
+.mode-switch[hidden],
+.projects[hidden],
+.project[hidden],
+.mode-option[hidden] {
+  display: none;
 }

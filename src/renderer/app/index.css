@@ -212,11 +212,6 @@ body *:not(.xterm, .xterm *) {
   outline: none;
 }
 
-/* The attribute is what swaps the two pages, and the display above would otherwise win over it. */
-.ink-view[hidden] {
-  display: none;
-}
-
 .ink-strip {
   display: flex;
   align-items: center;
@@ -469,10 +464,6 @@ body *:not(.xterm, .xterm *) {
   gap: 8px;
 }
 
-.view-log[hidden] {
-  display: none;
-}
-
 /* The command box grows along its row; in this column the same flex: 1 would stretch it down the page. */
 .log-filter {
   flex: none;
@@ -629,5 +620,22 @@ body *:not(.xterm, .xterm *) {
    under it stays out of sight. Folded, it is one bar like any other worker. */
 .workers > .pane.pane-screen .xterm,
 .workers > .pane.folded > .chat {
+  display: none;
+}
+
+/* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.workers[hidden],
+.ink-view[hidden],
+.pane-controls[hidden],
+.ink-strip[hidden],
+.ink-canvas[hidden],
+.manager-version[hidden],
+.manager-marker[hidden],
+.command-mark[hidden],
+.section-strip[hidden],
+.section-name[hidden],
+.command-label[hidden],
+.log-copy[hidden],
+.view-log[hidden] {
   display: none;
 }
