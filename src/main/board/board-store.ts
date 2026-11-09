@@ -116,8 +116,9 @@ and leaves out a \`.broken\` file set aside and a write's temporary file.
   the app puts things, not a button.
 - A card's column on the \`main\` branch says what has been merged, and \`Review\`
   is the one exception — a card there has a pull request open and nothing has
-  checked it. While work is in flight the card's column lives on that work's own
-  branch, and arrives here when the pull request does.
+  checked it. On a board git tracks, the \`board\` command writes the card on
+  \`main\` itself, from the project or any worktree, and brings the project's
+  checkout up to it; a worktree's own board is its branch's and is left alone.
 - \`id\` is a UUID, and no two cards may share one; it is also the file's name. Keep it stable when you
   edit a card. A card written without one takes its file's name, and one with an id another card
   already used is given a fresh one the next time the app reads the board.

@@ -84,8 +84,8 @@ app.
   and terminal. Main watches the `.dashboard` folder, not the file.
   (board-rule-1)
 - **A card with a pull request open goes in `Review`, not `Done`.** This beats
-  the global "move to Done when the PR is ready". The move into `Done` happens
-  on the branch first, then the merge, then the app's board. (board-rule-2)
+  the global "move to Done when the PR is ready". The move into `Done` comes
+  after the merge; the `board` command writes it on main itself. (board-rule-2)
 - **A caller that changes state calls an action.** A new door (IPC handler,
   command answer, key, sweep) calls the action in `src/main/actions/<noun>/`;
   a new kind of change adds one. `bypasses.test.ts` names the calls still made

@@ -1,0 +1,11 @@
+{
+  "id": "8cb4282d-71a3-4164-97ba-81686df11df6",
+  "title": "Stop every scope a pane leaves: on project close and when a dispatch replaces a pane's shell",
+  "notes": "Left by #255. (1) Project close drops its panes through dropPane, not pane.close, so their scopes are not stopped: a dev server detached in any pane of a closed project keeps running. Route project.close's pane teardown through pane.close (or the same stop port) so every scope goes. (2) A dispatch that replaces a pane's shell in place (pane.dispatch on an open pane) starts a new scope and leaves the old one running: stop the old unit before or right after the new shell starts. Through the pane and project actions only (actions-rule-1); decision tests for both; lower the matching bypass counts. Hand check on throwaway scopes only. Docs: docs/processes (close the open question), history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T12:22:21.324Z",
+  "updatedAt": "2026-11-09T12:22:21.324Z",
+  "column": "Todo",
+  "order": 21
+}

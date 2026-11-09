@@ -111,3 +111,45 @@ column did not change it. With two finished columns, last no longer says
 finished, so a board whose finished column has another name (`Shipped`) shows
 its subtasks as under way. That is the price of one rule the bar, the manager's
 counts and its stalled panes all share.
+
+## board-decision-5: The board command keeps a git-tracked board in step with origin itself
+
+**Every write to a board git tracks lands on origin's default branch, from the
+screen or the command, from the project or a worktree, and the project's
+checkout is fast-forwarded to it when nothing but the board is in the way.**
+Before, nothing did: the global instructions had agents push board commits from
+temporary worktrees, nothing ever brought the project's checkout up, and a later
+`board move` there wrote cards from a copy 19-32 commits old. On kamandsystem,
+2026-11-09, that put cards 6f33a3ad, 8564d0c6 and aebb87c7 back without their
+Done, branch, pull request and comments, and once (78442317) the stale copy was
+the truer one: Review with a merge-refused comment while origin said Done for a
+pull request still open.
+
+**What goes up is origin's board with the edit replayed onto it, never a copy
+written whole.** The checkout's uncommitted board is replayed as the difference
+from its HEAD, so a stale card it never touched stays as origin has it. Where
+both sides changed one card, the newer `updatedAt` wins each field and the
+trails are unioned (`rebaseBoardChange`, which the screen's save shares). The
+union is what makes a replay safe to repeat: counting comments from the base
+instead would add a pushed comment again every sync until the checkout caught up.
+
+**The commit is made with a scratch index and work tree of origin's tip, not a
+`git worktree`.** It is the temporary worktree the card asked for in every way
+that matters (only the board's files, the checkout untouched) without a full
+checkout per write, and a program killed half way leaves a folder in the temp
+folder rather than a worktree record that blocks the next `git worktree add`.
+
+**The screen does not wait.** A sync is a fetch and a push, seconds on a slow
+network, and the board answers every keystroke; the write is on disk first and
+syncs behind it. The fast-forward is synchronous so that no save lands between
+putting the board's files back to HEAD and laying the checkout's edits over the
+new tip. A `board` command in another process can still land there; the same
+read-then-write ceiling `runBoardCommandOnLatest` names.
+
+**What it costs.** A commit on main per save. A fetch per `board` command, reads
+included, about a second. A repository whose main refuses pushes keeps its
+board in the checkout, uncommitted, with a warning; before this the review
+landed Done through the branch, and now it lands it in the checkout only. And a
+ship still commits its Ship move on the new branch when origin did not have it
+yet; card.move waits for the sync before the ship so that origin has it, which
+leaves that commit empty and skipped.

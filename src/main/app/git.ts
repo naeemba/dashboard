@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
 import { defaultBranch, noDefaultBranchMessage } from './default-branch';
 
@@ -12,13 +12,34 @@ const runCommand = promisify(execFile);
 // change that is not staged leaves the leading column blank. A leading trim takes that blank away on
 // the first line only, which shifts its path one character left — and a reader that counts columns
 // then gets a path that is not the one git named. Only the trailing newline is ours to drop.
-export async function git(gitArguments: string[], cwd: string): Promise<string> {
-  return runProgram('git', gitArguments, cwd);
+//
+// `timeout` kills git after that many milliseconds, for a fetch or a push that would otherwise wait on
+// a dead network for minutes; `environment` is laid over the process's own.
+export type GitOptions = { timeout?: number; environment?: Record<string, string> };
+
+// The project's hooks are for its code, not for a board commit made beside it: a pre-push `npm test`
+// there is minutes of waiting per card, a post-checkout or post-merge `npm install` a full install.
+// Passed to every git call the create-task program and the board's git sync make that writes.
+export const NO_HOOKS = ['-c', 'core.hooksPath=/dev/null'];
+
+export async function git(gitArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {
+  return runProgram('git', gitArguments, cwd, options);
 }
 
 // The same for another program, which so far is gh asking whether a branch has a pull request.
-export async function runProgram(program: string, programArguments: string[], cwd: string): Promise<string> {
-  const { stdout } = await runCommand(program, programArguments, { cwd, maxBuffer: 64 * 1024 * 1024 });
+// The same, blocking: for the few local calls whose caller must not be interleaved with another write
+// in this process (the board sync's fast-forward). Never for anything that touches the network.
+export function gitNow(gitArguments: string[], cwd: string): string {
+  return execFileSync('git', gitArguments, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 }).trimEnd();
+}
+
+export async function runProgram(program: string, programArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {
+  const { stdout } = await runCommand(program, programArguments, {
+    cwd,
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: options.timeout,
+    env: options.environment === undefined ? undefined : { ...process.env, ...options.environment },
+  });
   return stdout.trimEnd();
 }
 

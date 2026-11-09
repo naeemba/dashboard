@@ -7,7 +7,9 @@ import { runBoardCommand } from './board-cli';
 import { BROKEN_SUFFIX } from './board-files';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
-import { boardAddArguments, commitMessage, lostRace, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
+import { NO_HOOKS } from '../app/git';
+import { lostRace } from './board-sync';
+import { boardAddArguments, commitMessage, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
 
 // The whole of the create-task program outside create-task.ts: git, the throwaway worktree, the
 // file and the terminal. The card goes onto the remote's default branch through a worktree of it
@@ -36,11 +38,6 @@ function git(directory: string, commandArguments: readonly string[]): string {
     throw new ExpectedFailure(stderr || `git ${commandArguments[0]} failed`);
   }
 }
-
-// The project's hooks are for its code, not for one card in a temp folder: a pre-push `npm test` there
-// has no node_modules and fails, a post-checkout `npm install` costs a full install per card. Passed
-// to every call that writes; a local push does not carry it to the remote's own hooks.
-const NO_HOOKS = ['-c', 'core.hooksPath=/dev/null'];
 
 function gitOrNull(directory: string, commandArguments: readonly string[]): string | null {
   try {

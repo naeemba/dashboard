@@ -170,6 +170,51 @@ board` in a project to see what it takes, or DASHBOARD_BOARD, the older path to
 the same program, with no word in front. It is how an agent working a card moves
 its own, and .dashboard/CLAUDE.md in each project spells it out.
 
+## Kept in step with git
+
+A board git tracks is the default branch's, wherever it is written from
+(board-decision-5). Every write, from the screen, card.move, the review sweep
+or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
+
+1. fetch origin's default branch (10 seconds at most);
+2. read origin's board there, with the checkout's own uncommitted board edits
+   replayed onto it (`rebaseBoardChange`), then the command's edit on top;
+3. commit that, and only the board's files, onto origin's tip with a plain
+   message (`board: "Fix login" Doing → Review`), and push it; a push that lost
+   a race fetches and tries again, three tries in all;
+4. bring the project's checkout up to it: on the default branch, only behind,
+   and nothing changed outside `.dashboard/`, the board's files are put back to
+   HEAD, the checkout fast-forwarded (no stash, hooks off), and its own board
+   edits laid back on top. Otherwise it is left where it is, and the `board`
+   command writes the same edit there as well, timestamps and all, so the next
+   sync does not publish it a second time.
+
+No git call the sync makes runs the project's hooks. A checkout on the default
+branch with a board file that does not parse, in place or set aside as
+`.broken`, publishes nothing: the card missing from its board would go to main
+as a deletion. The sync says why, and the board is written where it is.
+
+The commit is made in a scratch folder in the system temp folder holding only
+origin's board files and an index of its own, so the checkout's branch, HEAD,
+index and working tree are never touched by it and nothing is left registered
+with `git worktree`. Run in a card's worktree or a throwaway one, the command
+works on main the same way and leaves the worktree's board, which is its
+branch's, alone: no board change rides in a feature branch. `board list` and
+`board show` read the same fresh board, so a move made in a worktree reads back.
+
+A card both sides changed is merged field by field: comments are the union of
+both trails, one comment being one (at, body), and every other field, the column
+included, goes to the side whose card has the newer `updatedAt`.
+
+The screen never waits on the network: the save is on disk at once, and
+`board-sync-queue.ts` runs one sync per project behind it, a burst of saves
+folded into one more. card.move waits for its write to be on origin before a
+ship cuts a branch. Offline, with no `origin`, or with a push refused for any
+other reason, or with a sync that fails any other way, the board is written
+where it is as before, and the app logs one
+warning per project (`board` kind) until a sync goes through; the command prints
+it on each run. A board git does not track, and the manager's, are untouched.
+
 ## Files
 
 Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
@@ -178,6 +223,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   folder's bytes go), `card-order.ts` (a card's place in its column), `board-watch.ts`,
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
   onto the file as it is now)
+- The git sync: `board-sync.ts` (its decisions), `board-sync-git.ts` (the git),
+  `board-sync-queue.ts` (the app's one sync per project), each beside its `.test.ts`
 - The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
   `board-usage.ts`, `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,

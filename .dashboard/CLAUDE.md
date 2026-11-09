@@ -53,8 +53,9 @@ and leaves out a `.broken` file set aside and a write's temporary file.
   the app puts things, not a button.
 - A card's column on the `main` branch says what has been merged, and `Review`
   is the one exception — a card there has a pull request open and nothing has
-  checked it. While work is in flight the card's column lives on that work's own
-  branch, and arrives here when the pull request does.
+  checked it. On a board git tracks, the `board` command writes the card on
+  `main` itself, from the project or any worktree, and brings the project's
+  checkout up to it; a worktree's own board is its branch's and is left alone.
 - `id` is a UUID, and no two cards may share one; it is also the file's name. Keep it stable when you
   edit a card. A card written without one takes its file's name, and one with an id another card
   already used is given a fresh one the next time the app reads the board.
@@ -108,6 +109,9 @@ code the app does, so a card it writes is a card the app wrote.
     into Ship ships the card to an agent in a worktree, and one into Review starts its review loop. ship
     and review start them without a move; review is how to start a loop with the review.autoLoop setting
     off. On a worktree's board a move is only a move. Everything else edits the board's files alone.
+
+    A board git tracks is read and written on origin's default branch, from the project or any worktree,
+    and the project's checkout is brought up to it. Offline, it is written here, with a warning.
 
     A card that will not be done is kept, not deleted: `board move <id> Cancelled` puts it in the
     Cancelled column after Done, which starts nothing.
