@@ -26,24 +26,27 @@ function machine(recorded: number | null, pids: number[], groups: number[]) {
 describe('endDeadHost', () => {
   it('kills the group a dead host left running, before anything starts its workers again', () => {
     const { ports, sent } = machine(4100, [], [4100]);
-    expect(endDeadHost(ports)).toBe(true);
+    endDeadHost(ports);
     expect(sent).toEqual(['SIGKILL -4100']);
   });
 
   it('leaves a host that is still alive alone, its sessions with it', () => {
     const { ports, sent } = machine(4100, [4100], [4100]);
-    expect(endDeadHost(ports)).toBe(false);
+    endDeadHost(ports);
     expect(sent).toEqual([]);
   });
 
   it('counts a pid it may not signal as alive: it is not ours, and neither is its group', () => {
-    const ports = { recorded: () => 4100, kill: () => { throw errno('EPERM'); } };
-    expect(endDeadHost(ports)).toBe(false);
+    const sent: number[] = [];
+    endDeadHost({ recorded: () => 4100, kill: (pid) => { sent.push(pid); throw errno('EPERM'); } });
+    expect(sent).toEqual([4100]);
   });
 
   it('does nothing for a dead host that left nothing, or for no host recorded', () => {
-    expect(endDeadHost(machine(4100, [], []).ports)).toBe(false);
-    expect(endDeadHost(machine(null, [], [1]).ports)).toBe(false);
+    expect(() => endDeadHost(machine(4100, [], []).ports)).not.toThrow();
+    const none = machine(null, [], [1]);
+    endDeadHost(none.ports);
+    expect(none.sent).toEqual([]);
   });
 });
 

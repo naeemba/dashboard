@@ -349,8 +349,8 @@ How it is built:
   nothing of the one still closing can land on a new session under the same key. A start for a key
   the app just stopped begins a new session.
 - An option that is a callback, other than those, is refused rather than dropped by the line.
-- The app tries to reach or launch the host once at a time, shared by every worker starting together,
-  and again at the next start after a try that failed.
+- The app tries to reach or launch the host once per run, shared by every worker starting together,
+  and again once a host it had went or one answered and turned it away.
 - The host answers one app at a time, as the pane host does. It exits once no app is connected and no
   session runs.
 - One live session per worker, whatever happened to the host (card c5b8a687). On 2026-11-09 earlyoom

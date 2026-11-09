@@ -18,12 +18,9 @@ const server = screenHostServer(scopedQuery(query), () => {
 
 // A host already answering keeps the socket, and the app that launched this one reaches it instead.
 // Otherwise the sessions a host killed before it left running are ended first (dead-host.ts).
-if (await claimHostSocket(process.platform, socketPath)) {
-  net.createServer(acceptApps<ToScreenHost>(server))
-    // A path too long for a socket, or a folder it cannot write: the app hears no host, and runs its
-    // worker screens itself.
-    .on('error', () => process.exit(1))
-    .listen(socketPath, () => recordHost(socketPath));
-} else {
-  process.exit(0);
-}
+if (!(await claimHostSocket(process.platform, socketPath))) process.exit(0);
+net.createServer(acceptApps<ToScreenHost>(server))
+  // A path too long for a socket, or a folder it cannot write: the app hears no host, and runs its
+  // worker screens itself.
+  .on('error', () => process.exit(1))
+  .listen(socketPath, () => recordHost(socketPath));

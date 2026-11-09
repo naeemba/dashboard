@@ -1,5 +1,6 @@
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { attempt } from '../panes/host-socket';
+import { rmSync, writeFileSync } from 'node:fs';
+import { canConnect } from '../app/can-connect';
+import { readText } from '../app/missing-file';
 import { prepareHostSocket } from '../panes/pane-host-protocol';
 
 // What a screen host that died leaves running: its sessions. The Agent SDK starts each worker's Claude
@@ -13,23 +14,20 @@ import { prepareHostSocket } from '../panes/pane-host-protocol';
 // the host's leftovers or nothing. A pid that is alive is the host still going, or the number reused by
 // a process with no group of the host's left to share it, and is left alone either way.
 
-export type DeadHostPorts = {
+type DeadHostPorts = {
   // The pid the last host wrote, or null for none.
   recorded(): number | null;
   // process.kill's: a pid's signal, or a negative pid's to its whole group; 0 only asks.
   kill(pid: number, signal: NodeJS.Signals | 0): void;
 };
 
-// Whether the group of the host recorded was killed.
-export function endDeadHost(ports: DeadHostPorts): boolean {
+export function endDeadHost(ports: DeadHostPorts): void {
   const pid = ports.recorded();
-  if (pid === null || alive(ports, pid)) return false;
+  if (pid === null || alive(ports, pid)) return;
   try {
     ports.kill(-pid, 'SIGKILL');
-    return true;
   } catch {
     // ESRCH: nothing of it was left.
-    return false;
   }
 }
 
@@ -48,31 +46,25 @@ export function hostPidFile(socket: string): string {
   return `${socket}.pid`;
 }
 
+// Never 0 or 1, whose group signal would reach every process of the user.
 export function recordedPid(file: string): number | null {
-  try {
-    const pid = Number(readFileSync(file, 'utf8').trim());
-    return Number.isInteger(pid) && pid > 1 ? pid : null;
-  } catch {
-    return null;
-  }
+  const pid = Number(readText(file)?.trim());
+  return Number.isInteger(pid) && pid > 1 ? pid : null;
 }
 
-// The real ports, for the host's own start and for the app about to run a worker in its place.
-export function endDeadHostAt(socket: string): boolean {
-  return endDeadHost({ recorded: () => recordedPid(hostPidFile(socket)), kill: (pid, signal) => process.kill(pid, signal) });
+// Whether a worker's session may start where the host was: not while a host answers on the socket,
+// which may be running it, and otherwise once what the last host left is ended. The host's own start
+// and the app about to run a worker itself both ask.
+export async function endDeadHostUnlessAnswering(socket: string): Promise<boolean> {
+  if (await canConnect(socket)) return false;
+  endDeadHost({ recorded: () => recordedPid(hostPidFile(socket)), kill: (pid, signal) => process.kill(pid, signal) });
+  return true;
 }
 
-// Whether a host starting may listen on the socket. Not while another answers on it: taking the socket
-// from a live host leaves its sessions running where no app can reach them, and the next start of each
-// worker runs a second copy here. Otherwise what the last host left is ended before the first app can
-// connect and start a worker again.
+// Whether a host starting may listen on the socket. Taking it from a live host would leave that one's
+// sessions running where no app can reach them, and the next start of each worker run a second copy.
 export async function claimHostSocket(platform: string, socket: string): Promise<boolean> {
-  const other = await attempt(socket);
-  if (other !== null) {
-    other.destroy();
-    return false;
-  }
-  endDeadHostAt(socket);
+  if (!(await endDeadHostUnlessAnswering(socket))) return false;
   prepareHostSocket(platform, socket);
   return true;
 }

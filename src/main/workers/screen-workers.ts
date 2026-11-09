@@ -144,11 +144,16 @@ export function screenWorkers(ports: ScreenPorts) {
     byKey.set(screenKey(id), worker);
   }
 
-  function drop(id: string): void {
-    if (!live.delete(id)) return;
+  // Whether there was one to stop. The caller saves.
+  function forget(id: string): boolean {
+    if (!live.delete(id)) return false;
     byKey.delete(screenKey(id));
     ports.stop(screenKey(id));
-    save();
+    return true;
+  }
+
+  function drop(id: string): void {
+    if (forget(id)) save();
   }
 
   return {
@@ -158,7 +163,7 @@ export function screenWorkers(ports: ScreenPorts) {
     // first: left, its session would take the new worker's prompt, and its own turn would go on.
     start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string | null): void {
       const { index } = paneFromId(id);
-      drop(id);
+      forget(id);
       add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: false }, false);
       save();
       // Drawn first, so the screen is there for the prompt to land on.

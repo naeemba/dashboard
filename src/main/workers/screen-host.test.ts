@@ -75,7 +75,7 @@ function appSession(heard: string[]) {
 describe.skipIf(process.platform === 'win32')('the screen host', () => {
   it('starts the session in the scope the app chose for it', async () => {
     const sdk = fakeSdk();
-    const app = screenHost({ endDeadHost: () => undefined, socket: await host(sdk.start), launch: () => undefined });
+    const app = screenHost({ socket: await host(sdk.start), launch: () => undefined });
     const scope = { file: 'systemd-run', args: ['--user', '--scope', '--unit=agent-shop-3-k4f2.scope', '--', '/bin/claude'], unit: 'agent-shop-3-k4f2.scope' };
     expect((await app.query(KEY, { ...appSession([]), scope }))?.unit).toBe('agent-shop-3-k4f2.scope');
     await settle();
@@ -86,11 +86,11 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);
     const scope = (unit: string) => ({ file: 'systemd-run', args: [`--unit=${unit}`, '--', '/bin/claude'], unit });
-    await screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined }).query(KEY, { ...appSession([]), scope: scope('agent-shop-3-k4f2.scope') });
+    await screenHost({ socket: socketPath, launch: () => undefined }).query(KEY, { ...appSession([]), scope: scope('agent-shop-3-k4f2.scope') });
     await settle();
     accepted[0].destroy();
     await settle();
-    const second = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined });
+    const second = screenHost({ socket: socketPath, launch: () => undefined });
     await second.ready;
     expect(second.kept(KEY)?.unit).toBe('agent-shop-3-k4f2.scope');
     expect((await second.query(KEY, { ...appSession([]), scope: scope('agent-shop-3-zz99.scope') }))?.unit).toBe('agent-shop-3-k4f2.scope');
@@ -100,7 +100,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   it('keeps a turn going while no app is connected, and hands the next app what it missed', async () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);
-    const first = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined });
+    const first = screenHost({ socket: socketPath, launch: () => undefined });
     const heardFirst: string[] = [];
     const before = appSession(heardFirst);
     const query = (await first.query(KEY, before))?.query;
@@ -119,7 +119,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     await hook(session.options, 'Stop', { hook_event_name: 'Stop' });
     const answered = session.options.canUseTool?.('Bash', {}, { signal, toolUseID: 'tool-1' } as never);
 
-    const second = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined });
+    const second = screenHost({ socket: socketPath, launch: () => undefined });
     await second.ready;
     expect(second.kept(KEY)).toEqual({ key: KEY, busy: true, unit: null });
     const heard: string[] = [];
@@ -144,7 +144,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     const sdk = fakeSdk();
     let idle = 0;
     const socketPath = await host(sdk.start, () => { idle += 1; });
-    const app = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined });
+    const app = screenHost({ socket: socketPath, launch: () => undefined });
     await app.query(KEY, appSession([]));
     await settle();
     accepted[0].destroy();
@@ -155,33 +155,32 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     expect(idle).toBe(1);
   });
 
-  it('answers null when no host can be reached, so the session runs in the app once a dead host\'s are ended', async () => {
+  it('answers null when no host can be reached, so the session runs in the app', async () => {
     const folder = temporaryFolder('screen-host-');
-    const said: string[] = [];
-    const app = screenHost({ endDeadHost: () => said.push('end dead host'), socket: path.join(folder, 'none.sock'), launch: () => { said.push('launch'); }, connectTries: 0 });
+    let launched = 0;
+    const app = screenHost({ socket: path.join(folder, 'none.sock'), launch: () => { launched += 1; }, connectTries: 0 });
     await app.ready;
     expect(app.kept(KEY)).toBeUndefined();
     expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(await app.query(KEY, appSession([]))).toBeNull();
-    // Reached for again by the next start, which a host that came up meanwhile would take.
-    expect(said).toEqual(['launch', 'end dead host', 'launch', 'end dead host']);
+    expect(launched).toBe(1);
   });
 
   it('refuses to run a worker in the app while a host answers that turned it away: it may be running that worker', async () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);
-    await screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined }).query(KEY, appSession([]));
-    let ended = 0;
-    const second = screenHost({ endDeadHost: () => { ended += 1; }, socket: socketPath, launch: () => undefined, connectTries: 0 });
+    await screenHost({ socket: socketPath, launch: () => undefined }).query(KEY, appSession([]));
+    const second = screenHost({ socket: socketPath, launch: () => undefined, connectTries: 0 });
     await expect(second.query(KEY, appSession([]))).rejects.toThrow(HOST_NOT_ANSWERING);
-    expect(ended).toBe(0);
+    // Asked again by the next start, which a host that has let the first app go then takes.
+    await expect(second.query(KEY, appSession([]))).rejects.toThrow(HOST_NOT_ANSWERING);
     expect(sdk.sessions).toHaveLength(1);
   });
 
   it('holds what a turn ended with while the app was away: a result clears busy, a hook keeps only its name but Stop', async () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);
-    await screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined }).query(KEY, appSession([]));
+    await screenHost({ socket: socketPath, launch: () => undefined }).query(KEY, appSession([]));
     await settle();
     const [session] = sdk.sessions;
     await hook(session.options, 'UserPromptSubmit', { hook_event_name: 'UserPromptSubmit' });
@@ -192,7 +191,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     await hook(session.options, 'Stop', { hook_event_name: 'Stop', last_assistant_message: 'done' });
     await settle();
 
-    const second = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined });
+    const second = screenHost({ socket: socketPath, launch: () => undefined });
     await second.ready;
     expect(second.kept(KEY)).toEqual({ key: KEY, busy: false, unit: null });
     const heard: string[] = [];
@@ -205,7 +204,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   it('ends the app\'s sessions when the host goes, and reaches for a host again on the next', async () => {
     let launched = 0;
     const socketPath = await host(fakeSdk().start);
-    const app = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => { launched += 1; }, connectTries: 0 });
+    const app = screenHost({ socket: socketPath, launch: () => { launched += 1; }, connectTries: 0 });
     const query = (await app.query(KEY, appSession([])))?.query;
     await settle();
     listener?.close();
@@ -218,7 +217,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   it('launches the host again once one it launched itself has gone', async () => {
     const socketPath = hostSocket();
     let launched = 0;
-    const app = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => { launched += 1; void listen(socketPath, fakeSdk().start); } });
+    const app = screenHost({ socket: socketPath, launch: () => { launched += 1; void listen(socketPath, fakeSdk().start); } });
     const query = (await app.query(KEY, appSession([])))?.query;
     expect(launched).toBe(1);
     listener?.close();
@@ -246,7 +245,7 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
   it('starts a new session for a key stopped a moment ago, and ends the old one in the app', async () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);
-    const app = screenHost({ endDeadHost: () => undefined, socket: socketPath, launch: () => undefined });
+    const app = screenHost({ socket: socketPath, launch: () => undefined });
     const old = (await app.query(KEY, appSession([])))?.query;
     await settle();
     const oldMessages = old?.[Symbol.asyncIterator]();
