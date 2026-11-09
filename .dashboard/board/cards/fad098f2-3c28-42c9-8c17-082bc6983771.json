@@ -1,0 +1,11 @@
+{
+  "id": "fad098f2-3c28-42c9-8c17-082bc6983771",
+  "title": "Audit every CLAUDE.md rule: move what a tool or hook can carry, delete it from CLAUDE.md",
+  "notes": "Audit: move every remaining CLAUDE.md rule that a tool, a hook or the app can carry into that tool, and delete it from CLAUDE.md.\n\nUser's goal (2026-11-09): CLAUDE.md files hold as little as possible; the dashboard's tools (git, board, pane, the app's own session instructions, hooks) enforce or do the rest, without creating bugs.\n\nRead ~/.claude/CLAUDE.md (dotfiles), its rules/ files, the dashboard CLAUDE.md, and the seeded .dashboard/CLAUDE.md. For each rule, one row: keep (a judgement no tool can make, e.g. naming, honesty), move to a tool/hook/app instruction (say which, how it is enforced, what breaks if it fails), or delete (already enforced, e.g. by eslint or a test). Output: docs/workflow/claude-md-audit.md with the table, and one card per move on the board (high), ordered. No rule is deleted in this card.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T11:27:58.591Z",
+  "updatedAt": "2026-11-09T11:27:58.591Z",
+  "column": "Todo",
+  "order": 19
+}

@@ -1,0 +1,11 @@
+{
+  "id": "07e3399d-5598-4b88-bd32-3271c9f557da",
+  "title": "A card's column follows its pull request; the app writes the ship comment",
+  "notes": "Part 2 of 3 (after part 1): a card's column follows its pull request, and the app writes the ship comment, so no CLAUDE.md rule has to.\n\nToday agents are told when to move a card: Doing before the first edit (global CLAUDE.md), Done when the PR is ready (global) or Review then Done after the merge (dashboard board-rule-2). The two disagree; agents moved cards to Done on main before the PR merged, and one PR then failed to merge (kamandsystem #19).\n\nChange:\n- Doing: the app moves a card to Doing when it dispatches it (pane run --card, a move into Ship) if it is not already past Doing.\n- Review and Done from the PR: for a card with a branch, the app finds its PR through gh (from the branch; folds in card b0234b28, 'Pull request status on the Ship card'), records pullRequest, and sets the column: PR open -> Review, merged -> Done, closed unmerged -> back to Doing with a comment. Checked when a worker reports, when the board is shown, and on a slow timer; one gh call per open card with a branch.\n- Ship comment: on the move to Review and on the merge, the app adds a comment naming the PR, its title and URL, once each.\n- Every write goes through card actions (actions-rule-1) and part 1's sync path.\n- gh missing, logged out or offline: no column change, one log warning, nothing wrong written. A card without a branch (research) is never touched; main moves it as now.\nDecisions (column from PR state, when to comment, when to check) pure with tests. Docs: board README, decisions (supersedes board-rule-2's ordering), ship README, history. Engineering bar: clean, testable, readable.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T11:27:58.433Z",
+  "updatedAt": "2026-11-09T11:27:58.433Z",
+  "column": "Todo",
+  "order": 17
+}
