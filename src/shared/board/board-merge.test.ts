@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCard, addComment, deleteCard, dropCard, moveCard, moveCardToColumn, renameCard, selectionOf, setBranch, type Board } from './board';
+import { addCard, addComment, deleteCard, dropCard, moveCard, moveCardToColumn, renameCard, selectionOf, setBranch, type Board, type Card } from './board';
 import { rebaseBoardChange, sameBoard } from './board-merge';
 import { board, titles } from './test-board';
 
@@ -107,6 +107,60 @@ describe('rebaseBoardChange', () => {
     const latest = moved(base, 'a', 2);
     const next = dropCard(base, selectionOf(base, 'c')!, 0, 2).board;
     expect(titles(rebaseBoardChange(base, next, latest))).toEqual([['x', 'c', 'b'], [], ['a']]);
+  });
+});
+
+// A card with its dates set by hand, so which side is newer is the test's to say.
+function dated(from: Board, id: string, updatedAt: string, fields: Partial<Card> = {}): Board {
+  return {
+    columns: from.columns.map((column) => ({
+      ...column,
+      cards: column.cards.map((card) => (card.id === id ? { ...card, ...fields, updatedAt } : card)),
+    })),
+  };
+}
+
+function placed(from: Board, id: string, column: number, updatedAt: string, fields: Partial<Card> = {}): Board {
+  return dated(moved(from, id, column), id, updatedAt, fields);
+}
+
+describe('rebaseBoardChange when both sides changed one card', () => {
+  // Card 78442317: a checkout's stale copy said Review with a merge-refused comment, written after
+  // origin had been told Done for a pull request still open. The newer word is the checkout's.
+  it('keeps the newer move and both trails, and a field only one side set', () => {
+    const base = board(['a'], [], []);
+    const local = placed(base, 'a', 1, '2026-11-09T12:00:00.000Z', { comments: [{ at: '2026-11-09T12:00:00.000Z', body: 'merge refused' }] });
+    const origin = placed(base, 'a', 2, '2026-11-09T11:00:00.000Z', { pullRequest: 19, comments: [{ at: '2026-11-09T10:00:00.000Z', body: 'opened #19' }] });
+    const merged = rebaseBoardChange(base, local, origin);
+    expect(titles(merged)).toEqual([[], ['a'], []]);
+    expect(merged.columns[1].cards[0]).toMatchObject({ pullRequest: 19, updatedAt: '2026-11-09T12:00:00.000Z' });
+    expect(merged.columns[1].cards[0].comments?.map((comment) => comment.body)).toEqual(['opened #19', 'merge refused']);
+  });
+
+  // The kamandsystem loss: a copy 19 commits old moved a card, and origin had moved it since.
+  it('leaves the card where the newer side put it', () => {
+    const base = board(['a'], [], []);
+    const local = placed(base, 'a', 1, '2026-11-09T10:00:00.000Z', { title: 'renamed' });
+    const origin = placed(base, 'a', 2, '2026-11-09T11:00:00.000Z', { title: 'origin title', branch: 'work' });
+    const card = rebaseBoardChange(base, local, origin);
+    expect(titles(card)).toEqual([[], [], ['origin title']]);
+    expect(card.columns[2].cards[0]).toMatchObject({ branch: 'work', updatedAt: '2026-11-09T11:00:00.000Z' });
+  });
+
+  it('takes a field only the older side changed', () => {
+    const base = board(['a']);
+    const local = dated(base, 'a', '2026-11-09T10:00:00.000Z', { notes: 'from the checkout' });
+    const origin = dated(base, 'a', '2026-11-09T11:00:00.000Z', { title: 'from origin' });
+    expect(rebaseBoardChange(base, local, origin).columns[0].cards[0]).toMatchObject({ title: 'from origin', notes: 'from the checkout' });
+  });
+
+  it('adds a comment once when the disk already has it', () => {
+    const base = board(['a']);
+    const comment = { at: '2026-11-09T10:00:00.000Z', body: 'pushed already' };
+    const local = dated(base, 'a', '2026-11-09T10:00:00.000Z', { comments: [comment] });
+    expect(rebaseBoardChange(base, local, local).columns[0].cards[0].comments).toEqual([comment]);
+    const origin = dated(local, 'a', '2026-11-09T11:00:00.000Z', { comments: [comment, { at: '2026-11-09T11:00:00.000Z', body: 'later' }] });
+    expect(rebaseBoardChange(base, local, origin).columns[0].cards[0].comments?.map((entry) => entry.body)).toEqual(['pushed already', 'later']);
   });
 });
 
