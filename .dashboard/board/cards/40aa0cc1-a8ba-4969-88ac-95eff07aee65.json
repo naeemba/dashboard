@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:34:40.640Z",
-  "updatedAt": "2026-11-09T16:02:46.409Z",
+  "updatedAt": "2026-11-09T20:55:28.158Z",
   "branch": "work-board-card-40aa0cc1-a8ba-4969-88ac-95e",
   "pullRequest": 271,
   "comments": [
     {
       "at": "2026-11-09T16:02:46.409Z",
       "body": "Shipped in #271: every Claude screen session (main, worker screens, screen host) starts with --chrome when CLAUDE_CODE_ENABLE_CFC is on, or when it is unset and .claude.json has claudeInChromeDefaultEnabled: true. Confirmed first with a throwaway SDK query: 20 claude-in-chrome tools with the flag, none without. Decision in src/main/chat/chat-chrome.ts with a test."
+    },
+    {
+      "at": "2026-11-09T20:55:28.158Z",
+      "body": "Pull request #271 merged: Claude screens get Claude in Chrome when the user has it on https://github.com/naeemba/dashboard/pull/271"
     }
   ],
   "column": "Done",

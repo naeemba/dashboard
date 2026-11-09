@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:54.871Z",
-  "updatedAt": "2026-11-09T16:01:22.295Z",
+  "updatedAt": "2026-11-09T20:55:26.746Z",
   "branch": "work-board-card-195ef924-ec8f-44b5-87ed-6e1",
   "pullRequest": 273,
   "comments": [
     {
       "at": "2026-11-09T16:01:22.295Z",
       "body": "Shipped in #273: text-direction.test.ts fails pnpm test when an input or textarea in src/ is created without its own dir = 'auto'; docs/conventions points at it. CLAUDE.md line left for Audit 13."
+    },
+    {
+      "at": "2026-11-09T20:55:26.746Z",
+      "body": "Pull request #273 merged: Test that every input and textarea gets dir = 'auto' https://github.com/naeemba/dashboard/pull/273"
     }
   ],
   "column": "Done",
