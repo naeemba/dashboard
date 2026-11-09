@@ -32,10 +32,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
   nvim: 'One nvim filling the window, started the first time you press the nvim key here, not at '
     + 'launch. Quit it and Enter starts it again. The scrollback key on the terminals screen sends a '
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',
-  board: 'A kanban board in .dashboard/board, saved on every change, undo the way back, and '
-    + 'pushed to main when git tracks it. Into Ship, a card goes to an agent in its own worktree; into '
-    + 'Review, its review loop starts, unless a setting makes one arriving alone wait. Done moves only '
-    + 'by dragging. Delete cancels; in Cancelled or Done, it deletes.',
+  board: 'A kanban board in .dashboard/board, saved on every change, undo the way back, pushed to '
+    + 'main when git tracks it. Ship hands a card to an agent; its pull request moves it '
+    + 'on: open into Review, starting its loop unless a setting waits, merged into Done. Done moves only '
+    + 'by dragging. Delete cancels, or deletes in Cancelled and Done.',
   notes: 'Two pages for what is not a card: free text in .dashboard/notes.md and handwriting in '
     + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
     + 'key turns between them. No save key: written a moment after you stop, read only when you '

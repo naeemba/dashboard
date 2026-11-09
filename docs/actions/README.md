@@ -31,6 +31,13 @@ Neither door holds any of the logic; each only asks.
   past Review. One started this way that meets a dirty worktree is started
   again by the sweep once the commit lands, whatever the setting.
 
+- **card.start**: a card whose agent a ship or `pane run --card` has just
+  started: its branch written and the card into Doing, unless it is there or
+  past it. No door of its own; card.ship and `pane run` call it.
+- **card.follow**: one card's column from its pull request, asked of `gh` from
+  its branch (board-decision-6); the move goes through card.move as the app's
+  own. Called by the sweep in `pull-request-sweep.ts` only.
+
 - **pane.dispatch**: every agent a pane starts — `pane run`, a ship, the review
   loop, a resume after a restart or from the drawer, New Claude — screen or
   terminal, decided once in `paneKind` (workers-decision-8). Every resume is

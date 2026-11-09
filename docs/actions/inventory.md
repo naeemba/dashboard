@@ -99,6 +99,8 @@ conversation itself, not changes to app state.
 | move, the board's own write | `board:write`, `app/project-files-ipc.ts:42` | IPC (every board edit, then `card:move` for a column change) | the write is the board's; the entry is card.move's |
 | move into Ship on the branch | `commitShipMove`, `ship/ship-flow.ts:46` | card.ship | inside card.ship |
 | move into Review | `editProjectBoard`, `ship/review-flow.ts:97` | sweep | then card.move with `automatic`; the write itself bypasses |
+| start, into Doing with its branch | card.start, `actions/card/start.ts` | card.ship, `pane run --card` | no |
+| follow its pull request | card.follow, `actions/card/follow.ts` | the pull-request sweep (report, board shown, timer) | no; the move is card.move with `automatic` |
 | add, set, comment, edit, delete | `board-cli.ts`, `board:write` | CLI, IPC | file edits through `board-store.ts` (board-rule-1); no action needed until one starts something |
 
 ### settings and notes

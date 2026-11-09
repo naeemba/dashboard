@@ -4,6 +4,8 @@ Moving a card into Ship makes a branch and a worktree for it and starts an
 agent in one of the project's panes. When the agent puts a pull request on the
 card, a review takes the worktree and carries the pull request to merged. The
 worktree list shows every git worktree of a project and removes them.
+Handing a card to its agent moves it into Doing with its branch on it, and from
+then its pull request moves it (board-decision-6).
 
 ## Files
 

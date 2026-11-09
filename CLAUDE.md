@@ -85,7 +85,9 @@ app.
   (board-rule-1)
 - **A card with a pull request open goes in `Review`, not `Done`.** This beats
   the global "move to Done when the PR is ready". The move into `Done` comes
-  after the merge; the `board` command writes it on main itself. (board-rule-2)
+  after the merge; the app makes both moves from the pull request's state
+  (board-decision-6), and the `board` command writes one on main itself.
+  (board-rule-2)
 - **A caller that changes state calls an action.** A new door (IPC handler,
   command answer, key, sweep) calls the action in `src/main/actions/<noun>/`;
   a new kind of change adds one. `bypasses.test.ts` names the calls still made
