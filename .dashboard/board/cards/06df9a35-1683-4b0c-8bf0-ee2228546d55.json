@@ -1,0 +1,11 @@
+{
+  "id": "06df9a35-1683-4b0c-8bf0-ee2228546d55",
+  "title": "Audit 8: test that every display class has its [hidden] rule",
+  "notes": "A test reads the stylesheets and, for every class that sets display, wants a [hidden] { display: none } rule beside it. conventions-rule-3.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:55.825Z",
+  "updatedAt": "2026-11-09T15:32:55.825Z",
+  "column": "Backlog",
+  "order": 48
+}

@@ -1,0 +1,11 @@
+{
+  "id": "7e7219dd-9c87-437a-b9d0-9a47ad74c8e6",
+  "title": "Audit 6: eslint max-lines at 600 code lines",
+  "notes": "eslint max-lines 600 with skipComments and skipBlankLines; generated and data-only files as overrides, each with its reason. Moves the global file-size rule into this repo's checks.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:55.499Z",
+  "updatedAt": "2026-11-09T15:32:55.499Z",
+  "column": "Backlog",
+  "order": 46
+}
