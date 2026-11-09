@@ -28,7 +28,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - A worker's Claude screen, the `pane run` default off Windows: `session-cli.ts`; `screen-workers.ts`, `../../shared/workers/screen-key.ts`; the session is the [chat](../chat/README.md)'s `chat-sessions.ts`, the pane `src/renderer/app/page.ts` (workers-decision-5)
 - A Claude screen opened by hand with New Claude, and which screen is whose: `screen-owner.ts`, `screen-workers.ts`, `worker-channels.ts`, the button `src/renderer/app/chrome-bars.ts` (workers-decision-7)
 - Every agent a pane starts, screen or terminal, from every caller: the pane.dispatch action, `src/main/actions/pane/dispatch.ts` and `pane-actions.ts`, the default `pane-kind.ts` (workers-decision-8, [actions](../actions/README.md))
-- The screen host a worker screen's session runs in, so it outlives the app: `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`, `screen-host-protocol.ts`, `../chat/input-queue.ts` (workers-decision-6)
+- The screen host a worker screen's session runs in, so it outlives the app: `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`, `screen-host-protocol.ts`, `dead-host.ts`, `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios
 
@@ -81,7 +81,10 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a card's agent or main's worker in a terminal, when the app restarts, then it comes back in the terminal on its conversation; one on a Claude screen comes back as a screen.
 - Given a Claude of yours in a terminal, when the app restarts, then it comes back as the pane's process on its conversation, started by pane.dispatch like every other agent; exiting it leaves an exited pane, and Enter gives a shell (actions-decision-5).
 - Given a Claude screen opened by hand, when the app restarts, then it comes back as a Claude screen on the conversation it was last on, in the screen host off Windows as a worker screen is, and still not main's worker.
-- Given the screen host is not running (Windows, a machine restart, a socket that would not open, another Dashboard holding it), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
+- Given the screen host is not running (Windows, a machine restart, a socket that would not open), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
+- Given the screen host was killed (earlyoom, the OOM killer) while its workers were mid-turn, when a worker's pane starts its session again, then the sessions the dead host left running are killed first and the worker carries on in one session, never two (workers-decision-6).
+- Given a screen host that answers but will not take the app (another Dashboard holding it, or too slow to say what it kept), when a worker screen starts, then it is refused on the screen rather than run a second time in the app, and the next prompt tries again (workers-decision-6).
+- Given a pane already running a worker screen, when pane.dispatch starts another screen there, then the first one's session is stopped before the new one starts.
 
 ## Open questions
 

@@ -349,9 +349,23 @@ How it is built:
   nothing of the one still closing can land on a new session under the same key. A start for a key
   the app just stopped begins a new session.
 - An option that is a callback, other than those, is refused rather than dropped by the line.
-- The app tries to reach or launch the host once per run, shared by every worker starting together.
-- The host answers one app at a time, as the pane host does; a second Dashboard on the same user data
-  runs its worker screens itself. It exits once no app is connected and no session runs.
+- The app tries to reach or launch the host once at a time, shared by every worker starting together,
+  and again at the next start after a try that failed.
+- The host answers one app at a time, as the pane host does. It exits once no app is connected and no
+  session runs.
+- One live session per worker, whatever happened to the host (card c5b8a687). On 2026-11-09 earlyoom
+  SIGKILLed the host; its sessions share its process group, heard nothing, and ran on with parent pid
+  1, while the next start of each worker launched a new host that resumed the same conversation: two
+  sessions in one pane, both working. So the host writes its pid beside its socket
+  (`screens-1.sock.pid`), and a host starting kills the group of the one recorded there if that pid
+  is dead (`dead-host.ts`). Only then: Linux hands no pid out again while a group still carries it, so
+  a dead pid's group is the old host's leftovers and nothing else. A host starting also leaves the
+  socket alone while another answers on it, rather than taking it and running a second copy of each
+  worker its app asks for.
+- With no host, a worker runs in the app only once nothing answers on the socket, and after the same
+  kill. A host that answers but would not take this app (a second Dashboard on the same user data, or a
+  host too slow to say what it kept) may be running that very worker: the start is refused, the screen
+  says so, and the next prompt tries again.
 - It is run by the `node` a login shell finds, as the pane host is, so the Agent SDK is bundled into
   `screen-host-entry.mjs` (node cannot read it inside the asar) as an ES module, since the SDK reads
   `import.meta.url` as it loads. The CLI binary is the app's unpacked one, named in the options.
@@ -365,6 +379,8 @@ Watch for:
 
 - Windows has none: a named pipe needs the proof the pane host does (`paneHostAddress`), not built yet.
   Worker screens there still die with the app.
+- A tool a session ran in a process group of its own (a detached dev server) is not in the host's
+  group, and outlives the kill; its systemd scope, when it has one, ends it with the pane.
 - A protocol bump, or an app update that changes the socket's name, leaves the old host's sessions
   running unseen; a worker brought back then resumes its conversation in a second process. Bump only for
   a change an older host would misread.
