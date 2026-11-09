@@ -7,8 +7,8 @@ import { sourceFiles } from './src/main/testing/source-files';
 // before it does, or a dialog that is open swallows Ctrl+N mid-word. Each handler is parsed from the
 // source: its parameter's first `.key` must come after the guard's first call on that parameter.
 
-// The handlers that read a key before the guard on purpose, one entry per handler, for the reasons
-// docs/keys/hard-rules.md gives. A second unguarded handler in one of these files fails.
+// The files holding a handler that reads a key before the guard on purpose, one row per file, for the
+// reasons docs/keys/hard-rules.md gives. A second unguarded handler in one of these files passes.
 const EXCEPTIONS = [
   'src/renderer/app/overlay.ts', // Tab in a search box: nothing else there takes focus
   'src/renderer/board/filter-dialog.ts', // Tab in the board filter dialog, for the same reason
@@ -27,8 +27,10 @@ const GUARDS = new Set(['isModified', 'isBareCharacter']);
 type Handler = { file: string; line: number };
 type Found = { seen: number; unguarded: Handler[]; unreadable: Handler[] };
 
-// Whether the handler's first read of `.key` on its parameter comes after a guard call on it.
-// Undefined when there is no single plain parameter to follow.
+// Whether the handler's first read of its parameter's key (`.key`, `['key']`, `const { key } =`) comes
+// after a guard call on it. Undefined when there is no single plain parameter to follow. Only the
+// handler's own body is read: a function it hands the event to is trusted, and a guard counts by
+// where it is written, not by whether it returns.
 function guarded(handler: ts.ArrowFunction | ts.FunctionExpression): boolean | undefined {
   const [parameter] = handler.parameters;
   if (parameter === undefined) return true;
@@ -37,10 +39,15 @@ function guarded(handler: ts.ArrowFunction | ts.FunctionExpression): boolean | u
   const isParameter = (node: ts.Node): boolean => ts.isIdentifier(node) && node.text === name;
   let firstRead = Infinity;
   let firstGuard = Infinity;
+  const readsKey = (node: ts.Node): boolean =>
+    (ts.isPropertyAccessExpression(node) && node.name.text === 'key' && isParameter(node.expression))
+    || (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)
+      && node.argumentExpression.text === 'key' && isParameter(node.expression))
+    || (ts.isVariableDeclaration(node) && node.initializer !== undefined && isParameter(node.initializer)
+      && ts.isObjectBindingPattern(node.name)
+      && node.name.elements.some((element) => (element.propertyName ?? element.name).getText() === 'key'));
   const visit = (node: ts.Node): void => {
-    if (ts.isPropertyAccessExpression(node) && node.name.text === 'key' && isParameter(node.expression)) {
-      firstRead = Math.min(firstRead, node.getStart());
-    }
+    if (readsKey(node)) firstRead = Math.min(firstRead, node.getStart());
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && GUARDS.has(node.expression.text)
       && node.arguments.some(isParameter)) {
       firstGuard = Math.min(firstGuard, node.getStart());
@@ -51,14 +58,23 @@ function guarded(handler: ts.ArrowFunction | ts.FunctionExpression): boolean | u
   return firstRead === Infinity || firstGuard < firstRead;
 }
 
+// Whether a `keys` value sits in an object literal passed straight to viewerOverlay.
+function isViewerOption(value: ts.Expression): boolean {
+  const object = value.parent.parent;
+  const call = object?.parent;
+  return ts.isObjectLiteralExpression(object) && call !== undefined && ts.isCallExpression(call)
+    && ts.isIdentifier(call.expression) && call.expression.text === 'viewerOverlay';
+}
+
 // Every keydown listener, `onkeydown` and viewer `keys` option in one file.
 function handlersIn(file: string, source: string): Found {
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   const found: Found = { seen: 0, unguarded: [], unreadable: [] };
   const check = (handler: ts.Expression, viewerOption = false): void => {
     const inline = ts.isArrowFunction(handler) || ts.isFunctionExpression(handler);
-    // A `keys:` that is not a function is some other object's field, not a handler.
-    if (viewerOption && !inline) return;
+    // A `keys:` that is not a function is some other object's field, not a handler, unless the
+    // object is the option passed to viewerOverlay.
+    if (viewerOption && !inline && !isViewerOption(handler)) return;
     found.seen++;
     const answer = inline ? guarded(handler) : undefined;
     if (answer === true) return;
@@ -75,6 +91,7 @@ function handlersIn(file: string, source: string): Found {
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
       && ts.isPropertyAccessExpression(node.left) && node.left.name.text === 'onkeydown') check(node.right);
     if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === 'keys') check(node.initializer, true);
+    if (ts.isShorthandPropertyAssignment(node) && node.name.text === 'keys') check(node.name, true);
     ts.forEachChild(node, visit);
   };
   visit(tree);
@@ -114,10 +131,15 @@ describe('the handler reader', () => {
   it('fails a key read before the guard, or with none', () => {
     expect(read("a.addEventListener('keydown', (event) => { act(event.key, isModified(event)); });")).toEqual(['unguarded']);
     expect(read("open({ keys: (event) => { if (event.key === 'Tab') stop(); } });")).toEqual(['unguarded']);
+    expect(read("a.addEventListener('keydown', (event) => { const { key } = event; go(key); });")).toEqual(['unguarded']);
+    expect(read("a.addEventListener('keydown', (event) => { go(event['key']); });")).toEqual(['unguarded']);
   });
 
   it('cannot read a handler passed by name or destructured', () => {
     expect(read("a.addEventListener('keydown', onKey);")).toEqual(['unreadable']);
     expect(read("a.addEventListener('keydown', ({ key }) => { go(key); });")).toEqual(['unreadable']);
+    expect(read("viewerOverlay('x', el, { keys: onKeys });")).toEqual(['unreadable']);
+    expect(read("viewerOverlay('x', el, { keys });")).toEqual(['unreadable']);
+    expect(read("render({ keys: settings.keys });")).toEqual([]);
   });
 });
