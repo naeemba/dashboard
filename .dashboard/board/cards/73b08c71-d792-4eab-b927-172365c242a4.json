@@ -4,6 +4,13 @@
   "notes": "newest-read.test.ts:5, manager-reads.test.ts:8 and ship.test.ts:125 each hand-write a deferred promise helper that Promise.withResolvers() already provides (it typechecks and runs here: target ESNext, Node 24). Replace each copy with it. Cost if left: every new test that needs to control when a promise settles writes another copy under another name. Issue: https://github.com/naeemba/dashboard/issues/192 Review: https://github.com/naeemba/dashboard/pull/190#discussion_r4441187097",
   "priority": "low",
   "parent": null,
+  "updatedAt": "2026-11-09T16:44:18.020Z",
+  "comments": [
+    {
+      "at": "2026-11-09T16:44:18.020Z",
+      "body": "Tracks issue #192 (https://github.com/naeemba/dashboard/issues/192). The three hand-written deferred helpers are still on main as of ad100b60."
+    }
+  ],
   "column": "Backlog",
   "order": 18
 }

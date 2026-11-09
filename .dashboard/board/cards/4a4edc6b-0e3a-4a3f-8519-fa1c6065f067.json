@@ -4,6 +4,13 @@
   "notes": "session-requests.ts tells dispatched.get(id)?.dispatcher ?? slot, and dispatched/dispatchers are only in memory. A worker that project A's main (or the manager) dispatched into project X with pane claim --project comes back after a restart in X, so its done notice goes to X's main, which never dispatched it, and A hears nothing. Fix: persist the dispatcher with the worker mark in session.json; the same record fixes which main starts at open (PR #186). Issue: https://github.com/naeemba/dashboard/issues/187 Review: https://github.com/naeemba/dashboard/pull/186#discussion_r4438204842",
   "priority": "medium",
   "parent": null,
+  "updatedAt": "2026-11-09T16:44:18.085Z",
+  "comments": [
+    {
+      "at": "2026-11-09T16:44:18.085Z",
+      "body": "Tracks issue #187 (https://github.com/naeemba/dashboard/issues/187). session-requests.ts still falls back to the pane's own main on main as of ad100b60."
+    }
+  ],
   "column": "Backlog",
   "order": -4
 }
