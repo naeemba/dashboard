@@ -91,6 +91,15 @@ describe('paneHostServer', () => {
     expect(idle()).toBe(0);
   });
 
+  it('tells the next app the scope a kept shell runs in, as its own command rather than the scope\'s', () => {
+    const { host } = server();
+    const scope = { unit: 'pane-dashboard-1-k4f2.scope', file: 'systemd-run', args: ['--scope', '--', '/bin/zsh'] };
+    host.receive({ type: 'spawn', ...request('k'), scope });
+    const sent: FromHost[] = [];
+    host.connect((message) => sent.push(message));
+    expect(sent).toMatchObject([{ type: 'panes', panes: [{ key: 'k', file: '/bin/zsh', args: [], unit: scope.unit }] }]);
+  });
+
   it('stops once the app has gone and its last shell has ended', () => {
     const { host, spawned, idle } = server();
     host.connect(() => undefined);
