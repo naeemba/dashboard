@@ -1,5 +1,4 @@
 import { agentRows, taskOpening, type FinishedTask } from '../../shared/chat/chat-agents';
-import { failureText } from '../../shared/errors/failure';
 import { openTaskOutput } from './chat-task-output-view';
 import type { ChatTask, ChatTasks } from '../../shared/chat/chat-tasks';
 import type { ChatEntry, Transcript } from '../../shared/chat/chat-transcript';
@@ -63,7 +62,7 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
         read: () => say.bridge.chatTaskOutput(say.slot, target.taskId),
         running: () => transcript().tasks.some((each) => each.id === target.taskId),
         refused: (reason) => { say.onNotice(reason); back(); },
-        failed: (error) => { say.onError(`${task.description || task.kind}'s output not read: ${failureText(error)}`); back(); },
+        failed: (message) => { say.onError(message); back(); },
         closed: show,
       });
     }

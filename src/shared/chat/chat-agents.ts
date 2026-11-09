@@ -59,7 +59,7 @@ export function taskOutputShown(name: string, read: TaskOutputRead, running: boo
   if ('refused' in read) return { kind: 'refused', reason: `${name}'s output cannot be read: ${read.refused}` };
   if (read.output === '' && !running) return { kind: 'refused', reason: `${name} has no output to show: it printed nothing, or its output file is gone.` };
   const text = printableLines(read.output).join('\n');
-  return { kind: 'text', text: read.truncated ? `… only the last 8 KiB is kept\n${text}` : text };
+  return { kind: 'text', text: read.truncated ? `… the start is cut, only the end is kept\n${text}` : text };
 }
 
 // The count an Agent call's result ends with, `<usage>subagent_tokens: 33075 tool_uses: 3

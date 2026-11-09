@@ -556,12 +556,12 @@ export function registerChatSessions(
   // A shell or Monitor task's output for the agents list's viewer, which asks again while it is open.
   // Reading changes nothing, so this is a channel, not an action. Claude Code answers get_task_output
   // for a running task and once more after it ends; the SDK's Query has the call but not its type.
+  type OutputQuery = Query & { getTaskOutput?: (id: string) => Promise<TaskOutputRead> };
   table.handle('chat-task:output', async (_screen, slot: number, taskId: string): Promise<TaskOutputRead> => {
-    const query: Query & { getTaskOutput?: (id: string) => Promise<{ output: string; truncated: boolean }> } | undefined = (await sessions.get(slot))?.query;
+    const query: OutputQuery | undefined = (await sessions.get(slot))?.query;
     if (!query) return { refused: 'the session has ended.' };
     if (!query.getTaskOutput) return { refused: 'this version of Claude Code cannot read a task\'s output.' };
-    const { output, truncated } = await query.getTaskOutput(taskId);
-    return { output, truncated };
+    return query.getTaskOutput(taskId);
   });
 
   // Every screen is told the question is gone, so the one it was not answered on stops showing it.

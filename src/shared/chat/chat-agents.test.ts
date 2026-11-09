@@ -125,7 +125,7 @@ describe('taskOutputShown', () => {
 
   it('says the start was cut when only the end is kept', () => {
     const shown = taskOutputShown('npm test', { output: 'last', truncated: true }, false);
-    expect(shown).toEqual({ kind: 'text', text: '… only the last 8 KiB is kept\nlast' });
+    expect(shown).toEqual({ kind: 'text', text: '… the start is cut, only the end is kept\nlast' });
   });
 
   it('shows a running task that has printed nothing yet empty, to fill as it goes', () => {

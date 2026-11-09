@@ -1,5 +1,6 @@
 import { taskOutputShown, type FinishedTask, type TaskOutputRead } from '../../shared/chat/chat-agents';
 import type { ChatTask } from '../../shared/chat/chat-tasks';
+import { failureText } from '../../shared/errors/failure';
 import { viewerOverlay } from '../app/overlay';
 
 // How often the open viewer asks again while its task runs.
@@ -9,7 +10,7 @@ export type OutputPorts = {
   read(): Promise<TaskOutputRead>;
   running(): boolean;
   refused(reason: string): void;
-  failed(error: unknown): void;
+  failed(message: string): void;
   closed(): void;
 };
 
@@ -28,7 +29,7 @@ export async function openTaskOutput(task: ChatTask | FinishedTask, ports: Outpu
   try {
     first = await next();
   } catch (error) {
-    return ports.failed(error);
+    return ports.failed(`${name}'s output not read: ${failureText(error)}`);
   }
   if (first.shown.kind === 'refused') return ports.refused(first.shown.reason);
 
@@ -40,7 +41,9 @@ export async function openTaskOutput(task: ChatTask | FinishedTask, ports: Outpu
   output.className = 'chat-task-output';
   sheet.append(title, output);
 
+  // A quiet task reads the same each second; only a change is drawn, so the sheet is not laid out again.
   function draw(text: string): void {
+    if (text === output.textContent) return;
     const box = sheet.parentElement;
     const stick = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
     output.textContent = text;
