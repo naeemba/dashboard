@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T11:27:58.433Z",
-  "updatedAt": "2026-11-09T14:15:44.831Z",
+  "updatedAt": "2026-11-09T20:55:17.400Z",
   "branch": "work-board-card-07e3399d-5598-4b88-bd32-327",
   "pullRequest": 261,
   "comments": [
     {
       "at": "2026-11-09T14:14:59.175Z",
       "body": "PR #261, ready to merge: card.follow sets the column from gh (open → Review, merged → Done, closed → Doing, reopen = new open) with one line per state; card.start puts a card in Doing with its branch when its agent gets a pane; checked on report, board shown, 2-minute timer. Not done: b0234b28's status glyph; the review sweep still reads the PR number from the worktree board."
+    },
+    {
+      "at": "2026-11-09T20:55:17.400Z",
+      "body": "Pull request #261 merged: A card's column follows its pull request, and the app writes the ship comment https://github.com/naeemba/dashboard/pull/261"
     }
   ],
   "column": "Done",
