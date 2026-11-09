@@ -28,12 +28,15 @@ describe('pane.open', () => {
   it('starts New Claude and the drawer\'s resume through pane.dispatch, never a shell typed into', async () => {
     const { open, shells, dispatched } = opener(API);
     await open.call({ slot: 2, claude: true });
-    await open.call({ slot: 2, directory: '/work/api.worktrees/fix', claude: true, resume: 'session-1' });
+    await open.call({ slot: 2, directory: '/work/api.worktrees/fix', claude: true, resume: 'session-1', as: 'screen' });
+    await open.call({ slot: 2, claude: true, resume: 'session-2' });
     expect(shells).toEqual([]);
     expect(dispatched).toMatchObject([
-      { id: '2:2', directory: '/work/api', prompt: null, resume: null, dispatcherPath: null },
-      { id: '2:2', directory: '/work/api.worktrees/fix', prompt: null, resume: 'session-1', dispatcherPath: null },
+      { id: '2:2', directory: '/work/api', prompt: null, resume: null, dispatcherPath: null, as: null },
+      { id: '2:2', directory: '/work/api.worktrees/fix', prompt: null, resume: 'session-1', dispatcherPath: null, as: 'screen' },
+      { resume: 'session-2', as: null },
     ]);
+    expect(await open.call({ slot: 2, claude: true, resume: 'session-3', as: 'window' })).toEqual({ refused: 'a pane runs a screen or a terminal' });
   });
 
   it('refuses a closed page, and a shell in a project folder that is not there', async () => {

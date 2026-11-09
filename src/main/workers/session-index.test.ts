@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LIVE_USE_STEP_MS, parseSessionIndex, projectOf, renamed, resumeChoice, sessionPage, stillRunning, withLive, withSession, type SessionIndex } from './session-index';
+import { LIVE_USE_STEP_MS, parseSessionIndex, projectOf, renamed, resumeChoice, sessionPage, stillRunning, withKind, withLive, withSession, type SessionIndex } from './session-index';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
@@ -23,11 +23,27 @@ describe('withSession', () => {
   });
 });
 
+describe('withKind', () => {
+  it('records what a conversation last ran as, and hands the same index back when nothing changes', () => {
+    const screen = withKind(started({}, ID, 1), ID, 'screen');
+    expect(screen[PROJECT][0].kind).toBe('screen');
+    expect(withKind(screen, ID, 'terminal')[PROJECT][0].kind).toBe('terminal');
+    expect(withKind(screen, ID, 'screen')).toBe(screen);
+    expect(withKind(screen, OTHER, 'terminal')).toBe(screen);
+  });
+});
+
 describe('parseSessionIndex', () => {
   it('drops a row whose id is not a UUID, since a resume types it into a shell', () => {
     const good = started({}, ID, 1)[PROJECT][0];
     const parsed = parseSessionIndex({ [PROJECT]: [good, { ...good, id: `${ID}; rm -rf ~` }], '/x': 'no' });
     expect(parsed).toEqual({ [PROJECT]: [good] });
+  });
+
+  it('keeps a row with no kind, from before it was recorded, and drops one with a kind it does not know', () => {
+    const good = started({}, ID, 1)[PROJECT][0];
+    const screen = { ...good, kind: 'screen' };
+    expect(parseSessionIndex({ [PROJECT]: [good, screen, { ...good, kind: 'window' }] })).toEqual({ [PROJECT]: [good, screen] });
   });
 
   it('reads anything that is not an object as empty', () => {

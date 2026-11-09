@@ -26,3 +26,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #265 — A stop notice due while main is mid-turn waits for the turn to end, at most PAUSE_CEILING_MS from its start, and is dropped when that turn read the worker's report (workers-decision-1)
 - 2026-11-09 #267 — `pane release` after a merge that took the throwaway worktree no longer fails as `spawn git ENOENT`: a folder already gone is neither asked about nor removed, and git's registration of one deleted by hand is pruned
 - 2026-11-09 #283 — A killed screen host's sessions are ended before a worker starts again, neither host takes a live host's socket, and the app runs no worker itself while a host answers: one session per pane (workers-decision-6)
+- 2026-11-09 — A resumed conversation opens as what it last ran as: a screen stays a screen, a terminal a terminal, one of unknown kind pane run's default (workers-decision-8)

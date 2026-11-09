@@ -20,13 +20,14 @@ export type PaneDispatchInput = {
   directory: string;
   // Its first prompt, or null for New Claude: a screen that waits for you to type.
   prompt: string | null;
-  // A conversation to carry on after a restart, or null for a new one.
+  // A conversation to carry on (after a restart, from the drawer), or null for a new one.
   resume: string | null;
   cardId: string | null;
   // The page whose main the agent reports to, or null for a Claude opened by hand, which reports to
   // nobody. A ship's and the review loop's agent report to their project's main.
   dispatcherPath: string | null;
-  // `pane run --screen` or `--terminal`. Null leaves it to the platform.
+  // `pane run --screen` or `--terminal`; for a resume, what the conversation last ran as. Null leaves it
+  // to the platform.
   as: PaneKind | null;
 };
 
@@ -35,8 +36,10 @@ export type PaneShell = { directory: string | undefined; running: boolean };
 export type PaneDispatchPorts = {
   platform: string;
   shellCommand(): string;
-  // A new conversation id, recorded in the session index the drawer lists.
-  newSession(projectPath: string, directory: string, cardId: string | null): string;
+  // A new conversation id, recorded in the session index the drawer lists with what it runs as.
+  newSession(projectPath: string, directory: string, cardId: string | null, kind: PaneKind): string;
+  // A conversation carried on as `kind`, recorded for the next resume of it.
+  ranAs(session: string, kind: PaneKind): void;
   // Before either half: the pane is the new agent's, and main's worker when `dispatcherPath` names a main.
   starting(id: string, projectPath: string, dispatcherPath: string | null): void;
   // The folder the pane's shell stands in, and whether one is running.
@@ -49,12 +52,11 @@ export type PaneDispatchPorts = {
   screen(id: string, projectPath: string, directory: string, start: ScreenStart, cardId: string | null, dispatcherPath: string | null): void;
 };
 
-// A resume is a terminal: a screen comes back through screen-workers.ts on its own, so a conversation
-// handed here was a terminal's. No prompt is New Claude, which is a screen. Otherwise what was asked
-// for, or the platform's default.
+// New Claude, no prompt and nothing to carry on, is a screen. Anything else is what the door asked for,
+// or the platform's default: a resume asks for what the conversation last ran as (the drawer reads the
+// session index, a restart's are terminals'), so one of unknown kind opens the way pane run would.
 export function paneKind(input: Pick<PaneDispatchInput, 'resume' | 'prompt' | 'as'>, platform: string): PaneKind {
-  if (input.resume !== null) return 'terminal';
-  if (input.prompt === null) return 'screen';
+  if (input.prompt === null && input.resume === null) return 'screen';
   return input.as ?? defaultPaneKind(platform);
 }
 
@@ -81,17 +83,20 @@ export function paneDispatchInput(raw: Record<string, unknown>): PaneDispatchInp
 // comes back as the call's rejection, which the door awaits into its own catch (a ship's `ship failed`,
 // `session run failed`).
 export function startPane(ports: PaneDispatchPorts, input: PaneDispatchInput): { output: string } {
-  const { id, projectPath, directory, prompt, cardId, dispatcherPath } = input;
+  const { id, projectPath, directory, prompt, resume, cardId, dispatcherPath } = input;
   const { index } = paneFromId(id);
+  const kind = paneKind(input, ports.platform);
   ports.starting(id, projectPath, dispatcherPath);
-  if (paneKind(input, ports.platform) === 'terminal') {
+  if (resume !== null) ports.ranAs(resume, kind);
+  if (kind === 'terminal') {
     ports.terminal(id, directory, terminalArguments(ports, input, index));
     return { output: `started Claude Code in ${id}` };
   }
   if (screenNeedsShell(ports.shellOf(id), directory)) ports.plainShell(id, directory);
-  const session = ports.newSession(projectPath, directory, cardId);
+  const session = resume ?? ports.newSession(projectPath, directory, cardId, 'screen');
   const first = prompt === null || dispatcherPath === null ? prompt : workerPrompt(prompt, dispatcherPath);
-  ports.screen(id, projectPath, directory, { session, name: workerSessionName(projectPath, index), prompt: first }, cardId, dispatcherPath);
+  const start = { session, resume: resume !== null, name: workerSessionName(projectPath, index), prompt: first };
+  ports.screen(id, projectPath, directory, start, cardId, dispatcherPath);
   return { output: `started a Claude screen in ${id}` };
 }
 
@@ -110,7 +115,7 @@ function terminalArguments(ports: PaneDispatchPorts, input: PaneDispatchInput, i
   const shell = ports.shellCommand();
   if (resume !== null) return dispatcherPath === null ? agentResumeArguments(shell, resume) : workerResumeArguments(shell, id, resume);
   if (prompt === null) throw new Error(`${id} was to start Claude Code with no prompt`);
-  const session = ports.newSession(projectPath, directory, cardId);
+  const session = ports.newSession(projectPath, directory, cardId, 'terminal');
   if (dispatcherPath === null) return agentArguments(shell, prompt, session);
   return workerArguments(shell, projectPath, id, index, prompt, dispatcherPath, session);
 }

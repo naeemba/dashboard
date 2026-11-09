@@ -2,6 +2,7 @@ import type { Refused } from '../../../shared/app/bridge';
 import { nextPaneIndex } from '../../../shared/panes/pane-layout';
 import { terminalId } from '../../../shared/panes/terminals';
 import { action, isRefused } from '../action';
+import type { PaneKind } from '../../workers/pane-kind';
 import type { PaneDispatchInput } from './dispatch';
 import { isFilledTextOrNull, isSlot } from './pane-input';
 
@@ -13,9 +14,11 @@ export type PaneOpenInput = {
   slot: number;
   // Where it stands, or null for the project's own folder.
   directory: string | null;
-  // A Claude in it rather than a shell: a new screen, or `resume`'s conversation in the terminal.
+  // A Claude in it rather than a shell: a new screen, or `resume`'s conversation.
   claude: boolean;
   resume: string | null;
+  // What `resume`'s conversation last ran as, which it opens as again, or null for unknown.
+  as: PaneKind | null;
 };
 
 export type PaneOpenPorts = {
@@ -28,18 +31,19 @@ export type PaneOpenPorts = {
 };
 
 export function paneOpenInput(raw: Record<string, unknown>): PaneOpenInput | Refused {
-  const { slot, directory = null, claude = false, resume = null } = raw;
+  const { slot, directory = null, claude = false, resume = null, as = null } = raw;
   if (!isSlot(slot)) return { refused: 'no page was given' };
   if (!isFilledTextOrNull(directory) || typeof claude !== 'boolean' || !isFilledTextOrNull(resume)) {
     return { refused: 'the pane request was not one the app could read' };
   }
-  return { slot, directory, claude, resume };
+  if (as !== null && as !== 'screen' && as !== 'terminal') return { refused: 'a pane runs a screen or a terminal' };
+  return { slot, directory, claude, resume, as };
 }
 
 export const paneOpen = action<PaneOpenPorts, PaneOpenInput, { output: string; index: number }>('pane.open', {
   words: [],
   input: paneOpenInput,
-  async run(ports, { slot, directory, claude, resume }) {
+  async run(ports, { slot, directory, claude, resume, as }) {
     const project = ports.project(slot);
     if (project === undefined) return { refused: 'That project is closed' };
     // Its own folder is not there to stand in. A folder handed over (a resume's) is checked by its door.
@@ -52,7 +56,7 @@ export const paneOpen = action<PaneOpenPorts, PaneOpenInput, { output: string; i
       return { output: `opened ${id}`, index };
     }
     const started = await ports.dispatch({
-      id, projectPath: project.path, directory: folder, prompt: null, resume, cardId: null, dispatcherPath: null, as: null,
+      id, projectPath: project.path, directory: folder, prompt: null, resume, cardId: null, dispatcherPath: null, as,
     });
     return isRefused(started) ? started : { output: started.output, index };
   },

@@ -71,9 +71,9 @@ describe('pane.restore', () => {
     ]));
     await restore.call({ slot: 2, projectPath: API, firstPane: null });
     expect(dispatched).toMatchObject([
-      { id: '2:1', directory: API, resume: OURS, prompt: null, dispatcherPath: null },
-      { id: '2:2', directory: CARD.worktreePath, resume: CARDS, dispatcherPath: null },
-      { id: '2:3', directory: API, resume: MAINS, dispatcherPath: '/work/desk' },
+      { id: '2:1', directory: API, resume: OURS, prompt: null, dispatcherPath: null, as: 'terminal' },
+      { id: '2:2', directory: CARD.worktreePath, resume: CARDS, dispatcherPath: null, as: 'terminal' },
+      { id: '2:3', directory: API, resume: MAINS, dispatcherPath: '/work/desk', as: 'terminal' },
     ]);
     expect(records).toEqual([{ ...CARD, pane: 2 }]);
   });

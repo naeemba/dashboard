@@ -18,15 +18,18 @@ const placement = (byPane: [string, string][], takenAt: number) => ({
 });
 
 describe('sessionIndexStore', () => {
-  it('records a launch before handing out its id, and reads it back from disk', () => {
+  it('records a launch and what it runs as before handing out its id, and reads both back from disk', () => {
     const file = temporaryFile();
-    const id = sessionIndexStore(file).launched(project, '/code/api.worktrees/card', 'card-1');
-    expect(sessionIndexStore(file).find(project, id)).toMatchObject({ id, directory: '/code/api.worktrees/card', card: 'card-1' });
+    const store = sessionIndexStore(file);
+    const id = store.launched(project, '/code/api.worktrees/card', 'card-1', 'screen');
+    expect(sessionIndexStore(file).find(project, id)).toMatchObject({ id, directory: '/code/api.worktrees/card', card: 'card-1', kind: 'screen' });
+    store.ranAs(id, 'terminal');
+    expect(sessionIndexStore(file).find(project, id)?.kind).toBe('terminal');
   });
 
   it('names the pane a session runs in, and forgets it once a sweep no longer finds it', () => {
     const store = sessionIndexStore(temporaryFile());
-    const id = store.launched(project, project, null);
+    const id = store.launched(project, project, null, 'terminal');
     store.placed(placement([['0:3', id]], Date.now()));
     expect(store.runningIn(id)).toBe('terminal 4');
     store.placed(placement([], Date.now()));
@@ -54,7 +57,7 @@ describe('sessionIndexStore', () => {
 
   it("names the Claude screen for the conversation main will resume, before anything runs", () => {
     const store = sessionIndexStore(temporaryFile());
-    const id = store.launched(project, project, null);
+    const id = store.launched(project, project, null, 'terminal');
     store.mainRemembers(project, id);
     expect(store.runningIn(id)).toBe('the Claude screen');
     store.mainRemembers(project, undefined);
@@ -82,7 +85,7 @@ describe('sessionIndexStore', () => {
   it('skips the write when a sweep moves no row', () => {
     const file = temporaryFile();
     const store = sessionIndexStore(file);
-    const id = store.launched(project, project, null);
+    const id = store.launched(project, project, null, 'terminal');
     rmSync(file);
     store.placed(placement([['0:3', id]], Date.now() + LIVE_USE_STEP_MS - 1000));
     expect(existsSync(file)).toBe(false);

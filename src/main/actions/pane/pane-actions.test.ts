@@ -19,7 +19,7 @@ function wired({ startScreen = () => undefined, units = new Map<string, string>(
   const stops = vi.fn(stopScope);
   const logged: LogDraft[] = [];
   const { dispatch, send } = paneActions({
-    platform: 'linux', shellCommand: () => '/bin/zsh', newSession: () => 'new-session',
+    platform: 'linux', shellCommand: () => '/bin/zsh', newSession: () => 'new-session', ranAs: () => undefined,
     forgetAnswers: () => undefined, mainsWorkers,
     commands: new Map([['2:3', { args: [], directory: '/work/api' }]]), setPaneCommand: () => undefined,
     shells: new Map([['2:3', { kill: () => undefined }]]), spawn: (id) => { const unit = spawned.shift(); if (unit === undefined) units.delete(id); else units.set(id, unit); }, agentStarted: () => undefined,

@@ -485,13 +485,13 @@ registerPaneChannels(table, {
 // screen and which project a slot holds.
 const workerScreens = screenWorkers({
   // The screen host runs their sessions, so they outlive this process too (workers-decision-6).
-  file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), newSession: sessionIndex.launched, host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
+  file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), newSession: sessionIndex.launched, ranAs: sessionIndex.ranAs, host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
   tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => { session.start.call({ slot: key, from: 'kept' }).catch(() => undefined); }, notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
 });
 // Every change to a pane, from every door: every agent a pane starts, of every kind (workers-decision-8),
 // a pane opened, closed, typed into, and each one back after a restart.
 const pane = paneActions({
-  platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched,
+  platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched, ranAs: sessionIndex.ranAs,
   forgetAnswers: (id) => workerAnswers.forget(id), mainsWorkers,
   commands: terminalCommands, setPaneCommand, shells, spawn: panes.spawn,
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,

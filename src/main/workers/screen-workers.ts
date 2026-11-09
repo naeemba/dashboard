@@ -22,8 +22,9 @@ import { screenOwner } from './screen-owner';
 // again on the same conversation, as main's worker, once its project opens. A screen opened by hand
 // with New Claude is saved the same way with no dispatcher, and comes back as yours (screen-owner.ts).
 
-// `prompt` is the first message, or null for New Claude, which starts nothing until you type.
-export type ScreenStart = { session: string; name: string; prompt: string | null };
+// `prompt` is the first message, or null for New Claude, which starts nothing until you type. `resume`
+// is whether `session` is a conversation carried on (the drawer's resume) rather than a new one.
+export type ScreenStart = { session: string; resume: boolean; name: string; prompt: string | null };
 
 // `started` is whether the session has written its conversation, so a restart resumes it rather than
 // starting it fresh. A file from before it was saved names none, and was resumed then too.
@@ -48,8 +49,10 @@ export type ScreenPorts = {
   // Where the sessions run, and which ones it kept through the restart (screen-host-client.ts).
   host: ScreenHost;
   notify(id: string, state: WorkerState, waiting?: StopWaiting): void;
-  // A new conversation id for the project, in the session index the drawer lists.
-  newSession(projectPath: string, directory: string, card: string | null): string;
+  // A new conversation id for the project, in the session index the drawer lists as a screen's.
+  newSession(projectPath: string, directory: string, card: string | null, kind: 'screen'): string;
+  // A conversation picked in a screen's /resume, which the next resume of it opens on a screen.
+  ranAs(session: string, kind: 'screen'): void;
 };
 
 // What a screen event says about its worker: a question waiting on you, the question gone, the
@@ -127,14 +130,15 @@ export function screenWorkers(ports: ScreenPorts) {
   // One brought back after a restart had its turn ended by the restart, unless the screen host kept it
   // in the middle of one.
   function add(id: string, saved: Saved, back: boolean): void {
-    const resume = back && saved.started !== false;
+    const resume = saved.started ?? back;
     const done = back && ports.host.kept(saved.session)?.busy !== true;
     const worker: Worker = {
       session: saved.session, name: saved.name, resume, hooks: hooks(id, saved), id, saved, done,
       owner: screenOwner(saved.dispatcherPath) ?? 'main',
       // A screen opened by hand going on in another conversation, or a new one, which a restart resumes.
       carryOnIn(session) {
-        worker.session = session ?? ports.newSession(saved.projectPath, saved.directory, saved.cardId);
+        if (session !== null) ports.ranAs(session, 'screen');
+        worker.session = session ?? ports.newSession(saved.projectPath, saved.directory, saved.cardId, 'screen');
         worker.resume = session !== null;
         saved.session = worker.session;
         saved.started = worker.resume;
@@ -165,7 +169,7 @@ export function screenWorkers(ports: ScreenPorts) {
     start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string | null): void {
       const { index } = paneFromId(id);
       forget(id);
-      add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: false }, false);
+      add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: screen.resume }, false);
       save();
       // Drawn first, so the screen is there for the prompt to land on.
       ports.changed();
