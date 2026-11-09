@@ -16,7 +16,7 @@ function wired() {
   const changes = { seen: () => undefined, wrote: (_path: string, _board: unknown, write: () => void) => write() } as unknown as BoardChanges;
   const synced: string[] = [];
   const boardSync = { sync: async (path: string) => { synced.push(path); } };
-  registerProjectFiles(table, boards, changes, boardSync, (screen, channel, changed) => told.push([screen, channel, changed]));
+  registerProjectFiles(table, boards, changes, boardSync, (screen, channel, changed) => told.push([screen, channel, changed]), () => undefined);
   return { table, told, synced, projectPath };
 }
 

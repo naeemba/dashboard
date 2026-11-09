@@ -16,6 +16,8 @@ import { readInk, writeInk } from '../notes/ink-store';
 export function registerProjectFiles(
   table: Channels, boards: BoardWatchers, changes: BoardChanges, boardSync: BoardSyncQueue,
   tellOthers: (screen: string, channel: string, projectPath: string) => void,
+  // The board on screen: its cards are asked about their pull requests (pull-request-sweep.ts).
+  shown: (projectPath: string) => void,
 ): void {
   // Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
   // is a convenience — writing the two explanation files — so a read-only project folder must not cost
@@ -25,6 +27,7 @@ export function registerProjectFiles(
     try {
       const read = openBoard(projectPath);
       changes.seen(projectPath, read.board);
+      shown(projectPath);
       return read;
     } finally {
       // After the read, which is what creates .dashboard on a project that has never had a board — and

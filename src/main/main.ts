@@ -6,6 +6,8 @@ import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { runProgram } from './app/git';
+import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
+import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
 import { realPath } from './app/real-path';
 import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
@@ -508,7 +510,7 @@ const chats = registerChatSessions(table, {
   projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'), scoped: async (request) => { await scopes.ready; return scopes.scoped(request); },
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
-  heard: (slot, sender) => workerAnswers.heard(slot, sender),
+  heard: (slot, sender) => { workerAnswers.heard(slot, sender); followPullRequests(); },
 });
 // Every change to a session, from every door (session-actions.ts).
 const session = sessionActions({ chat: chats.actionPorts, sessions: sessionIndex, projectAt: projectIn, dispatchers: () => mainsWorkers.values() });
@@ -527,7 +529,7 @@ try {
 } catch (error: unknown) {
   failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
 }
-registerProjectFiles(table, boards, boardLog, boardSync, tellOthers);
+registerProjectFiles(table, boards, boardLog, boardSync, tellOthers, (projectPath) => { void pullRequests.check(projectPath); });
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -631,7 +633,7 @@ const worktree = worktreeActions({ remove: worktrees.remove, queue: shipInProjec
 // A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
 // card actions in actions/card/, bound here to their channels and, below, to the session socket.
 // What is handed over is only what this file knows — the records, the pages, the panes, the setting.
-const { reviews, actions: cardActionList } = cardActions({
+const { reviews, pullRequests, start: cardStart, actions: cardActionList } = cardActions({
   table,
   worktrees: worktrees.entries,
   slotOf: slotOfProject,
@@ -650,7 +652,14 @@ const { reviews, actions: cardActionList } = cardActions({
   boardSync,
   autoLoop: () => settings.review.autoLoop,
   log: (draft) => logStore.log(draft),
+  pullRequestOf: (projectPath, branch) => runProgram('gh', pullRequestListArguments(branch), projectPath, { timeout: 20_000 }).then(latestPullRequest),
 });
+// Every open project's cards asked about their pull requests on a slow timer and when a worker reports,
+// which may be from any project's card; the board on screen asks for its own (pull-request-sweep.ts).
+function followPullRequests(): void {
+  for (const open of projects) if (open !== undefined) void pullRequests.check(open.path);
+}
+setInterval(followPullRequests, FOLLOW_TIMER_MS).unref();
 registerWorktreeChannels(table, { worktrees, remove: worktree.remove });
 
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
@@ -712,6 +721,7 @@ const workerAnswers = sessionRequests({
     if (entry) {
       reviews.forget(entry.cardId);
       worktrees.givePane({ ...entry, reviewing: false }, index);
+      void cardStart.call({ projectPath: entry.projectPath, id: entry.cardId, branch: entry.branch });
     } else {
       worktrees.takePane(projectIn(slot)?.path ?? '', index, '');
     }
