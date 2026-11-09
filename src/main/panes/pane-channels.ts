@@ -21,7 +21,7 @@ export function registerPaneChannels(table: Channels, main: {
   // to land on. Without that half you arrive at whatever project you were last on and go looking for the
   // pane the banner had already named. Only this machine's window is told: the banner shows on the
   // desk it was raised on, and a remote screen landing on the pane would be answering a banner it never saw.
-  // A remote screen's missing pane arrives as null over the wire, so anything not a string raises only.
+  // The status bar's banner names no pane, so anything not a string only raises the window.
   table.on('notification:show', (_screen, title: string, body: string, paneId: unknown) => {
     const notification = new Notification({ title, body });
     notification.on('click', () => {

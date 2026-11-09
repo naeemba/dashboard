@@ -1,17 +1,9 @@
 import { ACTIONS, type ActionGroup } from '../../shared/keys/actions';
-import type { Settings } from '../../shared/settings/settings';
+import { isOn, TOGGLES, type Settings, type ToggleName } from '../../shared/settings/settings';
 
-// The on/off settings: each a section of the file holding one boolean. Enter turns one over.
-export const TOGGLES = { review: 'autoLoop', updates: 'check', errors: 'notify' } as const;
-export type ToggleName = keyof typeof TOGGLES;
-
-export function isOn(settings: Settings, name: ToggleName): boolean {
-  return (settings[name] as Record<string, boolean>)[TOGGLES[name]];
-}
-
-// The settings with one toggle turned over.
+// The settings with one toggle turned over. The section is spread so a field beside the toggle survives.
 export function toggled(settings: Settings, name: ToggleName): Settings {
-  return { ...settings, [name]: { [TOGGLES[name]]: !isOn(settings, name) } };
+  return { ...settings, [name]: { ...settings[name], [TOGGLES[name]]: !isOn(settings, name) } };
 }
 
 function toggleRow(settings: Settings, name: ToggleName, label: string): SettingsRow {

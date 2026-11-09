@@ -17,8 +17,8 @@ export function messageLifetime(kind: StatusKind, message: string): number {
 }
 
 // A banner only for an error, only while the window is not in front (you are already looking at the
-// bar otherwise), only with settings errors.notify on, and once a minute per sentence: a failure on a
-// timer would otherwise raise one every tick. `lastRaised` is recorded only when a banner is due, so
+// bar otherwise), only with settings errors.notify on, and once per sentence, again only after it has been quiet
+// for a minute: a failure on a timer would otherwise raise one every tick. `lastRaised` is recorded only when a banner is due, so
 // an error first seen with the window focused still raises one when it repeats after you look away.
 export function raisesErrorBanner(
   lastRaised: Map<string, number>, message: string, at: number, windowFocused: boolean, enabled: boolean,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isOn, settingsRows, stepSelection, toggled } from './settings-rows';
+import { isOn } from '../../shared/settings/settings';
+import { settingsRows, stepSelection, toggled } from './settings-rows';
 import { ACTIONS } from '../../shared/keys/actions';
 import { bindKey, defaultSettings, parseSettings } from '../../shared/settings/settings';
 

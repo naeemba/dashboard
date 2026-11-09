@@ -24,7 +24,8 @@ export type LogContext = { slot?: number; pane?: number; card?: string; session?
 export type LogDraft = {
   level: LogLevel; kind: LogKind; project?: string; message: string;
   error?: LogError; source?: LogSource;
-  // The action running when it was written (`project.close`), and the IPC channel of a failed invoke.
+  // The action running when it was written (`project.close`), or the owner of a status-bar message
+  // (`update`, `failure`); and the IPC channel of a failed invoke.
   action?: string; channel?: string;
   context?: LogContext;
 };

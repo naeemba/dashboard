@@ -109,17 +109,25 @@ close. A modified Escape is left alone (keys-rule-1).
 
 A notice is logged now, as info under its owner, so a refusal seen once is still
 on record. The worry that kept it out — every ship leaving a red line — does not
-hold at info. Both kinds are logged at most once a minute per sentence
-(`logsStatusMessage`), because with the message gone the bar can no longer
-compare a repaint against what it shows.
+hold at info. Both kinds are logged once per sentence, and again only after it
+has been quiet for a minute (`logsStatusMessage`), because with the message gone
+the bar can no longer compare a repaint against what it shows. Every repeat
+restarts the minute, so a save failing every 10 seconds for an hour is one line
+and one banner, not sixty.
 
-An error while the window is not in front raises a desktop notification, once a
-minute per sentence, with `errors.notify` to turn it off. The banner names no
-pane, so a click only brings the window forward; it does not go through
+An error while the window is not in front raises a desktop notification, by the
+same rule, with `errors.notify` to turn it off. Until the settings file is
+read no banner is raised, so a launch failure does not reach someone who turned
+it off; it is still on the bar and in the log. The banner names no pane, so a click only brings the window forward; it does not go through
 project.focus, which needs one.
 
-The once-a-minute rule is the bar's alone, not `log:write`'s: other writers
+The quiet-minute rule is the bar's alone, not `log:write`'s: other writers
 repeat a line on purpose (an agent started twice is two lines).
+
+One line does not fade: the update announcement (`Dashboard vX.Y.Z is out`)
+says how things stand, and with a check every six hours an 8-second line would
+go by while nobody is looking. Its caller asks for `stays`; a click or Escape
+still clears it.
 
 Watch for: a progress notice fades while its work goes on. A ship that takes a
 minute says `shipping…` for 8 seconds, then nothing until it ends. And a failure

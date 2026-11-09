@@ -32,6 +32,16 @@ export type Settings = {
   errors: { notify: boolean };
 };
 
+// The on/off settings: each a section of the file holding one boolean, read by parseSettings and turned
+// over by the settings screen's Enter.
+export const TOGGLES = { review: 'autoLoop', updates: 'check', errors: 'notify' } as const;
+export type ToggleName = keyof typeof TOGGLES;
+
+export function isOn(settings: Settings, name: ToggleName): boolean {
+  const section: Record<string, unknown> = settings[name];
+  return section[TOGGLES[name]] === true;
+}
+
 // One line of the file's `keys`, read. `written` travels with the binding because the two answers come
 // from the same look at the stored value; see toBinding.
 type Binding = { binding: string | null; written: boolean };
@@ -135,9 +145,11 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedFont = asRecord(raw.font);
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
-  const storedReview = asRecord(raw.review);
-  const storedUpdates = asRecord(raw.updates);
-  const storedErrors = asRecord(raw.errors);
+  // A toggle the file holds as a boolean, or the shipped one.
+  const toggle = (name: ToggleName): boolean => {
+    const stored = asRecord(raw[name])[TOGGLES[name]];
+    return typeof stored === 'boolean' ? stored : isOn(defaults, name);
+  };
   // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
   // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
   // typed cannot take one off a line someone did.
@@ -169,15 +181,9 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       address: typeof storedRemote.address === 'string' ? storedRemote.address.trim() : '',
       token: typeof storedRemote.token === 'string' ? storedRemote.token : '',
     },
-    review: {
-      autoLoop: typeof storedReview.autoLoop === 'boolean' ? storedReview.autoLoop : defaults.review.autoLoop,
-    },
-    updates: {
-      check: typeof storedUpdates.check === 'boolean' ? storedUpdates.check : defaults.updates.check,
-    },
-    errors: {
-      notify: typeof storedErrors.notify === 'boolean' ? storedErrors.notify : defaults.errors.notify,
-    },
+    review: { autoLoop: toggle('review') },
+    updates: { check: toggle('updates') },
+    errors: { notify: toggle('errors') },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 

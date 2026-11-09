@@ -13,7 +13,7 @@ describe('messageLifetime', () => {
 });
 
 describe('raisesErrorBanner', () => {
-  it('raises one while the window is away, once a minute per sentence', () => {
+  it('raises one while the window is away, once per sentence until it has been quiet a minute', () => {
     const raised = new Map<string, number>();
     expect(raisesErrorBanner(raised, 'Board not saved: EACCES', 0, false, true)).toBe(true);
     expect(raisesErrorBanner(raised, 'Board not saved: EACCES', 5000, false, true)).toBe(false);

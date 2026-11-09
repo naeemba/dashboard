@@ -2,7 +2,8 @@ import type { LogDraft } from '../../shared/app/log-entry';
 import { errorDetail } from '../../shared/app/log-error';
 import { isRepeatFailure } from '../../shared/app/log-entry';
 
-// Whether a status-bar message goes in the log: once a minute per sentence. A failure on a timer says
+// Whether a status-bar message goes in the log: once per sentence, and again only after it
+// has been quiet for a minute. A failure on a timer says
 // the same sentence every few seconds, and now that a message goes by itself the bar no longer holds
 // it to compare against; logging each repaint would fill the file with one line. A clear is nothing.
 export function logsStatusMessage(lastLogged: Map<string, number>, message: string, at: number): boolean {

@@ -5,7 +5,7 @@ import {
 import { FAILURE_REPEAT_WINDOW_MS } from '../../shared/app/log-entry';
 
 describe('logsStatusMessage', () => {
-  it('logs a sentence once a minute, and never a clear', () => {
+  it('logs a sentence once, again only after a quiet minute, and never a clear', () => {
     const logged = new Map<string, number>();
     expect(logsStatusMessage(logged, 'Board not saved: EACCES', 0)).toBe(true);
     expect(logsStatusMessage(logged, 'Notes not saved: EIO', 1000)).toBe(true);

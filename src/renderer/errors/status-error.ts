@@ -1,5 +1,4 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
-import type { Settings } from '../../shared/settings/settings';
 import { errorDraft, logsStatusMessage, noticeDraft, rememberRead, type FailureRead } from './error-log';
 import { messageLifetime, raisesErrorBanner, type StatusKind } from './status-message';
 import { failureNotice, whenFailureRead } from '../../shared/errors/failure';
@@ -8,8 +7,12 @@ import { isModified } from '../keys/shortcuts';
 export type StatusError = {
   element: HTMLElement;
   show(owner: string, message: string): void;
-  notice(owner: string, message: string): void;
+  notice(owner: string, message: string, options?: NoticeOptions): void;
 };
+
+// `stays` is for a line that says how things stand rather than what just happened — a newer release is
+// out — and is gone by the time anyone looks if it fades. A click or a bare Escape still clears it.
+export type NoticeOptions = { stays?: boolean };
 
 // The status bar's error span. Out of renderer.ts, which had reached its 600-line ceiling.
 //
@@ -23,13 +26,15 @@ export type StatusError = {
 //
 // A failure goes through show and logs an error line; everything else the bar says — a hint, a
 // refusal, progress like `shipping "Fix login"…` — goes through notice and logs an info line, so a
-// refusal seen once is still on record without reading as a failure. Each sentence at most once a
-// minute. An owner that clears its message still may, but nobody has to: every message goes by itself
+// refusal seen once is still on record without reading as a failure. Each sentence once, and again only
+// after it has been quiet for a minute. An owner that clears its message still may, but nobody has to: every message goes by itself
 // (status-message.ts), sooner on a click or a bare Escape. The Escape is watched, never taken: the
 // pane or dialog it was meant for still gets it (errors-decision-5).
 //
-// An error while the window is away raises a desktop banner too, unless settings errors.notify is off.
-export function createStatusError(bridge: DashboardBridge, settings: () => Settings): StatusError {
+// An error while the window is away raises a desktop banner too, while `notifies` says so: settings
+// errors.notify, and false until the settings file is read, so a launch failure does not banner someone
+// who turned it off.
+export function createStatusError(bridge: DashboardBridge, notifies: () => boolean): StatusError {
   const element = document.createElement('span');
   element.className = 'error';
   let errorOwner = '';
@@ -41,28 +46,29 @@ export function createStatusError(bridge: DashboardBridge, settings: () => Setti
   let reads: FailureRead[] = [];
   whenFailureRead((error, text) => { reads = rememberRead(reads, { error, text, at: Date.now() }); });
 
-  function draw(owner: string, message: string, kind: StatusKind): void {
+  // `kind` null is a line that stays until cleared.
+  function draw(owner: string, message: string, kind: StatusKind | null): void {
     if (message === '' && errorOwner !== owner) return;
     errorOwner = message === '' ? '' : owner;
     element.textContent = message;
     clearTimeout(fade);
-    if (message !== '') fade = setTimeout(dismiss, messageLifetime(kind, message));
+    if (message !== '' && kind !== null) fade = setTimeout(dismiss, messageLifetime(kind, message));
   }
 
   function dismiss(): void {
-    if (errorOwner !== '') draw(errorOwner, '', 'notice');
+    if (errorOwner !== '') draw(errorOwner, '', null);
   }
 
   // A clear is never logged, so the owner rule is draw's alone.
-  function notice(owner: string, message: string): void {
+  function notice(owner: string, message: string, options: NoticeOptions = {}): void {
     if (logsStatusMessage(logged, message, Date.now())) bridge.writeLog(noticeDraft(owner, message));
-    draw(owner, message, 'notice');
+    draw(owner, message, options.stays ? null : 'notice');
   }
 
   function show(owner: string, message: string): void {
     const now = Date.now();
     if (logsStatusMessage(logged, message, now)) bridge.writeLog(errorDraft(owner, message, reads, now));
-    if (raisesErrorBanner(raised, message, now, document.hasFocus(), settings().errors.notify)) {
+    if (raisesErrorBanner(raised, message, now, document.hasFocus(), notifies())) {
       bridge.notify('Dashboard', message);
     }
     draw(owner, message, 'error');

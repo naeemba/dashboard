@@ -16,10 +16,11 @@ The status bar's message goes by itself: a notice after 8 seconds, an error
 after 20, longer for a sentence that takes longer to read. A click on it, or a
 bare Escape anywhere, clears it sooner; the Escape still reaches the pane or
 dialog it was pressed in. Every notice is logged as info and every error as
-error, with the owner that wrote it as the entry's action, each sentence at
-most once a minute. An error while the window is not in front also raises a
-desktop notification, once a minute per sentence; a click on it brings the
-window forward. The settings screen's Errors row turns those off
+error, with the owner that wrote it as the entry's action, each sentence once,
+and again only after it has been quiet for a minute. An error while the window
+is not in front also raises a desktop notification, by the same rule; a click
+on it brings the window forward. The update line (`Dashboard vX.Y.Z is out`)
+does not fade; a click or Escape still clears it. The settings screen's Errors row turns those off
 (`errors.notify`).
 
 ## Scenarios
@@ -43,7 +44,5 @@ window forward. The settings screen's Errors row turns those off
   whatever was there, every tick (errors-decision-3).
 - A progress notice (`shipping "Fix login"…`) fades after 8 seconds even when
   the work is still going (errors-decision-5).
-- A remote screen's error banner shows on the host's desktop, the way a pane's
-  ring banner does.
 - `board-view.ts` still prints `String(error)` and is
   exempted from the check until fixed (errors-rule-1).
