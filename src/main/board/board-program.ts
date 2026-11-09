@@ -1,7 +1,9 @@
 import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
-import { asksApp, BOARD_REQUEST, brokenFilesRefusal, runBoardCommandOnLatest } from './board-cli';
+import { asksApp, BOARD_REQUEST, brokenFilesRefusal, readsBoard, runBoardCommand, runBoardCommandOnLatest, type CommandResult } from './board-cli';
+import { syncBoard } from './board-sync-git';
+import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
@@ -36,17 +38,42 @@ async function run(words: readonly string[]): Promise<number> {
     return 1;
   }
 
-  // Run against the board as it stands a moment before the write, not the one opened above:
-  // runBoardCommandOnLatest says why.
-  const result = runBoardCommandOnLatest(read.board, commandArguments, () => readBoard(project, false).board);
+  // A board git tracks is read and written on origin's default branch, and this checkout brought up to
+  // it (board-sync-git.ts). The id is made once, so an `add` retried on a fresh fetch, or written here
+  // as well, is one card.
+  const id = crypto.randomUUID();
+  const makeId = () => id;
+  if (readsBoard(commandArguments)) {
+    let onOrigin: CommandResult | null = null;
+    const sync = await syncBoard(project, (board) => {
+      onOrigin = runBoardCommand(board, commandArguments, makeId);
+      return onOrigin.ok && onOrigin.board !== null ? onOrigin.board : board;
+    });
+    if (sync.synced && onOrigin !== null) {
+      // A checkout the sync could not move holds the edit as well, as it did before there was a sync.
+      if (sync.checkout === 'stale') writeHere(project, read.board, commandArguments, makeId);
+      return answer(onOrigin);
+    }
+    if (!sync.synced && sync.warning !== null) process.stderr.write(`${sync.warning}\n`);
+  }
+  return answer(writeHere(project, read.board, commandArguments, makeId));
+}
+
+// The command run on this folder's board and written here. Against the board as it stands a moment
+// before the write, not the one opened: runBoardCommandOnLatest says why. Written before the line is
+// printed, so a failed write is what you see rather than a success message about a change that is not
+// on disk.
+function writeHere(project: string, opened: Board, commandArguments: readonly string[], makeId: () => string): CommandResult {
+  const result = runBoardCommandOnLatest(opened, commandArguments, () => readBoard(project, false).board, makeId);
+  if (result.ok && result.board !== null) writeBoard(project, result.board);
+  return result;
+}
+
+function answer(result: CommandResult): number {
   if (!result.ok) {
     process.stderr.write(`${result.message}\n`);
     return 1;
   }
-
-  // Written before the line is printed, so a failed write is what you see rather than a success
-  // message about a change that is not on disk.
-  if (result.board !== null) writeBoard(project, result.board);
   process.stdout.write(`${result.output}\n`);
   return 0;
 }

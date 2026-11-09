@@ -267,10 +267,17 @@ export function runBoardCommandOnLatest(
   board: Board,
   commandArguments: readonly string[],
   readAgain: () => Board,
+  makeId?: () => string,
 ): CommandResult {
-  const opened = runBoardCommand(board, commandArguments);
+  const opened = runBoardCommand(board, commandArguments, makeId);
   if (!opened.ok || opened.board === null) return opened;
-  return runBoardCommand(readAgain(), commandArguments);
+  return runBoardCommand(readAgain(), commandArguments, makeId);
+}
+
+// Whether a command reads the board at all, and so is worth a fetch of origin's: help is not.
+export function readsBoard(commandArguments: readonly string[]): boolean {
+  const [command] = commandArguments;
+  return command !== undefined && command !== '--help' && command !== '-h';
 }
 
 // What the board command prints when isManagerHomeDirectory says the command was run from $HOME
