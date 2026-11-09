@@ -11,6 +11,9 @@ in `scripts/running-app.mjs`, tested beside it), written in Node so the same
 hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
 line and points at its id here.
 
+`claude-md-audit.md` is the 2026-11-09 audit of every CLAUDE.md rule, global and this repo's: which stay,
+which a tool or hook should carry, and the cards that move them.
+
 ## Checks
 
 The three in `CLAUDE.md`. `pnpm test` runs in a temporary folder of its own: the guard points `TMPDIR`
