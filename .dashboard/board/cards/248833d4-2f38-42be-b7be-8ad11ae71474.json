@@ -5,13 +5,13 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:55.976Z",
-  "updatedAt": "2026-11-09T17:22:23.711Z",
+  "updatedAt": "2026-11-09T17:24:09.971Z",
   "comments": [
     {
       "at": "2026-11-09T17:22:23.711Z",
       "body": "PR #281 ready to merge, CI green. board guard now also refuses pkill/killall of Dashboard/electron/the pane host, kill of the app's pid (via /proc), osascript quit, open -a Dashboard and cp/mv/rm/rsync over the installed build; rebuild.sh, release.sh and out/ .vite/ builds go through. Same command and doors as #262, so the install adds nothing. workflow-decision-7. Limits: reads command text only (scripts, python -c, heredoc bodies get past); no /proc on a mac, so literal-pid kills unchecked there. CLAUDE.md line left for Audit 13."
     }
   ],
-  "column": "Doing",
-  "order": 16
+  "column": "Done",
+  "order": 221
 }
