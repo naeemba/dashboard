@@ -29,7 +29,22 @@ const folderRegex = (folders) => `(^|${slash})(${folders.join('|')})${slash}`;
 // One process's side of the line: the folders it never imports, even for a type, and the packages
 // it never value-imports. `no-restricted-imports` sees only static imports, so `import()` and an
 // `import('...')` type get the same lines through `no-restricted-syntax`.
-const side = ({ folders, folderMessage, packages, packageMessage: message, builtins = [] }) => ({
+//
+// The same rule refuses `String(error)` and `${error}` (errors-rule-1, which says why). It is a name
+// match: only a value named `error` or `thrown` is caught. A later block's `no-restricted-syntax` replaces this one's, so the two failure files
+// that format errors themselves take `side` again with `formatsErrors`, keeping their boundaries.
+const errorName = '/^(error|thrown)$/';
+const stringError = [
+  {
+    selector: `CallExpression[callee.name='String'][arguments.length=1][arguments.0.name=${errorName}]`,
+    message: 'Print an error with failureText from src/shared/errors/failure.ts, not String(error).',
+  },
+  {
+    selector: `TemplateLiteral > Identifier.expressions[name=${errorName}]`,
+    message: 'Print an error with failureText from src/shared/errors/failure.ts, not ${error}.',
+  },
+];
+const side = ({ folders, folderMessage, packages, packageMessage: message, builtins = [], formatsErrors = false }) => ({
   '@typescript-eslint/no-restricted-imports': ['error', {
     patterns: [
       { group: folders.map((folder) => `**/${folder}/**`), message: folderMessage },
@@ -40,8 +55,18 @@ const side = ({ folders, folderMessage, packages, packageMessage: message, built
   'no-restricted-syntax': ['error',
     { selector: `:matches(ImportExpression, TSImportType)[source.value=/${folderRegex(folders)}/]`, message: folderMessage },
     { selector: `ImportExpression[source.value=/${packageRegex(packages, builtins)}/]`, message },
+    ...(formatsErrors ? [] : stringError),
   ],
 });
+
+const mainSide = {
+  folders: ['renderer', 'preload'], folderMessage: 'Main never imports the renderer or the preload; move the type to src/shared.',
+  packages: domOnly, packageMessage: 'DOM-only module in main.',
+};
+const sharedSide = {
+  folders: ['main', 'renderer', 'preload'], folderMessage: 'Shared code imports only shared code.',
+  packages: [...nodeOnly, ...domOnly], builtins: unprefixedBuiltins, packageMessage: 'Shared code runs in both processes.',
+};
 
 export default defineConfig(
   { ignores: ['.vite/', 'dist/', 'out/'] },
@@ -60,20 +85,17 @@ export default defineConfig(
     folders: ['main', 'preload'], folderMessage: 'The renderer reaches main through the bridge; shared types live in src/shared.',
     packages: nodeOnly, builtins: unprefixedBuiltins, packageMessage: 'Node-only module in the renderer.',
   }) },
-  { files: ['src/main/**'], rules: side({
-    folders: ['renderer', 'preload'], folderMessage: 'Main never imports the renderer or the preload; move the type to src/shared.',
-    packages: domOnly, packageMessage: 'DOM-only module in main.',
-  }) },
+  { files: ['src/main/**'], rules: side(mainSide) },
+  // `failureLine` is the command line's own formatter and prints a stack on purpose.
+  { files: ['src/main/command/failure-line.ts'], rules: side({ ...mainSide, formatsErrors: true }) },
   // The preload runs in the window with `electron` and nothing else of Node's.
   { files: ['src/preload/**'], rules: side({
     folders: ['main', 'renderer'], folderMessage: 'The preload imports only src/shared.',
     packages: [...nodeOnly.filter((name) => name !== 'electron'), ...domOnly], builtins: unprefixedBuiltins,
     packageMessage: 'Only electron in the preload.',
   }) },
-  { files: ['src/shared/**'], rules: side({
-    folders: ['main', 'renderer', 'preload'], folderMessage: 'Shared code imports only shared code.',
-    packages: [...nodeOnly, ...domOnly], builtins: unprefixedBuiltins, packageMessage: 'Shared code runs in both processes.',
-  }) },
+  { files: ['src/shared/**'], rules: side(sharedSide) },
+  { files: ['src/shared/errors/failure.ts'], rules: side({ ...sharedSide, formatsErrors: true }) },
   // A test's folder comes from temporaryFolder() (workflow-rule-4). The core rule, not the typescript one
   // above, so this adds to the process boundaries instead of replacing them for test files.
   { files: ['src/**/*.test.ts', 'src/**/*-fixture.ts'], rules: { 'no-restricted-imports': ['error', {
