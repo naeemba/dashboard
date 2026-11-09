@@ -1,4 +1,5 @@
 import type { OpenProjects } from '../app/bridge';
+import type { PaneKind } from '../panes/pane-kind';
 
 // What the drawer on a project's page lists, as main sends it: the project's docs and the Claude
 // conversations the app started for it. Both sides name these, so they live here.
@@ -12,6 +13,9 @@ export type SessionRecord = {
   // Where it ran, which is where `claude --resume` has to be typed for the id to be found.
   directory: string;
   card: string | null;
+  // What it last ran as, which a resume opens it as again. Absent on a row from before it was recorded
+  // and on a main's conversation: a resume of one opens as pane run's default.
+  kind?: PaneKind;
   startedAt: number;
   lastUsedAt: number;
 };

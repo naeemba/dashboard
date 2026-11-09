@@ -439,10 +439,16 @@ a screen the default for `pane run` alone: a ship, the review loop, a resume aft
 Claude each started their pane their own way, so a card shipped on v2.43 on Linux still opened a
 terminal worker.
 
-`paneKind` is the whole choice: a resume is a terminal (a screen comes back through
-`screen-workers.ts`'s `comeBack`, never here); no prompt is New Claude, a screen; otherwise
-`pane run --screen` or `--terminal` wins, and with neither it is `defaultPaneKind`: a screen wherever
-`hasScreenHost` (not on Windows). Main's prompt tells main the same default from the same function. What either half is started with follows from the caller's input: main's worker gets
+`paneKind` is the whole choice: no prompt and nothing to resume is New Claude, a screen; otherwise
+the caller's `as` wins (`pane run --screen` or `--terminal`; for a resume, what the conversation last
+ran as), and with none it is `defaultPaneKind`: a screen wherever `hasScreenHost` (not on Windows).
+Since 2026-11-09 a resume is no longer always a terminal: insta-experiences' crashed worker screen,
+resumed, came back as `claude --resume` in a terminal. The session index records each conversation's
+kind (`kind` on its row: what pane.dispatch started it as, what a resume carried it on as, a screen's
+/resume picking it); the drawer passes it, a restart's resumes pass `terminal` (a screen comes back
+through `screen-workers.ts`'s `comeBack`, never here), and a row from before the kind was recorded,
+or a main's conversation, opens as pane run's default. A screen resume starts the screen on the
+conversation (`ScreenStart.resume`) rather than a new one. Main's prompt tells main the same default from the same function. What either half is started with follows from the caller's input: main's worker gets
 its hooks and report-back prompt, and since 2026-11-09 so does a card's agent, which reports to its
 project's main (workers-decision-1).
 

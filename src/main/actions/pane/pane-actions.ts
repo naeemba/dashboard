@@ -13,7 +13,7 @@ import { paneSend, type PaneSendPorts } from './send';
 // main.ts, which is at its 600-line ceiling. pane.claim and pane.release are bound by the session
 // command (session-requests.ts), whose ledger of who claimed what they need. The claim on main's worker
 // is tested in pane-actions.test.ts, every other decision in its action's own test.
-export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession'>
+export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession' | 'ranAs'>
   & Omit<PaneClosePorts, 'project'> & Pick<PaneOpenPorts, 'project'> & Omit<PaneSendPorts, 'handTo' | 'mainsWorkerIn'>
   & Omit<PaneRestorePorts, 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & {
     // The session command's answers about the pane, forgotten: it is the new agent's.
@@ -56,6 +56,7 @@ export function paneActions(main: PaneActionsMain): PaneActions {
     platform: main.platform,
     shellCommand: main.shellCommand,
     newSession: main.newSession,
+    ranAs: main.ranAs,
     starting(id, projectPath, dispatcherPath) {
       main.forgetAnswers(id);
       // Set to the main it reports to, or cleared for an agent that is not main's worker.

@@ -10,7 +10,7 @@ import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker
 import { paneLink } from '../../shared/workers/pane-link';
 import { closedReport, doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
-import type { PaneKind } from './pane-kind';
+import type { PaneKind } from '../../shared/panes/pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
 import { paneClaim } from '../actions/pane/claim';
 import { paneRelease } from '../actions/pane/release';

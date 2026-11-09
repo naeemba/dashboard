@@ -9,9 +9,9 @@ let folder: string;
 beforeEach(() => { folder = temporaryFolder('screen-workers-'); });
 
 const SESSION = 'ccaaf965-c864-48db-8044-30bf27d93087';
-const START = { session: SESSION, name: 'api-terminal-2', prompt: 'fix it\n\nSendMessage to main-api when done' };
+const START = { session: SESSION, resume: false, name: 'api-terminal-2', prompt: 'fix it\n\nSendMessage to main-api when done' };
 // New Claude, as pane.dispatch starts it.
-const BY_HAND = { session: 'mine', name: 'api-terminal-2', prompt: null };
+const BY_HAND = { session: 'mine', resume: false, name: 'api-terminal-2', prompt: null };
 
 function workers(file = path.join(folder, 'screen-workers.json'), kept: Record<string, { busy: boolean }> = {}) {
   const said: string[] = [];
@@ -24,6 +24,7 @@ function workers(file = path.join(folder, 'screen-workers.json'), kept: Record<s
     host: { ready: Promise.resolve(), kept: (session) => (session in kept ? { key: session, ...kept[session] } : undefined), query: () => Promise.resolve(null) },
     notify: (id, state, waiting) => said.push(`${id} ${state}${waiting ? ` ${waiting.background}/${waiting.scheduled}` : ''}`),
     newSession: (projectPath) => { said.push(`new ${projectPath}`); return `new-${said.length}`; },
+    ranAs: (session, kind) => said.push(`${session} ran as ${kind}`),
   });
   return { screens, said, file };
 }
@@ -223,7 +224,19 @@ describe('screenWorkers', () => {
     expect(after.screens.session(screenKey('3:1'))).toMatchObject({ session: 'picked', resume: true, owner: 'you' });
     after.screens.session(screenKey('3:1'))?.carryOnIn(null);
     expect(after.screens.session(screenKey('3:1'))).toMatchObject({ resume: false, owner: 'you' });
+    expect(before.said).toContain('picked ran as screen');
     expect(after.said).toEqual(['new /work/api']);
+  });
+
+  // The drawer's resume of a conversation that last ran on a screen: it carries on, and a restart
+  // resumes it again, rather than starting the id fresh.
+  it('opens a conversation carried on as one to resume, before and after a restart', () => {
+    const before = workers();
+    before.screens.start('2:1', '/work/api', '/work/api', { ...BY_HAND, session: SESSION, resume: true }, null, null);
+    expect(before.screens.session(screenKey('2:1'))).toMatchObject({ session: SESSION, resume: true, owner: 'you' });
+    const after = workers(before.file);
+    after.screens.comeBack(3, '/work/api');
+    expect(after.screens.session(screenKey('3:1'))).toMatchObject({ session: SESSION, resume: true });
   });
 
   it('brings main\'s worker back as main\'s', () => {

@@ -94,14 +94,15 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
 
     // A card's agent comes back as it, exactly as the ship started it; agentToResume says which sessions
     // those are. A worker main dispatched comes back as main's worker, its hooks reporting to the pane it
-    // is in now. Anything else is a Claude of yours.
+    // is in now. Anything else is a Claude of yours. Each was a terminal's, so it is one again: a screen
+    // comes back below, through screen-workers.ts, on its own.
     const resume = (id: string, savedIndex: number, conversation: PaneConversation) => {
       const card = agentToResume(ports.worktrees(), ports.panesBeforeLaunch, conversation, projectPath, savedIndex, ports.realPath);
       if (card !== undefined) ports.givePane(card, paneFromId(id).index);
       const dispatcherPath = conversation.dispatched === true ? workerDispatcher(conversation, projectPath) : null;
       return ports.dispatch({
         id, projectPath, directory: card?.worktreePath ?? conversation.directory, prompt: null,
-        resume: conversation.session, cardId: null, dispatcherPath, as: null,
+        resume: conversation.session, cardId: null, dispatcherPath, as: 'terminal',
       });
     };
     const started: Promise<{ output: string } | Refused>[] = [];

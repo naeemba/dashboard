@@ -4,18 +4,21 @@ import { replaceFile } from '../app/replace-file';
 import { projectSlug } from './dispatch';
 import { paneLabel, paneFromId } from '../../shared/panes/terminals';
 import {
-  NOT_IN_DRAWER, parseSessionIndex, projectOf, renamed, sessionPage, withLive, withSession, withUse, type SessionIndex,
+  NOT_IN_DRAWER, parseSessionIndex, projectOf, renamed, sessionPage, withKind, withLive, withSession, withUse, type SessionIndex,
 } from './session-index';
 import type { SessionPlacement } from './resume-ledger';
 import type { SessionList, SessionRecord } from '../../shared/drawer/drawer';
+import type { PaneKind } from '../../shared/panes/pane-kind';
 
 // session-index.json in the app's user data, read once at launch and written by main alone, plus what
 // is running now, which only main can see: the token sweep's latest reading of the panes and each
 // project's main conversation. Every rule about the rows is session-index.ts's.
 
 export type SessionIndexStore = {
-  // A fresh id for a Claude the app is about to start, recorded before it starts.
-  launched(projectPath: string, directory: string, card: string | null): string;
+  // A fresh id for a Claude the app is about to start as `kind`, recorded before it starts.
+  launched(projectPath: string, directory: string, card: string | null, kind: PaneKind): string;
+  // A conversation carried on as `kind`, which the next resume opens it as.
+  ranAs(id: string, kind: PaneKind): void;
   // The main session's conversation, reported when it begins or changes; undefined when it has none.
   mainIs(projectPath: string, id: string | undefined): void;
   // The conversation main's next launch resumes, undefined for none. Taken as well, since main resumes
@@ -69,16 +72,17 @@ export function sessionIndexStore(file: string, onScreen: (id: string) => string
     return pane === undefined ? null : paneLabel(paneFromId(pane).index);
   }
 
-  const record = (projectPath: string, id: string, directory: string, card: string | null): void => (
-    save(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: Date.now() }))
+  const record = (projectPath: string, id: string, directory: string, card: string | null, kind?: PaneKind): void => (
+    save(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: Date.now(), kind }))
   );
 
   return {
-    launched(projectPath, directory, card) {
+    launched(projectPath, directory, card, kind) {
       const id = randomUUID();
-      record(projectPath, id, directory, card);
+      record(projectPath, id, directory, card, kind);
       return id;
     },
+    ranAs: (id, kind) => save(withKind(index, id, kind)),
     mainIs(projectPath, id) {
       if (id === undefined) return void mains.delete(projectPath);
       mains.set(projectPath, id);

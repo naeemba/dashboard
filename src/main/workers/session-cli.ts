@@ -5,7 +5,7 @@
 import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
-import type { PaneKind } from './pane-kind';
+import type { PaneKind } from '../../shared/panes/pane-kind';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }

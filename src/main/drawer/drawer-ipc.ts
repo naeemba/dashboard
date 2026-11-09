@@ -34,7 +34,7 @@ export function registerDrawer(table: Channels, main: Pick<PaneActions, 'open'> 
     const choice = resumeChoice(main.sessions.find(projectPath, id), existsSync, main.sessions.runningIn(id));
     if ('refused' in choice) return choice;
     main.sessions.used(projectPath, id);
-    const opened = await main.open.call({ slot, directory: choice.record.directory, claude: true, resume: id });
+    const opened = await main.open.call({ slot, directory: choice.record.directory, claude: true, resume: id, as: choice.record.kind ?? null });
     return isRefused(opened) ? opened : { index: opened.index, open: main.openProjects() };
   });
 }
