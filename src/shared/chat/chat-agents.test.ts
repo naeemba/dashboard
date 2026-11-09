@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentConversation, agentRows, finishedAfter, KEPT_CONVERSATIONS, resultUsage, type FinishedTask } from './chat-agents';
+import { agentRows, followAfter, readTaskOutput, taskOpening, taskOutputRefusal, taskOutputShown, finishedAfter, KEPT_CONVERSATIONS, resultUsage, type FinishedTask } from './chat-agents';
 import { applyTaskMessage, type ChatTasks } from './chat-tasks';
 
 // Shaped as Claude Code 2.1.318 sent them for one Agent call.
@@ -86,27 +86,108 @@ describe('agentRows', () => {
   });
 });
 
-describe('agentConversation', () => {
+describe('taskOpening', () => {
   const agent = fold([started]).tasks[0];
   const workflow = fold([{ type: 'system', subtype: 'task_started', task_id: 'w', tool_use_id: 'call-w', description: 'Spec', task_type: 'local_workflow', workflow_name: 'spec' }]).tasks[0];
   const command = fold([{ type: 'system', subtype: 'task_started', task_id: 'b', tool_use_id: 'call-b', description: 'npm test', task_type: 'local_bash' }]).tasks[0];
+  const monitor = fold([{ type: 'system', subtype: 'background_tasks_changed', tasks: [{ task_id: 'm', task_type: 'monitor_mcp', description: 'eval batch progress lines' }] }]).tasks[0];
 
   it('opens an agent that has said something', () => {
-    expect(agentConversation(agent, { 'call-a': [] })).toEqual({ kind: 'open', id: 'call-a' });
+    expect(taskOpening(agent, { 'call-a': [] })).toEqual({ kind: 'conversation', id: 'call-a' });
   });
 
   it('opens a running agent that has said nothing yet, to fill as it goes', () => {
-    expect(agentConversation(agent, {})).toEqual({ kind: 'open', id: 'call-a' });
+    expect(taskOpening(agent, {})).toEqual({ kind: 'conversation', id: 'call-a' });
   });
 
   it('refuses a finished agent whose conversation is not kept, and says how many are', () => {
-    const answer = agentConversation({ ...agent, status: 'completed' }, {});
+    const answer = taskOpening({ ...agent, status: 'completed' }, {});
     expect(answer).toMatchObject({ kind: 'refused' });
     expect(answer.kind === 'refused' && answer.reason).toContain(`last ${KEPT_CONVERSATIONS} agents'`);
   });
 
-  it('refuses a workflow and a background command, which have no conversation', () => {
-    expect(agentConversation(workflow, { 'call-w': [] })).toMatchObject({ kind: 'refused' });
-    expect(agentConversation(command, {})).toMatchObject({ kind: 'refused' });
+  it('opens a workflow\'s panel, even with a conversation under its call', () => {
+    expect(taskOpening(workflow, { 'call-w': [] })).toEqual({ kind: 'workflow' });
+  });
+
+  it('opens a background command\'s and a monitor\'s output, running or finished, by task id', () => {
+    expect(taskOpening(command, {})).toEqual({ kind: 'output', taskId: 'b' });
+    expect(taskOpening({ ...command, status: 'completed' }, {})).toEqual({ kind: 'output', taskId: 'b' });
+    expect(taskOpening(monitor, {})).toEqual({ kind: 'output', taskId: 'm' });
+  });
+
+  it('refuses a kind the session keeps no output for, an MCP call, naming it', () => {
+    const call = fold([{ type: 'system', subtype: 'task_started', task_id: 'c', tool_use_id: 'call-c', description: 'Fetch report', task_type: 'mcp_task' }]).tasks[0];
+    const answer = taskOpening(call, {});
+    expect(answer.kind === 'refused' && answer.reason).toBe('Fetch report has nothing to show: only an agent, a workflow, a shell command or a Monitor opens.');
+  });
+
+  it('refuses an agent whose call the session did not name', () => {
+    const answer = taskOpening({ ...agent, toolUseId: null }, {});
+    expect(answer.kind === 'refused' && answer.reason).toContain('did not name the call');
+  });
+});
+
+describe('taskOutputShown', () => {
+  it('shows the output as plain lines, escape codes and redrawn progress gone', () => {
+    expect(taskOutputShown('npm test', { output: '\u001B[32mok\u001B[0m\n10%\r100%\n', truncated: false, total_bytes: 0 }, true))
+      .toEqual({ kind: 'text', text: 'ok\n100%\n' });
+  });
+
+  it('says the start was cut when only the end is kept', () => {
+    expect(taskOutputShown('npm test', { output: 'last', truncated: true, total_bytes: 20_480 }, false))
+      .toEqual({ kind: 'text', text: '… the start is cut: 20 KiB written, only the last 8 KiB is kept\nlast' });
+    expect(taskOutputShown('npm test', { output: 'last', truncated: true, total_bytes: 3_250_000 }, false))
+      .toMatchObject({ text: expect.stringContaining('3.1 MiB written') });
+  });
+
+  it('shows a running task that has printed nothing yet empty, to fill as it goes', () => {
+    expect(taskOutputShown('npm test', { output: '', truncated: false, total_bytes: 0 }, true)).toEqual({ kind: 'text', text: '' });
+  });
+
+  it('refuses an ended task with nothing to read, naming it', () => {
+    const shown = taskOutputShown('npm test', { output: '', truncated: false, total_bytes: 0 }, false);
+    expect(shown.kind === 'refused' && shown.reason).toBe('npm test has no output to show: it printed nothing, or its output file is gone.');
+  });
+
+  it('names the task in main\'s refusal', () => {
+    const shown = taskOutputShown('npm test', { refused: 'the session has ended.' }, true);
+    expect(shown.kind === 'refused' && shown.reason).toBe('npm test\'s output cannot be read: the session has ended.');
+  });
+});
+
+describe('taskOutputRefusal', () => {
+  it('says whether the session ended or its Claude Code lacks the call', () => {
+    expect(taskOutputRefusal(undefined)).toBe('the session has ended.');
+    expect(taskOutputRefusal({})).toBe('this version of Claude Code cannot read a task\'s output.');
+  });
+});
+
+describe('readTaskOutput', () => {
+  it('asks whether the task runs before the read, so the read it ended during is not the last', async () => {
+    let running = true;
+    const read = await readTaskOutput('npm test', async () => {
+      running = false;
+      return { output: 'summary', truncated: false, total_bytes: 7 };
+    }, () => running);
+    expect(read).toEqual({ running: true, shown: { kind: 'text', text: 'summary' } });
+  });
+});
+
+describe('followAfter', () => {
+  const text = { kind: 'text', text: 'ok' } as const;
+  const refused = { kind: 'refused', reason: 'no' } as const;
+
+  it('draws and asks again while the task runs', () => {
+    expect(followAfter({ running: true, shown: text })).toEqual({ draw: 'ok', again: true });
+  });
+
+  it('draws the read after the task ended and stops', () => {
+    expect(followAfter({ running: false, shown: text })).toEqual({ draw: 'ok', again: false });
+  });
+
+  it('keeps what it shows and stops on a refusal, running or not', () => {
+    expect(followAfter({ running: true, shown: refused })).toEqual({ draw: null, again: false });
+    expect(followAfter({ running: false, shown: refused })).toEqual({ draw: null, again: false });
   });
 });

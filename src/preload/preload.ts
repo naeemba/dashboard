@@ -89,6 +89,7 @@ const bridge: DashboardBridge = {
   chatWithdraw: (slot, id) => ipcRenderer.invoke('chat:withdraw', slot, id),
   chatStopTask: (slot, taskId) => ipcRenderer.invoke('chat-task:stop', slot, taskId),
   chatBackgroundTasks: (slot, toolUseId) => ipcRenderer.invoke('chat-task:background', slot, toolUseId),
+  chatTaskOutput: (slot, taskId) => ipcRenderer.invoke('chat-task:output', slot, taskId),
   chatAnswer: (slot, id, result) => ipcRenderer.send('chat:answer', slot, id, result),
   chatConfigure: (slot, change) => ipcRenderer.invoke('chat:configure', slot, change),
   chatMeasure: (slot, start) => ipcRenderer.invoke('chat:measure', slot, start === true),

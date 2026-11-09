@@ -3,6 +3,7 @@ import type { CommandRow } from '../chat/chat-commands';
 import type { PermissionAsk } from '../chat/chat-elicitation';
 import type { McpAction, McpServer } from '../chat/chat-mcp';
 import type { PdfRead } from '../chat/chat-pdf';
+import type { TaskOutputRead } from '../chat/chat-agents';
 import type { RewindChoice, RewindPoint } from '../chat/chat-rewind';
 import type { ChatMeasure } from '../chat/chat-status';
 import type { ChatEvent, ImageType } from '../chat/chat-transcript';
@@ -299,6 +300,8 @@ export type DashboardBridge = {
   // for every foreground task, and says whether one matched.
   chatStopTask(slot: number, taskId: string): Promise<void>;
   chatBackgroundTasks(slot: number, toolUseId?: string): Promise<boolean>;
+  // A shell or Monitor task's output, the last 8 KiB of it, or why it cannot be read.
+  chatTaskOutput(slot: number, taskId: string): Promise<TaskOutputRead>;
   // The answer to an ask, by the id it arrived with.
   chatAnswer(slot: number, id: string, result: PermissionResult): void;
   chatConfigure(slot: number, change: ChatPreferences): Promise<void>;

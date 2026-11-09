@@ -1,9 +1,11 @@
-import { agentConversation, agentRows, type FinishedTask } from '../../shared/chat/chat-agents';
+import { agentRows, taskOpening, type FinishedTask } from '../../shared/chat/chat-agents';
+import { openTaskOutput } from './chat-task-output-view';
 import type { ChatTask, ChatTasks } from '../../shared/chat/chat-tasks';
 import type { ChatEntry, Transcript } from '../../shared/chat/chat-transcript';
 import { clampIndex } from '../../shared/app/clamp-index';
 import { foldOf, redrawEntries, type DrawnEntry } from './chat-entries';
 import { screenClick } from './chat-screen-click';
+import { nearBottom } from './chat-scroll';
 import type { ChatViewOptions } from './chat-view';
 import { searchOverlay, viewerOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
@@ -12,7 +14,7 @@ import { isModified } from '../keys/shortcuts';
 // whole conversation over the screen, drawn like the main one and kept up while it runs. Up and Down
 // walk its entries, Enter unfolds the one picked, and Escape goes back to the list, whose own Escape
 // gives the keyboard back to the box. A click on a strip row opens its agent the same way; a workflow's
-// opens its phases.
+// opens its phases, and a shell command's or a Monitor's its output (chat-task-output-view.ts).
 export type AgentsView = {
   show(): void;
   open(task: ChatTask): void;
@@ -20,7 +22,7 @@ export type AgentsView = {
   update(): void;
 };
 
-type Say = Pick<ChatViewOptions, 'bridge' | 'onNotice' | 'goToPane'> & { openPdf(tile: HTMLElement): void; openWorkflow(task: ChatTask, closed: () => void): void };
+type Say = Pick<ChatViewOptions, 'bridge' | 'slot' | 'onNotice' | 'onError' | 'goToPane'> & { openPdf(tile: HTMLElement): void; openWorkflow(task: ChatTask, closed: () => void): void };
 
 export function createAgentsView(transcript: () => Transcript, say: Say, back: () => void): AgentsView {
   let listChanged: (() => void) | null = null;
@@ -48,13 +50,22 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
   }
 
   function open(task: ChatTask | FinishedTask): void {
-    // A workflow has no conversation; its phases open instead (chat-workflow-view.ts), and their
-    // Escape comes back to the list as a conversation's does.
-    if (task.workflow) return say.openWorkflow(task, show);
-    const target = agentConversation(task, transcript().agents);
+    // A workflow's phases open instead (chat-workflow-view.ts), and a shell command's or a Monitor's
+    // output; the Escape of either comes back to the list as a conversation's does.
+    const target = taskOpening(task, transcript().agents);
+    if (target.kind === 'workflow') return say.openWorkflow(task, show);
     if (target.kind === 'refused') {
       say.onNotice(target.reason);
       return back();
+    }
+    if (target.kind === 'output') {
+      return void openTaskOutput(task, {
+        read: () => say.bridge.chatTaskOutput(say.slot, target.taskId),
+        running: () => transcript().tasks.some((each) => each.id === target.taskId),
+        refused: (reason) => { say.onNotice(reason); back(); },
+        failed: (message) => { say.onError(message); back(); },
+        closed: show,
+      });
     }
     const { id } = target;
     const log = document.createElement('div');
@@ -78,7 +89,7 @@ export function createAgentsView(transcript: () => Transcript, say: Say, back: (
       const list = transcript().agents[id] ?? [];
       if (list === drawnList) return;
       const box = log.parentElement;
-      const stick = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+      const stick = !box || nearBottom(box);
       drawnList = list;
       redrawEntries(drawn, list, selected, (element) => log.append(element), (fresh) => fresh.fill());
       if (stick && box) box.scrollTop = box.scrollHeight;

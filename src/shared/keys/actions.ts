@@ -701,7 +701,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'task-background' }, mac: 'Alt+B', other: 'Alt+B',
   },
   {
-    name: 'claude-agents', description: 'List the agents running and finished this conversation; Enter opens one\'s conversation',
+    name: 'claude-agents', description: 'List the agents and background tasks running and finished this conversation; Enter opens one\'s conversation or output',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'agents' }, mac: 'Alt+A', other: 'Alt+A',
   },
   {
