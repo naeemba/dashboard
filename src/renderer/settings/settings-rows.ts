@@ -15,6 +15,7 @@ export type SettingsRow =
   | { kind: 'host-token'; label: string; value: string }
   | { kind: 'review-auto-loop'; label: string; value: string }
   | { kind: 'updates-check'; label: string; value: string }
+  | { kind: 'errors-notify'; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
 
@@ -75,6 +76,10 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   rows.push({ kind: 'heading', label: 'Updates' });
   rows.push({
     kind: 'updates-check', label: 'Check for a newer release on launch and every six hours', value: settings.updates.check ? 'on' : 'off',
+  });
+  rows.push({ kind: 'heading', label: 'Errors' });
+  rows.push({
+    kind: 'errors-notify', label: 'Raise a desktop notification for an error while the window is away', value: settings.errors.notify ? 'on' : 'off',
   });
   rows.push({ kind: 'heading', label: 'Reset' });
   rows.push({ kind: 'reset-keys', label: 'Reset every key to its default' });

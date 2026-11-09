@@ -27,6 +27,9 @@ export type Settings = {
   // check: whether the app reads GitHub's newest release on launch and every six hours (docs/updates).
   // Off, the update key still checks when pressed.
   updates: { check: boolean };
+  // notify: whether an error on the status bar raises a desktop notification while the window is not
+  // in front (docs/errors).
+  errors: { notify: boolean };
 };
 
 // One line of the file's `keys`, read. `written` travels with the binding because the two answers come
@@ -74,6 +77,7 @@ export function defaultSettings(isMac: boolean): Settings {
     remote: { address: '', token: '' },
     review: { autoLoop: true },
     updates: { check: true },
+    errors: { notify: true },
   };
 }
 
@@ -133,6 +137,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedRemote = asRecord(raw.remote);
   const storedReview = asRecord(raw.review);
   const storedUpdates = asRecord(raw.updates);
+  const storedErrors = asRecord(raw.errors);
   // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
   // A default is never `written`, so withoutDuplicates settles the written lines first and a key nobody
   // typed cannot take one off a line someone did.
@@ -169,6 +174,9 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     },
     updates: {
       check: typeof storedUpdates.check === 'boolean' ? storedUpdates.check : defaults.updates.check,
+    },
+    errors: {
+      notify: typeof storedErrors.notify === 'boolean' ? storedErrors.notify : defaults.errors.notify,
     },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }

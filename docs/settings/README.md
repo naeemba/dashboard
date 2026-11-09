@@ -36,6 +36,10 @@ The Updates row (`updates.check`, default on) says whether the app reads
 GitHub's newest release on launch and every six hours. Enter turns it over; off,
 the updates key still checks when pressed (docs/updates).
 
+The Errors row (`errors.notify`, default on) says whether an error on the status
+bar raises a desktop notification while the window is not in front. Enter turns
+it over (docs/errors).
+
 The Host rows make this Dashboard reachable from another: a port, read at the
 next launch, and the token the other machine pastes once. The port opens on
 127.0.0.1 only, so the other machine reaches it through an SSH tunnel (ssh -L

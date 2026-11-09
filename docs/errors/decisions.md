@@ -92,3 +92,31 @@ Watch for: the match is by text. A sentence that reshapes the text
 loses it, and a generic text (`no reason given`) read by one failure can lend
 its stack to another shown in the same second. Passing the Error through each
 caller's `onError` removes the guess; it can land one caller at a time.
+
+## errors-decision-5: A status-bar message goes by itself, and Escape is watched, not taken
+
+Only the owner of a message could clear it, and many owners never did: a
+refusal from the Claude screen (`Fix login has no conversation to show`) stayed
+on the bar until the app restarted. So every message is given a lifetime when it
+is drawn (`status-message.ts`): 8 seconds for a notice, 20 for an error, and
+70 ms a character for a sentence long enough to need more. An owner that clears
+its message still may; a newer message replaces the old one and its timer.
+
+Escape clears it from anywhere, but the bar only watches the key: it is not a
+row in the action table and it is never stopped. Taking it would cost nvim its
+Escape whenever a message was showing, and close nothing a dialog expected to
+close. A modified Escape is left alone (keys-rule-1).
+
+A notice is logged now, as info under its owner, so a refusal seen once is still
+on record. The worry that kept it out — every ship leaving a red line — does not
+hold at info. Both kinds are logged at most once a minute per sentence
+(`logsStatusMessage`), because with the message gone the bar can no longer
+compare a repaint against what it shows.
+
+An error while the window is not in front raises a desktop notification, once a
+minute per sentence, with `errors.notify` to turn it off. The banner names no
+pane, so a click only brings the window forward; it does not go through
+project.focus, which needs one.
+
+Watch for: a progress notice fades while its work goes on. A ship that takes a
+minute says `shipping…` for 8 seconds, then nothing until it ends.

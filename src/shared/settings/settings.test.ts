@@ -12,6 +12,11 @@ describe('parseSettings', () => {
     expect(parseSettings({ review: { autoLoop: 'no' } }, false).review).toEqual({ autoLoop: true });
   });
 
+  it('notifies of errors unless the file turns it off', () => {
+    expect(parseSettings({}, false).errors).toEqual({ notify: true });
+    expect(parseSettings({ errors: { notify: false } }, false).errors).toEqual({ notify: false });
+    expect(parseSettings({ errors: { notify: 'no' } }, false).errors).toEqual({ notify: true });
+  });
   it('checks for updates unless the file turns it off', () => {
     expect(parseSettings({}, false).updates).toEqual({ check: true });
     expect(parseSettings({ updates: { check: false } }, false).updates).toEqual({ check: false });
