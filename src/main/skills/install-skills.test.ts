@@ -12,6 +12,7 @@ function folder(): string {
 function build(): string {
   const out = folder();
   writeFileSync(join(out, 'create-task-cli-entry.js'), 'program');
+  writeFileSync(join(out, 'board-cli-entry.js'), 'program');
   return out;
 }
 
@@ -23,11 +24,12 @@ describe('installSkills', () => {
     expect(existsSync(createTaskScript(home))).toBe(true);
   });
 
-  it('installs /adopt-docs when /create-task fails, and answers one line for the failure', () => {
+  it('installs /adopt-docs when /create-task and the board guard fail, and answers one line for each', () => {
     const home = folder();
     const lines = installSkills(home, join(home, 'no-build'));
-    expect(lines).toHaveLength(1);
+    expect(lines).toHaveLength(2);
     expect(lines[0]).toMatch(/^create-task not installed: ENOENT/);
+    expect(lines[1]).toMatch(/^board guard not installed: ENOENT/);
     expect(readFileSync(adoptDocsSkillFile(home), 'utf8')).toContain('name: adopt-docs');
   });
 

@@ -188,3 +188,98 @@ landed Done through the branch, and now it lands it in the checkout only. And a
 ship still commits its Ship move on the new branch when origin did not have it
 yet; card.move waits for the sync before the ship so that origin has it, which
 leaves that commit empty and skipped.
+
+## board-decision-7: A card with a pull request open sits in Review, and the app keeps it there
+
+
+**A card with a pull request open sits in `Review`, not `Done`, and the app
+puts it there** (board-decision-6). A column on `main` says what has been
+merged; `Review` is the exception — a pull request open and nothing has checked
+it. Otherwise the board says a feature is finished and checked while nobody has
+looked at it, and `Review` sits empty in front of the person whose job it is to
+look. This was board-rule-2, a line in `CLAUDE.md` that beat a global
+instruction to move a card to Done once its pull request was ready; since the
+app moves the card from the pull request's state, neither instruction is
+anyone's to remember, and both are gone (board-decision-8). What follows is why
+the order matters.
+
+**The move into `Done` comes after the merge, and is one `board move`.** The
+`board` command writes a board git tracks on origin's main itself, and brings
+the project's checkout up to it (board-decision-5), from the project or from a
+card's worktree alike. So a card moved to Done before the merge is main saying
+Done for a pull request that may still be refused: kamandsystem #19 sat in Done
+unmerged exactly like that.
+
+What this replaced: the move went on the branch first, so the merge would carry
+it into main, then the app's board was moved after. A branch-only Done was the
+only way to get Done onto main when nothing but a merge wrote main, and the
+order mattered: moved after the merge, main went on committing `Review` for a
+feature that shipped weeks ago, while the only copy saying `Done` was an
+uncommitted change in one person's checkout. With the command writing main,
+the branch's board carries nothing about the card, and the order is merge, then
+move. `reviewPrompt` in `review.ts` is where it is written down, and
+`review.test.ts` pins it.
+
+## board-decision-8: The board is kept by a hook and the app's own instructions, not CLAUDE.md
+
+**An agent cannot hand-edit the board: a PreToolUse hook refuses an Edit, Write
+or NotebookEdit of a file under `.dashboard/board/` (or the older
+`.dashboard/board.json`), and a shell command that redirects, tees or `sed -i`s
+into one, with a message naming the board command.** Before, a line in the
+global `CLAUDE.md` said to use the command and never edit the JSON; an agent
+that forgot wrote a card missing a field, and the app repaired it silently on
+the next read (board-rule-1). A hook holds whatever the agent read. A board
+file read, or put back from git (`git checkout origin/main -- .dashboard/`, how
+a conflict on the board is resolved), goes through. An `mv` of a temporary file
+over a card, a script, or an editor in a pane still does: matching those means
+parsing the shell, and the guard is a guard rail, not a sandbox.
+
+**One decision, one command, three doors.** `board-guard.ts` decides from the
+tool's name and input, with the test, and every door runs the same `node
+"$HOME/.claude/dashboard/board.js" guard`: a terminal worker from its
+`--settings`, a Claude screen (main's and a worker's, hosted or not) from the
+session's settings, and any other Claude from `~/.claude/settings.json`. One
+string, so a session that has it from two of those runs it once: Claude Code
+drops identical commands. A command hook rather than an SDK callback because a
+hosted screen's hooks are told to the app, never asked, so a callback could not
+refuse anything there. It names the board command as `$DASHBOARD_BOARD` inside a
+pane the app opened and as its own path outside one. What it costs: a node
+start per Edit, Write and shell command, and a dev run's sessions use the copy
+the installed app last put there.
+
+**A Claude the app did not start gets it from `~/.claude/settings.json`.** At
+each launch the installed app copies its board program to
+`~/.claude/dashboard/board.js` and adds one PreToolUse entry running `node
+"$HOME/.claude/dashboard/board.js" guard`, only when no entry already runs that
+command. Nothing else in the file is rewritten: every other key and hook stays
+as it was, the file keeps its mode, a linked `settings.json` stays a link and
+the entry lands in the file it points at, and a file that is not JSON, or whose
+hooks are not the shape Claude Code reads, is refused with one warning in the
+log and left alone. `$HOME` rather than an absolute path, so a settings file
+shared between machines through a dotfiles repo needs one entry, not one per
+machine. What it costs: removing the entry by hand is undone at the next
+launch; keep it out by keeping the app from launching, or delete the hook's
+command file, which turns the entry into a non-blocking error.
+
+**What an agent has to know is in the instructions the app gives it.**
+`BOARD_INSTRUCTIONS` in `dispatch.ts` is appended to the system prompt of main
+and of every worker, terminal or screen, resumed or not: the command exists and
+prints its usage, a hand edit is refused, `board comment` records a finding
+where `board set --notes` would replace the description, and the app moves a
+card with a branch from its pull request, so an agent moves none and records no
+pull request. The global `CLAUDE.md` section that said all this, and this
+repo's board-rule-2, are deleted.
+
+**An agent records no pull request: the review starts from the one the app
+found.** The sweep that hands a finished card to a reviewer used to learn the
+agent was done only from the number it wrote on its worktree's board. It now
+also takes the number card.follow wrote on the project's board, while the card
+sits in Review or past it (`followedPullRequest` in `review.ts`); in Done the
+number is the one that merged, and the sweep needs it to clear that card's
+worktree. Not before Review, nor in Cancelled: a card sent back to Doing when
+its pull request closed unmerged keeps that number, and a fresh ship of it has
+opened nothing yet. The project's number comes first, and on a card before
+Review a worktree number equal to the project card's own is not counted: it
+came in with the base, so it is that closed pull request. What it costs: the
+review starts when card.follow next asks `gh`, up to two minutes after the pull
+request opens, rather than the moment an agent writes the number.
