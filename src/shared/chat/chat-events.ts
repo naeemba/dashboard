@@ -21,6 +21,14 @@ export function peerSender(origin: unknown): string | undefined {
   return [origin.name, origin.from].find((value): value is string => typeof value === 'string');
 }
 
+// Whether a session state message says a turn is under way: running or waiting on a permission
+// answer, not idle, which comes only after the turn's result. Undefined for any other message, and
+// for every message of a session not started with CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS.
+export function turnUnderWay(message: Record<string, unknown>): boolean | undefined {
+  if (message.type !== 'system' || message.subtype !== 'session_state_changed') return undefined;
+  return message.state === 'running' || message.state === 'requires_action';
+}
+
 // What a user message is when Claude Code injected it, or null when a person typed it. A message with
 // no origin is a person's: text pasted from elsewhere can hold the same tags, and must stay theirs.
 export function injectedMessage(origin: unknown, text: string): InjectedMessage | null {
