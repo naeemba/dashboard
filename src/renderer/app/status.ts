@@ -1,5 +1,6 @@
 import { EDITOR_INDEX, branchOfPane, paneLabel } from '../../shared/panes/terminals';
 import { paneTokens } from '../../shared/usage/usage';
+import { memoryText, type PaneMemory } from '../../shared/processes/scope-memory';
 import type { Mode } from '../../shared/keys/modes';
 
 // What the right-hand end of the status bar says: which view you are on, and for terminals which pane
@@ -38,6 +39,8 @@ export type StatusPage = {
   // right-hand end of the bar is the only thing on a project's screen that names one pane, so it is
   // where the one pane's figure belongs.
   focusedTokens: number;
+  // What the focused pane's systemd scopes hold, or undefined for none recorded (shared/processes).
+  focusedMemory: PaneMemory | undefined;
 };
 
 // The manager is where a launch with nothing saved lands, and with no project open there is nothing on
@@ -77,8 +80,7 @@ export function modeLabel(page: StatusPage): string {
   // Added rather than folded into paneLabel: that is the one spelling of what a pane is called, and a
   // running total is not part of a name. The manager's rows and the bell's notification both print
   // the label, and neither wants a number that moves every half minute in the middle of it.
-  const tokens = paneTokens(page.focusedTokens);
-  return tokens === '' ? label : `${label} · ${tokens}`;
+  return [label, paneTokens(page.focusedTokens), memoryText(page.focusedMemory)].filter((part) => part !== '').join(' · ');
 }
 
 // The mode, then the panes that rang while you were elsewhere. The tab strip only has room for the

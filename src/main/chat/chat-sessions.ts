@@ -24,13 +24,14 @@ import { forkFrom, resumeFrom, rewindPoints, rewoundTo, type RewindPoint } from 
 import { fileCandidates } from '../nvim/file-open';
 import { homedir } from 'node:os';
 import { failureText } from '../../shared/errors/failure';
+import { runningUnits } from '../processes/memory-sweep';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
 import { claudeExecutable, scopedQuery } from './claude-process';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import { nameMemoryFiles } from '../drawer/measured-memory';
 import { inputQueue, type InputQueue } from './input-queue';
-import type { HostedParams } from '../workers/screen-host-protocol';
+import type { HostedParams, HostedSession } from '../workers/screen-host-protocol';
 import type { ScreenOwner } from '../workers/screen-owner';
 import { keepsItsConversation, WORKER_KEEPS_ITS_CONVERSATION } from '../actions/session/conversation-ports';
 import type { ChatActionPorts } from '../actions/session/session-actions';
@@ -67,7 +68,7 @@ export type ChatHost = {
   worker(slot: number): ScreenSession | undefined;
   // A worker screen's session run in the screen host, so it outlives the app, or null when there is
   // no host and it runs here (screen-host-client.ts).
-  hosted(key: string, params: HostedParams): Promise<Query | null>;
+  hosted(key: string, params: HostedParams): Promise<HostedSession | null>;
   // The command as it starts inside its systemd scope, or as it is (processes/scope-support.ts), once
   // the launch's check has answered, as a pane waits on it (processes-decision-4).
   scoped(request: ScopeRequest): Promise<ScopedCommand>;
@@ -103,6 +104,8 @@ type Session = {
   stopped: boolean;
   // Run in the screen host, which a quit leaves running.
   hosted: boolean;
+  // The scope its Claude runs in, for the memory readout; the host's answer for a hosted one.
+  unit: string | null;
 };
 
 // The PATH a pane's shell builds from its startup files, which the app itself never read when it was
@@ -247,7 +250,7 @@ export function liveConversation(worker: ScreenSession | undefined, remembered: 
 export function registerChatSessions(
   table: Channels,
   host: ChatHost,
-): { open(slot: number, adopt?: string): void; actionPorts: ChatActionPorts; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): string; withdraw(slot: number, id: string): Promise<boolean> } {
+): { open(slot: number, adopt?: string): void; actionPorts: ChatActionPorts; stop(slot: number): void; stopAll(): void; tell(slot: number, text: string): string; withdraw(slot: number, id: string): Promise<boolean>; units(): Promise<[number, string][]> } {
   // Promises, so a second prompt sent while the SDK is still loading joins the session the first one
   // is starting rather than starting a second process.
   const sessions = new Map<number, Promise<Session>>();
@@ -363,7 +366,8 @@ export function registerChatSessions(
     };
     const hosted = worker ? await host.hosted(worker.session, params) : null;
     const session: Session = {
-      input, asks, stopped: false, hosted: hosted !== null, query: hosted ?? scopedQuery(query)(params),
+      input, asks, stopped: false, hosted: hosted !== null, query: hosted?.query ?? scopedQuery(query)(params),
+      unit: hosted === null ? scope.unit : hosted.unit,
     };
     // Failing, the session stays on the settings file's level and fast mode until the next pick.
     const replayed = replayedFlagSettings(preferences.get(slot));
@@ -753,6 +757,8 @@ export function registerChatSessions(
     stopAll: () => {
       for (const [slot, session] of [...sessions]) void session.then((running) => { if (closedAtQuit(running)) stop(slot); }, () => undefined);
     },
+    // The scope of every session running now, by slot or screen key.
+    units: () => runningUnits(sessions),
     // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
     tell: (slot, text) => send(slot, [{ type: 'text', text }]),
     // One of those taken back while it still waits in the queue: a worker's report read after its notice.

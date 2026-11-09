@@ -5,7 +5,7 @@ import { inputQueue } from '../chat/input-queue';
 import { launchPaneHost } from '../panes/pane-host-client';
 import { attempt, reachHost } from '../panes/host-socket';
 import { line, lineReader } from '../panes/pane-host-protocol';
-import { screenHostSocket, type AskCallback, type FromScreenHost, type HostedParams, type KeptSession, type ToScreenHost } from './screen-host-protocol';
+import { screenHostSocket, type AskCallback, type FromScreenHost, type HostedParams, type HostedSession, type KeptSession, type ToScreenHost } from './screen-host-protocol';
 
 // The app's half of the screen host: a worker screen's session run there, behind a Query that passes
 // every call over the socket, so chat-sessions.ts drives it as it drives one of its own. With no host
@@ -19,7 +19,7 @@ export type ScreenHost = {
   kept(key: string): KeptSession | undefined;
   // The session run in the host, started there or taken up if the host still runs it, or null when
   // there is no host to run it.
-  query(key: string, params: HostedParams): Promise<Query | null>;
+  query(key: string, params: HostedParams): Promise<HostedSession | null>;
 };
 
 type Listener = (message: FromScreenHost) => void;
@@ -96,11 +96,16 @@ export function screenHost(options: { socket: string | null; launch(): void; con
     async query(key, params) {
       await ready;
       if (!(await reach())) return null;
+      const taken = kept.get(key);
       kept.delete(key);
-      return hostedQuery(key, params, send, (listener) => {
-        if (listener === null) listeners.delete(key);
-        else listeners.set(key, listener);
-      });
+      const unit = taken === undefined ? params.scope?.unit ?? null : taken.unit ?? null;
+      return {
+        unit,
+        query: hostedQuery(key, params, send, (listener) => {
+          if (listener === null) listeners.delete(key);
+          else listeners.set(key, listener);
+        }),
+      };
     },
   };
 }

@@ -31,6 +31,8 @@ type Hosted = {
   // Asked to stop: the app ended it on its side and hears nothing more of it, and a start for its key
   // begins a new session rather than taking up this one.
   stopped: boolean;
+  // The scope its Claude started in, which a later start for the same key does not change.
+  unit: string | null;
 };
 
 export function screenHostServer(start: StartSession, idle: () => void) {
@@ -77,7 +79,7 @@ export function screenHostServer(start: StartSession, idle: () => void) {
 
   function begin(key: string, request: HostedStart): void {
     const input = inputQueue<SDKUserMessage>();
-    const hosted: Hosted = { query: null, input, asks: new Map(), held: [], attached: true, busy: false, stopped: false };
+    const hosted: Hosted = { query: null, input, asks: new Map(), held: [], attached: true, busy: false, stopped: false, unit: request.scope?.unit ?? null };
     sessions.set(key, hosted);
     const query = start({
       prompt: input,
@@ -138,7 +140,7 @@ export function screenHostServer(start: StartSession, idle: () => void) {
     connect(answer: (message: FromScreenHost) => void): void {
       send = answer;
       for (const hosted of sessions.values()) hosted.attached = false;
-      answer({ type: 'sessions', sessions: [...sessions.entries()].map(([key, hosted]) => ({ key, busy: hosted.busy })) });
+      answer({ type: 'sessions', sessions: [...sessions.entries()].map(([key, hosted]) => ({ key, busy: hosted.busy, unit: hosted.unit })) });
     },
     disconnect(): void {
       send = null;

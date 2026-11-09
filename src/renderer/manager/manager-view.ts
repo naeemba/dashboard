@@ -14,6 +14,7 @@ import { NEED_LABELS, nextLanding, needsYou, type Need } from '../../shared/mana
 import type { ManagerReads } from './manager-reads';
 import { isBareCharacter } from '../keys/shortcuts';
 import { paneTokens, projectTokens, TOKEN_COLUMNS } from '../../shared/usage/usage';
+import { memoryText, nearHigh } from '../../shared/processes/scope-memory';
 import { dirtyLabel, worktreePaneText } from '../../shared/ship/worktree-rows';
 import type { JumpToWorktree } from '../ship/worktree-view';
 
@@ -108,7 +109,7 @@ function labelledTokens(label: string, text: string): HTMLElement {
 // Not a line the keyboard can land on: it is not in `lines`, and it takes no click.
 const GROUP_COLUMNS = {
   need: ['Needs you', 'Project', 'What', 'Waiting'],
-  pane: ['Terminal', 'Last line on screen', 'Status', 'Last output', 'Tokens'],
+  pane: ['Terminal', 'Last line on screen', 'Status', 'Last output', 'Tokens', 'Memory'],
   worktree: ['Worktree', 'Changes', 'Size', 'Started', 'Terminal', ''],
 } as const;
 
@@ -135,6 +136,13 @@ function writeTokens(row: Element | undefined, figures: readonly string[]): void
     const cell = cells?.[column];
     if (cell && cell.textContent !== text) cell.textContent = text;
   });
+}
+
+function writeMemory(cell: Element | null | undefined, pane: PaneSummary): void {
+  if (!cell) return;
+  const text = memoryText(pane.memory);
+  if (cell.textContent !== text) cell.textContent = text;
+  cell.classList.toggle('manager-memory-near', nearHigh(pane.memory));
 }
 
 export function createManagerView(options: ManagerOptions): ManagerView {
@@ -256,6 +264,10 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     // What the agent in this pane has cost. Nothing at all for a pane with no agent in it, which is
     // most of them: a column of `0` down the list would say only that five shells are not Claude Code.
     const tokens = tokenCell(paneTokens(line.pane.tokens));
+    // What its systemd scopes hold, the cap named beside it once it is near; nothing without a scope.
+    const memory = document.createElement('span');
+    memory.className = 'manager-memory';
+    writeMemory(memory, line.pane);
 
     // What the pane has on screen, so the question can be read from here. A pane that has printed
     // nothing gets no empty block under it.
@@ -263,7 +275,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
     tail.className = 'manager-tail';
     tail.textContent = tailLines.join('\n');
     tail.hidden = tailLines.length === 0;
-    item.append(name, lastPrinted, state, age, tokens, tail);
+    item.append(name, lastPrinted, state, age, tokens, memory, tail);
     return item;
   }
 
@@ -554,6 +566,7 @@ export function createManagerView(options: ManagerOptions): ManagerView {
         const age = row?.querySelector('.manager-age');
         if (age) age.textContent = paneAge(line.pane.lastPrintedAt);
         writeTokens(row, [paneTokens(line.pane.tokens)]);
+        writeMemory(row?.querySelector('.manager-memory'), line.pane);
         const tail = row?.querySelector<HTMLElement>('.manager-tail');
         if (tail) {
           const block = tailBlock(line.pane);

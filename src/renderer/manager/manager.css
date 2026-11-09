@@ -259,7 +259,12 @@
 
 .manager-pane,
 .manager-group-pane {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 8ch 13ch 8ch;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 8ch 13ch 8ch 16ch;
+}
+
+/* A scope near its MemoryHigh, where the kernel starts slowing the agent down. */
+.manager-memory-near {
+  color: var(--yellow);
 }
 
 .manager-worktree,

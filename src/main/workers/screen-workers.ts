@@ -183,6 +183,8 @@ export function screenWorkers(ports: ScreenPorts) {
     // Where the worker works, which is not where the hidden shell under it stands.
     folder: (id: string): string | undefined => live.get(id)?.saved.directory,
     session: (key: number): ScreenSession | undefined => byKey.get(key),
+    // The pane a worker screen's session runs under this key, or undefined for a page's main.
+    paneOf: (key: number): string | undefined => byKey.get(key)?.id,
     // Called on every event of every session, a streamed token included, so the cheap test goes first.
     observe(key: number, event: ChatEvent): void {
       const signal = screenSignal(event);

@@ -22,6 +22,7 @@ const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary 
   state,
   lastPrintedAt: 0,
   tokens: 0,
+  memory: undefined,
   tail: () => tail,
   lastPrinted: () => tail.at(-1) ?? '',
 });
@@ -129,6 +130,11 @@ describe('managerRows', () => {
     });
     expect(rows[0].tokens).toEqual({ fiveHours: 10, week: 20, allTime: 30 });
     expect(rows[0].panes.map((entry) => entry.tokens)).toEqual([0, 4_000]);
+  });
+
+  it('puts what each pane’s scopes hold on its pane, and nothing on one with no scope', () => {
+    const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])], undefined, [], { '3:1': { bytes: 2048, high: null } });
+    expect(rows[0].panes.map((entry) => entry.memory)).toEqual([undefined, { bytes: 2048, high: null }]);
   });
 
   it('gives a project the sweep has not reached yet nought rather than nothing at all', () => {

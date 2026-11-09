@@ -15,6 +15,7 @@ function page(overrides: Partial<StatusPage>): StatusPage {
     worktrees: [],
     focusedDirectory: '',
     focusedTokens: 0,
+    focusedMemory: undefined,
     ...overrides,
   };
 }
@@ -118,5 +119,21 @@ describe('the focused pane’s tokens', () => {
 
   it('keeps out of the board, the manager and nvim, which name no single shell', () => {
     expect(modeLabel(page({ mode: 'board', boardLabel: 'Todo', focusedTokens: 9_200_000 }))).toBe('board · Todo');
+  });
+});
+
+describe('the focused pane’s memory', () => {
+  const GIB = 1024 ** 3;
+
+  it('says what its scope holds after the tokens', () => {
+    expect(modeLabel(page({ focusedTokens: 9_200_000, focusedMemory: { bytes: 2.1 * GIB, high: 6 * GIB } }))).toBe('main · 9.2M · 2.1 GB');
+  });
+
+  it('names the cap once the scope is near it', () => {
+    expect(modeLabel(page({ focusedMemory: { bytes: 5.1 * GIB, high: 6 * GIB } }))).toBe('main · 5.1 GB of 6.0 GB');
+  });
+
+  it('says nothing for a pane with no scope recorded', () => {
+    expect(modeLabel(page({ focusedMemory: undefined }))).toBe('main');
   });
 });
