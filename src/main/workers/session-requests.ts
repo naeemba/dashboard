@@ -110,6 +110,9 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // The main session in `slot` read a message from the session called `sender`: when that is a worker
   // that main dispatched, its next stop needs no notice.
   heard(slot: number, sender: string): void;
+  // The main session in `slot` began a turn, or ended one after its result was read: a worker's stop
+  // notice due in between waits for the end, so the report that turn read drops it.
+  mainTurn(slot: number, midTurn: boolean): void;
   // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
   notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply;
   // Every finished worker pane released, each for the reason auto-release.ts gives. Run on a timer.
@@ -146,7 +149,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
   // to something else by then.
   const mainOf = (id: string): number => dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
+  // The mains mid-turn now, by slot.
+  const busyMains = new Set<number>();
   const notices = stopNotices({
+    midTurn: (id) => busyMains.has(mainOf(id)),
     notice(id, paused) {
       if (!mainsWorker(id)) return;
       const slot = mainOf(id);
@@ -377,6 +383,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (id === undefined) return;
       notices.reported(id);
       quietFrom(id, true);
+    },
+    mainTurn(slot: number, midTurn: boolean) {
+      if (midTurn) return void busyMains.add(slot);
+      busyMains.delete(slot);
+      notices.turnOver((id) => mainOf(id) === slot);
     },
   });
 }

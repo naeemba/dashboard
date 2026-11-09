@@ -23,3 +23,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-08 #233 — Every agent a pane starts goes through pane.dispatch: a ship and the review loop open a Claude screen off Windows too (workers-decision-8)
 - 2026-11-08 #241 — `pane release` takes back a stop notice still queued for the worker it releases, and a released screen worker's late hook no longer counts as the next one's (workers-decision-1)
 - 2026-11-09 — Work sent with `pane send`, a ship or the review loop reports to the main that sent it, and the app closes a finished worker's pane itself (workers-decision-1)
+- 2026-11-09 — A stop notice due while main is mid-turn waits for the turn to end, and is dropped when that turn read the worker's report (workers-decision-1)

@@ -8,7 +8,10 @@ function clock() {
   const noticed: string[] = [];
   const paused: string[] = [];
   const takenBack: string[] = [];
+  // The workers whose main is mid-turn.
+  const busy = new Set<string>();
   const notices = stopNotices({
+    midTurn: (id) => busy.has(id),
     after(ms, run) {
       const timer = { at: now + ms, run, cancelled: false };
       timers.push(timer);
@@ -27,7 +30,7 @@ function clock() {
       timer.run();
     }
   }
-  return { notices, noticed, paused, takenBack, pass };
+  return { notices, noticed, paused, takenBack, busy, pass };
 }
 
 describe('stopNotices', () => {
@@ -193,6 +196,52 @@ describe('stopNotices', () => {
         pass(10);
         expect(noticed).toEqual(['2:1', '2:1']);
         expect(takenBack).toEqual(['2:1']);
+      });
+    });
+
+    // Queued, a notice main takes the moment its turn ends, before the app reads that turn's result.
+    describe('while main is mid-turn', () => {
+      it('holds the notice and drops it when the turn read the worker\'s report', () => {
+        const { notices, noticed, busy, pass } = clock();
+        busy.add('2:1');
+        notices.state('2:1', 'done', nothing);
+        pass(10);
+        expect(noticed).toEqual([]);
+        notices.reported('2:1');
+        busy.delete('2:1');
+        notices.turnOver(() => true);
+        expect(noticed).toEqual([]);
+      });
+
+      it('tells the notice when the turn ends without the report, and only to that main', () => {
+        const { notices, noticed, paused, busy, pass } = clock();
+        busy.add('2:1');
+        busy.add('3:1');
+        notices.state('2:1', 'done', nothing);
+        notices.state('3:1', 'done', { background: 1, scheduled: 0 });
+        pass(1000);
+        busy.clear();
+        notices.turnOver((id) => id === '3:1');
+        expect(noticed).toEqual(['3:1']);
+        expect(paused).toEqual(['3:1']);
+        notices.turnOver(() => true);
+        expect(noticed).toEqual(['3:1', '2:1']);
+        // Told once: a second turn end has nothing held.
+        notices.turnOver(() => true);
+        expect(noticed).toHaveLength(2);
+      });
+
+      it('drops a held notice when the worker works again or is forgotten', () => {
+        const { notices, noticed, busy, pass } = clock();
+        busy.add('2:1');
+        busy.add('2:2');
+        notices.state('2:1', 'done', nothing);
+        notices.state('2:2', 'done', nothing);
+        pass(10);
+        notices.state('2:1', 'running');
+        notices.forget('2:2');
+        notices.turnOver(() => true);
+        expect(noticed).toEqual([]);
       });
     });
   });

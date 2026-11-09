@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { injectedMessage, notTypedMessage } from './chat-events';
+import { injectedMessage, notTypedMessage, turnUnderWay } from './chat-events';
 
 describe('injectedMessage', () => {
   it('leaves a typed message, and one with no origin, as the person\'s own', () => {
@@ -78,5 +78,17 @@ describe('notTypedMessage', () => {
     expect(meta('[Image: original 2148x1196, displayed at 2000x1114. Multiply coordinates by 1.07]')).toBe('hidden');
     expect(meta('<system-reminder>x</system-reminder>')).toBe('hidden');
     expect(meta('<local-command-caveat>Run directly.</local-command-caveat>')).toBe('hidden');
+  });
+});
+
+describe('turnUnderWay', () => {
+  const state = (value: string) => ({ type: 'system', subtype: 'session_state_changed', state: value });
+
+  it('reads running and a permission wait as mid-turn, idle as over, and anything else as neither', () => {
+    expect(turnUnderWay(state('running'))).toBe(true);
+    expect(turnUnderWay(state('requires_action'))).toBe(true);
+    expect(turnUnderWay(state('idle'))).toBe(false);
+    expect(turnUnderWay({ type: 'result', subtype: 'success' })).toBeUndefined();
+    expect(turnUnderWay({ type: 'system', subtype: 'init', state: 'running' })).toBeUndefined();
   });
 });
