@@ -1,5 +1,6 @@
 import type { Refused } from '../../../shared/app/bridge';
 import { baseName } from '../../../shared/app/base-name';
+import { failureText } from '../../../shared/errors/failure';
 import { action, isRefused } from '../action';
 import { isFilledText } from './pane-input';
 
@@ -49,8 +50,13 @@ export const paneRelease = action<PaneReleasePorts, { id: string }, { output: st
     if (throwaway === undefined) return { output: `released ${id}${closeNote}` };
     const folder = baseName(throwaway.worktreePath);
     if (!ports.exists(throwaway.worktreePath)) {
-      await ports.prune(throwaway.projectPath);
-      return { output: `released ${id}; ${folder} was already removed${closeNote}` };
+      // The pane is closed and the throwaway forgotten by now: a prune that fails, say because the
+      // project folder is gone too, is said in the reply rather than failing a release that worked.
+      const pruneNote = await ports.prune(throwaway.projectPath).then(
+        () => '',
+        (error: unknown) => ` (git worktree prune failed: ${failureText(error)})`,
+      );
+      return { output: `released ${id}; ${folder} was already removed${pruneNote}${closeNote}` };
     }
     const reason = await ports.unfinished(throwaway.worktreePath);
     if (reason !== null) return { output: `released ${id}${closeNote}; kept ${throwaway.worktreePath}: ${reason}` };

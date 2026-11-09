@@ -56,4 +56,21 @@ describe('pane.release', () => {
     expect(await release.call({ id: '2:2' })).toEqual({ output: 'released 2:2; work-1 was already removed' });
     expect(asked).toEqual(['prune /p']);
   });
+
+  // The prune is cleanup after the release is done: a project folder gone too fails it, not the release.
+  it('still answers released when the prune fails', async () => {
+    const release = bind(paneRelease, {
+      busyWith: () => null,
+      mainsWorker: () => true,
+      close: async (id) => ({ output: `closed ${id}` }),
+      forget: () => ({ worktreePath: '/w/work-1', projectPath: '/p' }),
+      exists: () => false,
+      prune: async () => { throw new Error('spawn git ENOENT'); },
+      unfinished: async () => null,
+      removeWorktree: async () => undefined,
+    });
+    expect(await release.call({ id: '2:3' })).toEqual({
+      output: 'released 2:3; work-1 was already removed (git worktree prune failed: spawn git ENOENT)',
+    });
+  });
 });
