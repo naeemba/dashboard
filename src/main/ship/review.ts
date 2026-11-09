@@ -1,4 +1,4 @@
-import { addComment, CANCELLED_COLUMN, cardAt, cardById, isColumnNamed, REVIEW_COLUMN, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
+import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, REVIEW_COLUMN, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
@@ -29,7 +29,7 @@ export function intoReview(board: Board, cardId: string): Board | null {
 export function followedPullRequest(board: Board, cardId: string): number | null {
   const at = selectionOf(board, cardId);
   if (at === null || !isColumnNamed(board.columns[at.column].name, REVIEW_COLUMN)) return null;
-  return cardById(board, cardId)?.pullRequest ?? null;
+  return cardAt(board, at)?.pullRequest ?? null;
 }
 
 // Whether the card sits in Cancelled. One of the reasons awaitsReview answers false, exported so the

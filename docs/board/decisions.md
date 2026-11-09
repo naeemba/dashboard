@@ -234,12 +234,18 @@ a conflict on the board is resolved), goes through. An `mv` of a temporary file
 over a card, a script, or an editor in a pane still does: matching those means
 parsing the shell, and the guard is a guard rail, not a sandbox.
 
-**One decision, three doors.** `board-guard.ts` decides from the tool's name
-and input, with the test. Every Claude the app starts runs it as `node
-"$DASHBOARD_BOARD" guard`: a terminal worker from its `--settings`, a Claude
-screen (main's and a worker's, hosted or not) from the session's settings. A
-command hook rather than an SDK callback because a hosted screen's hooks are
-told to the app, never asked, so a callback could not refuse anything there.
+**One decision, one command, three doors.** `board-guard.ts` decides from the
+tool's name and input, with the test, and every door runs the same `node
+"$HOME/.claude/dashboard/board.js" guard`: a terminal worker from its
+`--settings`, a Claude screen (main's and a worker's, hosted or not) from the
+session's settings, and any other Claude from `~/.claude/settings.json`. One
+string, so a session that has it from two of those runs it once: Claude Code
+drops identical commands. A command hook rather than an SDK callback because a
+hosted screen's hooks are told to the app, never asked, so a callback could not
+refuse anything there. It names the board command as `$DASHBOARD_BOARD` inside a
+pane the app opened and as its own path outside one. What it costs: a node
+start per Edit, Write and shell command, and a dev run's sessions use the copy
+the installed app last put there.
 
 **A Claude the app did not start gets it from `~/.claude/settings.json`.** At
 each launch the installed app copies its board program to

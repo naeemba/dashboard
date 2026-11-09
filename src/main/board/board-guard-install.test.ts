@@ -1,7 +1,8 @@
 import { lstatSync, mkdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { GUARD_COMMAND, installBoardGuard, withBoardGuard } from './board-guard-install';
+import { installBoardGuard, withBoardGuard } from './board-guard-install';
+import { GUARD_COMMAND } from './board-guard';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 const user = {

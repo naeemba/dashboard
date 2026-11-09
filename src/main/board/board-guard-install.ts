@@ -1,8 +1,10 @@
 import { readFileSync, realpathSync, statSync } from 'node:fs';
+import { readText } from '../app/missing-file';
+import { isRecord } from '../../shared/app/is-record';
 import path from 'node:path';
 import { replaceFile, replaceFileIfChanged } from '../app/replace-file';
 import { failureLine } from '../command/failure-line';
-import { GUARDED_TOOLS } from './board-guard';
+import { GUARD_COMMAND, guardEntry } from './board-guard';
 
 // The board guard for a Claude the app did not start: a terminal of your own, another editor's
 // agent. At each launch the app copies this build's board program to ~/.claude/dashboard/board.js and,
@@ -17,19 +19,9 @@ import { GUARDED_TOOLS } from './board-guard';
 // not the shape Claude Code reads, is refused rather than repaired. Removing the entry is undone at
 // the next launch; that is what "only if missing" means here.
 
-export const GUARD_COMMAND = 'node "$HOME/.claude/dashboard/board.js" guard';
-
-function guardFolder(home: string): string {
-  return path.join(home, '.claude', 'dashboard');
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function runsGuard(entry: unknown): boolean {
-  return isObject(entry) && Array.isArray(entry.hooks)
-    && entry.hooks.some((hook) => isObject(hook) && hook.command === GUARD_COMMAND);
+  return isRecord(entry) && Array.isArray(entry.hooks)
+    && entry.hooks.some((hook) => isRecord(hook) && hook.command === GUARD_COMMAND);
 }
 
 // The settings file's text with the guard added: `text` null when there is nothing to write, or a
@@ -41,31 +33,21 @@ export function withBoardGuard(current: string | null): { text: string | null } 
   } catch {
     return { refused: 'it is not JSON' };
   }
-  if (!isObject(settings)) return { refused: 'it is not a JSON object' };
+  if (!isRecord(settings)) return { refused: 'it is not a JSON object' };
   const hooks = settings.hooks ?? {};
-  if (!isObject(hooks)) return { refused: 'its hooks are not an object' };
+  if (!isRecord(hooks)) return { refused: 'its hooks are not an object' };
   const preToolUse = hooks.PreToolUse ?? [];
   if (!Array.isArray(preToolUse)) return { refused: 'its PreToolUse hooks are not a list' };
   if (preToolUse.some(runsGuard)) return { text: null };
-  const entry = { matcher: GUARDED_TOOLS, hooks: [{ type: 'command', command: GUARD_COMMAND }] };
-  const next = { ...settings, hooks: { ...hooks, PreToolUse: [...preToolUse, entry] } };
+  const next = { ...settings, hooks: { ...hooks, PreToolUse: [...preToolUse, guardEntry(GUARD_COMMAND)] } };
   return { text: `${JSON.stringify(next, null, 2)}\n` };
-}
-
-function readIfThere(file: string): string | null {
-  try {
-    return readFileSync(file, 'utf8');
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
-  }
 }
 
 // `builtBoard` is the board-cli-entry.js this build carries. Answers the line to log when it could
 // not install, or null: a failure here costs the guard, never the launch.
 export function installBoardGuard(home: string, builtBoard: string): string | null {
   try {
-    const folder = guardFolder(home);
+    const folder = path.join(home, '.claude', 'dashboard');
     replaceFileIfChanged(path.join(folder, 'board.js'), readFileSync(builtBoard, 'utf8'));
     // Node reads a .js as ESM under a package.json saying "type": "module", and one in ~ would make
     // the CommonJS program fail (create-task-install.ts installs the same).
@@ -73,7 +55,7 @@ export function installBoardGuard(home: string, builtBoard: string): string | nu
     const linked = path.join(home, '.claude', 'settings.json');
     // Through the link: a settings.json linked into a dotfiles repo stays a link, and the entry lands
     // in the file it points at.
-    const current = readIfThere(linked);
+    const current = readText(linked);
     const file = current === null ? linked : realpathSync(linked);
     const next = withBoardGuard(current);
     if ('refused' in next) return `board guard not added to ${linked}: ${next.refused}`;

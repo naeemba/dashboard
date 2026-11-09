@@ -73,11 +73,11 @@ export type ReviewPorts = {
 //
 // Or, when the agent wrote none, the one card.follow found from the branch and put on the project's
 // board (followedPullRequest), so an agent has nothing to record but its pull request.
-function finishedIn(entry: WorktreeEntry): number | null {
+// `project` is the project's board as the caller already read it, or null.
+function finishedIn(entry: WorktreeEntry, project: Board | null): number | null {
   const board = peekBoard(entry.worktreePath);
   const written = board === null ? undefined : cardById(board, entry.cardId)?.pullRequest;
   if (written !== undefined) return written;
-  const project = peekBoard(entry.projectPath);
   return project === null ? null : followedPullRequest(project, entry.cardId);
 }
 
@@ -217,7 +217,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // pull request the review is about to merge. Nothing is marked, so the sweep picks the card up
     // the moment the agent stops working.
     if (ports.agentWorksIn(slot, entry.pane)) return;
-    const pullRequest = finishedIn(entry);
+    const board = projectBoard(entry.projectPath);
+    const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return;
     // A card that has already been through this. The number on the branch's board is written once and
     // stays written, so it goes on saying "finished" long after the review that read it merged the
@@ -225,7 +226,6 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // only thing that can. A card past Review is finished with its worktree too, so that is removed
     // here, once: the review pane cannot remove the folder it is standing in, and without this every
     // shipped card leaves one beside the project for good.
-    const board = projectBoard(entry.projectPath);
     // A cancelled card keeps its worktree until the worktree dialog removes it (board-decision-4), and
     // is never reviewed. Not marked, so moving it out of Cancelled lets the next tick pick it up.
     // ponytail: two board reads per cancelled worktree every tick; mark it if that ever shows.
@@ -316,14 +316,14 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const slot = ports.slotOf(entry.projectPath);
     if (slot === -1) return { refused: notOpenRefusal(entry.title) };
     if (ports.agentWorksIn(slot, entry.pane)) return { refused: `the agent on "${entry.title}" is still working` };
-    const pullRequest = finishedIn(entry);
+    const board = projectBoard(entry.projectPath);
+    const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };
     // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
     // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a
     // pull request that merged.
     // Null is refused as well, as sweepOne leaves it alone: a card the project's board does not show,
     // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
-    const board = projectBoard(entry.projectPath);
     const awaits = board === null ? null : awaitsReview(board, id);
     if (board !== null && isCancelled(board, id)) {
       return { refused: `"${entry.title}" is cancelled; move it out of Cancelled to review it` };

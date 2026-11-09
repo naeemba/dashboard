@@ -121,6 +121,11 @@ export function workerPrompt(prompt: string, dispatcherPath: string): string {
   return `${prompt}\n\nSendMessage to ${mainSessionName(dispatcherPath)} when done, saying what you did.`;
 }
 
+// What a worker runs under, started or resumed: auto mode, its hooks and the board instructions.
+function workerFlags(id: string): string[] {
+  return ['--permission-mode', 'auto', '--settings', workerSettings(id), '--append-system-prompt', BOARD_INSTRUCTIONS];
+}
+
 // The prompt is the argument, never typed into a session already running: what a live prompt box
 // does with pasted text depends on what it was doing when it arrived. `dispatcherPath` is the project
 // whose main dispatched it, which is another project's when the pane was claimed with --project: the
@@ -131,9 +136,7 @@ export function workerArguments(
   return claudeArguments(shellCommand, [
     '--session-id', session,
     '--name', workerSessionName(projectPath, index),
-    '--permission-mode', 'auto',
-    '--settings', workerSettings(id),
-    '--append-system-prompt', BOARD_INSTRUCTIONS,
+    ...workerFlags(id),
     workerPrompt(prompt, dispatcherPath),
   ]);
 }
@@ -141,7 +144,5 @@ export function workerArguments(
 // A worker main dispatched, resumed after a restart in pane `id`: the same flags it was started with, so
 // it still works unasked and its hooks report to the pane it is in now rather than the one it was in.
 export function workerResumeArguments(shellCommand: string, id: string, session: string): string[] {
-  return claudeArguments(shellCommand, [
-    '--resume', session, '--permission-mode', 'auto', '--settings', workerSettings(id), '--append-system-prompt', BOARD_INSTRUCTIONS,
-  ]);
+  return claudeArguments(shellCommand, ['--resume', session, ...workerFlags(id)]);
 }
