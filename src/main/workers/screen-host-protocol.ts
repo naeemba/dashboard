@@ -1,4 +1,4 @@
-import type { Options, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { Options, Query, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import path from 'node:path';
 import type { ScopedCommand } from '../processes/scope';
 
@@ -28,6 +28,11 @@ export function hasScreenHost(platform: string): boolean {
 // an older host ignores it: that session's Claude runs unscoped.
 export type HostedParams = { prompt: AsyncIterable<SDKUserMessage>; options: Options; scope?: ScopedCommand };
 
+// A session run in the host, as the app drives it. `unit` is the scope its Claude runs in as the host
+// answers it: one it kept started in its own, not the one asked for now. Null when it is unscoped or a
+// host from an older build kept it.
+export type HostedSession = { query: Query; unit: string | null };
+
 // The callbacks a session can ask the app for and wait on the answer.
 export type AskCallback = 'canUseTool' | 'onElicitation';
 
@@ -47,7 +52,8 @@ export type ToScreenHost =
   | { type: 'stop'; key: string };
 
 // A session the host is running. `busy` while a turn is under way: a prompt was taken and no result came.
-export type KeptSession = { key: string; busy: boolean };
+// `unit` is the scope its Claude started in, null for none; a host from an older build sends none.
+export type KeptSession = { key: string; busy: boolean; unit?: string | null };
 
 export type FromScreenHost =
   | { type: 'sessions'; sessions: KeptSession[] }
