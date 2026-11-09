@@ -35,6 +35,7 @@ import { unfinishedWork } from './workers/finished-work';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
+import { launchScopes } from './processes/launch-scopes';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
 import { readMarket } from './markets/markets-fetch';
@@ -191,6 +192,10 @@ const shellHost = paneHost({
   impostor: () => renewPipeToken(app.getPath('userData')),
   lost: failures.hold,
 });
+// The systemd scope each pane's shell starts in, once the check at launch has answered: docs/processes.
+// Every pane waits on it with the host (panesReady), so no pane starts unscoped for being early.
+const scopes = launchScopes((draft) => logStore.log(draft));
+const panesReady = Promise.all([shellHost.ready, scopes.ready]);
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.
 const boards = boardWatchers((projectPath) => {
@@ -208,7 +213,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
-  temporary: app.getPath('temp'), shellCommand: () => shellCommand, projectPath: (slot) => projectIn(slot)?.path,
+  temporary: app.getPath('temp'), shellCommand: () => shellCommand, scoped: scopes.scoped, projectPath: (slot) => projectIn(slot)?.path,
   send: sendToRenderer, keepsScreens: () => keepsScreenCopies(remoteHost !== null, remote.reachesWindow()),
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
@@ -515,7 +520,7 @@ try {
   mkdirSync(MANAGER_FOLDER, { recursive: true });
   chats.open(MANAGER_SLOT);
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
-  void Promise.all([shellHost.ready, workerScreens.host.ready]).then(() => {
+  void Promise.all([panesReady, workerScreens.host.ready]).then(() => {
     restorePanes(MANAGER_SLOT, MANAGER_FOLDER, null);
     startMainsWaitedOn();
   });
@@ -655,7 +660,7 @@ const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:upda
 
 // The project actions, and the picker's and the close key's door to them (project-actions.ts).
 const project = projectActions({
-  ready: async () => { await Promise.all([shellHost.ready, workerScreens.host.ready]); },
+  ready: async () => { await Promise.all([panesReady, workerScreens.host.ready]); },
   slotOf: slotOfProject,
   missingIn: (slot) => projects[slot]?.missing === true,
   folderExists: (folder) => !projectFromPath(folder).missing,
@@ -730,11 +735,12 @@ const workerAnswers = sessionRequests({
 table.handle('workers:read', () => workerAnswers.workers());
 const answerSession = projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers));
 // Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
-// kept would get a fresh shell over one it already has. project.open waits for the screen host as well.
+// kept would get a fresh shell over one it already has. They wait on the scope check too (panesReady),
+// so no pane starts unscoped for being early. project.open waits for the screen host as well.
 const sessions = listenForSessions(
   sessionSocket,
   __BUILD_VERSION__,
-  (request) => shellHost.ready.then(() => answerSession(request)),
+  (request) => panesReady.then(() => answerSession(request)),
   (error) => failures.hold(`The session command cannot reach this app: ${failureText(error)}`),
   // Where a terminal outside the panes finds it: app-address.ts.
   () => announceSocket(app.getPath('userData'), sessionSocket, failures.hold),

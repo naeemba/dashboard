@@ -90,6 +90,11 @@ app.
   command answer, key, sweep) calls the action in `src/main/actions/<noun>/`;
   a new kind of change adds one. `bypasses.test.ts` names the calls still made
   outside one: lower a count, never raise it. (actions-rule-1)
+- **A process that runs as long as a pane or an agent starts in its systemd
+  scope** (`src/main/processes/`). A file that names `node:child_process` or
+  `node-pty` is a row in `process-starts.test.ts` with its reason; delete rows,
+  never add one without the reason. A slice unit that is there is never
+  written over. (processes-rule-1, processes-rule-2)
 - **IPC channels are `<noun>:<verb>`**: `link:open`, `board:read`,
   `pty:resize`. (app-rule-1)
 - **Imports stay on their process's side.** `src/renderer/` never imports

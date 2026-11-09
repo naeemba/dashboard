@@ -91,6 +91,11 @@ Neither door holds any of the logic; each only asks.
   running keeps its shell. The launch tidy (`tidySettingsFile`,
   `settings-store.ts`) still rewrites the file's own lines outside it.
 
+- **processes.install-slices** (launch, on Linux once systemd answers): writes
+  `agents.slice` and `panes.slice` into the user's systemd folder where missing,
+  never over one that is there, and reloads the manager only when it wrote one
+  ([processes](../processes/README.md)).
+
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
 [`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls and wrappers

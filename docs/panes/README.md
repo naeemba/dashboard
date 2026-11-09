@@ -109,6 +109,11 @@ an agent indenting the rest, is read whole from either row as long as the cut
 falls after its first slash; one that only reaches the edge the pane had when it
 was printed can take the first word of an indented row under it.
 
+On Linux each pane's shell runs in a systemd scope of its own, an agent's under
+agents.slice with a memory cap and every other under panes.slice, so one
+agent's test run cannot swap the desktop; [processes](../processes/README.md)
+says how, and what the pane keeps of it.
+
 ## Files
 
 Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
@@ -158,6 +163,8 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   until they exit or the machine restarts.
 - An app whose protocol version differs from the running host's starts a host of
   its own; the old host's shells run on unseen.
+- A host started by a build before systemd scopes runs every pane unscoped
+  until it exits (processes README).
 
 - A job put in the background is invisible to the busy check; `runsAProgram`
   in `pane-reading.ts` says why.

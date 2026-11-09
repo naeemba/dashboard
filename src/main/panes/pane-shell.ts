@@ -25,7 +25,8 @@ export type PaneShell = {
 // The one spawn of a pane's pty, in the pane host and in the app when there is no host, so a shell
 // started either way sees the same terminal.
 export function spawnShell(request: SpawnRequest): PaneShell {
-  return pty.spawn(request.file, request.args, {
+  const { file, args } = request.scope ?? request;
+  return pty.spawn(file, args, {
     name: 'xterm-256color', cols: request.cols, rows: request.rows, cwd: request.cwd, env: request.env,
   });
 }

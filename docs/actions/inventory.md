@@ -121,6 +121,12 @@ settings, and stays.
 | restart | update.restart, `actions/update/restart.ts` | IPC `update:restart` | no |
 | install | update.install, `actions/update/install.ts`; the swap and relaunch pinned in `bypasses.test.ts` | the quit question's answer (`app-window.ts`) | no |
 
+### processes
+
+| Verb | Where | Doors | Bypass |
+|---|---|---|---|
+| install-slices | processes.install-slices, `actions/processes/install-slices.ts`, bound in `processes/launch-scopes.ts` | launch, once systemd answers | no |
+
 ## The action set
 
 One row per noun.verb, and what it decides that its callers do not.
@@ -147,6 +153,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | update.check | whether the release is newer, whether this machine can install it (refused if not, never offered), leaving one being installed alone; the settings row gates only the schedule |
 | update.download | that there is a release to download; a failure kept on the state for the dialog |
 | update.restart | that a download is staged and is the release; the update armed and the quit asked for |
+| processes.install-slices | which slice units are missing, never one that is there; a reload only when one was written |
 | update.install | Quit swaps the armed update in and relaunches; any other answer forgets it; no relaunch when the swap fails |
 
 ## The plan
