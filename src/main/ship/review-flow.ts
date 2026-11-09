@@ -71,14 +71,17 @@ export type ReviewPorts = {
 // per in-flight worktree on a five-second timer for the whole life of the app, to spare a refusal
 // that costs nothing when nothing is stuck. swapWorktree is where the window is handled instead.
 //
-// Or, when the agent wrote none, the one card.follow found from the branch and put on the project's
-// board (followedPullRequest), so an agent has nothing to record but its pull request.
+// The one card.follow found from the branch and put on the project's board (followedPullRequest) comes
+// first, so an agent has nothing to record but its pull request. First, because a number on the
+// worktree's board can be an earlier pull request's: card.follow keeps it on a card it sends back to
+// Doing, and a re-ship cuts the worktree from a base that carries it. Reviewing that one would run
+// `/pr-loop` at a closed pull request and leave the new one unreviewed.
 // `project` is the project's board as the caller already read it, or null.
 function finishedIn(entry: WorktreeEntry, project: Board | null): number | null {
+  const followed = project === null ? null : followedPullRequest(project, entry.cardId);
+  if (followed !== null) return followed;
   const board = peekBoard(entry.worktreePath);
-  const written = board === null ? undefined : cardById(board, entry.cardId)?.pullRequest;
-  if (written !== undefined) return written;
-  return project === null ? null : followedPullRequest(project, entry.cardId);
+  return board === null ? null : cardById(board, entry.cardId)?.pullRequest ?? null;
 }
 
 // The project's board, or null when it cannot be read at all. Null is not "no card here": a board the
@@ -205,7 +208,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // One card, start to finish. Every guard in it runs before the first await, and so does the mark,
   // so the whole list can be walked at once, and a run can start while the last one is still out,
   // without two of them starting the same card.
-  async function sweepOne(entry: WorktreeEntry): Promise<void> {
+  // `boardOf` is the run's one read of each project's board, shared by every worktree in it.
+  async function sweepOne(entry: WorktreeEntry, boardOf: (projectPath: string) => Board | null): Promise<void> {
     if (reviewed.has(entry.cardId)) return;
     // Panes belong to an open project. A project closed right now is not a refusal: nothing is marked,
     // and the sweep finds the card again the moment it is opened.
@@ -217,7 +221,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // pull request the review is about to merge. Nothing is marked, so the sweep picks the card up
     // the moment the agent stops working.
     if (ports.agentWorksIn(slot, entry.pane)) return;
-    const board = projectBoard(entry.projectPath);
+    const board = boardOf(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return;
     // A card that has already been through this. The number on the branch's board is written once and
@@ -228,7 +232,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // shipped card leaves one beside the project for good.
     // A cancelled card keeps its worktree until the worktree dialog removes it (board-decision-4), and
     // is never reviewed. Not marked, so moving it out of Cancelled lets the next tick pick it up.
-    // ponytail: two board reads per cancelled worktree every tick; mark it if that ever shows.
+    // ponytail: a board read per project and one per cancelled worktree every tick; mark it if that ever shows.
     if (board !== null && isCancelled(board, entry.cardId)) return;
     const awaits = board === null ? null : awaitsReview(board, entry.cardId);
     if (awaits === false) {
@@ -363,8 +367,16 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // in different projects, and awaiting each in turn would leave the second sitting on `shipped` for
   // however long the first one's git takes, with nothing on screen saying why. Two in the *same*
   // project still go one at a time: that is what the queue is for.
+  //
+  // Each project's board is read once per run, on the first worktree that gets far enough to ask: the
+  // cards each look only at themselves, and every write below reads the board afresh.
   async function run(): Promise<void> {
-    await Promise.all(ports.worktrees().map((entry) => sweepOne(entry)));
+    const boards = new Map<string, Board | null>();
+    const boardOf = (projectPath: string): Board | null => {
+      if (!boards.has(projectPath)) boards.set(projectPath, projectBoard(projectPath));
+      return boards.get(projectPath) ?? null;
+    };
+    await Promise.all(ports.worktrees().map((entry) => sweepOne(entry, boardOf)));
   }
 
   function forget(cardId: string): void {

@@ -109,6 +109,17 @@ describe('reviewSweep', () => {
     expect(log.started[0].prompt).toContain('/pr-loop 12');
   });
 
+  // card.follow's number on the project's board, with the card in Review: an agent that recorded
+  // nothing is reviewed, and one whose worktree carries an earlier pull request's number is reviewed
+  // on the new one.
+  it.each([[null], [12]])('reviews the pull request card.follow found, worktree number %s', async (written) => {
+    const { entry, projectPath } = flight(written);
+    writeBoard(projectPath, intoReview(boardWithCard(15), CARD) as Board);
+    const { ports: made, log } = ports(entry);
+    await sweepWith(made).run();
+    expect(log.started[0].prompt).toContain('/pr-loop 15');
+  });
+
   // The pull request number is the whole signal. Until it is there the agent is still working, and a
   // sweep that took its worktree away would take the work with it.
   it('leaves a card whose agent has not opened a pull request alone', async () => {
