@@ -102,7 +102,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   prompt.placeholder = PLACEHOLDER;
   prompt.rows = 3;
   prompt.dir = 'auto';
-  const attachments = createAttachments(element, prompt, bridge, options);
+  const attachments = createAttachments(element, prompt, bridge, options, () => focus());
   const menu = createCommandMenu();
   const activity = document.createElement('div');
   activity.className = 'chat-working';
@@ -646,8 +646,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       }
       // Escape closes an open command list first, as in Claude Code. Otherwise always sent: this screen
       // may not know of a turn another one started, and interrupting an idle session does nothing.
-      // Escape on a selected thumbnail goes back to the prompt.
-      if (command === 'interrupt' && attachments.selecting()) prompt.focus();
+      // Escape on a selected thumbnail goes back to the screen, the ask first.
+      if (command === 'interrupt' && attachments.selecting()) focus();
       else if (command === 'interrupt' && menu.open()) menu.update('', []);
       else if (command === 'interrupt') bridge.chatInterrupt(slot);
       if (command === 'attachments' && !attachments.select()) options.onNotice('No image is attached to the prompt.');

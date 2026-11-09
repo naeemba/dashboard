@@ -45,7 +45,8 @@ off. From the keyboard, the attachments key (Alt+D) selects the last thumbnail:
 the arrows walk them, Delete or Backspace takes the selected one off (Delete
 keeps the place, Backspace steps back, as a caret does;
 `chat-attachment-keys.ts` decides), Enter shows it full size, and Escape goes
-back to the box, as it does once the last one is gone. A click on an image, or the image key, shows
+back to the box, as it does once the last one is gone (to a waiting permission
+ask instead, when one is open). A click on an image, or the image key, shows
 it full size: the selected entry's first one, or with nothing selected the first
 one attached. Write @ and a path to point Claude at a file; @ opens a list of
 the project's files that narrows as you type, and Tab or Enter puts the one

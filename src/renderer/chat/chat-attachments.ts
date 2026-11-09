@@ -2,6 +2,7 @@ import type { DashboardBridge } from '../../shared/app/bridge';
 import type { Say } from './chat-screen-commands';
 import { droppedFiles, fileMention, mentionInsertion } from '../../shared/chat/chat-commands';
 import { IMAGE_LIMIT_SHOWN, imageDataUrl, imagesFit, isImageType, type ChatImage } from '../../shared/chat/chat-transcript';
+import { iconOnlyButton } from '../app/icons';
 import { imageOverlay } from '../app/overlay';
 import { isModified } from '../keys/shortcuts';
 import { attachmentKey } from './chat-attachment-keys';
@@ -13,9 +14,10 @@ import { attachmentKey } from './chat-attachment-keys';
 //
 // Each thumbnail has an x that takes it off. From the keyboard, the attachments key puts the selection
 // on the last thumbnail; chat-attachment-keys.ts says what the keys do there, Enter shows the selected
-// one full size, and Escape (the screen's interrupt key, chat-view.ts) goes back to the prompt.
+// one full size, and Escape (the screen's interrupt key, chat-view.ts) goes back to the screen: `back`, which
+// prefers a waiting permission ask over the prompt.
 
-const HOW_TO_REMOVE = 'The x, or Alt+D then Delete, takes it off; Backspace in an empty prompt takes off the last';
+const HOW_TO_REMOVE = 'The x, or the attachments key then Delete, takes it off; Backspace in an empty prompt takes off the last';
 
 export type Attachments = {
   element: HTMLElement;
@@ -31,6 +33,7 @@ export type Attachments = {
 
 export function createAttachments(
   screen: HTMLElement, prompt: HTMLTextAreaElement, bridge: DashboardBridge, say: Pick<Say, 'onNotice'>,
+  back: () => void,
 ): Attachments {
   const element = document.createElement('div');
   element.className = 'chat-attached';
@@ -45,21 +48,19 @@ export function createAttachments(
       const image = document.createElement('img');
       image.src = imageDataUrl(picture);
       image.alt = `image ${index + 1}`;
-      const remove = document.createElement('button');
-      remove.className = 'chat-attached-remove';
+      // The click is delegated below.
+      const remove = iconOnlyButton('chat-attached-remove', 'reset', `Remove image ${index + 1}`, () => {});
       remove.tabIndex = -1;
-      remove.textContent = '×';
-      remove.setAttribute('aria-label', `Remove image ${index + 1}`);
       thumbnail.append(image, remove);
       return thumbnail;
     }));
   }
 
-  // null is the prompt.
+  // null is back to the screen.
   function selectAt(index: number | null): void {
     const thumbnail = index === null ? null : element.children[index];
     if (thumbnail instanceof HTMLElement) thumbnail.focus();
-    else prompt.focus();
+    else back();
   }
 
   function removeAt(index: number, select: number | null): void {
