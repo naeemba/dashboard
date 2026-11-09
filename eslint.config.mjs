@@ -30,14 +30,20 @@ const folderRegex = (folders) => `(^|${slash})(${folders.join('|')})${slash}`;
 // it never value-imports. `no-restricted-imports` sees only static imports, so `import()` and an
 // `import('...')` type get the same lines through `no-restricted-syntax`.
 //
-// The same rule refuses `String(error)` (errors-rule-1): an Error object printed that way reads
-// `[object Object]` or a bare `Error` on the status bar, so a message for a person goes through
-// `failureText`. A later block's `no-restricted-syntax` replaces this one's, so the two failure files
+// The same rule refuses `String(error)` and `${error}` (errors-rule-1, which says why). It is a name
+// match: only a value named `error` or `thrown` is caught. A later block's `no-restricted-syntax` replaces this one's, so the two failure files
 // that format errors themselves take `side` again with `formatsErrors`, keeping their boundaries.
-const stringError = {
-  selector: "CallExpression[callee.name='String'][arguments.length=1][arguments.0.name='error']",
-  message: 'Print an error with failureText from src/shared/errors/failure.ts, not String(error).',
-};
+const errorName = '/^(error|thrown)$/';
+const stringError = [
+  {
+    selector: `CallExpression[callee.name='String'][arguments.length=1][arguments.0.name=${errorName}]`,
+    message: 'Print an error with failureText from src/shared/errors/failure.ts, not String(error).',
+  },
+  {
+    selector: `TemplateLiteral > Identifier.expressions[name=${errorName}]`,
+    message: 'Print an error with failureText from src/shared/errors/failure.ts, not ${error}.',
+  },
+];
 const side = ({ folders, folderMessage, packages, packageMessage: message, builtins = [], formatsErrors = false }) => ({
   '@typescript-eslint/no-restricted-imports': ['error', {
     patterns: [
@@ -49,7 +55,7 @@ const side = ({ folders, folderMessage, packages, packageMessage: message, built
   'no-restricted-syntax': ['error',
     { selector: `:matches(ImportExpression, TSImportType)[source.value=/${folderRegex(folders)}/]`, message: folderMessage },
     { selector: `ImportExpression[source.value=/${packageRegex(packages, builtins)}/]`, message },
-    ...(formatsErrors ? [] : [stringError]),
+    ...(formatsErrors ? [] : stringError),
   ],
 });
 

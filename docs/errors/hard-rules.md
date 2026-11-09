@@ -34,12 +34,15 @@ second copy no test can catch — the code stays right while the sentence goes
 stale. Say what the wiring does; let the module say what the rule is.
 
 An error put in front of a person goes through `failureText`, never
-`String(error)`: an Error object printed that way reads `[object Object]` or a
-bare `Error` where the reason should be. `pnpm exec eslint .` refuses
-`String(error)` everywhere in `src/` but the two files that format errors
+`String(error)`: that prints `Error: boom` with the prefix, an empty or
+`undefined` message where `failureText` says `no reason given`, and the read
+never reaches `whenFailureRead`, so the bar's log line loses the Error and its
+stack (errors-decision-4). `pnpm exec eslint .` refuses `String(error)` and
+`${error}` everywhere in `src/` but the two files that format errors
 themselves: `failure.ts`, and `src/main/command/failure-line.ts`, the command
 line's own formatter, which prints a stack on purpose. `eslint.config.test.ts`
-pins it. Never an `eslint-disable` for it; a message that needs something
+pins it. The lint is a name match: it catches a value named `error` or
+`thrown`, nothing else, so a clean lint is not proof the rule held. Never an `eslint-disable` for it; a message that needs something
 `failureText` does not give is a change to `failureText`.
 
 ## errors-rule-2: An IPC handler answers a refusal, it does not throw it

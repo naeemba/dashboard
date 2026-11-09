@@ -84,6 +84,13 @@ describe('String(error)', () => {
     expect(await boundaryErrors(filePath, source)).toHaveLength(1);
   });
 
+  it.each([
+    'export const say = (thrown: unknown): string => String(thrown);',
+    'export const say = (error: unknown): string => `failed: ${error}`;',
+  ])('fails on %s', async (other) => {
+    expect(await boundaryErrors('src/renderer/probe.ts', other)).toHaveLength(1);
+  });
+
   it.each(['src/shared/errors/failure.ts', 'src/main/command/failure-line.ts'])('allows it in %s', async (filePath) => {
     expect(await boundaryErrors(filePath, source)).toEqual([]);
   });
@@ -91,6 +98,8 @@ describe('String(error)', () => {
   it.each([
     ['src/shared/errors/failure.ts', "import { x } from '../../main/app/projects';"],
     ['src/main/command/failure-line.ts', "import { x } from '../../renderer/page';"],
+    ['src/shared/errors/failure.ts', "export const projects = await import('../../main/app/projects');"],
+    ['src/main/command/failure-line.ts', "export const page = await import('../../renderer/page');"],
   ])('keeps the process boundaries in %s', async (filePath, imports) => {
     expect(await boundaryErrors(filePath, imports)).toHaveLength(1);
   });
