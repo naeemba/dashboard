@@ -60,5 +60,35 @@ grouped at the foot of its stylesheet, where it wins source order over a `.paren
 `.view-nvim`, `.view-notes`, `.view-manager`) are exempt, in `HIDDEN_BY_VISIBILITY`:
 `.view[hidden], .page[hidden]` hide them with visibility, and a `display: none` would make
 their panes measure zero. A row that stops setting `display` or gains a `[hidden]` rule fails
-the test, and a missing rule on a `.view-` or `.page-` class points at that list. Vitest has no DOM here, so the test reads the CSS
-rather than an element.
+the test, and a missing rule on a `.view-` or `.page-` class points at that list. Vitest has no DOM
+here, so the test reads
+the CSS rather than an element.
+
+## conventions-rule-4: 600 code lines a file
+
+**`max-lines` in `eslint.config.mjs` refuses a file over 600 lines of code.**
+Comments and blank lines do not count (`skipComments`, `skipBlankLines`), so a
+file is never split by deleting or moving its explanation: 260 lines of logic
+under 330 lines of reasoning passes. Over the limit means the file does more
+than one job; split it along that seam, not into `foo-part2.ts`.
+
+The exceptions are generated files, lockfiles, vendored code and data-only files
+(fixtures, long literal tables). Each one is a `files` override beside the rule
+in `eslint.config.mjs` with its reason in a comment, and a file left over the
+limit on purpose is also a decision in its feature's `decisions.md`. There are
+none yet. An override list that grows without reasons is the rule gone again:
+a 900-line `renderer.ts` passes `eslint .` and nobody notices.
+
+`eslint.config.test.ts` pins it: 601 code lines fail, 600 under a page of
+comments pass. Nothing stops an inline `eslint-disable max-lines`; never write
+one.
+
+eslint reads only `.ts` and `.mjs`, so `stylesheet-size.test.ts` holds the
+stylesheets: every `src/**/*.css` at or under 600 lines once `/* … */` and blank
+lines are gone. Without it `chat.css`, then at 594, would have crossed the limit
+with both eslint and CI green; the `[hidden]` rules did cross it, and split its
+foot row into `chat-foot.css`.
+
+What it looked like before: the limit lived only in the global instructions, so
+a file grew one card at a time with nothing refusing it. `board-view.ts` reached
+599 code lines and `renderer.ts` 587.

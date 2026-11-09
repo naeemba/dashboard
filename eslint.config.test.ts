@@ -75,6 +75,23 @@ describe('test folders', () => {
   });
 });
 
+// Pins conventions-rule-4: 600 code lines a file, and comments and blank lines are free.
+describe('file size', () => {
+  const sizeErrors = async (source: string): Promise<string[]> => {
+    const [result] = await eslint.lintText(source, { filePath: 'src/main/probe.ts' });
+    return result.messages.filter((message) => message.ruleId === 'max-lines').map((message) => message.ruleId ?? '');
+  };
+  const code = (lines: number): string => Array.from({ length: lines }, (_, index) => `export const line${index} = ${index};`).join('\n');
+
+  it('fails a file of 601 code lines', async () => {
+    expect(await sizeErrors(code(601))).toEqual(['max-lines']);
+  });
+
+  it('allows 600 code lines under any amount of explanation', async () => {
+    expect(await sizeErrors(`${'// why\n\n'.repeat(300)}/*\n${'reason\n'.repeat(100)}*/\n${code(600)}`)).toEqual([]);
+  });
+});
+
 // Pins errors-rule-1: an error shown to a person goes through failureText, never String(error).
 // The probes import nothing, so the one `no-restricted-syntax` they can raise is this one.
 describe('String(error)', () => {
