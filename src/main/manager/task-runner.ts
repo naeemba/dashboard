@@ -1,5 +1,5 @@
 import type { Channels } from '../app/channels';
-import path from 'node:path';
+import { projectSlug } from '../workers/dispatch';
 import { spawnScoped } from '../processes/spawn-scoped';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import { tailLines } from '../../shared/manager/manager';
@@ -93,7 +93,7 @@ function taskRunner(ports: TaskPorts): TaskRunner {
       // stdin is closed rather than left as a pipe nobody ever writes to. A command that asks a question
       // would block on an answer that cannot arrive, leaving the row on `running` with nothing on screen
       // saying a question was asked; closed, the same command fails at once and the row shows what it said.
-      const scoped = ports.scoped({ kind: 'task', id: path.basename(projectPath), file: shell, args: taskArguments(shell, command) });
+      const scoped = ports.scoped({ kind: 'task', id: projectSlug(projectPath), file: shell, args: taskArguments(shell, command) });
       // systemd-run --scope runs the shell as itself, so the process group killTask stops is the task's.
       const child = spawnScoped(scoped, {
         cwd: projectPath, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'],

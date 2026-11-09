@@ -1,7 +1,7 @@
-import type { Options, Query, SpawnedProcess, SpawnOptions } from '@anthropic-ai/claude-agent-sdk';
+import type { Options, Query, SpawnedProcess } from '@anthropic-ai/claude-agent-sdk';
 import { unpacked } from '../app/unpacked';
 import { spawnScoped } from '../processes/spawn-scoped';
-import type { ScopedCommand } from '../processes/scope';
+import { retargeted, type ScopedCommand } from '../processes/scope';
 import type { HostedParams } from '../workers/screen-host-protocol';
 
 // The Claude process the Agent SDK starts for a session: which binary, and the systemd scope it runs
@@ -26,20 +26,15 @@ export function claudeExecutable(): string {
   return unpacked(found);
 }
 
-// What the SDK asked to run, put in the scope: systemd-run's own options up to its `--`, then the
-// SDK's command as it chose it (the CLI itself, or node and the CLI's script) and every flag it built.
-export function claudeInScope(scope: ScopedCommand, started: Pick<SpawnOptions, 'command' | 'args'>): { file: string; args: string[] } {
-  return { file: scope.file, args: [...scope.args.slice(0, scope.args.indexOf('--') + 1), started.command, ...started.args] };
-}
-
-// The session's options with the SDK's spawn routed through the scope. With no scope (unavailable,
+// The session's options with the SDK's spawn routed through the scope: the SDK's command as it chose
+// it (the CLI itself, or node and the CLI's script) and every flag it built. With no scope (unavailable,
 // not Linux, a caller from before scopes) the options are left alone and the SDK spawns as it always
 // did. stderr is dropped rather than piped: nothing reads it, and a full pipe would stall the CLI.
 export function withScope(options: Options, scope: ScopedCommand | undefined): Options {
   if (scope?.unit == null) return options;
   return {
     ...options,
-    spawnClaudeCodeProcess: (started) => spawnScoped(claudeInScope(scope, started), {
+    spawnClaudeCodeProcess: (started) => spawnScoped(retargeted(scope, started.command, started.args), {
       cwd: started.cwd, env: started.env, signal: started.signal, stdio: ['pipe', 'pipe', 'ignore'],
     }) as SpawnedProcess,
   };
