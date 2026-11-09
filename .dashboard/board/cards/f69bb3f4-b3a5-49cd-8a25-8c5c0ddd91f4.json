@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:55.203Z",
-  "updatedAt": "2026-11-09T16:02:39.479Z",
+  "updatedAt": "2026-11-09T16:09:45.358Z",
   "branch": "work-board-card-f69bb3f4-b3a5-49cd-8a25-8c5",
   "pullRequest": 276,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-09T16:09:45.358Z",
+      "body": "Shipped in #276: src/main/skills/adopt-docs-skill.test.ts fails pnpm test when the CLAUDE.md docs rule or the docs/README.md preamble is no longer in ADOPT_DOCS_SKILL. The CLAUDE.md line stays for audit card 13."
+    }
+  ],
+  "column": "Done",
+  "order": 215
 }
