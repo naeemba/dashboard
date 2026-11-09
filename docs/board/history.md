@@ -17,5 +17,5 @@ One line per merged change: date, pull request, why.
 - 2026-11-02 #171 — An arrow key moves the highlight instead of rebuilding the board
 - 2026-11-08 #245 — A Cancelled column: the delete key keeps a card that will not be done (board-decision-4)
 - 2026-11-09 #261 — A card's column follows its pull request through gh, and the app writes the line naming it (board-decision-6)
-- 2026-11-09 #TBD — A card shows its pull request's checks and review as one glyph (board-decision-7)
+- 2026-11-09 #266 — A card shows its pull request's checks and review as one glyph (board-decision-7)
 - 2026-11-09 #254 — Every write to a git-tracked board lands on origin's main, and the checkout is brought up to it (board-decision-5)
