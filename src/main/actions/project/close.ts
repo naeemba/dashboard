@@ -61,7 +61,7 @@ export const projectClose = action<ProjectClosePorts, ProjectCloseInput, { outpu
     ports.close(slot);
     const stops = await Promise.allSettled(units.map((unit) => ports.stopScope(unit)));
     const notStopped = stops.flatMap((stop, at) => (stop.status === 'rejected' ? [notStoppedText(units[at], stop.reason)] : []));
-    for (const message of notStopped) ports.log({ level: 'warn', kind: 'project', action: 'project.close', message });
+    for (const message of notStopped) ports.log({ level: 'warn', kind: 'project', action: 'project.close', message, context: { slot } });
     return { output: [`closed ${name}`, ...notStopped].join('; ') };
   },
 });

@@ -57,7 +57,7 @@ describe('project.close', () => {
     expect(ports.close).toHaveBeenCalledWith(4);
     expect(ports.stopScope).toHaveBeenCalledWith('pane-web-2-b.scope');
     expect(ports.log).toHaveBeenCalledExactlyOnceWith({
-      level: 'warn', kind: 'project', action: 'project.close', message: 'pane-web-1-a.scope was not stopped: timed out',
+      level: 'warn', kind: 'project', action: 'project.close', message: 'pane-web-1-a.scope was not stopped: timed out', context: { slot: 4 },
     });
   });
 

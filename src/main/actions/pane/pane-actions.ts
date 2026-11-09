@@ -49,8 +49,11 @@ export function paneActions(main: PaneActionsMain): PaneActions {
     main.shells.delete(id);
     main.spawn(id);
     if (replaced === undefined || replaced === main.scopeOf(id)) return;
+    const { slot, index } = paneFromId(id);
     main.stopScope(replaced).catch((error: unknown) => {
-      main.log({ level: 'warn', kind: 'pane', action: 'pane.dispatch', message: notStoppedText(replaced, error) });
+      main.log({
+        level: 'warn', kind: 'pane', action: 'pane.dispatch', message: notStoppedText(replaced, error), context: { slot, pane: index },
+      });
     });
   }
   const plainShell = (id: string, directory: string) => shellIn(id, directory, []);
