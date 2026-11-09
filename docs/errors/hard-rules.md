@@ -1,6 +1,6 @@
 # Errors: hard rules
 
-The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
+The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what breaking it looked like.
 
 ## errors-rule-1: A refusal is explained where it is decided
 

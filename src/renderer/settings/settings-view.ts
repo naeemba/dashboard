@@ -24,7 +24,7 @@ export function openSettings(
     let rows = settingsRows(settings);
     let selected = stepSelection(rows, 0, 0);
     // The row waiting for a keystroke, or null. While a row is armed this screen reads modified keys,
-    // which every other dialog refuses to do — reading them is the whole job. CLAUDE.md names it.
+    // which every other dialog refuses to do — reading them is the whole job. keys-rule-1 in docs/keys/hard-rules.md names it.
     let armed: string | null = null;
     let message = '';
     let editor: HTMLInputElement | null = null;

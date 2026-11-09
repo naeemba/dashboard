@@ -139,7 +139,7 @@ or CI step holds it and the entry names that check:
 
     # <Feature>: hard rules
 
-    The one-line rule is in \`CLAUDE.md\`; this is what breaking it looked like.
+    The one-line rule is in \`CLAUDE.md\`, or the entry names the check that holds it; this is what breaking it looked like.
 
     ## <feature>-rule-1: <the rule in a few words>
 

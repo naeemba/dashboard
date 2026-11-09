@@ -29,9 +29,9 @@ app.
 Rules a test, lint or CI step holds are not repeated here (workflow-decision-8).
 
 - **Never quit, kill, restart or replace the running Dashboard app** unless
-  asked in the same conversation, through a script of your own too; the hook
-  reads only the command line. After a change: run the checks, say the installed app needs a rebuild and restart,
-  stop. (workflow-rule-1)
+  asked in the same conversation, including through a script of your own: the
+  hook reads only the command line. After a change: run the checks, say the
+  installed app needs a rebuild and restart, stop. (workflow-rule-1)
 - **Keyboard first.** Every action is reachable without the mouse; a new choice
   is a row the arrow keys walk, not a button. A click on a row moves the
   selection there, then does what Enter does there. A mouse gesture on one of
@@ -72,4 +72,5 @@ Rules a test, lint or CI step holds are not repeated here (workflow-decision-8).
   outside one: lower a count, never raise it. (actions-rule-1)
 - **Never an `eslint-disable`** for the import boundaries between processes (a
   type both sides name moves to `src/shared/`; app-rule-2) or for `mkdtemp` in a
-  test (use `temporaryFolder()`; workflow-rule-4).
+  test (use `temporaryFolder()`; workflow-rule-4), or for `max-lines` (split the
+  file; conventions-rule-4).

@@ -1,6 +1,6 @@
 # Actions: hard rules
 
-The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
+The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what breaking it looked like.
 
 ## actions-rule-1: A caller that changes state calls an action
 

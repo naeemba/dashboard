@@ -190,7 +190,7 @@ project table (`claude-md-audit.md`) names each rule and its check. workflow-rul
 hook cannot read: a script of your own.
 
 - **A rule eslint carries keeps one line**: never an `eslint-disable` for it (app-rule-2,
-  workflow-rule-4, errors-rule-1's `String(error)`), for the reason in the audit's rows.
+  workflow-rule-4, conventions-rule-4's `max-lines`, errors-rule-1's `String(error)`), for the reason in the audit's rows.
 - **The entry stays in `hard-rules.md` under its id**, naming its check, and `docs/README.md` says
   a hard rule may be held there instead of in `CLAUDE.md`. Code, tests and history lines cite the
   ids; moving each entry to `decisions.md` under a new id would have broken every citation for a
