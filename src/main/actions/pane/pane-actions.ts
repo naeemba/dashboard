@@ -1,4 +1,5 @@
 import { agentStartEntry, type LogDraft } from '../../../shared/app/log-entry';
+import { failureText } from '../../../shared/errors/failure';
 import type { PaneCommand } from '../../../shared/panes/pane-reading';
 import { paneFromId } from '../../../shared/panes/terminals';
 import { bind, type BoundAction } from '../action';
@@ -40,11 +41,18 @@ export type PaneActions = {
 export function paneActions(main: PaneActionsMain): PaneActions {
   // The pane's shell started over in the folder, running `args`. The pane keeps its id; the old shell
   // is killed first, since two processes writing to one id is what retargeting a live pane would leave.
+  // Its scope is stopped once the new shell has one of its own (each start is named afresh), so what
+  // the old shell detached ends with it, as a close ends it.
   function shellIn(id: string, directory: string, args: string[]): void {
+    const replaced = main.scopeOf(id);
     main.setPaneCommand(id, { args, directory });
     main.shells.get(id)?.kill();
     main.shells.delete(id);
     main.spawn(id);
+    if (replaced === undefined || replaced === main.scopeOf(id)) return;
+    main.stopScope(replaced).catch((error: unknown) => {
+      main.log({ level: 'warn', kind: 'pane', action: 'pane.dispatch', message: `${replaced} was not stopped: ${failureText(error)}` });
+    });
   }
   const plainShell = (id: string, directory: string) => shellIn(id, directory, []);
 
