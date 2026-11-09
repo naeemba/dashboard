@@ -1,5 +1,6 @@
 import net from 'node:net';
-import { hostProof, line, lineReader } from './pane-host-protocol';
+import { canConnect } from '../app/can-connect';
+import { hostProof, line, lineReader, prepareHostSocket } from './pane-host-protocol';
 
 // The socket code the pane host and the screen host share: an app reaching a host, starting it when
 // nothing answers, and a host taking one app at a time. Kept apart from pane-host-server.ts and
@@ -19,6 +20,17 @@ export async function reachHost(socketPath: string, launch: () => void, tries = 
     socket = await attempt(socketPath);
   }
   return socket;
+}
+
+// Whether a host starting may listen on the socket. Not while another host answers on it: taking the
+// socket from a live one leaves what it runs (shells, worker screens' sessions) where no app can reach
+// it, and the next start of each runs a second copy. `before` runs once the socket is this host's to
+// take, before it is.
+export async function claimHostSocket(platform: string, socket: string, before = (): void => undefined): Promise<boolean> {
+  if (await canConnect(socket)) return false;
+  before();
+  prepareHostSocket(platform, socket);
+  return true;
 }
 
 export function attempt(socketPath: string): Promise<net.Socket | null> {
@@ -47,7 +59,8 @@ export function acceptApps<To extends { type: string }>(server: AppServer<To>, t
       if (message.type !== 'hello') return void socket.destroy();
       // One app at a time. An app that went has had its end closed by the kernel, so a second one
       // arriving while one is connected is a second Dashboard on the same user data: it is turned away
-      // and runs its own, rather than taking what the host keeps for the first one out from under it.
+      // rather than taking what the host keeps for the first one out from under it. The pane host's app
+      // then runs its shells itself; the screen host's refuses its worker screens (workers-decision-6).
       // The proof goes with a busy too: on Windows an unproven busy is an impostor's.
       const proof = token !== undefined && message.nonce !== undefined ? hostProof(token, message.nonce) : undefined;
       if (current !== null) {

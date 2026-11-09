@@ -55,7 +55,8 @@ export type ScreenPorts = {
 // What a screen event says about its worker: a question waiting on you, the question gone, the
 // session's conversation written, which is what a later start resumes rather than starts fresh, or its
 // turn over. The Stop hook does not run for a turn you interrupt or a session that dies, and the SDK's
-// result and the session's end come either way; they end the turn without telling main anything.
+// result and the session's end come either way; they end the turn without telling main anything,
+// except an end with an error (observe).
 export function screenSignal(event: ChatEvent): WorkerState | 'started' | 'turn-over' | null {
   if (event.kind === 'ask') return 'blocked';
   if (event.kind === 'ask-gone') return 'running';
@@ -144,19 +145,26 @@ export function screenWorkers(ports: ScreenPorts) {
     byKey.set(screenKey(id), worker);
   }
 
-  function drop(id: string): void {
-    if (!live.delete(id)) return;
+  // Whether there was one to stop. The caller saves.
+  function forget(id: string): boolean {
+    if (!live.delete(id)) return false;
     byKey.delete(screenKey(id));
     ports.stop(screenKey(id));
-    save();
+    return true;
+  }
+
+  function drop(id: string): void {
+    if (forget(id)) save();
   }
 
   return {
     host: ports.host,
     // A worker screen: main's, a card's agent, or one of yours (New Claude, `dispatcherPath` null and
-    // no prompt). Only pane.dispatch calls it (workers-decision-8).
+    // no prompt). Only pane.dispatch calls it (workers-decision-8). One already in the pane is stopped
+    // first: left, its session would take the new worker's prompt, and its own turn would go on.
     start(id: string, projectPath: string, directory: string, screen: ScreenStart, cardId: string | null, dispatcherPath: string | null): void {
       const { index } = paneFromId(id);
+      forget(id);
       add(id, { projectPath, index, directory, session: screen.session, name: screen.name, dispatcherPath, cardId, started: false }, false);
       save();
       // Drawn first, so the screen is there for the prompt to land on.
@@ -165,8 +173,11 @@ export function screenWorkers(ports: ScreenPorts) {
     },
     has: (id: string): boolean => live.has(id),
     // `pane send` to a worker screen: the text as its next prompt. False for a pane that is not one.
+    // A sent prompt puts the worker back at work, so a session that then fails to start is reported.
     send(id: string, text: string): boolean {
-      if (!live.has(id)) return false;
+      const worker = live.get(id);
+      if (!worker) return false;
+      worker.done = false;
       ports.tell(screenKey(id), text);
       return true;
     },
@@ -190,8 +201,14 @@ export function screenWorkers(ports: ScreenPorts) {
       const signal = screenSignal(event);
       const worker = signal && byKey.get(key);
       if (!worker) return;
-      if (signal === 'turn-over') worker.done = true;
-      else if (signal !== 'started') report(worker.id, signal);
+      if (signal === 'turn-over') {
+        const atWork = !worker.done;
+        worker.done = true;
+        // A session that failed at work, a start the screen host refused among them, ran no Stop hook and
+        // took no prompt: main is told it stopped, or it waits on a report that never comes. A finished
+        // worker already reported, so the host dying under it says nothing more.
+        if (atWork && event.kind === 'ended' && event.error !== null) report(worker.id, 'done');
+      } else if (signal !== 'started') report(worker.id, signal);
       else if (!worker.resume) {
         worker.resume = true;
         worker.saved.started = true;

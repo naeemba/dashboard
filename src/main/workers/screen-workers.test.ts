@@ -67,6 +67,15 @@ describe('screenWorkers', () => {
     expect(screens.working('2:2')).toBeUndefined();
   });
 
+  it('stops the worker already in the pane before it starts another there', () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    screens.start('2:1', '/work/api', '/work/api', { ...START, session: 'next' }, null, '/work/api');
+    expect(said.slice(2)).toEqual([`stop ${screenKey('2:1')}`, 'changed', `tell ${screenKey('2:1')} fix it`]);
+    expect(screens.paneRunning(SESSION)).toBeUndefined();
+    expect(screens.paneRunning('next')).toBe('2:1');
+  });
+
   it('takes no hook from a worker the pane has let go of, even once another worker runs at its number', async () => {
     const { screens, said } = workers();
     screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
@@ -89,6 +98,36 @@ describe('screenWorkers', () => {
     screens.observe(screenKey('2:1'), { kind: 'message', message: { type: 'result', subtype: 'error_during_execution' } });
     expect(screens.working('2:1')).toBe(false);
     expect(said.at(-1)).toBe('2:1 running');
+  });
+
+  it('tells main a worker whose session failed, a refused start among them, has stopped', () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    screens.observe(screenKey('2:1'), { kind: 'ended', error: 'The screen host is running for another Dashboard' });
+    expect(screens.working('2:1')).toBe(false);
+    expect(said.at(-1)).toBe('2:1 done');
+  });
+
+  it('says nothing more to main when a finished worker\'s session ends with an error', async () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    const hooks = screens.session(screenKey('2:1'))?.hooks ?? {};
+    await hooks.Stop?.[0].hooks[0]({ hook_event_name: 'Stop', background_tasks: [], session_crons: [] } as never, undefined, hookOptions);
+    const before = said.length;
+    screens.observe(screenKey('2:1'), { kind: 'ended', error: 'The screen host stopped' });
+    expect(said.length).toBe(before);
+  });
+
+  it('tells main a finished worker stopped when the start for its next prompt fails', async () => {
+    const { screens, said } = workers();
+    screens.start('2:1', '/work/api', '/work/api', START, null, '/work/api');
+    const hooks = screens.session(screenKey('2:1'))?.hooks ?? {};
+    await hooks.Stop?.[0].hooks[0]({ hook_event_name: 'Stop', background_tasks: [], session_crons: [] } as never, undefined, hookOptions);
+    screens.observe(screenKey('2:1'), { kind: 'ended', error: 'The screen host stopped' });
+    screens.send('2:1', 'now card B');
+    expect(screens.working('2:1')).toBe(true);
+    screens.observe(screenKey('2:1'), { kind: 'ended', error: 'The screen host is running for another Dashboard' });
+    expect(said.at(-1)).toBe('2:1 done');
   });
 
   it('marks a question as blocked, and resumes the conversation once the session has started it', () => {

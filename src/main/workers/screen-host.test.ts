@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { inputQueue, type InputQueue } from '../chat/input-queue';
 import { prepareHostSocket } from '../panes/pane-host-protocol';
-import { hostedQuery, screenHost } from './screen-host-client';
+import { HOST_NOT_ANSWERING, hostedQuery, screenHost } from './screen-host-client';
 import { acceptApps } from '../panes/host-socket';
 import { screenHostServer, type StartSession } from './screen-host-server';
 import { screenHostSocket, type FromScreenHost, type ToScreenHost } from './screen-host-protocol';
@@ -164,6 +164,17 @@ describe.skipIf(process.platform === 'win32')('the screen host', () => {
     expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(await app.query(KEY, appSession([]))).toBeNull();
     expect(launched).toBe(1);
+  });
+
+  it('refuses to run a worker in the app while a host answers that turned it away: it may be running that worker', async () => {
+    const sdk = fakeSdk();
+    const socketPath = await host(sdk.start);
+    await screenHost({ socket: socketPath, launch: () => undefined }).query(KEY, appSession([]));
+    const second = screenHost({ socket: socketPath, launch: () => undefined, connectTries: 0 });
+    await expect(second.query(KEY, appSession([]))).rejects.toThrow(HOST_NOT_ANSWERING);
+    // Asked again by the next start, which a host that has let the first app go then takes.
+    await expect(second.query(KEY, appSession([]))).rejects.toThrow(HOST_NOT_ANSWERING);
+    expect(sdk.sessions).toHaveLength(1);
   });
 
   it('holds what a turn ended with while the app was away: a result clears busy, a hook keeps only its name but Stop', async () => {

@@ -28,7 +28,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - A worker's Claude screen, the `pane run` default off Windows: `session-cli.ts`; `screen-workers.ts`, `../../shared/workers/screen-key.ts`; the session is the [chat](../chat/README.md)'s `chat-sessions.ts`, the pane `src/renderer/app/page.ts` (workers-decision-5)
 - A Claude screen opened by hand with New Claude, and which screen is whose: `screen-owner.ts`, `screen-workers.ts`, `worker-channels.ts`, the button `src/renderer/app/chrome-bars.ts` (workers-decision-7)
 - Every agent a pane starts, screen or terminal, from every caller: the pane.dispatch action, `src/main/actions/pane/dispatch.ts` and `pane-actions.ts`, the default `pane-kind.ts` (workers-decision-8, [actions](../actions/README.md))
-- The screen host a worker screen's session runs in, so it outlives the app: `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`, `screen-host-protocol.ts`, `../chat/input-queue.ts` (workers-decision-6)
+- The screen host a worker screen's session runs in, so it outlives the app: `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`, `screen-host-protocol.ts`, `dead-host.ts`, `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios
 
@@ -67,7 +67,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given main runs `pane run <id> "<prompt>"` (with `--card` or `--worktree` or neither), when the worker starts, then the pane shows a Claude screen instead of its terminal, in the same folder, in auto mode, named and indexed as a terminal worker is, with the prompt as its first message; `--screen` is still accepted and changes nothing (workers-decision-5).
 - Given main runs `pane run <id> --terminal "<prompt>"`, when the worker starts, then it is Claude Code in the pane's terminal, as every worker was before screens were the default; `--terminal` with `--screen` is refused (workers-decision-5).
 - Given Dashboard on Windows, which has no screen host, when main runs a plain `pane run`, then the worker is Claude Code in the terminal, so an app quit does not end its turn; `--screen` asks for a screen there, and main's dispatch usage says so (workers-decision-5).
-- Given a worker on a Claude screen, when its turn ends, then its own Stop hook, called in the app rather than through `session notify`, reports done with what it still waits on, and main is told exactly as for a terminal worker; a turn you interrupt, or a session that ends, counts as over for the review sweep without telling main; a question it asks marks the pane blocked until answered, and arriving in the screen clears the pane's bell.
+- Given a worker on a Claude screen, when its turn ends, then its own Stop hook, called in the app rather than through `session notify`, reports done with what it still waits on, and main is told exactly as for a terminal worker; a turn you interrupt, or a session that ends, counts as over for the review sweep without telling main, unless it ended with an error while at work (a refused or failed start among them), when main is told it stopped; a question it asks marks the pane blocked until answered, and arriving in the screen clears the pane's bell.
 - Given a worker on a Claude screen, when a ship, the review sweep, the command screen or a project close picks or checks a pane, then that pane reads as running an agent, and the drawer and main's /resume refuse its conversation as running in that pane.
 - Given main's worker on a Claude screen, when /clear, /resume, /branch or /rewind is typed in it, then each is refused with a notice that the worker stays on the conversation it was started on; /rename and Ctrl+R act on the worker's own conversation, not main's.
 - Given a worker on a Claude screen, when `pane send` names its pane, then the text goes in as its next prompt rather than into the hidden shell; `pane release` closes the pane and ends the session.
@@ -81,7 +81,11 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a card's agent or main's worker in a terminal, when the app restarts, then it comes back in the terminal on its conversation; one on a Claude screen comes back as a screen.
 - Given a Claude of yours in a terminal, when the app restarts, then it comes back as the pane's process on its conversation, started by pane.dispatch like every other agent; exiting it leaves an exited pane, and Enter gives a shell (actions-decision-5).
 - Given a Claude screen opened by hand, when the app restarts, then it comes back as a Claude screen on the conversation it was last on, in the screen host off Windows as a worker screen is, and still not main's worker.
-- Given the screen host is not running (Windows, a machine restart, a socket that would not open, another Dashboard holding it), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
+- Given the screen host is not running (Windows, a machine restart, a socket that would not open), when the app restarts, then the worker screen's turn ended with the app; its conversation carries on from the next prompt, or starts fresh under its id if the session never wrote it.
+- Given the screen host was killed (earlyoom, the OOM killer) while its workers were mid-turn, when a worker's pane starts its session again, then the sessions the dead host left running are killed first and the worker carries on in one session, never two (workers-decision-6).
+- Given a screen host that answers but will not take the app (another Dashboard holding it, or too slow to say what it kept), when a worker screen starts, then it is refused on the screen rather than run a second time in the app, main is told the worker stopped, and the next prompt tries again (workers-decision-6).
+- Given a worker screen that already sent main its report, when the screen host dies under it, then main is told nothing more about that worker.
+- Given a pane already running a worker screen, when pane.dispatch starts another screen there, then the first one's session is stopped before the new one starts.
 
 ## Open questions
 

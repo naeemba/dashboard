@@ -5,12 +5,15 @@ import { inputQueue } from '../chat/input-queue';
 import { launchPaneHost } from '../panes/pane-host-client';
 import { attempt, reachHost } from '../panes/host-socket';
 import { line, lineReader } from '../panes/pane-host-protocol';
+import { endDeadHostUnlessAnswering } from './dead-host';
 import { screenHostSocket, type AskCallback, type FromScreenHost, type HostedParams, type HostedSession, type KeptSession, type ToScreenHost } from './screen-host-protocol';
 
 // The app's half of the screen host: a worker screen's session run there, behind a Query that passes
 // every call over the socket, so chat-sessions.ts drives it as it drives one of its own. With no host
-// (Windows, a socket that will not open, another Dashboard holding it) a worker screen runs in the app
-// as it did before, and dies with it. workers-decision-6 says why.
+// (Windows, a socket that will not open) a worker screen runs in the app as it did before, and dies
+// with it, once what a host that died left running is ended. Never while a host answers that would not
+// take this app (another Dashboard holding it, or one too slow to say what it kept): it may be running
+// that very worker. workers-decision-6 says why.
 
 export type ScreenHost = {
   // Settled once a host already running has said which sessions it kept, or once there is none.
@@ -26,14 +29,15 @@ type Listener = (message: FromScreenHost) => void;
 
 const ANSWER_WAIT_MS = 5000;
 const HOST_STOPPED = 'The screen host stopped';
+export const HOST_NOT_ANSWERING = 'The screen host is running for another Dashboard, or did not answer, and may still be running this worker: it was not started a second time';
 
 // `connectTries` is how long a launched host is waited for (reachHost); a test passes 0.
 export function screenHost(options: { socket: string | null; launch(): void; connectTries?: number }): ScreenHost {
   let connection: net.Socket | null = null;
   let kept = new Map<string, KeptSession>();
   const listeners = new Map<string, Listener>();
-  // One try at the host per run, shared by every worker starting at once: two would each launch a host,
-  // and the second would take the socket from the first. Tried again only once a host it had went.
+  // One try at the host per run, shared by every worker starting at once: two would each launch a host.
+  // Tried again once a host it had went, or once one answered and would not take this app.
   let reaching: Promise<boolean> | null = null;
   const send = (message: ToScreenHost): void => { connection?.write(line(message)); };
 
@@ -89,13 +93,20 @@ export function screenHost(options: { socket: string | null; launch(): void; con
     return reaching;
   }
 
+  // Where no host took this app: refused while one answers on the socket, otherwise run in the app.
+  async function inApp(): Promise<null> {
+    if (options.socket === null || await endDeadHostUnlessAnswering(options.socket)) return null;
+    reaching = null;
+    throw new Error(HOST_NOT_ANSWERING);
+  }
+
   const ready = join();
   return {
     ready,
     kept: (key) => kept.get(key),
     async query(key, params) {
       await ready;
-      if (!(await reach())) return null;
+      if (!(await reach())) return inApp();
       const taken = kept.get(key);
       kept.delete(key);
       const unit = taken === undefined ? params.scope?.unit ?? null : taken.unit ?? null;
