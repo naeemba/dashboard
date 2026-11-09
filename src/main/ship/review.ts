@@ -1,4 +1,4 @@
-import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
+import { addComment, CANCELLED_COLUMN, cardAt, cardById, isColumnNamed, REVIEW_COLUMN, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
@@ -19,6 +19,17 @@ import { posixQuoted } from '../../shared/panes/shell';
 // The only way this sees a missing card is the board changing between those reads.
 export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
+}
+
+// The pull request card.follow found for this card, from the project's board: the number, only while the
+// card sits in Review, which is where an open pull request put it (board-decision-6). The sweep's other
+// sign that a card is finished, beside the number an agent wrote on its worktree's board, so an agent
+// that only opened its pull request is reviewed too. Not from any other column: a card back in Doing
+// after its pull request closed unmerged keeps that number, and a fresh ship of it has opened nothing yet.
+export function followedPullRequest(board: Board, cardId: string): number | null {
+  const at = selectionOf(board, cardId);
+  if (at === null || !isColumnNamed(board.columns[at.column].name, REVIEW_COLUMN)) return null;
+  return cardById(board, cardId)?.pullRequest ?? null;
 }
 
 // Whether the card sits in Cancelled. One of the reasons awaitsReview answers false, exported so the
@@ -95,7 +106,7 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // checkout up to it (board-sync-git.ts), so one move after the merge is the card on main and on screen.
 // Before the merge it would be main saying Done for a pull request that may yet be refused, which is
 // how kamandsystem #19 sat in Done unmerged. The branch's own board is not moved: nothing the merge
-// carries is about the card any more (board-rule-2).
+// carries is about the card any more (board-decision-7).
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in.

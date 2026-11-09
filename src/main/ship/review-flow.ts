@@ -1,6 +1,6 @@
 import { boardFolderPath, peekBoard, readBoard } from '../board/board-store';
 import { isCardSetAside } from '../board/board-files';
-import { awaitsReview, intoReview, isCancelled, reviewPrompt, reviewRefused, worktreeKept } from './review';
+import { awaitsReview, followedPullRequest, intoReview, isCancelled, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
 import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
@@ -70,9 +70,15 @@ export type ReviewPorts = {
 // the number is committed, and the swap has to survive that anyway. And it would put a `git show`
 // per in-flight worktree on a five-second timer for the whole life of the app, to spare a refusal
 // that costs nothing when nothing is stuck. swapWorktree is where the window is handled instead.
+//
+// Or, when the agent wrote none, the one card.follow found from the branch and put on the project's
+// board (followedPullRequest), so an agent has nothing to record but its pull request.
 function finishedIn(entry: WorktreeEntry): number | null {
   const board = peekBoard(entry.worktreePath);
-  return board === null ? null : cardById(board, entry.cardId)?.pullRequest ?? null;
+  const written = board === null ? undefined : cardById(board, entry.cardId)?.pullRequest;
+  if (written !== undefined) return written;
+  const project = peekBoard(entry.projectPath);
+  return project === null ? null : followedPullRequest(project, entry.cardId);
 }
 
 // The project's board, or null when it cannot be read at all. Null is not "no card here": a board the

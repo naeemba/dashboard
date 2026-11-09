@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyBoard, moveCardById, type Board } from '../../shared/board/board';
-import { awaitsReview, intoReview, reviewPrompt, reviewRefused } from './review';
+import { awaitsReview, followedPullRequest, intoReview, reviewPrompt, reviewRefused } from './review';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
 
@@ -49,6 +49,24 @@ describe('awaitsReview', () => {
   it('is true on a board with no Review column', () => {
     const board = { columns: [{ name: 'Done', cards: [{ id: CARD, title: 'a', notes: '', priority: 'medium' as const, parent: null }] }] };
     expect(awaitsReview(board, CARD)).toBe(true);
+  });
+});
+
+describe('followedPullRequest', () => {
+  function withNumber(column: number): Board {
+    const board = moveCardById(boardWithCard(), CARD, column) as Board;
+    return { columns: board.columns.map((each) => ({ ...each, cards: each.cards.map((card) => ({ ...card, pullRequest: 12 })) })) };
+  }
+
+  it('is the number card.follow put on a card in Review', () => {
+    expect(followedPullRequest(withNumber(4), CARD)).toBe(12);
+  });
+
+  // Doing: its pull request closed unmerged, or a fresh ship of it has opened nothing yet.
+  it('is null in any other column, and without a number', () => {
+    expect(followedPullRequest(withNumber(3), CARD)).toBeNull();
+    expect(followedPullRequest(moveCardById(boardWithCard(), CARD, 4) as Board, CARD)).toBeNull();
+    expect(followedPullRequest(withNumber(4), 'not-on-the-board')).toBeNull();
   });
 });
 
