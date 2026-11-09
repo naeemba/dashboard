@@ -1,0 +1,11 @@
+{
+  "id": "a1fd13cc-1e45-4713-a1a5-9fc0cd8e4075",
+  "title": "Add the missing pull request number to the 2026-11-09 pane send line in docs/workers/history.md",
+  "notes": "docs/workers/history.md:25 has no pull request number, but the file preamble asks for date, pull request, why. Without it the line cannot be traced back to the change it records. Issue: https://github.com/naeemba/dashboard/issues/272 Review: https://github.com/naeemba/dashboard/pull/265#discussion_r4514737279",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-09T15:50:22.810Z",
+  "updatedAt": "2026-11-09T15:50:22.811Z",
+  "column": "Backlog",
+  "order": 54
+}
