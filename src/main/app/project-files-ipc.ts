@@ -3,6 +3,7 @@ import type { Board } from '../../shared/board/board';
 import { openBoard, peekBoard, writeBoard } from '../board/board-store';
 import { rebaseBoardChange } from '../../shared/board/board-merge';
 import type { BoardChanges } from '../board/board-changes';
+import type { BoardSyncQueue } from '../board/board-sync-queue';
 import type { BoardWatchers } from '../board/board-watch';
 import { readNotes, writeNotes } from '../notes/notes-store';
 import { readInk, writeInk } from '../notes/ink-store';
@@ -13,7 +14,7 @@ import { readInk, writeInk } from '../notes/ink-store';
 // what only it holds: the watchers that tell the renderer about a write from somewhere else, and the way
 // to every screen but one.
 export function registerProjectFiles(
-  table: Channels, boards: BoardWatchers, changes: BoardChanges,
+  table: Channels, boards: BoardWatchers, changes: BoardChanges, boardSync: BoardSyncQueue,
   tellOthers: (screen: string, channel: string, projectPath: string) => void,
 ): void {
   // Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
@@ -43,6 +44,9 @@ export function registerProjectFiles(
     const written = rebaseBoardChange(base, board, peekBoard(projectPath));
     changes.wrote(projectPath, written, () => boards.wrote(projectPath, writeBoard(projectPath, written)));
     tellOthers(screen, 'board:change', projectPath);
+    // To origin behind the write, never in front of it: the screen does not wait on the network. What
+    // the sync brings back from origin reaches the screen through the watcher, as the command's does.
+    void boardSync.sync(projectPath);
     // Null when the board went out as sent, so the common save carries nothing back.
     return written === board ? null : written;
   });

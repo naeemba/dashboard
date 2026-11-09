@@ -55,6 +55,8 @@ import { paneExitEntry } from '../shared/app/log-entry';
 import { registerLog } from './app/log-ipc';
 import { registerWhatsNew } from './app/whats-new-store';
 import { registerProjectFiles, watchProjectBoard } from './app/project-files-ipc';
+import { syncBoard } from './board/board-sync-git';
+import { boardSyncQueue } from './board/board-sync-queue';
 import { SESSION_FILE } from './app/session';
 import { sessionIndexStore } from './workers/session-index-store';
 import { registerDrawer } from './drawer/drawer-ipc';
@@ -114,6 +116,7 @@ const table = channels();
 const logStore = registerLog(table, app.getPath('userData'), sendToRenderer);
 registerWhatsNew(table, app.getPath('userData'));
 const boardLog = boardChanges((draft) => logStore.log(draft), peekBoard);
+const boardSync = boardSyncQueue((projectPath) => syncBoard(projectPath), (project, message) => logStore.log({ level: 'warn', kind: 'board', project, message }));
 
 // The app opens without it. What is in this file is a shell command and a list of project folders, so a
 // launch that cannot read it opens on the shipped defaults with nothing you set applied — worth a line
@@ -519,7 +522,7 @@ try {
 } catch (error: unknown) {
   failures.hold(`The manager's terminals have no folder: ${failureText(error)}`);
 }
-registerProjectFiles(table, boards, boardLog, tellOthers);
+registerProjectFiles(table, boards, boardLog, boardSync, tellOthers);
 
 // Which page a project is open on, or -1. Two questions want it — opening a project that is already
 // open, and finding the panes a review can take — and two copies of the walk would answer differently
@@ -639,6 +642,7 @@ const { reviews, actions: cardActionList } = cardActions({
   startReview: (entry, slot, prompt) => attachPane(worktrees.record(entry), slot, prompt),
   queue: shipInProject,
   boardLog,
+  boardSync,
   autoLoop: () => settings.review.autoLoop,
   log: (draft) => logStore.log(draft),
 });

@@ -19,6 +19,7 @@ function fakePorts(over: Partial<CardMovePorts> = {}): { ports: CardMovePorts; s
     ports: {
       read: () => ({ board, brokenFiles: [] }),
       write: (_projectPath, next, source) => { board = next; seen.writes.push({ board: next, source }); },
+      published: async () => { seen.ran.push('published'); },
       projectBoard: () => true,
       autoLoop: () => true,
       ship: async () => { seen.ran.push('ship'); return { output: 'shipped on fix-login' }; },
@@ -43,14 +44,14 @@ describe('card.move', () => {
     const { ports, seen } = fakePorts();
     await expect(move(ports, 'Ship')).resolves.toEqual({ output: 'Fix login  →  Ship\nshipped on fix-login', ran: 'ship', started: 'shipped on fix-login' });
     expect(seen.writes.map(({ board, source }) => [columnOf(board), source])).toEqual([['Ship', 'command']]);
-    expect(seen.ran).toEqual(['ship']);
+    expect(seen.ran).toEqual(['published', 'ship']);
   });
 
   it('starts the review loop for a card a person moves into Review', async () => {
     const { ports, seen } = fakePorts({ autoLoop: () => false });
     await expect(move(ports, 'review', 'command')).resolves.toMatchObject({ ran: 'review' });
     await expect(move(ports, 'Review', 'user')).resolves.toMatchObject({ ran: 'review' });
-    expect(seen.ran).toEqual(['review', 'review']);
+    expect(seen.ran).toEqual(['published', 'review', 'published', 'review']);
   });
 
   // Shift+Right twice quickly from Doing: the screen's save of Done lands before its ask about Review.
@@ -80,7 +81,7 @@ describe('card.move', () => {
     await move(ports, 'Ship');
     await expect(move(ports, 'Ship', 'user')).resolves.toEqual({ output: 'Fix login is already in Ship\nshipped on fix-login', ran: 'ship', started: 'shipped on fix-login' });
     expect(seen.writes).toHaveLength(1);
-    expect(seen.ran).toEqual(['ship', 'ship']);
+    expect(seen.ran).toEqual(['published', 'ship', 'published', 'ship']);
   });
 
   it('keeps the move and answers the refusal when the ship is refused', async () => {

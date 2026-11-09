@@ -12,7 +12,10 @@ export type CardMovePorts = {
   // refused rather than set aside (readBoard says why).
   read(projectPath: string): { board: Board; brokenFiles: string[] };
   // `source` says whose write it is, for the move log: the sweep's own moves are not the command's.
+  // The write goes to origin behind it, through the board's git sync.
   write(projectPath: string, board: Board, source: MoveSource): void;
+  // Settles once every board write to the project so far is on origin, or could not be.
+  published(projectPath: string): Promise<void>;
   // Whether the folder is a project's own board, not a worktree's or the manager's.
   projectBoard(projectPath: string): boolean;
   autoLoop(): boolean;
@@ -54,6 +57,10 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
       projectBoard: ports.projectBoard(projectPath),
     });
     if (entry === 'nothing') return { output: moved.output, ran: entry, started: '' };
+    // A ship cuts its branch off origin, so the Ship move is on origin first, the screen's own save of it
+    // included: a branch cut before it carries a Ship move of its own, and that card's file then
+    // conflicts with main's at the merge.
+    await ports.published(projectPath);
     const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id });
     // The move stays written: a card refused a ship or a review is still where it was put, and the
     // refusal says why nothing started there.
