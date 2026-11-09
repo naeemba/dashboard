@@ -32,7 +32,7 @@ now.
 | release | pane.release, `actions/pane/release.ts`, bound in `session-requests.ts`; closes through pane.close | CLI `pane release` | the throwaway's removal is worktree.remove's row |
 | close | pane.close, `actions/pane/close.ts` | IPC `pane:close`, pane.release | no |
 | agent exited | `releaseAgentPane`, `main.ts` | the shell's exit | yes, and stays an event, not a request |
-| restart a shell | `pty:restart`, `panes/pane-channels.ts:42` | IPC (Enter on an exited pane) | yes |
+| restart a shell | pane.restart, `actions/pane/restart.ts` | IPC `pty:restart` (Enter on an exited pane), pane.dispatch's shell started over | no |
 
 Fold, zoom, focus and the layout are the renderer's own, saved through
 `session:write` (`app/session-store.ts:51`); main owns none of them, so they are
@@ -139,7 +139,8 @@ One row per noun.verb, and what it decides that its callers do not.
 | pane.send | screen prompt or shell bytes |
 | pane.release | whether the pane is the asker's, and whether its throwaway worktree goes |
 | pane.close | that the pane is a worker; ends a card record's claim on it |
-| pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch |
+| pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch; a kept shell not taken back has its scope stopped |
+| pane.restart | refused while a shell runs; the old shell's scope stopped once the new one has its own |
 | worktree.make | card, throwaway or again; the branch it names; whether it fetches and takes the project's queue itself (only a throwaway) |
 | worktree.remove | per door, forced or not, queued or not, logged or not (`removalOf`); the keeper refuses with changes and kills the shells and closes the screens in it |
 | project.open | a missing folder refused, a dead page opened over, its main started only for the command; the dialog stays the picker's door's |
@@ -163,7 +164,7 @@ two fight over `main.ts`:
 
 1. **pane** (done): pane.dispatch has its doors, the shell's and the drawer's
    resume are behind it, and claim, open, send, release, close and restore are
-   actions. Left: the agent's exit and `pty:restart`.
+   actions, and so is pane.restart. Left: the agent's exit.
 2. **worktree** (done): make and remove behind one action each, the dialog,
    the throwaway and the review on it, and a card's pane written onto its
    record in one place, the keeper's `givePane`.
