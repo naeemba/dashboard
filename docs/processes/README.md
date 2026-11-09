@@ -70,7 +70,8 @@ nothing.
 Two other ways a pane's shell goes stop its scope the same way. Closing a
 project (project.close) reads the scope of every pane it has, the editor's
 included, drops the panes and then stops each scope; a unit it could not stop
-is named after `closed <project>`. A dispatch that starts a pane's shell over
+is named after `closed <project>` and is a warning in the log, since the close
+key shows only a refusal. A dispatch that starts a pane's shell over
 in place (a terminal agent into a pane that had a shell, or a screen whose
 shell had to move folder) stops the old shell's scope once the new shell has
 its own; each start is named afresh, so the stop never reaches the new one. A

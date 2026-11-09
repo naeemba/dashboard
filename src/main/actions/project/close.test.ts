@@ -14,6 +14,7 @@ function setUp(panes: PaneUse[], units: string[] = [], stopScope: (unit: string)
     scopesOf: (slot) => (slot === 4 ? units : []),
     close: vi.fn(),
     stopScope: stops,
+    log: vi.fn(),
   };
   return { ports, stops, close: bind(projectClose, ports) };
 }
@@ -55,6 +56,9 @@ describe('project.close', () => {
     await expect(close.call({ slot: 4, name: 'web' })).resolves.toEqual({ output: 'closed web; pane-web-1-a.scope was not stopped: timed out' });
     expect(ports.close).toHaveBeenCalledWith(4);
     expect(ports.stopScope).toHaveBeenCalledWith('pane-web-2-b.scope');
+    expect(ports.log).toHaveBeenCalledExactlyOnceWith({
+      level: 'warn', kind: 'project', action: 'project.close', message: 'pane-web-1-a.scope was not stopped: timed out',
+    });
   });
 
   it('stops nothing when it refuses or only checks', async () => {
