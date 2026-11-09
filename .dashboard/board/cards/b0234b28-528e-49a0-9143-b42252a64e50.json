@@ -4,6 +4,7 @@
   "notes": "For each card with a branch and no pull request number, gh pr list --head <branch> finds the number and stores it on the card. For each card with a number, poll gh pr view (state, mergeable, checks, review decision) about once a minute and show one glyph on the card: checks running, checks failed, approved, mergeable, merged. A merged pull request is recorded on the card and never polled again. Open: whether a merged pull request moves the card to Done by itself or only marks it.",
   "priority": "medium",
   "parent": null,
-  "column": "Todo",
-  "order": 5
+  "updatedAt": "2026-11-09T15:12:47.127Z",
+  "column": "Doing",
+  "order": 1
 }
