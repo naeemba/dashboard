@@ -210,7 +210,8 @@ The screen never waits on the network: the save is on disk at once, and
 `board-sync-queue.ts` runs one sync per project behind it, a burst of saves
 folded into one more. card.move waits for its write to be on origin before a
 ship cuts a branch. Offline, with no `origin`, or with a push refused for any
-other reason, or with a sync that fails any other way, the board is written where it is as before, and the app logs one
+other reason, or with a sync that fails any other way, the board is written
+where it is as before, and the app logs one
 warning per project (`board` kind) until a sync goes through; the command prints
 it on each run. A board git does not track, and the manager's, are untouched.
 
