@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { retargeted, scopedCommand, scopeSlug, type ScopeSupport } from './scope';
+import { retargeted, scopedCommand, scopeLimits, scopeSlug, type ScopeSupport } from './scope';
 
 // A support that hands out the suffixes given, in order, and calls the names given taken.
 function support(suffixes: string[], taken: string[] = []): ScopeSupport {
@@ -80,5 +80,18 @@ describe('scopeSlug', () => {
 
   it('names an id with nothing usable in it', () => {
     expect(scopeSlug('日本')).toBe('unnamed');
+  });
+});
+
+describe('scopeLimits', () => {
+  it('reads the slice and the cap back off a name this file hands out', () => {
+    expect(scopeLimits('agent-shop-3-k4f2.scope')).toEqual({ slice: 'agents.slice', high: 6 * 1024 ** 3 });
+    expect(scopeLimits('task-shop-x9q0.scope')).toEqual({ slice: 'agents.slice', high: 6 * 1024 ** 3 });
+    expect(scopeLimits('pane-shop-0-a1b2.scope')).toEqual({ slice: 'panes.slice', high: null });
+  });
+
+  it('knows nothing of a unit it did not name', () => {
+    expect(scopeLimits('app-dashboard-12.scope')).toBeNull();
+    expect(scopeLimits('agent-shop.service')).toBeNull();
   });
 });

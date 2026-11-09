@@ -38,6 +38,7 @@ import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
 import { launchScopes, stopScope } from './processes/launch-scopes';
+import { memorySweep, recordedUnits, userServiceCgroup } from './processes/memory-sweep';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
 import { CLOSE_SWEEP_MS, finishedCardIn } from './workers/auto-release';
@@ -512,6 +513,13 @@ const chats = registerChatSessions(table, {
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
   heard: (slot, sender) => { workerAnswers.heard(slot, sender); followPullRequests(slot); },
+});
+// What each open project's pane and session scopes hold, every few seconds, for the manager's rows and
+// the status bar (docs/processes).
+memorySweep({
+  root: userServiceCgroup(process.getuid?.() ?? 0),
+  units: async () => recordedUnits(panes.scopeUnits, await chats.units(), workerScreens.paneOf, (slot) => projectIn(slot) !== undefined),
+  publish: (snapshot) => sendToRenderer('memory:change', snapshot),
 });
 // Every change to a session, from every door (session-actions.ts).
 const session = sessionActions({ chat: chats.actionPorts, sessions: sessionIndex, projectAt: projectIn, dispatchers: () => mainsWorkers.values() });
