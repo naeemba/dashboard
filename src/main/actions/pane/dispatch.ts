@@ -2,7 +2,8 @@ import type { Refused } from '../../../shared/app/bridge';
 import { agentArguments, agentResumeArguments } from '../../../shared/panes/shell';
 import { paneFromId } from '../../../shared/panes/terminals';
 import { workerArguments, workerPrompt, workerResumeArguments, workerSessionName } from '../../workers/dispatch';
-import { defaultPaneKind, type PaneKind } from '../../workers/pane-kind';
+import { isPaneKindOrNull, type PaneKind } from '../../../shared/panes/pane-kind';
+import { defaultPaneKind } from '../../workers/pane-kind';
 import type { ScreenStart } from '../../workers/screen-workers';
 import { action } from '../action';
 import { isFilledText, isFilledTextOrNull } from './pane-input';
@@ -67,6 +68,9 @@ export function screenNeedsShell(shell: PaneShell, directory: string): boolean {
   return !shell.running || shell.directory !== directory;
 }
 
+// pane.open hands its `as` on to here, so it refuses one with the same words.
+export const NOT_A_PANE_KIND: Refused = { refused: 'a pane runs a screen or a terminal' };
+
 export function paneDispatchInput(raw: Record<string, unknown>): PaneDispatchInput | Refused {
   const { id, projectPath, directory, prompt, resume, cardId, dispatcherPath, as } = raw;
   if (!isFilledText(id)) return { refused: 'no pane was given' };
@@ -74,7 +78,7 @@ export function paneDispatchInput(raw: Record<string, unknown>): PaneDispatchInp
   if (!isFilledTextOrNull(prompt) || !isFilledTextOrNull(resume) || !isFilledTextOrNull(cardId) || !isFilledTextOrNull(dispatcherPath)) {
     return { refused: 'the pane request was not one the app could read' };
   }
-  if (as !== null && as !== 'screen' && as !== 'terminal') return { refused: 'a pane runs a screen or a terminal' };
+  if (!isPaneKindOrNull(as)) return NOT_A_PANE_KIND;
   return { id, projectPath, directory, prompt, resume, cardId, dispatcherPath, as };
 }
 

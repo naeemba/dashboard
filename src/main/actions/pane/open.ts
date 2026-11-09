@@ -2,8 +2,8 @@ import type { Refused } from '../../../shared/app/bridge';
 import { nextPaneIndex } from '../../../shared/panes/pane-layout';
 import { terminalId } from '../../../shared/panes/terminals';
 import { action, isRefused } from '../action';
-import type { PaneKind } from '../../workers/pane-kind';
-import type { PaneDispatchInput } from './dispatch';
+import { isPaneKindOrNull, type PaneKind } from '../../../shared/panes/pane-kind';
+import { NOT_A_PANE_KIND, type PaneDispatchInput } from './dispatch';
 import { isFilledTextOrNull, isSlot } from './pane-input';
 
 // A new worker pane on a page, at the lowest number going: a plain shell, a Claude screen waiting for
@@ -36,7 +36,7 @@ export function paneOpenInput(raw: Record<string, unknown>): PaneOpenInput | Ref
   if (!isFilledTextOrNull(directory) || typeof claude !== 'boolean' || !isFilledTextOrNull(resume)) {
     return { refused: 'the pane request was not one the app could read' };
   }
-  if (as !== null && as !== 'screen' && as !== 'terminal') return { refused: 'a pane runs a screen or a terminal' };
+  if (!isPaneKindOrNull(as)) return NOT_A_PANE_KIND;
   return { slot, directory, claude, resume, as };
 }
 

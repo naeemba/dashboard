@@ -72,14 +72,14 @@ export function sessionIndexStore(file: string, onScreen: (id: string) => string
     return pane === undefined ? null : paneLabel(paneFromId(pane).index);
   }
 
-  const record = (projectPath: string, id: string, directory: string, card: string | null): void => (
-    save(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: Date.now() }))
+  const record = (projectPath: string, id: string, directory: string, card: string | null, kind?: PaneKind): void => (
+    save(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: Date.now(), kind }))
   );
 
   return {
     launched(projectPath, directory, card, kind) {
       const id = randomUUID();
-      save(withKind(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: Date.now() }), id, kind));
+      record(projectPath, id, directory, card, kind);
       return id;
     },
     ranAs: (id, kind) => save(withKind(index, id, kind)),

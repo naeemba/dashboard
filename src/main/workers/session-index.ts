@@ -1,7 +1,7 @@
 import { isPaneConversation, resumable } from './claude-resume';
 import { isRecord } from '../../shared/app/is-record';
 import type { SessionList, SessionRecord } from '../../shared/drawer/drawer';
-import type { PaneKind } from '../../shared/panes/pane-kind';
+import { isPaneKindOrNull, type PaneKind } from '../../shared/panes/pane-kind';
 
 // The app's own record of every Claude conversation it started, by project, which is what the drawer
 // lists and resumes from. Kept in the app's user data, never in .dashboard/: sessions are one person's
@@ -19,7 +19,7 @@ function isSessionRecord(value: unknown): value is SessionRecord {
   return isPaneConversation({ session: id, directory })
     && typeof label === 'string' && label !== ''
     && (card === null || typeof card === 'string')
-    && (kind === undefined || kind === 'screen' || kind === 'terminal')
+    && (kind === undefined || (kind !== null && isPaneKindOrNull(kind)))
     && isNumber(startedAt) && isNumber(lastUsedAt);
 }
 
@@ -35,12 +35,13 @@ export function parseSessionIndex(value: unknown): SessionIndex {
 // so a label is never handed out twice.
 export function withSession(
   index: SessionIndex, projectPath: string, slug: string,
-  session: { id: string; directory: string; card: string | null; at: number },
+  session: { id: string; directory: string; card: string | null; at: number; kind?: PaneKind },
 ): SessionIndex {
   const rows = index[projectPath] ?? [];
   if (rows.some((row) => row.id === session.id)) return withUse(index, projectPath, session.id, session.at);
   const row: SessionRecord = {
     id: session.id, label: `${slug}-${rows.length + 1}`, directory: session.directory, card: session.card,
+    ...(session.kind === undefined ? {} : { kind: session.kind }),
     startedAt: session.at, lastUsedAt: session.at,
   };
   return { ...index, [projectPath]: [...rows, row] };
