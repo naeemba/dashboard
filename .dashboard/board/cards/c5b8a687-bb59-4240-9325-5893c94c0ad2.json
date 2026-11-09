@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T16:12:43.137Z",
-  "updatedAt": "2026-11-09T16:23:55.959Z",
+  "updatedAt": "2026-11-09T16:24:33.738Z",
   "comments": [
     {
       "at": "2026-11-09T16:19:28.820Z",
@@ -14,6 +14,10 @@
     {
       "at": "2026-11-09T16:23:55.959Z",
       "body": "Evidence, 19:55: four SDK claude processes have parent pid 1 (orphaned), each in a worker worktree: 7e7219dd (16 min, 286MB), 54bfe7fe (20 min), f69bb3f4 (25 min), 4f2abb7e (69 min). Their parent (the screen host, or the app before the OOM) died and they kept running, while the panes for those cards also have sessions. Likely: the screen host was killed under memory pressure, its sessions lived on unparented, and the app started new ones. Fix both ends: the screen host's sessions die with it (or are re-adopted when a host starts again), and no second session starts for a pane whose old one may be alive."
+    },
+    {
+      "at": "2026-11-09T16:24:33.738Z",
+      "body": "Correction to the previous comment: parent pid 1 is not evidence of a duplicate. Pid 965649 is the live worker that just reported PR #276 (its message socket is 965649.sock), so these SDK processes are reparented live sessions (the screen host detaches them, or the host restarted). Check which of them have a second session for the same pane before concluding anything."
     }
   ],
   "column": "Todo",
