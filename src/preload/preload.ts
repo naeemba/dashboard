@@ -42,6 +42,7 @@ const bridge: DashboardBridge = {
   addPane: (slot, claude) => ipcRenderer.invoke('pane:add', slot, claude),
   closePane: (slot, index) => ipcRenderer.invoke('pane:close', slot, index),
   onPaneMark: (listener) => ipcRenderer.on('pane:mark', (_event, id, state) => listener(id, state)),
+  onPaneReleased: (listener) => ipcRenderer.on('pane:released', (_event, text) => listener(text)),
   onData: (listener) => ipcRenderer.on('pty:data', (_event, id, data) => listener(id, data)),
   onExit: (listener) => ipcRenderer.on('pty:exit', (_event, id, exitCode) => listener(id, exitCode)),
   getSession: () => ipcRenderer.invoke('session:read'),

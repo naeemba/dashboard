@@ -5,6 +5,7 @@ import { sessionToWrite, type PaneConversation } from '../workers/claude-resume'
 import { resumeLedger, type SessionPlacement } from '../workers/resume-ledger';
 import { readSession, writeSession } from './session';
 import type { Session } from '../../shared/app/bridge';
+import { terminalId } from '../../shared/panes/terminals';
 
 // session.json, read once at launch and written by main alone. The renderer sends the layout whenever it
 // changes, as it always has; main writes it with which Claude Code conversation each pane is running,
@@ -25,6 +26,9 @@ type ClaudeSessions = {
   moveResume(fromId: string, toId: string): void;
   // Where every live session is, from a sweep or from Quit.
   placed(placement: SessionPlacement): void;
+  // Whether a page of the host window's layout puts the keyboard back on this pane: the one you are
+  // in, or were last in on that page. A zoomed pane is always that one.
+  hasKeyboard(id: string): boolean;
 };
 
 // `dispatcherOf` is main's record of the panes holding its workers and whose main dispatched each, saved
@@ -63,5 +67,6 @@ export function sessionStore(
       ledger.place(placement);
       write();
     },
+    hasKeyboard: (id) => layout?.pages.some((page) => terminalId(slotOf(page.path), page.focused) === id) ?? false,
   };
 }

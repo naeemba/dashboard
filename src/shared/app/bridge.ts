@@ -204,6 +204,8 @@ export type DashboardBridge = {
   closePane(slot: number, index: number): Promise<void>;
   // A worker's hooks saying it is waiting on a permission or has finished its turn.
   onPaneMark(listener: (id: string, state: WorkerState) => void): void;
+  // A finished worker the app closed itself, said as a passing notice (auto-release.ts).
+  onPaneReleased(listener: (text: string) => void): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;

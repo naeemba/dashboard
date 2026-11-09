@@ -23,8 +23,8 @@ export type PaneDispatchInput = {
   // A conversation to carry on after a restart, or null for a new one.
   resume: string | null;
   cardId: string | null;
-  // The page whose main the agent reports to, or null: a card's agent reports through the board, and
-  // a Claude opened by hand reports to nobody.
+  // The page whose main the agent reports to, or null for a Claude opened by hand, which reports to
+  // nobody. A ship's and the review loop's agent report to their project's main.
   dispatcherPath: string | null;
   // `pane run --screen` or `--terminal`. Null leaves it to the platform.
   as: PaneKind | null;

@@ -13,7 +13,7 @@ import { paneSend, type PaneSendPorts } from './send';
 // command (session-requests.ts), whose ledger of who claimed what they need. The claim on main's worker
 // is tested in pane-actions.test.ts, every other decision in its action's own test.
 export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession'>
-  & Omit<PaneClosePorts, 'project'> & Pick<PaneOpenPorts, 'project'> & PaneSendPorts
+  & Omit<PaneClosePorts, 'project'> & Pick<PaneOpenPorts, 'project'> & Omit<PaneSendPorts, 'handTo'>
   & Omit<PaneRestorePorts, 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & {
     // The session command's answers about the pane, forgotten: it is the new agent's.
     forgetAnswers(id: string): void;
@@ -33,7 +33,7 @@ export type PaneActions = {
   dispatch: BoundAction;
   open: BoundAction<{ output: string; index: number }>;
   close: BoundAction;
-  send: BoundAction;
+  send: BoundAction<{ output: string; handedTo: string | null }>;
   restore: BoundAction;
 };
 
@@ -74,7 +74,7 @@ export function paneActions(main: PaneActionsMain): PaneActions {
       project: main.project, openPanes: main.openPanes, dispatch: dispatch.call, shell: plainShell,
     }),
     close: bind(paneClose, main),
-    send: bind(paneSend, main),
+    send: bind(paneSend, { ...main, handTo: (id, dispatcherPath) => main.mainsWorkers.set(id, dispatcherPath) }),
     restore: bind(paneRestore, {
       ...main,
       hasCommand: (id) => main.commands.has(id),

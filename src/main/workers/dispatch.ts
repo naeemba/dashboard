@@ -58,7 +58,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     ...runUsage,
     '  list [--all]           every pane, and whether its worker is running, blocked or done;',
     '                         --all across every open project',
-    '  release <id>           close the pane once you have its report',
+    '  release <id>           close a worker\'s pane now, before the app would',
     '',
     'A card task takes --card: it runs in the worktree the board made when the card moved to Ship. Any'
       + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
@@ -68,6 +68,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so; `list` says done the moment"
       + ' its turn ends, or paused while it waits on its own background work.',
+    '',
+    'The app closes a finished worker\'s pane itself: once its card is Done or Cancelled, or once you'
+      + ' have read its report and sent it nothing for a while. Text you `send` an agent tells it to'
+      + ' report to you too.',
   ].join('\n');
 }
 

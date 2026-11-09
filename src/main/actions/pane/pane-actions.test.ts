@@ -9,19 +9,19 @@ const RUN: PaneDispatchInput = {
 
 function wired(startScreen: () => void = () => undefined) {
   const mainsWorkers = new Map<string, string>();
-  const { dispatch } = paneActions({
+  const { dispatch, send } = paneActions({
     platform: 'linux', shellCommand: () => '/bin/zsh', newSession: () => 'new-session',
     forgetAnswers: () => undefined, mainsWorkers,
     commands: new Map([['2:3', { args: [], directory: '/work/api' }]]), setPaneCommand: () => undefined,
     shells: new Map(), spawn: () => undefined, agentStarted: () => undefined,
     startScreen, log: () => undefined,
     project: () => undefined, openPanes: () => [], drop: () => undefined, scopeOf: () => undefined, stopScope: async () => undefined,
-    endClaim: () => undefined, changed: () => undefined, screenPrompt: () => false, typeIntoShell: () => undefined,
+    endClaim: () => undefined, changed: () => undefined, agentIn: () => true, screenPrompt: () => false, typeIntoShell: () => undefined,
     kept: () => [], listenTo: () => undefined, takeResume: () => null, owedResumes: () => [], moveResume: () => undefined,
     screensBack: () => [], worktrees: () => [], panesBeforeLaunch: new Map(), realPath: (folder) => folder,
     givePane: () => undefined,
   });
-  return { dispatch, mainsWorkers };
+  return { dispatch, send, mainsWorkers };
 }
 
 describe('paneActions', () => {
@@ -31,6 +31,12 @@ describe('paneActions', () => {
     expect(mainsWorkers.get('2:3')).toBe('/work/desk');
     await dispatch.call({ ...RUN, dispatcherPath: null });
     expect(mainsWorkers.has('2:3')).toBe(false);
+  });
+
+  it('claims the pane for the main that sends its agent work', async () => {
+    const { send, mainsWorkers } = wired();
+    await send.call({ id: '2:3', text: 'fix it', dispatcherPath: '/work/desk' });
+    expect(mainsWorkers.get('2:3')).toBe('/work/desk');
   });
 
   it('rejects to the caller when a start fails, so its own catch reports it', async () => {
