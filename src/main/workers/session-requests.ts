@@ -8,7 +8,7 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { doneReport } from '../../shared/workers/done-report';
+import { closedReport, doneReport } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import type { PaneKind } from './pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
@@ -145,10 +145,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // sent work reports to nobody. The main that claimed it hears, which is another project's when
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
   // to something else by then.
+  const mainOf = (id: string): number => dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
   const notices = stopNotices({
     notice(id, paused) {
       if (!mainsWorker(id)) return;
-      const slot = dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
+      const slot = mainOf(id);
       const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused));
       return () => ports.withdraw(slot, messageId);
     },
@@ -270,14 +271,20 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }
 
   // One at a time, so two releases never race over one throwaway worktree. A refusal leaves the pane
-  // as it is, and the next sweep decides again.
+  // as it is, and the next sweep decides again. Release takes back the worker's stop notice, so a
+  // worker closed for its card before main read a report from it is told to main here instead.
   async function closeFinished(): Promise<void> {
     const closeAfterMs = ports.closeAfterMs();
     for (const id of openPaneIds().filter(mainsWorker)) {
-      const verdict = releaseVerdict(look(id), closeAfterMs);
+      const seen = look(id);
+      const verdict = releaseVerdict(seen, closeAfterMs);
       if (!verdict.release) continue;
+      const slot = mainOf(id);
+      const name = nameOfPane(id);
       const released = await release.call({ id });
-      if (!isRefused(released)) ports.released(id, verdict.reason, released.output);
+      if (isRefused(released)) continue;
+      ports.released(id, verdict.reason, released.output);
+      if (!seen.reportRead) ports.tell(slot, closedReport(name, id, verdict.reason));
     }
   }
 

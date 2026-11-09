@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project } from './session-requests-fixture';
+import { closedReport } from '../../shared/workers/done-report';
 
 // What closeFinished does with what the session command heard; auto-release.test.ts holds every case
 // of the verdict itself.
@@ -47,6 +48,25 @@ describe('closeFinished', () => {
     await answer.closeFinished();
     expect(closed).toEqual(['2:1']);
     expect(released).toEqual(['2:1 card done: released 2:1']);
+  });
+
+  it('tells main of a worker closed for its card before main read a report from it', async () => {
+    const { ports, closed, told, finishedCards } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'fix the tests'] });
+    answer.notify('2:1', 'done', NOTHING_WAITING);
+    finishedCards.set('2:1', 'Done');
+    await answer.closeFinished();
+    expect(closed).toEqual(['2:1']);
+    expect(told).toEqual([`2 ${closedReport('api-terminal-2', '2:1', 'card done')}`]);
+  });
+
+  it('tells main nothing of a worker it read a report from', async () => {
+    const { answer, told, finishedCards } = await reported();
+    finishedCards.set('2:1', 'Done');
+    await answer.closeFinished();
+    expect(told).toEqual([]);
   });
 
   it('keeps the pane with the keyboard', async () => {

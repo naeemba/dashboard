@@ -10,11 +10,18 @@ export function doneReport(name: string, id: string, paused = false): string {
   return `${name} in pane ${id} (${paneLink(id)}) ${what} \`pane list\` shows where every worker stands.`;
 }
 
+// What main is told about a worker the app closed (auto-release.ts) before main read a report from it:
+// the close takes back any stop notice, and main would wait on a pane that is gone.
+export function closedReport(name: string, id: string, reason: string): string {
+  return `${name} in pane ${id} (${paneLink(id)}) was closed by the app, ${reason}, ${UNREPORTED} \`pane list\` shows where every worker stands.`;
+}
+
 // How long a pause may last before main is told anyway (stop-notices.ts): a worker that left a dev
 // server or a watcher running and forgot to report is never woken, so no later stop would come.
 export const PAUSE_CEILING_MS = 30 * 60 * 1000;
 
-const STOPPED = 'has stopped without sending you a report.';
+const UNREPORTED = 'without sending you a report.';
+const STOPPED = `has stopped ${UNREPORTED}`;
 const PAUSED = `has been paused for ${PAUSE_CEILING_MS / 60_000} minutes, waiting on its own background work,`
   + ' without sending you a report.';
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -23,10 +30,11 @@ const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // the conversations saved then.
 const DONE_REPORT = new RegExp(`^\\S+ in pane -?\\d+:\\d+ \\(${PANE_ADDRESS.source}\\) `
   + `(?:${escape(STOPPED)}|${escape(PAUSED)}|`
+  + `was closed by the app, [^,]+, ${escape(UNREPORTED)}|`
   + 'has finished its turn\\. If it sent you a report, that says what it did;)'
   + ' `pane list` shows where every worker stands\\.$');
 
-// Whether a prompt is one doneReport wrote, live or read back from a saved conversation.
+// Whether a prompt is one doneReport or closedReport wrote, live or read back from a saved conversation.
 export function isDoneReport(text: string): boolean {
   return DONE_REPORT.test(text);
 }
