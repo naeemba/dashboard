@@ -40,7 +40,7 @@ describe('relativeAge', () => {
     expect(relativeAge(now - 5 * MINUTE, now)).toBe('5 minutes ago');
   });
 
-  // .dashboard/CLAUDE.md invites hand-editing, so this is a thing people will write.
+  // A person can edit a card file by hand, so this is a thing people will write.
   it('says nothing about text that is not a date', () => {
     expect(relativeAge('last tuesday', now)).toBe(null);
     expect(relativeAge('', now)).toBe(null);
