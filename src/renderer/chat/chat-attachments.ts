@@ -50,11 +50,6 @@ export function createAttachments(
       remove.tabIndex = -1;
       remove.textContent = '×';
       remove.setAttribute('aria-label', `Remove image ${index + 1}`);
-      remove.addEventListener('click', () => removeAt(index, null));
-      // A click moves the selection there; the screen's click handler then shows the image full size.
-      thumbnail.addEventListener('mousedown', (event) => {
-        if (event.target !== remove) selectAt(index);
-      });
       thumbnail.append(image, remove);
       return thumbnail;
     }));
@@ -72,6 +67,14 @@ export function createAttachments(
     draw();
     selectAt(select);
   }
+
+  // A click on a thumbnail focuses it, which is the selection; the screen's click handler then shows
+  // the image full size. One on its x takes it off.
+  element.addEventListener('click', (event) => {
+    const remove = event.target instanceof Element ? event.target.closest('.chat-attached-remove') : null;
+    const index = [...element.children].findIndex((thumbnail) => thumbnail.contains(remove));
+    if (remove && index !== -1) removeAt(index, null);
+  });
 
   element.addEventListener('keydown', (event) => {
     if (isModified(event)) return;
