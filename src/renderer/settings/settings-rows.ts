@@ -1,6 +1,23 @@
 import { ACTIONS, type ActionGroup } from '../../shared/keys/actions';
 import type { Settings } from '../../shared/settings/settings';
 
+// The on/off settings: each a section of the file holding one boolean. Enter turns one over.
+export const TOGGLES = { review: 'autoLoop', updates: 'check', errors: 'notify' } as const;
+export type ToggleName = keyof typeof TOGGLES;
+
+export function isOn(settings: Settings, name: ToggleName): boolean {
+  return (settings[name] as Record<string, boolean>)[TOGGLES[name]];
+}
+
+// The settings with one toggle turned over.
+export function toggled(settings: Settings, name: ToggleName): Settings {
+  return { ...settings, [name]: { [TOGGLES[name]]: !isOn(settings, name) } };
+}
+
+function toggleRow(settings: Settings, name: ToggleName, label: string): SettingsRow {
+  return { kind: 'toggle', name, label, value: isOn(settings, name) ? 'on' : 'off' };
+}
+
 // One line of the settings screen. Headings are printed and walked past; everything else can be
 // selected and changed. Kept apart from the view so the walking is testable without a browser.
 export type SettingsRow =
@@ -13,9 +30,7 @@ export type SettingsRow =
   | { kind: 'weather-place'; label: string; value: string }
   | { kind: 'host-port'; label: string; value: string }
   | { kind: 'host-token'; label: string; value: string }
-  | { kind: 'review-auto-loop'; label: string; value: string }
-  | { kind: 'updates-check'; label: string; value: string }
-  | { kind: 'errors-notify'; label: string; value: string }
+  | { kind: 'toggle'; name: ToggleName; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
 
@@ -70,17 +85,11 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   });
   rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
   rows.push({ kind: 'heading', label: 'Review' });
-  rows.push({
-    kind: 'review-auto-loop', label: 'Start the review loop when a pull request opens', value: settings.review.autoLoop ? 'on' : 'off',
-  });
+  rows.push(toggleRow(settings, 'review', 'Start the review loop when a pull request opens'));
   rows.push({ kind: 'heading', label: 'Updates' });
-  rows.push({
-    kind: 'updates-check', label: 'Check for a newer release on launch and every six hours', value: settings.updates.check ? 'on' : 'off',
-  });
+  rows.push(toggleRow(settings, 'updates', 'Check for a newer release on launch and every six hours'));
   rows.push({ kind: 'heading', label: 'Errors' });
-  rows.push({
-    kind: 'errors-notify', label: 'Raise a desktop notification for an error while the window is away', value: settings.errors.notify ? 'on' : 'off',
-  });
+  rows.push(toggleRow(settings, 'errors', 'Raise a desktop notification for an error while the window is away'));
   rows.push({ kind: 'heading', label: 'Reset' });
   rows.push({ kind: 'reset-keys', label: 'Reset every key to its default' });
   rows.push({ kind: 'reset-all', label: 'Reset everything to defaults' });

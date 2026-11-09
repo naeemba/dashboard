@@ -50,7 +50,7 @@ export function createStatusError(bridge: DashboardBridge, settings: () => Setti
   }
 
   function dismiss(): void {
-    draw(errorOwner, '', 'notice');
+    if (errorOwner !== '') draw(errorOwner, '', 'notice');
   }
 
   // A clear is never logged, so the owner rule is draw's alone.

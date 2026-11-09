@@ -7,7 +7,7 @@ import {
   bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, resetKeys,
   type Settings,
 } from '../../shared/settings/settings';
-import { settingsRows, stepSelection, type SettingsRow } from './settings-rows';
+import { settingsRows, stepSelection, toggled, type SettingsRow } from './settings-rows';
 import { chatShadowPartner, isModified } from '../keys/shortcuts';
 
 // Modifier keys pressed on their own are not a binding — you are still on your way to one. Without
@@ -133,7 +133,7 @@ export function openSettings(
     function startEditing(row: SettingsRow): void {
       if (row.kind === 'heading' || row.kind === 'key'
         || row.kind === 'reset-keys' || row.kind === 'reset-all' || row.kind === 'host-token'
-        || row.kind === 'review-auto-loop' || row.kind === 'updates-check' || row.kind === 'errors-notify') return;
+        || row.kind === 'toggle') return;
       const input = document.createElement('input');
       input.className = 'settings-edit';
       input.value = row.value;
@@ -206,9 +206,7 @@ export function openSettings(
       if (row.kind === 'reset-all') return commit(resetAll(settings, isMac));
       if (row.kind === 'heading') return;
       // On or off, so Enter turns it over rather than opening a box.
-      if (row.kind === 'review-auto-loop') return commit({ ...settings, review: { autoLoop: !settings.review.autoLoop } });
-      if (row.kind === 'updates-check') return commit({ ...settings, updates: { check: !settings.updates.check } });
-      if (row.kind === 'errors-notify') return commit({ ...settings, errors: { notify: !settings.errors.notify } });
+      if (row.kind === 'toggle') return commit(toggled(settings, row.name));
       if (row.kind === 'host-token') {
         void navigator.clipboard.writeText(row.value);
         return say('Token copied');

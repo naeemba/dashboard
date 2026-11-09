@@ -118,5 +118,11 @@ minute per sentence, with `errors.notify` to turn it off. The banner names no
 pane, so a click only brings the window forward; it does not go through
 project.focus, which needs one.
 
+The once-a-minute rule is the bar's alone, not `log:write`'s: other writers
+repeat a line on purpose (an agent started twice is two lines).
+
 Watch for: a progress notice fades while its work goes on. A ship that takes a
-minute says `shipping…` for 8 seconds, then nothing until it ends.
+minute says `shipping…` for 8 seconds, then nothing until it ends. And a failure
+whose cause is still there fades too: `Board not saved: EACCES` leaves the bar
+after 20 seconds while the card is still not on disk, so a condition that keeps
+failing has to show itself again (the next save does) or it is only in the log.
