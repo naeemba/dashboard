@@ -21,6 +21,21 @@ export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
 }
 
+// The pull request card.follow found for this card, from the project's board: the number, while the
+// card sits in Review or past it. card.follow puts it there when the pull request opens and moves the card
+// to Done only after the merge (board-decision-6), so a number on a card in Done is the one that merged,
+// and the sweep needs it to clear that card's worktree. The sweep's first sign that a card is finished,
+// ahead of any number already on its worktree's board. Not before Review: a card back in Doing after its
+// pull request closed unmerged keeps that number, and a fresh ship of it has opened nothing yet. Not in
+// Cancelled, wherever that column sits, and not on a board with no Review column, which has no column to
+// be in or past.
+export function followedPullRequest(board: Board, cardId: string): number | null {
+  const at = selectionOf(board, cardId);
+  const review = reviewColumnIndex(board);
+  if (at === null || review === -1 || at.column < review || isCancelled(board, cardId)) return null;
+  return cardAt(board, at)?.pullRequest ?? null;
+}
+
 // Whether the card sits in Cancelled. One of the reasons awaitsReview answers false, exported so the
 // refusal of a review by hand can say this one by name rather than "its review has run".
 export function isCancelled(board: Board, cardId: string): boolean {
@@ -35,8 +50,8 @@ export function isCancelled(board: Board, cardId: string): boolean {
 //
 // What asking the record instead costs. `reviewing` on it is a sentence about a pane, so it is cleared
 // when the pane goes and a restart wipes it off every card. Without this, the first tick after that
-// restart finds a card sitting in Done with a pull request number still on the branch's board, pulls it
-// back into Review, re-cuts the worktree and runs `/pr-loop` at a pull request that merged last week.
+// restart finds a card sitting in Done with its pull request number on the card, pulls it back into
+// Review, re-cuts the worktree and runs `/pr-loop` at a pull request that merged last week.
 //
 // Null is the third answer, for a card this board does not mention, and it means "I cannot say" rather
 // than "review it". Such a card cannot be one made on the branch: every worktree the sweep walks was cut
@@ -95,7 +110,7 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // checkout up to it (board-sync-git.ts), so one move after the merge is the card on main and on screen.
 // Before the merge it would be main saying Done for a pull request that may yet be refused, which is
 // how kamandsystem #19 sat in Done unmerged. The branch's own board is not moved: nothing the merge
-// carries is about the card any more (board-rule-2).
+// carries is about the card any more (board-decision-7).
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in.

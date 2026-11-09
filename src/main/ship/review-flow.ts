@@ -1,6 +1,6 @@
 import { boardFolderPath, peekBoard, readBoard } from '../board/board-store';
 import { isCardSetAside } from '../board/board-files';
-import { awaitsReview, intoReview, isCancelled, reviewPrompt, reviewRefused, worktreeKept } from './review';
+import { awaitsReview, followedPullRequest, intoReview, isCancelled, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
 import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
@@ -53,26 +53,37 @@ export type ReviewPorts = {
   arrived: (entry: WorktreeEntry) => Promise<unknown>;
 };
 
-// The pull request on a worktree's own board, or null when the agent has not opened one yet. That
-// number is the whole signal: an agent that has opened a pull request has done the work, whatever
-// column it left the card in and whatever it said about it, and one that never gets that far never
-// writes the field — so a card that failed is left alone rather than reviewed. The worktree's own
-// board is where to look, because it is the copy the agent has been editing all along.
+// The pull request this card's work opened, or null while there is none yet. That number is the whole
+// signal: a card that has a pull request has done the work, whatever column it was left in, and one
+// that never gets that far has none, so a card that failed is left alone rather than reviewed. Two
+// sources, in this order: the number card.follow found from the branch and put on the project's card
+// while it sits in Review or past it (followedPullRequest), then any number already on the worktree's
+// own board.
+// Agents no longer write one there, so a worktree number only arrives with the base the ship cut from.
 //
 // peekBoard rather than readBoard: readBoard moves a board file it cannot parse aside, and in a
 // worktree that file is tracked and committed. A sweep running on a timer must not delete a branch's
 // board because the agent in it wrote a broken one.
 //
-// The working copy, and not `git show HEAD:` of the same path, which is the obvious answer to the
-// number being readable a moment before the commit that makes it true. Two reasons it is not taken.
-// It would not close the hole: `/work-card` pushes the commit carrying the number and keeps going —
-// the /simplify pass this repo asks for, a follow-up commit — so a worktree can be dirty long after
-// the number is committed, and the swap has to survive that anyway. And it would put a `git show`
-// per in-flight worktree on a five-second timer for the whole life of the app, to spare a refusal
-// that costs nothing when nothing is stuck. swapWorktree is where the window is handled instead.
-function finishedIn(entry: WorktreeEntry): number | null {
+// The working copy, and not `git show HEAD:` of the same path: a worktree can be dirty long after the
+// pull request opens — `/work-card` keeps going with the /simplify pass and follow-up commits — so the
+// swap has to survive that anyway, and a `git show` per in-flight worktree on a five-second timer would
+// cost more than the refusal it spares. swapWorktree is where a dirty worktree is handled.
+//
+// The followed number comes first because a number on the worktree's board can be an earlier pull
+// request's: card.follow keeps it on a card it sends back to Doing, and a re-ship cuts the worktree from
+// a base that carries it. For the same reason, on a card before Review, a worktree number equal to the
+// project card's own is not counted: nobody writes one there, so it can only be that closed pull
+// request, and reviewing it would run `/pr-loop` at it in the window before card.follow sees the new
+// one. A card in Review or past it never reaches that check: followedPullRequest answers for it.
+// `project` is the project's board as the caller already read it, or null.
+function finishedIn(entry: WorktreeEntry, project: Board | null): number | null {
+  const followed = project === null ? null : followedPullRequest(project, entry.cardId);
+  if (followed !== null) return followed;
   const board = peekBoard(entry.worktreePath);
-  return board === null ? null : cardById(board, entry.cardId)?.pullRequest ?? null;
+  const written = board === null ? null : cardById(board, entry.cardId)?.pullRequest ?? null;
+  if (written === null) return null;
+  return project !== null && cardById(project, entry.cardId)?.pullRequest === written ? null : written;
 }
 
 // The project's board, or null when it cannot be read at all. Null is not "no card here": a board the
@@ -127,12 +138,11 @@ async function swapWorktree(
   const removed = await ports.removeWorktree(entry.worktreePath);
   if (!removed.ok) {
     if (removed.dirty.length === 0) return { message: removed.message, again: false };
-    // Uncommitted files are usually the agent's own last breath. The pull request number is written
-    // onto the branch's board and then committed, and a write and its commit are never the same act,
-    // so there is always a window where the number is on disk and the commit is not — and git will
-    // not give up a worktree with a change in it. A moment later it would. So the card is asked about
-    // again on the next tick rather than written off for the rest of the run. `/work-card` asks for
-    // both in one shell command to keep that window short, which narrows it and cannot close it.
+    // Uncommitted files are usually the agent's own last commit still being made: the pull request is
+    // open, and the agent goes on committing fixes to it, so there is always a window where a change
+    // is on disk and its commit is not — and git will not give up a worktree with a change in it. A
+    // moment later it would. So the card is asked about again on the next tick rather than written off
+    // for the rest of the run.
     //
     // A worktree that stays dirty — an agent that really did walk away mid-change — is the price, and
     // this paragraph is the only thing that names it. Unmarked, the card runs the whole of sweepOne
@@ -199,30 +209,31 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // One card, start to finish. Every guard in it runs before the first await, and so does the mark,
   // so the whole list can be walked at once, and a run can start while the last one is still out,
   // without two of them starting the same card.
-  async function sweepOne(entry: WorktreeEntry): Promise<void> {
+  // `boardOf` is the run's one read of each project's board, shared by every worktree in it.
+  async function sweepOne(entry: WorktreeEntry, boardOf: (projectPath: string) => Board | null): Promise<void> {
     if (reviewed.has(entry.cardId)) return;
     // Panes belong to an open project. A project closed right now is not a refusal: nothing is marked,
     // and the sweep finds the card again the moment it is opened.
     const slot = ports.slotOf(entry.projectPath);
     if (slot === -1) return;
-    // The pull request number is not the agent being done. `/work-card` pushes the commit carrying it
-    // and keeps going — the /simplify pass this repo asks for, a follow-up commit, its own summary — so
+    // The pull request number is not the agent being done. `/work-card` opens the pull request and
+    // keeps going — the /simplify pass this repo asks for, a follow-up commit, its own summary — so
     // taking the folder away here kills the shell before `git push` runs and the fix never reaches the
     // pull request the review is about to merge. Nothing is marked, so the sweep picks the card up
     // the moment the agent stops working.
     if (ports.agentWorksIn(slot, entry.pane)) return;
-    const pullRequest = finishedIn(entry);
+    const board = boardOf(entry.projectPath);
+    const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return;
-    // A card that has already been through this. The number on the branch's board is written once and
-    // stays written, so it goes on saying "finished" long after the review that read it merged the
-    // pull request. The project's board is what tells the two apart; review.ts holds why it is the
-    // only thing that can. A card past Review is finished with its worktree too, so that is removed
-    // here, once: the review pane cannot remove the folder it is standing in, and without this every
-    // shipped card leaves one beside the project for good.
-    const board = projectBoard(entry.projectPath);
+    // A card that has already been through this. The pull request number, once there, stays there, so
+    // it goes on saying "finished" long after the review that read it merged the pull request. The
+    // project's board is what tells the two apart; review.ts holds why it is the only thing that can.
+    // A card past Review is finished with its worktree too, so that is removed here, once: the review
+    // pane cannot remove the folder it is standing in, and without this every shipped card leaves one
+    // beside the project for good.
     // A cancelled card keeps its worktree until the worktree dialog removes it (board-decision-4), and
     // is never reviewed. Not marked, so moving it out of Cancelled lets the next tick pick it up.
-    // ponytail: two board reads per cancelled worktree every tick; mark it if that ever shows.
+    // ponytail: a board read per project and one per cancelled worktree every tick; mark it if that ever shows.
     if (board !== null && isCancelled(board, entry.cardId)) return;
     const awaits = board === null ? null : awaitsReview(board, entry.cardId);
     if (awaits === false) {
@@ -259,8 +270,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // command that dropped one card off a board that still has others. Either is the deletion
     // as far as this line is concerned, and one tick — five seconds — is all it takes to land in
     // between. The card is then back in Ship reading `shipped · fix-login · terminal 3`, with its
-    // worktree still on disk and its pull request number still on the branch's board, and no review
-    // ever starts for it again until you restart the app or ship the card again. The mark stays anyway:
+    // worktree still on disk, and no review ever starts for it again until you restart the app or ship
+    // the card again. The mark stays anyway:
     // asking the board whether the card has come back is the read the mark exists to avoid, so there is
     // no cheap version of this that covers it. If it becomes worth more than this paragraph, `forget`
     // is already exported and `board:change` already fires in main for every open project's folder.
@@ -310,14 +321,14 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const slot = ports.slotOf(entry.projectPath);
     if (slot === -1) return { refused: notOpenRefusal(entry.title) };
     if (ports.agentWorksIn(slot, entry.pane)) return { refused: `the agent on "${entry.title}" is still working` };
-    const pullRequest = finishedIn(entry);
+    const board = projectBoard(entry.projectPath);
+    const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };
     // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
     // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a
     // pull request that merged.
     // Null is refused as well, as sweepOne leaves it alone: a card the project's board does not show,
     // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
-    const board = projectBoard(entry.projectPath);
     const awaits = board === null ? null : awaitsReview(board, id);
     if (board !== null && isCancelled(board, id)) {
       return { refused: `"${entry.title}" is cancelled; move it out of Cancelled to review it` };
@@ -357,8 +368,16 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // in different projects, and awaiting each in turn would leave the second sitting on `shipped` for
   // however long the first one's git takes, with nothing on screen saying why. Two in the *same*
   // project still go one at a time: that is what the queue is for.
+  //
+  // Each project's board is read once per run, on the first worktree that gets far enough to ask: the
+  // cards each look only at themselves, and every write below reads the board afresh.
   async function run(): Promise<void> {
-    await Promise.all(ports.worktrees().map((entry) => sweepOne(entry)));
+    const boards = new Map<string, Board | null>();
+    const boardOf = (projectPath: string): Board | null => {
+      if (!boards.has(projectPath)) boards.set(projectPath, projectBoard(projectPath));
+      return boards.get(projectPath) ?? null;
+    };
+    await Promise.all(ports.worktrees().map((entry) => sweepOne(entry, boardOf)));
   }
 
   function forget(cardId: string): void {

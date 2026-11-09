@@ -1,0 +1,11 @@
+{
+  "id": "66559db4-eed7-4888-b9c3-9e3920302342",
+  "title": "Audit 10: hook that refuses a zsh path= assignment (dotfiles)",
+  "notes": "In dotfiles: the PreToolUse Bash hook beside block-spin-loops.js refuses path=, local path= and typeset path=, naming the PATH tie. The global zsh rule's first line.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:56.136Z",
+  "updatedAt": "2026-11-09T15:32:56.136Z",
+  "column": "Backlog",
+  "order": 50
+}

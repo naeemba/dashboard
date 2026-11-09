@@ -33,14 +33,16 @@ body {
    both ways at once. It costs nothing on the app's own English: plaintext takes the direction from
    the first letter that has one, and in "Enter changes the row" that letter is E.
 
-   A pane is the exception, and not only because its markup is xterm's to style rather than ours.
+   A terminal is the exception, and not only because its markup is xterm's to style rather than ours.
    xterm.js lays out a grid of cells and reorders nothing, nvim does not do it either, so Persian
-   inside a pane reads back to front whatever this file says.
+   in a terminal reads back to front whatever this file says. Only the terminal, not the pane around
+   it: a worker's Claude screen sits inside a pane and is our markup, and excluding the whole pane
+   left its Persian prose laid out wrong while main's screen beside it was right.
 
    Order only: the alignment stays put, so five columns of cards still line up down their left edge.
    The boxes you type into carry dir="auto" instead, which turns the box round as well, the way a text
    field does in any browser. */
-body *:not(.pane, .pane *) {
+body *:not(.xterm, .xterm *) {
   unicode-bidi: plaintext;
 }
 
