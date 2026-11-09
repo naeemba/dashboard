@@ -106,12 +106,16 @@ Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
 - What wants you: `needs-you.ts`, `board-summary.ts`
 - Boards of every project: `cards.ts`, `cards-view.ts`
 - Command across projects: `command-view.ts`, `tasks.ts`, `task-runner.ts`
-- Log section: `log-view.ts`
+- Log section: `log-view.ts`; what its popup and copy make of an entry,
+  `log-popup.ts`, tested against `log-popup.fixture.ts` (scrubbed real lines,
+  old and new)
 - Terminals: `manager-terminals.ts` (main's half; the view is the panes
   feature's `page.ts`)
 
 ## Scenarios
 
+- Given the log section, when you press Enter on an entry or click it, then it opens formatted in the drawer's JSON viewer, a stack one frame to a line; Escape closes it.
+- Given the log section or its popup, when you press Alt+C or click a row's copy button, then the entry is on the clipboard as JSON, an older five-field entry included.
 - Given a pane is waiting, when you press Enter on its row, then you land on that pane in its project.
 - Given several things need you, when you press the next-in-queue key, then you are taken to the next one.
 - Given the manager's board, when you move a card in a project's board there, then that project's `board.json` changes.

@@ -704,6 +704,7 @@ function apply(action: Action): void {
     case 'command-cancel': return page.command?.runAction(action);
     case 'log-select':
     case 'log-open':
+    case 'log-copy':
     case 'log-filter-reset': return page.log?.runAction(action);
     case 'chat': return focusedChat(page)?.runCommand(action.command);
     case 'notes-ink-toggle': return toggleNotesPage(page);

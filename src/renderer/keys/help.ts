@@ -63,7 +63,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'key takes a project away, refused while a worker runs something. The drawer lists the '
     + 'project\'s docs, YAML and JSON foldable, and its conversations.',
   log: 'What the app did and what went wrong, newest first. Type to filter: every word must appear, '
-    + 'so `error ship` is the ships that failed. Kept in dashboard.log in the app\'s data folder, '
+    + 'so `error ship` is the ships that failed. An entry opens formatted, or copies as JSON. Kept in dashboard.log in the app\'s data folder, '
     + LOG_FILE_COUNT + ' files of ' + LOG_FILE_LIMIT_SHOWN + '. Never what you type in a pane.',
   app: 'Hold Ctrl, Cmd or Alt alone and a panel names every key that modifier can still start here. '
     + 'Settings live in ~/.config/dashboard/settings.json, holding only what you changed; the Host rows '

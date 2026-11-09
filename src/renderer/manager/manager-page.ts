@@ -156,6 +156,8 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   const log = createLogView({
     bridge: options.bridge,
     onError: (message) => options.onError('log', message),
+    onNotice: (message) => options.onNotice('log', message),
+    binding: options.binding,
   });
   // Above the five views rather than inside one, so it is on screen whichever section is showing.
   const strip = createSectionStrip(options.onSection);

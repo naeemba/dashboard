@@ -17,6 +17,13 @@ the box to filter — every word must appear, so `error ship` is the ships that
 failed. Kept in dashboard.log in the app's data folder, 5 files of 5 MB; the
 path is at the top. Never what you type in a pane.
 
+Enter, or a click on a row, opens the entry in a popup: the drawer's JSON
+viewer, foldable, with the row's fields first and an error's stack (and each
+cause's) one frame to a line. Escape puts it away. Alt+C, or the button at the
+end of a row, copies the entry as JSON, exactly as it was read; Alt+C copies
+from the popup too. An older entry with only the five row fields opens and
+copies the same, and a line the file could not parse is left out of the list.
+
 Each line of the file is one JSON entry: `time`, `level`, `kind`, `project`
 and `message`, the one sentence the row shows. Every entry also says which
 `build` wrote it (`<version>+<commit>`) and its `source` (`main` or
