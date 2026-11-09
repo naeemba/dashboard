@@ -1,0 +1,11 @@
+{
+  "id": "eb5fba3f-566c-46d3-ab17-59c2b573ed54",
+  "title": "The close key on a pane hides a scope pane.close could not stop",
+  "notes": "pane:close in src/main/workers/worker-channels.ts:20-22 awaits pane.close and throws its answer away, so when systemctl --user stop fails, 'closed 2:3; <unit> was not stopped: ...' reaches neither the screen nor the log. A dev server the pane detached keeps its port; the next npm run dev fails with EADDRINUSE and nothing says why. From #255. Fix: log the unit not stopped as a warn, as shellIn in pane-actions.ts does, or show the answer. Issue: https://github.com/naeemba/dashboard/issues/259 Review: https://github.com/naeemba/dashboard/pull/257#discussion_r4512904937",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-09T12:52:40.233Z",
+  "updatedAt": "2026-11-09T12:52:40.233Z",
+  "column": "Backlog",
+  "order": 40
+}
