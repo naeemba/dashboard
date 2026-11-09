@@ -76,26 +76,26 @@ describe('test folders', () => {
 });
 
 // Pins errors-rule-1: an error shown to a person goes through failureText, never String(error).
+// The probes import nothing, so the one `no-restricted-syntax` they can raise is this one.
 describe('String(error)', () => {
-  const stringErrors = async (filePath: string, source: string): Promise<number> => {
-    const [result] = await eslint.lintText(source, { filePath });
-    return result.messages.filter((message) => message.message.includes('failureText')).length;
-  };
   const source = 'export const say = (error: unknown): string => `failed: ${String(error)}`;';
 
   it.each(['src/renderer/probe.ts', 'src/main/probe.ts', 'src/shared/probe.ts', 'src/preload/probe.ts'])('fails in %s', async (filePath) => {
-    expect(await stringErrors(filePath, source)).toBe(1);
+    expect(await boundaryErrors(filePath, source)).toHaveLength(1);
   });
 
   it.each(['src/shared/errors/failure.ts', 'src/main/command/failure-line.ts'])('allows it in %s', async (filePath) => {
-    expect(await stringErrors(filePath, source)).toBe(0);
+    expect(await boundaryErrors(filePath, source)).toEqual([]);
   });
 
-  it('keeps the process boundaries in the failure files', async () => {
-    expect(await boundaryErrors('src/shared/errors/failure.ts', "import { x } from '../../main/app/projects';")).toHaveLength(1);
+  it.each([
+    ['src/shared/errors/failure.ts', "import { x } from '../../main/app/projects';"],
+    ['src/main/command/failure-line.ts', "import { x } from '../../renderer/page';"],
+  ])('keeps the process boundaries in %s', async (filePath, imports) => {
+    expect(await boundaryErrors(filePath, imports)).toHaveLength(1);
   });
 
   it('leaves String on anything else alone', async () => {
-    expect(await stringErrors('src/renderer/probe.ts', 'export const text = (count: number): string => String(count);')).toBe(0);
+    expect(await boundaryErrors('src/renderer/probe.ts', 'export const text = (count: number): string => String(count);')).toEqual([]);
   });
 });
