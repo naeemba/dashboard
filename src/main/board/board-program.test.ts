@@ -120,7 +120,7 @@ describe('board guard', () => {
 
   it('refuses killing the running app, with its own reason', () => {
     const kill = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'kill 4242' } });
-    const app = (pid: number) => (pid === 4242 ? '/home/me/.local/opt/dashboard/Dashboard --type=renderer' : null);
+    const app = () => [{ pid: 4242, names: ['Dashboard'], commandLine: '/home/me/.local/opt/dashboard/Dashboard --type=renderer' }];
     expect(JSON.parse(guardAnswer(kill, undefined, 'board.js', app)).hookSpecificOutput.permissionDecisionReason).toContain('rebuild');
     expect(guardAnswer(kill, undefined, 'board.js', noProcess)).toBe('');
   });

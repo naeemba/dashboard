@@ -4,11 +4,11 @@
 // app expects, repaired silently on the next read.
 //
 // One decision, run as `board guard` (board-program.ts) from every settings file that names the hook,
-// beside the running-app guard (app/running-app-guard.ts), which rides the same command and doors:
+// beside the running-app guard (workflow/running-app-guard.ts), which rides the same command and doors:
 // a terminal worker's, a Claude screen's, and the user's own ~/.claude/settings.json
 // (board-guard-install.ts).
 
-import { hookRefusal, SHELL_REDIRECT, textField } from '../app/hook-answer';
+import { hookRefusal, SHELL_REDIRECT, textField } from './hook-answer';
 
 // The tools whose input names the file they write, and the field it is in.
 const FILE_FIELDS: Record<string, string> = { Edit: 'file_path', Write: 'file_path', NotebookEdit: 'notebook_path' };

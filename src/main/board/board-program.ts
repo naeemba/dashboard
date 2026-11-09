@@ -11,8 +11,8 @@ import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
 import { boardGuard } from './board-guard';
-import { runningAppGuard } from '../app/running-app-guard';
-import { readFileSync } from 'node:fs';
+import { runningAppGuard, runningProcess, type ProcessList, type RunningProcess } from '../workflow/running-app-guard';
+import { readdirSync, readFileSync } from 'node:fs';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
 // file and a line of output out, and the exit code back. Every decision it could make is made there
@@ -96,26 +96,36 @@ function answer(result: CommandResult): number {
 // (running-app-guard.ts). The hook's input in, the refusal to print or ''. The board's refusal names
 // the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
 // (`boardVariable` set) and this program's own path outside one.
-export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, commandLineOf: (pid: number) => string | null): string {
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList): string {
   const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown };
   const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
-  const refused = boardGuard(toolName, input.tool_input, command) ?? runningAppGuard(toolName, input.tool_input, commandLineOf);
+  const refused = boardGuard(toolName, input.tool_input, command) ?? runningAppGuard(toolName, input.tool_input, listProcesses);
   return refused === undefined ? '' : JSON.stringify(refused);
 }
 
-// A pid's command line from /proc, or null where there is none (no such pid, or a mac).
-// ponytail: a mac has no /proc, so a `kill <pid>` there is not checked; the name-based refusals are.
-function procCommandLine(pid: number): string | null {
+// Every process /proc shows, or null where there is no /proc (a mac). Read only when a command could
+// kill something, and a process that ends while it is read is left out.
+// ponytail: a mac has no /proc, so there a kill is judged by the names it carries.
+function procProcesses(): RunningProcess[] | null {
+  let pids: string[];
   try {
-    return readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ');
+    pids = readdirSync('/proc').filter((name) => /^\d+$/.test(name));
   } catch {
     return null;
   }
+  return pids.flatMap((pid) => {
+    try {
+      const argv = readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0').filter(Boolean);
+      return [runningProcess(Number(pid), readFileSync(`/proc/${pid}/comm`, 'utf8').trim(), argv)];
+    } catch {
+      return [];
+    }
+  });
 }
 
 function guard(): number {
-  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procCommandLine));
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procProcesses));
   return 0;
 }
 

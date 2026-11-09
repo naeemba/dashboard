@@ -145,12 +145,21 @@ is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` t
 Agreed on 2026-11-09, card 9 of the CLAUDE.md audit (`claude-md-audit.md`). workflow-rule-1 was a line an
 agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
 
-- `pkill` or `killall` naming Dashboard or electron;
-- `kill` of a pid `pgrep` or `pidof` finds for either, or of a literal pid whose command line is the
-  installed build (`~/.local/opt/dashboard/`, `Dashboard.app/`) or electron out of a checkout. The command
-  line comes from `/proc`, so on a mac a literal pid is not checked; the name-based refusals are;
+- a `pkill`, `killall`, or `kill` fed by `pgrep` or `pidof`, that would hit one of the app's processes:
+  each pattern is matched against `/proc` the way the command would match it (`-f` against the command
+  line, otherwise the process's name), and a process is the app's when its command line is out of the
+  installed build (`~/.local/opt/dashboard/`, `Dashboard.app/`, which covers its pane host, screen host
+  and Claude), is a pane or screen host anywhere, or is electron out of a checkout named `dashboard*`.
+  So `killall node` is refused while the pane host runs and `pkill -f vitest` goes through. On a mac,
+  with no `/proc`, the pattern is refused when it names Dashboard, electron, node or claude;
+- a `kill` of a literal pid or process group (`-<pid>`) that is the app's, and `kill -1`;
+- `systemctl stop`, `kill` or `restart` of `agents.slice` or `panes.slice`;
 - `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
-- a `cp`, `mv`, `rm`, `rsync`, `ditto` or `ln` naming the installed build, or a `>` or `tee` into it.
+- a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, or `find` with
+  `-delete` or `-exec`, naming the installed build, or a `>` or `tee` into it.
+
+Each verb counts only at the start of a simple command (behind `sudo`, `command`, `env`, `exec` or a
+path), so a commit message, a PR body or a grep that names one goes through.
 
 `scripts/rebuild.sh`, `scripts/release.sh`, `pnpm run package` and anything into `out/` or `.vite/` go
 through: the hook reads the agent's command, not what a script runs, and the scripts swap a build in beside
@@ -158,10 +167,11 @@ the running one without stopping it. `no-running-app.mjs` still stops a package 
 the checkout. Reading the installed build (`ls`, `node "$DASHBOARD_COMMAND"`) goes through.
 
 - **The same program and doors as the board guard** (board-decision-8): `board guard` asks the board's
-  question and then this one (`src/main/app/running-app-guard.ts`), so every door that already runs
+  question and then this one (`src/main/workflow/running-app-guard.ts`), so every door that already runs
   `node "$HOME/.claude/dashboard/board.js" guard` refuses both, and the install adds nothing new to
   `~/.claude/settings.json`. A second command would have been a second entry in every user's settings and
   a second process per Bash call.
 - **It reads the command's text**, as the board guard does. A script of your own, a command built at run
-  time or a `python -c` still gets through; the hook is a guard rail, not a sandbox.
+  time or a `python -c` still gets through, and a heredoc line that starts with one of the verbs is
+  refused; the hook is a guard rail, not a sandbox.
 - **The refusal says what to do instead**: say the installed app needs a rebuild and restart, and stop.
