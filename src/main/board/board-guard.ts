@@ -3,7 +3,8 @@
 // with the command to use instead. What a hand edit costs is board-rule-1's: a card missing a field the
 // app expects, repaired silently on the next read.
 //
-// One decision, run as `board guard` (board-program.ts) from every settings file that names the hook:
+// One decision, run as `board guard` (board-program.ts) from every settings file that names the hook,
+// beside the running-app guard (app/running-app-guard.ts), which rides the same command and doors:
 // a terminal worker's, a Claude screen's, and the user's own ~/.claude/settings.json
 // (board-guard-install.ts).
 
@@ -39,7 +40,7 @@ const BOARD_FILE = new RegExp(String.raw`(?:^|[\\/])` + BOARD_TAIL);
 const TARGET = String.raw`\s*["']?(?:[^\s"';|&<>]*[\\/])?` + BOARD_TAIL;
 const SHELL_WRITE = new RegExp(String.raw`(?:>>?|\btee(?:\s+-a)?|\bsed\b[^;|&]*\s-i[^;|&]*\s)${TARGET}`);
 
-function textField(input: unknown, field: string): string {
+export function textField(input: unknown, field: string): string {
   const value = isRecord(input) ? input[field] : undefined;
   return typeof value === 'string' ? value : '';
 }
@@ -56,14 +57,12 @@ function boardGuardReason(boardCommand: string): string {
     + `Run \`node "${boardCommand}"\` with no arguments for its usage: move, set, comment, add.`;
 }
 
+// A refusal as a PreToolUse hook prints it on stdout.
+export function hookRefusal(reason: string) {
+  return { hookSpecificOutput: { hookEventName: 'PreToolUse' as const, permissionDecision: 'deny' as const, permissionDecisionReason: reason } };
+}
+
 // The hook's answer, as the command prints it on stdout; undefined lets the call through.
 export function boardGuard(toolName: string, toolInput: unknown, boardCommand: string) {
-  if (!writesBoard(toolName, toolInput)) return undefined;
-  return {
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse' as const,
-      permissionDecision: 'deny' as const,
-      permissionDecisionReason: boardGuardReason(boardCommand),
-    },
-  };
+  return writesBoard(toolName, toolInput) ? hookRefusal(boardGuardReason(boardCommand)) : undefined;
 }

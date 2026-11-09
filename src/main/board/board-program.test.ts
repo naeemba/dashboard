@@ -106,14 +106,22 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
 });
 
 describe('board guard', () => {
+  const noProcess = () => null;
   const write = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/p/.dashboard/board/cards/a.json' } });
 
   it('names $DASHBOARD_BOARD in a pane the app opened, and its own path outside one', () => {
-    expect(guardAnswer(write, '/app/board.js', '/home/me/.claude/dashboard/board.js')).toContain('node \\"$DASHBOARD_BOARD\\"');
-    expect(guardAnswer(write, undefined, '/home/me/.claude/dashboard/board.js')).toContain('node \\"/home/me/.claude/dashboard/board.js\\"');
+    expect(guardAnswer(write, '/app/board.js', '/home/me/.claude/dashboard/board.js', noProcess)).toContain('node \\"$DASHBOARD_BOARD\\"');
+    expect(guardAnswer(write, undefined, '/home/me/.claude/dashboard/board.js', noProcess)).toContain('node \\"/home/me/.claude/dashboard/board.js\\"');
   });
 
   it('prints nothing for a call it lets through', () => {
-    expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js')).toBe('');
+    expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js', noProcess)).toBe('');
+  });
+
+  it('refuses killing the running app, with its own reason', () => {
+    const kill = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'kill 4242' } });
+    const app = (pid: number) => (pid === 4242 ? '/home/me/.local/opt/dashboard/Dashboard --type=renderer' : null);
+    expect(JSON.parse(guardAnswer(kill, undefined, 'board.js', app)).hookSpecificOutput.permissionDecisionReason).toContain('rebuild');
+    expect(guardAnswer(kill, undefined, 'board.js', noProcess)).toBe('');
   });
 });

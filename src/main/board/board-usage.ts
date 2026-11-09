@@ -15,6 +15,7 @@ export const USAGE = `board — the Dashboard board of the project you are in
   board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
   board comment <id> "<text>"
   board guard            a PreToolUse hook: reads its input on stdin, refuses a hand edit of the board
+                         or quitting, killing or replacing the running Dashboard
 
 Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field. Any of them
 takes --project <name|aka> to work on that project's board, from ~/.dashboard/projects.yaml, instead

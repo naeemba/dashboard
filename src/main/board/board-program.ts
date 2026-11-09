@@ -10,7 +10,8 @@ import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
-import { boardGuard } from './board-guard';
+import { boardGuard, hookRefusal, textField } from './board-guard';
+import { RUNNING_APP_REASON, stopsRunningApp } from '../app/running-app-guard';
 import { readFileSync } from 'node:fs';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
@@ -91,18 +92,31 @@ function answer(result: CommandResult): number {
   return 0;
 }
 
-// `board guard`, a PreToolUse hook (board-guard.ts): the hook's input in, the refusal to print or ''.
-// It names the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
+// `board guard`, a PreToolUse hook: the board guard (board-guard.ts), then the running-app guard
+// (running-app-guard.ts). The hook's input in, the refusal to print or ''. The board's refusal names
+// the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
 // (`boardVariable` set) and this program's own path outside one.
-export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string): string {
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, commandLineOf: (pid: number) => string | null): string {
   const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown };
+  const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
-  const refused = boardGuard(String(input.tool_name), input.tool_input, command);
+  const refused = boardGuard(toolName, input.tool_input, command)
+    ?? (toolName === 'Bash' && stopsRunningApp(textField(input.tool_input, 'command'), commandLineOf) ? hookRefusal(RUNNING_APP_REASON) : undefined);
   return refused === undefined ? '' : JSON.stringify(refused);
 }
 
+// A pid's command line from /proc, or null where there is none (no such pid, or a mac).
+// ponytail: a mac has no /proc, so a `kill <pid>` there is not checked; the name-based refusals are.
+function procCommandLine(pid: number): string | null {
+  try {
+    return readFileSync(`/proc/${pid}/cmdline`, 'utf8').replaceAll('\0', ' ');
+  } catch {
+    return null;
+  }
+}
+
 function guard(): number {
-  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1]));
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procCommandLine));
   return 0;
 }
 
