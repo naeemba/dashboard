@@ -103,12 +103,11 @@ describe('folding', () => {
     expect(enclosingHeader(view, 1)).toBeNull();
   });
 
-  it('maps the arrows and the fold-all key, and ignores them modified', () => {
-    expect(['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'a', 'x'].map((key) => dataKey(key, false, true)))
+  it('maps the arrows and the fold-all key', () => {
+    expect(['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'a', 'x'].map((key) => dataKey(key, true)))
       .toEqual(['next', 'previous', 'open', 'close', 'all', 'ignore']);
-    expect(dataKey('a', true, true)).toBe('ignore');
     // With nothing to fold the arrows are left to scroll the doc.
-    expect(dataKey('ArrowDown', false, false)).toBe('ignore');
+    expect(dataKey('ArrowDown', false)).toBe('ignore');
   });
 
   it('walks the Edit row and the fold lines in sight, round', () => {
