@@ -139,3 +139,29 @@ is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` t
 - An `EXIT` trap prints `Stopped:` for any failure `stop` did not explain, with a `next` line the script
   moves along as it goes (nothing dispatched; the run may still be going or the id is wrong; the run
   finished but its release could not be read; the release is out, resume to install), rather than an `|| stop` on every line that can fail.
+
+## workflow-decision-7: The running app is kept by a hook that rides the board guard
+
+Agreed on 2026-11-09, card 9 of the CLAUDE.md audit (`claude-md-audit.md`). workflow-rule-1 was a line an
+agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
+
+- `pkill` or `killall` naming Dashboard or electron;
+- `kill` of a pid `pgrep` or `pidof` finds for either, or of a literal pid whose command line is the
+  installed build (`~/.local/opt/dashboard/`, `Dashboard.app/`) or electron out of a checkout. The command
+  line comes from `/proc`, so on a mac a literal pid is not checked; the name-based refusals are;
+- `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
+- a `cp`, `mv`, `rm`, `rsync`, `ditto` or `ln` naming the installed build, or a `>` or `tee` into it.
+
+`scripts/rebuild.sh`, `scripts/release.sh`, `pnpm run package` and anything into `out/` or `.vite/` go
+through: the hook reads the agent's command, not what a script runs, and the scripts swap a build in beside
+the running one without stopping it. `no-running-app.mjs` still stops a package while an app runs out of
+the checkout. Reading the installed build (`ls`, `node "$DASHBOARD_COMMAND"`) goes through.
+
+- **The same program and doors as the board guard** (board-decision-8): `board guard` asks the board's
+  question and then this one (`src/main/app/running-app-guard.ts`), so every door that already runs
+  `node "$HOME/.claude/dashboard/board.js" guard` refuses both, and the install adds nothing new to
+  `~/.claude/settings.json`. A second command would have been a second entry in every user's settings and
+  a second process per Bash call.
+- **It reads the command's text**, as the board guard does. A script of your own, a command built at run
+  time or a `python -c` still gets through; the hook is a guard rail, not a sandbox.
+- **The refusal says what to do instead**: say the installed app needs a rebuild and restart, and stop.

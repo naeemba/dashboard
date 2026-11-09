@@ -6,7 +6,7 @@ bumping the version. Owns `.gitattributes`, the CI and release workflows (the re
 `scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` (its decisions in `scripts/release-checks.mjs`, tested beside it), `scripts/version-unchanged.mjs`, CI's refusal of a pull request that moves the version (tested beside it; `scripts/version-unchanged-step.mjs` is its entry) and the
 `/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build
 hooks, the test run's temporary-folder guard and its eslint rule (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, tested beside it, its count in
-`vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `src/main/testing/source-files.ts` (every non-test `.ts` file under a folder, for the tests that read the source), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
+`vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `src/main/testing/source-files.ts` (every non-test `.ts` file under a folder, for the tests that read the source), the running-app guard (`src/main/app/running-app-guard.ts`, tested beside it, run by `board guard`; workflow-decision-7), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
 in `scripts/running-app.mjs`, tested beside it), written in Node so the same
 hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
 line and points at its id here.
@@ -67,6 +67,7 @@ follows. The workflow writes them, so they are the same whichever way the run wa
 - Given a second Run workflow while one is running, when it starts after the first finishes, then it works out the version the first one released and fails before committing, saying to dispatch again.
 - Given a pushed pre-release tag (`v2.42.0-rc.1`) on a commit whose `package.json` says that version, when the workflow runs, then it builds and publishes a pre-release the same way and commits nothing to main.
 - Given an app running out of this checkout, on any of the three platforms, when `pnpm run package` runs, then it stops before deleting the files that app is executing.
+- Given an agent in any Claude session the board guard reaches, when it runs `pkill -f Dashboard`, `kill` of the running app's pid, `osascript -e 'quit app "Dashboard"'`, `open -a Dashboard` or an `rm`/`cp` over `~/.local/opt/dashboard`, then the call is refused with a message saying to report that a rebuild is needed; `scripts/rebuild.sh`, `scripts/release.sh` and `rm -rf out .vite` go through (`running-app-guard.test.ts`).
 - Given a test that makes a temporary folder and never removes it, when `pnpm test` ends, then the run fails naming the folder's prefix and count, and nothing it made is left in `/tmp`.
 - Given a clean `pnpm test`, when it ends, then `/tmp` holds the same `dashboard-*`, `create-task-*` and `board-files-*` folders it held before.
 - Given two branches cut after #167 that each append a line to the same `docs/**/history.md`, when one merges the other, then both lines are kept and git reports no conflict. A branch cut before #167 still conflicts once, on the merge that brings `.gitattributes` in.
