@@ -1,4 +1,5 @@
 import type { Refused, WorktreeEntry } from '../../../shared/app/bridge';
+import type { LogDraft } from '../../../shared/app/log-entry';
 import type { PaneCommand } from '../../../shared/panes/pane-reading';
 import { nextPaneIndex } from '../../../shared/panes/pane-layout';
 import { MAIN_INDEX, paneFromId, terminalId } from '../../../shared/panes/terminals';
@@ -7,6 +8,7 @@ import { paneOfKey, type Survivor } from '../../panes/pane-host-protocol';
 import type { PaneShell } from '../../panes/pane-shell';
 import { agentToResume, isPaneConversation, workerDispatcher, type PaneConversation } from '../../workers/claude-resume';
 import { action, isRefused } from '../action';
+import { notStoppedText } from './close';
 import type { PaneDispatchInput } from './dispatch';
 import { isFilledText, isSlot } from './pane-input';
 
@@ -55,6 +57,10 @@ export type PaneRestorePorts = {
   spawn(id: string): void;
   openPanes(slot: number): readonly number[];
   dispatch(input: PaneDispatchInput): Promise<{ output: string } | Refused>;
+  // pane.close's stop, for a kept shell not taken back. A scope already gone is not a failure.
+  stopScope(unit: string): Promise<void>;
+  // A scope left running is a warning: the page's open reads only a refusal.
+  log(draft: LogDraft): void;
 };
 
 function paneRestoreInput(raw: Record<string, unknown>): PaneRestoreInput | Refused {
@@ -68,7 +74,9 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
   words: [],
   input: paneRestoreInput,
   async run(ports, { slot, projectPath, firstPane }) {
-    // Before the resumes, which skip the panes taken here.
+    // Before the resumes, which skip the panes taken here. A shell not taken back is killed and its
+    // scope stopped after, as pane.close stops one, so what it detached does not run on unseen.
+    const stops: Promise<void>[] = [];
     for (const { survivor, shell } of ports.kept(projectPath)) {
       const { index } = paneOfKey(survivor.key);
       const id = terminalId(slot, index);
@@ -76,6 +84,12 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
       const pane = adoptedPane(survivor, saved, ports.worktrees(), ports.panesBeforeLaunch, ports.realPath);
       if (pane === undefined) {
         shell.kill();
+        const { unit } = survivor;
+        if (unit !== undefined) {
+          stops.push(ports.stopScope(unit).catch((error: unknown) => {
+            ports.log({ level: 'warn', kind: 'pane', action: 'pane.restore', message: notStoppedText(unit, error), context: { slot, pane: index } });
+          }));
+        }
         continue;
       }
       ports.setPaneCommand(id, pane.command);
@@ -122,6 +136,7 @@ export const paneRestore = action<PaneRestorePorts, PaneRestoreInput, { output: 
       if (card !== undefined) ports.givePane(card, back.index);
     }
 
+    await Promise.all(stops);
     const refusals = (await Promise.all(started)).filter(isRefused);
     if (refusals.length > 0) return { refused: refusals.map((each) => each.refused).join('; ') };
     return { output: `${started.length} conversations carried on in ${projectPath}` };
