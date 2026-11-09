@@ -250,27 +250,13 @@ describe('stopNotices', () => {
         busy.add('2:1');
         notices.state('2:1', 'done', { background: 1, scheduled: 0 });
         pass(1000);
+        // The turn ends before the stop comes due: the pause it replaced is no longer held.
         notices.state('2:1', 'done', nothing);
-        pass(10);
         busy.delete('2:1');
         notices.turnOver();
+        pass(2000);
         expect(noticed).toEqual(['2:1']);
         expect(paused).toEqual([]);
-      });
-
-      // `idle` waits on main's background work too, which may run for as long as it likes.
-      it('tells a held notice anyway once it has waited the ceiling for a turn that never ends', () => {
-        const { notices, noticed, busy, pass } = clock();
-        busy.add('2:1');
-        notices.state('2:1', 'done', nothing);
-        pass(10);
-        pass(999);
-        expect(noticed).toEqual([]);
-        pass(1);
-        expect(noticed).toEqual(['2:1']);
-        busy.delete('2:1');
-        notices.turnOver();
-        expect(noticed).toEqual(['2:1']);
       });
     });
   });

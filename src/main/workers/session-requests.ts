@@ -112,7 +112,7 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   heard(slot: number, sender: string): void;
   // The main session in `slot` began a turn, or ended one after its result was read: a worker's stop
   // notice due in between waits for the end, so the report that turn read drops it.
-  mainTurn(slot: number, midTurn: boolean): void;
+  mainTurn(slot: number, running: boolean): void;
   // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
   notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply;
   // Every finished worker pane released, each for the reason auto-release.ts gives. Run on a timer.
@@ -149,10 +149,12 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
   // to something else by then.
   const mainOf = (id: string): number => dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
-  // The mains mid-turn now, by slot, with when the turn began. One mid-turn past PAUSE_CEILING_MS
-  // counts as idle: `idle` waits on main's background work too, which may never end.
-  const busyMains = new Map<number, number>();
-  const midTurn = (slot: number) => Date.now() - (busyMains.get(slot) ?? -Infinity) < PAUSE_CEILING_MS;
+  // The mains mid-turn now, by slot, each with whether the turn has run PAUSE_CEILING_MS and the
+  // timer that says so. One past it counts as idle, and every notice held for it is told then:
+  // `idle` waits on main's background work too, which may never end. One clock for the turn, so a
+  // notice is held no longer than the turn's ceiling, whenever it came due.
+  const busyMains = new Map<number, { overCeiling: boolean; stop: () => void }>();
+  const midTurn = (slot: number) => busyMains.get(slot)?.overCeiling === false;
   const notices = stopNotices({
     midTurn: (id) => midTurn(mainOf(id)),
     notice(id, paused) {
@@ -389,8 +391,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       notices.reported(id);
       quietFrom(id, true);
     },
-    mainTurn(slot: number, midTurn: boolean) {
-      if (midTurn) return void busyMains.set(slot, busyMains.get(slot) ?? Date.now());
+    mainTurn(slot: number, running: boolean) {
+      if (running) {
+        if (busyMains.has(slot)) return;
+        const turn = { overCeiling: false, stop: () => clearTimeout(timer) };
+        const timer = setTimeout(() => { turn.overCeiling = true; notices.turnOver(); }, PAUSE_CEILING_MS);
+        return void busyMains.set(slot, turn);
+      }
+      busyMains.get(slot)?.stop();
       busyMains.delete(slot);
       notices.turnOver();
     },
