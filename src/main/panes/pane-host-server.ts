@@ -54,6 +54,7 @@ export function paneHostServer(spawn: Spawn, idle: () => void) {
       const panes: Survivor[] = [...entries].map(([key, { shell, request, copy }]) => ({
         key, pid: shell.pid, file: request.file, args: request.args, cwd: request.cwd,
         cols: shell.cols, rows: shell.rows, foreground: foregroundName(shell) ?? '', screen: copy.replay(),
+        unit: request.scope?.unit ?? undefined,
       }));
       sender({ type: 'panes', panes, proof });
     },

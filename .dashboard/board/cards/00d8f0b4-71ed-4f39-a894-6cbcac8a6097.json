@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T11:16:06.078Z",
-  "updatedAt": "2026-11-09T11:16:20.743Z",
-  "column": "Doing",
-  "order": 0
+  "updatedAt": "2026-11-09T11:53:29.878Z",
+  "branch": "work-board-card-00d8f0b4-71ed-4f39-a894-6cb",
+  "pullRequest": 253,
+  "comments": [
+    {
+      "at": "2026-11-09T11:53:29.878Z",
+      "body": "Shipped in #253: each pane's shell runs in its own systemd scope (agent-*.scope under agents.slice, capped 6G/8G; pane-*.scope under panes.slice), slices written once at launch, unit recorded per pane and on kept shells, guard test on process starts, docs/processes."
+    }
+  ],
+  "column": "Done",
+  "order": 204
 }

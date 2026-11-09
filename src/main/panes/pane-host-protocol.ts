@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { chmodSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import type { ScopedCommand } from '../processes/scope';
 
 // What the app and the pane host say to each other: one JSON message per line over a unix socket,
 // or a named pipe on Windows.
@@ -122,10 +123,14 @@ export function paneOfKey(key: string): { projectPath: string; index: number } {
   return { projectPath, index };
 }
 
+// `file` and `args` are the pane's own command, which is what a survivor reports back. `scope` is that
+// command as started inside the pane's systemd scope (processes/scope.ts), when it has one: what the
+// pty actually runs. An older host ignores it and runs the command unscoped.
 export type SpawnRequest = {
   key: string;
   file: string;
   args: string[];
+  scope?: ScopedCommand;
   cwd: string;
   env: Record<string, string>;
   cols: number;
@@ -156,6 +161,8 @@ export type Survivor = {
   rows: number;
   foreground: string;
   screen: string;
+  // The systemd scope it runs in, when it was started in one.
+  unit?: string;
 };
 
 export type FromHost =
