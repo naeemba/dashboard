@@ -1,9 +1,9 @@
-import { writeFileSync } from 'node:fs';
+import { chmodSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
 import { runBoardCommand } from './board-cli';
-import { peekBoard, writeBoard } from './board-store';
+import { BOARD_FOLDER_PATH, openBoard, peekBoard, writeBoard } from './board-store';
 import { syncBoard, type BoardEdit } from './board-sync-git';
 import { boardOn, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
 import { temporaryFolder } from '../testing/temporary-folder';
@@ -150,6 +150,29 @@ describe('syncBoard', () => {
     expect(outcome).toMatchObject({ synced: true, checkout: 'stale' });
     expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Done' });
     expect(git(checkout, 'rev-parse', 'HEAD')).toBe(head);
+  });
+
+  // A card whose file does not parse is missing from the checkout's board, and publishing that board
+  // would delete the card on main for everyone.
+  it('publishes nothing from a checkout with a board file that does not parse, in place or set aside', async () => {
+    const { bare, checkout } = project();
+    writeFileSync(join(checkout, BOARD_FOLDER_PATH, 'cards', 'a.json'), '<<<<<<< HEAD\n{');
+    const inPlace = await syncBoard(checkout);
+    expect(!inPlace.synced && inPlace.warning).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
+    openBoard(checkout);
+    const setAside = await syncBoard(checkout);
+    expect(!setAside.synced && setAside.warning).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
+    expect(columns(boardOn(bare))).toEqual({ a: 'Todo', b: 'Todo' });
+  });
+
+  // git-lfs installs a post-checkout hook that fails where git-lfs is not on PATH.
+  it('runs none of the project\'s hooks', async () => {
+    const { bare, checkout } = project();
+    const hook = join(checkout, '.git', 'hooks', 'post-checkout');
+    writeFileSync(hook, '#!/bin/sh\nexit 2\n');
+    chmodSync(hook, 0o755);
+    expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toMatchObject({ synced: true });
+    expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Todo' });
   });
 
   it('writes nothing and warns when origin cannot be reached', async () => {

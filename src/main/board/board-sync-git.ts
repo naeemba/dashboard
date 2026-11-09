@@ -1,25 +1,27 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import type { Board } from '../../shared/board/board';
 import { rebaseBoardChange, sameBoard } from '../../shared/board/board-merge';
 import { failureText } from '../../shared/errors/failure';
 import { isManagerPath } from '../../shared/manager/manager';
-import { baseBranch, git } from '../app/git';
+import { baseBranch, git, NO_HOOKS } from '../app/git';
 import { realPath } from '../app/real-path';
+import { BROKEN_SUFFIX } from './board-files';
 import { BOARD_PATHSPECS, peekBoard, readBoard, writeBoard } from './board-store';
 import {
   FETCH_TIMEOUT,
   PUSH_ATTEMPTS,
   PUSH_TIMEOUT,
   checkoutStep,
+  damagedBoardRefusal,
+  lostRace,
   notSyncedWarning,
   publishesCheckout,
   syncCommitMessage,
   type CheckoutStep,
 } from './board-sync';
-import { lostRace, NO_HOOKS } from './create-task';
 
 // The board's git sync: every write to a board git tracks lands on origin's default branch, and the
 // project's checkout is brought up to it. The decisions are board-sync.ts's; this is the git and the
@@ -74,6 +76,7 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
       const origin = await boardAt(gitDirectory, tip, join(scratch, 'origin'));
       if ('refusal' in origin) return notSynced(origin.refusal);
       const pending = await checkoutPending(checkout, gitDirectory, branch, tip, origin.board, join(scratch, 'base'));
+      if (pending !== null && 'refusal' in pending) return notSynced(pending.refusal);
       const next = edit(pending === null ? origin.board : rebaseBoardChange(pending.base, pending.local, origin.board));
       let target = tip;
       if (!sameBoard(origin.board, next)) {
@@ -130,7 +133,7 @@ async function boardAt(gitDirectory: string, ref: string, folder: string): Promi
   const scratch: Scratch = { work, git: (gitArguments) => git(gitArguments, work, { environment }) };
   await scratch.git(['read-tree', ref]);
   if ((await scratch.git(['ls-files', '--', ...BOARD_PATHSPECS])) === '') return { refusal: `${ref.slice(0, 8)} has no board` };
-  await scratch.git(['checkout', '--quiet', '--', ...BOARD_PATHSPECS]);
+  await scratch.git([...NO_HOOKS, 'checkout', '--quiet', '--', ...BOARD_PATHSPECS]);
   const read = readBoard(work, false);
   if (read.brokenFiles.length > 0) return { refusal: `board files at ${ref.slice(0, 8)} do not parse` };
   return { board: read.board, scratch };
@@ -147,11 +150,22 @@ async function commitBoard(scratch: Scratch, board: Board, parent: string, messa
 
 // The checkout's own board edits, as the base its board was edited from (the board at its HEAD) and the
 // board in its working tree; null when there are none or they are not the default branch's to publish.
+// A refusal when a board file there does not parse: the card is missing from the board read, and
+// replaying that would push its deletion. updateCheckout has the same blind spot and needs no check
+// of its own: it only moves a checkout on the default branch, which this has already refused.
 async function checkoutPending(
   checkout: string, gitDirectory: string, branch: string, tip: string, origin: Board, folder: string,
-): Promise<{ base: Board; local: Board } | null> {
-  const [onBranch, head] = await Promise.all([answer(['symbolic-ref', '--short', '-q', 'HEAD'], checkout), answer(['rev-parse', 'HEAD'], checkout)]);
+): Promise<{ base: Board; local: Board } | { refusal: string } | null> {
+  const [onBranch, head, deleted] = await Promise.all([
+    answer(['symbolic-ref', '--short', '-q', 'HEAD'], checkout),
+    answer(['rev-parse', 'HEAD'], checkout),
+    answer(['ls-files', '--deleted', '--', ...BOARD_PATHSPECS], checkout),
+  ]);
   if (!publishesCheckout(onBranch, branch)) return null;
+  // Unparsable where it is, or renamed to `.broken` by the app's read, which git sees as a deletion.
+  const setAside = (deleted ?? '').split('\n').filter((file) => file !== '' && existsSync(join(checkout, `${file}${BROKEN_SUFFIX}`)));
+  const refusal = damagedBoardRefusal([...readBoard(checkout, false).brokenFiles.map((file) => relative(checkout, file)), ...setAside]);
+  if (refusal !== null) return { refusal };
   const local = peekBoard(checkout);
   if (local === null || head === null) return null;
   const base = head === tip ? { board: origin } : await boardAt(gitDirectory, head, folder);

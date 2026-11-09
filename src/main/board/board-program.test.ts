@@ -5,6 +5,7 @@ import { addCard, emptyBoard } from '../../shared/board/board';
 import { BOARD_FOLDER_PATH, seedBoardDirectory, writeBoard } from './board-store';
 import { runBoardProgram } from './board-program';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { syncBoard } from './board-sync-git';
 import { boardOn, clone, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
 
 // The `board` command's write is committed, so its read must not salvage: a rename would leave the
@@ -56,5 +57,26 @@ describe('the board command on a board git tracks', () => {
     expect(onOrigin?.columns.find((column) => column.name === 'Doing')?.cards.map((card) => card.id)).toEqual(['card']);
     expect(git(worktree, 'status', '--porcelain')).toBe('');
     expect(git(worktree, 'log', '-1', '--format=%s')).toBe('board');
+  });
+
+  // A checkout with code changes is left where it is, so the comment is written there too. The same
+  // comment, timestamp and all: one written again would go up as a second on the next sync.
+  it('writes the same change into a checkout it cannot move, and the next sync adds nothing', async () => {
+    const bare = remote();
+    const checkout = clone(bare, false);
+    git(checkout, 'checkout', '--quiet', 'main');
+    writeBoard(checkout, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
+    writeFileSync(join(checkout, 'code.txt'), 'one\n');
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'board');
+    git(checkout, 'push', '--quiet', 'origin', 'main');
+    writeFileSync(join(checkout, 'code.txt'), 'two\n');
+    vi.spyOn(process, 'cwd').mockReturnValue(checkout);
+    vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+    expect(await runBoardProgram(['comment', 'card', 'hello'])).toBe(0);
+    await syncBoard(checkout);
+    const card = boardOn(bare)?.columns.flatMap((column) => column.cards).find((entry) => entry.id === 'card');
+    expect(card?.comments?.map((comment) => comment.body)).toEqual(['hello']);
   });
 });

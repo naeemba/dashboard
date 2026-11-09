@@ -85,17 +85,3 @@ export function noBoardMessage(remote: string, branch: string): string {
 export function commitMessage(title: string): string {
   return `board: add "${title}"`;
 }
-
-// Whether a refused push lost a race to another writer, which a fresh fetch fixes: git's own words
-// for the remote moving under it, before the push (fetch first, non-fast-forward) or during it
-// (incorrect old value provided on git 2.51 and later; older receive-pack says "failed to update ref"
-// and prints the lock error "is at <sha> but expected <sha>"). A protected branch, a declined hook or
-// a missing right is not.
-export function lostRace(gitMessage: string): boolean {
-  return /\((fetch first|non-fast-forward|incorrect old value provided)\)|is at [0-9a-f]+ but expected [0-9a-f]+/.test(gitMessage);
-}
-
-// The project's hooks are for its code, not for a board commit made beside it: a pre-push `npm test`
-// there is minutes of waiting per card, a post-checkout or post-merge `npm install` a full install.
-// Passed to every git call the create-task program and the board's git sync make that writes.
-export const NO_HOOKS = ['-c', 'core.hooksPath=/dev/null'];

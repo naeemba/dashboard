@@ -7,7 +7,9 @@ import { runBoardCommand } from './board-cli';
 import { BROKEN_SUFFIX } from './board-files';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
-import { NO_HOOKS, boardAddArguments, commitMessage, lostRace, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
+import { NO_HOOKS } from '../app/git';
+import { lostRace } from './board-sync';
+import { boardAddArguments, commitMessage, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
 
 // The whole of the create-task program outside create-task.ts: git, the throwaway worktree, the
 // file and the terminal. The card goes onto the remote's default branch through a worktree of it

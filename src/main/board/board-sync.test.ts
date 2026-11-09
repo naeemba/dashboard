@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addCard, deleteCard, emptyBoard, moveCardToColumn, renameCard, selectionOf } from '../../shared/board/board';
-import { checkoutStep, publishesCheckout, syncCommitMessage, type CheckoutState } from './board-sync';
+import { checkoutStep, damagedBoardRefusal, lostRace, publishesCheckout, syncCommitMessage, type CheckoutState } from './board-sync';
 
 const behind: CheckoutState = { branch: 'main', defaultBranch: 'main', current: false, behind: true, porcelain: '' };
 
@@ -54,5 +54,23 @@ describe('syncCommitMessage', () => {
     expect(syncCommitMessage(before, deleteCard(before, selectionOf(before, 'b')!).board)).toBe('board: remove "Add search"');
     const both = renameCard(renamed, selectionOf(renamed, 'b')!, 'Add a search').board;
     expect(syncCommitMessage(before, both)).toBe('board: update 2 cards');
+  });
+});
+
+describe('lostRace', () => {
+  it('retries only the rejections a fresh fetch fixes', () => {
+    expect(lostRace(' ! [rejected]        HEAD -> main (fetch first)')).toBe(true);
+    expect(lostRace(' ! [rejected]        HEAD -> main (non-fast-forward)')).toBe(true);
+    expect(lostRace(' ! [remote rejected] HEAD -> main (incorrect old value provided)')).toBe(true);
+    expect(lostRace("remote: error: cannot lock ref 'refs/heads/main': is at 1a2b3c but expected 4d5e6f")).toBe(true);
+    expect(lostRace(' ! [remote rejected] HEAD -> main (pre-receive hook declined)')).toBe(false);
+    expect(lostRace('remote: error: GH006: Protected branch update failed for refs/heads/main.')).toBe(false);
+  });
+});
+
+describe('damagedBoardRefusal', () => {
+  it('refuses only when a board file does not parse, and names it', () => {
+    expect(damagedBoardRefusal([])).toBeNull();
+    expect(damagedBoardRefusal(['.dashboard/board/cards/a.json'])).toContain('(.dashboard/board/cards/a.json)');
   });
 });

@@ -186,7 +186,13 @@ or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
    and nothing changed outside `.dashboard/`, the board's files are put back to
    HEAD, the checkout fast-forwarded (no stash, hooks off), and its own board
    edits laid back on top. Otherwise it is left where it is, and the `board`
-   command writes its edit there as well.
+   command writes the same edit there as well, timestamps and all, so the next
+   sync does not publish it a second time.
+
+No git call the sync makes runs the project's hooks. A checkout on the default
+branch with a board file that does not parse, in place or set aside as
+`.broken`, publishes nothing: the card missing from its board would go to main
+as a deletion. The sync says why, and the board is written where it is.
 
 The commit is made in a scratch folder in the system temp folder holding only
 origin's board files and an index of its own, so the checkout's branch, HEAD,
@@ -204,7 +210,7 @@ The screen never waits on the network: the save is on disk at once, and
 `board-sync-queue.ts` runs one sync per project behind it, a burst of saves
 folded into one more. card.move waits for its write to be on origin before a
 ship cuts a branch. Offline, with no `origin`, or with a push refused for any
-other reason, the board is written where it is as before, and the app logs one
+other reason, or with a sync that fails any other way, the board is written where it is as before, and the app logs one
 warning per project (`board` kind) until a sync goes through; the command prints
 it on each run. A board git does not track, and the manager's, are untouched.
 

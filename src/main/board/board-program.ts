@@ -2,7 +2,10 @@ import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard }
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
 import { asksApp, BOARD_REQUEST, brokenFilesRefusal, readsBoard, runBoardCommand, runBoardCommandOnLatest, type CommandResult } from './board-cli';
-import { syncBoard } from './board-sync-git';
+import { syncBoard, type BoardSync } from './board-sync-git';
+import { notSyncedWarning } from './board-sync';
+import { rebaseBoardChange } from '../../shared/board/board-merge';
+import { failureText } from '../../shared/errors/failure';
 import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
@@ -39,20 +42,28 @@ async function run(words: readonly string[]): Promise<number> {
   }
 
   // A board git tracks is read and written on origin's default branch, and this checkout brought up to
-  // it (board-sync-git.ts). The id is made once, so an `add` retried on a fresh fetch, or written here
-  // as well, is one card.
+  // it (board-sync-git.ts). The id is made once, so an `add` retried on a fresh fetch is one card. A
+  // sync that throws is one more way of not reaching origin: the board is written here, with the warning.
   const id = crypto.randomUUID();
   const makeId = () => id;
   if (readsBoard(commandArguments)) {
-    let onOrigin: CommandResult | null = null;
+    // Each board the command ran on and what it answered; the last is what went up, when a lost race retried.
+    const tries: { before: Board; result: CommandResult }[] = [];
     const sync = await syncBoard(project, (board) => {
-      onOrigin = runBoardCommand(board, commandArguments, makeId);
-      return onOrigin.ok && onOrigin.board !== null ? onOrigin.board : board;
-    });
-    if (sync.synced && onOrigin !== null) {
-      // A checkout the sync could not move holds the edit as well, as it did before there was a sync.
-      if (sync.checkout === 'stale') writeHere(project, read.board, commandArguments, makeId);
-      return answer(onOrigin);
+      const result = runBoardCommand(board, commandArguments, makeId);
+      tries.push({ before: board, result });
+      return result.ok && result.board !== null ? result.board : board;
+    }).catch((error: unknown): BoardSync => ({ synced: false, warning: notSyncedWarning(failureText(error)) }));
+    const onOrigin = tries.at(-1);
+    if (sync.synced && onOrigin !== undefined) {
+      const { before, result } = onOrigin;
+      // A checkout the sync could not move holds the edit as well, as it did before there was a sync:
+      // the same change, not the command run again, whose new timestamps the next sync would publish as
+      // a second comment.
+      if (sync.checkout === 'stale' && result.ok && result.board !== null) {
+        writeBoard(project, rebaseBoardChange(before, result.board, readBoard(project, false).board));
+      }
+      return answer(result);
     }
     if (!sync.synced && sync.warning !== null) process.stderr.write(`${sync.warning}\n`);
   }
