@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T13:28:49.805Z",
-  "updatedAt": "2026-11-08T22:04:58.647Z",
+  "updatedAt": "2026-11-09T20:55:03.145Z",
   "branch": "work-board-card-9d7accc8-2c04-40f5-a5a9-c31",
   "pullRequest": 249,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-08T22:04:58.647Z",
       "body": "Shipped in #249: on a worktree's board a move (Review, Ship included) is a file edit and exits 0; the command and the app's isProjectBoard both read the folder's .git (linked-worktree.ts). --notes was not this bug: move refuses extra words; set --notes replaces the description by design, comment appends."
+    },
+    {
+      "at": "2026-11-09T20:55:03.145Z",
+      "body": "Pull request #249 merged: board: a move on a worktree's board is only a move, and exits 0 https://github.com/naeemba/dashboard/pull/249"
     }
   ],
   "column": "Done",

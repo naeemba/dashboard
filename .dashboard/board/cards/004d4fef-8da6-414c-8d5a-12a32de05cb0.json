@@ -5,13 +5,17 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-08T21:27:06.769Z",
-  "updatedAt": "2026-11-08T21:36:22.243Z",
+  "updatedAt": "2026-11-09T20:55:00.610Z",
   "branch": "work-board-card-004d4fef-8da6-414c-8d5a-12a",
   "pullRequest": 247,
   "comments": [
     {
       "at": "2026-11-08T21:36:22.243Z",
       "body": "Shipped in #247: close-project.ts askMain narrows each pane to { index, name } before projects:close, so the IPC structured clone no longer refuses the xterm terminal and element. A test asserts the request survives structuredClone. The other bridge calls send only scalars. Not checked by hand in the app."
+    },
+    {
+      "at": "2026-11-09T20:55:00.610Z",
+      "body": "Pull request #247 merged: Send only pane index and name over projects:close https://github.com/naeemba/dashboard/pull/247"
     }
   ],
   "column": "Done",
