@@ -15,7 +15,7 @@ describe('attachmentKey', () => {
     expect(attachmentKey('Backspace', 0, 3)).toEqual({ remove: 0, select: 0 });
   });
 
-  it('goes back to the prompt once the last one is gone', () => {
+  it('goes back to the screen once the last one is gone', () => {
     expect(attachmentKey('Delete', 0, 1)).toEqual({ remove: 0, select: null });
   });
 

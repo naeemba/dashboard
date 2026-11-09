@@ -27,7 +27,7 @@ export type Attachments = {
   clear(): void;
   // Puts the selection on the last thumbnail; false when none is attached.
   select(): boolean;
-  // Whether a thumbnail holds the selection, so Escape goes back to the prompt rather than interrupting.
+  // Whether a thumbnail holds the selection, so Escape goes back to the screen rather than interrupting.
   selecting(): boolean;
 };
 

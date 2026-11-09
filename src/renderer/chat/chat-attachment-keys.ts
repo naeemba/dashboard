@@ -1,7 +1,7 @@
 // What a key does with the images attached to the prompt once the selection is on their thumbnails:
 // the arrows walk them, Delete or Backspace takes the selected one off. Delete leaves the selection on
 // the one that slides into its place, Backspace on the one before, as the caret does in text; the
-// last one gone, the selection goes back to the prompt (`select: null`). Any other key is not theirs.
+// last one gone, the selection goes back to the screen (`select: null`). Any other key is not theirs.
 import { clampIndex } from '../../shared/app/clamp-index';
 
 export type AttachmentKey = { remove: number | null; select: number | null };
