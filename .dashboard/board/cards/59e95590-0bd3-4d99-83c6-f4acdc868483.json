@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:54.731Z",
-  "updatedAt": "2026-11-09T15:49:41.293Z",
-  "column": "Doing",
-  "order": 8
+  "updatedAt": "2026-11-09T16:05:43.652Z",
+  "branch": "work-board-card-59e95590-0bd3-4d99-83c6-f4a",
+  "pullRequest": 274,
+  "comments": [
+    {
+      "at": "2026-11-09T16:05:43.652Z",
+      "body": "Shipped in #274: eslint refuses String(error) and ${error} outside failure.ts and failure-line.ts, pinned in eslint.config.test.ts. board-view.ts now prints through failureText, so its exemption is gone. The CLAUDE.md line stays, minus the board-view exemption, for Audit 13 to delete."
+    }
+  ],
+  "column": "Done",
+  "order": 214
 }

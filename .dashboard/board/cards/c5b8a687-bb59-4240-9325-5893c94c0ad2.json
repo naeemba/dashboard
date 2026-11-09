@@ -1,0 +1,11 @@
+{
+  "id": "c5b8a687-bb59-4240-9325-5893c94c0ad2",
+  "title": "Two sessions run in one worker pane",
+  "notes": "2026-11-09: card 7e7219dd's worktree (pane 0:3) had two Claude sessions named dashboard-terminal-4 at once: [bcbe2b] started first and busy, [af80ae] started 4 minutes later, which found the other and committed cd32e2ff before standing down. At the same time ListAgents showed other worker names freshly started and idle (dashboard-terminal-2 [c0a14a], dashboard-terminal-3 [0bbf8c]) for panes that had just been released or merged. Suspects: pane 0:3 was released after #273 merged and claimed again at once for Audit 6 (same pane number, same worker name), and the old screen session lived on in the screen host and was resumed or kept answering under the pane's name; or a restore resumed a worker whose screen-host session was still running (#226 + #235). Find which, with a test of the decision that lets a second session start for a pane, and make it impossible: one live session per pane, the old one stopped (and its scope, #255) before a new one starts. Docs: workers README, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T16:12:43.137Z",
+  "updatedAt": "2026-11-09T16:12:43.137Z",
+  "column": "Todo",
+  "order": 5
+}

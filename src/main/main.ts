@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
-import { runProgram } from './app/git';
+import { git, runProgram } from './app/git';
 import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
 import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
@@ -758,6 +758,8 @@ const workerAnswers = sessionRequests({
     return { worktreePath: entry.worktreePath, working: agentRunsIn(slotOfProject(projectPath), entry.pane) };
   },
   makeWorktree: worktree.makeThrowaway,
+  exists: existsSync,
+  prune: async (projectPath) => { await git(['worktree', 'prune'], projectPath); },
   unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
   removeWorktree: worktree.removeForRelease,
   hasKeyboard: claudeSessions.hasKeyboard,

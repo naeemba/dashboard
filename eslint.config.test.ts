@@ -74,3 +74,37 @@ describe('test folders', () => {
     expect(await folderErrors('src/main/testing/temporary-folder.ts', "import { mkdtempSync } from 'node:fs';")).toEqual([]);
   });
 });
+
+// Pins errors-rule-1: an error shown to a person goes through failureText, never String(error).
+// The probes import nothing, so the one `no-restricted-syntax` they can raise is this one.
+describe('String(error)', () => {
+  const source = 'export const say = (error: unknown): string => `failed: ${String(error)}`;';
+
+  it.each(['src/renderer/probe.ts', 'src/main/probe.ts', 'src/shared/probe.ts', 'src/preload/probe.ts'])('fails in %s', async (filePath) => {
+    expect(await boundaryErrors(filePath, source)).toHaveLength(1);
+  });
+
+  it.each([
+    'export const say = (thrown: unknown): string => String(thrown);',
+    'export const say = (error: unknown): string => `failed: ${error}`;',
+  ])('fails on %s', async (other) => {
+    expect(await boundaryErrors('src/renderer/probe.ts', other)).toHaveLength(1);
+  });
+
+  it.each(['src/shared/errors/failure.ts', 'src/main/command/failure-line.ts'])('allows it in %s', async (filePath) => {
+    expect(await boundaryErrors(filePath, source)).toEqual([]);
+  });
+
+  it.each([
+    ['src/shared/errors/failure.ts', "import { x } from '../../main/app/projects';"],
+    ['src/main/command/failure-line.ts', "import { x } from '../../renderer/page';"],
+    ['src/shared/errors/failure.ts', "export const projects = await import('../../main/app/projects');"],
+    ['src/main/command/failure-line.ts', "export const page = await import('../../renderer/page');"],
+  ])('keeps the process boundaries in %s', async (filePath, imports) => {
+    expect(await boundaryErrors(filePath, imports)).toHaveLength(1);
+  });
+
+  it('leaves String on anything else alone', async () => {
+    expect(await boundaryErrors('src/renderer/probe.ts', 'export const text = (count: number): string => String(count);')).toEqual([]);
+  });
+});

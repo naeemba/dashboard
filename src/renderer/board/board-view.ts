@@ -231,7 +231,7 @@ export function createBoardView(options: BoardOptions): BoardView {
       if (read.brokenFiles.length > 0) message = `Damaged board files kept as ${read.brokenFiles.join(', ')}`;
       readWorked = true;
     } catch (error: unknown) {
-      message = `Board not opened: ${String(error)}`;
+      message = `Board not opened: ${failureText(error)}`;
     }
     return { fresh, next, message, readWorked, mark };
   }
@@ -282,7 +282,7 @@ export function createBoardView(options: BoardOptions): BoardView {
         return true;
       },
       (error: unknown) => {
-        options.onError(`Board not saved: ${String(error)}`);
+        options.onError(`Board not saved: ${failureText(error)}`);
         return false;
       },
     );
