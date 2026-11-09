@@ -18,15 +18,19 @@ const NEAR_HIGH = 0.8;
 const GIB = 1024 ** 3;
 const MIB = 1024 ** 2;
 
-// `2.1G`, `640M`; empty for no reading, so a pane without a scope prints nothing.
-export function formatMemory(bytes: number | undefined): string {
-  if (bytes === undefined) return '';
+// `2.1G`, `640M`.
+export function formatMemory(bytes: number): string {
   if (bytes >= GIB) return `${(bytes / GIB).toFixed(1)}G`;
   return `${Math.max(1, Math.round(bytes / MIB))}M`;
 }
 
-export function nearHigh(memory: PaneMemory | undefined): boolean {
+export function nearHigh(memory: PaneMemory | undefined): memory is { bytes: number; high: number } {
   return memory !== undefined && memory.high !== null && memory.bytes >= memory.high * NEAR_HIGH;
+}
+
+// What the window draws of a snapshot, so a sweep that moved nothing on screen sends nothing.
+export function drawnMemory(snapshot: MemorySnapshot): string {
+  return JSON.stringify(Object.entries(snapshot).map(([id, memory]) => [id, memoryText(memory), nearHigh(memory)]));
 }
 
 // What a row or the status bar prints: the figure, and the cap beside it once it is near (`5.1G of
@@ -34,5 +38,5 @@ export function nearHigh(memory: PaneMemory | undefined): boolean {
 export function memoryText(memory: PaneMemory | undefined): string {
   if (memory === undefined) return '';
   const figure = formatMemory(memory.bytes);
-  return nearHigh(memory) && memory.high !== null ? `${figure} of ${Math.round(memory.high / GIB)}G` : figure;
+  return nearHigh(memory) ? `${figure} of ${Math.round(memory.high / GIB)}G` : figure;
 }

@@ -4,12 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { readMemory, recordedUnits, userServiceCgroup } from './memory-sweep';
 
-// A user service's cgroup folder with these scopes in it, each holding the bytes given.
-function cgroups(scopes: Record<string, number>): string {
+const AGENT_HIGH = 6 * 1024 ** 3;
+
+// A user service's cgroup folder with these scopes in it, each holding the bytes given under its cap
+// (memory.high's `max` for none).
+function cgroups(scopes: Record<string, [number, number | 'max']>): string {
   const root = temporaryFolder('memory-sweep-');
-  for (const [where, bytes] of Object.entries(scopes)) {
+  for (const [where, [bytes, high]] of Object.entries(scopes)) {
     mkdirSync(path.join(root, where), { recursive: true });
     writeFileSync(path.join(root, where, 'memory.current'), `${bytes}\n`);
+    writeFileSync(path.join(root, where, 'memory.high'), `${high}\n`);
   }
   return root;
 }
@@ -21,18 +25,18 @@ describe('userServiceCgroup', () => {
 });
 
 describe('readMemory', () => {
-  it('reads each scope under its own slice, with an agent’s cap', async () => {
-    const root = cgroups({ 'agents.slice/agent-shop-3-k4f2.scope': 2048, 'panes.slice/pane-shop-1-a1b2.scope': 1024 });
+  it('reads each scope under its own slice, with the cap the kernel holds it to', async () => {
+    const root = cgroups({ 'agents.slice/agent-shop-3-k4f2.scope': [2048, AGENT_HIGH], 'panes.slice/pane-shop-1-a1b2.scope': [1024, 'max'] });
     expect(await readMemory(root, [['3:3', 'agent-shop-3-k4f2.scope'], ['3:1', 'pane-shop-1-a1b2.scope']])).toEqual({
-      '3:3': { bytes: 2048, high: 6 * 1024 ** 3 },
+      '3:3': { bytes: 2048, high: AGENT_HIGH },
       '3:1': { bytes: 1024, high: null },
     });
   });
 
   it('adds a worker screen’s shell and session up under its pane, keeping the session’s cap', async () => {
-    const root = cgroups({ 'panes.slice/pane-shop-2-a1b2.scope': 1000, 'agents.slice/agent-worker-x9q0.scope': 5000 });
+    const root = cgroups({ 'panes.slice/pane-shop-2-a1b2.scope': [1000, 'max'], 'agents.slice/agent-worker-x9q0.scope': [5000, AGENT_HIGH] });
     expect(await readMemory(root, [['3:2', 'pane-shop-2-a1b2.scope'], ['3:2', 'agent-worker-x9q0.scope']])).toEqual({
-      '3:2': { bytes: 6000, high: 6 * 1024 ** 3 },
+      '3:2': { bytes: 6000, high: AGENT_HIGH },
     });
   });
 

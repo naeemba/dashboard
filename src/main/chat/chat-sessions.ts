@@ -740,8 +740,8 @@ export function registerChatSessions(
     },
     // The scope of every session running now, by slot or screen key.
     async units(): Promise<[number, string][]> {
-      const running = await Promise.all([...sessions].map(async ([slot, session]) => [slot, (await session.catch(() => null))?.unit] as const));
-      return running.flatMap(([slot, unit]) => (unit == null ? [] : [[slot, unit] as [number, string]]));
+      const running = await Promise.all([...sessions].map(async ([slot, session]) => [slot, (await session.catch(() => null))?.unit]));
+      return running.filter((entry): entry is [number, string] => entry[1] != null);
     },
     // A message the app writes to the page's main, as a prompt: a worker's report (session-requests.ts).
     tell: (slot, text) => send(slot, [{ type: 'text', text }]),

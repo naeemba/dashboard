@@ -12,8 +12,7 @@ export type ScopeKind = 'agent' | 'task' | 'shell';
 
 // What one agent may hold before the kernel reclaims from it (high) and before it is killed (max).
 // The slice's own caps are in its unit file (install-slices.ts), where a drop-in tunes them.
-const AGENT_MEMORY_HIGH_GIB = 6;
-const AGENT_MEMORY_HIGH = `${AGENT_MEMORY_HIGH_GIB}G`;
+const AGENT_MEMORY_HIGH = '6G';
 const AGENT_MEMORY_MAX = '8G';
 
 const SLICES: Record<ScopeKind, string> = { agent: 'agents.slice', task: 'agents.slice', shell: 'panes.slice' };
@@ -68,13 +67,11 @@ export function retargeted(scope: ScopedCommand, file: string, args: readonly st
   return { file: scope.file, args: [...scope.args.slice(0, scope.args.indexOf('--') + 1), file, ...args], unit: scope.unit };
 }
 
-// The slice a unit this file named runs under and its MemoryHigh in bytes (null for uncapped), read
-// back off its prefix; null for a name this file never hands out. The memory readout reads
-// memory.current under that slice, and marks a scope near its cap.
-export function scopeLimits(unit: string): { slice: string; high: number | null } | null {
+// The slice a unit this file named runs under, read back off its prefix; null for a name this file
+// never hands out. The memory readout reads the scope's cgroup files under it.
+export function sliceOf(unit: string): string | null {
   const kind = (Object.keys(PREFIXES) as ScopeKind[]).find((each) => unit.startsWith(`${PREFIXES[each]}-`) && unit.endsWith('.scope'));
-  if (kind === undefined) return null;
-  return { slice: SLICES[kind], high: kind === 'shell' ? null : AGENT_MEMORY_HIGH_GIB * 1024 ** 3 };
+  return kind === undefined ? null : SLICES[kind];
 }
 
 const SLUG_LIMIT = 40;
