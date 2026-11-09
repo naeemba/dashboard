@@ -40,6 +40,7 @@ import { installSkills } from './skills/install-skills';
 import { launchScopes, stopScope } from './processes/launch-scopes';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
+import { CLOSE_SWEEP_MS, finishedCardIn } from './workers/auto-release';
 import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
@@ -495,7 +496,7 @@ const pane = paneActions({
   log: (draft) => logStore.log(draft),
   project: projectIn, openPanes, drop: dropPane, changed: () => panesChanged(), scopeOf: (id) => panes.scopeUnits.get(id), stopScope,
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
-  screenPrompt: workerScreens.send,
+  agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
@@ -613,6 +614,8 @@ function giveCardPane(entry: WorktreeEntry, index: number): WorktreeEntry {
 // Give the worktree a pane: a free worker, or a new one. Split out because it is also the whole of a
 // second ship of a card whose worktree exists but never got one.
 async function attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult> {
+  // The agent reports to the project's main, which then closes its pane once its card is done
+  // (workers-decision-1).
   // The project can be closed while the git half of a ship is still running, and its slot is empty from
   // then on. Without this the agent would start in a pane of a page nobody has — running, unreadable
   // and unreachable until the app quits. The worktree is already made and recorded, so shipping the
@@ -626,7 +629,7 @@ async function attachPane(entry: WorktreeEntry, slot: number, prompt: string): P
   const index = freePaneIn(slot);
   const given = giveCardPane(entry, index);
   const projectPath = projectIn(slot)?.path ?? entry.projectPath;
-  const started = await pane.dispatch.call({ id: terminalId(slot, index), projectPath, directory: entry.worktreePath, prompt, resume: null, cardId: entry.cardId, dispatcherPath: null, as: null });
+  const started = await pane.dispatch.call({ id: terminalId(slot, index), projectPath, directory: entry.worktreePath, prompt, resume: null, cardId: entry.cardId, dispatcherPath: projectPath, as: null });
   if (isRefused(started)) return { ok: false, message: started.refused };
   return { ok: true, entry: given };
 }
@@ -737,7 +740,7 @@ const workerAnswers = sessionRequests({
     return pane.dispatch.call({ id, projectPath: projectIn(slot)?.path ?? directory, directory, prompt, resume: null, cardId, dispatcherPath, as });
   },
   close: (id) => pane.close.call({ id }),
-  send: (id, text) => pane.send.call({ id, text }),
+  send: (id, text, dispatcherPath) => pane.send.call({ id, text, dispatcherPath }),
   mark: (id, state) => sendToRenderer('pane:mark', id, state),
   tell: chats.tell,
   withdraw: (slot, messageId) => { chats.withdraw(slot, messageId).catch(() => undefined); },
@@ -749,7 +752,21 @@ const workerAnswers = sessionRequests({
   makeWorktree: worktree.makeThrowaway,
   unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
   removeWorktree: worktree.removeForRelease,
+  hasKeyboard: claudeSessions.hasKeyboard,
+  finishedCard(id) {
+    const { slot, index } = paneFromId(id);
+    return finishedCardIn(worktrees.entries(), projectIn(slot)?.path, index, boardLog.latest);
+  },
+  closeAfterMs: () => settings.workers.closeAfterMinutes * 60_000,
+  released(id, reason, output) {
+    logStore.log({ level: 'info', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `${output}: ${reason}` });
+    sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
+  },
 });
+// Finished workers closed by the app itself, through pane.release (auto-release.ts).
+setInterval(() => {
+  workerAnswers.closeFinished().catch((error: unknown) => failures.hold(`Finished workers not closed: ${failureText(error)}`));
+}, CLOSE_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 const answerSession = projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers));
@@ -786,7 +803,7 @@ function createWindow(): void {
 // This machine's session, as the host serves it to a remote screen and as the local window gets it back
 // on leaving another host.
 const held: HeldByMain = {
-  table, screenCopies, shells, screens: paneScreens, version: __BUILD_VERSION__, settings: () => settings,
+  table, screenCopies, shells, screens: paneScreens, version: __BUILD_VERSION__, settings: () => settings, forgetLayout: claudeSessions.forgetScreen,
   projects: openProjects, worktrees: worktrees.list, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
 };
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.

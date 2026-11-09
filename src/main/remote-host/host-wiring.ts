@@ -7,11 +7,13 @@ import type { Screens } from '../../shared/remote-host/screens';
 
 // What the host needs from the main process, which holds all of it. Out of main.ts because main had
 // reached its 600-line ceiling; this is only the plumbing between the two.
-export type HeldByMain = HeldForRemote & { shells: Map<string, PaneShell>; screens: Screens; hold(message: string): void };
+export type HeldByMain = HeldForRemote & {
+  shells: Map<string, PaneShell>; screens: Screens; hold(message: string): void; forgetLayout(screen: string): void;
+};
 
 // After the join replay a screen gets the same pushes as everyone. A screen that leaves stops voting
-// on pane sizes, so the shells are resized to whoever is left. No port in the settings means the host
-// is off, and nothing listens.
+// on pane sizes, so the shells are resized to whoever is left, and its layout no longer keeps a pane
+// open. No port in the settings means the host is off, and nothing listens.
 export function startHost(held: HeldByMain): RemoteHost | null {
   const { port, bind } = held.settings().host;
   return port === null ? null : startRemoteHost(port, bind, {
@@ -21,6 +23,7 @@ export function startHost(held: HeldByMain): RemoteHost | null {
     onJoin: (_screen, send) => replaySession(held, send),
     onLeave(screen) {
       held.screens.forget(screen);
+      held.forgetLayout(screen);
       resizeShellsToScreens(held.shells, held.screens);
     },
     log: held.log,

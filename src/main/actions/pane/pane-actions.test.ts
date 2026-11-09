@@ -18,19 +18,19 @@ function wired({ startScreen = () => undefined, units = new Map<string, string>(
   const mainsWorkers = new Map<string, string>();
   const stops = vi.fn(stopScope);
   const logged: LogDraft[] = [];
-  const { dispatch } = paneActions({
+  const { dispatch, send } = paneActions({
     platform: 'linux', shellCommand: () => '/bin/zsh', newSession: () => 'new-session',
     forgetAnswers: () => undefined, mainsWorkers,
     commands: new Map([['2:3', { args: [], directory: '/work/api' }]]), setPaneCommand: () => undefined,
     shells: new Map([['2:3', { kill: () => undefined }]]), spawn: (id) => { const unit = spawned.shift(); if (unit === undefined) units.delete(id); else units.set(id, unit); }, agentStarted: () => undefined,
     startScreen, log: (draft) => logged.push(draft),
     project: () => undefined, openPanes: () => [], drop: () => undefined, scopeOf: (id) => units.get(id), stopScope: stops,
-    endClaim: () => undefined, changed: () => undefined, screenPrompt: () => false, typeIntoShell: () => undefined,
+    endClaim: () => undefined, changed: () => undefined, agentIn: () => true, screenIn: () => true, screenPrompt: () => false, typeIntoShell: () => undefined,
     kept: () => [], listenTo: () => undefined, takeResume: () => null, owedResumes: () => [], moveResume: () => undefined,
     screensBack: () => [], worktrees: () => [], panesBeforeLaunch: new Map(), realPath: (folder) => folder,
     givePane: () => undefined,
   });
-  return { dispatch, mainsWorkers, stops, logged };
+  return { dispatch, send, mainsWorkers, stops, logged };
 }
 
 describe('paneActions', () => {
@@ -40,6 +40,12 @@ describe('paneActions', () => {
     expect(mainsWorkers.get('2:3')).toBe('/work/desk');
     await dispatch.call({ ...RUN, dispatcherPath: null });
     expect(mainsWorkers.has('2:3')).toBe(false);
+  });
+
+  it('claims the pane for the main that sends its agent work', async () => {
+    const { send, mainsWorkers } = wired();
+    await send.call({ id: '2:3', text: 'fix it', dispatcherPath: '/work/desk' });
+    expect(mainsWorkers.get('2:3')).toBe('/work/desk');
   });
 
   it('rejects to the caller when a start fails, so its own catch reports it', async () => {

@@ -40,6 +40,11 @@ The Errors row (`errors.notify`, default on) says whether an error on the status
 bar raises a desktop notification while the window is not in front. Enter turns
 it over (docs/errors).
 
+`workers.closeAfterMinutes` (default 10, in the file by hand only, no row) is how
+long a worker whose report main has read sits with nothing sent to it before the
+app closes its pane; 0 closes one only when its card is finished. A whole number
+of minutes, none or more; anything else reads as the default (docs/workers).
+
 The Host rows make this Dashboard reachable from another: a port, read at the
 next launch, and the token the other machine pastes once. The port opens on
 127.0.0.1 only, so the other machine reaches it through an SSH tunnel (ssh -L

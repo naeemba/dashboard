@@ -17,6 +17,15 @@ describe('parseSettings', () => {
     expect(parseSettings({ errors: { notify: false } }, false).errors).toEqual({ notify: false });
     expect(parseSettings({ errors: { notify: 'no' } }, false).errors).toEqual({ notify: true });
   });
+  it('closes a finished worker ten minutes after its report unless the file says other whole minutes', () => {
+    expect(parseSettings({}, false).workers).toEqual({ closeAfterMinutes: 10 });
+    expect(parseSettings({ workers: { closeAfterMinutes: 0 } }, false).workers).toEqual({ closeAfterMinutes: 0 });
+    expect(parseSettings({ workers: { closeAfterMinutes: 30 } }, false).workers).toEqual({ closeAfterMinutes: 30 });
+    for (const rubbish of [-1, 2.5, '10', null]) {
+      expect(parseSettings({ workers: { closeAfterMinutes: rubbish } }, false).workers).toEqual({ closeAfterMinutes: 10 });
+    }
+  });
+
   it('checks for updates unless the file turns it off', () => {
     expect(parseSettings({}, false).updates).toEqual({ check: true });
     expect(parseSettings({ updates: { check: false } }, false).updates).toEqual({ check: false });
