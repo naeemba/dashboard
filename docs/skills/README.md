@@ -38,7 +38,9 @@ a `docs/adopt-docs` branch from an earlier run, is skipped with no pull request.
 The skill's text is `ADOPT_DOCS_SKILL`, written from this repository's own `docs/` as the worked
 example. A change to the pattern here (the index's wording, the id scheme, the CLAUDE.md rule)
 changes that text in the same pull request; `CLAUDE.md` says so beside the docs rule
-(skills-decision-2).
+(skills-decision-2). `adopt-docs-skill.test.ts` fails when the docs rule in `CLAUDE.md` or the
+preamble of `docs/README.md` is no longer in that text, word for word (line breaks and indent
+aside).
 
 ## Rolling /adopt-docs out to every project
 
@@ -58,7 +60,7 @@ line from each pane, collects one pull request link per project, and merges none
 Folders: `src/main/skills/`.
 
 - Which skills are installed, and the warning lines: `install-skills.ts`, `install-skills.test.ts`
-- The text of `/adopt-docs`: `adopt-docs-skill.ts`
+- The text of `/adopt-docs`, and the test that it carries this repository's docs rule and index preamble: `adopt-docs-skill.ts`, `adopt-docs-skill.test.ts`
 - Where a skill's folder is: `skill-folder.ts`
 - Wired in `main.ts` at `ready`, after the window opens, in the packaged app only
 
@@ -70,3 +72,4 @@ Folders: `src/main/skills/`.
 - Given a repository whose main checkout is on a branch with uncommitted work, when `/adopt-docs` runs there, then the pull request is opened from its own worktree and the checkout is unchanged.
 - Given a repository whose default branch is already in the pattern, when `/adopt-docs` runs from a checkout on an older branch, then it says "already in the docs pattern" and opens nothing.
 - Given a repository with a `docs/adopt-docs` branch, when `/adopt-docs` runs, then it says "earlier run: docs/adopt-docs exists" and opens nothing.
+- Given a change to the docs rule in `CLAUDE.md` or the preamble of `docs/README.md`, when `pnpm test` runs without the same change to `ADOPT_DOCS_SKILL`, then it fails naming the file that changed.
