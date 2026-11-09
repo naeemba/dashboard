@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:54.871Z",
-  "updatedAt": "2026-11-09T15:49:41.439Z",
-  "column": "Doing",
-  "order": 9
+  "updatedAt": "2026-11-09T16:01:22.295Z",
+  "branch": "work-board-card-195ef924-ec8f-44b5-87ed-6e1",
+  "pullRequest": 273,
+  "comments": [
+    {
+      "at": "2026-11-09T16:01:22.295Z",
+      "body": "Shipped in #273: text-direction.test.ts fails pnpm test when an input or textarea in src/ is created without its own dir = 'auto'; docs/conventions points at it. CLAUDE.md line left for Audit 13."
+    }
+  ],
+  "column": "Done",
+  "order": 214
 }
