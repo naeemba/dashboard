@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { settingsRows, stepSelection } from './settings-rows';
+import { settingsRows, stepSelection, toggled } from './settings-rows';
 import { ACTIONS } from '../../shared/keys/actions';
-import { bindKey, defaultSettings, parseSettings } from '../../shared/settings/settings';
+import { bindKey, defaultSettings, isOn, parseSettings } from '../../shared/settings/settings';
 
 const settings = defaultSettings(true);
 const rows = settingsRows(settings);
@@ -87,5 +87,15 @@ describe('stepSelection', () => {
     expect(stepSelection(rows, 1, -1)).toBe(1);
     const last = stepSelection(rows, rows.length - 1, 0);
     expect(stepSelection(rows, last, 1)).toBe(last);
+  });
+});
+
+describe('toggled', () => {
+  it('turns one on/off setting over and leaves the others', () => {
+    const off = toggled(settings, 'errors');
+    expect(off.errors).toEqual({ notify: false });
+    expect(off.updates).toEqual(settings.updates);
+    expect(isOn(toggled(off, 'errors'), 'errors')).toBe(true);
+    expect(settingsRows(off)).toContainEqual(expect.objectContaining({ kind: 'toggle', name: 'errors', value: 'off' }));
   });
 });

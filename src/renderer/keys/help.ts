@@ -66,9 +66,9 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'so `error ship` is the ships that failed. An entry opens formatted, or copies as JSON. Kept in dashboard.log in the app\'s data folder, '
     + LOG_FILE_COUNT + ' files of ' + LOG_FILE_LIMIT_SHOWN + '. Never what you type in a pane.',
   app: 'Hold Ctrl, Cmd or Alt alone and a panel names every key that modifier can still start here. '
-    + 'Settings live in ~/.config/dashboard/settings.json, holding only what you changed; the Host rows '
-    + 'let another Dashboard connect here. The worktree list holds shipped cards\' worktrees. What\'s new '
-    + 'lists what an update brought. The updates key checks for a newer release and installs it.',
+    + 'Settings live in ~/.config/dashboard/settings.json, holding only what you changed. The worktree list holds shipped cards\' worktrees. What\'s new '
+    + 'lists what an update brought. The updates key checks for a release and installs it. Bar messages fade; '
+    + 'Escape or a click clears one.',
 };
 
 // What a screen does with the keys no binding names, which is why these are written out rather than

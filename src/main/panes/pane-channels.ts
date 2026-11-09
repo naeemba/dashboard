@@ -14,15 +14,19 @@ export function registerPaneChannels(table: Channels, main: {
   spawnTerminal(id: string): void;
   // project.focus, on the pane the banner named.
   land(paneId: string): void;
+  // The window to the front, for a banner that named no pane (a status-bar error).
+  raise(): void;
 }): void {
   // Clicking the banner is the answer to it: the app comes forward, and the renderer is told which pane
   // to land on. Without that half you arrive at whatever project you were last on and go looking for the
   // pane the banner had already named. Only this machine's window is told: the banner shows on the
   // desk it was raised on, and a remote screen landing on the pane would be answering a banner it never saw.
-  table.on('notification:show', (_screen, title: string, body: string, paneId: string) => {
+  // The status bar's banner names no pane, so anything not a string only raises the window.
+  table.on('notification:show', (_screen, title: string, body: string, paneId: unknown) => {
     const notification = new Notification({ title, body });
     notification.on('click', () => {
-      main.land(paneId);
+      if (typeof paneId === 'string') main.land(paneId);
+      else main.raise();
     });
     notification.show();
   });
@@ -68,10 +72,15 @@ function fitShell(shells: Map<string, PaneShell>, screens: Screens, id: string):
 // hidden-to-shown transition; coming back from the Dock is restore()'s, so both are needed.
 export function landOnPane(window: BrowserWindow | undefined, paneId: string): void {
   if (!window) return;
+  raiseWindow(window);
+  window.webContents.send('notification:click', paneId);
+}
+
+export function raiseWindow(window: BrowserWindow | undefined): void {
+  if (!window) return;
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();
-  window.webContents.send('notification:click', paneId);
 }
 
 // ponytail: a fixed pause; a pty that echoes slower than this still gets the Enter inside the paste.

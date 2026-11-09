@@ -1,5 +1,14 @@
 import { ACTIONS, type ActionGroup } from '../../shared/keys/actions';
-import type { Settings } from '../../shared/settings/settings';
+import { isOn, TOGGLES, type Settings, type ToggleName } from '../../shared/settings/settings';
+
+// The settings with one toggle turned over. The section is spread so a field beside the toggle survives.
+export function toggled(settings: Settings, name: ToggleName): Settings {
+  return { ...settings, [name]: { ...settings[name], [TOGGLES[name]]: !isOn(settings, name) } };
+}
+
+function toggleRow(settings: Settings, name: ToggleName, label: string): SettingsRow {
+  return { kind: 'toggle', name, label, value: isOn(settings, name) ? 'on' : 'off' };
+}
 
 // One line of the settings screen. Headings are printed and walked past; everything else can be
 // selected and changed. Kept apart from the view so the walking is testable without a browser.
@@ -13,8 +22,7 @@ export type SettingsRow =
   | { kind: 'weather-place'; label: string; value: string }
   | { kind: 'host-port'; label: string; value: string }
   | { kind: 'host-token'; label: string; value: string }
-  | { kind: 'review-auto-loop'; label: string; value: string }
-  | { kind: 'updates-check'; label: string; value: string }
+  | { kind: 'toggle'; name: ToggleName; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
 
@@ -69,13 +77,11 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   });
   rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
   rows.push({ kind: 'heading', label: 'Review' });
-  rows.push({
-    kind: 'review-auto-loop', label: 'Start the review loop when a pull request opens', value: settings.review.autoLoop ? 'on' : 'off',
-  });
+  rows.push(toggleRow(settings, 'review', 'Start the review loop when a pull request opens'));
   rows.push({ kind: 'heading', label: 'Updates' });
-  rows.push({
-    kind: 'updates-check', label: 'Check for a newer release on launch and every six hours', value: settings.updates.check ? 'on' : 'off',
-  });
+  rows.push(toggleRow(settings, 'updates', 'Check for a newer release on launch and every six hours'));
+  rows.push({ kind: 'heading', label: 'Errors' });
+  rows.push(toggleRow(settings, 'errors', 'Raise a desktop notification for an error while the window is away'));
   rows.push({ kind: 'heading', label: 'Reset' });
   rows.push({ kind: 'reset-keys', label: 'Reset every key to its default' });
   rows.push({ kind: 'reset-all', label: 'Reset everything to defaults' });

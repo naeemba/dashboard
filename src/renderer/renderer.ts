@@ -101,10 +101,12 @@ const tabStrip = createTabStrip((index) => showPage(index));
 const modeSwitch = createModeSwitch((mode) => setMode(mode));
 const statusTerminal = document.createElement('span');
 statusTerminal.className = 'terminal';
-const statusError = createStatusError(bridge);
+// The shipped settings stand in until start() reads the file; a banner waits for the real answer.
+let settingsLoaded = false;
+const statusError = createStatusError(bridge, () => settingsLoaded && settings.errors.notify);
 const showError = statusError.show;
 const showNotice = statusError.notice;
-watchUpdates(bridge, (message) => showNotice('update', message), () => bindingName(settings, 'updates'));
+watchUpdates(bridge, (message) => showNotice('update', message, { stays: true }), () => bindingName(settings, 'updates'));
 statusElement.append(modeSwitch.element, statusError.element, statusTerminal);
 
 const addPaneButton = createAddPaneButton((claude) => addPane(pages[activeIndex], claude));
@@ -889,6 +891,7 @@ async function start(): Promise<void> {
   bridge.onUsageChange(applyUsage);
   const loaded = await bridge.getSettings();
   settings = loaded.settings;
+  settingsLoaded = true;
   shellCommand = loaded.shellCommand;
   // Read before anything is on screen, because the first page to open starts saving over it.
   const session = await bridge.getSession();

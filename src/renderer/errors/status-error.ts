@@ -1,12 +1,18 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
-import { errorDraft, rememberRead, shouldLogError, type FailureRead } from './error-log';
+import { errorDraft, logsStatusMessage, noticeDraft, rememberRead, type FailureRead } from './error-log';
+import { messageLifetime, raisesErrorBanner, type StatusKind } from './status-message';
 import { failureNotice, whenFailureRead } from '../../shared/errors/failure';
+import { isModified } from '../keys/shortcuts';
 
 export type StatusError = {
   element: HTMLElement;
   show(owner: string, message: string): void;
-  notice(owner: string, message: string): void;
+  notice(owner: string, message: string, options?: NoticeOptions): void;
 };
+
+// `stays` is for a line that says how things stand rather than what just happened — a newer release is
+// out — and is gone by the time anyone looks if it fades. A click or a bare Escape still clears it.
+export type NoticeOptions = { stays?: boolean };
 
 // The status bar's error span. Out of renderer.ts, which had reached its 600-line ceiling.
 //
@@ -18,30 +24,61 @@ export type StatusError = {
 // clean read anywhere clears everything: open a read-only project, get `Board not saved: EACCES`, then
 // look at another project's board and the message is gone while the card still is not on disk.
 //
-// A failure goes through show, and is also a line in the log, which is the one place every error a
-// person sees already passes through. Everything else the bar says — a hint, a refusal, progress like
-// `shipping "Fix login"…` — goes through notice, which draws the same and logs nothing: logged, every
-// ship would leave a red error line behind it and the log would read as a list of key presses.
-export function createStatusError(bridge: DashboardBridge): StatusError {
+// A failure goes through show and logs an error line; everything else the bar says — a hint, a
+// refusal, progress like `shipping "Fix login"…` — goes through notice and logs an info line, so a
+// refusal seen once is still on record without reading as a failure. Each sentence once, and again only
+// after it has been quiet for a minute. An owner that clears its message still may, but nobody has to: every message goes by itself
+// (status-message.ts), sooner on a click or a bare Escape. The Escape is watched, never taken: the
+// pane or dialog it was meant for still gets it (errors-decision-5).
+//
+// An error while the window is away raises a desktop banner too, while `notifies` says so: settings
+// errors.notify, and false until the settings file is read, so a launch failure does not banner someone
+// who turned it off.
+export function createStatusError(bridge: DashboardBridge, notifies: () => boolean): StatusError {
   const element = document.createElement('span');
   element.className = 'error';
   let errorOwner = '';
+  let fade: ReturnType<typeof setTimeout> | undefined;
+  const logged = new Map<string, number>();
+  const raised = new Map<string, number>();
   // The errors failureText read lately, so the bar's log line carries the stack of the one its sentence
   // was built from (errors-decision-4).
   let reads: FailureRead[] = [];
   whenFailureRead((error, text) => { reads = rememberRead(reads, { error, text, at: Date.now() }); });
 
-  function notice(owner: string, message: string): void {
+  // `kind` null is a line that stays until cleared.
+  function draw(owner: string, message: string, kind: StatusKind | null): void {
     if (message === '' && errorOwner !== owner) return;
     errorOwner = message === '' ? '' : owner;
     element.textContent = message;
+    clearTimeout(fade);
+    if (message !== '' && kind !== null) fade = setTimeout(dismiss, messageLifetime(kind, message));
   }
 
-  // A clear is never logged, so the owner rule is notice's alone.
-  function show(owner: string, message: string): void {
-    if (shouldLogError(message, element.textContent ?? '')) bridge.writeLog(errorDraft(message, reads, Date.now()));
-    notice(owner, message);
+  function dismiss(): void {
+    if (errorOwner !== '') draw(errorOwner, '', null);
   }
+
+  // A clear is never logged, so the owner rule is draw's alone.
+  function notice(owner: string, message: string, options: NoticeOptions = {}): void {
+    if (logsStatusMessage(logged, message, Date.now())) bridge.writeLog(noticeDraft(owner, message));
+    draw(owner, message, options.stays ? null : 'notice');
+  }
+
+  function show(owner: string, message: string): void {
+    const now = Date.now();
+    if (logsStatusMessage(logged, message, now)) bridge.writeLog(errorDraft(owner, message, reads, now));
+    if (raisesErrorBanner(raised, message, now, document.hasFocus(), notifies())) {
+      bridge.notify('Dashboard', message);
+    }
+    draw(owner, message, 'error');
+  }
+
+  element.addEventListener('click', dismiss);
+  // Capture, so a dialog that stops the key still lets the bar see it.
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !isModified(event)) dismiss();
+  }, true);
 
   // Failures nobody caught, from either side of the wire, under one owner so they never clear a board's
   // message or have one cleared by them.

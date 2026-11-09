@@ -92,3 +92,45 @@ Watch for: the match is by text. A sentence that reshapes the text
 loses it, and a generic text (`no reason given`) read by one failure can lend
 its stack to another shown in the same second. Passing the Error through each
 caller's `onError` removes the guess; it can land one caller at a time.
+
+## errors-decision-5: A status-bar message goes by itself, and Escape is watched, not taken
+
+Only the owner of a message could clear it, and many owners never did: a
+refusal from the Claude screen (`Fix login has no conversation to show`) stayed
+on the bar until the app restarted. So every message is given a lifetime when it
+is drawn (`status-message.ts`): 8 seconds for a notice, 20 for an error, and
+70 ms a character for a sentence long enough to need more. An owner that clears
+its message still may; a newer message replaces the old one and its timer.
+
+Escape clears it from anywhere, but the bar only watches the key: it is not a
+row in the action table and it is never stopped. Taking it would cost nvim its
+Escape whenever a message was showing, and close nothing a dialog expected to
+close. A modified Escape is left alone (keys-rule-1).
+
+A notice is logged now, as info under its owner, so a refusal seen once is still
+on record. The worry that kept it out — every ship leaving a red line — does not
+hold at info. Both kinds are logged once per sentence, and again only after it
+has been quiet for a minute (`logsStatusMessage`), because with the message gone
+the bar can no longer compare a repaint against what it shows. Every repeat
+restarts the minute, so a save failing every 10 seconds for an hour is one line
+and one banner, not sixty.
+
+An error while the window is not in front raises a desktop notification, by the
+same rule, with `errors.notify` to turn it off. Until the settings file is
+read no banner is raised, so a launch failure does not reach someone who turned
+it off; it is still on the bar and in the log. The banner names no pane, so a click only brings the window forward; it does not go through
+project.focus, which needs one.
+
+The quiet-minute rule is the bar's alone, not `log:write`'s: other writers
+repeat a line on purpose (an agent started twice is two lines).
+
+The update lines do not fade: the announcements (`Dashboard vX.Y.Z is out`
+and `Dashboard vX.Y.Z is ready · … to restart into it`) say how things stand,
+and with a check every six hours an 8-second line would go by while nobody is
+looking. Their caller asks for `stays`; a click or Escape still clears them.
+
+Watch for: a progress notice fades while its work goes on. A ship that takes a
+minute says `shipping…` for 8 seconds, then nothing until it ends. And a failure
+whose cause is still there fades too: `Board not saved: EACCES` leaves the bar
+after 20 seconds while the card is still not on disk, so a condition that keeps
+failing has to show itself again (the next save does) or it is only in the log.
