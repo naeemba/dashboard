@@ -494,7 +494,7 @@ const pane = paneActions({
   log: (draft) => logStore.log(draft),
   project: projectIn, openPanes, drop: dropPane, changed: () => panesChanged(), scopeOf: (id) => panes.scopeUnits.get(id), stopScope,
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
-  agentIn, screenPrompt: workerScreens.send,
+  agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,

@@ -43,7 +43,8 @@ Neither door holds any of the logic; each only asks.
   card record's claim on it ended.
 - **pane.send** (`pane send`): a screen's prompt, or typed into the shell; an
   agent a main sends text becomes that main's worker, the text ending with the
-  line telling it to report there.
+  line telling it to report there, when it reports its turn ends (a Claude
+  screen, or Claude Code started as a worker).
 - **pane.claim** and **pane.release** (`pane claim`, `pane release`): bound by
   the session command, `session-requests.ts`, on its ledger of who claimed and
   ran each pane; the asker's right to the pane is checked there first.

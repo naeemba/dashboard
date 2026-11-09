@@ -117,9 +117,11 @@ line and no dispatcher: `pane send` into a pane, a ship, the review loop. A work
 (2026-11-09) finished a pull request and told nobody, then said nothing marked the task as coming
 from another session. Now pane.dispatch gives a ship's and the review loop's agent its project's main
 as dispatcher, and pane.send makes an agent a main sends text the main's worker and adds the line to
-the text (send.ts holds the rule: only to an agent, since a shell would run the line). So the stop
-notices, their withdrawal and the false-notice rules above cover these panes too. Text sent to a
-shell is typed as it is and hands nothing over.
+the text (send.ts holds the rule: only to an agent that reports its turn ends, since a shell would run
+the line). So the stop notices, their withdrawal and the false-notice rules above cover these panes
+too. Text sent to a shell is typed as it is and hands nothing over, and so is text sent to Claude Code
+started without the worker hooks (resumed from the drawer): handed over, it was listed at work forever,
+its stop never told and the app never closing it.
 
 What this costs: a ship's agent on a Claude screen is main's, so /clear, /resume, /branch and /rewind
 are refused in it as in any worker screen, and main may release it. A screen you opened by hand and

@@ -13,12 +13,12 @@ import { paneSend, type PaneSendPorts } from './send';
 // command (session-requests.ts), whose ledger of who claimed what they need. The claim on main's worker
 // is tested in pane-actions.test.ts, every other decision in its action's own test.
 export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession'>
-  & Omit<PaneClosePorts, 'project'> & Pick<PaneOpenPorts, 'project'> & Omit<PaneSendPorts, 'handTo'>
+  & Omit<PaneClosePorts, 'project'> & Pick<PaneOpenPorts, 'project'> & Omit<PaneSendPorts, 'handTo' | 'mainsWorkerIn'>
   & Omit<PaneRestorePorts, 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & {
     // The session command's answers about the pane, forgotten: it is the new agent's.
     forgetAnswers(id: string): void;
     // Main's claim on each pane: the main its worker reports to.
-    mainsWorkers: Pick<Map<string, string>, 'set' | 'delete'>;
+    mainsWorkers: Pick<Map<string, string>, 'set' | 'delete' | 'has'>;
     commands: Pick<Map<string, PaneCommand>, 'get' | 'has' | 'set'>;
     shells: Pick<Map<string, { kill(): void }>, 'get' | 'has' | 'delete'>;
     // Working from this instant, rather than from the first report that catches its spinner: there is a
@@ -74,7 +74,11 @@ export function paneActions(main: PaneActionsMain): PaneActions {
       project: main.project, openPanes: main.openPanes, dispatch: dispatch.call, shell: plainShell,
     }),
     close: bind(paneClose, main),
-    send: bind(paneSend, { ...main, handTo: (id, dispatcherPath) => main.mainsWorkers.set(id, dispatcherPath) }),
+    send: bind(paneSend, {
+      ...main,
+      mainsWorkerIn: (id) => main.mainsWorkers.has(id),
+      handTo: (id, dispatcherPath) => main.mainsWorkers.set(id, dispatcherPath),
+    }),
     restore: bind(paneRestore, {
       ...main,
       hasCommand: (id) => main.commands.has(id),
