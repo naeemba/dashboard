@@ -1,4 +1,5 @@
 import type { Refused } from '../../../shared/app/bridge';
+import type { LogDraft } from '../../../shared/app/log-entry';
 import { failureText } from '../../../shared/errors/failure';
 import { paneFromId } from '../../../shared/panes/terminals';
 import { action } from '../action';
@@ -27,6 +28,22 @@ export type PaneClosePorts = {
 // a shell started over.
 export function notStoppedText(unit: string, error: unknown): string {
   return `${unit} was not stopped: ${failureText(error)}`;
+}
+
+// A pane's old scope stopped where nobody reads the answer (pane.restart, pane.restore): one left
+// running is a warning in the log, and its text is answered too, or null when it stopped.
+export async function stopOrWarn(
+  ports: Pick<PaneClosePorts, 'stopScope'> & { log(draft: LogDraft): void }, unit: string, action: string, id: string,
+): Promise<string | null> {
+  try {
+    await ports.stopScope(unit);
+    return null;
+  } catch (error: unknown) {
+    const message = notStoppedText(unit, error);
+    const { slot, index } = paneFromId(id);
+    ports.log({ level: 'warn', kind: 'pane', action, message, context: { slot, pane: index } });
+    return message;
+  }
 }
 
 export const paneClose = action<PaneClosePorts, { id: string }, { output: string }>('pane.close', {
