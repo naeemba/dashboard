@@ -74,9 +74,10 @@ sweep that throws is held on the status bar and the next one runs anyway. The
 figures are added up by the pane the window draws: a pane's shell under its own
 id, a worker screen's session under its pane, a page's main session on main.
 The manager's pane rows show it in a Memory column (`2.1 GB`) and the status bar
-ends on the focused pane's. From 80% of a scope's MemoryHigh (an agent's is 6G) the figure
-names the cap (`5.1 GB of 6.0 GB`) and the row's turns yellow: past MemoryHigh the
-kernel slows the agent. Off Linux nothing is read and nothing is shown.
+ends on the focused pane's. From 80% of a scope's MemoryHigh (an agent's is 6G)
+the figure names the cap (`5.1 GB of 6.0 GB`) and the row turns yellow: past
+MemoryHigh the kernel slows the agent. Off Linux nothing is read and nothing is
+shown.
 
 When a pane closes, by its close key or `pane release`, pane.close kills its
 shell and then runs `systemctl --user stop --no-block <unit>`, so a dev server
@@ -180,8 +181,8 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - Given an agent pane running a test suite, when you open the manager, then
   its row's Memory column shows its scope's memory.current within five seconds,
   and the status bar on that pane ends on the same figure.
-- Given an agent whose scope holds 5G, then its figure reads `5.0 GB of 6.0 GB`, in
-  yellow on the manager.
+- Given an agent whose scope holds 5G, then its figure reads `5.0 GB of 6.0 GB`,
+  in yellow on the manager.
 - Given a worker screen the screen host kept through a restart, when the app
   opens again, then its row shows the memory of the scope it first started in.
 - Given a mac, or a pane host from before scopes, then no Memory figure shows.
