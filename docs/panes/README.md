@@ -41,8 +41,9 @@ over. Going to the pane clears the edge, and so does the worker getting back to
 work. Main only runs a worker in, or closes, a pane it started, one it sent
 work, or one with nothing running in it. The app closes a worker's pane itself
 once its card is finished, or a while after main has read its report, and says
-so on the status bar; never the pane you are in, or one waiting on a question or
-on its own background work (workers-decision-1).
+so on the status bar; never the pane you are in on any screen, a pane on the
+manager page, or one waiting on a question or on its own background work
+(workers-decision-1).
 
 The button at the right end of the title row is two halves, [New Terminal | New
 Claude], each with its key. New Terminal opens a plain shell at the bottom of

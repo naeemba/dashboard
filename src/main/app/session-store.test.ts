@@ -5,6 +5,7 @@ import { channels } from './channels';
 import { PROJECT_MODES } from '../../shared/keys/modes';
 import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 import { sessionStore } from './session-store';
+import { MANAGER_SLOT } from '../../shared/manager/manager';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 const layout = { pages: [{ path: '/code/api', mode: PROJECT_MODES[0], focused: 0, names: [null] }], activeIndex: 0 };
@@ -42,13 +43,19 @@ describe('session:read', () => {
 });
 
 describe('hasKeyboard', () => {
-  it("is the pane each page of the host window's layout has the keyboard on, and none before a layout", () => {
+  it("is the pane each page of every screen's layout has the keyboard on, and none before a layout", () => {
     const { table, sessions } = store();
     expect(sessions.hasKeyboard('2:3')).toBe(false);
     table.dispatch(LOCAL_SCREEN, 'session:write', [{ ...layout, pages: [{ ...layout.pages[0], focused: 3 }] }]);
     expect(sessions.hasKeyboard('2:3')).toBe(true);
     expect(sessions.hasKeyboard('2:1')).toBe(false);
     table.dispatch('couch', 'session:write', [{ ...layout, pages: [{ ...layout.pages[0], focused: 1 }] }]);
-    expect(sessions.hasKeyboard('2:1')).toBe(false);
+    expect(sessions.hasKeyboard('2:1')).toBe(true);
+    expect(sessions.hasKeyboard('2:3')).toBe(true);
+  });
+
+  it('is every manager pane, which no layout names', () => {
+    const { sessions } = store();
+    expect(sessions.hasKeyboard(`${MANAGER_SLOT}:2`)).toBe(true);
   });
 });
