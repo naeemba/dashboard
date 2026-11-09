@@ -35,11 +35,13 @@ export const paneRelease = action<PaneReleasePorts, { id: string }, { output: st
     if (program !== null && !ports.mainsWorker(id)) return { refused: `${id} is running ${program}, which no session run started — close it by hand` };
     const closed = await ports.close(id);
     if (isRefused(closed)) return closed;
+    // What close said past `closed <id>`, a scope it could not stop, is said here too.
+    const closeNote = closed.output.slice(`closed ${id}`.length);
     const throwaway = ports.forget(id);
-    if (throwaway === undefined) return { output: `released ${id}` };
+    if (throwaway === undefined) return { output: `released ${id}${closeNote}` };
     const reason = await ports.unfinished(throwaway.worktreePath);
-    if (reason !== null) return { output: `released ${id}; kept ${throwaway.worktreePath}: ${reason}` };
+    if (reason !== null) return { output: `released ${id}${closeNote}; kept ${throwaway.worktreePath}: ${reason}` };
     await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);
-    return { output: `released ${id} and removed ${baseName(throwaway.worktreePath)}` };
+    return { output: `released ${id} and removed ${baseName(throwaway.worktreePath)}${closeNote}` };
   },
 });

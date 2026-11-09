@@ -15,7 +15,7 @@ function wired(startScreen: () => void = () => undefined) {
     commands: new Map([['2:3', { args: [], directory: '/work/api' }]]), setPaneCommand: () => undefined,
     shells: new Map(), spawn: () => undefined, agentStarted: () => undefined,
     startScreen, log: () => undefined,
-    project: () => undefined, openPanes: () => [], drop: () => undefined,
+    project: () => undefined, openPanes: () => [], drop: () => undefined, scopeOf: () => undefined, stopScope: async () => undefined,
     endClaim: () => undefined, changed: () => undefined, screenPrompt: () => false, typeIntoShell: () => undefined,
     kept: () => [], listenTo: () => undefined, takeResume: () => null, owedResumes: () => [], moveResume: () => undefined,
     screensBack: () => [], worktrees: () => [], panesBeforeLaunch: new Map(), realPath: (folder) => folder,

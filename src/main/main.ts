@@ -35,7 +35,7 @@ import { unfinishedWork } from './workers/finished-work';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
-import { launchScopes } from './processes/launch-scopes';
+import { launchScopes, stopScope } from './processes/launch-scopes';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
 import { readMarket } from './markets/markets-fetch';
@@ -488,7 +488,7 @@ const pane = paneActions({
   commands: terminalCommands, setPaneCommand, shells, spawn: panes.spawn,
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,
   log: (draft) => logStore.log(draft),
-  project: projectIn, openPanes, drop: dropPane, changed: () => panesChanged(),
+  project: projectIn, openPanes, drop: dropPane, changed: () => panesChanged(), scopeOf: (id) => panes.scopeUnits.get(id), stopScope,
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
   screenPrompt: workerScreens.send,
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
