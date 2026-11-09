@@ -103,7 +103,10 @@ puts `session_state_changed` on the stream: `running` (or `requires_action`, a p
 turn begins, `idle` after its `result`. Checked 2026-11-09 with the agent SDK 0.3.316 and a throwaway
 session: `running` came before the turn's init and `idle` 3 ms after its result. chat-sessions.ts reads the result's sender first and the idle after it, so the
 report is heard before the held notice is decided. A session that ends counts as idle, so nothing is
-held for a main that is gone.
+held for a main that is gone. The sweep that closes finished workers skips a worker whose main
+is mid-turn for the same reason: a close told then, "closed without a report read", would reach main
+after the very turn that read the report. A worker screen runs without the variable; nothing waits on
+its turns.
 
 Watch for: `idle` comes only once main has nothing left to do, so a main that goes from one queued
 prompt straight into the next holds the notice through all of them. Main is told late, never twice. A

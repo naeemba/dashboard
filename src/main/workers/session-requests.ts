@@ -278,10 +278,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // One at a time, so two releases never race over one throwaway worktree. A refusal leaves the pane
   // as it is, and the next sweep decides again. Release takes back the worker's stop notice, so a
-  // worker closed for its card before main read a report from it is told to main here instead.
+  // worker closed for its card before main read a report from it is told to main here instead. Not
+  // while its main is mid-turn: the turn may have read the report, heard only at its end, and a close
+  // told meanwhile is taken the moment it ends (workers-decision-1).
   async function closeFinished(): Promise<void> {
     const closeAfterMs = ports.closeAfterMs();
     for (const id of openPaneIds().filter(mainsWorker)) {
+      if (busyMains.has(mainOf(id))) continue;
       const seen = look(id);
       const verdict = releaseVerdict(seen, closeAfterMs);
       if (!verdict.release) continue;
@@ -387,7 +390,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     mainTurn(slot: number, midTurn: boolean) {
       if (midTurn) return void busyMains.add(slot);
       busyMains.delete(slot);
-      notices.turnOver((id) => mainOf(id) === slot);
+      notices.turnOver();
     },
   });
 }

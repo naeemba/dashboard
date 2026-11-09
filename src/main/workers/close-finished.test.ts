@@ -64,6 +64,24 @@ describe('closeFinished', () => {
     expect(told[0]).not.toContain('without sending you a report');
   });
 
+  // The turn may be the one reading the worker's report, which main hears only at its end.
+  it('leaves a finished worker alone while its main is mid-turn, and releases it once the turn ends', async () => {
+    const { ports, closed, told, finishedCards } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'fix the tests'] });
+    answer.mainTurn(2, true);
+    answer.notify('2:1', 'done', NOTHING_WAITING);
+    finishedCards.set('2:1', 'Done');
+    await answer.closeFinished();
+    expect(closed).toEqual([]);
+    answer.heard(2, 'api-terminal-2');
+    answer.mainTurn(2, false);
+    await answer.closeFinished();
+    expect(closed).toEqual(['2:1']);
+    expect(told).toEqual([]);
+  });
+
   it('tells main nothing of a worker it read a report from', async () => {
     const { answer, told, finishedCards } = await reported();
     finishedCards.set('2:1', 'Done');

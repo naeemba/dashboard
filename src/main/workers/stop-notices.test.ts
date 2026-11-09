@@ -209,7 +209,7 @@ describe('stopNotices', () => {
         expect(noticed).toEqual([]);
         notices.reported('2:1');
         busy.delete('2:1');
-        notices.turnOver(() => true);
+        notices.turnOver();
         expect(noticed).toEqual([]);
       });
 
@@ -220,14 +220,15 @@ describe('stopNotices', () => {
         notices.state('2:1', 'done', nothing);
         notices.state('3:1', 'done', { background: 1, scheduled: 0 });
         pass(1000);
-        busy.clear();
-        notices.turnOver((id) => id === '3:1');
+        busy.delete('3:1');
+        notices.turnOver();
         expect(noticed).toEqual(['3:1']);
         expect(paused).toEqual(['3:1']);
-        notices.turnOver(() => true);
+        busy.delete('2:1');
+        notices.turnOver();
         expect(noticed).toEqual(['3:1', '2:1']);
         // Told once: a second turn end has nothing held.
-        notices.turnOver(() => true);
+        notices.turnOver();
         expect(noticed).toHaveLength(2);
       });
 
@@ -240,7 +241,7 @@ describe('stopNotices', () => {
         pass(10);
         notices.state('2:1', 'running');
         notices.forget('2:2');
-        notices.turnOver(() => true);
+        notices.turnOver();
         expect(noticed).toEqual([]);
       });
     });

@@ -293,11 +293,12 @@ export function registerChatSessions(
   async function start(slot: number, projectPath: string): Promise<Session> {
     const { query } = await import('@anthropic-ai/claude-agent-sdk');
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
-    // The session state flag: main's turn begins and ends on the stream, so a worker's stop notice can
-    // wait for the end (workers-decision-1).
-    const environment = { ...host.environment, PATH: await shellPath, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1' };
+    const environment: Record<string, string> = { ...host.environment, PATH: await shellPath };
     const executable = claudeExecutable();
     const worker = host.worker(slot);
+    // Main's turns begin and end on its stream, so a worker's stop notice can wait for the end
+    // (workers-decision-1).
+    if (!worker) environment.CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS = '1';
     const name = worker?.name ?? mainSessionName(projectPath);
     // Asked here rather than inside the SDK's spawn, so the screen host gets the same answer and the
     // unit is known before the process starts. The SDK's own command takes the executable's place.
@@ -389,7 +390,10 @@ export function registerChatSessions(
           const sender = peerSender(record.origin);
           if (sender !== undefined) host.heard(slot, sender);
           const midTurn = turnUnderWay(record);
-          if (midTurn !== undefined && !worker) host.mainTurn(slot, midTurn);
+          if (midTurn !== undefined) {
+            host.mainTurn(slot, midTurn);
+            continue;
+          }
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {

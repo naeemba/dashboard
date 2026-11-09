@@ -35,7 +35,7 @@ export type StopNoticePorts = {
   // Whether the main the worker's notice goes to is mid-turn. A notice due then is held until that
   // turn ends: queued, main takes it the moment the turn ends, before the app has read whether the
   // turn read the worker's report, and it can no longer be taken back.
-  midTurn?(id: string): boolean;
+  midTurn(id: string): boolean;
 };
 
 export type StopNotices = {
@@ -48,9 +48,9 @@ export type StopNotices = {
   // still waits in main's queue is taken back: main reads a report only when its turn ends, and the
   // turn that read it is usually the one that merged and released the worker.
   forget(id: string): void;
-  // A main's turn ended, after its result was read: each notice held for a worker `ofThatMain` names,
-  // and not dropped by a report that turn read, is told now.
-  turnOver(ofThatMain: (id: string) => boolean): void;
+  // A main's turn ended, after its result was read: each notice held for a worker whose main is no
+  // longer mid-turn, and not dropped by a report that turn read, is told now.
+  turnOver(): void;
 };
 
 function after(ms: number, run: () => void): () => void {
@@ -101,7 +101,7 @@ export function stopNotices(
     pending.set(id, wait(ms, () => {
       pending.delete(id);
       (paused ? pauseNoticed : noticed).add(id);
-      if (ports.midTurn?.(id)) held.set(id, paused);
+      if (ports.midTurn(id)) held.set(id, paused);
       else say(id, paused);
     }));
   }
@@ -147,8 +147,9 @@ export function stopNotices(
       pauseNoticed.delete(id);
       stopped.delete(id);
     },
-    turnOver(ofThatMain) {
-      for (const [id, paused] of [...held].filter(([each]) => ofThatMain(each))) {
+    turnOver() {
+      for (const [id, paused] of held) {
+        if (ports.midTurn(id)) continue;
         held.delete(id);
         say(id, paused);
       }
