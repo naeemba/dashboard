@@ -112,6 +112,26 @@ finished, so a board whose finished column has another name (`Shipped`) shows
 its subtasks as under way. That is the price of one rule the bar, the manager's
 counts and its stalled panes all share.
 
+## board-decision-9: A card's pull request glyph is read with its column and held in memory
+
+**The glyph (checks running, failed, approved, mergeable, merged) comes from the
+same `gh pr list` card.follow asks, with three more fields, and is never written
+on the card.** A second lookup would be a second `gh` call per card per check.
+Written on the card, a glyph that changes as each check finishes would be a
+commit pushed to origin every minute a pull request is building. In memory, a
+restart shows nothing until the next check, a minute at most; merged is the one
+read from the card, from the merge line board-decision-6 writes, since a merged
+card is never asked about again.
+
+**One glyph, in this order: merged, a failed check, a running one, approved,
+mergeable.** A failed check is what needs you first, and approved over
+mergeable because an approval is news and mergeable alone is not. An open pull
+request that is conflicting or waiting on a review shows none.
+
+**Checked every minute, not two.** The glyph is worth reading only if it is near
+the truth; the column's moves come sooner too, for one `gh` call per card in
+flight per minute.
+
 ## board-decision-6: A card's column follows its pull request, and the app says so
 
 **The app moves a shipped card: into Doing when its agent starts, into Review
@@ -124,7 +144,7 @@ the merge. Agents moved cards to Done on main before the merge, and kamandsystem
 This supersedes board-rule-2's ordering: the rule (Review while open, Done after
 the merge) stands, and the app keeps it. Folds in card b0234b28's lookup (the
 number found from the branch through `gh`); its glyph of check and review state
-is not part of this.
+is board-decision-9.
 
 **Each state moves the card when it differs from the last line about that pull
 request, and the line on the card is the record of that.** A reopen counts as a
@@ -134,13 +154,14 @@ person: a card dragged back to Doing for a fix while its pull request stays open
 would jump to Review two minutes later. The one exception is Done with a pull
 request open, which is moved back every time, since that card is the bug above.
 
-**Asked when a worker reports, when the board is shown, and every two minutes;
+**Asked when a worker reports, when the board is shown, and every two minutes
+(every minute since board-decision-9);
 never twice in 30 seconds.** Showing the board re-reads it after each write, the
 app's own included, and asking `gh` on each read would be a call per card per
 keystroke. A Done card is asked about for a day after it last changed, enough to
 catch an early Done and few enough that the first run does not ask about every
 card ever finished. What it costs: one `gh` call per card in flight per check,
-and a merged pull request reaches Done up to two minutes after the merge when
+and a merged pull request reaches Done up to a minute after the merge when
 nobody reports and nobody looks.
 
 **`gh` failing is silence, not a state.** Missing, logged out or offline, nothing

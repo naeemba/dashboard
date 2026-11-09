@@ -32,10 +32,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
   nvim: 'One nvim filling the window, started the first time you press the nvim key here, not at '
     + 'launch. Quit it and Enter starts it again. The scrollback key on the terminals screen sends a '
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',
-  board: 'A kanban board in .dashboard/board, saved on every change, undo the way back, pushed to '
-    + 'main when git tracks it. Ship hands a card to an agent; its pull request moves it '
-    + 'on: open into Review, starting its loop unless a setting waits, merged into Done. Done moves only '
-    + 'by dragging. Delete cancels, or deletes in Cancelled and Done.',
+  board: 'A kanban board in .dashboard/board, saved on every change, pushed to '
+    + 'main when git tracks it. Ship hands a card to an agent; its pull request moves it: open into '
+    + 'Review, starting its loop unless a setting waits, merged into Done, with a glyph for its '
+    + 'checks. Only dragging moves Done. Delete cancels, or deletes in Cancelled and Done.',
   notes: 'Two pages for what is not a card: free text in .dashboard/notes.md and handwriting in '
     + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
     + 'key turns between them. No save key: written a moment after you stop, read only when you '
@@ -48,10 +48,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'how it exited and the last line it printed; the other key types it into a free shell in each, '
     + 'where it prints as it goes. The last line is a guess, and the command and its results '
     + 'are gone on restart.',
-  claude: 'Claude Code as a page: tables, code, diffs, tool calls folded, which the unfold key '
-    + 'opens; the link key follows links. The project\'s main session. A slash lists commands, @ '
-    + 'mentions a file, the agents and workflow keys open them. The foot shows usage and cache warmth, '
-    + 'the context key lists it; a click changes its model, mode or effort.',
+  claude: 'Claude Code as a page: tables, code, diffs, tool calls the unfold key opens; the link key '
+    + 'follows links. A slash lists commands, @ files; the agents and workflow keys open them, the '
+    + 'attachments key walks attached images, Delete removes one. The foot shows usage and cache '
+    + 'warmth, the context key lists it; a click changes model, mode or effort.',
   sections: 'The manager is five screens under one strip of names; two of these keys walk it from any '
     + 'of them, since the arrows belong to the board and the notes. The refresh key reads the four '
     + 'cards above the strip now rather than at the next half hour.',

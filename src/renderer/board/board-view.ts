@@ -14,7 +14,6 @@ import {
   isWaitingColumn,
   moveCard,
   moveCardToColumn,
-  flightParts,
   moveSelection,
   pullRequestFrom,
   returnFromShip,
@@ -72,7 +71,8 @@ import {
   undoChange,
   type BoardState,
 } from './board-state';
-import type { DashboardBridge, WorktreeEntry } from '../../shared/app/bridge';
+import type { BoardShown, DashboardBridge, WorktreeEntry } from '../../shared/app/bridge';
+import { flightLine } from '../../shared/board/pull-request-status';
 import { cardRows } from './card-search';
 import { confirmOverlay, searchOverlay } from '../app/overlay';
 import { columnIcon, icon, labelled } from '../app/icons';
@@ -167,6 +167,8 @@ export function createBoardView(options: BoardOptions): BoardView {
   // nothing about work under way on a branch. A map rather than a scan per card: renderCard runs for
   // every card on the board on every keystroke — the same reason age.ts builds its formatter once.
   let inFlight = new Map<string, WorktreeEntry>();
+  // Each card's pull request glyph, from main with the board it was read with.
+  let pullRequestStatuses: BoardShown['pullRequestStatuses'] = {};
   // The line that says where a dragged card would land.
   const dropMarker = createDropMarker();
   // The id of the card a left press landed on, or null. Held by id rather than by node because the
@@ -223,6 +225,7 @@ export function createBoardView(options: BoardOptions): BoardView {
     const boardRead = options.bridge.readBoard(options.projectPath);
     try {
       const read = await boardRead;
+      pullRequestStatuses = read.pullRequestStatuses;
       next = fresh ? loadBoard(state, read.board) : reloadBoard(state, read.board);
       // The old file is still on disk under this name, so the cards are not gone — just not shown.
       if (read.brokenFiles.length > 0) message = `Damaged board files kept as ${read.brokenFiles.join(', ')}`;
@@ -434,10 +437,9 @@ export function createBoardView(options: BoardOptions): BoardView {
       // The number goes into the box bare: you type 14, and flightParts is what puts the # back.
       item.append(renderEditor(editing, String(card[editing] ?? '')));
     } else {
-      const flight = flightParts(card);
-      if (flight.length > 0) {
-        item.append(labelled('p', 'board-flight', card.pullRequest === undefined ? 'branch' : 'pullRequest',
-          flight.join(' · ')));
+      const flight = flightLine(card, pullRequestStatuses[card.id]);
+      if (flight !== '') {
+        item.append(labelled('p', 'board-flight', card.pullRequest === undefined ? 'branch' : 'pullRequest', flight));
       }
     }
     // One segment per child, coloured by the column it is in: finished (isFinishedColumn), not started,
