@@ -68,7 +68,8 @@ describe('installBoardGuard', () => {
     expect(readFileSync(join(home, '.claude', 'dashboard', 'board.js'), 'utf8')).toBe('program');
     expect(lstatSync(join(home, '.claude', 'settings.json')).isSymbolicLink()).toBe(true);
     expect(guardEntries(readFileSync(join(dotfiles, 'settings.json'), 'utf8'))).toHaveLength(1);
-    expect(statSync(join(dotfiles, 'settings.json')).mode & 0o777).toBe(0o600);
+    // Windows keeps no POSIX mode; 0o600 reads back as 0o666 there.
+    if (process.platform !== 'win32') expect(statSync(join(dotfiles, 'settings.json')).mode & 0o777).toBe(0o600);
   });
 
   it('leaves a link to a settings file that is not there a link, and writes nothing', () => {
