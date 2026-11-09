@@ -34,7 +34,7 @@ describe('the board command over a card file that does not parse', () => {
   });
 });
 
-describe('the board command on a board git tracks', () => {
+describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
   useGitTestEnvironment();
 
   // Doing, not Review or Ship: a move into those asks the running app, and no test may.

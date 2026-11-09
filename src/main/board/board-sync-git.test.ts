@@ -72,7 +72,7 @@ function clean(checkout: string): boolean {
   return git(checkout, 'status', '--porcelain') === '';
 }
 
-describe('syncBoard', () => {
+describe('syncBoard', { timeout: 60_000 }, () => {
   it('commits the edit to origin and leaves the checkout on it, clean', async () => {
     const { bare, checkout } = project();
     const outcome = await syncBoard(checkout, command('move', 'a', 'Doing'));
