@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T15:32:32.451Z",
-  "updatedAt": "2026-11-09T15:12:47.307Z",
-  "column": "Doing",
-  "order": 2
+  "updatedAt": "2026-11-09T15:59:39.988Z",
+  "branch": "work-board-card-dd3723b7-a165-495d-980d-bca",
+  "pullRequest": 265,
+  "comments": [
+    {
+      "at": "2026-11-09T15:59:39.988Z",
+      "body": "PR #265: a stop notice due while main is mid-turn is held until main goes idle (session_state_changed), dropped if that turn read the worker's report, capped at PAUSE_CEILING_MS from the turn's start; the close sweep skips a worker whose main is mid-turn. Ready to merge, CI green."
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }

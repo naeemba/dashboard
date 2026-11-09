@@ -513,6 +513,7 @@ const chats = registerChatSessions(table, {
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
   heard: (slot, sender) => { workerAnswers.heard(slot, sender); followPullRequests(slot); },
+  mainTurn: (slot, midTurn) => workerAnswers.mainTurn(slot, midTurn),
 });
 // Every change to a session, from every door (session-actions.ts).
 const session = sessionActions({ chat: chats.actionPorts, sessions: sessionIndex, projectAt: projectIn, dispatchers: () => mainsWorkers.values() });

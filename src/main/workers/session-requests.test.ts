@@ -224,6 +224,47 @@ describe('sessionRequests', () => {
     expect(withdrawn).toEqual(['2 0']);
   });
 
+  it('holds a notice due while main is mid-turn and drops it when that turn read the report', async () => {
+    const { ports, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/work/api', args: ['run', '2:2', 'go'] });
+    answer.mainTurn(2, true);
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
+    await answer({ directory: '/anywhere', args: ['notify', '2:2', 'done', '--background', '0', '--scheduled', '0'] });
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    // Another main's turn ending says nothing of this one's workers.
+    answer.mainTurn(3, false);
+    expect(told).toEqual([]);
+    answer.heard(2, 'api-terminal-2');
+    answer.mainTurn(2, false);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-3', '2:2')}`]);
+  });
+
+  // `idle` waits on main's background work too, which may never end. One clock, the turn's: a notice
+  // due late in it is told at the turn's ceiling with every other one held, not a ceiling later.
+  it('tells every held notice once main has been mid-turn for the ceiling, in the order they came due', async () => {
+    const { ports, told } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    await answer({ directory: '/work/api', args: ['run', '2:2', 'go'] });
+    answer.mainTurn(2, true);
+    vi.advanceTimersByTime(PAUSE_CEILING_MS - 2 * REPORT_SETTLE_MS);
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    answer.mainTurn(2, true);
+    expect(told).toEqual([]);
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
+    await answer({ directory: '/anywhere', args: ['notify', '2:2', 'done', '--background', '0', '--scheduled', '0'] });
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`, `2 ${doneReport('api-terminal-3', '2:2')}`]);
+  });
+
   // Main hears a report only when the turn that read it ends, and that turn merges and releases.
   it('takes back a notice still queued when main releases the worker, and tells nothing of it after', async () => {
     const { ports, told, withdrawn } = project();

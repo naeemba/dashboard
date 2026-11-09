@@ -22,9 +22,18 @@ log — as its first 6 lines and a row counting the rest, opened the same way
 from the web is a link, so nothing is fetched until you click it), an edit as a
 diff. It runs in the project's folder with the project's own CLAUDE.md,
 settings, skills, hooks and MCP servers, the same as claude typed in a pane, as
-the project's main session. It starts the first time you show this screen,
-when a worker reports to it, or when `dashboard project open` opens the project,
-so a page the app restores at launch and you never look at runs no Claude.
+the project's main session. The session starts the first time you show this
+screen, when a worker reports to it, or when `dashboard project open` opens the
+project, so a page the app restores at launch and you never look at runs no
+Claude. Claude in Chrome comes too when the app's environment has
+`CLAUDE_CODE_ENABLE_CFC` on (`1`, `true`), or, with that unset, when Claude
+Code's config (`.claude.json`, in `CLAUDE_CONFIG_DIR` or the home folder) has
+`claudeInChromeDefaultEnabled: true`; `CLAUDE_CODE_ENABLE_CFC` off (`0`,
+`false`) keeps it out whatever the config says. The interactive CLI decides the
+same way, one the SDK starts reads only the `--chrome` flag, so every screen,
+main's, a worker's and the screen host's, is started with it then and without
+it otherwise. A `CLAUDE_CODE_ENABLE_CFC` set only in a settings file's `env`
+block is not in the app's environment, so the screen goes by the config.
 On Linux its Claude runs in a systemd scope of its own under agents.slice,
 `agent-main-<project>-<random>.scope` (docs/processes).
 
@@ -236,7 +245,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 
 - Main's half: `chat-sessions.ts`, `claude-process.ts` (the CLI it starts, in its systemd scope), `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`,
-  `chat-start.ts`
+  `chat-start.ts`, `chat-chrome.ts` (whether a session gets `--chrome`)
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`, `chat-screen-click.ts`
@@ -257,6 +266,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 
 - Given a tool needs a yes, when the session asks, then a box over the prompt holds the question until you answer it.
 - Given main ran a worker with `pane run` (a Claude screen unless `--terminal`, or on Windows), when its pane is drawn, then it holds this same screen, run under the pane's own key in the worker's folder, conversation and hooks; /clear, /resume, /branch and /rewind are refused there, so it stays on the conversation it was started on (workers-decision-5). A Claude screen opened by hand with New Claude holds it too, and all four act on its own conversation (workers-decision-7).
+- Given Claude Code's config has `claudeInChromeDefaultEnabled: true`, when any Claude screen's session starts, then it has the Claude in Chrome tools, as claude typed in a pane does; with the setting off, absent, or the config unreadable, it has none. `CLAUDE_CODE_ENABLE_CFC` in the app's environment overrides the config either way: `0` leaves the tools out with the setting on, `1` brings them with it unset.
 - Given an MCP server asks for a form or a sign-in link, when the session passes it on, then the same box walks the form a field at a time, or opens the link, and every step can decline; a yes or no or a pick opens on the server's default, a typed answer outside the field's bounds keeps the box open saying what it takes, a required multi-select or a link that is not http(s) can only be declined, an optional multi-select can also be skipped, and Escape or the session ending reaches the server as a cancel, not a decline; the server's other dialogs are not declared, so Claude Code keeps its own fallback.
 - Given a turn is running, when you press Escape, then the turn is interrupted and any pending question is given up on: a tool call is declined, a server form cancelled.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
@@ -289,7 +299,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given Claude edited files after a prompt, when you /rewind to it and restore code, then the files are as they were before it; restore conversation, and the conversation picks up from just before it with the prompt back in the box.
 - Given text in the box, when you press Ctrl+G, then it opens in the project's nvim, and once saved there and you come back, the box holds what you saved.
 - Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
-- Given main's worker stopped without a report, when the app tells main so, then it is queued behind the turn if one is running, grey in the queue strip, and once main takes it the thread shows it as a notice line linking the worker's pane, never as a prompt you typed; Up skips it in the queue and /rewind leaves it out; one saved under the older "has finished its turn" wording reads back the same way (workers-decision-1).
+- Given main's worker stopped without a report, when the app tells main so, then it is told once the turn ends, or once the turn has run 30 minutes for every notice held in it; it is queued behind the turn, grey in the queue strip, when the CLI sends no session state or the turn has already run 30 minutes, and once main takes it the thread shows it as a notice line linking the worker's pane, never as a prompt you typed; Up skips it in the queue and /rewind leaves it out; one saved under the older "has finished its turn" wording reads back the same way (workers-decision-1).
 - Given a request fails and the session retries it, or a plan limit nears or is hit, when the session says so, then a notice line in the thread says the error and the wait, or which limit and when it resets; the same limit line shows once.
 - Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
 - Given Claude ran an agent, when its call is on screen, then the call's line reads `Agent List X11 and read hostname 3 tools · 33.1K tokens · 5s`, counting while the agent runs and kept after it ends or the conversation is read back.

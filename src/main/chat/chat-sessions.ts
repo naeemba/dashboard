@@ -2,7 +2,7 @@ import type { EffortLevel, ModelInfo, Options, PermissionResult, Query, SDKUserM
 import { BOARD_INSTRUCTIONS, mainPrompt, mainSessionName } from '../workers/dispatch';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
-import { peerSender } from '../../shared/chat/chat-events';
+import { peerSender, turnUnderWay } from '../../shared/chat/chat-events';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -14,6 +14,7 @@ import type { Channels } from '../app/channels';
 import { conversationChange, EMPTY_TRANSCRIPT, reportedPreferences, withEarlier, type ChatEvent } from '../../shared/chat/chat-transcript';
 import { HISTORY_CONVERSATIONS, sentPrompts, staleConversations, type PromptsRead } from '../../shared/chat/chat-history';
 import { exportTarget } from './chat-export-target';
+import { chromeArgumentsFor } from './chat-chrome';
 import { closedAtQuit, sessionToMeasure } from './chat-start';
 import { elicitationAsk, elicitationResult, type PermissionAsk } from '../../shared/chat/chat-elicitation';
 import { changeMcpServer, mcpServers, type McpAction, type McpServer } from '../../shared/chat/chat-mcp';
@@ -85,6 +86,8 @@ export type ChatHost = {
   runningInPane(id: string): string | null;
   // The session in `slot` read a message another session sent it, by that session's name: a worker's report.
   heard(slot: number, sender: string): void;
+  // The main session in `slot` began a turn (true) or ended one (false), from its session state.
+  mainTurn(slot: number, midTurn: boolean): void;
 };
 
 // The call /btw makes. The pinned SDK has it on every query but does not declare it yet.
@@ -291,10 +294,15 @@ export function registerChatSessions(
 
   async function start(slot: number, projectPath: string): Promise<Session> {
     const { query } = await import('@anthropic-ai/claude-agent-sdk');
+    // Read while the shell's PATH and the scope are awaited; it never rejects.
+    const chrome = chromeArgumentsFor(host.environment, homedir());
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
-    const environment = { ...host.environment, PATH: await shellPath };
+    const environment: Record<string, string> = { ...host.environment, PATH: await shellPath };
     const executable = claudeExecutable();
     const worker = host.worker(slot);
+    // Main's turns begin and end on its stream, so a worker's stop notice can wait for the end
+    // (workers-decision-1).
+    if (!worker) environment.CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS = '1';
     const name = worker?.name ?? mainSessionName(projectPath);
     // Asked here rather than inside the SDK's spawn, so the screen host gets the same answer and the
     // unit is known before the process starts. The SDK's own command takes the executable's place.
@@ -317,7 +325,8 @@ export function registerChatSessions(
         // newer model's thinking arrives empty. The flag alone leaves whether to think to the settings.
         // A worker screen runs as a terminal worker does: auto mode, its own name, the board instructions.
         permissionMode: preferences.get(slot)?.permissionMode ?? (worker ? 'auto' : undefined),
-        extraArgs: { name, 'thinking-display': 'summarized' },
+        // Claude in Chrome when the user's config turns it on, which only the interactive CLI reads (chat-chrome.ts).
+        extraArgs: { name, 'thinking-display': 'summarized', ...await chrome },
         // Every settings file loads, on main's screen and a worker's, as in the terminal, so the
         // user's allow rules apply before auto mode decides (workers-decision-5).
         settingSources: ['user', 'project', 'local'],
@@ -387,6 +396,11 @@ export function registerChatSessions(
           }
           const sender = peerSender(record.origin);
           if (sender !== undefined) host.heard(slot, sender);
+          const midTurn = turnUnderWay(record);
+          if (midTurn !== undefined) {
+            host.mainTurn(slot, midTurn);
+            continue;
+          }
           if (relayed(record)) host.send(slot, { kind: 'message', message: record });
         }
       } catch (thrown: unknown) {
@@ -396,6 +410,7 @@ export function registerChatSessions(
         if (resume && !started) remember(projectPath, undefined);
       }
       if (reporters.ended(projectPath, session)) host.conversation(projectPath, undefined);
+      if (!worker) host.mainTurn(slot, false);
       for (const { resolve } of session.asks.values()) resolve({ behavior: 'deny', message: 'The session ended.' });
       // An end nobody asked for is not restarted here: a session that dies on start would die again
       // in a loop. The screen says it ended, and the next prompt starts it.
