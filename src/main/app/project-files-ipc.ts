@@ -1,5 +1,6 @@
 import type { Channels } from './channels';
 import type { Board } from '../../shared/board/board';
+import type { PullRequestStatus } from '../../shared/board/pull-request-status';
 import { openBoard, peekBoard, writeBoard } from '../board/board-store';
 import { rebaseBoardChange } from '../../shared/board/board-merge';
 import type { BoardChanges } from '../board/board-changes';
@@ -18,6 +19,8 @@ export function registerProjectFiles(
   tellOthers: (screen: string, channel: string, projectPath: string) => void,
   // The board on screen: its cards are asked about their pull requests (pull-request-sweep.ts).
   shown: (projectPath: string) => void,
+  // Each card's pull request glyph, held in main (pull-request-status.ts).
+  pullRequestStatuses: (projectPath: string, board: Board) => Record<string, PullRequestStatus>,
 ): void {
   // Reading also seeds the folder, so the first Ctrl+B on a project is what creates .dashboard. Seeding
   // is a convenience — writing the two explanation files — so a read-only project folder must not cost
@@ -28,7 +31,7 @@ export function registerProjectFiles(
       const read = openBoard(projectPath);
       changes.seen(projectPath, read.board);
       shown(projectPath);
-      return read;
+      return { ...read, pullRequestStatuses: pullRequestStatuses(projectPath, read.board) };
     } finally {
       // After the read, which is what creates .dashboard on a project that has never had a board — and
       // in a finally, because a read that throws still leaves a folder worth watching. Skip it there and
