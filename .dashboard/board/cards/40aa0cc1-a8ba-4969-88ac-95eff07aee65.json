@@ -1,0 +1,11 @@
+{
+  "id": "40aa0cc1-a8ba-4969-88ac-95eff07aee65",
+  "title": "Claude screens get Claude in Chrome when the user has it on",
+  "notes": "Chrome (the Claude in Chrome extension's tools) is reachable from a terminal Claude but not from a Claude screen (user, 2026-11-09). The user has claudeInChromeDefaultEnabled: true in ~/.claude.json, which the interactive CLI honours; the screens start claude through the Agent SDK (chat-sessions.ts ~320, extraArgs: { name, 'thinking-display' }), and nothing passes --chrome. Main has always been a screen; since #227/#233 every worker is one too, which is why it now shows everywhere.\n\nChange: start every Claude screen session (main, worker screens, the screen host's sessions) with the CLI's --chrome (extraArgs chrome: null) when the user's Claude Code config has Claude in Chrome on by default, and without it otherwise (respect --no-chrome / the setting being off). First confirm the SDK-spawned CLI accepts --chrome in its stream-json mode and that the extension's tools then appear in the session's tool list (a throwaway query with a cheap model); if it does not, say so on the card instead of guessing. The decision (on or off from the user's config) in a small module with a test. Docs: chat README, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:34:40.640Z",
+  "updatedAt": "2026-11-09T15:34:40.640Z",
+  "column": "Doing",
+  "order": 7
+}

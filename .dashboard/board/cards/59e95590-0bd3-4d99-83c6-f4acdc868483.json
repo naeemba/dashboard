@@ -1,0 +1,11 @@
+{
+  "id": "59e95590-0bd3-4d99-83c6-f4acdc868483",
+  "title": "Audit 1: lint String(error) outside the failure files, and fix board-view.ts",
+  "notes": "eslint no-restricted-syntax refuses String(error) outside failure.ts and failure-line.ts. Fix the two in board-view.ts to go through failureText, and drop its exemption. Replaces the grep in errors-rule-1.\n\nFrom the CLAUDE.md audit, docs/workflow/claude-md-audit.md (card fad098f2). The rule stays in CLAUDE.md until card 13 deletes it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T15:32:54.731Z",
+  "updatedAt": "2026-11-09T15:32:54.731Z",
+  "column": "Backlog",
+  "order": 41
+}
