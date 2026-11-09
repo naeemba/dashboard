@@ -5,13 +5,13 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T15:32:56.280Z",
-  "updatedAt": "2026-11-09T16:48:09.169Z",
+  "updatedAt": "2026-11-09T20:20:36.979Z",
   "comments": [
     {
       "at": "2026-11-09T16:48:09.169Z",
       "body": "dotfiles PR #72 (naeemba/dotfiles), ready to merge, not merged. final-message.md moved from claude/rules/ to claude/hooks/; the UserPromptSubmit hook reads ~/.claude/hooks/final-message.md; install.sh links claude/hooks; install.test.sh checks the link and the file (passes). Subagents no longer get the rule from rules/ (their last message goes to the calling agent, not a person). After merge: pull the dotfiles checkout and re-run ./install.sh, or the hook prints the heading with no rule. Dotfiles has no CI. Review loop: floor-addressed, 1 round, 1 low fixed (db28ab4), 1 nit rejected (rename hooks/)."
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 225
 }
