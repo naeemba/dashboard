@@ -21,6 +21,8 @@ describe('pullRequestStatus', () => {
     expect(pullRequestStatus(pull({ statusCheckRollup: [passed], reviewDecision: 'APPROVED', mergeable: 'MERGEABLE' }))).toBe('approved');
     expect(pullRequestStatus(pull({ statusCheckRollup: [passed], reviewDecision: '', mergeable: 'MERGEABLE' }))).toBe('mergeable');
     expect(pullRequestStatus(pull({ statusCheckRollup: [passed], mergeable: 'CONFLICTING' }))).toBeNull();
+    expect(pullRequestStatus(pull({ statusCheckRollup: [passed], reviewDecision: 'REVIEW_REQUIRED', mergeable: 'MERGEABLE' }))).toBeNull();
+    expect(pullRequestStatus(pull({ statusCheckRollup: [passed], reviewDecision: 'CHANGES_REQUESTED', mergeable: 'MERGEABLE' }))).toBeNull();
   });
 
   // A commit status, from an outside service, has a state and no status.

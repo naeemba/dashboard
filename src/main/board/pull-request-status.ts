@@ -20,6 +20,7 @@ export function pullRequestStatus(pull: PullRequest): PullRequestStatus | null {
   if (checks.includes('failed')) return 'failed';
   if (checks.includes('running')) return 'running';
   if (reviewDecision === 'APPROVED') return 'approved';
+  if (reviewDecision === 'REVIEW_REQUIRED' || reviewDecision === 'CHANGES_REQUESTED') return null;
   return mergeable === 'MERGEABLE' ? 'mergeable' : null;
 }
 
