@@ -2,8 +2,6 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-// The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
-// flag is renamed, and this file is the only place an agent finds out the command exists at all.
 import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
 import { byPlace, storedOrder } from './card-order';
 import { dashboardFolder } from '../app/dashboard-folder';
