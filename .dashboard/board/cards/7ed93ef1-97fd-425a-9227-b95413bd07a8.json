@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-09T10:05:12.348Z",
-  "updatedAt": "2026-11-09T10:37:52.521Z",
+  "updatedAt": "2026-11-09T20:55:06.068Z",
   "branch": "work-board-card-7ed93ef1-97fd-425a-9227-b95",
   "pullRequest": 251,
   "comments": [
     {
       "at": "2026-11-09T10:37:52.521Z",
       "body": "Shipped in PR #251: opening a background shell command or Monitor from Alt+A or the strip shows its output (via get_task_output), followed live while it runs; agents and workflows open as before."
+    },
+    {
+      "at": "2026-11-09T20:55:06.068Z",
+      "body": "Pull request #251 merged: Opening a shell or monitor task on the Claude screen shows its output https://github.com/naeemba/dashboard/pull/251"
     }
   ],
   "column": "Done",

@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-08T21:29:55.475Z",
-  "updatedAt": "2026-11-09T09:50:44.912Z",
+  "updatedAt": "2026-11-09T20:55:04.717Z",
   "branch": "work-board-card-c30c8a10-85a2-486d-aa1a-429",
   "pullRequest": 250,
   "comments": [
@@ -20,6 +20,10 @@
     {
       "at": "2026-11-09T09:50:44.912Z",
       "body": "Shipped in #250: Enter or a click opens a log entry in the drawer's JSON viewer (error stack and causes one frame to a line, plus #248's source, action, channel, context and build). Alt+C or the row button copies it as JSON, and Alt+C works in the popup too. Older five-field entries work the same. Tested against a scrubbed fixture of real old and new log lines."
+    },
+    {
+      "at": "2026-11-09T20:55:04.717Z",
+      "body": "Pull request #250 merged: The log page: a click opens an entry formatted, a key copies it https://github.com/naeemba/dashboard/pull/250"
     }
   ],
   "column": "Done",

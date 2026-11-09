@@ -5,9 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T11:27:58.354Z",
-  "updatedAt": "2026-11-09T12:18:31.367Z",
+  "updatedAt": "2026-11-09T20:55:09.823Z",
   "branch": "work-board-card-371a8ed2-1074-4f70-ac8b-5d9",
   "pullRequest": 254,
+  "comments": [
+    {
+      "at": "2026-11-09T20:55:09.823Z",
+      "body": "Pull request #254 merged: The board command keeps the board in step with git itself https://github.com/naeemba/dashboard/pull/254"
+    }
+  ],
   "column": "Done",
   "order": 205
 }
