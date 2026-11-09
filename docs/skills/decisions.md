@@ -16,3 +16,5 @@ person before they land. (2026-11-06, #225)
 towards. A change to either, or to the id scheme, changes the skill's text in the same pull request;
 `CLAUDE.md` carries that rule beside the docs rule, where someone rewording it will see it.
 (2026-11-06, #225)
+`adopt-docs-skill.test.ts` checks the docs rule and the index preamble are in the skill's text, so
+rewording either without the skill fails `pnpm test`.
