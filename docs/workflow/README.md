@@ -8,11 +8,11 @@ bumping the version. Owns `.gitattributes`, the CI and release workflows (the re
 hooks, the test run's temporary-folder guard and its eslint rule (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, tested beside it, its count in
 `vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `src/main/testing/source-files.ts` (every non-test `.ts` file under a folder, for the tests that read the source), the running-app guard (`src/main/workflow/running-app-guard.ts`, tested beside it, run by `board guard`; workflow-decision-7), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
 in `scripts/running-app.mjs`, tested beside it), written in Node so the same
-hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
-line and points at its id here.
+hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule a check does
+not hold in one line and points at its id here (workflow-decision-8).
 
 `claude-md-audit.md` is the 2026-11-09 audit of every CLAUDE.md rule, global and this repo's: which stay,
-which a tool or hook should carry, and the cards that move them.
+which a tool or hook should carry, and the cards that moved them.
 
 ## Checks
 

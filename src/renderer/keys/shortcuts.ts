@@ -8,8 +8,8 @@ export type { Action };
 
 // What every keydown handler asks before it acts on `event.key`. A key with a modifier held is on its
 // way to whoever owns that combination, so a handler that reads `event.key` without asking this first
-// steals it. Dialogs included. CLAUDE.md holds the list of handlers that ask, and the few deliberate
-// exceptions.
+// steals it. Dialogs included. key-modifiers.test.ts holds every handler to it, and lists the few
+// deliberate exceptions.
 export function isModified(input: KeyInput): boolean {
   return input.shiftKey || stopsTyping(input);
 }

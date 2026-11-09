@@ -134,7 +134,8 @@ request that names what went wrong, or a "never"/"always" comment that says what
 happened. A rule in \`CLAUDE.md\` with no such record stays a one-liner there,
 with no entry. A comment saying what *would* happen is not a seen breaking. Each
 entry says what happens to a person when it is broken, not the mechanism, and
-each one gets a one-line rule in \`CLAUDE.md\` (step 7):
+each one gets a one-line rule in \`CLAUDE.md\` (step 7), unless a test, lint
+or CI step holds it and the entry names that check:
 
     # <Feature>: hard rules
 
@@ -206,6 +207,9 @@ stays where it is. Nothing is lost:
     Every rule and decision has a stable id, \`<feature>-rule-N\` and
     \`<feature>-decision-N\`, never renumbered. History lines, pull requests and
     commits cite the id.
+
+    A hard rule's one line is in \`CLAUDE.md\`, unless its entry names the test,
+    lint or CI step that holds it.
 
     ## Features
 

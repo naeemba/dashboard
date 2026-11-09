@@ -21,6 +21,7 @@ started it, which is the freeze this feature exists to end.
 
 The launch writes `agents.slice` and `panes.slice` only when missing. A user
 who raised `MemoryMax` in the file by hand, or in a drop-in, keeps it.
+`install-slices.test.ts` fails when a slice that is there gets written.
 
 What breaking it looks like: the app rewrites the file at every launch. You
 raise agents.slice's MemoryMax to 24G for a heavy week; the next launch puts it

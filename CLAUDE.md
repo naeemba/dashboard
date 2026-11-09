@@ -26,42 +26,28 @@ app.
 
 ## Hard rules
 
+Rules a test, lint or CI step holds are not repeated here (workflow-decision-8).
+
 - **Never quit, kill, restart or replace the running Dashboard app** unless
-  asked in the same conversation. No `pnpm run package` into /Applications, no
-  `osascript ... quit`, no `pkill`, no `open -a Dashboard`. Building into
-  `out/` or `.vite/` is fine. After a change: run the checks, say the installed
-  app needs a rebuild and restart, stop. (workflow-rule-1)
+  asked in the same conversation, through a script of your own too; the hook
+  reads only the command line. After a change: run the checks, say the installed app needs a rebuild and restart,
+  stop. (workflow-rule-1)
 - **Keyboard first.** Every action is reachable without the mouse; a new choice
   is a row the arrow keys walk, not a button. A click on a row moves the
   selection there, then does what Enter does there. A mouse gesture on one of
   the manager's boards makes that board active first. (conventions-rule-1)
 - **Mode keys pass through.** The key naming the mode you are already in goes
-  to the pane. Every dialog that reads `event.key` checks
-  `if (isModified(event)) return;` first (the manager list asks
-  `isBareCharacter` because it takes Shift on purpose). Exceptions, each on
-  purpose: Tab in a search box, the board's filter dialog, the notes box and
-  the drawer; the drawer's own key, which closes it; every key in the settings
-  screen while a row is armed; Shift on the manager list. A new project view
-  is a row in `PROJECT_MODES`, a row in `ACTIONS`, a view in `page.ts`, a
-  branch in `focusMode` and `modeLabel`, and a name and blurb in
-  `src/renderer/keys/help.ts`. An action's name starts with its
-  scope: it is a key in the user's settings file. (keys-rule-1)
-- **Every `<input>` and `<textarea>` gets `dir = 'auto'`** in the change that
-  adds it. These two counts agree (conventions-rule-2):
-
-      grep -rn "createElement('input')\|createElement('textarea')" src/ | wc -l
-      grep -rn "dir = 'auto'" src/ | wc -l
-
-- **`hidden` only hides what the stylesheet left alone.** A class that sets
-  `display` needs a `.thing[hidden] { display: none }` beside it for every
-  element it hides with the attribute. (conventions-rule-3)
+  to the pane. A new project view is a row in `PROJECT_MODES`, a row in
+  `ACTIONS`, a view in `page.ts`, a branch in `focusMode` and `modeLabel`, and
+  a name and blurb in `src/renderer/keys/help.ts`. An action's name starts
+  with its scope: it is a key in the user's settings file. (keys-rule-1)
 - **A refusal is explained where it is decided.** Export the predicate from the
   file that enforces the refusal; the file that prints the message calls it.
   Never a second copy of the condition, in code or in a comment.
   `blockingChanges` exempts `.dashboard/` on purpose; `changedFiles` does not.
-  An error shown to a person goes through `failureText`; `pnpm exec eslint .`
-  refuses `String(error)` outside `failure.ts` and `failure-line.ts`, and adding
-  a file to that list is the rule being broken. (errors-rule-1)
+  An error shown to a person goes through `failureText`: never an
+  `eslint-disable` for the `String(error)` rule, and never a new file in its
+  exempt list. (errors-rule-1)
 - **An IPC handler that refuses answers the refusal as a value** (`{ refused }`)
   and throws only for failures. (errors-rule-2)
 - **The help dialog is part of the change.** A key, mode or screen change
@@ -84,23 +70,6 @@ app.
   command answer, key, sweep) calls the action in `src/main/actions/<noun>/`;
   a new kind of change adds one. `bypasses.test.ts` names the calls still made
   outside one: lower a count, never raise it. (actions-rule-1)
-- **A process that runs as long as a pane or an agent starts in its systemd
-  scope** (`src/main/processes/`). A file that names `node:child_process` or
-  `node-pty` is a row in `process-starts.test.ts` with its reason; delete rows,
-  never add one without the reason. A slice unit that is there is never
-  written over. (processes-rule-1, processes-rule-2)
-- **IPC channels are `<noun>:<verb>`**: `link:open`, `board:read`,
-  `pty:resize`. (app-rule-1)
-- **Imports stay on their process's side.** `src/renderer/` never imports
-  `src/main/` or `src/preload/`, `src/main/` never imports `src/renderer/` or
-  `src/preload/`, `src/preload/` and `src/shared/` import only `src/shared/`,
-  even for a type or an `import()`. A Node or DOM package is a value import
-  only on its own side. `pnpm exec eslint .` enforces it, `eslint.config.test.ts`
-  pins it; a type both sides name moves to `src/shared/`, never an
-  eslint-disable. (app-rule-2)
-- **A test's folder comes from `temporaryFolder()`** in
-  `src/main/testing/temporary-folder.ts`, never its own `mkdtemp`; eslint
-  refuses the import in a test. (workflow-rule-4)
-- **A card does not bump `package.json` `version`.** The build stamps its
-  commit (`<version>+<commit>`); the version moves only on a release.
-  (workflow-rule-3)
+- **Never an `eslint-disable`** for the import boundaries between processes (a
+  type both sides name moves to `src/shared/`; app-rule-2) or for `mkdtemp` in a
+  test (use `temporaryFolder()`; workflow-rule-4).
