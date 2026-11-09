@@ -6,7 +6,7 @@ bumping the version. Owns `.gitattributes`, the CI and release workflows (the re
 `scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` (its decisions in `scripts/release-checks.mjs`, tested beside it) and the
 `/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build
 hooks, the test run's temporary-folder guard and its eslint rule (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, tested beside it, its count in
-`vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
+`vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `src/main/testing/source-files.ts` (every non-test `.ts` file under a folder, for the tests that read the source), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
 in `scripts/running-app.mjs`, tested beside it), written in Node so the same
 hook runs on a mac, Linux and Windows; `CLAUDE.md` carries each rule in one
 line and points at its id here.

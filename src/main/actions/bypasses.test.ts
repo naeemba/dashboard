@@ -1,6 +1,6 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { sourceFiles } from '../testing/source-files';
 
 // actions-rule-1: a caller that changes state calls an action. These are the calls that do the work
 // themselves, and every place each is made today. A new caller is a new count here and fails; a noun's
@@ -43,17 +43,11 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: 'quitAndInstall(', allowed: { 'src/main/actions/update/update-actions.ts': 1 } },
 ];
 
-function sourceFiles(folder: string): string[] {
-  return readdirSync(folder, { recursive: true, encoding: 'utf8' })
-    .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
-    .map((file) => path.join(folder, file));
-}
-
 function callsOf(call: string): Record<string, number> {
   const found: Record<string, number> = {};
   for (const file of sourceFiles('src/main')) {
     const count = readFileSync(file, 'utf8').split(call).length - 1;
-    if (count > 0) found[file.split(path.sep).join('/')] = count;
+    if (count > 0) found[file] = count;
   }
   return found;
 }
