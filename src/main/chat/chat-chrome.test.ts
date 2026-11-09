@@ -25,9 +25,9 @@ describe('chromeArguments', () => {
 
 describe('configurationFile', () => {
   it('reads the config from CLAUDE_CONFIG_DIR, or the home folder when it is unset or empty', () => {
-    expect(configurationFile({ CLAUDE_CONFIG_DIR: '/c' }, '/home/ann')).toBe('/c/.claude.json');
-    expect(configurationFile({}, '/home/ann')).toBe('/home/ann/.claude.json');
-    expect(configurationFile({ CLAUDE_CONFIG_DIR: '' }, '/home/ann')).toBe('/home/ann/.claude.json');
+    expect(configurationFile({ CLAUDE_CONFIG_DIR: '/c' }, '/home/ann')).toBe(path.join('/c', '.claude.json'));
+    expect(configurationFile({}, '/home/ann')).toBe(path.join('/home/ann', '.claude.json'));
+    expect(configurationFile({ CLAUDE_CONFIG_DIR: '' }, '/home/ann')).toBe(path.join('/home/ann', '.claude.json'));
   });
 });
 
