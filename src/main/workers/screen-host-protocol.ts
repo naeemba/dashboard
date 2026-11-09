@@ -1,5 +1,6 @@
 import type { Options, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import path from 'node:path';
+import type { ScopedCommand } from '../processes/scope';
 
 // What the app and the screen host say to each other: one JSON message per line over a unix socket,
 // as the pane host's do (pane-host-protocol.ts). workers-decision-6 says why worker screens run there.
@@ -22,15 +23,17 @@ export function hasScreenHost(platform: string): boolean {
   return platform !== 'win32';
 }
 
-// What a session starts on, on either side of the socket: chat-sessions.ts's prompts and options.
-export type HostedParams = { prompt: AsyncIterable<SDKUserMessage>; options: Options };
+// What a session starts on, on either side of the socket: chat-sessions.ts's prompts and options,
+// and the systemd scope main chose for its Claude (claude-process.ts). An older app sends none, and
+// an older host ignores it: that session's Claude runs unscoped.
+export type HostedParams = { prompt: AsyncIterable<SDKUserMessage>; options: Options; scope?: ScopedCommand };
 
 // The callbacks a session can ask the app for and wait on the answer.
 export type AskCallback = 'canUseTool' | 'onElicitation';
 
 // A session's options as a line can carry them: the callbacks stay in the app, and the host calls
 // back for them. `hooks` names the events the app has hooks on.
-export type HostedStart = { options: Omit<Options, AskCallback | 'hooks'>; hooks: string[] };
+export type HostedStart = { options: Omit<Options, AskCallback | 'hooks'>; hooks: string[]; scope?: ScopedCommand };
 
 // `key` is the worker's conversation id, which stays the same across a restart where its pane id does not.
 export type ToScreenHost =

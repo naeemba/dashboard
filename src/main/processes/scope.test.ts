@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scopedCommand, scopeSlug, type ScopeSupport } from './scope';
+import { retargeted, scopedCommand, scopeSlug, type ScopeSupport } from './scope';
 
 // A support that hands out the suffixes given, in order, and calls the names given taken.
 function support(suffixes: string[], taken: string[] = []): ScopeSupport {
@@ -18,6 +18,12 @@ describe('scopedCommand', () => {
       ],
       unit: 'agent-dashboard-3-k4f2.scope',
     });
+  });
+
+  it("starts a manager's task under agents.slice with an agent's caps, named apart", () => {
+    const scoped = scopedCommand({ kind: 'task', id: 'shop', file: '/bin/zsh', args: ['-c', 'pnpm test'] }, support(['x9q0']));
+    expect(scoped.unit).toBe('task-shop-x9q0.scope');
+    expect(scoped.args).toEqual(expect.arrayContaining(['--slice=agents.slice', 'MemoryMax=8G']));
   });
 
   it('starts a shell under panes.slice with no cap of its own', () => {
@@ -41,6 +47,20 @@ describe('scopedCommand', () => {
   it('runs unscoped when the second name is taken as well', () => {
     const scoped = scopedCommand({ kind: 'shell', id: 'p-1', ...ZSH }, support(['aaaa', 'bbbb', 'cccc'], ['pane-p-1-aaaa.scope', 'pane-p-1-bbbb.scope']));
     expect(scoped).toEqual({ ...ZSH, unit: null });
+  });
+});
+
+describe('retargeted', () => {
+  const scope = scopedCommand({ kind: 'agent', id: 'main-shop', file: '/sdk/claude', args: [] }, support(['k4f2']));
+
+  it("runs another command after systemd-run's options, in the same unit", () => {
+    expect(retargeted(scope, 'node', ['/sdk/cli.js', '--verbose']).args.slice(-5))
+      .toEqual(['MemoryMax=8G', '--', 'node', '/sdk/cli.js', '--verbose']);
+    expect(retargeted(scope, 'node', []).args).toContain('--unit=agent-main-shop-k4f2.scope');
+  });
+
+  it('is the command alone when there is no scope', () => {
+    expect(retargeted({ file: '/sdk/claude', args: [], unit: null }, 'node', ['cli.js'])).toEqual({ file: 'node', args: ['cli.js'], unit: null });
   });
 });
 

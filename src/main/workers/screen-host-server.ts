@@ -81,6 +81,7 @@ export function screenHostServer(start: StartSession, idle: () => void) {
     sessions.set(key, hosted);
     const query = start({
       prompt: input,
+      scope: request.scope,
       options: {
         ...request.options,
         hooks: hooksFor(key, hosted, request.hooks),
