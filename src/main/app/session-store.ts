@@ -31,6 +31,8 @@ type ClaudeSessions = {
   // were last in on that page. A zoomed pane is always that one. Every manager pane counts: no layout
   // names the manager page's pane, so the one you are typing in there cannot be told from the rest.
   hasKeyboard(id: string): boolean;
+  // A couch that left: its last layout no longer keeps a pane's keyboard.
+  forgetScreen(screen: string): void;
 };
 
 // `dispatcherOf` is main's record of the panes holding its workers and whose main dispatched each, saved
@@ -42,7 +44,6 @@ export function sessionStore(
   const ledger = resumeLedger(saved.pages, existsSync);
   let layout: Session | null = null;
   // Every screen's latest layout, the host window's and each couch's, for hasKeyboard alone.
-  // ponytail: a couch that disconnects keeps its last layout here, which only keeps a pane open longer.
   const screenLayouts = new Map<string, Session>();
   let lastWritten = '';
 
@@ -73,6 +74,7 @@ export function sessionStore(
       ledger.place(placement);
       write();
     },
+    forgetScreen: (screen) => { screenLayouts.delete(screen); },
     hasKeyboard: (id) => paneFromId(id).slot === MANAGER_SLOT || [...screenLayouts.values()]
       .some(({ pages }) => pages.some((page) => terminalId(slotOf(page.path), page.focused) === id)),
   };

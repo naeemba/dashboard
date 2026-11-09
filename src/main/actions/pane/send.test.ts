@@ -42,6 +42,6 @@ describe('pane.send', () => {
 
   it('refuses text from no main', async () => {
     const { send } = panes();
-    expect(await send.call({ id: '2:1', text: 'fix it' })).toEqual({ refused: 'no pane or text was given' });
+    expect(await send.call({ id: '2:1', text: 'fix it' })).toEqual({ refused: 'no pane, text or sending main was given' });
   });
 });

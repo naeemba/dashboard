@@ -60,6 +60,8 @@ describe('closeFinished', () => {
     await answer.closeFinished();
     expect(closed).toEqual(['2:1']);
     expect(told).toEqual([`2 ${closedReport('api-terminal-2', '2:1', 'card done')}`]);
+    // Main may not have read a report the worker did send: the notice must not deny one.
+    expect(told[0]).not.toContain('without sending you a report');
   });
 
   it('tells main nothing of a worker it read a report from', async () => {

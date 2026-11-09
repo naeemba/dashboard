@@ -784,7 +784,7 @@ function createWindow(): void {
 // This machine's session, as the host serves it to a remote screen and as the local window gets it back
 // on leaving another host.
 const held: HeldByMain = {
-  table, screenCopies, shells, screens: paneScreens, version: __BUILD_VERSION__, settings: () => settings,
+  table, screenCopies, shells, screens: paneScreens, version: __BUILD_VERSION__, settings: () => settings, forgetLayout: claudeSessions.forgetScreen,
   projects: openProjects, worktrees: worktrees.list, usage: tokenUsage.latest, log: (draft) => logStore.log(draft), hold: failures.hold,
 };
 // Local window only: a pushed pane of the host this screen joined is not this app's own to rebroadcast.

@@ -45,7 +45,7 @@ export function reportsTurns(ports: Pick<PaneSendPorts, 'agentIn' | 'screenIn' |
 export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; handed: boolean }>('pane.send', {
   words: [],
   input: ({ id, text, dispatcherPath }) => (isFilledText(id) && typeof text === 'string' && isFilledText(dispatcherPath)
-    ? { id, text, dispatcherPath } : { refused: 'no pane or text was given' }),
+    ? { id, text, dispatcherPath } : { refused: 'no pane, text or sending main was given' }),
   async run(ports, { id, text, dispatcherPath }) {
     const handed = reportsTurns(ports, id);
     if (handed) ports.handTo(id, dispatcherPath);

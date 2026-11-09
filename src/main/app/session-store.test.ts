@@ -54,6 +54,13 @@ describe('hasKeyboard', () => {
     expect(sessions.hasKeyboard('2:3')).toBe(true);
   });
 
+  it('is no longer the pane of a couch that left', () => {
+    const { table, sessions } = store();
+    table.dispatch('couch', 'session:write', [{ ...layout, pages: [{ ...layout.pages[0], focused: 1 }] }]);
+    sessions.forgetScreen('couch');
+    expect(sessions.hasKeyboard('2:1')).toBe(false);
+  });
+
   it('is every manager pane, which no layout names', () => {
     const { sessions } = store();
     expect(sessions.hasKeyboard(`${MANAGER_SLOT}:2`)).toBe(true);

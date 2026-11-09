@@ -373,7 +373,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     heard(reader: number, sender: string) {
       const id = openPaneIds()
         .find((each) => nameOfPane(each) === sender && mainsWorker(each)
-          && (dispatched.get(each)?.dispatcher ?? paneFromId(each).slot) === reader);
+          && mainOf(each) === reader);
       if (id === undefined) return;
       notices.reported(id);
       quietFrom(id, true);
