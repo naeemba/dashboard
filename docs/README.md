@@ -38,7 +38,7 @@ commits cite the id.
 
 ## Cross-cutting
 
-Rules that hold for every feature. `CLAUDE.md` states each in one line.
+Rules that hold for every feature. `CLAUDE.md` states each in one line, unless a tool holds it.
 
 | Folder | What it is |
 |---|---|

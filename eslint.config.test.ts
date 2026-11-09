@@ -79,7 +79,7 @@ describe('test folders', () => {
 describe('file size', () => {
   const sizeErrors = async (source: string): Promise<string[]> => {
     const [result] = await eslint.lintText(source, { filePath: 'src/main/probe.ts' });
-    return result.messages.map((message) => message.ruleId ?? '').filter((ruleId) => ruleId === 'max-lines');
+    return result.messages.filter((message) => message.ruleId === 'max-lines').map((message) => message.ruleId ?? '');
   };
   const code = (lines: number): string => Array.from({ length: lines }, (_, index) => `export const line${index} = ${index};`).join('\n');
 

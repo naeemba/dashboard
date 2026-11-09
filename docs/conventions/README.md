@@ -5,7 +5,8 @@ Cross-cutting rules every screen outside a terminal is held to: keyboard first,
 a file. Owns `text-direction.test.ts`, which holds conventions-rule-2, and the
 `max-lines` rule in `eslint.config.mjs`, which holds conventions-rule-4.
 `CLAUDE.md` carries the first three in one line each and points at their id
-here; the file-size rule comes from the global rules until Audit 13.
+here; the file-size rule is eslint's, and `docs/workflow/claude-md-audit.md`
+says what CLAUDE.md keeps of it.
 
 ## Scenarios
 
