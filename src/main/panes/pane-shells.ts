@@ -38,8 +38,10 @@ export function paneShells(main: {
   // foreground against this, so switching the setting cannot make five panes sitting at prompts read
   // as running a program and refuse every ship after it.
   const startedWith = new Map<string, string>();
-  // The systemd scope each pane's shell runs in, for whatever stops or reads the scope later. A pane
-  // started unscoped (scopes unavailable, an older pane host) has none.
+  // The systemd scope each pane's shell was asked to run in, for whatever stops or reads the scope
+  // later. A pane started with scopes unavailable has none. A pane host from a build before scopes
+  // ignores the request and runs the shell unscoped, so its recorded unit does not exist: whatever
+  // stops a scope treats "no such unit" as already stopped.
   const scopeUnits = new Map<string, string>();
 
   function spawn(id: string): void {

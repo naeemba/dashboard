@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // processes-rule-1: a process that runs as long as a pane or an agent starts in its systemd scope
-// (scope-support.ts). The files that can start a process at all, by importing what starts one, each
+// (scope-support.ts). The files that can start a process at all, by naming what starts one, each
 // under the reason it may. A new file fails here: it starts through the scope, or it is a short call
 // that ends before anyone would want it capped, and says so above its row. A card that moves a site
 // behind the scope or removes it deletes its row; never add one without that reason.
@@ -32,7 +32,8 @@ const STARTS_PROCESSES = [
   'src/main/manager/task-runner.ts',
 ];
 
-const STARTS = /from '(node:)?child_process'|from 'node-pty'/;
+// Any quoted mention, so a dynamic import, a require or double quotes cannot slip past.
+const STARTS = /['"](node:)?child_process['"]|['"]node-pty['"]/;
 
 function sourceFiles(folder: string): string[] {
   return readdirSync(folder, { recursive: true, encoding: 'utf8' })

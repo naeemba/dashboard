@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { failureText } from '../../shared/errors/failure';
 import { scopedCommand, type ScopedCommand, type ScopeRequest } from './scope';
 
@@ -85,5 +85,5 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
 const SUFFIX_LETTERS = 'abcdefghijklmnopqrstuvwxyz0123456789';
 
 function randomSuffix(): string {
-  return [...randomBytes(4)].map((byte) => SUFFIX_LETTERS[byte % SUFFIX_LETTERS.length]).join('');
+  return Array.from({ length: 4 }, () => SUFFIX_LETTERS[randomInt(SUFFIX_LETTERS.length)]).join('');
 }

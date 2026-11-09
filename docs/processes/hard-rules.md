@@ -4,7 +4,7 @@ The one-line rule is in `CLAUDE.md`; this is what breaking it looked like.
 
 ## processes-rule-1: A process that runs as long as a pane or an agent starts in its scope
 
-Every file that can start a process, by importing `node:child_process` or
+Every file that can start a process, by naming `node:child_process` or
 `node-pty`, is named in `src/main/processes/process-starts.test.ts` under the
 reason it may: it starts through the scope, it starts the app or one of its
 hosts, or it is a short call (git, `ps`, a probe) that ends in seconds. A new

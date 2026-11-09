@@ -731,7 +731,8 @@ const workerAnswers = sessionRequests({
 table.handle('workers:read', () => workerAnswers.workers());
 const answerSession = projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers));
 // Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
-// kept would get a fresh shell over one it already has, and for the scope check (panesReady). project.open waits for the screen host as well.
+// kept would get a fresh shell over one it already has. They wait on the scope check too (panesReady),
+// so no pane starts unscoped for being early. project.open waits for the screen host as well.
 const sessions = listenForSessions(
   sessionSocket,
   __BUILD_VERSION__,
