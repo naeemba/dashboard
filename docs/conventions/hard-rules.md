@@ -74,6 +74,11 @@ a 900-line `renderer.ts` passes `eslint .` and nobody notices.
 comments pass. Nothing stops an inline `eslint-disable max-lines`; never write
 one.
 
+eslint reads only `.ts` and `.mjs`, so `stylesheet-size.test.ts` holds the
+stylesheets: every `src/**/*.css` at or under 600 lines once `/* … */` and blank
+lines are gone. Without it `chat.css`, at 594, would cross the limit with both
+eslint and CI green.
+
 What it looked like before: the limit lived only in the global instructions, so
 a file grew one card at a time with nothing refusing it. `board-view.ts` reached
 599 code lines and `renderer.ts` 587.
