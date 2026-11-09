@@ -6,11 +6,11 @@ import { tailLines } from '../../shared/manager/manager';
 import { taskArguments } from '../../shared/panes/shell';
 import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from '../../shared/manager/tasks';
 
-// The command screen's processes: starting them, killing them, and saying what each one did. No
-// decision of its own lives here — which report to send after a process ends is `tasks.ts`'s
-// `finishedTasks`, beside its test — so this is the spawning and the wiring, the way main's own
-// handlers are, and it is untested for the same reason they are. It sits apart from `main.ts` because
-// it wants nothing from that file but the way to the renderer and the shell to spawn.
+// The command screen's processes: starting them, killing them, and saying what each one did. Which
+// report to send after a process ends is `tasks.ts`'s `finishedTasks`, beside its test. The one branch
+// here, a run dropped because a cancel or a newer run came while it waited for its scopes, is pinned
+// by task-runner.test.ts. It sits apart from `main.ts` because it wants nothing from that file but the
+// way to the renderer and the shell to spawn.
 
 export type TaskPorts = {
   // One row's new state, on its way to the renderer.
@@ -32,7 +32,7 @@ export type TaskRunner = {
   stop: () => void;
 };
 
-function taskRunner(ports: TaskPorts): TaskRunner {
+export function taskRunner(ports: TaskPorts): TaskRunner {
   // Every process the current run started, each beside the project it is running in. The path is kept
   // here because cancelling has to name every project it stopped — a row told nothing sits on `running`
   // forever, and the process it was waiting for is already dead.
