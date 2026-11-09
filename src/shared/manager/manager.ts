@@ -6,6 +6,7 @@ import { needKey, type Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from '../usage/usage';
 import { isRinging, type Bell } from '../panes/waiting';
 import { orderedWorktrees } from '../ship/worktree-rows';
+import type { MemorySnapshot, PaneMemory } from '../processes/scope-memory';
 import type { OpenProjects, Project, WorktreeEntry } from '../app/bridge';
 
 // What a removal needs to know: what to call the worktree in the question, and where it is. A record
@@ -98,6 +99,8 @@ export type PaneSummary = {
   // What the agent in this pane has cost so far, or nought for a pane running no agent at all — which
   // is most of them, and which the row prints nothing for.
   tokens: number;
+  // What its systemd scopes hold, or undefined for a pane with none recorded (shared/processes).
+  memory: PaneMemory | undefined;
   tail(): string[];
   lastPrinted(): string;
 };
@@ -185,6 +188,7 @@ export function managerRows(
   pages: readonly ManagerPage[],
   usage: UsageSnapshot = NO_USAGE,
   worktrees: readonly WorktreeEntry[] = [],
+  memory: MemorySnapshot = {},
 ): ManagerRow[] {
   return pages.map((page) => ({
     slot: page.slot,
@@ -199,6 +203,7 @@ export function managerRows(
       state: paneState(pane),
       lastPrintedAt: pane.lastPrintedAt,
       tokens: usage.panes[terminalId(page.slot, pane.index)] ?? 0,
+      memory: memory[terminalId(page.slot, pane.index)],
       tail: () => pane.tail(),
       lastPrinted: () => pane.lastPrinted(),
     })),

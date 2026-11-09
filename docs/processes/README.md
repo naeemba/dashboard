@@ -52,10 +52,27 @@ where the desktop put them.
 
 The scope's full name is kept for each pane (`scopeUnits` in `pane-shells.ts`)
 and travels with a shell the pane host keeps through a restart, so whatever
-stops or reads a scope later finds it again. A session's and a task's unit is
-not kept yet: a session the screen host already holds keeps the unit it first
-started in, not the one main asks for again, so the card that stops scopes
-records the unit the host answers with.
+stops or reads a scope later finds it again. A session's unit is kept on its
+record in `chat-sessions.ts`. For a worker screen's session that is the unit the
+screen host answers with: the host keeps each session's unit and sends it in
+the list of sessions it kept, so a session taken up after a restart is known by
+the scope it started in, not the new one main asked for (`unit` on
+`KeptSession`). A host from an older build sends none, and that session's unit
+is unknown. A task's unit is not kept.
+
+### Memory readout
+
+Every five seconds main reads `memory.current` of every scope recorded for an
+open project's panes and sessions, under
+`/sys/fs/cgroup/user.slice/user-<uid>.slice/user@<uid>.service/<slice>/<unit>`,
+the slice read back off the unit's prefix (`scopeLimits` in `scope.ts`). One
+small file per scope; a scope that has ended has none and is left out. The
+figures are added up by the pane the window draws: a pane's shell under its own
+id, a worker screen's session under its pane, a page's main session on main.
+The manager's pane rows show it in a Memory column (`2.1G`) and the status bar
+ends on the focused pane's. From 80% of an agent's 6G MemoryHigh the figure
+names the cap (`5.1G of 6G`) and the row's turns yellow: past MemoryHigh the
+kernel slows the agent. Off Linux nothing is read and nothing is shown.
 
 When a pane closes, by its close key or `pane release`, pane.close kills its
 shell and then runs `systemctl --user stop --no-block <unit>`, so a dev server
@@ -114,6 +131,9 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   spawn routed through the scope)
 - The slices: `install-slices.ts`, the action and both unit files' text
 - The guard: `process-starts.test.ts` (processes-rule-1)
+- The readout: `memory-sweep.ts` (which scopes, read where, added up by pane),
+  `src/shared/processes/scope-memory.ts` (the figure and the near-cap mark),
+  `src/main/workers/screen-host-server.ts` (each kept session's unit)
 
 ## Scenarios
 
@@ -153,6 +173,14 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   killed and its scope is inactive.
 - Given a pane whose scope already ended, when it closes, then it closes as any
   pane does and nothing is reported.
+- Given an agent pane running a test suite, when you open the manager, then
+  its row's Memory column shows its scope's memory.current within five seconds,
+  and the status bar on that pane ends on the same figure.
+- Given an agent whose scope holds 5G, then its figure reads `5.0G of 6G`, in
+  yellow on the manager.
+- Given a worker screen the screen host kept through a restart, when the app
+  opens again, then its row shows the memory of the scope it first started in.
+- Given a mac, or a pane host from before scopes, then no Memory figure shows.
 
 ## Open questions
 

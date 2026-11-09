@@ -120,3 +120,19 @@ describe('the focused pane’s tokens', () => {
     expect(modeLabel(page({ mode: 'board', boardLabel: 'Todo', focusedTokens: 9_200_000 }))).toBe('board · Todo');
   });
 });
+
+describe('the focused pane’s memory', () => {
+  const GIB = 1024 ** 3;
+
+  it('says what its scope holds after the tokens', () => {
+    expect(modeLabel(page({ focusedTokens: 9_200_000, focusedMemory: { bytes: 2.1 * GIB, high: 6 * GIB } }))).toBe('main · 9.2M · 2.1G');
+  });
+
+  it('names the cap once the scope is near it', () => {
+    expect(modeLabel(page({ focusedMemory: { bytes: 5.1 * GIB, high: 6 * GIB } }))).toBe('main · 5.1G of 6G');
+  });
+
+  it('says nothing for a pane with no scope recorded', () => {
+    expect(modeLabel(page({ focusedMemory: undefined }))).toBe('main');
+  });
+});
