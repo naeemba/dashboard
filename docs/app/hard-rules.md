@@ -10,6 +10,12 @@ The thing first, then what you do to it: `link:open`, `session:write`,
 `session:restored`, which end in a noun or a past participle and are not
 renamed yet; do not copy them.
 
+`channel-names.test.ts` holds every channel to the shape: lower-case words joined
+by hyphens, a colon, then the same again. It reads each name `preload.ts` invokes,
+sends or listens on, each literal `table.handle('…')` and `table.on('…')` in
+`src/main/`, and each action's name, so `readBoard` fails in CI. It cannot tell
+that `restored` is not a verb; that part is still the rule.
+
 `notify:show` did not — two verbs, nothing named. Grep for the channels that
 touch notifications and it does not sort next to them, so the next person adds
 `alert:send` and now there are three spellings of one idea.
