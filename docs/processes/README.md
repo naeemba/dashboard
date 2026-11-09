@@ -26,7 +26,8 @@ manager's tasks starts in a scope of its own:
   `agent-main-dashboard-k4f2.scope` for dashboard's main, the worker's own name
   for a worker screen. Main picks the scope when the session starts and the
   SDK's spawn runs the CLI through it, in the app or in the screen host
-  (processes-decision-5).
+  (processes-decision-5). A session that fails ends with the last of the CLI's
+  stderr (or systemd-run's refusal) in its error, as an unscoped one does.
 - A command the manager runs across projects runs in
   `task-<project>-<random>.scope` under `agents.slice` with an agent's caps: a
   build or a test suite is what grows to an agent's size.
@@ -51,15 +52,18 @@ where the desktop put them.
 
 The scope's full name is kept for each pane (`scopeUnits` in `pane-shells.ts`)
 and travels with a shell the pane host keeps through a restart, so whatever
-stops or reads a scope later finds it again. A session keeps its unit on its
-record in `chat-sessions.ts`, a task on its row in `task-runner.ts`.
+stops or reads a scope later finds it again. A session's and a task's unit is
+not kept yet: a session the screen host already holds keeps the unit it first
+started in, not the one main asks for again, so the card that stops scopes
+records the unit the host answers with.
 
 At launch the app checks once that `systemd-run` is installed and that
 `systemctl --user is-system-running` answers that the manager is up (`degraded`
 counts: most desktops are). Until it has answered, and for the whole run if it
 says no, every pane starts unscoped, with one warning in the log saying why.
-Every pane waits on the check the way it waits on the pane host, so a pane
-opened at launch is not unscoped for being early (processes-decision-4).
+Every pane waits on the check the way it waits on the pane host, and every
+session and task waits on it too, so nothing started at launch is unscoped for
+being early (processes-decision-4).
 
 The same launch writes `agents.slice` and `panes.slice` into
 `$XDG_CONFIG_HOME/systemd/user` (`~/.config/systemd/user`) when either is
@@ -112,9 +116,6 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - A screen host started by an older build ignores the scope main sends with a
   worker screen: that host's sessions run unscoped until it exits, once no app
   is connected and none of its sessions runs.
-- A scoped session's CLI writes its stderr nowhere: the SDK reads stderr only
-  from a process it spawned itself, so an error a scoped session ends with
-  carries the exit code without the CLI's last lines.
 - A scope is not stopped when its pane closes, so a dev server an agent left
   running outlives the pane; a later card stops it.
 - Only this run's names are checked before one is handed out. A name a previous

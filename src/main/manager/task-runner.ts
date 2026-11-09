@@ -19,12 +19,13 @@ export type TaskPorts = {
   // next command should be the one you just picked.
   shellCommand: () => string;
   // Each task's command in its own scope under agents.slice, `task-<project>-<random>.scope`: a build
-  // or a test suite holds an agent's memory (processes/scope-support.ts).
-  scoped: (request: ScopeRequest) => ScopedCommand;
+  // or a test suite holds an agent's memory (processes/scope-support.ts). A promise, so a run at
+  // launch waits for the scope check rather than starting unscoped (processes-decision-4).
+  scoped: (request: ScopeRequest) => Promise<ScopedCommand>;
 };
 
 export type TaskRunner = {
-  run: (command: string, projectPaths: string[]) => void;
+  run: (command: string, projectPaths: string[]) => Promise<void>;
   // The cancel key, and the start of every fresh run.
   cancel: () => void;
   // The app is going away, so there is no row left to tell.
@@ -40,6 +41,9 @@ function taskRunner(ports: TaskPorts): TaskRunner {
   // run 3's dying processes report "cancelled" for projects run 4 has already marked "running" — the
   // row goes backwards in front of you and stays wrong until the next run.
   let currentRun = 0;
+  // Which ask to run is the latest, counted before a run waits for its scopes: a cancel or a second
+  // run while the first waits drops the first.
+  let asked = 0;
 
   function killTask(child: ReturnType<typeof spawnScoped>): void {
     try {
@@ -65,6 +69,7 @@ function taskRunner(ports: TaskPorts): TaskRunner {
   // The paths are read before the processes are killed, and the run number moves with them, so each
   // project is told exactly once — from here, rather than a second time as its own close event arrives.
   function cancel(): void {
+    asked += 1;
     const paths = runningTasks.map((task) => task.projectPath);
     stop();
     currentRun += 1;
@@ -82,18 +87,27 @@ function taskRunner(ports: TaskPorts): TaskRunner {
     if (finished.send) ports.send(result);
   }
 
-  function run(command: string, projectPaths: string[]): void {
+  async function run(command: string, projectPaths: string[]): Promise<void> {
+    const ask = ++asked;
+    const shell = ports.shellCommand();
+    const commands = await Promise.all(projectPaths.map((projectPath) =>
+      ports.scoped({ kind: 'task', id: projectSlug(projectPath), file: shell, args: taskArguments(shell, command) })));
+    // The cancel key or a newer run came while the scope check was still out: this run never starts,
+    // and its rows say so rather than wait on `running` for nothing.
+    if (ask !== asked) {
+      for (const projectPath of projectPaths) ports.send({ projectPath, state: 'cancelled', exitCode: null, lastLine: '', tail: [] });
+      return;
+    }
     cancel();
     const runNumber = currentRun;
-    const shell = ports.shellCommand();
-    for (const projectPath of projectPaths) {
+    projectPaths.forEach((projectPath, index) => {
+      const scoped = commands[index];
       ports.send({ projectPath, state: 'running', exitCode: null, lastLine: '', tail: [] });
       // Not a pty and not one of the five panes: a command that borrows a shell throws away whatever was
       // in it, which is the whole reason this screen exists rather than sending keystrokes to panes.
       // stdin is closed rather than left as a pipe nobody ever writes to. A command that asks a question
       // would block on an answer that cannot arrive, leaving the row on `running` with nothing on screen
       // saying a question was asked; closed, the same command fails at once and the row shows what it said.
-      const scoped = ports.scoped({ kind: 'task', id: projectSlug(projectPath), file: shell, args: taskArguments(shell, command) });
       // systemd-run --scope runs the shell as itself, so the process group killTask stops is the task's.
       const child = spawnScoped(scoped, {
         cwd: projectPath, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'],
@@ -122,8 +136,8 @@ function taskRunner(ports: TaskPorts): TaskRunner {
           tail: tailLines(printableLines(output)),
         });
       });
-      runningTasks.push({ child, projectPath, unit: scoped.unit });
-    }
+      runningTasks.push({ child, projectPath });
+    });
   }
 
   return { run, cancel, stop };
@@ -133,7 +147,7 @@ function taskRunner(ports: TaskPorts): TaskRunner {
 // ceiling; main keeps the returned runner because quitting stops it.
 export function registerTasks(table: Channels, ports: TaskPorts): TaskRunner {
   const tasks = taskRunner(ports);
-  table.on('task:run', (_screen, command: string, projectPaths: string[]) => tasks.run(command, projectPaths));
+  table.on('task:run', (_screen, command: string, projectPaths: string[]) => { void tasks.run(command, projectPaths); });
   table.on('task:cancel', () => tasks.cancel());
   return tasks;
 }

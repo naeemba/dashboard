@@ -88,8 +88,7 @@ export function anyRunning(results: Iterable<TaskResult>): boolean {
 
 // One command in one project, while it is still running. Generic over the child so this stays a pure
 // module: main.ts hands it node's ChildProcess, and a test hands it anything at all.
-// `unit` is the systemd scope the task runs in, or null when unscoped (task-runner.ts).
-export type RunningTask<Child> = { child: Child; projectPath: string; unit: string | null };
+export type RunningTask<Child> = { child: Child; projectPath: string };
 
 // A process has ended: what is left running, and whether this ending is the one to report. Two guards,
 // and each stops a row that would otherwise be wrong.

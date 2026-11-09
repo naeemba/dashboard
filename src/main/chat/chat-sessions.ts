@@ -99,8 +99,6 @@ type Session = {
   stopped: boolean;
   // Run in the screen host, which a quit leaves running.
   hosted: boolean;
-  // The systemd scope its Claude runs in (`agent-main-shop-k4f2.scope`), or null when unscoped.
-  unit: string | null;
 };
 
 // The PATH a pane's shell builds from its startup files, which the app itself never read when it was
@@ -353,7 +351,7 @@ export function registerChatSessions(
     };
     const hosted = worker ? await host.hosted(worker.session, params) : null;
     const session: Session = {
-      input, asks, stopped: false, hosted: hosted !== null, query: hosted ?? scopedQuery(query)(params), unit: scope.unit,
+      input, asks, stopped: false, hosted: hosted !== null, query: hosted ?? scopedQuery(query)(params),
     };
     // Failing, the session stays on the settings file's level and fast mode until the next pick.
     const replayed = replayedFlagSettings(preferences.get(slot));

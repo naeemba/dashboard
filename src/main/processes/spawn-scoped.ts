@@ -5,8 +5,8 @@ import type { ScopedCommand } from './scope';
 // put in its scope (scope-support.ts), or left as it was when there is none. The manager's tasks and
 // the Agent SDK's Claude (claude-process.ts) start here, so neither names child_process itself
 // (processes-rule-1).
-// Only a ScopedCommand fits, the answer of scopes.scoped or retargeted, so a caller cannot hand it a
-// bare command and pass the guard.
+// The type does not stop a hand-built command, so every file that imports this is a row in
+// process-starts.test.ts too.
 export function spawnScoped(command: ScopedCommand, options: SpawnOptions) {
   return spawn(command.file, command.args, options);
 }

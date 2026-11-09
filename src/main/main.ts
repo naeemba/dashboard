@@ -652,7 +652,7 @@ registerWorktreeChannels(table, { worktrees, remove: worktree.remove });
 // The command screen. What it does with the processes it spawns is task-runner.ts's; what is handed
 // over here is only what this file knows — the way to the renderer, and the shell the settings screen
 // last picked.
-const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand, scoped: scopes.scoped });
+const tasks = registerTasks(table, { send: (result) => sendToRenderer('task:update', result), shellCommand: () => shellCommand, scoped: async (request) => { await scopes.ready; return scopes.scoped(request); } });
 
 // The project actions, and the picker's and the close key's door to them (project-actions.ts).
 const project = projectActions({

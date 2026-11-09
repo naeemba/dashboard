@@ -42,8 +42,9 @@ that ignores `scope` just runs the pane unscoped.
 
 ## processes-decision-4: Every pane waits on the check, and a pane's kind is read off its command
 
-Projects at launch, the manager's panes and every session-command answer wait
-on `scopes.ready` beside the pane host. The check is two probes, plus a
+Projects at launch, the manager's panes, every session-command answer, every
+Claude screen's session and every manager task wait on `scopes.ready` beside
+the pane host. The check is two probes, plus a
 daemon-reload the first time, tens of milliseconds; not waiting left the panes
 restored at launch unscoped half the time.
 

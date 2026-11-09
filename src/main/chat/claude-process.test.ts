@@ -1,6 +1,6 @@
-import type { Options, SpawnedProcess } from '@anthropic-ai/claude-agent-sdk';
+import type { Options, Query, SpawnedProcess } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
-import { withScope } from './claude-process';
+import { scopedQuery, withScope } from './claude-process';
 
 describe('withScope', () => {
   const options: Options = { cwd: '/work/shop' };
@@ -20,5 +20,23 @@ describe('withScope', () => {
     child.stdin.end('hello');
     expect(await exited).toBe(0);
     expect(output).toBe('hello');
+  });
+});
+
+describe('scopedQuery', () => {
+  it.skipIf(process.platform === 'win32')("ends a failed session with the scoped CLI's stderr", async () => {
+    // Stands in for the SDK: spawns through the hook, then fails the way it does when the CLI exits 1.
+    const query = ({ options }: { options: Options }): Query => (async function* () {
+      const child = options.spawnClaudeCodeProcess?.({
+        command: 'sh', args: ['-c', 'echo "No conversation found" >&2; exit 1'], cwd: '/', env: {}, signal: new AbortController().signal,
+      }) as SpawnedProcess;
+      await new Promise((resolve) => child.once('exit', resolve));
+      yield* [];
+      throw new Error('Claude Code process exited with code 1');
+    })() as unknown as Query;
+    const scope = { file: 'env', args: ['--', 'ignored'], unit: 'agent-test-0000.scope' };
+    const running = scopedQuery(query)({ prompt: (async function* () {})(), options: {}, scope });
+    await expect((async () => { for await (const message of running) void message; })())
+      .rejects.toThrow('Claude Code process exited with code 1. stderr: No conversation found');
   });
 });

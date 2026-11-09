@@ -40,9 +40,26 @@ function sourceFiles(folder: string): string[] {
     .map((file) => path.join(folder, file).split(path.sep).join('/'));
 }
 
+// spawn-scoped.ts takes any command shaped like a scoped one, so a file that imports it starts a
+// process just as surely as one that names child_process. Each hands it the answer of scopes.scoped or
+// retargeted; a new file is a row here, under the same reason.
+const STARTS_THROUGH_SCOPE = [
+  // The manager's tasks, each command from scopes.scoped.
+  'src/main/manager/task-runner.ts',
+  // The Agent SDK's Claude, retargeted into the scope main chose.
+  'src/main/chat/claude-process.ts',
+];
+
+const IMPORTS_SPAWN_SCOPED = /from ['"][./]*(processes\/)?spawn-scoped['"]/;
+
 describe('what starts a process', () => {
   it('is only the files allowed to, each for its reason', () => {
     const starting = sourceFiles('src').filter((file) => STARTS.test(readFileSync(file, 'utf8')));
     expect(starting.sort()).toEqual(STARTS_PROCESSES.sort());
+  });
+
+  it('through spawn-scoped is only the files allowed to', () => {
+    const starting = sourceFiles('src').filter((file) => IMPORTS_SPAWN_SCOPED.test(readFileSync(file, 'utf8')));
+    expect(starting.sort()).toEqual(STARTS_THROUGH_SCOPE.sort());
   });
 });
