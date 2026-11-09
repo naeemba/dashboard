@@ -1,5 +1,7 @@
 import type { Channels } from '../app/channels';
-import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { spawnScoped } from '../processes/spawn-scoped';
+import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import { tailLines } from '../../shared/manager/manager';
 import { taskArguments } from '../../shared/panes/shell';
 import { finishedTasks, lastPrintableLine, printableLines, type RunningTask, type TaskResult } from '../../shared/manager/tasks';
@@ -16,6 +18,9 @@ export type TaskPorts = {
   // Asked each time rather than held, because the settings screen can change the shell mid-run and the
   // next command should be the one you just picked.
   shellCommand: () => string;
+  // Each task's command in its own scope under agents.slice, `task-<project>-<random>.scope`: a build
+  // or a test suite holds an agent's memory (processes/scope-support.ts).
+  scoped: (request: ScopeRequest) => ScopedCommand;
 };
 
 export type TaskRunner = {
@@ -30,13 +35,13 @@ function taskRunner(ports: TaskPorts): TaskRunner {
   // Every process the current run started, each beside the project it is running in. The path is kept
   // here because cancelling has to name every project it stopped — a row told nothing sits on `running`
   // forever, and the process it was waiting for is already dead.
-  let runningTasks: RunningTask<ReturnType<typeof spawn>>[] = [];
+  let runningTasks: RunningTask<ReturnType<typeof spawnScoped>>[] = [];
   // Which run a process belongs to. Without it, killing run 3 and starting run 4 in the same breath lets
   // run 3's dying processes report "cancelled" for projects run 4 has already marked "running" — the
   // row goes backwards in front of you and stays wrong until the next run.
   let currentRun = 0;
 
-  function killTask(child: ReturnType<typeof spawn>): void {
+  function killTask(child: ReturnType<typeof spawnScoped>): void {
     try {
       // The negative pid is the process group, which is what `detached` bought: `npm audit` spawns
       // children, and killing only the shell leaves them running with nothing on screen naming them.
@@ -71,7 +76,7 @@ function taskRunner(ports: TaskPorts): TaskRunner {
   // Shared by every way a process can end (failed to start, or exited), rather than repeated in each
   // listener. Both guards live in `finishedTasks` beside their test; this is the wiring that applies
   // what it answers.
-  function finishTask(child: ReturnType<typeof spawn>, run: number, result: TaskResult): void {
+  function finishTask(child: ReturnType<typeof spawnScoped>, run: number, result: TaskResult): void {
     const finished = finishedTasks(runningTasks, child, run, currentRun);
     runningTasks = finished.tasks;
     if (finished.send) ports.send(result);
@@ -88,7 +93,9 @@ function taskRunner(ports: TaskPorts): TaskRunner {
       // stdin is closed rather than left as a pipe nobody ever writes to. A command that asks a question
       // would block on an answer that cannot arrive, leaving the row on `running` with nothing on screen
       // saying a question was asked; closed, the same command fails at once and the row shows what it said.
-      const child = spawn(shell, taskArguments(shell, command), {
+      const scoped = ports.scoped({ kind: 'task', id: path.basename(projectPath), file: shell, args: taskArguments(shell, command) });
+      // systemd-run --scope runs the shell as itself, so the process group killTask stops is the task's.
+      const child = spawnScoped(scoped, {
         cwd: projectPath, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'],
       });
       // Both streams into one buffer. A tool that reports on stderr — most of them, for a summary — would
@@ -115,7 +122,7 @@ function taskRunner(ports: TaskPorts): TaskRunner {
           tail: tailLines(printableLines(output)),
         });
       });
-      runningTasks.push({ child, projectPath });
+      runningTasks.push({ child, projectPath, unit: scoped.unit });
     }
   }
 

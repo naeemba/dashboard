@@ -20,6 +20,12 @@ describe('scopedCommand', () => {
     });
   });
 
+  it("starts a manager's task under agents.slice with an agent's caps, named apart", () => {
+    const scoped = scopedCommand({ kind: 'task', id: 'shop', file: '/bin/zsh', args: ['-c', 'pnpm test'] }, support(['x9q0']));
+    expect(scoped.unit).toBe('task-shop-x9q0.scope');
+    expect(scoped.args).toEqual(expect.arrayContaining(['--slice=agents.slice', 'MemoryMax=8G']));
+  });
+
   it('starts a shell under panes.slice with no cap of its own', () => {
     expect(scopedCommand({ kind: 'shell', id: 'dashboard-0', file: '/bin/zsh', args: [] }, support(['a1b2']))).toEqual({
       file: 'systemd-run',

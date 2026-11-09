@@ -160,7 +160,7 @@ export function hostedQuery(key: string, params: HostedParams, send: (message: T
       else pending?.reject(new Error(message.error));
     } else if (message.type === 'ended') end(message.error);
   });
-  send({ type: 'start', key, options: rest, hooks: Object.keys(hooks ?? {}) });
+  send({ type: 'start', key, options: rest, hooks: Object.keys(hooks ?? {}), scope: params.scope });
   void (async () => {
     for await (const message of params.prompt) send({ type: 'prompt', key, message });
   })();

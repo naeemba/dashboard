@@ -103,8 +103,8 @@ describe('anyRunning', () => {
 });
 
 describe('finishedTasks', () => {
-  const one = { child: 'one', projectPath: '/one' };
-  const two = { child: 'two', projectPath: '/two' };
+  const one = { child: 'one', projectPath: '/one', unit: null };
+  const two = { child: 'two', projectPath: '/two', unit: 'task-two-a1b2.scope' };
 
   it('reports a process from the current run and drops it from the list', () => {
     expect(finishedTasks([one, two], 'one', 3, 3)).toEqual({ tasks: [two], send: true });

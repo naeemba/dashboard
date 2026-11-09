@@ -105,7 +105,7 @@ Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
   `section-strip.ts`, `manager.css`
 - What wants you: `needs-you.ts`, `board-summary.ts`
 - Boards of every project: `cards.ts`, `cards-view.ts`
-- Command across projects: `command-view.ts`, `tasks.ts`, `task-runner.ts`
+- Command across projects: `command-view.ts`, `tasks.ts`, `task-runner.ts` (each project's run in its own `task-<project>-*.scope` under agents.slice on Linux, docs/processes)
 - Log section: `log-view.ts`; what its popup and copy make of an entry,
   `log-popup.ts`, tested against `log-popup.fixture.ts` (scrubbed real lines,
   old and new)

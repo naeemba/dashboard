@@ -15,6 +15,8 @@ const STARTS_PROCESSES = [
   'src/main/panes/pane-host-client.ts',
   // The scope check's two probes and daemon-reload.
   'src/main/processes/launch-scopes.ts',
+  // The manager's tasks and the Agent SDK's Claude, each command put in its scope before it gets here.
+  'src/main/processes/spawn-scoped.ts',
   // The app started from the `dashboard` command, which is the app, not an agent.
   'src/main/command/start-app.ts',
   // Git, nvim's remote calls, ps and lsof, an update's unpacking, the login shell's PATH: each ends in
@@ -27,9 +29,6 @@ const STARTS_PROCESSES = [
   'src/main/panes/shell-directory-lookup.ts',
   'src/main/update/install.ts',
   'src/main/chat/chat-sessions.ts',
-  // The manager's tasks, which run builds and tests, and the Agent SDK's sessions, which start inside
-  // the SDK and import nothing here: both scoped by the card after this one.
-  'src/main/manager/task-runner.ts',
 ];
 
 // Any quoted mention, so a dynamic import, a require or double quotes cannot slip past.

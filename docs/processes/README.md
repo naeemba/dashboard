@@ -14,12 +14,22 @@ node, vitest, jest, tsc, next) ran in the one scope the desktop launched
 Dashboard into, 15.4G of RAM with no caps, so a 12G jest run swapped the whole
 desktop and nothing could say which session it was.
 
-Now every pane's shell starts in a scope of its own:
+Now every pane's shell, every Claude the Agent SDK starts and every one of the
+manager's tasks starts in a scope of its own:
 
 - An agent's pane (Claude Code run as the pane's command, as pane.dispatch's
   terminal half starts it) runs in `agent-<project>-<pane>-<random>.scope` under
   `agents.slice`, with its own `MemoryHigh=6G` and `MemoryMax=8G`
   (processes-decision-1).
+- A Claude screen's session, a page's main or a worker screen, runs in
+  `agent-<session name>-<random>.scope` under `agents.slice` with the same caps:
+  `agent-main-dashboard-k4f2.scope` for dashboard's main, the worker's own name
+  for a worker screen. Main picks the scope when the session starts and the
+  SDK's spawn runs the CLI through it, in the app or in the screen host
+  (processes-decision-5).
+- A command the manager runs across projects runs in
+  `task-<project>-<random>.scope` under `agents.slice` with an agent's caps: a
+  build or a test suite is what grows to an agent's size.
 - Every other pane, the user's own shells and the editor, and the plain shell
   under a Claude screen, runs in `pane-<project>-<pane>-<random>.scope` under
   `panes.slice`, uncapped.
@@ -41,7 +51,8 @@ where the desktop put them.
 
 The scope's full name is kept for each pane (`scopeUnits` in `pane-shells.ts`)
 and travels with a shell the pane host keeps through a restart, so whatever
-stops or reads a scope later finds it again.
+stops or reads a scope later finds it again. A session keeps its unit on its
+record in `chat-sessions.ts`, a task on its row in `task-runner.ts`.
 
 At launch the app checks once that `systemd-run` is installed and that
 `systemctl --user is-system-running` answers that the manager is up (`degraded`
@@ -63,7 +74,10 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 
 - The decisions: `scope.ts` (the command and its unit name), `scope-support.ts`
   (whether scopes work here, and every name handed out)
-- The edge: `launch-scopes.ts` (the probes, the slice files, daemon-reload)
+- The edge: `launch-scopes.ts` (the probes, the slice files, daemon-reload),
+  `spawn-scoped.ts` (the one spawn a task and the SDK's Claude start through)
+- The SDK's Claude: `src/main/chat/claude-process.ts` (which binary, and its
+  spawn routed through the scope)
 - The slices: `install-slices.ts`, the action and both unit files' text
 - The guard: `process-starts.test.ts` (processes-rule-1)
 
@@ -74,6 +88,12 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   MemoryHigh 6G and MemoryMax 8G.
 - Given the same, when a terminal or the editor opens, then its shell is in a
   `pane-*.scope` under panes.slice.
+- Given the same, when a page's Claude screen starts its session, then
+  `systemctl --user status 'agent-main-*'` lists the CLI in its scope; a worker
+  screen's CLI is in its own `agent-*` scope, started by the screen host.
+- Given the same, when the command screen runs `pnpm test` in three projects,
+  then each runs in a `task-<project>-*.scope` under agents.slice and goes
+  away when it ends.
 - Given three agents each running a test suite, when you run `systemd-cgls
   --user`, then each agent's processes are in its own scope and Dashboard's main
   process is under neither slice.
@@ -89,8 +109,12 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 
 - A pane host started by an older build ignores the scope on the spawn request:
   panes stay unscoped until that host exits, once every pane it holds is closed.
-- The manager's tasks and the Agent SDK's sessions (main's Claude screen, the
-  worker screens) are not scoped yet; the card after this one does them.
+- A screen host started by an older build ignores the scope main sends with a
+  worker screen: that host's sessions run unscoped until it exits, once no app
+  is connected and none of its sessions runs.
+- A scoped session's CLI writes its stderr nowhere: the SDK reads stderr only
+  from a process it spawned itself, so an error a scoped session ends with
+  carries the exit code without the CLI's last lines.
 - A scope is not stopped when its pane closes, so a dev server an agent left
   running outlives the pane; a later card stops it.
 - Only this run's names are checked before one is handed out. A name a previous

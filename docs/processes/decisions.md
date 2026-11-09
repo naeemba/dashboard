@@ -53,3 +53,17 @@ a pane a command of its own), rather than a kind carried from pane.dispatch,
 pane.open and pane.restore, which would be a second copy of the same answer to
 drift from it. A Claude screen's agent runs in the screen host, not the pane:
 the shell under it is a plain one.
+
+## processes-decision-5: Main picks a session's scope, and the SDK's spawn only runs it
+
+A Claude screen's session asks for its scope in `chat-sessions.ts` when it
+starts, with the CLI's path as the command, and sends the answer with the
+session: as data beside the options, since the screen host is another process
+and a function cannot cross its socket. `withScope` in `claude-process.ts`, on
+both sides, gives the SDK a `spawnClaudeCodeProcess` that runs systemd-run's
+options up to its `--`, then whatever command and flags the SDK built. With no
+scope it leaves the SDK's own spawn in place.
+
+Asking inside the spawn hook was the other way: it would need the screen host
+to have its own systemd check and its own names (processes-decision-3's reasons),
+and the unit would not be known until the SDK chose to start the process.

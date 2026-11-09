@@ -25,7 +25,8 @@ import { homedir } from 'node:os';
 import { failureText } from '../../shared/errors/failure';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
-import { unpacked } from '../app/unpacked';
+import { claudeExecutable, scopedQuery } from './claude-process';
+import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import { nameMemoryFiles } from '../drawer/measured-memory';
 import { inputQueue, type InputQueue } from './input-queue';
 import type { HostedParams } from '../workers/screen-host-protocol';
@@ -65,6 +66,9 @@ export type ChatHost = {
   // A worker screen's session run in the screen host, so it outlives the app, or null when there is
   // no host and it runs here (screen-host-client.ts).
   hosted(key: string, params: HostedParams): Promise<Query | null>;
+  // The command as it starts inside its systemd scope, or as it is (processes/scope-support.ts), once
+  // the launch's check has answered, as a pane waits on it (processes-decision-4).
+  scoped(request: ScopeRequest): Promise<ScopedCommand>;
   // The environment every pane gets, so the agent's own shell can find the board command too.
   environment: Record<string, string>;
   userData: string;
@@ -95,24 +99,9 @@ type Session = {
   stopped: boolean;
   // Run in the screen host, which a quit leaves running.
   hosted: boolean;
+  // The systemd scope its Claude runs in (`agent-main-shop-k4f2.scope`), or null when unscoped.
+  unit: string | null;
 };
-
-// The CLI the SDK drives, from the platform package pnpm installed beside it. Named here rather than
-// left to the SDK because a packaged app keeps it in app.asar.unpacked: nothing can be executed from
-// inside an asar, and the SDK would find the copy inside it. On a musl Linux pnpm installs the `-musl`
-// package instead, so that name is tried when the plain one is not there.
-function claudeExecutable(): string {
-  const binary = process.platform === 'win32' ? 'claude.exe' : 'claude';
-  const name = `@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}`;
-  let found: string;
-  try {
-    found = require.resolve(`${name}/${binary}`);
-  } catch (error) {
-    if (process.platform !== 'linux') throw error;
-    found = require.resolve(`${name}-musl/${binary}`);
-  }
-  return unpacked(found);
-}
 
 // The PATH a pane's shell builds from its startup files, which the app itself never read when it was
 // started from a launcher: without it a hook running `node` or an MCP server started with `npx` works
@@ -307,6 +296,10 @@ export function registerChatSessions(
     const environment = { ...host.environment, PATH: await shellPath };
     const executable = claudeExecutable();
     const worker = host.worker(slot);
+    const name = worker?.name ?? mainSessionName(projectPath);
+    // Asked here rather than inside the SDK's spawn, so the screen host gets the same answer and the
+    // unit is known before the process starts. The SDK's own command takes the executable's place.
+    const scope = await host.scoped({ kind: 'agent', id: name, file: executable, args: [] });
     const resume = worker ? undefined : remembered[projectPath];
     const input = inputQueue<SDKUserMessage>();
     const asks: Session['asks'] = new Map();
@@ -325,7 +318,7 @@ export function registerChatSessions(
         // newer model's thinking arrives empty. The flag alone leaves whether to think to the settings.
         // A worker screen runs as a terminal worker does: auto mode, its own name, no dispatch prompt.
         permissionMode: preferences.get(slot)?.permissionMode ?? (worker ? 'auto' : undefined),
-        extraArgs: { name: worker?.name ?? mainSessionName(projectPath), 'thinking-display': 'summarized' },
+        extraArgs: { name, 'thinking-display': 'summarized' },
         // Every settings file loads, on main's screen and a worker's, as in the terminal, so the
         // user's allow rules apply before auto mode decides (workers-decision-5).
         settingSources: ['user', 'project', 'local'],
@@ -356,9 +349,12 @@ export function registerChatSessions(
         // (onUserDialog) are left undeclared, so the CLI never sends one and keeps its own fallback.
         onElicitation: async (request, options) => elicitationResult(request, await ask(slot, asks, elicitationAsk(request), options.signal)),
       },
+      scope,
     };
     const hosted = worker ? await host.hosted(worker.session, params) : null;
-    const session: Session = { input, asks, stopped: false, hosted: hosted !== null, query: hosted ?? query(params) };
+    const session: Session = {
+      input, asks, stopped: false, hosted: hosted !== null, query: hosted ?? scopedQuery(query)(params), unit: scope.unit,
+    };
     // Failing, the session stays on the settings file's level and fast mode until the next pick.
     const replayed = replayedFlagSettings(preferences.get(slot));
     if (Object.keys(replayed).length > 0) session.query.applyFlagSettings(replayed).catch(() => undefined);
