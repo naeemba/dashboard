@@ -1,0 +1,11 @@
+{
+  "id": "3adff980-a0c0-4d92-ae6b-0997381d3d69",
+  "title": "Enforce the board with a hook and the app's session instructions, then delete the CLAUDE.md board rules",
+  "notes": "Part 3 of 3 (after parts 1 and 2 are merged and work): enforce the board's use with a hook and the app's own session instructions, then delete the rules from CLAUDE.md.\n\n- A PreToolUse hook refuses Edit, Write and NotebookEdit (and Bash redirects into the path, if cheaply detectable) on .dashboard/board/** with a message naming the board command. Installed for the app's own sessions (SDK hooks in chat-sessions.ts and the pane workers' settings) and offered for the user's global settings (~/.claude/settings.json) so a plain terminal Claude gets it too; the app installs it there only if missing, never rewriting the file's other entries, and the docs say so.\n- What an agent must know about the board (the command exists, comment to record findings, the app moves columns from the PR) goes into the instructions the app gives its sessions (src/main/workers/dispatch.ts and the worker prompt), not CLAUDE.md.\n- Then remove: the global ~/.claude/CLAUDE.md section 'Move the Card on the Board' (the file is the user's dotfiles: /home/sharp/Workspace/dotfiles/claude/CLAUDE.md; commit there on its own branch and open a PR in that repo), and the dashboard CLAUDE.md's board-rule-2 line (its hard-rules entry becomes a decision describing what the app does). board-rule-1 stays: it is a rule for people editing this codebase.\n- Also the seeded .dashboard/CLAUDE.md text the app writes into projects, if it repeats any of it.\nTests: the hook's decision (which paths, which tools) pure with tests. Docs: board README, decisions, history. Engineering bar: clean, testable, readable.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-09T11:27:58.506Z",
+  "updatedAt": "2026-11-09T11:27:58.506Z",
+  "column": "Todo",
+  "order": 18
+}
