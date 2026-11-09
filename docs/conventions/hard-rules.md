@@ -31,9 +31,10 @@ fixes reading order but not the caret. Without it you type a Persian card title
 and the text runs away from the cursor, ending punctuation lands on the wrong
 side, and Home and End go to the opposite ends of what you see.
 
-`text-direction.test.ts` holds it: file by file, the lines that create an
-`input` or `textarea` and the lines that set `dir = 'auto'` must agree, so a new
-box without it fails `pnpm test` with that file's name.
+`text-direction.test.ts` holds it: each `input` or `textarea` is found by the
+variable it is assigned to, and that variable must set `dir = 'auto'` in the
+same file, so a new box without it fails `pnpm test` with its file and name. A
+`dir` set on a wrapper does not count for the box inside it.
 
 ## conventions-rule-3: `hidden` only hides what the stylesheet left alone
 
