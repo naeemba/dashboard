@@ -22,7 +22,11 @@ log — as its first 6 lines and a row counting the rest, opened the same way
 from the web is a link, so nothing is fetched until you click it), an edit as a
 diff. It runs in the project's folder with the project's own CLAUDE.md,
 settings, skills, hooks and MCP servers, the same as claude typed in a pane, as
-the project's main session. It starts the first time you show this screen,
+the project's main session. Claude in Chrome comes too when Claude Code's config
+(`.claude.json`, in `CLAUDE_CONFIG_DIR` or the home folder) has
+`claudeInChromeDefaultEnabled: true`: the interactive CLI reads that setting,
+one the SDK starts only the `--chrome` flag, so every screen, main's, a worker's
+and the screen host's, is started with it then and without it otherwise. It starts the first time you show this screen,
 when a worker reports to it, or when `dashboard project open` opens the project,
 so a page the app restores at launch and you never look at runs no Claude.
 On Linux its Claude runs in a systemd scope of its own under agents.slice,
@@ -230,7 +234,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 
 - Main's half: `chat-sessions.ts`, `claude-process.ts` (the CLI it starts, in its systemd scope), `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
   `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`,
-  `chat-start.ts`
+  `chat-start.ts`, `chat-chrome.ts` (whether a session gets `--chrome`)
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
   `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`, `chat-screen-click.ts`
@@ -251,6 +255,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 
 - Given a tool needs a yes, when the session asks, then a box over the prompt holds the question until you answer it.
 - Given main ran a worker with `pane run` (a Claude screen unless `--terminal`, or on Windows), when its pane is drawn, then it holds this same screen, run under the pane's own key in the worker's folder, conversation and hooks; /clear, /resume, /branch and /rewind are refused there, so it stays on the conversation it was started on (workers-decision-5). A Claude screen opened by hand with New Claude holds it too, and all four act on its own conversation (workers-decision-7).
+- Given Claude Code's config has `claudeInChromeDefaultEnabled: true`, when any Claude screen's session starts, then it has the Claude in Chrome tools, as claude typed in a pane does; with the setting off, absent, or the config unreadable, it has none.
 - Given an MCP server asks for a form or a sign-in link, when the session passes it on, then the same box walks the form a field at a time, or opens the link, and every step can decline; a yes or no or a pick opens on the server's default, a typed answer outside the field's bounds keeps the box open saying what it takes, a required multi-select or a link that is not http(s) can only be declined, an optional multi-select can also be skipped, and Escape or the session ending reaches the server as a cancel, not a decline; the server's other dialogs are not declared, so Claude Code keeps its own fallback.
 - Given a turn is running, when you press Escape, then the turn is interrupted and any pending question is given up on: a tool call is declined, a server form cancelled.
 - Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
