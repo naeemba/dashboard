@@ -11,6 +11,8 @@
 // ponytail: it reads the command's text. A script of your own, a `$(…)` built at run time or a
 // `python -c` still gets through; matching those means running the shell, and this is a guard rail.
 
+import { hookRefusal, SHELL_REDIRECT, textField } from './hook-answer';
+
 // The command line of a process that is the running Dashboard: the installed build on Linux or a
 // mac, or electron run out of a checkout (the shape running-app.mjs looks for).
 const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|\/node_modules\/electron\//;
@@ -22,10 +24,10 @@ const NAMES_APP = /dashboard|electron/i;
 // A copy, move, removal or link that names the installed build, or a redirect or tee into it. A read
 // (`ls`, `cat`, running its dashboard-cli-entry.js) goes through.
 const REPLACES = new RegExp(String.raw`\b(?:cp|mv|rm|rsync|ditto|ln)\b.*${INSTALLED}`);
-const WRITES_INTO = new RegExp(String.raw`(?:>>?|\btee(?:\s+-a)?)\s*["']?[^\s"']*${INSTALLED}`);
-const FINDS_PID = /\b(?:pgrep|pidof)\b[^;&|)]*(?:dashboard|electron)/i;
+const WRITES_INTO = new RegExp(String.raw`${SHELL_REDIRECT}\s*["']?[^\s"']*${INSTALLED}`);
+const FINDS_PID = new RegExp(String.raw`\b(?:pgrep|pidof)\b[^;&|)]*(?:${NAMES_APP.source})`, 'i');
 
-export const RUNNING_APP_REASON = 'This would quit, kill, restart or replace the Dashboard running on this machine, '
+const RUNNING_APP_REASON = 'This would quit, kill, restart or replace the Dashboard running on this machine, '
   + 'which stops every Claude screen mid-turn. Say the installed app needs a rebuild and restart, and stop; '
   + 'scripts/rebuild.sh installs a new build beside the running one without touching it.';
 
@@ -49,4 +51,10 @@ export function stopsRunningApp(command: string, commandLineOf: (pid: number) =>
     || /\bopen\b.*(?:-a\s+["']?Dashboard\b|Dashboard\.app)/.test(part)
     || REPLACES.test(part) || WRITES_INTO.test(part)
     || killedPids(part).some((pid) => RUNNING_APP.test(commandLineOf(pid) ?? '')));
+}
+
+// The hook's answer, as `board guard` prints it on stdout; undefined lets the call through.
+export function runningAppGuard(toolName: string, toolInput: unknown, commandLineOf: (pid: number) => string | null) {
+  const stops = toolName === 'Bash' && stopsRunningApp(textField(toolInput, 'command'), commandLineOf);
+  return stops ? hookRefusal(RUNNING_APP_REASON) : undefined;
 }

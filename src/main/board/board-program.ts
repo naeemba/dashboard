@@ -10,8 +10,8 @@ import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
-import { boardGuard, hookRefusal, textField } from './board-guard';
-import { RUNNING_APP_REASON, stopsRunningApp } from '../app/running-app-guard';
+import { boardGuard } from './board-guard';
+import { runningAppGuard } from '../app/running-app-guard';
 import { readFileSync } from 'node:fs';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
@@ -100,8 +100,7 @@ export function guardAnswer(inputText: string, boardVariable: string | undefined
   const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown };
   const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
-  const refused = boardGuard(toolName, input.tool_input, command)
-    ?? (toolName === 'Bash' && stopsRunningApp(textField(input.tool_input, 'command'), commandLineOf) ? hookRefusal(RUNNING_APP_REASON) : undefined);
+  const refused = boardGuard(toolName, input.tool_input, command) ?? runningAppGuard(toolName, input.tool_input, commandLineOf);
   return refused === undefined ? '' : JSON.stringify(refused);
 }
 
