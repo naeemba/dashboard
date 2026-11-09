@@ -8,7 +8,7 @@ import { sourceFiles } from './src/main/testing/source-files';
 // source: its parameter's first `.key` must come after the guard's first call on that parameter.
 
 // The files holding a handler that reads a key before the guard on purpose, one row per file, for the
-// reasons docs/keys/hard-rules.md gives. A second unguarded handler in one of these files passes.
+// reasons docs/keys/hard-rules.md gives. A second unguarded handler in one of these files fails.
 const EXCEPTIONS = [
   'src/renderer/app/overlay.ts', // Tab in a search box: nothing else there takes focus
   'src/renderer/board/filter-dialog.ts', // Tab in the board filter dialog, for the same reason
