@@ -699,6 +699,14 @@
   color: var(--muted);
 }
 
+/* A shell command's or a Monitor's output in the same sheet (chat-task-output-view.ts), wrapped so a
+   long line reads without a sideways scroll. */
+.chat-task-output {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .chat-agent-title {
   position: sticky;
   top: 0;

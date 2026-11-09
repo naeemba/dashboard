@@ -25,6 +25,7 @@ import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, turnTokens, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
 } from '../../shared/chat/chat-transcript';
 import { promptParts, withdrawable } from './chat-queue';
+import { nearBottom } from './chat-scroll';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
 import { createAgentsView } from './chat-agents-view';
@@ -158,7 +159,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     }
   }, { root: log, rootMargin: '800px 0px' });
 
-  const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+  const atBottom = () => nearBottom(log);
 
   // One row under the box: on the left the model, the mode and what Claude is doing; on the right
   // the meters Claude Code's status line carries, whether the prompt cache is warm, then the

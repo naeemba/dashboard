@@ -156,9 +156,13 @@ click in it does what it does in the main log: an image or PDF opens over it,
 and a pane link puts the conversation away and lands on the pane. An agent that
 has said nothing yet opens empty and fills as it goes; only the last 20 agents'
 conversations are kept, besides any still running, and a session that ends lists
-what it was running as ended. A background command has no conversation to
-open, and says so; Enter on a workflow opens its panel, whose Escape comes back
-to the list (chat-decision-15).
+what it was running as ended. Enter on a workflow opens its panel, whose Escape
+comes back to the list (chat-decision-15). Enter on a background shell command or
+a Monitor, or a click on its strip row, opens its output in the same sheet: the
+last 8 KiB it printed, escape codes gone, followed live while it runs with the
+last lines in view, and Escape goes back to the list. An ended one whose output
+is gone says so, naming the task; any other kind, an MCP call say, says it has
+nothing to show (chat-decision-17).
 
 A running workflow's strip row also carries a bar and how many of its agents
 have ended of those started, `▰▰▰▱▱▱▱▱▱▱ 3/10 agents`, beside its tokens and
@@ -283,6 +287,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given Claude ran an agent, when its call is on screen, then the call's line reads `Agent List X11 and read hostname 3 tools · 33.1K tokens · 5s`, counting while the agent runs and kept after it ends or the conversation is read back.
 - Given a workflow is running, when you press Alt+P, then a panel lists its phases with their marks and counts and the picked phase's agents with model, tokens and time; Up and Down walk the phases, Enter on Stop the workflow stops it, and Escape goes back to the box; a click on the workflow's strip row opens the same panel, whose Escape goes to the Alt+A list.
 - Given an agent is running or has finished this conversation, when you press Alt+A, then a list shows it, running ones first, finished ones with `completed`, their count and the first line of their report; Enter opens its conversation, which grows as the agent works, Escape goes back to the list, and a click on its strip row opens the same view (chat-decision-15).
+- Given a background shell command or a Monitor is running or has finished this conversation, when you press Alt+A and Enter on it, then its output shows over the screen and grows while it runs, the last lines in view; Escape goes back to the list, and an ended one with no output left says so in one sentence naming it (chat-decision-17).
 - Given a turn's agent writes, when it sends each message, then the working line's `↓ N tokens` grows by what it wrote, four characters a token (chat-decision-15).
 - Given a half-written prompt in the box, when you press Alt+S, then the box empties and Up from the empty box brings the draft back before any sent prompt; the last 10 stashed are kept until they are sent.
 - Given Up showing an earlier prompt over a half-written draft, when you press Alt+S, then the draft is stashed, not the prompt Up showed; a waiting question keeps the keyboard.
