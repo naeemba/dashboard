@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T12:22:21.324Z",
-  "updatedAt": "2026-11-09T13:00:48.196Z",
+  "updatedAt": "2026-11-09T20:55:13.651Z",
   "branch": "work-board-card-8cb4282d-71a3-4164-97ba-816",
   "pullRequest": 257,
   "comments": [
     {
       "at": "2026-11-09T13:00:48.196Z",
       "body": "Shipped in #257: project.close stops every pane's scope (editor's included) after the close; a dispatch that starts a pane's shell over stops the old shell's scope. Open: pty:restart and restore's unadopted kept shell still leave old scopes (docs/processes open questions)."
+    },
+    {
+      "at": "2026-11-09T20:55:13.651Z",
+      "body": "Pull request #257 merged: Stop every scope a pane leaves: on project close and when a dispatch replaces a pane's shell https://github.com/naeemba/dashboard/pull/257"
     }
   ],
   "column": "Done",

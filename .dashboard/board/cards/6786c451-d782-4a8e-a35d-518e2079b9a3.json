@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T11:39:43.260Z",
-  "updatedAt": "2026-11-09T13:24:50.464Z",
+  "updatedAt": "2026-11-09T20:55:14.909Z",
   "branch": "work-board-card-6786c451-d782-4a8e-a35d-518",
   "pullRequest": 258,
   "comments": [
     {
       "at": "2026-11-09T13:24:50.464Z",
       "body": "Shipped in PR #258: pane send, ships and the review loop report to the main that sent the work, and the app releases finished worker panes (card Done/Cancelled, or report read plus workers.closeAfterMinutes idle) through pane.release, with a passing notice. Not done: a hand-opened screen handed work comes back as yours after a restart; a restored worker is not auto-closed until it stops again; no settings-screen row."
+    },
+    {
+      "at": "2026-11-09T20:55:14.909Z",
+      "body": "Pull request #258 merged: Report handed-over work to its main, and close finished worker panes https://github.com/naeemba/dashboard/pull/258"
     }
   ],
   "column": "Done",

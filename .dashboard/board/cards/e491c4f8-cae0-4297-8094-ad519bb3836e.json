@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T13:06:33.171Z",
-  "updatedAt": "2026-11-09T13:20:48.441Z",
+  "updatedAt": "2026-11-09T20:55:16.065Z",
   "branch": "work-board-card-e491c4f8-cae0-4297-8094-ad5",
   "pullRequest": 260,
   "comments": [
     {
       "at": "2026-11-09T13:20:48.441Z",
       "body": "Shipped in #260: pane.restart (Enter on an exited pane, and a dispatch starting a shell over) stops the old shell's scope; pane.restore stops the scope of a kept shell it kills. In-app hand check on throwaway scopes not done."
+    },
+    {
+      "at": "2026-11-09T20:55:16.065Z",
+      "body": "Pull request #260 merged: Stop the old scope when a shell restarts or a kept shell is not taken back https://github.com/naeemba/dashboard/pull/260"
     }
   ],
   "column": "Done",
