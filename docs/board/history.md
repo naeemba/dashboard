@@ -16,3 +16,4 @@ One line per merged change: date, pull request, why.
 - 2026-10-14 #73 — Backlog column, board filter and a sort button
 - 2026-11-02 #171 — An arrow key moves the highlight instead of rebuilding the board
 - 2026-11-08 #245 — A Cancelled column: the delete key keeps a card that will not be done (board-decision-4)
+- 2026-11-09 #254 — Every write to a git-tracked board lands on origin's main, and the checkout is brought up to it (board-decision-5)
