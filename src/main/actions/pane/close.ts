@@ -35,12 +35,13 @@ export const paneClose = action<PaneClosePorts, { id: string }, { output: string
     ports.drop(id);
     ports.endClaim(ports.project(slot)?.path ?? '', index);
     ports.changed();
-    if (unit === undefined) return { output: `closed ${id}` };
-    try {
-      await ports.stopScope(unit);
-    } catch (error: unknown) {
-      // The pane is gone either way; what it left running is said, not hidden.
-      return { output: `closed ${id}; ${unit} was not stopped: ${failureText(error)}` };
+    if (unit !== undefined) {
+      try {
+        await ports.stopScope(unit);
+      } catch (error: unknown) {
+        // The pane is gone either way; what it left running is said, not hidden.
+        return { output: `closed ${id}; ${unit} was not stopped: ${failureText(error)}` };
+      }
     }
     return { output: `closed ${id}` };
   },

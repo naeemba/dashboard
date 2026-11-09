@@ -14,8 +14,8 @@ import { processScopes, type ProcessScopes, type Probe } from './scope-support';
 // real folder; everything they hand over to is tested beside it.
 
 const runCommand = promisify(execFile);
-// daemon-reload answers in milliseconds; one stuck must not hold the launch for long.
-const RELOAD_TIMEOUT_MS = 3_000;
+// daemon-reload and a queued stop answer in milliseconds; one stuck must not hold a launch or a close.
+const SYSTEMCTL_TIMEOUT_MS = 3_000;
 // What `systemctl stop` exits with for a unit that is not loaded: a scope already ended and collected,
 // or one a pane host from before scopes never started. Either way there is nothing left to stop.
 const NOT_LOADED = 5;
@@ -39,7 +39,7 @@ export function writeNew(file: string, text: string): boolean {
 // 90 seconds systemd gives it.
 export async function stopScope(unit: string): Promise<void> {
   try {
-    await runCommand('systemctl', ['--user', 'stop', '--no-block', unit], { timeout: RELOAD_TIMEOUT_MS });
+    await runCommand('systemctl', ['--user', 'stop', '--no-block', unit], { timeout: SYSTEMCTL_TIMEOUT_MS });
   } catch (error: unknown) {
     if ((error as { code?: unknown }).code !== NOT_LOADED) throw error;
   }
@@ -48,7 +48,7 @@ export async function stopScope(unit: string): Promise<void> {
 export function launchScopes(log: (draft: LogDraft) => void): ProcessScopes {
   const install = bind(processesInstallSlices, {
     writeNew,
-    reload: async () => { await runCommand('systemctl', ['--user', 'daemon-reload'], { timeout: RELOAD_TIMEOUT_MS }); },
+    reload: async () => { await runCommand('systemctl', ['--user', 'daemon-reload'], { timeout: SYSTEMCTL_TIMEOUT_MS }); },
   });
   return processScopes({
     platform: process.platform,

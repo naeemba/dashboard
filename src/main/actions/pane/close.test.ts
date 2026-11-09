@@ -21,7 +21,10 @@ describe('pane.close', () => {
     const close = closeWith(done);
     expect(await close.call({ id: '2:2' })).toEqual({ output: 'closed 2:2' });
     expect(done).toEqual(['drop 2:2', 'claim /work/api 2', 'changed']);
-    expect(await close.call({ id: '2:5' })).toEqual({ refused: '2:5 is not open' });
+    done.length = 0;
+    const scoped = closeWith(done, { scopeOf: () => 'pane-api-5-k4f2.scope' });
+    expect(await scoped.call({ id: '2:5' })).toEqual({ refused: '2:5 is not open' });
+    expect(done).toEqual([]);
   });
 
   it('stops the pane\'s scope after its shell is dropped, the unit read before the drop forgets it', async () => {
@@ -43,12 +46,5 @@ describe('pane.close', () => {
     });
     expect(await close.call({ id: '2:2' })).toEqual({ output: 'closed 2:2; pane-api-2-k4f2.scope was not stopped: Access denied' });
     expect(done).toEqual(['drop 2:2', 'claim /work/api 2', 'changed']);
-  });
-
-  it('stops nothing for a pane that is not open', async () => {
-    const done: string[] = [];
-    const close = closeWith(done, { scopeOf: () => 'pane-api-5-k4f2.scope' });
-    await close.call({ id: '2:5' });
-    expect(done).toEqual([]);
   });
 });

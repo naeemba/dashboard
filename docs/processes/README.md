@@ -107,6 +107,8 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   panes stay unscoped until that host exits, once every pane it holds is closed.
 - The manager's tasks and the Agent SDK's sessions (main's Claude screen, the
   worker screens) are not scoped yet; the card after this one does them.
+- Closing a project drops its panes without pane.close, so their scopes are
+  not stopped and what their shells detached outlives the project's page.
 - A pane whose shell is replaced in place (a dispatch into a pane that already
   had a shell) starts a new scope; the old one is not stopped, so what that
   shell detached keeps running until it ends on its own.
