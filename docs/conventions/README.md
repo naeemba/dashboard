@@ -10,4 +10,4 @@ at its id here.
 
 - Given a list of rows, when you click one, then the selection moves there and it does what Enter does there.
 - Given a new text box, when you type a Persian card title, then the caret stays with the text.
-- Given a class that sets `display`, when an element with it is `hidden`, then it disappears because a `[hidden]` rule sits beside it.
+- Given a class that sets `display`, when an element with it is `hidden`, then it disappears because a `[hidden]` rule sits in its stylesheet's foot block.

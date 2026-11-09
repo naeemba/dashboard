@@ -41,7 +41,7 @@ same file, so a new box without it fails `pnpm test` with its file and name. A
 `element.hidden = true` hides by way of the browser's own `[hidden] { display:
 none }`, and any `display` in our CSS beats it. **So whenever a class gets a
 `display`, every element that class hides with the attribute needs a
-`.thing[hidden] { display: none }` beside it.**
+`.thing[hidden] { display: none }` in the same stylesheet, in its foot block.**
 
 What it looks like: the manager's column names and its total joined the rows'
 `display: flex` so they would line up with them. Close every project and the
@@ -55,7 +55,10 @@ instead.
 `.chat-log img`) that sets a `display` with no `.name[hidden]` rule in the same file, and on
 a `.name[hidden]` whose class sets no `display` there, so a deleted class does not leave its
 rule behind. It cannot see which elements are ever hidden, so every such class gets one,
-grouped at the foot of its stylesheet. The classes on a `.view` or `.page` are a named list
-in the test: `.view[hidden], .page[hidden]` hide them with visibility, and a `display: none`
-would make their terminals measure zero. Vitest has no DOM here, so the test reads the CSS
+grouped at the foot of its stylesheet, where it wins source order over a `.parent .thing
+{ display: flex }` written above it. The view classes that hold panes (`.view-terminals`,
+`.view-nvim`, `.view-notes`, `.view-manager`) are exempt, in `HIDDEN_BY_VISIBILITY`:
+`.view[hidden], .page[hidden]` hide them with visibility, and a `display: none` would make
+their panes measure zero. A row that stops setting `display` or gains a `[hidden]` rule fails
+the test, and a missing rule on a `.view-` or `.page-` class points at that list. Vitest has no DOM here, so the test reads the CSS
 rather than an element.

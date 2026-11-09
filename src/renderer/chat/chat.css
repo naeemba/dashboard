@@ -310,10 +310,6 @@
   outline: none;
 }
 
-.chat-ask[hidden] {
-  display: none;
-}
-
 .chat-ask-title {
   margin: 0 0 6px;
   color: var(--brightWhite);
@@ -562,10 +558,6 @@
   font-size: 12px;
 }
 
-.chat-working[hidden] {
-  display: none;
-}
-
 .chat-tasks {
   display: flex;
   flex-direction: column;
@@ -575,10 +567,6 @@
   padding: 4px 2px;
   border-top: 1px solid var(--line);
   font-size: 12px;
-}
-
-.chat-tasks[hidden] {
-  display: none;
 }
 
 .chat-task.selected {
@@ -637,10 +625,6 @@
   background: var(--surface-raised);
 }
 
-.chat-menu[hidden] {
-  display: none;
-}
-
 .chat-menu-row {
   display: flex;
   align-items: baseline;
@@ -689,10 +673,6 @@
   overflow-y: auto;
   padding: 4px 8px;
   color: var(--muted);
-}
-
-.chat-queued[hidden] {
-  display: none;
 }
 
 .chat-queued-prompt {
@@ -750,6 +730,11 @@
 
 /* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
 .main-chat[hidden],
+.chat-ask[hidden],
+.chat-working[hidden],
+.chat-tasks[hidden],
+.chat-menu[hidden],
+.chat-queued[hidden],
 .chat[hidden],
 .chat-more[hidden],
 .chat-copy[hidden],

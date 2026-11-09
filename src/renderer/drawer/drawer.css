@@ -19,11 +19,6 @@
   left: var(--drawer-width);
 }
 
-/* display: flex on the drawer beats the browser's own [hidden] (conventions-rule-3). */
-.drawer[hidden] {
-  display: none;
-}
-
 .drawer-list {
   flex: 1;
   overflow-y: auto;
@@ -178,6 +173,7 @@
 }
 
 /* Each class above that sets display beats the browser's own [hidden] (conventions-rule-3). */
+.drawer[hidden],
 .drawer-row[hidden],
 .doc-viewer-dialog[hidden],
 .data-line[hidden] {
