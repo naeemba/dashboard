@@ -1,4 +1,4 @@
-import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, REVIEW_COLUMN, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
+import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
@@ -21,14 +21,18 @@ export function intoReview(board: Board, cardId: string): Board | null {
   return moveCardById(board, cardId, reviewColumnIndex(board));
 }
 
-// The pull request card.follow found for this card, from the project's board: the number, only while the
-// card sits in Review, which is where an open pull request put it (board-decision-6). The sweep's first
-// sign that a card is finished, ahead of any number already on its worktree's board, so an agent that
-// only opened its pull request is reviewed too. Not from any other column: a card back in Doing
-// after its pull request closed unmerged keeps that number, and a fresh ship of it has opened nothing yet.
+// The pull request card.follow found for this card, from the project's board: the number, while the
+// card sits in Review or past it. card.follow puts it there when the pull request opens and moves the card
+// to Done only after the merge (board-decision-6), so a number on a card in Done is the one that merged,
+// and the sweep needs it to clear that card's worktree. The sweep's first sign that a card is finished,
+// ahead of any number already on its worktree's board. Not before Review: a card back in Doing after its
+// pull request closed unmerged keeps that number, and a fresh ship of it has opened nothing yet. Not in
+// Cancelled, wherever that column sits, and not on a board with no Review column, which has no column to
+// be in or past.
 export function followedPullRequest(board: Board, cardId: string): number | null {
   const at = selectionOf(board, cardId);
-  if (at === null || !isColumnNamed(board.columns[at.column].name, REVIEW_COLUMN)) return null;
+  const review = reviewColumnIndex(board);
+  if (at === null || review === -1 || at.column < review || isCancelled(board, cardId)) return null;
   return cardAt(board, at)?.pullRequest ?? null;
 }
 

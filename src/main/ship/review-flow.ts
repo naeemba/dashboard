@@ -57,26 +57,25 @@ export type ReviewPorts = {
 // signal: a card that has a pull request has done the work, whatever column it was left in, and one
 // that never gets that far has none, so a card that failed is left alone rather than reviewed. Two
 // sources, in this order: the number card.follow found from the branch and put on the project's card
-// while it sits in Review (followedPullRequest), then any number already on the worktree's own board.
+// while it sits in Review or past it (followedPullRequest), then any number already on the worktree's
+// own board.
 // Agents no longer write one there, so a worktree number only arrives with the base the ship cut from.
 //
 // peekBoard rather than readBoard: readBoard moves a board file it cannot parse aside, and in a
 // worktree that file is tracked and committed. A sweep running on a timer must not delete a branch's
 // board because the agent in it wrote a broken one.
 //
-// The working copy, and not `git show HEAD:` of the same path, which is the obvious answer to the
-// number being readable a moment before the commit that makes it true. Two reasons it is not taken.
-// It would not close the hole: `/work-card` pushes the commit carrying the number and keeps going —
-// the /simplify pass this repo asks for, a follow-up commit — so a worktree can be dirty long after
-// the number is committed, and the swap has to survive that anyway. And it would put a `git show`
-// per in-flight worktree on a five-second timer for the whole life of the app, to spare a refusal
-// that costs nothing when nothing is stuck. swapWorktree is where the window is handled instead.
+// The working copy, and not `git show HEAD:` of the same path: a worktree can be dirty long after the
+// pull request opens — `/work-card` keeps going with the /simplify pass and follow-up commits — so the
+// swap has to survive that anyway, and a `git show` per in-flight worktree on a five-second timer would
+// cost more than the refusal it spares. swapWorktree is where a dirty worktree is handled.
 //
 // The followed number comes first because a number on the worktree's board can be an earlier pull
 // request's: card.follow keeps it on a card it sends back to Doing, and a re-ship cuts the worktree from
-// a base that carries it. For the same reason a worktree number equal to the project card's own is not
-// counted: nobody writes one there, so it can only be that closed pull request, and reviewing it would
-// run `/pr-loop` at it in the window before card.follow sees the new one.
+// a base that carries it. For the same reason, on a card before Review, a worktree number equal to the
+// project card's own is not counted: nobody writes one there, so it can only be that closed pull
+// request, and reviewing it would run `/pr-loop` at it in the window before card.follow sees the new
+// one. A card in Review or past it never reaches that check: followedPullRequest answers for it.
 // `project` is the project's board as the caller already read it, or null.
 function finishedIn(entry: WorktreeEntry, project: Board | null): number | null {
   const followed = project === null ? null : followedPullRequest(project, entry.cardId);
@@ -139,12 +138,11 @@ async function swapWorktree(
   const removed = await ports.removeWorktree(entry.worktreePath);
   if (!removed.ok) {
     if (removed.dirty.length === 0) return { message: removed.message, again: false };
-    // Uncommitted files are usually the agent's own last breath. The pull request number is written
-    // onto the branch's board and then committed, and a write and its commit are never the same act,
-    // so there is always a window where the number is on disk and the commit is not — and git will
-    // not give up a worktree with a change in it. A moment later it would. So the card is asked about
-    // again on the next tick rather than written off for the rest of the run. `/work-card` asks for
-    // both in one shell command to keep that window short, which narrows it and cannot close it.
+    // Uncommitted files are usually the agent's own last commit still being made: the pull request is
+    // open, and the agent goes on committing fixes to it, so there is always a window where a change
+    // is on disk and its commit is not — and git will not give up a worktree with a change in it. A
+    // moment later it would. So the card is asked about again on the next tick rather than written off
+    // for the rest of the run.
     //
     // A worktree that stays dirty — an agent that really did walk away mid-change — is the price, and
     // this paragraph is the only thing that names it. Unmarked, the card runs the whole of sweepOne
@@ -218,8 +216,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // and the sweep finds the card again the moment it is opened.
     const slot = ports.slotOf(entry.projectPath);
     if (slot === -1) return;
-    // The pull request number is not the agent being done. `/work-card` pushes the commit carrying it
-    // and keeps going — the /simplify pass this repo asks for, a follow-up commit, its own summary — so
+    // The pull request number is not the agent being done. `/work-card` opens the pull request and
+    // keeps going — the /simplify pass this repo asks for, a follow-up commit, its own summary — so
     // taking the folder away here kills the shell before `git push` runs and the fix never reaches the
     // pull request the review is about to merge. Nothing is marked, so the sweep picks the card up
     // the moment the agent stops working.
@@ -227,8 +225,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const board = boardOf(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return;
-    // A card that has already been through this. The number on the branch's board, once there, stays
-    // there, so it goes on saying "finished" long after the review that read it merged the
+    // A card that has already been through this. The pull request number, once there, stays there, so it goes on saying "finished" long after the review that read it merged the
     // pull request. The project's board is what tells the two apart; review.ts holds why it is the
     // only thing that can. A card past Review is finished with its worktree too, so that is removed
     // here, once: the review pane cannot remove the folder it is standing in, and without this every
@@ -272,7 +269,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // command that dropped one card off a board that still has others. Either is the deletion
     // as far as this line is concerned, and one tick — five seconds — is all it takes to land in
     // between. The card is then back in Ship reading `shipped · fix-login · terminal 3`, with its
-    // worktree still on disk and its pull request number still on the branch's board, and no review
+    // worktree still on disk, and no review
     // ever starts for it again until you restart the app or ship the card again. The mark stays anyway:
     // asking the board whether the card has come back is the read the mark exists to avoid, so there is
     // no cheap version of this that covers it. If it becomes worth more than this paragraph, `forget`

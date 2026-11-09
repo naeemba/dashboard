@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyBoard, moveCardById, type Board } from '../../shared/board/board';
+import { CANCELLED_COLUMN, columnNamed, emptyBoard, moveCardById, type Board } from '../../shared/board/board';
 import { awaitsReview, followedPullRequest, intoReview, reviewPrompt, reviewRefused } from './review';
 
 const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
@@ -58,13 +58,16 @@ describe('followedPullRequest', () => {
     return { columns: board.columns.map((each) => ({ ...each, cards: each.cards.map((card) => ({ ...card, pullRequest: 12 })) })) };
   }
 
-  it('is the number card.follow put on a card in Review', () => {
+  // Done: card.follow moves a card there only after the merge, so the number is the one that merged.
+  it('is the number card.follow put on a card in Review or Done', () => {
     expect(followedPullRequest(withNumber(4), CARD)).toBe(12);
+    expect(followedPullRequest(withNumber(5), CARD)).toBe(12);
   });
 
   // Doing: its pull request closed unmerged, or a fresh ship of it has opened nothing yet.
-  it('is null in any other column, and without a number', () => {
+  it('is null before Review, in Cancelled, and without a number', () => {
     expect(followedPullRequest(withNumber(3), CARD)).toBeNull();
+    expect(followedPullRequest(withNumber(columnNamed(boardWithCard(), CANCELLED_COLUMN)), CARD)).toBeNull();
     expect(followedPullRequest(moveCardById(boardWithCard(), CARD, 4) as Board, CARD)).toBeNull();
     expect(followedPullRequest(withNumber(4), 'not-on-the-board')).toBeNull();
   });
