@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-09T16:12:43.137Z",
-  "updatedAt": "2026-11-09T16:24:33.738Z",
+  "updatedAt": "2026-11-09T16:47:42.216Z",
   "comments": [
     {
       "at": "2026-11-09T16:19:28.820Z",
@@ -20,6 +20,6 @@
       "body": "Correction to the previous comment: parent pid 1 is not evidence of a duplicate. Pid 965649 is the live worker that just reported PR #276 (its message socket is 965649.sock), so these SDK processes are reparented live sessions (the screen host detaches them, or the host restarted). Check which of them have a second session for the same pane before concluding anything."
     }
   ],
-  "column": "Todo",
-  "order": 5
+  "column": "Doing",
+  "order": 20
 }
