@@ -208,7 +208,11 @@ Every pane also carries DASHBOARD_COMMAND, the path to a command whose board
 words list cards and move them from a shell: run `node "$DASHBOARD_COMMAND"
 board` in a project to see what it takes, or DASHBOARD_BOARD, the older path to
 the same program, with no word in front. It is how an agent working a card moves
-its own, and .dashboard/CLAUDE.md in each project spells it out.
+its own. The .dashboard/CLAUDE.md the app seeds into each project says only
+that: what the folder holds, that the board is changed through the command, and
+`node "$DASHBOARD_BOARD"` to print what it takes. It is written once, when it is
+missing, so a project seeded with the older text that spelled out the card
+format keeps it, and an edited copy stays edited.
 
 ## Kept in step with git
 
@@ -289,7 +293,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-usage.ts`, `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
 - The guard: `board-guard.ts` (which tools and paths are refused), `board-guard-install.ts`
   (the program and the entry under `~/.claude`), each beside its `.test.ts`; `board guard` in
-  `board-program.ts` is the hook's command
+  `board-program.ts` is the hook's command, and asks the running-app guard too (workflow-decision-7);
+  `hook-answer.ts` is what the two guards share
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
   (what the app writes under `~/.claude` at launch), each beside its `.test.ts`

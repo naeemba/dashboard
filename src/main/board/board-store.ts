@@ -2,15 +2,11 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-// The usage text is written once, in board-usage.ts. Copied into here it would go stale the day a
-// flag is renamed, and this file is the only place an agent finds out the command exists at all.
-import { USAGE } from './board-usage';
 import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
 import { byPlace, storedOrder } from './card-order';
 import { dashboardFolder } from '../app/dashboard-folder';
 import { readText } from '../app/missing-file';
 import { TEMPORARY_SUFFIX } from '../app/replace-file';
-import { posixQuoted } from '../../shared/panes/shell';
 import { isRecord } from '../../shared/app/is-record';
 import {
   BACKLOG_COLUMN,
@@ -63,114 +59,14 @@ export const BROKEN_BOARD_FILE = `${BOARD_FILE}${BROKEN_SUFFIX}`;
 // writes a file that is not there, so those copies would otherwise drift the moment this text changes.
 export const EXPLANATION_FOR_AGENTS = `# .dashboard
 
-This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B.
+This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B: \`board/\`, one
+file per card, or \`board.json\` in a project the app has not written to since.
 
-## board/
+Change it with the board command, never by editing those files; an agent's edit of one is refused by
+the \`board guard\` hook the app installs. Every pane the app opens carries \`DASHBOARD_BOARD\`, its path:
 
-One file per card, so two branches working different cards never edit the same file:
-
-    board/columns.json            { "columns": ["Backlog", "Todo", "Ship", "Doing", "Review", "Done", "Cancelled"] }
-    board/cards/<id>.json         one card, with the column it is in and its place there
-
-A card's file:
-
-    {
-      "id": "0f6a2c5e-...",
-      "title": "Fix the resize race",
-      "notes": "",
-      "priority": "high",
-      "parent": null,
-      "createdAt": "2026-09-08T09:12:44.017Z",
-      "updatedAt": "2026-09-08T09:12:44.017Z",
-      "branch": "fix-resize-race",
-      "pullRequest": 14,
-      "comments": [
-        { "at": "2026-09-09T11:02:10.551Z", "body": "The race is in the debounce, not the observer." }
-      ],
-      "column": "Todo",
-      "order": 3
-    }
-
-A project the app has not written to since this layout arrived still has the older \`board.json\`
-here instead — the whole board in one file, \`{ "columns": [{ "name": "Todo", "cards": [...] }] }\`.
-It is read the same, and the next write moves every card into \`board/\` and removes it. Commit the
-two together: \`git add -A -- ${BOARD_PATHSPECS.map(posixQuoted).join(' ')}\` takes in both,
-and leaves out a \`.broken\` file set aside and a write's temporary file.
-
-- \`columns\` in \`columns.json\` is ordered. The first column is the leftmost on screen. A card naming
-  a column the list does not have gets that column, after the listed ones.
-- \`column\` is the name of the card's column; a card without one is in Backlog. \`order\` is a number,
-  and the cards of a column go top to bottom by it, then by \`id\`. A move gives the moved card a
-  number between its new neighbours and leaves every other file alone.
-- Every board has a \`Backlog\` column, first unless someone moved it. A card
-  nobody has chosen to work on waits there; \`Todo\` holds what has been picked.
-  \`board add\` with no \`--column\` puts a card in Backlog.
-- The \`Ship\` column is not an ordinary one. Moving a card into it asks the
-  Dashboard app to make a git worktree for that card, check out a branch named
-  after it, and start an agent in one of the project's panes. Put a card there
-  only when you mean to start it.
-- A shipped card's column follows its pull request, and the app moves it: into
-  \`Doing\` when its agent starts, into \`Review\` when the pull request on its
-  branch opens, into \`Done\` when it merges, back to \`Doing\` when it closes
-  unmerged, with one comment naming the pull request each time. An agent working
-  a card neither moves it nor records the number: the app finds the pull request
-  from the branch, and starts the review once the agent goes quiet. Into
-  \`Review\`, the app throws that card's worktree away and makes a fresh one on
-  the pull request's branch with an agent reviewing it.
-- A card's column on the \`main\` branch says what has been merged, and \`Review\`
-  is the one exception — a card there has a pull request open and nothing has
-  checked it. On a board git tracks, the \`board\` command writes the card on
-  \`main\` itself, from the project or any worktree, and brings the project's
-  checkout up to it; a worktree's own board is its branch's and is left alone.
-- \`id\` is a UUID, and no two cards may share one; it is also the file's name. Keep it stable when you
-  edit a card. A card written without one takes its file's name, and one with an id another card
-  already used is given a fresh one the next time the app reads the board.
-- A card file that is not JSON is moved aside as \`<id>.json.broken\` the next time the app reads the
-  board, so nothing overwrites it.
-- \`title\` is one line. A card with no \`title\`, or a blank one, is dropped when the app reads
-  the file.
-- \`notes\` is the card's description, free text over as many lines as you like. \`e\` opens it.
-- \`priority\` is one of \`urgent\`, \`high\`, \`medium\`, \`low\`. Anything else, or nothing, reads as
-  \`medium\`. It colours the card's left edge, and \`s\` sorts a column by it, urgent first.
-- \`parent\` is the \`id\` of another card, or \`null\`. It is the only thing that makes a card a
-  subtask: subtasks are ordinary cards that live in whatever column they are in, and a parent keeps
-  no list of its children. A \`parent\` naming a card that is not on the board, or a ring of cards
-  that are each other's ancestors, is reset to \`null\` when the app reads the file.
-- \`createdAt\` and \`updatedAt\` are ISO dates, or absent. Absent means unknown, not now: a card written
-  before these fields existed, or written by hand without them, stays that way and the app never
-  fills them in on read. \`updatedAt\` moves when one of that card's own fields changes, and when the
-  card moves to another column — reordering a column leaves it alone.
-- \`comments\` is the card's comment trail, oldest first, or absent when nothing has been said. Each
-  entry is \`{ "at": <ISO date>, "body": <text> }\`; \`at\` may be absent, and an entry with a blank
-  \`body\` or no \`body\` is dropped when the app reads the file. It is append-only — write to it with
-  \`board comment\` and never by rewriting what is there. \`notes\` is the card's description and is
-  edited in place; everything said about the card over its life goes here instead, so recording a
-  finding cannot take out what somebody else wrote.
-- \`branch\` is the git branch the work is on, or absent. \`pullRequest\` is the pull request's number,
-  a whole number above zero written without the \`#\`, or absent. A ship writes the branch and the app
-  finds the pull request from it through \`gh\`; \`b\` edits the branch and \`r\` the pull request.
-
-## The \`board\` command
-
-Every pane the Dashboard app opens carries \`DASHBOARD_BOARD\`, the path to a command that edits the
-board of the project you are in — any depth inside it, not only its root. It goes through the same
-code the app does, so a card it writes is a card the app wrote.
-
-${USAGE.split('\n').map((line) => (line === '' ? '' : `    ${line}`)).join('\n')}
-
-Run it as \`node "$DASHBOARD_BOARD" <command>\`. \`list\` prints the column, the priority, the id and
-how many comments each card has — the id is the one \`show\`, \`move\`, \`set\` and \`comment\` want.
-\`show\` prints one card in full, including its comment trail, which is the part \`list\` has no room
-for.
-
-Use it, not a hand edit: a refusal comes back as a message and nothing is written, where a hand edit
-that gets a field wrong is repaired silently on the next read. An agent's Edit or Write of a file under
-\`board/\`, or a shell redirect into one, is refused by the \`board guard\` hook the app installs.
-
-A person editing the files in an editor is not stopped — the app notices. It watches this folder
-while a board is on screen, so a card moved from the command line or by hand shows up where you are
-looking, with the selection left on the card it was on. The app rewrites a card's whole file when it changes that card
-and drops any field not listed above.
+    node "$DASHBOARD_BOARD"          prints what it takes
+    node "$DASHBOARD_BOARD" list     every card, with the id the other commands want
 `;
 
 export const EXPLANATION_FOR_PEOPLE = `# .dashboard
@@ -181,7 +77,7 @@ Project state for the Dashboard app. \`board/\` holds this project's kanban boar
 
 Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\` if it is yours alone.
 
-\`CLAUDE.md\` beside this file describes the format.
+\`CLAUDE.md\` beside this file tells an agent how to change the board.
 `;
 
 // Which project a directory belongs to. The command line is pointed at a project by the directory you
@@ -249,7 +145,7 @@ function optionalText(value: unknown): string | undefined {
 }
 
 // A card with a blank title is dropped, not kept: it would draw as a 4px strip you cannot read but
-// can still select and delete, and .dashboard/CLAUDE.md promises agents it is dropped.
+// can still select and delete.
 function parseCard(value: unknown, makeId: () => string): Card | null {
   if (!isRecord(value) || !isTitle(value.title)) return null;
   return {
@@ -276,7 +172,7 @@ function parseCard(value: unknown, makeId: () => string): Card | null {
 // without the field — a board from before comments existed round-trips as the file it was.
 //
 // A comment with no body is dropped rather than kept: it would draw as a blank line in the trail with
-// a date beside it, and .dashboard/CLAUDE.md promises agents it is dropped.
+// a date beside it.
 function parseComments(value: unknown): CardComment[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const comments = value.flatMap((entry): CardComment[] => (isRecord(entry) && isCommentBody(entry.body)
@@ -525,10 +421,12 @@ export function openBoard(projectPath: string, salvage = true): BoardRead {
 }
 
 // Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md
-// stays edited. The folder existing is not enough to skip the walk: writeBoard makes it too, and a
+// stays edited, and so does one seeded with the older text that spelled out the card format: it still
+// names the board command, and the hand edit it describes is refused by the guard, which names the
+// command too. The folder existing is not enough to skip the walk: writeBoard makes it too, and a
 // repo that keeps board.json in git often does not keep the docs beside it — clone one of those and
-// the folder arrives with no CLAUDE.md in it, leaving an agent working in there nothing that says
-// what a card looks like.
+// the folder arrives with no CLAUDE.md in it, leaving an agent working in there nothing that names
+// the command.
 export function seedBoardDirectory(projectPath: string): void {
   const directory = join(projectPath, BOARD_DIRECTORY);
   mkdirSync(directory, { recursive: true });

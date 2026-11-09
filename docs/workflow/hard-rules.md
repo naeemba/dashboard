@@ -18,6 +18,10 @@ After changing code: run the tests, say the installed app needs a rebuild and
 restart to pick the change up, and stop there. Building into `out/` or `.vite/`
 is fine — nothing runs from those.
 
+A PreToolUse hook refuses the quit, the kill, `open -a Dashboard` and a hand
+replacement of the installed build (workflow-decision-7). The rule stays here
+for what the hook cannot read: a script of your own that does the same.
+
 ## workflow-rule-2: A decision gets its own module and a test
 
 `renderer.ts` is wiring: read the browser, call a function, draw the answer. A

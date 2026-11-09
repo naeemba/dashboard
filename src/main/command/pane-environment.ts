@@ -12,7 +12,7 @@ export type PaneCommands = { board: string; session: string; dashboard: string }
 export function paneCommands(buildFolder: string): PaneCommands {
   return {
     // DASHBOARD_BOARD, so an agent in any project can move its own card without hand-editing JSON.
-    // .dashboard/CLAUDE.md, seeded into every project the app touches, is where it is documented.
+    // Run bare, it prints its usage; .dashboard/CLAUDE.md, seeded into every project, points there.
     board: path.join(buildFolder, 'board-cli-entry.js'),
     // DASHBOARD_SESSION, the `session` command, which reaches this app on the socket.
     session: path.join(buildFolder, 'session-cli-entry.js'),
