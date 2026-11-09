@@ -64,6 +64,8 @@ export type SessionPorts = {
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
+  // Whether a throwaway's folder is still there (pane.release).
+  exists(worktreePath: string): boolean;
   unfinished(worktreePath: string): Promise<string | null>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
   // What closeFinished asks of a worker beside what is held here (auto-release.ts): whether its page

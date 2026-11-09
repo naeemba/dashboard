@@ -750,6 +750,7 @@ const workerAnswers = sessionRequests({
     return { worktreePath: entry.worktreePath, working: agentRunsIn(slotOfProject(projectPath), entry.pane) };
   },
   makeWorktree: worktree.makeThrowaway,
+  exists: existsSync,
   unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
   removeWorktree: worktree.removeForRelease,
   hasKeyboard: claudeSessions.hasKeyboard,

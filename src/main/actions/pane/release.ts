@@ -22,6 +22,10 @@ export type PaneReleasePorts = {
   // waiting in main's queue is taken back, since main hears a report only once the turn that read it
   // ends, and that turn is the one releasing the worker (workers-decision-1).
   forget(id: string): Throwaway | undefined;
+  // Whether the folder is still on disk. A merge can take it first: `gh pr merge --delete-branch`
+  // removes the branch's worktree, and git spawned into a folder that is gone fails as `spawn git
+  // ENOENT`, which read as the release failing when it had worked.
+  exists(worktreePath: string): boolean;
   // Why the worktree is kept, or null when nothing in it would be lost (finished-work.ts).
   unfinished(worktreePath: string): Promise<string | null>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
@@ -39,9 +43,11 @@ export const paneRelease = action<PaneReleasePorts, { id: string }, { output: st
     const closeNote = closed.output.slice(`closed ${id}`.length);
     const throwaway = ports.forget(id);
     if (throwaway === undefined) return { output: `released ${id}${closeNote}` };
+    const folder = baseName(throwaway.worktreePath);
+    if (!ports.exists(throwaway.worktreePath)) return { output: `released ${id}; ${folder} was already removed${closeNote}` };
     const reason = await ports.unfinished(throwaway.worktreePath);
     if (reason !== null) return { output: `released ${id}${closeNote}; kept ${throwaway.worktreePath}: ${reason}` };
     await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);
-    return { output: `released ${id} and removed ${baseName(throwaway.worktreePath)}${closeNote}` };
+    return { output: `released ${id} and removed ${folder}${closeNote}` };
   },
 });
