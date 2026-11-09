@@ -5,9 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-09T10:05:12.444Z",
-  "updatedAt": "2026-11-09T10:38:15.936Z",
+  "updatedAt": "2026-11-09T10:57:25.203Z",
   "branch": "work-board-card-082e210b-b69d-4cfd-9198-33e",
   "pullRequest": 252,
-  "column": "Review",
-  "order": 0
+  "comments": [
+    {
+      "at": "2026-11-09T10:57:25.203Z",
+      "body": "Shipped in #252: status-bar notices fade (8 s, errors 20 s), Escape or a click clears them, every notice/error logged once a minute per sentence, an error raises a desktop banner while the window is away, Errors settings row turns it off."
+    }
+  ],
+  "column": "Done",
+  "order": 203
 }
