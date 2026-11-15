@@ -1,0 +1,11 @@
+{
+  "id": "fd1764ae-eb9e-4306-a630-4f8f898e0f2d",
+  "title": "Review worker merges only with review.autoMerge on (off by default; global + per-project)",
+  "notes": "The review worker merges a PR only when merging is turned on. It is off by default, and it can be set globally and per project.\n\nWhy: when a card reaches Review, the app's review worker (prompt in src/main/ship/review.ts) runs /pr-loop and then lands the PR with `gh pr merge`. #290 merged that way on 2026-11-16 without the user's go-ahead. Two commits reached main with no review after them.\n\nDo:\n- A global setting, `review.autoMerge`, false by default, in the settings file next to review.autoLoop.\n- A per-project override on the project's entry in ~/.dashboard/projects.yaml (autoMerge: true|false), read the way PR #288 reads bumpVersion (src/main/projects/projects-file.ts). The project value wins when set; otherwise the global value applies. A missing or broken file means off.\n- One exported decision, \"may this review land its PR\", with a test covering global off/on × project unset/false/true.\n- When merging is off: the review prompt stops after /pr-loop and CI are green. It does not merge and does not move the card. It reports to main-dashboard with the rounds, the fixes, what is open and the CI state, so the user decides.\n- When merging is on: it behaves as today, except that it waits for CI to go green on the final head commit before `gh pr merge`. Any commit pushed after the last review round must also pass CI before the merge.\n- The settings screen shows the global setting, and the settings, help and docs (ship, workers, settings) change with it.\n\nDo not bump the version.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-15T23:28:05.310Z",
+  "updatedAt": "2026-11-15T23:28:05.310Z",
+  "column": "Backlog",
+  "order": 43
+}
