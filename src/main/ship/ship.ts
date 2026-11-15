@@ -1,6 +1,7 @@
 import { basename, dirname, join } from 'node:path';
 import { BOARD_DIRECTORY } from '../board/board-store';
 import { slug } from '../../shared/app/slug';
+import { BUMP_VERSION, KEEP_VERSION } from '../skills/work-card-skill';
 
 // Every decision the ship makes that is not git's or Electron's. The handlers in main.ts run the
 // commands; what to call things and what counts as being in the way is here, where a test can pin it.
@@ -71,11 +72,12 @@ export function notOpenRefusal(title: string): string {
   return `"${title}" is on a project the app does not have open; open it first`;
 }
 
-// What the agent shipping a card is asked to do: the one command, and the card it is aimed at. A
-// function rather than the string spelled out at each call site, because a ship writes it twice — once
-// when it starts and once when it is finished after stopping part way — and two copies drift.
-export function workPrompt(cardId: string): string {
-  return `/work-card ${cardId}`;
+// What the agent shipping a card is asked to do: the one command, the card it is aimed at, and whether
+// the project bumps its version (its projects.yaml entry), and the base branch it bumps from. A function rather than the string spelled
+// out at each call site, because a ship writes it twice — once when it starts and once when it is
+// finished after stopping part way — and two copies drift.
+export function workPrompt(cardId: string, bumpVersion: boolean, base: string): string {
+  return `/work-card ${cardId} ${bumpVersion ? BUMP_VERSION : KEEP_VERSION} ${base}`;
 }
 
 // Every file `git status --porcelain` named, whatever it is. This is git's own answer, so it is the

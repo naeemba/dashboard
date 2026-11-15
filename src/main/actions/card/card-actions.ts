@@ -6,7 +6,9 @@ import { REVIEW_COLUMN, type Board } from '../../../shared/board/board';
 import type { BoardChanges } from '../../board/board-changes';
 import type { BoardSyncQueue } from '../../board/board-sync-queue';
 import { readBoard, writeBoard } from '../../board/board-store';
+import { homedir } from 'node:os';
 import { realPath } from '../../app/real-path';
+import { bumpsVersion, readProjectsFile } from '../../projects/projects-file';
 import { isProjectBoard } from './project-board';
 import { isLinkedWorktree } from '../../board/linked-worktree';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
@@ -23,7 +25,7 @@ import { cardStart } from './start';
 
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
-export type CardActionsMain = Omit<ShipPorts, 'forgetReview'>
+export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
   & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived'> & {
     table: Channels;
     boardLog: BoardChanges;
@@ -68,7 +70,11 @@ export function cardActions(main: CardActionsMain): CardActions {
     writeBoard: writeShown,
     arrived: (entry: WorktreeEntry) => move.call({ projectPath: entry.projectPath, id: entry.cardId, column: REVIEW_COLUMN, source: 'automatic' }),
   });
-  const shipCard = shipFlow({ ...main, forgetReview: (cardId) => reviews.forget(cardId) });
+  const shipCard = shipFlow({
+    ...main,
+    forgetReview: (cardId) => reviews.forget(cardId),
+    bumpsVersion: (projectPath) => bumpsVersion(readProjectsFile().text, projectPath, homedir(), realPath),
+  });
 
   const move = bind(cardMove, {
     read,

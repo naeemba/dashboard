@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { ranked } from '../../shared/app/fuzzy';
 import { BOARD_DIRECTORY } from '../board/board-store';
+import { wholePath } from '../nvim/file-open';
 
 // ~/.dashboard/projects.yaml: every project the manager can be asked about, one entry each, written
 // by hand. Read here, and only here, into Project values; the `project` command and whatever opens a
@@ -20,8 +21,10 @@ import { BOARD_DIRECTORY } from '../board/board-store';
 //       - name: new-raxel
 //         role: test
 //         address: https://test.example.com
+//     bumpVersion: true
 //
-// name and path are required, the rest optional. A key the reader does not know is a problem rather
+// name and path are required, the rest optional. bumpVersion, false when left out, says whether a
+// shipped card bumps the project's version (projects-decision-1). A key the reader does not know is a problem rather
 // than ignored, so a misspelt `alias:` is said out loud instead of quietly matching nothing.
 
 export type Deploy = { name: string; role: string; address: string };
@@ -33,11 +36,12 @@ export type Project = {
   site: string;
   about: string;
   deploy: Deploy[];
+  bumpVersion: boolean;
 };
 
 export type ProjectsRead = { ok: true; projects: Project[] } | { ok: false; problems: string[] };
 
-const PROJECT_KEYS = ['name', 'aka', 'path', 'site', 'about', 'deploy'];
+const PROJECT_KEYS = ['name', 'aka', 'path', 'site', 'about', 'deploy', 'bumpVersion'];
 const DEPLOY_KEYS = ['name', 'role', 'address'];
 
 type Fields = Map<string, { value: unknown; line: number }>;
@@ -107,6 +111,15 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
     return value ?? '';
   };
 
+  // An optional true or false: absent is false, anything else a problem and false.
+  const flag = (found: Fields, key: string): boolean => {
+    const field = found.get(key);
+    if (field === undefined || isEmpty(field.value)) return false;
+    if (isScalar(field.value) && typeof field.value.value === 'boolean') return field.value.value;
+    problem(field.line, `${key} must be true or false`);
+    return false;
+  };
+
   // An optional list: each item through `each`, anything but a list one problem on the field's line.
   const list = <T>(found: Fields, key: string, notAList: string, each: (item: unknown) => T | null): T[] => {
     const field = found.get(key);
@@ -144,9 +157,30 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
       else owner.set(key, { project: name, line: entryLine });
     }
 
-    projects.push({ name, aka, path, deploy, site: optional(found, 'site') ?? '', about: optional(found, 'about') ?? '' });
+    projects.push({
+      name, aka, path, deploy, site: optional(found, 'site') ?? '', about: optional(found, 'about') ?? '',
+      bumpVersion: flag(found, 'bumpVersion'),
+    });
   }
   return problems.length > 0 ? { ok: false, problems } : { ok: true, projects };
+}
+
+// The entry naming the folder. A path written exactly as the folder skips the realpath call, which
+// is the common case for an entry the app appended itself.
+export function listedFolder(projects: readonly Project[], folder: string, home: string, realPath: (folder: string) => string): Project | undefined {
+  const real = realPath(folder);
+  return projects.find((project) => {
+    const whole = wholePath(project.path, home);
+    return whole !== undefined && (whole === folder || realPath(whole) === real);
+  });
+}
+
+// Whether a card shipped in the folder bumps its version: its entry says `bumpVersion: true`. No file,
+// a file that does not read, or a folder it does not list is false, the default, so a broken file
+// never adds a version change a project's CI may refuse.
+export function bumpsVersion(text: string | null, folder: string, home: string, realPath: (folder: string) => string): boolean {
+  const listed = projectsListed(text, 'projects.yaml');
+  return listed.ok && listedFolder(listed.projects, folder, home, realPath)?.bumpVersion === true;
 }
 
 // The projects a word finds, best first. Name and every aka are fuzzy-matched each on its own, so a

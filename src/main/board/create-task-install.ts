@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { failureLine } from '../command/failure-line';
 import { replaceFileIfChanged } from '../app/replace-file';
-import { skillFolder } from '../skills/skill-folder';
+import { skillFile, skillFolder } from '../skills/skill-folder';
 
 // /create-task and the program it runs, which install-skills.ts writes under ~/.claude at every
 // launch so an upgrade reaches it with no step of its own.
@@ -86,7 +86,7 @@ export function installCreateTask(home: string, builtScript: string): string | n
   try {
     const script = createTaskScript(home);
     replaceFileIfChanged(script, SHEBANG + readFileSync(builtScript, 'utf8'), EXECUTABLE);
-    replaceFileIfChanged(path.join(createTaskFolder(home), 'SKILL.md'), createTaskSkill(script));
+    replaceFileIfChanged(skillFile(home, 'create-task'), createTaskSkill(script));
     // Node reads a .js as ESM when the nearest package.json above it says "type": "module", and one
     // in ~/.claude or ~ would make the CommonJS program fail with `require is not defined`.
     replaceFileIfChanged(path.join(createTaskFolder(home), 'package.json'), '{"type":"commonjs"}\n');

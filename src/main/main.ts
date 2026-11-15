@@ -841,8 +841,8 @@ app.on('ready', () => {
   app.setAboutPanelOptions({ applicationVersion: __BUILD_VERSION__ });
   logStore.log({ level: 'info', kind: 'app', message: `started v${__BUILD_VERSION__}` });
   createWindow();
-  // After the window, since nothing on screen needs it: /create-task with its program, and
-  // /adopt-docs, under ~/.claude, refreshed from this build (install-skills.ts). The installed app
+  // After the window, since nothing on screen needs it: /create-task with its program, /adopt-docs
+  // and /work-card, under ~/.claude, refreshed from this build (install-skills.ts). The installed app
   // only: every Claude session on the machine runs that copy, and a dev run from a half-done branch
   // would hand them its program.
   if (app.isPackaged) {

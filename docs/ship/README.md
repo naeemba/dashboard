@@ -25,10 +25,17 @@ worktree, a ship's, a review's or a throwaway's, is made by worktree.make and
 removed by worktree.remove; the record naming a card's pane is written by the
 keeper's `givePane`, whichever door started the agent.
 
+The agent is started on `/work-card <card id> bump-version|keep-version <base branch>`
+(`workPrompt`), the skill the app installs ([skills](../skills/README.md#work-card)).
+The second word is the project's `bumpVersion` in `projects.yaml`, read at each
+ship, `keep-version` unless it says `true` (projects-decision-1). The third is the
+branch the worktree was cut from, which a bump merges in first.
+
 ## Scenarios
 
 - Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane, on a Claude screen off Windows.
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
+- Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.
 - Given the review merged the pull request, when it finishes, then the card is moved to Done on the branch, then merged, then on the app's board.
 - Given a worktree with modified files, when you remove it from the list, then the app says so instead of git's raw `fatal:`.
