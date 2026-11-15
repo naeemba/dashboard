@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:28:05.310Z",
-  "updatedAt": "2026-11-15T23:49:13.398Z",
+  "updatedAt": "2026-11-15T23:49:48.378Z",
   "branch": "review-worker-merges-only-with-review-autom",
   "pullRequest": 291,
   "comments": [
     {
       "at": "2026-11-15T23:37:40.059Z",
       "body": "Pull request #291 opened: Review worker merges only with review.autoMerge on https://github.com/naeemba/dashboard/pull/291"
+    },
+    {
+      "at": "2026-11-15T23:49:48.378Z",
+      "body": "Pull request #291 merged: Review worker merges only with review.autoMerge on https://github.com/naeemba/dashboard/pull/291"
     }
   ],
   "column": "Done",
