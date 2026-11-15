@@ -150,6 +150,23 @@ describe('paneHostServer', () => {
     host.pollForeground();
     expect(sent).toEqual([]);
   });
+
+  // pane-shell.ts's foregroundName says why.
+  it('reads the scope runner starting a shell as nothing, and one started after the shell as a program', () => {
+    const { host, spawned } = server();
+    const sent: FromHost[] = [];
+    host.connect((message) => sent.push(message));
+    host.receive({ type: 'spawn', ...request('k') });
+    const shell = spawned[0].shell as { process: string };
+    shell.process = '/usr/bin/systemd-run';
+    host.pollForeground();
+    expect(sent.filter((message) => message.type === 'foreground')).toEqual([]);
+    for (const name of ['zsh', 'systemd-run']) {
+      shell.process = name;
+      host.pollForeground();
+    }
+    expect(sent.filter((message) => message.type === 'foreground').map((message) => message.name)).toEqual(['zsh', 'systemd-run']);
+  });
 });
 
 describe('hostCommand', () => {

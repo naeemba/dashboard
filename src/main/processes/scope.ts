@@ -1,4 +1,5 @@
 import { slug } from '../../shared/app/slug';
+import { SCOPE_RUNNER } from '../../shared/processes/scope-runner';
 
 // Which systemd scope a process the app starts runs in, as a command: the decision only, nothing
 // spawned or asked here. docs/processes/README.md says why each pane and agent gets a scope of its
@@ -40,7 +41,7 @@ export function scopedCommand(request: ScopeRequest, support: ScopeSupport): Sco
   const unit = freeUnit(request, support);
   if (unit === null) return unchanged;
   return {
-    file: 'systemd-run',
+    file: SCOPE_RUNNER,
     args: [
       '--user', '--scope', '--collect', '--quiet', `--slice=${SLICES[request.kind]}`, `--unit=${unit}`,
       ...(request.kind !== 'shell' ? ['-p', `MemoryHigh=${AGENT_MEMORY_HIGH}`, '-p', `MemoryMax=${AGENT_MEMORY_MAX}`] : []),
