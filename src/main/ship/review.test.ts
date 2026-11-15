@@ -154,15 +154,11 @@ describe('reviewPrompt', () => {
     expect(prompt).not.toContain('--approve');
   });
 
-  // The whole of the ordering. The board command writes main itself now (board-sync-git.ts), so a Done
-  // moved before the merge is main saying Done for a pull request that may yet be refused: kamandsystem
-  // #19 sat there unmerged. One move, after the merge, and no commit of the branch's board.
-  it('merges first and moves the card to Done once, after', () => {
-    const merge = prompt.indexOf('gh pr merge 12 --merge');
-    const move = prompt.indexOf(`cd '/work/api' && node "$DASHBOARD_BOARD" move ${CARD} Done`);
-    expect(merge).toBeGreaterThan(-1);
-    expect(merge).toBeLessThan(move);
-    expect(prompt.split(`move ${CARD} Done`)).toHaveLength(2);
+  // The app's follow moves the card to Done once gh says merged. An agent asked to move it as well can
+  // move it before the merge, and main says Done for a pull request that may yet be refused:
+  // kamandsystem #19 sat there unmerged.
+  it('leaves the move to Done to the app', () => {
+    expect(prompt).not.toContain(`move ${CARD}`);
     expect(prompt).not.toContain('git commit');
   });
 
