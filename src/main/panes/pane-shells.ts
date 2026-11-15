@@ -95,7 +95,15 @@ export function paneShells(main: {
     else scopeUnits.set(id, unit);
     const copy = screenCopyWhile(main.keepsScreens, () => shell);
     screenCopies.set(id, copy);
-    shell.onData((data) => { copy.push(data); main.send('pty:data', id, data); });
+    // The pty's first output is the shell's prompt, printed while the shell holds the foreground, so a
+    // reading there marks the shell as past its scope runner (pane-shell.ts's foregroundName) even when
+    // nothing asks for one before you start a systemd-run of your own. Nothing polls an in-process pane.
+    let pastTheRunner = false;
+    shell.onData((data) => {
+      if (!pastTheRunner) pastTheRunner = foregroundName(shell) !== undefined;
+      copy.push(data);
+      main.send('pty:data', id, data);
+    });
     shell.onExit(({ exitCode }) => {
       // Only when this is still the pane's shell. A ship kills the shell in the pane it takes and
       // starts the agent in the same tick, and the killed shell's exit arrives after that: without the

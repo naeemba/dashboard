@@ -44,8 +44,9 @@ const pastTheirRunner = new WeakSet<PaneShell>();
 // scope is made and it execs the shell, and the first reading can land in that window: counted as a
 // program, a pane `pane claim` had just handed out was refused by `pane run` as running systemd-run,
 // while `pane list` a moment later said idle. So the runner answers nothing until the pty has named
-// anything else. A systemd-run you start yourself comes after your shell's prompt and reads as the
-// program it is. A pane host's shell (`kept`) was read by the host, which already did this.
+// anything else. A systemd-run you start yourself comes after your shell's prompt, which marks the shell:
+// the host reads every pane every 500 ms, and an in-process pane is read on its first output (listenTo
+// in pane-shells.ts). A pane host's shell (`kept`) was read by the host, which already did this.
 export function foregroundName(shell: PaneShell | undefined): string | undefined {
   let name: string | undefined;
   try {

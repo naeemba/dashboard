@@ -172,6 +172,9 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   its own; the old host's shells run on unseen.
 - A host started by a build before systemd scopes runs every pane unscoped
   until it exits (processes README).
+- A host started by a build before #289 reads a pane it has just spawned as
+  running `systemd-run`, so `pane run` right after `pane claim` refuses it,
+  until that host exits.
 
 - A job put in the background is invisible to the busy check; `runsAProgram`
   in `pane-reading.ts` says why.

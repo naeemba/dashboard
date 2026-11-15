@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { terminalId, EDITOR_INDEX } from '../../shared/panes/terminals';
 import { screens } from '../../shared/remote-host/screens';
 import type { PaneHost } from './pane-host-client';
-import type { PaneShell } from './pane-shell';
+import { foregroundName, type PaneShell } from './pane-shell';
 import type { SpawnRequest } from './pane-host-protocol';
 import { paneShells } from './pane-shells';
 import type { ScopeRequest } from '../processes/scope';
@@ -65,6 +65,21 @@ describe('paneShells', () => {
     ]);
     expect(made.requests[0]).toMatchObject({ file: '/bin/zsh', args: ['-ilc', 'claude'] });
     expect(made.scopeUnits.get(AGENT)).toBe('agent-dashboard-2.scope');
+  });
+
+  // pane-shell.ts's foregroundName says why.
+  it('marks an in-process shell past its runner on its first output, so a systemd-run started later reads as a program', () => {
+    const made = shells();
+    const listeners: ((data: string) => void)[] = [];
+    const shell = { ...fakeShell(), onData: (listener: (data: string) => void) => listeners.push(listener) };
+    made.listenTo(WORKER, shell, '/bin/zsh', undefined);
+    listeners.forEach((listener) => listener('$ '));
+    shell.process = 'systemd-run';
+    expect(made.foregroundOf(WORKER)).toBe('systemd-run');
+  });
+
+  it('passes a pane host\'s reading through as it is, runner or not', () => {
+    expect(foregroundName({ ...fakeShell(true), process: 'systemd-run' })).toBe('systemd-run');
   });
 
   it('forgets a pane\'s scope when the pane is dropped or its shell comes back unscoped', () => {
