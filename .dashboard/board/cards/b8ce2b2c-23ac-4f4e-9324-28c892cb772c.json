@@ -1,0 +1,11 @@
+{
+  "id": "b8ce2b2c-23ac-4f4e-9324-28c892cb772c",
+  "title": "pane run refuses a just-claimed pane as busy (systemd-run seen as a command)",
+  "notes": "A pane that `pane claim` hands out can be refused by `pane run` as busy.\n\nSeen 2026-11-16:\n- After #287 merged, `pane release 0:1` printed \"released 0:1; run-pr-loop-... was already removed\".\n- The next `pane claim` returned 0:1. Then `pane run 0:1 ...` failed: \"0:1 is running systemd-run — claim another\".\n- `pane list` showed \"0:1 terminal 2 idle\".\n- A second claim gave 0:2, which worked.\n\nLikely cause: the pane's shell is started through systemd-run (scope.ts / spawn-scoped.ts, panes.slice). The busy check reads the pane's foreground process and sees the systemd-run wrapper as a running command, at least just after the shell is spawned. claim, list and run then disagree about whether the pane is free.\n\nFix at the root: one predicate for \"this pane is free\", exported from where the refusal is decided (errors-rule-1), and used by claim, list and run alike. The systemd-run wrapper, and whatever stands in for the shell inside the scope, must count as the shell rather than as a command. Add a test for that decision.\n\nDo not bump the version.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-15T22:10:33.299Z",
+  "updatedAt": "2026-11-15T22:10:33.299Z",
+  "column": "Backlog",
+  "order": 45
+}
