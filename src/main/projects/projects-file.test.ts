@@ -137,11 +137,13 @@ describe('findProjects', () => {
   });
 });
 
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
+
 describe('bumpsVersion', () => {
   const same = (folder: string) => folder;
   const file = '- name: a\n  path: ~/a\n  bumpVersion: true\n- name: b\n  path: /b\n';
 
-  it('is the entry for the folder, matched through ~ and through a link', () => {
+  posixPathsOnly('is the entry for the folder, matched through ~ and through a link', () => {
     expect(bumpsVersion(file, '/home/me/a', '/home/me', same)).toBe(true);
     expect(bumpsVersion(file, '/b', '/home/me', same)).toBe(false);
     expect(bumpsVersion(file, '/link-to-a', '/home/me', (folder) => (folder === '/link-to-a' ? '/home/me/a' : folder))).toBe(true);
