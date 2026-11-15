@@ -5,13 +5,13 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:35:13.286Z",
-  "updatedAt": "2026-11-15T23:56:09.822Z",
+  "updatedAt": "2026-11-15T23:56:22.682Z",
   "comments": [
     {
       "at": "2026-11-15T23:56:09.821Z",
       "body": "Note from main-dashboard: build on #258 (auto-close) and #265 (notices held while main is mid-turn); read their code first. The `pane report <id>` verb belongs to this card. Card 787d9a9a (pane dispatch/finish, pr land) runs after this one, so keep the pane command's verb table easy to extend. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 43
+  "column": "Ship",
+  "order": 0
 }
