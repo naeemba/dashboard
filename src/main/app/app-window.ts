@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
-import { dismissesViewer, frameNavigation, isOpenableLink, windowMayNavigate } from '../../shared/panes/links';
+import { isOpenableLink } from '../../shared/panes/links';
+import { dismissesViewer, frameNavigation, windowMayNavigate } from './window-navigation';
 import { TITLE_BAR_HEIGHT } from '../../shared/app/theme';
 
 // The window and the question its close asks. Main-process wiring, out of main.ts because main had
@@ -36,10 +37,10 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
       window.webContents.send('viewer:dismiss');
     });
     // The PDF viewer keeps its own blob and pages, and a link in the PDF opens in the browser rather
-    // than inside the overlay or in a bare window of its own. The window's main frame is also held by
-    // will-navigate below, so 'allow' never lets it leave the app's page.
+    // than inside the overlay or in a bare window of its own. The window's main frame is left to
+    // will-navigate below, which keeps it on the app's page.
     contents.on('will-frame-navigate', (event) => {
-      const where = frameNavigation(event.url, event.isMainFrame);
+      const where = frameNavigation(event.url, event.isMainFrame && contents === window.webContents);
       if (where === 'allow') return;
       event.preventDefault();
       if (where === 'browser') void shell.openExternal(event.url);
