@@ -125,6 +125,8 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 
 - The decisions: `scope.ts` (the command and its unit name), `scope-support.ts`
   (whether scopes work here, and every name handed out)
+- The runner's name: `src/shared/processes/scope-runner.ts`, which
+  `pane-shell.ts` also reads (docs/panes)
 - The edge: `launch-scopes.ts` (the probes, the slice files, daemon-reload,
   stopping a pane's scope), `spawn-scoped.ts` (the one spawn a task and the
   SDK's Claude start through)

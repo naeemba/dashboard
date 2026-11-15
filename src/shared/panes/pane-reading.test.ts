@@ -50,12 +50,6 @@ describe('paneIsBusy', () => {
     expect(paneIsBusy({ ...idle, foreground: 'bash', shell: '/bin/zsh' })).toBe(true);
   });
 
-  // SCOPE_RUNNER says why.
-  it('reads the scope runner starting the shell as the shell', () => {
-    expect(paneIsBusy(running('systemd-run'))).toBe(false);
-    expect(paneIsBusy(running('/usr/bin/systemd-run'))).toBe(false);
-  });
-
   it('reads an agent as busy by its record, not by what the pty says', () => {
     expect(paneIsBusy({ ...agent, foreground: 'zsh' })).toBe(true);
   });

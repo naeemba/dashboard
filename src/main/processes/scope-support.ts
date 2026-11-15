@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { failureText } from '../../shared/errors/failure';
-import { SCOPE_RUNNER } from '../../shared/panes/pane-reading';
+import { SCOPE_RUNNER } from '../../shared/processes/scope-runner';
 import { scopedCommand, type ScopedCommand, type ScopeRequest } from './scope';
 
 // Whether this machine can put a process in a systemd scope, asked once at launch and kept, and the

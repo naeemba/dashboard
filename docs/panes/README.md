@@ -149,6 +149,7 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Given a project behind another one with its panes printing, when you come back to it, then every pane shows its latest output and scrolls back through everything it printed meanwhile.
 - Given a pane link on the Claude screen, when you click it, then the page holding the pane comes forward with the pane focused, the way a notification click lands (see [chat](../chat/README.md)).
 - Given a shell that has finished what it ran, when anything asks whether the pane is busy, then one answer says it is free.
+- Given a pane `pane claim` has just opened, when `pane run` asks whether it is busy before `systemd-run` has started its shell, then it is free; a `systemd-run` you start at the prompt reads as a program like any other.
 - Given a worker pane running a job, when the app quits, crashes or is updated and opens again, then the pane comes back with the same shell, its screen and the job still running.
 - Given Windows, when the app quits and opens again, then every pane comes back the same as on a mac or Linux.
 - Given another user on the same Windows machine, when they open the pane host's pipe, then they hear no screen and the app keeps its panes.

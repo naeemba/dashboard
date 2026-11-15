@@ -78,9 +78,7 @@ nothing about the foreground can be read, so a pane is held back only while an
 agent is working in it and a job of yours in the foreground is taken like any
 other.
 
-A pane whose shell `systemd-run` is still starting in its scope
-(docs/processes) is at its prompt, not running a program: a pane `pane claim`
-has just handed out is free to `pane run`.
+A pane whose shell is still starting is free (docs/panes, its scenarios).
 
 Nothing you have written on this board is touched — the branch gets its own copy
 of the file. The card goes back to where it was once the ship works, carrying a

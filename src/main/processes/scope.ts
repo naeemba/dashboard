@@ -1,5 +1,5 @@
 import { slug } from '../../shared/app/slug';
-import { SCOPE_RUNNER } from '../../shared/panes/pane-reading';
+import { SCOPE_RUNNER } from '../../shared/processes/scope-runner';
 
 // Which systemd scope a process the app starts runs in, as a command: the decision only, nothing
 // spawned or asked here. docs/processes/README.md says why each pane and agent gets a scope of its
