@@ -79,7 +79,7 @@ Folders: `src/main/skills/`.
 - Which skills are installed, and the warning lines: `install-skills.ts`, `install-skills.test.ts`
 - The text of `/adopt-docs`, and the test that it carries this repository's docs rule and index preamble: `adopt-docs-skill.ts`, `adopt-docs-skill.test.ts`
 - The text of `/work-card` and the two words a ship passes it: `work-card-skill.ts`; `ship.test.ts` pins that the skill reads both
-- Where a skill's folder is: `skill-folder.ts`
+- Where a skill's folder and its SKILL.md are: `skill-folder.ts`
 - Wired in `main.ts` at `ready`, after the window opens, in the packaged app only
 
 ## Scenarios

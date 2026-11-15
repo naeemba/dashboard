@@ -111,6 +111,15 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
     return value ?? '';
   };
 
+  // An optional true or false: absent is false, anything else a problem and false.
+  const flag = (found: Fields, key: string): boolean => {
+    const field = found.get(key);
+    if (field === undefined || isEmpty(field.value)) return false;
+    if (isScalar(field.value) && typeof field.value.value === 'boolean') return field.value.value;
+    problem(field.line, `${key} must be true or false`);
+    return false;
+  };
+
   // An optional list: each item through `each`, anything but a list one problem on the field's line.
   const list = <T>(found: Fields, key: string, notAList: string, each: (item: unknown) => T | null): T[] => {
     const field = found.get(key);
@@ -148,13 +157,9 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
       else owner.set(key, { project: name, line: entryLine });
     }
 
-    const bump = found.get('bumpVersion');
-    const bumpVersion = bump === undefined || isEmpty(bump.value) ? false : isScalar(bump.value) ? bump.value.value : null;
-    if (typeof bumpVersion !== 'boolean') problem(bump?.line ?? entryLine, 'bumpVersion must be true or false');
-
     projects.push({
       name, aka, path, deploy, site: optional(found, 'site') ?? '', about: optional(found, 'about') ?? '',
-      bumpVersion: bumpVersion === true,
+      bumpVersion: flag(found, 'bumpVersion'),
     });
   }
   return problems.length > 0 ? { ok: false, problems } : { ok: true, projects };
@@ -174,8 +179,8 @@ export function listedFolder(projects: readonly Project[], folder: string, home:
 // a file that does not read, or a folder it does not list is false, the default, so a broken file
 // never adds a version change a project's CI may refuse.
 export function bumpsVersion(text: string | null, folder: string, home: string, realPath: (folder: string) => string): boolean {
-  const read = text === null ? null : readProjects(text);
-  return read?.ok === true && listedFolder(read.projects, folder, home, realPath)?.bumpVersion === true;
+  const listed = projectsListed(text, 'projects.yaml');
+  return listed.ok && listedFolder(listed.projects, folder, home, realPath)?.bumpVersion === true;
 }
 
 // The projects a word finds, best first. Name and every aka are fuzzy-matched each on its own, so a

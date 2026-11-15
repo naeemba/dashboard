@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createTaskScript } from '../board/create-task-install';
-import { adoptDocsSkillFile, installSkills, workCardSkillFile } from './install-skills';
+import { installSkills } from './install-skills';
+import { skillFile } from './skill-folder';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 function folder(): string {
@@ -20,8 +21,8 @@ describe('installSkills', () => {
   it('writes /adopt-docs and /work-card beside /create-task', () => {
     const home = folder();
     expect(installSkills(home, build())).toEqual([]);
-    expect(readFileSync(adoptDocsSkillFile(home), 'utf8')).toMatch(/^---\nname: adopt-docs\n/);
-    expect(readFileSync(workCardSkillFile(home), 'utf8')).toMatch(/^---\nname: work-card\n/);
+    expect(readFileSync(skillFile(home, 'adopt-docs'), 'utf8')).toMatch(/^---\nname: adopt-docs\n/);
+    expect(readFileSync(skillFile(home, 'work-card'), 'utf8')).toMatch(/^---\nname: work-card\n/);
     expect(existsSync(createTaskScript(home))).toBe(true);
   });
 
@@ -31,7 +32,7 @@ describe('installSkills', () => {
     expect(lines).toHaveLength(2);
     expect(lines[0]).toMatch(/^create-task not installed: ENOENT/);
     expect(lines[1]).toMatch(/^board guard not installed: ENOENT/);
-    expect(readFileSync(adoptDocsSkillFile(home), 'utf8')).toContain('name: adopt-docs');
+    expect(readFileSync(skillFile(home, 'adopt-docs'), 'utf8')).toContain('name: adopt-docs');
   });
 
   it('answers a line, never a throw, when /adopt-docs cannot be written', () => {

@@ -4,3 +4,8 @@ import path from 'node:path';
 export function skillFolder(home: string, name: string): string {
   return path.join(home, '.claude', 'skills', name);
 }
+
+// The text Claude Code reads for that skill.
+export function skillFile(home: string, name: string): string {
+  return path.join(skillFolder(home, name), 'SKILL.md');
+}
