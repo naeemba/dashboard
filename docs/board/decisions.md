@@ -243,7 +243,8 @@ order mattered: moved after the merge, main went on committing `Review` for a
 feature that shipped weeks ago, while the only copy saying `Done` was an
 uncommitted change in one person's checkout. With the command writing main,
 the branch's board carries nothing about the card, and the order is merge, then
-move. `reviewPrompt` in `review.ts` asks only for the merge, and
+move. `reviewPrompt` in `review.ts` asks for no move, only the merge when merging is
+on (ship-decision-1), and
 `review.test.ts` pins that it names no move.
 
 ## board-decision-8: The board is kept by a hook and the app's own instructions, not CLAUDE.md

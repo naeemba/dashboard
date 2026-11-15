@@ -14,12 +14,15 @@ closes the projects it names; you can also edit it by hand.
           role: test
           address: https://test.example.com
 
-`name` and `path` are required; `aka`, `site`, `about`, `deploy` and
-`bumpVersion` are not. A deploy needs all of `name`, `role` and `address`.
+`name` and `path` are required; `aka`, `site`, `about`, `deploy`,
+`bumpVersion` and `autoMerge` are not. A deploy needs all of `name`, `role` and `address`.
 `bumpVersion: true` makes a card shipped in that project bump its version; left
 out, or with no file at all, a shipped card leaves the version alone
-(projects-decision-1, [ship](../ship/README.md)). It is written by hand; `project
-set` keeps it as it is.
+(projects-decision-1, [ship](../ship/README.md)). `autoMerge: true` or `false`
+says whether a review of that project's cards merges its pull request, over
+settings `review.autoMerge`; left out, the setting decides, and with no file, or
+one that does not read, nothing merges (ship-decision-1). Both are written by
+hand; `project set` keeps them as they are.
 
 | Verb | What it prints |
 |---|---|

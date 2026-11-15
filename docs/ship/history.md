@@ -14,3 +14,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-08 #233 — A shipped card's agent and its review loop start through pane.dispatch, a Claude screen off Windows (workers-decision-8)
 - 2026-11-16 #288 — A ship tells `/work-card` whether to bump the version, from projects.yaml (projects-decision-1)
 - 2026-11-16 #290 — The review prompt no longer moves the card to Done (board-decision-7)
+- 2026-11-16 — The review merges only with `review.autoMerge` or the project's `autoMerge` on, after CI passes on the head commit; off, it reports to main (ship-decision-1)

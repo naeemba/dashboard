@@ -32,6 +32,12 @@ pull request opens starts its review loop by itself. Enter turns it over. Off,
 the card waits in Review until you move it into Review or run `dashboard board
 review <id>` (docs/actions).
 
+The Review section's second row, Merge (`review.autoMerge`, default off), says whether that review loop
+merges the pull request once it and CI are green. Off, the review stops there
+and reports to the project's main, and you merge. A project's `autoMerge` in
+`~/.dashboard/projects.yaml` wins over this row (ship-decision-1,
+[projects](../projects/README.md)).
+
 The Updates row (`updates.check`, default on) says whether the app reads
 GitHub's newest release on launch and every six hours. Enter turns it over; off,
 the updates key still checks when pressed (docs/updates).
