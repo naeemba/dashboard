@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createTaskScript } from '../board/create-task-install';
-import { adoptDocsSkillFile, installSkills } from './install-skills';
+import { adoptDocsSkillFile, installSkills, workCardSkillFile } from './install-skills';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 function folder(): string {
@@ -17,10 +17,11 @@ function build(): string {
 }
 
 describe('installSkills', () => {
-  it('writes /adopt-docs beside /create-task', () => {
+  it('writes /adopt-docs and /work-card beside /create-task', () => {
     const home = folder();
     expect(installSkills(home, build())).toEqual([]);
     expect(readFileSync(adoptDocsSkillFile(home), 'utf8')).toMatch(/^---\nname: adopt-docs\n/);
+    expect(readFileSync(workCardSkillFile(home), 'utf8')).toMatch(/^---\nname: work-card\n/);
     expect(existsSync(createTaskScript(home))).toBe(true);
   });
 

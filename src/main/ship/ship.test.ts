@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  blockingChanges, branchNameFor, changedFiles, oneAtATime, worktreePathFor,
+  blockingChanges, branchNameFor, changedFiles, oneAtATime, workPrompt, worktreePathFor,
 } from './ship';
+import { BUMP_VERSION, KEEP_VERSION, WORK_CARD_SKILL } from '../skills/work-card-skill';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -162,5 +163,13 @@ describe('oneAtATime', () => {
     const failed = queue('api', async () => { throw new Error('index.lock'); });
     await expect(failed).rejects.toThrow('index.lock');
     await expect(queue('api', async () => 'next')).resolves.toBe('next');
+  });
+});
+
+describe('workPrompt', () => {
+  it('sends the card and the project\'s version word, both of which the skill reads', () => {
+    expect(workPrompt(cardId, true)).toBe(`/work-card ${cardId} ${BUMP_VERSION}`);
+    expect(workPrompt(cardId, false)).toBe(`/work-card ${cardId} ${KEEP_VERSION}`);
+    for (const word of [BUMP_VERSION, KEEP_VERSION, '$0', '$1']) expect(WORK_CARD_SKILL).toContain(word);
   });
 });

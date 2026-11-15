@@ -5,9 +5,14 @@ import { installBoardGuard } from '../board/board-guard-install';
 import { failureLine } from '../command/failure-line';
 import { ADOPT_DOCS_SKILL } from './adopt-docs-skill';
 import { skillFolder } from './skill-folder';
+import { WORK_CARD_SKILL } from './work-card-skill';
 
 export function adoptDocsSkillFile(home: string): string {
   return path.join(skillFolder(home, 'adopt-docs'), 'SKILL.md');
+}
+
+export function workCardSkillFile(home: string): string {
+  return path.join(skillFolder(home, 'work-card'), 'SKILL.md');
 }
 
 // Every skill the app puts under ~/.claude/skills, refreshed from this build at each launch. Answers
@@ -19,10 +24,16 @@ export function installSkills(home: string, buildFolder: string): string[] {
   if (createTask !== null) lines.push(createTask);
   const guard = installBoardGuard(home, path.join(buildFolder, 'board-cli-entry.js'));
   if (guard !== null) lines.push(guard);
-  try {
-    replaceFileIfChanged(adoptDocsSkillFile(home), ADOPT_DOCS_SKILL);
-  } catch (error: unknown) {
-    lines.push(`adopt-docs not installed: ${failureLine(error)}`);
+  const skills: [name: string, file: string, text: string][] = [
+    ['adopt-docs', adoptDocsSkillFile(home), ADOPT_DOCS_SKILL],
+    ['work-card', workCardSkillFile(home), WORK_CARD_SKILL],
+  ];
+  for (const [name, file, text] of skills) {
+    try {
+      replaceFileIfChanged(file, text);
+    } catch (error: unknown) {
+      lines.push(`${name} not installed: ${failureLine(error)}`);
+    }
   }
   return lines;
 }

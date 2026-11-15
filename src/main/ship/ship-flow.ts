@@ -19,6 +19,8 @@ export type ShipPorts = {
   makeWorktree(request: ShipWorktreeRequest): Promise<ShipWorktree>;
   // A free worker for the card's agent, or a new one; main.ts says how it picks.
   attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult>;
+  // Whether a card shipped in the project bumps its version: its projects.yaml entry, off by default.
+  bumpsVersion(projectPath: string): boolean;
   agentRunsIn(slot: number, pane: number | null): boolean;
   dropDeadWorktrees(): void;
   forgetReview(cardId: string): void;
@@ -99,7 +101,7 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
 
     const refusal = await commitShipMove(entry);
     if (refusal !== null) return { ok: false, message: refusal };
-    return ports.attachPane(entry, slot, workPrompt(cardId));
+    return ports.attachPane(entry, slot, workPrompt(cardId, ports.bumpsVersion(projectPath)));
   }
 
   return async function shipCard(request: ShipRequest): Promise<ShipResult> {
@@ -140,7 +142,7 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
         // `reviewing: false` is the other half of the forget above. A record that was the review keeps
         // the flag through this spread otherwise, and the sweep skips the card for good: the pull
         // request this ship opens is never reviewed, with nothing on screen saying why.
-        return ports.attachPane({ ...existing, reviewing: false }, slot, workPrompt(cardId));
+        return ports.attachPane({ ...existing, reviewing: false }, slot, workPrompt(cardId, ports.bumpsVersion(projectPath)));
       });
     } catch (error: unknown) {
       return { ok: false, message: `ship failed: ${failureText(error)}` };

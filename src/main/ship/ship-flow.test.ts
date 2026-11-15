@@ -28,6 +28,7 @@ describe('a resumed ship over a card file that does not parse', () => {
       agentRunsIn: () => false,
       dropDeadWorktrees: () => undefined,
       forgetReview: () => undefined,
+      bumpsVersion: () => false,
       queue: (_, run) => run(),
     });
     for (let run = 0; run < 2; run += 1) {
