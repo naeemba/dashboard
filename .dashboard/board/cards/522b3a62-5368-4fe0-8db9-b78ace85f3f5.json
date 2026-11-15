@@ -1,0 +1,11 @@
+{
+  "id": "522b3a62-5368-4fe0-8db9-b78ace85f3f5",
+  "title": "board move/comment/add commit and push by themselves, so the board never conflicts",
+  "notes": "From the 30-session retro (2026-11-16), dashboard manager session 43c16374:\n- `git checkout -- .dashboard/board.json; git pull` ran 42 times;\n- `for i in 1 2 3` retry loops ran 47 times;\n- workers reported board.json merge conflicts 9 times;\n- one pull failed with \"Your local changes … board.json would be overwritten\".\n\ncreate-task.js already commits to main from a throwaway worktree. Make every writing board verb do the same, with retries on a push race, so callers never touch git for the board. Check first whether the current \"read and written on origin's default branch\" behaviour already covers part of this.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-15T23:35:27.216Z",
+  "updatedAt": "2026-11-15T23:35:27.216Z",
+  "column": "Backlog",
+  "order": 45
+}
