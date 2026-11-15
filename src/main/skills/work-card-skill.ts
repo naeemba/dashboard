@@ -4,17 +4,19 @@
 // ~/.claude/commands/work-card.md of the same name, so an old dotfiles copy is shadowed, not run.
 //
 // Nothing here repeats what every worker is already told or held to: the board's rules are
-// BOARD_INSTRUCTIONS (workers/dispatch.ts), and the guard hook refuses quitting the running app.
+// BOARD_INSTRUCTIONS (workers/dispatch.ts). The guard hook refuses only commands aimed at the Dashboard
+// app itself, so the skill still says not to quit any running app: another project's is not guarded.
 
 // The second word of the prompt: whether this project bumps its version, from its projects.yaml
-// entry (projects-decision-1). Always one of the two, so `$1` is never left in the text unfilled.
+// entry (projects-decision-1). Always one of the two, so `$1` is never left in the text unfilled. The
+// third, `$2`, is the branch the worktree was cut from, which is not always main.
 export const BUMP_VERSION = 'bump-version';
 export const KEEP_VERSION = 'keep-version';
 
 export const WORK_CARD_SKILL = `---
 name: work-card
 description: Work the board card with this id, start to finish, in the worktree the app already made for it
-argument-hint: <card id> [${BUMP_VERSION}|${KEEP_VERSION}]
+argument-hint: <card id> [${BUMP_VERSION}|${KEEP_VERSION}] <base branch>
 model: opus
 effort: high
 ---
@@ -53,11 +55,11 @@ project is held to.
   release. The version is how anybody tells an installed copy from what has
   been merged.
 
-  Bump last, right before you open the pull request, and bump from what
-  \`main\` says then. Other cards run in their own worktrees at the same time,
-  and two that both bumped from \`1.4.0\` early both say \`1.5.0\`. So first run
-  \`git fetch origin && git merge origin/main\` — the local \`main\` here is as
-  old as the worktree — then bump. If the merge conflicts, resolve it the way
+  Bump last, right before you open the pull request, and bump from what the
+  base branch, \`$2\`, says then. Other cards run in their own worktrees at the
+  same time, and two that both bumped from \`1.4.0\` early both say \`1.5.0\`.
+  So first run \`git fetch origin && git merge origin/$2\` — the local \`$2\`
+  here is as old as the worktree — then bump. If the merge conflicts, resolve it the way
   \`/pr-conflicts\` does, commit the merge, then bump.
 
   Bump with \`npm version <patch|minor|major> --no-git-tag-version\`, whatever
@@ -66,7 +68,7 @@ project is held to.
   worktree, so the next card to reach the same number would fail on it. A
   project with no \`package.json\` is bumped wherever it keeps its version.
   Commit the bump on its own. If the pull request later conflicts on the
-  version, merge \`origin/main\` the same way, keep its number and bump again
+  version, merge \`origin/$2\` the same way, keep its number and bump again
   from it.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
   type-check and lint scripts. Run them through the package manager its
@@ -81,6 +83,8 @@ project is held to.
 ## What not to do
 
 - Do not touch the main branch, or any file outside this worktree.
+- Do not quit, kill, restart or rebuild any running app, including the one
+  whose pane you are running in.
 - Do not remove this worktree when you are finished — that is done by hand,
   from the app's worktree list.
 - If the card turns out to be wrong or impossible, stop, say why — as a

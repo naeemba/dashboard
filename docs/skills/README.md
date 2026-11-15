@@ -45,17 +45,19 @@ aside).
 
 ## /work-card
 
-What a shipped card's agent is started on: `/work-card <card id> bump-version|keep-version`
+What a shipped card's agent is started on: `/work-card <card id> bump-version|keep-version <base branch>`
 ([ship](../ship/README.md)). It reads the card and its subtasks and the project's `CLAUDE.md`, does
 the work, runs the project's checks and opens the pull request. The checks are the ones `CLAUDE.md`
 names, else the project's test, type-check and lint scripts, through the package manager its
 lockfile names. The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
-`bump-version` tells it to bump last, from `origin/main`, with `npm version --no-git-tag-version`.
+`bump-version` tells it to bump last, from `origin/<base branch>` (the third word, the branch the
+worktree was cut from), with `npm version --no-git-tag-version`.
 
 It does not repeat what every worker is already told or held to: the board's rules are
 `BOARD_INSTRUCTIONS`, appended to every worker's system prompt, and the board guard's hook refuses
-the board edits. A skill in `~/.claude/skills/` wins over a `~/.claude/commands/` file of the same
+the board edits. It does say not to quit, kill, restart or rebuild any running app: the running-app
+guard refuses only commands aimed at the Dashboard app, and another project's app is not covered. A skill in `~/.claude/skills/` wins over a `~/.claude/commands/` file of the same
 name ([Claude Code skills](https://code.claude.com/docs/en/skills), "Resolve skills that share a
 name"), so an older `~/.claude/commands/work-card.md` is shadowed by the app's copy, not run.
 
@@ -78,7 +80,7 @@ Folders: `src/main/skills/`.
 
 - Which skills are installed, and the warning lines: `install-skills.ts`, `install-skills.test.ts`
 - The text of `/adopt-docs`, and the test that it carries this repository's docs rule and index preamble: `adopt-docs-skill.ts`, `adopt-docs-skill.test.ts`
-- The text of `/work-card` and the two words a ship passes it: `work-card-skill.ts`; `ship.test.ts` pins that the skill reads both
+- The text of `/work-card` and the words a ship passes it: `work-card-skill.ts`; `ship-flow.test.ts` pins that a ship asks about the project's path and passes its base
 - Where a skill's folder and its SKILL.md are: `skill-folder.ts`
 - Wired in `main.ts` at `ready`, after the window opens, in the packaged app only
 

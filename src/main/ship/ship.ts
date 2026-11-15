@@ -73,11 +73,11 @@ export function notOpenRefusal(title: string): string {
 }
 
 // What the agent shipping a card is asked to do: the one command, the card it is aimed at, and whether
-// the project bumps its version (its projects.yaml entry). A function rather than the string spelled
+// the project bumps its version (its projects.yaml entry), and the base branch it bumps from. A function rather than the string spelled
 // out at each call site, because a ship writes it twice — once when it starts and once when it is
 // finished after stopping part way — and two copies drift.
-export function workPrompt(cardId: string, bumpVersion: boolean): string {
-  return `/work-card ${cardId} ${bumpVersion ? BUMP_VERSION : KEEP_VERSION}`;
+export function workPrompt(cardId: string, bumpVersion: boolean, base: string): string {
+  return `/work-card ${cardId} ${bumpVersion ? BUMP_VERSION : KEEP_VERSION} ${base}`;
 }
 
 // Every file `git status --porcelain` named, whatever it is. This is git's own answer, so it is the
