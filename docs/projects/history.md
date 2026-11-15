@@ -8,3 +8,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-07 #229 — `project open` starts the project's main and answers once SendMessage can reach it
 - 2026-11-09 #247 — the close key sends main each pane's index and name only; whole panes failed the IPC clone and no project closed
 - 2026-11-16 #288 — `bumpVersion` on an entry says whether a card shipped there bumps the version, off by default (projects-decision-1)
+- 2026-11-16 — `autoMerge` on an entry says whether a review merges there, over settings `review.autoMerge` (ship-decision-1)

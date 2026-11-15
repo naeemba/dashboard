@@ -3,7 +3,7 @@ import { stringify } from 'yaml';
 
 // `project init`: a first ~/.dashboard/projects.yaml written from the projects the app knows, the
 // open ones first, then the recent ones, so the owner starts from a list rather than a blank file.
-// Only name and path are filled; aka, site, about, deploy and bumpVersion are the owner's to add. Writing the file,
+// Only name and path are filled; aka, site, about, deploy, bumpVersion and autoMerge are the owner's to add. Writing the file,
 // and never over one that is there, is project-program.ts's job.
 
 const HEADER = `# Every project the manager can be asked about. Written by \`dashboard project init\` from the
@@ -17,6 +17,7 @@ const HEADER = `# Every project the manager can be asked about. Written by \`das
 #       role: production
 #       address: https://example.com
 #   bumpVersion: true   # a shipped card bumps the version; off when left out
+#   autoMerge: true     # a review merges its pull request; settings review.autoMerge when left out
 `;
 
 // A path under home is written from ~, the way a person would write it.

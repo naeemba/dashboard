@@ -51,6 +51,9 @@ export type ReviewPorts = {
   // A finished card noticed: card.move into Review with source 'automatic', which starts the loop
   // through `review` below only when settings review.autoLoop is on (column-entry.ts).
   arrived: (entry: WorktreeEntry) => Promise<unknown>;
+  // Whether the review may merge its pull request (landsPullRequest), read at each start so a change on
+  // the settings screen or in projects.yaml holds for the next review.
+  landsPullRequest: (projectPath: string) => boolean;
 };
 
 // The pull request this card's work opened, or null while there is none yet. That number is the whole
@@ -166,7 +169,7 @@ async function swapWorktree(
   const started = await ports.startReview(
     { ...entry, pane: null, reviewing: true },
     slot,
-    reviewPrompt(entry.cardId, pullRequest, entry.projectPath),
+    reviewPrompt(entry.cardId, pullRequest, entry.projectPath, ports.landsPullRequest(entry.projectPath)),
   );
   return { message: started.ok ? '' : started.message, again: false };
 }

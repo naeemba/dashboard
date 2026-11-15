@@ -22,9 +22,11 @@ import { wholePath } from '../nvim/file-open';
 //         role: test
 //         address: https://test.example.com
 //     bumpVersion: true
+//     autoMerge: false
 //
 // name and path are required, the rest optional. bumpVersion, false when left out, says whether a
-// shipped card bumps the project's version (projects-decision-1). A key the reader does not know is a problem rather
+// shipped card bumps the project's version (projects-decision-1). autoMerge, null when left out, says
+// whether a review lands its pull request, over settings review.autoMerge (landsPullRequest). A key the reader does not know is a problem rather
 // than ignored, so a misspelt `alias:` is said out loud instead of quietly matching nothing.
 
 export type Deploy = { name: string; role: string; address: string };
@@ -37,11 +39,13 @@ export type Project = {
   about: string;
   deploy: Deploy[];
   bumpVersion: boolean;
+  // null: the entry says nothing, and settings review.autoMerge decides.
+  autoMerge: boolean | null;
 };
 
 export type ProjectsRead = { ok: true; projects: Project[] } | { ok: false; problems: string[] };
 
-const PROJECT_KEYS = ['name', 'aka', 'path', 'site', 'about', 'deploy', 'bumpVersion'];
+const PROJECT_KEYS = ['name', 'aka', 'path', 'site', 'about', 'deploy', 'bumpVersion', 'autoMerge'];
 const DEPLOY_KEYS = ['name', 'role', 'address'];
 
 type Fields = Map<string, { value: unknown; line: number }>;
@@ -111,10 +115,10 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
     return value ?? '';
   };
 
-  // An optional true or false: absent is false, anything else a problem and false.
-  const flag = (found: Fields, key: string): boolean => {
+  // An optional true or false: absent is null, anything else a problem and false.
+  const flag = (found: Fields, key: string): boolean | null => {
     const field = found.get(key);
-    if (field === undefined || isEmpty(field.value)) return false;
+    if (field === undefined || isEmpty(field.value)) return null;
     if (isScalar(field.value) && typeof field.value.value === 'boolean') return field.value.value;
     problem(field.line, `${key} must be true or false`);
     return false;
@@ -159,7 +163,7 @@ export function readProjects(text: string, fileName = 'projects.yaml'): Projects
 
     projects.push({
       name, aka, path, deploy, site: optional(found, 'site') ?? '', about: optional(found, 'about') ?? '',
-      bumpVersion: flag(found, 'bumpVersion'),
+      bumpVersion: flag(found, 'bumpVersion') ?? false, autoMerge: flag(found, 'autoMerge'),
     });
   }
   return problems.length > 0 ? { ok: false, problems } : { ok: true, projects };
@@ -181,6 +185,25 @@ export function listedFolder(projects: readonly Project[], folder: string, home:
 export function bumpsVersion(text: string | null, folder: string, home: string, realPath: (folder: string) => string): boolean {
   const listed = projectsListed(text, 'projects.yaml');
   return listed.ok && listedFolder(listed.projects, folder, home, realPath)?.bumpVersion === true;
+}
+
+// Whether a review of a card in the folder may land its pull request: the entry's `autoMerge` when it
+// says one, settings review.autoMerge when it does not, when no entry lists the folder, or when there is
+// no file at all — no file has no entry that could be saying false. A file that does not read, or cannot
+// be read, is false whatever the setting says: the entry it cannot read may be the one saying false, and
+// a merge nobody asked for cannot be taken back (#290 landed that way). `read` is readProjectsFile's
+// text, taken as a function so a read that throws answers false here rather than failing the review.
+export function landsPullRequest(read: () => string | null, folder: string, home: string, realPath: (folder: string) => string, autoMerge: boolean): boolean {
+  let text: string | null;
+  try {
+    text = read();
+  } catch {
+    return false;
+  }
+  if (text === null) return autoMerge;
+  const listed = projectsListed(text, 'projects.yaml');
+  if (!listed.ok) return false;
+  return listedFolder(listed.projects, folder, home, realPath)?.autoMerge ?? autoMerge;
 }
 
 // The projects a word finds, best first. Name and every aka are fuzzy-matched each on its own, so a

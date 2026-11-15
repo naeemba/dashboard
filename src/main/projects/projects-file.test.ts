@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bumpsVersion, findProjects, readProjects, type Project } from './projects-file';
+import { bumpsVersion, findProjects, landsPullRequest, readProjects, type Project } from './projects-file';
 
 const FILE = `- name: new-crm
   aka: [crm]
@@ -35,7 +35,7 @@ describe('readProjects', () => {
         { name: 'new-raxel', role: 'test', address: 'https://test.example.com' },
         { name: 'armytech', role: 'production', address: 'https://armytech.example.com' },
       ],
-      bumpVersion: false,
+      bumpVersion: false, autoMerge: null,
     });
     expect(screensaver).toMatchObject({ site: '', deploy: [] });
   });
@@ -74,7 +74,7 @@ describe('readProjects', () => {
   aka: [A]
 `);
     expect(read).toEqual({ ok: false, problems: [
-      'projects.yaml:3: project has no field "alias" (it takes name, aka, path, site, about, deploy, bumpVersion)',
+      'projects.yaml:3: project has no field "alias" (it takes name, aka, path, site, about, deploy, bumpVersion, autoMerge)',
       'projects.yaml:4: project has no name',
       'projects.yaml:5: aka must be a list of names, like aka: [mandala]',
       'projects.yaml:9: deploy has no role',
@@ -153,5 +153,33 @@ describe('bumpsVersion', () => {
     expect(bumpsVersion(null, '/home/me/a', '/home/me', same)).toBe(false);
     expect(bumpsVersion(`${file}  bumpVersion: maybe\n`, '/home/me/a', '/home/me', same)).toBe(false);
     expect(bumpsVersion(file, '/elsewhere', '/home/me', same)).toBe(false);
+  });
+});
+
+describe('landsPullRequest', () => {
+  const same = (folder: string) => folder;
+  const entry = (autoMerge: string) => `- name: a\n  path: /a\n${autoMerge}`;
+
+  for (const global of [false, true]) {
+    it(`with settings review.autoMerge ${global ? 'on' : 'off'}, the entry's value wins when it has one`, () => {
+      expect(landsPullRequest(() => entry(''), '/a', '/home/me', same, global)).toBe(global);
+      expect(landsPullRequest(() => entry('  autoMerge: false\n'), '/a', '/home/me', same, global)).toBe(false);
+      expect(landsPullRequest(() => entry('  autoMerge: true\n'), '/a', '/home/me', same, global)).toBe(true);
+    });
+  }
+
+  it('is the setting for a folder the file does not list', () => {
+    expect(landsPullRequest(() => entry('  autoMerge: false\n'), '/elsewhere', '/home/me', same, true)).toBe(true);
+  });
+
+  it('is the setting with no file, since no entry can be saying false', () => {
+    expect(landsPullRequest(() => null, '/a', '/home/me', same, true)).toBe(true);
+    expect(landsPullRequest(() => null, '/a', '/home/me', same, false)).toBe(false);
+  });
+
+  it('is false with a file that does not read or cannot be read, whatever the setting', () => {
+    expect(landsPullRequest(() => entry('  autoMerge: maybe\n'), '/a', '/home/me', same, true)).toBe(false);
+    const denied = () => { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); };
+    expect(landsPullRequest(denied, '/a', '/home/me', same, true)).toBe(false);
   });
 });

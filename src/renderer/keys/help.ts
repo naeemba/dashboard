@@ -34,7 +34,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',
   board: 'A kanban board in .dashboard/board, saved on every change, pushed to '
     + 'main when git tracks it. Ship hands a card to an agent; its pull request moves it: open into '
-    + 'Review, starting its loop unless a setting waits, merged into Done, with a glyph for its '
+    + 'Review, its loop and merge as settings allow, merged into Done, with a glyph for its '
     + 'checks. Only dragging moves Done. Delete cancels, or deletes in Cancelled and Done.',
   notes: 'Two pages for what is not a card: free text in .dashboard/notes.md and handwriting in '
     + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
