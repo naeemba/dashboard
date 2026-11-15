@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T22:03:43.098Z",
-  "updatedAt": "2026-11-15T22:32:50.593Z",
+  "updatedAt": "2026-11-15T22:51:49.244Z",
   "branch": "app-owned-work-card-skill-version-bump-is-a",
   "pullRequest": 288,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-15T22:32:50.593Z",
       "body": "Review loop converged in 2 rounds: 5 findings fixed, 0 left, conflict with main resolved. Windows CI failed on a POSIX-path test; fixed in 2545d530, CI now green and the PR is clean to merge. Not merged: main-dashboard asked to hold the merge and the card move."
+    },
+    {
+      "at": "2026-11-15T22:51:49.227Z",
+      "body": "Pull request #288 merged: App-owned /work-card skill; version bump is a per-project setting https://github.com/naeemba/dashboard/pull/288"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 227
 }
