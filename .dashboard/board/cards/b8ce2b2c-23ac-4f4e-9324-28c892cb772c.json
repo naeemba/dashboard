@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T22:10:33.299Z",
-  "updatedAt": "2026-11-15T22:10:39.599Z",
-  "column": "Ship",
-  "order": 0
+  "updatedAt": "2026-11-15T22:15:36.389Z",
+  "branch": "pane-run-refuses-a-just-claimed-pane-as-bus",
+  "pullRequest": 289,
+  "comments": [
+    {
+      "at": "2026-11-15T22:15:36.359Z",
+      "body": "Pull request #289 opened: pane run refuses a just claimed pane as bus https://github.com/naeemba/dashboard/pull/289"
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }
