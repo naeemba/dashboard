@@ -1,0 +1,11 @@
+{
+  "id": "650279dc-6168-4ba7-8804-c59faccd366e",
+  "title": "App-owned /work-card skill; version bump is a per-project setting",
+  "notes": "The app installs its own /work-card skill, and the version bump becomes a per-project setting, off by default.\n\nWhy: the dotfiles copy of work-card (~/Workspace/dotfiles/claude/commands/work-card.md:40-45) bumps the version unless the project's CLAUDE.md says not to. Audit 13 removed that line here, because CI holds the rule (scripts/version-unchanged.mjs, workflow-rule-3). So every card shipped in this repo bumps package.json and CI fails the PR. The app is the only thing that runs /work-card (src/main/ship/ship.ts workPrompt), and it does not install it, so ship depends on a file outside the app.\n\nDo:\n- Ship work-card as an app skill, the way adopt-docs and create-task are installed (src/main/skills/install-skills.ts, skill-folder.ts).\n- The bump step comes from a per-project setting, off by default. Off means the skill tells the worker not to touch the version.\n- The checks come from the project's own lockfile/package manager, not a hard-coded npm/npx.\n- Drop the lines that repeat the board instructions and the running-app guard: the app already holds both (BOARD_INSTRUCTIONS in src/main/workers/dispatch.ts, the board guard hook).\n- Make sure the app's copy wins over a ~/.claude/commands/work-card.md of the same name, or say in the PR how they resolve. Deleting the dotfiles copy is a separate dotfiles PR; name the file in this PR's description.\n- Docs and help: the feature's docs change in the same PR.\n\nThis card itself: DO NOT bump the version. The current dotfiles skill will tell you to; CI refuses it here.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-15T22:03:43.098Z",
+  "updatedAt": "2026-11-15T22:03:43.098Z",
+  "column": "Backlog",
+  "order": 43
+}
