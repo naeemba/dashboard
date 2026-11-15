@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { failureText } from '../../shared/errors/failure';
+import { SCOPE_RUNNER } from '../../shared/panes/pane-reading';
 import { scopedCommand, type ScopedCommand, type ScopeRequest } from './scope';
 
 // Whether this machine can put a process in a systemd scope, asked once at launch and kept, and the
@@ -56,7 +57,7 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
     // Not worth a line where scopes were never going to be: every Mac and Windows launch.
     if (ports.platform !== 'linux') return;
     const [systemdRun, managerState] = await Promise.all([
-      ports.probe('systemd-run', ['--version']),
+      ports.probe(SCOPE_RUNNER, ['--version']),
       ports.probe('systemctl', ['--user', 'is-system-running']),
     ]);
     const refusal = scopeRefusal(systemdRun, managerState);

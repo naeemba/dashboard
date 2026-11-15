@@ -82,8 +82,16 @@ export type PaneUse = PaneReading & { exited: boolean };
 function runsAProgram(foreground: string | undefined, shell: string | undefined): boolean {
   // No shell recorded means no pty was ever spawned, which is the same nothing-is-running answer an
   // undefined foreground gives.
-  return foreground !== undefined && shell !== undefined && baseName(foreground) !== baseName(shell);
+  if (foreground === undefined || shell === undefined) return false;
+  const name = baseName(foreground);
+  return name !== baseName(shell) && name !== SCOPE_RUNNER;
 }
+
+// What starts a pane's shell inside its systemd scope (scope.ts). It holds the pty from spawn until the
+// scope is made and it execs the shell, and the pane host's first reading lands in that window: counted
+// as a program, a pane `pane claim` had just handed out was refused by `pane run` as running
+// systemd-run, while `pane list` a moment later said idle. It is the shell, not yet under its own name.
+export const SCOPE_RUNNER = 'systemd-run';
 
 // Whether a pane is somebody's, which is what a ship asks before it takes one. Two ways to be: an agent
 // is recorded in it, or its shell is running something right now.
