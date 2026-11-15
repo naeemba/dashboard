@@ -11,9 +11,9 @@ describe('firstProjectsFile', () => {
     expect(readProjects(file.file)).toEqual({
       ok: true,
       projects: [
-        { name: 'crm', aka: [], path: '~/Workspace/crm', site: '', about: '', deploy: [], bumpVersion: false },
-        { name: 'api', aka: [], path: '/srv/api', site: '', about: '', deploy: [], bumpVersion: false },
-        { name: 'me', aka: [], path: '~', site: '', about: '', deploy: [], bumpVersion: false },
+        { name: 'crm', aka: [], path: '~/Workspace/crm', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
+        { name: 'api', aka: [], path: '/srv/api', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
+        { name: 'me', aka: [], path: '~', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
       ],
     });
     expect(file.count).toBe(3);
