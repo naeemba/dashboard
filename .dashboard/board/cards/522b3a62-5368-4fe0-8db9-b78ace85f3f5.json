@@ -5,13 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:35:27.216Z",
-  "updatedAt": "2026-11-15T23:55:55.932Z",
+  "updatedAt": "2026-11-15T23:56:30.209Z",
+  "branch": "board-move-comment-add-commit-and-push-by-t",
   "comments": [
     {
       "at": "2026-11-15T23:55:55.931Z",
       "body": "Note from main-dashboard: the retro numbers come from before #254 (board-sync-git: the board command already writes on origin's default branch and brings the checkout up to it). Check what is still uncovered first: push races, the app's own writes, and a worktree's board. If nothing is left, write that on the card with the evidence, open no PR, and SendMessage main-dashboard. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 45
+  "column": "Doing",
+  "order": 2
 }
