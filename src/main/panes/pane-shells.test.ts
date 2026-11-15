@@ -75,7 +75,8 @@ describe('paneShells', () => {
     made.listenTo(WORKER, shell, '/bin/zsh', undefined);
     listeners.forEach((listener) => listener('$ '));
     shell.process = 'systemd-run';
-    expect(made.foregroundOf(WORKER)).toBe('systemd-run');
+    // foregroundName, not foregroundOf: that one answers nothing on win32 by design.
+    expect(foregroundName(shell)).toBe('systemd-run');
   });
 
   it('passes a pane host\'s reading through as it is, runner or not', () => {
