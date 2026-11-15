@@ -14,8 +14,12 @@ closes the projects it names; you can also edit it by hand.
           role: test
           address: https://test.example.com
 
-`name` and `path` are required; `aka`, `site`, `about` and `deploy` are not. A
-deploy needs all of `name`, `role` and `address`.
+`name` and `path` are required; `aka`, `site`, `about`, `deploy` and
+`bumpVersion` are not. A deploy needs all of `name`, `role` and `address`.
+`bumpVersion: true` makes a card shipped in that project bump its version; left
+out, or with no file at all, a shipped card leaves the version alone
+(projects-decision-1, [ship](../ship/README.md)). It is written by hand; `project
+set` keeps it as it is.
 
 | Verb | What it prints |
 |---|---|
