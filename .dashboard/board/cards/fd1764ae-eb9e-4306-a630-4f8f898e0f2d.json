@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:28:05.310Z",
-  "updatedAt": "2026-11-15T23:28:05.310Z",
-  "column": "Backlog",
-  "order": 43
+  "updatedAt": "2026-11-15T23:28:12.057Z",
+  "branch": "review-worker-merges-only-with-review-autom",
+  "column": "Doing",
+  "order": 0
 }
