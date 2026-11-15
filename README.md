@@ -19,6 +19,8 @@ The main session dispatches with `node "$DASHBOARD_COMMAND" pane` (`claim`, `run
     pnpm install
     pnpm start
 
+On Windows, [docs/app/windows-setup.md](docs/app/windows-setup.md) walks through it step by step, folder by folder.
+
 While the installed app is running, `pnpm start` on its own only brings that app's window to the front and
 exits: one app runs per userData folder. "One app at a time" in `docs/app/README.md` says how to run a
 development copy beside it.
