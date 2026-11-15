@@ -154,7 +154,7 @@ describe('reviewPrompt', () => {
     expect(prompt).not.toContain('--approve');
   });
 
-  // Why is reviewPrompt's comment: an agent's move can land before the merge.
+  // The reason is in reviewPrompt's comment: an agent's move can land before the merge.
   it('leaves the move to Done to the app', () => {
     expect(prompt).not.toContain(`move ${CARD}`);
   });
