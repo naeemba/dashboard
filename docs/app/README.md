@@ -98,7 +98,8 @@ from `renderer/` or `preload/`, one in `preload/` or `shared/` only from
 its own side. `eslint.config.test.ts` pins each of those.
 
 - Process and window: `index.html` and its test, `main.ts`, `launch-gate.ts`, `renderer.ts`,
-  `preload.ts`, `bridge.ts`, `channels.ts`, `channel-names.test.ts` (app-rule-1), `app-window.ts`
+  `preload.ts`, `bridge.ts`, `channels.ts`, `channel-names.test.ts` (app-rule-1), `app-window.ts`,
+  `window-navigation.ts` and its test
 - Build: `vite.build-version.ts`, `vite.changelog.ts` and their tests at the
   repository root, declared in `forge.env.d.ts`
 - What's new: `whats-new.ts` (in `src/shared/app/`), `whats-new-store.ts`,
@@ -207,8 +208,31 @@ change. A violation is silent in the app: open DevTools and look for
 guards against a reply sending a secret out), or the PDF viewer's two
 directives go.
 
+## The window's own page
+
+`app-window.ts` keeps the window on the app's page: `will-navigate` refuses
+every navigation of the main frame, so a stray link cannot replace the pages
+and panes. The one exception is `pnpm start`: `windowMayNavigate` (`window-navigation.ts`)
+lets the window reload from the dev server's own origin, because the dev
+server's client reloads the page itself, once at launch after bundling
+dependencies and again after an edit. Refused, that reload left the window on
+the load it had cut short, with the script never run: an empty screen.
+
+`will-frame-navigate`, the PDF viewer's rule (`frameNavigation`), judges
+everything but the window's main frame. Electron raises it for that frame too,
+and judged there the dev page counted as a web link: it opened in the browser
+and the window's load was cancelled. A viewer in a contents of its own has a
+main frame as well, and only this rule holds it, so the exemption is the
+window's main frame, not every main frame.
+
+The dev server listens on `127.0.0.1`, not `localhost` (`vite.renderer.config.ts`):
+on Windows `localhost` bound to `::1` alone while the window asked
+`127.0.0.1`, and the load failed with `ERR_CONNECTION_REFUSED`.
+
 ## Scenarios
 
+- Given a fresh launch with `pnpm start` on Windows, when the dev server reloads the page after bundling, then the window shows the manager and the restored projects, and no browser tab opens.
+- Given a link in a page, when it would navigate the window's own frame, then the window stays where it is.
 - Given three projects open, when the app restarts, then they come back in the order you cycled them, each on the view it was left on.
 - Given a shell is running a task, when you close the window, then the app asks before it closes.
 - Given the picker is open, when you type part of a folder's name, then the list narrows to the folders whose letters appear in that order.
