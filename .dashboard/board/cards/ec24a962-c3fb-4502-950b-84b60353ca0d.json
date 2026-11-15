@@ -1,0 +1,11 @@
+{
+  "id": "ec24a962-c3fb-4502-950b-84b60353ca0d",
+  "title": "Worker notices: one per turn, only when the worker has no background work left",
+  "notes": "From the 30-session retro (2026-11-16). The manager gets flooded with worker notices and polls on every one:\n- \"finished its turn\": 44 in a dotfiles manager session, 42 in openwrt-config.\n- \"stopped without sending you a report\": 25 in a new-crm manager session, and 12 for a pane the user was talking to directly.\n- One new-crm manager read worker session logs by hand 62 times to learn what a worker was doing.\n\nThe cause: notices fire while the worker's background /pr-loop, CI wait or /simplify agents are still running.\n\nWant:\n- one notice per turn, only when the Stop hook input shows no background tasks or wakeups left;\n- the notice carries the worker's last assistant message, or a short tail of it;\n- no notice when the pane's last prompt came from the user rather than the manager;\n- `pane report <id>` prints a worker's state and last message, so the manager never greps ~/.claude/projects.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-15T23:35:13.286Z",
+  "updatedAt": "2026-11-15T23:35:13.286Z",
+  "column": "Backlog",
+  "order": 43
+}
