@@ -123,10 +123,13 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
   const waitForChecks = [
-    `   wait for CI on the pull request's head commit: \`gh pr checks ${pullRequest} --watch\`. Every check`,
+    `   wait for CI on the pull request's head commit: \`gh pr checks ${pullRequest} --watch\`, run in the`,
+    '   background (run_in_background), so you are woken when it exits. That is the whole wait: no',
+    '   `gh pr view` or `gh pr checks` in between, and no foreground `sleep`, which is refused. Every check',
     '   must pass on the commit the pull request ends on, a commit pushed after the last review round',
-    '   included. "No checks reported" right after a push means CI has not started: ask again in a',
-    '   minute, and only if there are still none does the repository run no CI.',
+    '   included. "No checks reported" right after a push means CI has not started: run',
+    `   \`sleep 60 && gh pr checks ${pullRequest} --watch\` in the background once more, and only if there`,
+    '   are still none does the repository run no CI.',
   ];
   const sayOnCard = `\`${board} comment ${cardId} "<what happened>"\``;
   const report = [

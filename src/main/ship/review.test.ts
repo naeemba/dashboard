@@ -156,6 +156,14 @@ describe('reviewPrompt', () => {
     expect(prompt.indexOf('gh pr checks 12')).toBeLessThan(prompt.indexOf('gh pr merge 12'));
   });
 
+  // One session polled `gh pr checks` 166 times by hand, and `sleep N; gh pr checks` in the foreground
+  // is refused: the wait is one background watch that wakes the agent when it exits.
+  it.each([true, false])('waits on CI with a background watch, not a poll (merge %s)', (merge) => {
+    const waiting = reviewPrompt(CARD, 12, '/work/api', merge);
+    expect(waiting).toContain('run_in_background');
+    expect(waiting).toContain('sleep 60 && gh pr checks 12 --watch');
+  });
+
   // #290 was merged by this prompt with nobody's go-ahead.
   describe('with merging off', () => {
     const reporting = reviewPrompt(CARD, 12, '/work/api', false);
