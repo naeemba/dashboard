@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-15T22:03:56.853Z",
-  "updatedAt": "2026-11-15T22:51:08.747Z",
+  "updatedAt": "2026-11-15T23:03:27.900Z",
   "branch": "app-holds-pane-command-permissions-review-p",
-  "column": "Doing",
+  "pullRequest": 290,
+  "comments": [
+    {
+      "at": "2026-11-15T23:03:27.873Z",
+      "body": "Pull request #290 opened: App holds pane-command permissions; review prompt stops moving cards to Done https://github.com/naeemba/dashboard/pull/290"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
