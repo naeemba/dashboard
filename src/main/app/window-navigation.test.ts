@@ -20,23 +20,32 @@ describe('windowMayNavigate', () => {
 });
 
 describe('frameNavigation', () => {
+  const viewerFrame = { isMainFrame: false, isWindowContents: true };
+  const windowFrame = { isMainFrame: true, isWindowContents: true };
+
   it('keeps the PDF and the viewer pages in the frame', () => {
-    expect(frameNavigation('blob:file:///3f2a-41c0', false)).toBe('allow');
-    expect(frameNavigation('chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/index.html', false)).toBe('allow');
+    expect(frameNavigation('blob:file:///3f2a-41c0', viewerFrame)).toBe('allow');
+    expect(frameNavigation('chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/index.html', viewerFrame)).toBe('allow');
   });
 
   it('sends a page link to the browser', () => {
-    expect(frameNavigation('https://vendor.example.com/datasheet', false)).toBe('browser');
+    expect(frameNavigation('https://vendor.example.com/datasheet', viewerFrame)).toBe('browser');
   });
 
   it('drops every other scheme', () => {
-    expect(frameNavigation('file:///etc/passwd', false)).toBe('refuse');
-    expect(frameNavigation('javascript:alert(1)', false)).toBe('refuse');
+    expect(frameNavigation('file:///etc/passwd', viewerFrame)).toBe('refuse');
+    expect(frameNavigation('javascript:alert(1)', viewerFrame)).toBe('refuse');
   });
 
   it("leaves the window's main frame to will-navigate", () => {
-    expect(frameNavigation('http://127.0.0.1:5173/', true)).toBe('allow');
-    expect(frameNavigation('file:///C:/Program%20Files/Dashboard/index.html', true)).toBe('allow');
+    expect(frameNavigation('http://127.0.0.1:5173/', windowFrame)).toBe('allow');
+    expect(frameNavigation('file:///C:/Program%20Files/Dashboard/index.html', windowFrame)).toBe('allow');
+  });
+
+  it("judges a viewer's own main frame like any other", () => {
+    const ownContents = { isMainFrame: true, isWindowContents: false };
+    expect(frameNavigation('https://vendor.example.com/datasheet', ownContents)).toBe('browser');
+    expect(frameNavigation('blob:file:///3f2a-41c0', ownContents)).toBe('allow');
   });
 });
 

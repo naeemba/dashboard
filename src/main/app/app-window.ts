@@ -40,7 +40,9 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
     // than inside the overlay or in a bare window of its own. The window's main frame is left to
     // will-navigate below, which keeps it on the app's page.
     contents.on('will-frame-navigate', (event) => {
-      const where = frameNavigation(event.url, event.isMainFrame && contents === window.webContents);
+      const where = frameNavigation(event.url, {
+        isMainFrame: event.isMainFrame, isWindowContents: contents === window.webContents,
+      });
       if (where === 'allow') return;
       event.preventDefault();
       if (where === 'browser') void shell.openExternal(event.url);

@@ -10,8 +10,10 @@ import { isOpenableLink } from '../../shared/panes/links';
 // window stopped half loaded, its script never run: `pnpm start` showed an empty window on Windows.
 // Only the window's main frame: a viewer in a contents of its own has a main frame too, and nothing
 // but this rule holds it.
-export function frameNavigation(url: string, isWindowFrame: boolean): 'allow' | 'browser' | 'refuse' {
-  if (isWindowFrame) return 'allow';
+export function frameNavigation(
+  url: string, frame: { isMainFrame: boolean; isWindowContents: boolean },
+): 'allow' | 'browser' | 'refuse' {
+  if (frame.isMainFrame && frame.isWindowContents) return 'allow';
   if (/^(blob|chrome-extension):/.test(url)) return 'allow';
   return isOpenableLink(url) ? 'browser' : 'refuse';
 }
