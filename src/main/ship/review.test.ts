@@ -148,17 +148,19 @@ describe('reviewPrompt', () => {
   });
 
   // The pane runs as the author of the pull request, and GitHub refuses an approval from the author.
-  // Ask for one and the agent burns a turn on a command that can only fail, then stops at step 4 and
+  // Ask for one and the agent burns a turn on a command that can only fail, then stops at step 3 and
   // leaves a landable pull request sitting in Review saying the approval was refused.
   it('does not ask for an approval the author cannot give', () => {
     expect(prompt).not.toContain('--approve');
   });
 
-  // The app's follow moves the card to Done once gh says merged. An agent asked to move it as well can
-  // move it before the merge, and main says Done for a pull request that may yet be refused:
-  // kamandsystem #19 sat there unmerged.
+  // Why is reviewPrompt's comment: an agent's move can land before the merge.
   it('leaves the move to Done to the app', () => {
     expect(prompt).not.toContain(`move ${CARD}`);
+  });
+
+  // The branch's board carries nothing about the card (board-decision-7).
+  it('commits nothing of the branch\'s board', () => {
     expect(prompt).not.toContain('git commit');
   });
 
