@@ -124,6 +124,7 @@ export function workerSettings(id: string): string {
   // word in quotes on its way to claude; every other space here is inside one, and without it the JSON
   // reached claude cut at each of them (windowsPowerShellWraps). JSON does not mind the space.
   return '{ ' + JSON.stringify({
+    ...APP_SESSION_SETTINGS,
     hooks: {
       Stop: [{ hooks: [notify('done --stop-input')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
@@ -131,7 +132,6 @@ export function workerSettings(id: string): string {
       PostToolUse: [{ hooks: [notify('running')] }],
       ...APP_SESSION_SETTINGS.hooks,
     },
-    permissions: APP_SESSION_SETTINGS.permissions,
   }).slice(1);
 }
 
