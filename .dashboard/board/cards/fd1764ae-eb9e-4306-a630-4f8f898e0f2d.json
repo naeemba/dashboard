@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:28:05.310Z",
-  "updatedAt": "2026-11-15T23:37:40.077Z",
+  "updatedAt": "2026-11-15T23:49:13.398Z",
   "branch": "review-worker-merges-only-with-review-autom",
   "pullRequest": 291,
   "comments": [
@@ -14,6 +14,6 @@
       "body": "Pull request #291 opened: Review worker merges only with review.autoMerge on https://github.com/naeemba/dashboard/pull/291"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 230
 }
