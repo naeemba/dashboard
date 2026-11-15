@@ -103,6 +103,7 @@ In `C:\workspace\dashboard\dashboard`:
 
 | What you see | What to do |
 |---|---|
+| The window opens empty, or a Chrome tab opens on `http://127.0.0.1:5173` | A checkout older than #287: `git pull`, then `pnpm start` again. "The window's own page" in [README.md](README.md) says what it was |
 | `pnpm` is not recognized | Step 3 again, in an Administrator PowerShell, then open a new window |
 | `pnpm start` exits and only brings a window to the front | The installed Dashboard is running: one app runs per userData folder. Quit it, or see "One app at a time" in [README.md](README.md) |
 | `Failed to load native module: pty.node` or `node-pty has no built binary` | `pnpm install`, then `pnpm rebuild node-pty` |

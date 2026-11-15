@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import path from 'node:path';
-import { dismissesViewer, frameNavigation, isOpenableLink } from '../../shared/panes/links';
+import { dismissesViewer, frameNavigation, isOpenableLink, windowMayNavigate } from '../../shared/panes/links';
 import { TITLE_BAR_HEIGHT } from '../../shared/app/theme';
 
 // The window and the question its close asks. Main-process wiring, out of main.ts because main had
@@ -39,7 +39,7 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
     // than inside the overlay or in a bare window of its own. The window's main frame is also held by
     // will-navigate below, so 'allow' never lets it leave the app's page.
     contents.on('will-frame-navigate', (event) => {
-      const where = frameNavigation(event.url);
+      const where = frameNavigation(event.url, event.isMainFrame);
       if (where === 'allow') return;
       event.preventDefault();
       if (where === 'browser') void shell.openExternal(event.url);
@@ -123,7 +123,10 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
   window.webContents.on('did-finish-load', () => options.loaded());
   // The window never leaves the app's own page. A stray link followed in it would replace every page
   // and pane on screen, with no way back, and hand the preload's bridge to whatever site it named.
-  window.webContents.on('will-navigate', (event) => event.preventDefault());
+  // windowMayNavigate says why the dev server's own reload is the one exception.
+  window.webContents.on('will-navigate', (event) => {
+    if (!windowMayNavigate(event.url, MAIN_WINDOW_VITE_DEV_SERVER_URL)) event.preventDefault();
+  });
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
