@@ -148,21 +148,19 @@ describe('reviewPrompt', () => {
   });
 
   // The pane runs as the author of the pull request, and GitHub refuses an approval from the author.
-  // Ask for one and the agent burns a turn on a command that can only fail, then stops at step 4 and
+  // Ask for one and the agent burns a turn on a command that can only fail, then stops at step 3 and
   // leaves a landable pull request sitting in Review saying the approval was refused.
   it('does not ask for an approval the author cannot give', () => {
     expect(prompt).not.toContain('--approve');
   });
 
-  // The whole of the ordering. The board command writes main itself now (board-sync-git.ts), so a Done
-  // moved before the merge is main saying Done for a pull request that may yet be refused: kamandsystem
-  // #19 sat there unmerged. One move, after the merge, and no commit of the branch's board.
-  it('merges first and moves the card to Done once, after', () => {
-    const merge = prompt.indexOf('gh pr merge 12 --merge');
-    const move = prompt.indexOf(`cd '/work/api' && node "$DASHBOARD_BOARD" move ${CARD} Done`);
-    expect(merge).toBeGreaterThan(-1);
-    expect(merge).toBeLessThan(move);
-    expect(prompt.split(`move ${CARD} Done`)).toHaveLength(2);
+  // The reason is in reviewPrompt's comment: an agent's move can land before the merge.
+  it('leaves the move to Done to the app', () => {
+    expect(prompt).not.toContain(`move ${CARD}`);
+  });
+
+  // The branch's board carries nothing about the card (board-decision-7).
+  it('commits nothing of the branch\'s board', () => {
     expect(prompt).not.toContain('git commit');
   });
 

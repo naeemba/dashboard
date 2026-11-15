@@ -37,7 +37,7 @@ branch the worktree was cut from, which a bump merges in first.
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
 - Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.
-- Given the review merged the pull request, when it finishes, then the card is moved to Done on the branch, then merged, then on the app's board.
+- Given the review merged the pull request, when the app next asks gh about the card, then the app moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
 - Given a worktree with modified files, when you remove it from the list, then the app says so instead of git's raw `fatal:`.
 
 ## Known limits

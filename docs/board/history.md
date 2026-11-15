@@ -21,3 +21,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #254 — Every write to a git-tracked board lands on origin's main, and the checkout is brought up to it (board-decision-5)
 - 2026-11-09 #262 — A hook refuses an agent's hand edit of the board, and the app tells its sessions what to know; board-rule-2 becomes a decision (board-decision-7, board-decision-8)
 - 2026-11-09 #282 — The seeded .dashboard/CLAUDE.md names the board command and stops (board-decision-8)
+- 2026-11-16 #290 — The review pane merges and moves nothing; the app's follow moves the card into Done (board-decision-7)

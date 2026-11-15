@@ -469,3 +469,18 @@ What it changes, on purpose:
   record naming the pane again as a terminal agent's does.
 - A screen's pane stays busy until it is closed, as a terminal agent's does while Claude Code runs, so
   a ship takes a new pane rather than one whose screen has finished its turn. Closing it frees it.
+
+## workers-decision-9: The app's own commands are allowed in the settings it starts a session with
+
+**Every session the app starts (main's screen, a worker's screen or terminal) is started with
+`permissions.allow` rules for `node "$DASHBOARD_COMMAND" pane *`, `session *` and
+`node "$DASHBOARD_BOARD" *`** (`APP_SESSION_SETTINGS` in `src/main/workers/dispatch.ts`, beside the board guard, passed in
+the screen's `settings` and a terminal worker's `--settings`). Before, the rules lived only in the
+user's own `~/.claude/settings.json`, so on a fresh machine main's first `pane claim` waited on a
+question, or the classifier, until the rule was copied in by hand.
+
+`permissions.allow`, not `autoMode.allow`. Claude Code does read `autoMode` from a `--settings`
+source (user, flag and policy settings; project and local are ignored as repo-controlled), and
+concatenates each source's `allow`. But a source's `allow` without `"$defaults"` stands in for the
+classifier's default list, so a flag rule on a machine whose user settings name no `autoMode` would
+drop the defaults. An allow rule is decided before the classifier is asked, so it is enough.

@@ -205,7 +205,7 @@ read-then-write ceiling `runBoardCommandOnLatest` names.
 **What it costs.** A commit on main per save. A fetch per `board` command, reads
 included, about a second. A repository whose main refuses pushes keeps its
 board in the checkout, uncommitted, with a warning; before this the review
-landed Done through the branch, and now it lands it in the checkout only. And a
+landed Done through the branch, and now the app's move into Done lands in the checkout only. And a
 ship still commits its Ship move on the new branch when origin did not have it
 yet; card.move waits for the sync before the ship so that origin has it, which
 leaves that commit empty and skipped.
@@ -224,12 +224,17 @@ app moves the card from the pull request's state, neither instruction is
 anyone's to remember, and both are gone (board-decision-8). What follows is why
 the order matters.
 
-**The move into `Done` comes after the merge, and is one `board move`.** The
-`board` command writes a board git tracks on origin's main itself, and brings
-the project's checkout up to it (board-decision-5), from the project or from a
-card's worktree alike. So a card moved to Done before the merge is main saying
-Done for a pull request that may still be refused: kamandsystem #19 sat in Done
-unmerged exactly like that.
+**The move into `Done` comes after the merge, and is the app's.** The review
+pane merges and moves nothing. card.follow moves the card into Done once gh says
+merged, and its write goes to origin's main through the same `syncBoard` the
+`board` command uses (board-decision-5). A card moved to Done before the merge
+is main saying Done for a pull request that may still be refused: kamandsystem
+#19 sat in Done unmerged exactly like that.
+
+Until 2026-11-16 the review prompt ended with `board move <card> Done` after the
+merge, while the system prompt every session gets (`BOARD_INSTRUCTIONS`) told it
+never to move a branch card. The follow already did the move, so the prompt's
+was a second writer and a contradiction, and it went.
 
 What this replaced: the move went on the branch first, so the merge would carry
 it into main, then the app's board was moved after. A branch-only Done was the
@@ -238,8 +243,8 @@ order mattered: moved after the merge, main went on committing `Review` for a
 feature that shipped weeks ago, while the only copy saying `Done` was an
 uncommitted change in one person's checkout. With the command writing main,
 the branch's board carries nothing about the card, and the order is merge, then
-move. `reviewPrompt` in `review.ts` is where it is written down, and
-`review.test.ts` pins it.
+move. `reviewPrompt` in `review.ts` asks only for the merge, and
+`review.test.ts` pins that it names no move.
 
 ## board-decision-8: The board is kept by a hook and the app's own instructions, not CLAUDE.md
 

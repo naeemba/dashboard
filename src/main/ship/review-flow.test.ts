@@ -209,8 +209,8 @@ describe('reviewSweep', () => {
     expect(log.started).toEqual([]);
   });
 
-  // The review agent moves the project's card to Done and then writes its summary. Taking the folder
-  // then kills the shell mid-sentence.
+  // The review agent is still writing its summary when the card reaches Done. Taking the folder then
+  // kills the shell mid-sentence.
   it('waits for the review agent to stop before removing a finished worktree', async () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, inDone(12));

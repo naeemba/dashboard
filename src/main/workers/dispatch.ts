@@ -44,6 +44,24 @@ export const BOARD_INSTRUCTIONS = [
     + ' branch, such as research, is moved by whoever works it.',
 ].join('\n');
 
+// The app's own commands, allowed in the settings of every session it starts (main's screen, a worker's
+// screen or terminal), so a fresh machine runs them with no rule copied into ~/.claude/settings.json.
+// permissions.allow rather than autoMode.allow: Claude Code reads the second from a --settings source
+// too, but one there without "$defaults" replaces the classifier's default list on a machine whose own
+// settings name none, and an allow rule is decided before the classifier is asked anyway.
+const APP_COMMAND_PERMISSIONS = {
+  allow: [
+    'Bash(node "$DASHBOARD_COMMAND" pane *)',
+    'Bash(node "$DASHBOARD_COMMAND" session *)',
+    'Bash(node "$DASHBOARD_BOARD" *)',
+  ],
+};
+
+// What every session the app starts carries in its settings, whatever else its own adds: the board
+// guard (board-guard.ts) and the app's commands allowed. One object, so a screen and a terminal worker
+// cannot drift apart.
+export const APP_SESSION_SETTINGS = { hooks: BOARD_GUARD_HOOKS, permissions: APP_COMMAND_PERMISSIONS };
+
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
 export function mainPrompt(projectPath: string, platform: string = process.platform): string {
@@ -106,12 +124,13 @@ export function workerSettings(id: string): string {
   // word in quotes on its way to claude; every other space here is inside one, and without it the JSON
   // reached claude cut at each of them (windowsPowerShellWraps). JSON does not mind the space.
   return '{ ' + JSON.stringify({
+    ...APP_SESSION_SETTINGS,
     hooks: {
       Stop: [{ hooks: [notify('done --stop-input')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
       UserPromptSubmit: [{ hooks: [notify('running')] }],
       PostToolUse: [{ hooks: [notify('running')] }],
-      ...BOARD_GUARD_HOOKS,
+      ...APP_SESSION_SETTINGS.hooks,
     },
   }).slice(1);
 }

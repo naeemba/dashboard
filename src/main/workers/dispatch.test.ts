@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
+  APP_SESSION_SETTINGS, mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
 } from './dispatch';
 import { quoteForShell, windowsPowerShellWraps } from '../../shared/panes/shell';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
@@ -74,6 +74,18 @@ describe('workerSettings', () => {
     const settings = JSON.parse(workerSettings('2:3'));
     expect(settings.hooks.UserPromptSubmit[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
     expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
+  });
+
+  // A fresh machine has no rule for them in ~/.claude/settings.json.
+  it('allows the pane, session and board commands', () => {
+    expect(JSON.parse(workerSettings('2:3')).permissions.allow).toEqual(expect.arrayContaining([
+      'Bash(node "$DASHBOARD_COMMAND" pane *)', 'Bash(node "$DASHBOARD_COMMAND" session *)', 'Bash(node "$DASHBOARD_BOARD" *)',
+    ]));
+  });
+
+  // A terminal worker carries everything a screen does, so a key added to the shared settings reaches both.
+  it('carries every app session setting', () => {
+    expect(JSON.parse(workerSettings('2:3'))).toMatchObject(APP_SESSION_SETTINGS);
   });
 
   // Every other space in it is inside a string, and Windows PowerShell wraps a word for claude only when

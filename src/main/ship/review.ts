@@ -103,14 +103,12 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 }
 
 // What the review pane is asked to do. One prompt rather than a bare `/pr-loop`, because the loop
-// stops at a report and the card wants the pull request landed — and because that last move, into
-// Done, has to come after the merge.
+// stops at a report and the card wants the pull request landed.
 //
-// The `board` command writes a board git tracks on origin's main itself and brings the project's
-// checkout up to it (board-sync-git.ts), so one move after the merge is the card on main and on screen.
-// Before the merge it would be main saying Done for a pull request that may yet be refused, which is
-// how kamandsystem #19 sat in Done unmerged. The branch's own board is not moved: nothing the merge
-// carries is about the card any more (board-decision-7).
+// The card is not moved: the app's follow (card.follow) moves it into Done once gh says merged, and
+// writes it on origin's main through the same sync the `board` command uses (board-sync-git.ts). A move
+// asked of the agent was one more chance of Done before the merge, which is how kamandsystem #19 sat in
+// Done unmerged, and BOARD_INSTRUCTIONS tells every session the app starts not to move a branch card.
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in.
@@ -121,16 +119,9 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     '',
     `1. Run /pr-loop ${pullRequest} and let it finish.`,
     '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
-    '   conflict with the base branch, land it in this order and no other:',
-    '',
-    `   a. \`gh pr merge ${pullRequest} --merge\`. Do not approve it: you are the author, and GitHub`,
-    '      refuses an approval from the author. The pull request does not need one to merge.',
-    '',
-    `   b. \`${board} move ${cardId} Done\``,
-    '',
-    "      The board command writes the card on origin's main and brings the project's checkout up to",
-    '      it, so this one move is the card on main and on screen. Only after the merge: moved before',
-    '      it, main says Done for a pull request that may still be refused.',
+    `   conflict with the base branch, land it: \`gh pr merge ${pullRequest} --merge\`. Do not approve it:`,
+    '   you are the author, and GitHub refuses an approval from the author. The pull request does not',
+    '   need one to merge. Do not move the card: the app moves it to Done once the merge is in.',
     '',
     '3. Any other ending — the loop stopped short, the merge was refused, the pull request conflicts —',
     "   is where you stop, and the card stays in Review. Say what happened on the card:",
