@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T22:03:43.098Z",
-  "updatedAt": "2026-11-15T22:03:43.098Z",
-  "column": "Backlog",
-  "order": 43
+  "updatedAt": "2026-11-15T22:04:21.998Z",
+  "branch": "app-owned-work-card-skill-version-bump-is-a",
+  "column": "Doing",
+  "order": 0
 }
