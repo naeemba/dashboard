@@ -162,18 +162,24 @@ describe('landsPullRequest', () => {
 
   for (const global of [false, true]) {
     it(`with settings review.autoMerge ${global ? 'on' : 'off'}, the entry's value wins when it has one`, () => {
-      expect(landsPullRequest(entry(''), '/a', '/home/me', same, global)).toBe(global);
-      expect(landsPullRequest(entry('  autoMerge: false\n'), '/a', '/home/me', same, global)).toBe(false);
-      expect(landsPullRequest(entry('  autoMerge: true\n'), '/a', '/home/me', same, global)).toBe(true);
+      expect(landsPullRequest(() => entry(''), '/a', '/home/me', same, global)).toBe(global);
+      expect(landsPullRequest(() => entry('  autoMerge: false\n'), '/a', '/home/me', same, global)).toBe(false);
+      expect(landsPullRequest(() => entry('  autoMerge: true\n'), '/a', '/home/me', same, global)).toBe(true);
     });
   }
 
   it('is the setting for a folder the file does not list', () => {
-    expect(landsPullRequest(entry('  autoMerge: false\n'), '/elsewhere', '/home/me', same, true)).toBe(true);
+    expect(landsPullRequest(() => entry('  autoMerge: false\n'), '/elsewhere', '/home/me', same, true)).toBe(true);
   });
 
-  it('is false with no file or a file that does not read, whatever the setting', () => {
-    expect(landsPullRequest(null, '/a', '/home/me', same, true)).toBe(false);
-    expect(landsPullRequest(entry('  autoMerge: maybe\n'), '/a', '/home/me', same, true)).toBe(false);
+  it('is the setting with no file, since no entry can be saying false', () => {
+    expect(landsPullRequest(() => null, '/a', '/home/me', same, true)).toBe(true);
+    expect(landsPullRequest(() => null, '/a', '/home/me', same, false)).toBe(false);
+  });
+
+  it('is false with a file that does not read or cannot be read, whatever the setting', () => {
+    expect(landsPullRequest(() => entry('  autoMerge: maybe\n'), '/a', '/home/me', same, true)).toBe(false);
+    const denied = () => { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }); };
+    expect(landsPullRequest(denied, '/a', '/home/me', same, true)).toBe(false);
   });
 });

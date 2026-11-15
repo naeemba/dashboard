@@ -78,7 +78,7 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   });
   rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
   rows.push({ kind: 'heading', label: 'Review' });
-  rows.push(toggleRow(settings, 'review', 'Start the review loop when a pull request opens'));
+  rows.push(toggleRow(settings, 'autoLoop', 'Start the review loop when a pull request opens'));
   rows.push(toggleRow(settings, 'autoMerge', 'Merge the pull request once the loop and CI are green'));
   rows.push({ kind: 'heading', label: 'Updates' });
   rows.push(toggleRow(settings, 'updates', 'Check for a newer release on launch and every six hours'));

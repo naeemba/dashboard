@@ -35,10 +35,10 @@ branch the worktree was cut from, which a bump merges in first.
 The review agent is started on `reviewPrompt`. Whether it may merge is
 `landsPullRequest`, read at each review start: the project's `autoMerge` in
 `projects.yaml` when its entry says one, settings `review.autoMerge` (the
-settings screen's Merge row under Review, off by default) otherwise, and off when the file is
-missing or does not read. Off, it runs the loop, waits for CI, and reports to
-the project's main; on, it merges the head commit CI passed on
-(ship-decision-1).
+settings screen's Merge row under Review, off by default) otherwise or when
+there is no file, and off when the file does not read. Off, it runs the loop,
+waits for CI, says the ending on the card and reports to the project's main; on,
+it merges the head commit it noted before the CI wait (ship-decision-1).
 
 ## Scenarios
 
@@ -46,7 +46,7 @@ the project's main; on, it merges the head commit CI passed on
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
 - Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.
-- Given merging is off (the default), when the review loop and CI finish, then the review merges nothing, the card stays in Review, and the project's main hears the rounds, the fixes, what is open and the CI state.
+- Given merging is off (the default), when the review loop and CI finish, then the review merges nothing, the card stays in Review with the ending in a comment on it, and the project's main hears the rounds, the fixes, what is open and the CI state.
 - Given settings `review.autoMerge` is on but the project's entry says `autoMerge: false`, when its card is reviewed, then nothing is merged; the entry wins either way, and a folder the file does not list follows the setting.
 - Given merging is on and a fix was pushed after the last review round, when the loop ends, then the review waits for CI on that commit and merges it with `--match-head-commit`; a failed check stops it with a comment on the card.
 - Given the review merged the pull request, when the app next asks gh about the card, then the app moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).

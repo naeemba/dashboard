@@ -42,7 +42,7 @@ export type Settings = {
 // The on/off settings: each a boolean in a section of the file, named as [section, field], read by
 // parseSettings and turned over by the settings screen's Enter.
 export const TOGGLES = {
-  review: ['review', 'autoLoop'],
+  autoLoop: ['review', 'autoLoop'],
   autoMerge: ['review', 'autoMerge'],
   updates: ['updates', 'check'],
   errors: ['errors', 'notify'],
@@ -204,7 +204,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       address: typeof storedRemote.address === 'string' ? storedRemote.address.trim() : '',
       token: typeof storedRemote.token === 'string' ? storedRemote.token : '',
     },
-    review: { autoLoop: toggle('review'), autoMerge: toggle('autoMerge') },
+    review: { autoLoop: toggle('autoLoop'), autoMerge: toggle('autoMerge') },
     updates: { check: toggle('updates') },
     errors: { notify: toggle('errors') },
     workers: {

@@ -71,14 +71,7 @@ export function cardActions(main: CardActionsMain): CardActions {
     ...main,
     writeBoard: writeShown,
     arrived: (entry: WorktreeEntry) => move.call({ projectPath: entry.projectPath, id: entry.cardId, column: REVIEW_COLUMN, source: 'automatic' }),
-    // A file that cannot be read for any reason is off, as landsPullRequest says of a broken one.
-    landsPullRequest: (projectPath) => {
-      try {
-        return landsPullRequest(readProjectsFile().text, projectPath, homedir(), realPath, main.autoMerge());
-      } catch {
-        return false;
-      }
-    },
+    landsPullRequest: (projectPath) => landsPullRequest(() => readProjectsFile().text, projectPath, homedir(), realPath, main.autoMerge()),
   });
   const shipCard = shipFlow({
     ...main,

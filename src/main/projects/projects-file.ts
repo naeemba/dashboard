@@ -188,10 +188,19 @@ export function bumpsVersion(text: string | null, folder: string, home: string, 
 }
 
 // Whether a review of a card in the folder may land its pull request: the entry's `autoMerge` when it
-// says one, settings review.autoMerge when it does not, or when no entry lists the folder. No file, or a
-// file that does not read, is false whatever the setting says: the entry it cannot read may be the one
-// saying false, and a merge nobody asked for cannot be taken back (#290 landed that way).
-export function landsPullRequest(text: string | null, folder: string, home: string, realPath: (folder: string) => string, autoMerge: boolean): boolean {
+// says one, settings review.autoMerge when it does not, when no entry lists the folder, or when there is
+// no file at all — no file has no entry that could be saying false. A file that does not read, or cannot
+// be read, is false whatever the setting says: the entry it cannot read may be the one saying false, and
+// a merge nobody asked for cannot be taken back (#290 landed that way). `read` is readProjectsFile's
+// text, taken as a function so a read that throws answers false here rather than failing the review.
+export function landsPullRequest(read: () => string | null, folder: string, home: string, realPath: (folder: string) => string, autoMerge: boolean): boolean {
+  let text: string | null;
+  try {
+    text = read();
+  } catch {
+    return false;
+  }
+  if (text === null) return autoMerge;
   const listed = projectsListed(text, 'projects.yaml');
   if (!listed.ok) return false;
   return listedFolder(listed.projects, folder, home, realPath)?.autoMerge ?? autoMerge;

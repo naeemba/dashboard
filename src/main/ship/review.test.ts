@@ -152,6 +152,7 @@ describe('reviewPrompt', () => {
   it('merges only once CI is green on the head commit, and only that commit', () => {
     expect(prompt).toContain('gh pr checks 12 --watch');
     expect(prompt).toContain('--match-head-commit');
+    expect(prompt.indexOf('gh pr view 12 --json headRefOid')).toBeLessThan(prompt.indexOf('gh pr checks 12'));
     expect(prompt.indexOf('gh pr checks 12')).toBeLessThan(prompt.indexOf('gh pr merge 12'));
   });
 
@@ -166,8 +167,13 @@ describe('reviewPrompt', () => {
     });
 
     it('reports to the project\'s main and leaves the card where it is', () => {
-      expect(reporting).toContain('your report to main');
+      expect(reporting).toContain('Your report to main');
       expect(reporting).not.toContain(`move ${CARD}`);
+    });
+
+    // Main's message is gone once its session closes; the card is what the board shows a day later.
+    it('says the ending on the card too', () => {
+      expect(reporting).toContain(`cd '/work/api' && node "$DASHBOARD_BOARD" comment ${CARD} "<what happened>"`);
     });
   });
 
