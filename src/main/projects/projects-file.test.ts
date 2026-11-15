@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findProjects, readProjects, type Project } from './projects-file';
+import { bumpsVersion, findProjects, readProjects, type Project } from './projects-file';
 
 const FILE = `- name: new-crm
   aka: [crm]
@@ -35,8 +35,16 @@ describe('readProjects', () => {
         { name: 'new-raxel', role: 'test', address: 'https://test.example.com' },
         { name: 'armytech', role: 'production', address: 'https://armytech.example.com' },
       ],
+      bumpVersion: false,
     });
     expect(screensaver).toMatchObject({ site: '', deploy: [] });
+  });
+
+  it('reads bumpVersion as true or false, and refuses anything else', () => {
+    expect(projects('- name: a\n  path: /a\n  bumpVersion: true\n')[0]?.bumpVersion).toBe(true);
+    expect(projects('- name: a\n  path: /a\n  bumpVersion:\n')[0]?.bumpVersion).toBe(false);
+    expect(readProjects('- name: a\n  path: /a\n  bumpVersion: yes\n'))
+      .toEqual({ ok: false, problems: ['projects.yaml:3: bumpVersion must be true or false'] });
   });
 
   it('reads an empty file as no projects', () => {
@@ -66,7 +74,7 @@ describe('readProjects', () => {
   aka: [A]
 `);
     expect(read).toEqual({ ok: false, problems: [
-      'projects.yaml:3: project has no field "alias" (it takes name, aka, path, site, about, deploy)',
+      'projects.yaml:3: project has no field "alias" (it takes name, aka, path, site, about, deploy, bumpVersion)',
       'projects.yaml:4: project has no name',
       'projects.yaml:5: aka must be a list of names, like aka: [mandala]',
       'projects.yaml:9: deploy has no role',
@@ -126,5 +134,22 @@ describe('findProjects', () => {
     expect(names('idle')).toEqual(['screensaver']);
     const billing = projects('- name: billing\n  path: /billing\n  about: Invoices sent from the crm\n' + FILE);
     expect(findProjects(billing, 'crm').map((project) => project.name)).toEqual(['new-crm', 'billing']);
+  });
+});
+
+describe('bumpsVersion', () => {
+  const same = (folder: string) => folder;
+  const file = '- name: a\n  path: ~/a\n  bumpVersion: true\n- name: b\n  path: /b\n';
+
+  it('is the entry for the folder, matched through ~ and through a link', () => {
+    expect(bumpsVersion(file, '/home/me/a', '/home/me', same)).toBe(true);
+    expect(bumpsVersion(file, '/b', '/home/me', same)).toBe(false);
+    expect(bumpsVersion(file, '/link-to-a', '/home/me', (folder) => (folder === '/link-to-a' ? '/home/me/a' : folder))).toBe(true);
+  });
+
+  it('is false with no file, a file that does not read, or a folder it does not list', () => {
+    expect(bumpsVersion(null, '/home/me/a', '/home/me', same)).toBe(false);
+    expect(bumpsVersion(`${file}  bumpVersion: maybe\n`, '/home/me/a', '/home/me', same)).toBe(false);
+    expect(bumpsVersion(file, '/elsewhere', '/home/me', same)).toBe(false);
   });
 });

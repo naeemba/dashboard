@@ -2,9 +2,8 @@ import { homedir } from 'node:os';
 import { Document, isSeq, parseDocument, visit, type YAMLMap, type YAMLSeq } from 'yaml';
 import { realPath as realFolder } from '../app/real-path';
 import { replaceFile } from '../app/replace-file';
-import { wholePath } from '../nvim/file-open';
 import { exactProject } from './project-named';
-import { projectsListed, readProjects, readProjectsFile, type Project } from './projects-file';
+import { listedFolder, projectsListed, readProjects, readProjectsFile, type Project } from './projects-file';
 import { uniqueName, writtenPath } from './projects-first';
 
 // Every change to ~/.dashboard/projects.yaml after init: `project add`, `set` and `remove`, and the
@@ -75,16 +74,6 @@ function located(text: string | null, filePath: string, word: string): { documen
   const project = exactProject(file.projects, word);
   if (project === undefined) return { ok: false, message: `no project is called ${word}` };
   return { document: file.document, project, index: file.projects.indexOf(project) };
-}
-
-// The entry naming the folder. A path written exactly as the folder skips the realpath call, which
-// is the common case for an entry the app appended itself.
-function listedFolder(projects: readonly Project[], folder: string, home: string, realPath: (folder: string) => string): Project | undefined {
-  const real = realPath(folder);
-  return projects.find((project) => {
-    const whole = wholePath(project.path, home);
-    return whole !== undefined && (whole === folder || realPath(whole) === real);
-  });
 }
 
 function akaList(document: Document, aka: readonly string[]): YAMLSeq {
