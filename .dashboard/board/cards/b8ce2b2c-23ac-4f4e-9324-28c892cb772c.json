@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T22:10:33.299Z",
-  "updatedAt": "2026-11-15T22:15:36.389Z",
+  "updatedAt": "2026-11-15T22:37:18.429Z",
   "branch": "pane-run-refuses-a-just-claimed-pane-as-bus",
   "pullRequest": 289,
   "comments": [
     {
       "at": "2026-11-15T22:15:36.359Z",
       "body": "Pull request #289 opened: pane run refuses a just claimed pane as bus https://github.com/naeemba/dashboard/pull/289"
+    },
+    {
+      "at": "2026-11-15T22:37:18.429Z",
+      "body": "Review loop ended floor-addressed after 3 rounds (7 findings fixed, commits 8025532c 0d98338e 66ce7a60; main merged in for a card-file conflict). Not merged: once marked ready, Windows CI fails on the PR's own new test, src/main/panes/pane-shells.test.ts 'marks an in-process shell past its runner on its first output, so a systemd-run started later reads as a program' (expected undefined to be 'systemd-run'). Linux/mac checks pass and main is green on Windows. Run: https://github.com/naeemba/dashboard/actions/runs/43770100140"
     }
   ],
   "column": "Review",
