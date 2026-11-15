@@ -20,8 +20,8 @@ closes the projects it names; you can also edit it by hand.
 out, or with no file at all, a shipped card leaves the version alone
 (projects-decision-1, [ship](../ship/README.md)). `autoMerge: true` or `false`
 says whether a review of that project's cards merges its pull request, over
-settings `review.autoMerge`; left out, the setting decides, and with no file, or
-one that does not read, nothing merges (ship-decision-1). Both are written by
+settings `review.autoMerge`; left out, or with no file at all, the setting
+decides; a file that does not read means nothing merges (ship-decision-1). Both are written by
 hand; `project set` keeps them as they are.
 
 | Verb | What it prints |
