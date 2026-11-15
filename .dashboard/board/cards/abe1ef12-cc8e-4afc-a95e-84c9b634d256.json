@@ -1,0 +1,11 @@
+{
+  "id": "abe1ef12-cc8e-4afc-a95e-84c9b634d256",
+  "title": "App holds pane-command permissions; review prompt stops moving cards to Done",
+  "notes": "Two small cases where an agent is told to do what the app already does.\n\n1. Pane-command permissions in the app's own settings. Main's screen passes settings { hooks: BOARD_GUARD_HOOKS } (src/main/chat/chat-sessions.ts ~338) and workers get workerSettings (src/main/workers/dispatch.ts ~103-117). Add permissions.allow for Bash(node \"$DASHBOARD_COMMAND\" pane *), session *, and the board command, so a fresh machine needs no hand copy from the dotfiles settings.json (lines ~127-128). Check whether autoMode.allow is honoured from flag settings. If it isn't, permissions.allow is enough.\n\n2. The review prompt moves the card to Done itself (src/main/ship/review.ts ~129 `board move <card> Done`), but the worker's system prompt (dispatch.ts ~41-44) says the app moves branch cards and the worker must not. The app does move it on merge (src/main/board/pull-request-column.test.ts:83). Drop the move from the review prompt. First check that the follow writes the card on origin/main the way the board command does: review.ts ~108-113 explains why the move was put there. If it doesn't, say so on the card and stop.\n\nAlso correct docs/workflow/claude-md-audit.md:34. It says main's dispatch prompt asks for /simplify, but mainPrompt doesn't.\n\nDo not bump the version.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-15T22:03:56.853Z",
+  "updatedAt": "2026-11-15T22:03:56.853Z",
+  "column": "Backlog",
+  "order": 44
+}
