@@ -1,0 +1,11 @@
+{
+  "id": "787d9a9a-7231-4f20-b487-8d208d82bd72",
+  "title": "Move the manager's /tmp scripts into the CLI: dispatch, finish, land, budget",
+  "notes": "From the 30-session retro (2026-11-16): managers keep rebuilding their workflow as throwaway /tmp scripts.\n- Dashboard manager: land.sh ran 130 times, wave.sh 116, finish.sh 99 and dispatch.sh 57. They were lost when /tmp filled, and wave.sh was rewritten 3 times.\n- new-crm manager: a hand-made /tmp/budget.sh ran 59 times, and `sleep 1500; echo heartbeat` ran 19 times to stay awake overnight. The user restated the usage cap each time (\"don't go over 74%\").\n\nWant:\n- `pane dispatch <card>`, `pane finish <id>` and `pr land <n>` as CLI verbs;\n- a `budget` verb that reads the 7-day usage against a cap the user sets once;\n- a scheduled wake-up instead of sleep heartbeats.\nKeep the worker brief as a template in the repo.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-15T23:35:34.238Z",
+  "updatedAt": "2026-11-15T23:35:34.238Z",
+  "column": "Backlog",
+  "order": 46
+}
