@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T22:03:43.098Z",
-  "updatedAt": "2026-11-15T22:04:21.998Z",
+  "updatedAt": "2026-11-15T22:13:28.337Z",
   "branch": "app-owned-work-card-skill-version-bump-is-a",
-  "column": "Doing",
+  "pullRequest": 288,
+  "comments": [
+    {
+      "at": "2026-11-15T22:13:28.311Z",
+      "body": "Pull request #288 opened: App-owned /work-card skill; version bump is a per-project setting https://github.com/naeemba/dashboard/pull/288"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
