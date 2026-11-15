@@ -676,6 +676,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList } = car
   boardLog,
   boardSync,
   autoLoop: () => settings.review.autoLoop,
+  autoMerge: () => settings.review.autoMerge,
   log: (draft) => logStore.log(draft),
   pullRequestOf: async (projectPath, branch) => {
     const pull = latestPullRequest(await runProgram('gh', pullRequestListArguments(branch), projectPath, { timeout: 20_000 }));

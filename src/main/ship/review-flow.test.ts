@@ -78,6 +78,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       queue: (_key, run) => run(),
       writeBoard: (projectPath, board) => { writeBoard(projectPath, board); },
       arrived: async () => undefined,
+      landsPullRequest: () => false,
       ...over,
     },
   };
@@ -113,6 +114,16 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
     expect(log.added).toEqual(['ship-it']);
     expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(log.started[0].prompt).not.toContain('gh pr merge');
+  });
+
+  it('asks the review to merge only when the project may land its pull request', async () => {
+    const { entry, projectPath } = flight(12);
+    const asked: string[] = [];
+    const { ports: made, log } = ports(entry, { landsPullRequest: (path) => { asked.push(path); return true; } });
+    await sweepWith(made).run();
+    expect(asked).toEqual([projectPath]);
+    expect(log.started[0].prompt).toContain('gh pr merge 12 --merge');
   });
 
   // card.follow's number on the project's board, with the card in Review: an agent that recorded

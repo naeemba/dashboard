@@ -8,7 +8,7 @@ import type { BoardSyncQueue } from '../../board/board-sync-queue';
 import { readBoard, writeBoard } from '../../board/board-store';
 import { homedir } from 'node:os';
 import { realPath } from '../../app/real-path';
-import { bumpsVersion, readProjectsFile } from '../../projects/projects-file';
+import { bumpsVersion, landsPullRequest, readProjectsFile } from '../../projects/projects-file';
 import { isProjectBoard } from './project-board';
 import { isLinkedWorktree } from '../../board/linked-worktree';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
@@ -26,13 +26,15 @@ import { cardStart } from './start';
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
 export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
-  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived'> & {
+  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest'> & {
     table: Channels;
     boardLog: BoardChanges;
     // Every board write here goes to origin behind it (board-sync-queue.ts).
     boardSync: BoardSyncQueue;
     // settings.review.autoLoop, read at each move so a change on the settings screen holds at once.
     autoLoop(): boolean;
+    // settings.review.autoMerge, the same way; a project's entry in projects.yaml wins over it.
+    autoMerge(): boolean;
     log(draft: LogDraft): void;
     // `gh pr list` for a branch, in the project (pull-request-column.ts reads its answer).
     pullRequestOf(projectPath: string, branch: string): Promise<PullRequest | null>;
@@ -69,6 +71,14 @@ export function cardActions(main: CardActionsMain): CardActions {
     ...main,
     writeBoard: writeShown,
     arrived: (entry: WorktreeEntry) => move.call({ projectPath: entry.projectPath, id: entry.cardId, column: REVIEW_COLUMN, source: 'automatic' }),
+    // A file that cannot be read for any reason is off, as landsPullRequest says of a broken one.
+    landsPullRequest: (projectPath) => {
+      try {
+        return landsPullRequest(readProjectsFile().text, projectPath, homedir(), realPath, main.autoMerge());
+      } catch {
+        return false;
+      }
+    },
   });
   const shipCard = shipFlow({
     ...main,

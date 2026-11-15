@@ -1,5 +1,6 @@
 import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
+import { mainSessionName } from '../workers/dispatch';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps
@@ -103,7 +104,14 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 }
 
 // What the review pane is asked to do. One prompt rather than a bare `/pr-loop`, because the loop
-// stops at a report and the card wants the pull request landed.
+// stops at a report and the card wants either the pull request landed or the user told it is ready.
+//
+// `merge` is landsPullRequest's answer (projects-file.ts), off unless settings or the project's entry
+// turn it on: #290 was merged by this prompt with nobody's go-ahead, and two commits reached main with
+// no review after them. Off, the pane stops once the loop and CI are done and reports to the project's
+// main; the card waits in Review until the user merges it. On, it merges only once CI has passed on the
+// head commit, so a fix pushed after the last review round is checked too, and names that commit to
+// `gh pr merge` so a push landing in between is not merged unchecked.
 //
 // The card is not moved: the app's follow (card.follow) moves it into Done once gh says merged, and
 // writes it on origin's main through the same sync the `board` command uses (board-sync-git.ts). A move
@@ -112,23 +120,50 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in.
-export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string): string {
+export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
+  const waitForChecks = [
+    `   wait for CI on the pull request's head commit: \`gh pr checks ${pullRequest} --watch\`. Every check`,
+    '   must pass on the commit the pull request ends on, a commit pushed after the last review round',
+    '   included. "No checks reported" right after a push means CI has not started: ask again in a',
+    '   minute, and only if there are still none does the repository run no CI.',
+  ];
+  const ending = [
+    '',
+    'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',
+    "in Done on the project's board and this pane has been closed. Do not quit, kill or rebuild any",
+    'running app.',
+  ];
+  if (!merge) {
+    return [
+      `Review pull request #${pullRequest}. It came from card ${cardId} on the board of ${projectPath}.`,
+      'Merging is off for this project: the user lands the pull request, not you.',
+      '',
+      `1. Run /pr-loop ${pullRequest} and let it finish.`,
+      '2. Then, unless the loop stopped short or the pull request conflicts with the base branch,',
+      ...waitForChecks,
+      '3. Do not merge it, and do not move the card: it stays in Review until the user merges.',
+      `4. Report to ${mainSessionName(projectPath)} whatever the ending: how many rounds the loop ran,`,
+      '   what each one fixed, what is still open, and the CI state of the head commit.',
+      ...ending,
+    ].join('\n');
+  }
   return [
     `Review pull request #${pullRequest} and land it. It came from card ${cardId} on the board of ${projectPath}.`,
     '',
     `1. Run /pr-loop ${pullRequest} and let it finish.`,
     '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
-    `   conflict with the base branch, land it: \`gh pr merge ${pullRequest} --merge\`. Do not approve it:`,
-    '   you are the author, and GitHub refuses an approval from the author. The pull request does not',
-    '   need one to merge. Do not move the card: the app moves it to Done once the merge is in.',
+    '   conflict with the base branch,',
+    ...waitForChecks,
+    `3. Once every check is green, land it with the commit they passed on: \`gh pr merge ${pullRequest} --merge`,
+    `   --match-head-commit <sha>\`, the sha from \`gh pr view ${pullRequest} --json headRefOid -q .headRefOid\`.`,
+    '   Do not approve it: you are the author, and GitHub refuses an approval from the author. The pull',
+    '   request does not need one to merge. Do not move the card: the app moves it to Done once the',
+    '   merge is in.',
     '',
-    '3. Any other ending — the loop stopped short, the merge was refused, the pull request conflicts —',
-    "   is where you stop, and the card stays in Review. Say what happened on the card:",
+    '4. Any other ending — the loop stopped short, a check failed, the merge was refused, the pull',
+    "   request conflicts — is where you stop, and the card stays in Review. Say what happened on the card:",
     `   \`${board} comment ${cardId} "<what happened>"\`.`,
-    '',
-    'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',
-    "in Done on the project's board and this pane has been closed. Do not quit, kill or rebuild any",
-    'running app.',
+    ...ending,
   ].join('\n');
 }

@@ -128,23 +128,47 @@ describe('reviewRefused', () => {
 });
 
 describe('reviewPrompt', () => {
-  const prompt = reviewPrompt(CARD, 12, '/work/api');
+  const prompt = reviewPrompt(CARD, 12, '/work/api', true);
 
   it('quotes the project path, which is allowed a space in it', () => {
-    expect(reviewPrompt(CARD, 12, '/work/my api')).toContain("cd '/work/my api' &&");
+    expect(reviewPrompt(CARD, 12, '/work/my api', true)).toContain("cd '/work/my api' &&");
   });
 
   // A folder is allowed an apostrophe too, and one left raw ends the quotes early: the agent is handed
   // `cd '/work/Bob's api'`, which is not the command anyone meant — and the fallback that tells the
   // card what went wrong is built from the same string, so the card sits in Review saying nothing.
   it('escapes an apostrophe in the project path', () => {
-    const prompt = reviewPrompt(CARD, 12, "/work/Bob's api");
+    const prompt = reviewPrompt(CARD, 12, "/work/Bob's api", true);
     expect(prompt).toContain(String.raw`cd '/work/Bob'\''s api' &&`);
   });
 
   it('names the pull request to run the loop against', () => {
     expect(prompt).toContain('/pr-loop 12');
     expect(prompt).toContain('gh pr merge 12 --merge');
+  });
+
+  // A fix pushed after the last review round is merged only once CI has passed on it, and the merge
+  // names that commit, so a push landing between the check and the merge is refused rather than merged.
+  it('merges only once CI is green on the head commit, and only that commit', () => {
+    expect(prompt).toContain('gh pr checks 12 --watch');
+    expect(prompt).toContain('--match-head-commit');
+    expect(prompt.indexOf('gh pr checks 12')).toBeLessThan(prompt.indexOf('gh pr merge 12'));
+  });
+
+  // #290 was merged by this prompt with nobody's go-ahead.
+  describe('with merging off', () => {
+    const reporting = reviewPrompt(CARD, 12, '/work/api', false);
+
+    it('runs the loop and waits for CI, and never merges', () => {
+      expect(reporting).toContain('/pr-loop 12');
+      expect(reporting).toContain('gh pr checks 12 --watch');
+      expect(reporting).not.toContain('gh pr merge');
+    });
+
+    it('reports to the project\'s main and leaves the card where it is', () => {
+      expect(reporting).toContain('Report to main-api');
+      expect(reporting).not.toContain(`move ${CARD}`);
+    });
   });
 
   // The pane runs as the author of the pull request, and GitHub refuses an approval from the author.
