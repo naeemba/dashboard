@@ -166,7 +166,7 @@ describe('reviewPrompt', () => {
     });
 
     it('reports to the project\'s main and leaves the card where it is', () => {
-      expect(reporting).toContain('Report to main-api');
+      expect(reporting).toContain('your report to main');
       expect(reporting).not.toContain(`move ${CARD}`);
     });
   });

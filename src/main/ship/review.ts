@@ -1,6 +1,5 @@
 import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
-import { mainSessionName } from '../workers/dispatch';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps
@@ -128,30 +127,14 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     '   included. "No checks reported" right after a push means CI has not started: ask again in a',
     '   minute, and only if there are still none does the repository run no CI.',
   ];
-  const ending = [
-    '',
-    'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',
-    "in Done on the project's board and this pane has been closed. Do not quit, kill or rebuild any",
-    'running app.',
+  const report = [
+    '2. Then, unless the loop stopped short or the pull request conflicts with the base branch,',
+    ...waitForChecks,
+    '3. Do not merge it, and do not move the card: it stays in Review until the user merges.',
+    '4. Whatever the ending, your report to main (the SendMessage asked for below) says how many rounds',
+    '   the loop ran, what each one fixed, what is still open, and the CI state of the head commit.',
   ];
-  if (!merge) {
-    return [
-      `Review pull request #${pullRequest}. It came from card ${cardId} on the board of ${projectPath}.`,
-      'Merging is off for this project: the user lands the pull request, not you.',
-      '',
-      `1. Run /pr-loop ${pullRequest} and let it finish.`,
-      '2. Then, unless the loop stopped short or the pull request conflicts with the base branch,',
-      ...waitForChecks,
-      '3. Do not merge it, and do not move the card: it stays in Review until the user merges.',
-      `4. Report to ${mainSessionName(projectPath)} whatever the ending: how many rounds the loop ran,`,
-      '   what each one fixed, what is still open, and the CI state of the head commit.',
-      ...ending,
-    ].join('\n');
-  }
-  return [
-    `Review pull request #${pullRequest} and land it. It came from card ${cardId} on the board of ${projectPath}.`,
-    '',
-    `1. Run /pr-loop ${pullRequest} and let it finish.`,
+  const land = [
     '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
     '   conflict with the base branch,',
     ...waitForChecks,
@@ -164,6 +147,16 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     '4. Any other ending — the loop stopped short, a check failed, the merge was refused, the pull',
     "   request conflicts — is where you stop, and the card stays in Review. Say what happened on the card:",
     `   \`${board} comment ${cardId} "<what happened>"\`.`,
-    ...ending,
+  ];
+  return [
+    `Review pull request #${pullRequest}${merge ? ' and land it' : ''}. It came from card ${cardId} on the board of ${projectPath}.`,
+    ...(merge ? [] : ['Merging is off for this project: the user lands the pull request, not you.']),
+    '',
+    `1. Run /pr-loop ${pullRequest} and let it finish.`,
+    ...(merge ? land : report),
+    '',
+    'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',
+    "in Done on the project's board and this pane has been closed. Do not quit, kill or rebuild any",
+    'running app.',
   ].join('\n');
 }
