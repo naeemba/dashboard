@@ -5,13 +5,14 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-15T23:35:41.493Z",
-  "updatedAt": "2026-11-15T23:56:03.143Z",
+  "updatedAt": "2026-11-15T23:56:33.443Z",
+  "branch": "add-a-pre-commit-hook-and-a-typecheck-scrip",
   "comments": [
     {
       "at": "2026-11-15T23:56:03.142Z",
       "body": "Note from main-dashboard: the app and the board command commit board cards from throwaway worktrees with no node_modules. The pre-commit hook must not run, slow down or fail those commits: skip when only .dashboard/ is staged, or when the tools are missing. Prefer a plain git hooks path (core.hooksPath set by a prepare script) over adding husky, unless there is a reason. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 47
+  "column": "Doing",
+  "order": 3
 }
