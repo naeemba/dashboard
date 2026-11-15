@@ -44,6 +44,19 @@ export const BOARD_INSTRUCTIONS = [
     + ' branch, such as research, is moved by whoever works it.',
 ].join('\n');
 
+// The app's own commands, allowed in the settings of every session it starts (main's screen, a worker's
+// screen or terminal), so a fresh machine runs them with no rule copied into ~/.claude/settings.json.
+// permissions.allow rather than autoMode.allow: Claude Code reads the second from a --settings source
+// too, but one there without "$defaults" replaces the classifier's default list on a machine whose own
+// settings name none, and an allow rule is decided before the classifier is asked anyway.
+export const APP_COMMAND_PERMISSIONS = {
+  allow: [
+    'Bash(node "$DASHBOARD_COMMAND" pane *)',
+    'Bash(node "$DASHBOARD_COMMAND" session *)',
+    'Bash(node "$DASHBOARD_BOARD" *)',
+  ],
+};
+
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
 export function mainPrompt(projectPath: string, platform: string = process.platform): string {
@@ -99,7 +112,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
 // runs, which the hook's input tells apart (stop-notices.ts). permission_prompt is the one Notification
 // that needs a person; the app marks the pane and raises a banner. A prompt submitted, or a tool that
 // has run (so any permission was granted), is the worker back at work, which takes either mark off.
-// None of them reads the pane's screen. PreToolUse is the board guard (board-guard.ts).
+// None of them reads the pane's screen. PreToolUse is the board guard (board-guard.ts). The permissions
+// are APP_COMMAND_PERMISSIONS.
 export function workerSettings(id: string): string {
   const notify = (state: string) => ({ type: 'command', command: `node "$DASHBOARD_SESSION" notify ${id} ${state}` });
   // The space after the brace is outside every string, which is what makes Windows PowerShell wrap the
@@ -113,6 +127,7 @@ export function workerSettings(id: string): string {
       PostToolUse: [{ hooks: [notify('running')] }],
       ...BOARD_GUARD_HOOKS,
     },
+    permissions: APP_COMMAND_PERMISSIONS,
   }).slice(1);
 }
 

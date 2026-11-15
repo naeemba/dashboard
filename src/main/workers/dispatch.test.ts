@@ -76,6 +76,13 @@ describe('workerSettings', () => {
     expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
   });
 
+  // A fresh machine has no rule for them in ~/.claude/settings.json.
+  it('allows the pane, session and board commands', () => {
+    expect(JSON.parse(workerSettings('2:3')).permissions.allow).toEqual(expect.arrayContaining([
+      'Bash(node "$DASHBOARD_COMMAND" pane *)', 'Bash(node "$DASHBOARD_COMMAND" session *)', 'Bash(node "$DASHBOARD_BOARD" *)',
+    ]));
+  });
+
   // Every other space in it is inside a string, and Windows PowerShell wraps a word for claude only when
   // it finds one outside: without this one the JSON reached claude cut at each space, claude took the
   // first piece for a settings file that was not there, and the worker's pane never started.

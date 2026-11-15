@@ -1,5 +1,5 @@
 import type { EffortLevel, ModelInfo, Options, PermissionResult, Query, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
-import { BOARD_INSTRUCTIONS, mainPrompt, mainSessionName } from '../workers/dispatch';
+import { APP_COMMAND_PERMISSIONS, BOARD_INSTRUCTIONS, mainPrompt, mainSessionName } from '../workers/dispatch';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { peerSender, turnUnderWay } from '../../shared/chat/chat-events';
@@ -334,8 +334,9 @@ export function registerChatSessions(
         // user's allow rules apply before auto mode decides (workers-decision-5).
         settingSources: ['user', 'project', 'local'],
         hooks: worker?.hooks,
-        // The board guard, as a command hook so a hosted worker's session runs it too (board-guard.ts).
-        settings: { hooks: BOARD_GUARD_HOOKS },
+        // The board guard, as a command hook so a hosted worker's session runs it too (board-guard.ts),
+        // and the app's own commands allowed (APP_COMMAND_PERMISSIONS).
+        settings: { hooks: BOARD_GUARD_HOOKS, permissions: APP_COMMAND_PERMISSIONS },
         env: environment,
         includePartialMessages: true,
         // Every hook's start and answer, not only SessionStart's: the working line names the one
