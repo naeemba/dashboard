@@ -1,0 +1,11 @@
+{
+  "id": "40e9e4a6-2f66-42ce-bafd-33d5a351e4a9",
+  "title": "Wait on CI without polling, and stop pr-loop's blocked run-cancel step",
+  "notes": "From the 30-session retro (2026-11-16):\n- 166 manual `gh pr view` / `gh pr checks` polls in a single new-crm manager session.\n- `sleep N; gh pr checks` was blocked 6 times across the dashboard and new-crm, because foreground sleep is blocked.\n- pr-loop's `gh run cancel` step was blocked by the auto-mode classifier as \"Interfere With Workloads\", and 5 sessions tried it.\n\nWant:\n- one documented way to wait: `gh pr checks <n> --watch` with run_in_background, or a small ci-wait script under Monitor. Name it in the pr-loop skill and in the landing prompt in src/main/ship/review.ts.\n- Drop the `gh run cancel` step from pr-loop, since the draft flag already keeps CI from running, or get the user to allow it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-15T23:35:20.206Z",
+  "updatedAt": "2026-11-15T23:35:20.206Z",
+  "column": "Backlog",
+  "order": 44
+}

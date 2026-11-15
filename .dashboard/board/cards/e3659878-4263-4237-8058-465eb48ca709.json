@@ -1,0 +1,11 @@
+{
+  "id": "e3659878-4263-4237-8058-465eb48ca709",
+  "title": "Add a pre-commit hook and a typecheck script",
+  "notes": "From the 30-session retro (2026-11-16):\n- package.json has `lint` and `test` but no `typecheck`, so `tsc --noEmit` runs only in CI.\n- There is no pre-commit hook. Worker 2c34293e hit an eslint error mid-edit (\"'wholePath' is defined but never used\").\n- Windows-only test failures (Unix paths in tests) reached #288 and #289 after the review loop had finished; only CI's windows-latest job caught them.\n\nWant:\n- `\"typecheck\": \"tsc --noEmit\"`;\n- a pre-commit hook running lint and typecheck on staged files;\n- a review-checklist line: tests touching paths or processes use path.join or skip on win32, like the neighbouring files.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-15T23:35:41.493Z",
+  "updatedAt": "2026-11-15T23:35:41.493Z",
+  "column": "Backlog",
+  "order": 47
+}
