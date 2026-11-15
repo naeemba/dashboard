@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-15T23:34:30.357Z",
-  "updatedAt": "2026-11-15T23:34:40.620Z",
+  "updatedAt": "2026-11-15T23:34:47.882Z",
+  "comments": [
+    {
+      "at": "2026-11-15T23:34:47.882Z",
+      "body": "Created by mistake while testing the CLI's argument order; not a task."
+    }
+  ],
   "column": "Cancelled",
   "order": 8
 }
