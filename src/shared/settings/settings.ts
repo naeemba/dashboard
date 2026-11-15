@@ -23,7 +23,10 @@ export type Settings = {
   remote: { address: string; token: string };
   // autoLoop: whether a shipped card that reaches Review on its own starts its review loop. Off, it
   // waits there until moved into Review by hand or `dashboard board review <id>` (column-entry.ts).
-  review: { autoLoop: boolean };
+  // autoMerge: whether the review loop lands its pull request once CI is green. Off, the default, it
+  // stops at a report to the project's main; a project's `autoMerge` in projects.yaml wins over it
+  // (landsPullRequest in projects-file.ts).
+  review: { autoLoop: boolean; autoMerge: boolean };
   // check: whether the app reads GitHub's newest release on launch and every six hours (docs/updates).
   // Off, the update key still checks when pressed.
   updates: { check: boolean };
@@ -36,14 +39,20 @@ export type Settings = {
   workers: { closeAfterMinutes: number };
 };
 
-// The on/off settings: each a section of the file holding one boolean, read by parseSettings and turned
-// over by the settings screen's Enter.
-export const TOGGLES = { review: 'autoLoop', updates: 'check', errors: 'notify' } as const;
+// The on/off settings: each a boolean in a section of the file, named as [section, field], read by
+// parseSettings and turned over by the settings screen's Enter.
+export const TOGGLES = {
+  review: ['review', 'autoLoop'],
+  autoMerge: ['review', 'autoMerge'],
+  updates: ['updates', 'check'],
+  errors: ['errors', 'notify'],
+} as const;
 export type ToggleName = keyof typeof TOGGLES;
 
 export function isOn(settings: Settings, name: ToggleName): boolean {
-  const section: Record<string, unknown> = settings[name];
-  return section[TOGGLES[name]] === true;
+  const [section, field] = TOGGLES[name];
+  const stored: Record<string, unknown> = settings[section];
+  return stored[field] === true;
 }
 
 // One line of the file's `keys`, read. `written` travels with the binding because the two answers come
@@ -96,7 +105,7 @@ export function defaultSettings(isMac: boolean): Settings {
     weatherPlace: DEFAULT_WEATHER_PLACE,
     host: { port: null, token: '', bind: DEFAULT_HOST_BIND },
     remote: { address: '', token: '' },
-    review: { autoLoop: true },
+    review: { autoLoop: true, autoMerge: false },
     updates: { check: true },
     errors: { notify: true },
     workers: { closeAfterMinutes: DEFAULT_CLOSE_AFTER_MINUTES },
@@ -160,7 +169,8 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedWorkers = asRecord(raw.workers);
   // A toggle the file holds as a boolean, or the shipped one.
   const toggle = (name: ToggleName): boolean => {
-    const stored = asRecord(raw[name])[TOGGLES[name]];
+    const [section, field] = TOGGLES[name];
+    const stored = asRecord(raw[section])[field];
     return typeof stored === 'boolean' ? stored : isOn(defaults, name);
   };
   // A line the file left out reads as undefined, which toBinding already answers with the shipped default.
@@ -194,7 +204,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       address: typeof storedRemote.address === 'string' ? storedRemote.address.trim() : '',
       token: typeof storedRemote.token === 'string' ? storedRemote.token : '',
     },
-    review: { autoLoop: toggle('review') },
+    review: { autoLoop: toggle('review'), autoMerge: toggle('autoMerge') },
     updates: { check: toggle('updates') },
     errors: { notify: toggle('errors') },
     workers: {

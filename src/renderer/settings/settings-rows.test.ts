@@ -98,4 +98,10 @@ describe('toggled', () => {
     expect(isOn(toggled(off, 'errors'), 'errors')).toBe(true);
     expect(settingsRows(off)).toContainEqual(expect.objectContaining({ kind: 'toggle', name: 'errors', value: 'off' }));
   });
+
+  // Two toggles share the review section, so turning one over must keep the other.
+  it('turns over a toggle that shares its section with another', () => {
+    const merging = toggled(settings, 'autoMerge');
+    expect(merging.review).toEqual({ autoLoop: settings.review.autoLoop, autoMerge: !settings.review.autoMerge });
+  });
 });

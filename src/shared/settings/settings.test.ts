@@ -7,9 +7,16 @@ import { THEME } from '../app/theme';
 
 describe('parseSettings', () => {
   it('starts the review loop on its own unless the file turns it off', () => {
-    expect(parseSettings({}, false).review).toEqual({ autoLoop: true });
-    expect(parseSettings({ review: { autoLoop: false } }, false).review).toEqual({ autoLoop: false });
-    expect(parseSettings({ review: { autoLoop: 'no' } }, false).review).toEqual({ autoLoop: true });
+    expect(parseSettings({}, false).review.autoLoop).toBe(true);
+    expect(parseSettings({ review: { autoLoop: false } }, false).review.autoLoop).toBe(false);
+    expect(parseSettings({ review: { autoLoop: 'no' } }, false).review.autoLoop).toBe(true);
+  });
+
+  // #290 merged with nobody's go-ahead: a review lands its pull request only when the file says so.
+  it('leaves the merge to the user unless the file turns it on', () => {
+    expect(parseSettings({}, false).review).toEqual({ autoLoop: true, autoMerge: false });
+    expect(parseSettings({ review: { autoMerge: true } }, false).review).toEqual({ autoLoop: true, autoMerge: true });
+    expect(parseSettings({ review: { autoMerge: 'yes' } }, false).review.autoMerge).toBe(false);
   });
 
   it('notifies of errors unless the file turns it off', () => {

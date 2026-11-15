@@ -3,7 +3,8 @@ import { isOn, TOGGLES, type Settings, type ToggleName } from '../../shared/sett
 
 // The settings with one toggle turned over. The section is spread so a field beside the toggle survives.
 export function toggled(settings: Settings, name: ToggleName): Settings {
-  return { ...settings, [name]: { ...settings[name], [TOGGLES[name]]: !isOn(settings, name) } };
+  const [section, field] = TOGGLES[name];
+  return { ...settings, [section]: { ...settings[section], [field]: !isOn(settings, name) } };
 }
 
 function toggleRow(settings: Settings, name: ToggleName, label: string): SettingsRow {
@@ -78,6 +79,7 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
   rows.push({ kind: 'heading', label: 'Review' });
   rows.push(toggleRow(settings, 'review', 'Start the review loop when a pull request opens'));
+  rows.push(toggleRow(settings, 'autoMerge', 'Merge the pull request once the loop and CI are green'));
   rows.push({ kind: 'heading', label: 'Updates' });
   rows.push(toggleRow(settings, 'updates', 'Check for a newer release on launch and every six hours'));
   rows.push({ kind: 'heading', label: 'Errors' });
