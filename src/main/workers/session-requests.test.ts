@@ -170,12 +170,12 @@ describe('sessionRequests', () => {
     expect(answer.workers()).toEqual([]);
   });
 
-  // A worker resumed at launch has no run behind it, so its own page's main hears it.
-  it('tells the pane\'s own main when a resumed worker no run started is done', async () => {
+  // A worker resumed at launch whose dispatcher's page is not open: its own page's main hears it.
+  it('tells the pane\'s own main when a resumed worker\'s dispatcher page is not open', async () => {
     const { ports, open, agents, workers, told } = project();
     open.push(1);
     agents.add('2:1');
-    workers.set('2:1', '/work/api');
+    workers.set('2:1', '/work/gone');
     const answer = sessionRequests(ports);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
