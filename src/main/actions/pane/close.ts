@@ -33,7 +33,8 @@ export function notStoppedText(unit: string, error: unknown): string {
 }
 
 // A pane's scope stopped where the answer may not be read (pane.close behind the close key,
-// pane.restart, pane.restore): one left running is a warning in the log, and its text is answered too, or null when it stopped.
+// pane.restart, pane.restore): one left running is a warning in the log, and its text is answered
+// too, or null when it stopped.
 export async function stopOrWarn(
   ports: Pick<PaneClosePorts, 'stopScope' | 'log'>, unit: string, action: string, id: string,
 ): Promise<string | null> {
