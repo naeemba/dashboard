@@ -85,7 +85,9 @@ is answered without picking it again. Only a pane that is asking takes a key
 that way: a pane that has died wants Enter in the pane itself, and one getting
 on with its work is left alone. Main, and a worker drawn as a Claude screen,
 have no terminal to type into, so the row shows the question with its answers
-numbered, `1. Yes`, `2. No`, and a digit picks one; a tool call, or a single
+numbered and a digit picks one. The digits follow the labels the row prints, so
+`2` is not always No: a tool call that comes with an "always" rule lists
+`2. Yes, and do not ask again for this` and moves No to `3`. A tool call, or a single
 question with one pick, is answered that way. A form, several questions or an
 answer to type are answered on the screen itself, and its row shows only the
 question. A project with nothing to report says nothing
@@ -130,7 +132,7 @@ Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
 - Given the log section, when you press Enter on an entry or click it, then it opens formatted in the drawer's JSON viewer, a stack one frame to a line; Escape closes it.
 - Given the log section or its popup, when you press Alt+C or click a row's copy button, then the entry is on the clipboard as JSON, an older five-field entry included.
 - Given a pane is waiting, when you press Enter on its row, then you land on that pane in its project.
-- Given a worker drawn as a Claude screen is asking to run a tool, when you press `1` on its row, then the call is allowed without leaving the manager, and `2` declines it.
+- Given a worker drawn as a Claude screen is asking to run a tool, when you press `1` on its row, then the call is allowed without leaving the manager, and the digit beside `No` on the row declines it.
 - Given several things need you, when you press the next-in-queue key, then you are taken to the next one.
 - Given the manager's board, when you move a card in a project's board there, then that project's `board.json` changes.
 - Given projects are marked, when you run a command, then it runs in a free pane of each marked project.

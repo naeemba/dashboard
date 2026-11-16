@@ -225,7 +225,7 @@ function mainEntry(page: Page): ManagerPane[] {
   if (chat === null) return [];
   return [{
     index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(chat.question() !== null), exited: false,
-    lastPrintedAt: 0, lastPrinted: () => chat.question() ?? '',
+    answers: chat.rowKeys(), lastPrintedAt: 0, lastPrinted: () => chat.question() ?? '',
     tail: () => chat.questionLines(),
   }];
 }
@@ -236,10 +236,14 @@ function currentManagerRows(): ManagerRow[] {
   return managerRows(projectPages().map((entry) => ({
     project: entry.project,
     slot: entry.slot,
-    panes: [...mainEntry(entry), ...namedPanes(entry).map((pane) => ({
+    panes: [...mainEntry(entry), ...namedPanes(entry).map((pane): ManagerPane => ({
       ...pane,
+      // A worker drawn as a screen is read like main: its shell is out of sight under it, so neither
+      // the shell's lines nor when it last printed are anything the worker did.
+      answers: pane.screen?.rowKeys() ?? 'character',
+      lastPrintedAt: pane.screen ? 0 : pane.lastPrintedAt,
       tail: () => pane.screen?.questionLines() ?? paneTail(pane.terminal),
-      lastPrinted: () => paneLastLine(pane.terminal),
+      lastPrinted: () => (pane.screen ? pane.screen.question() ?? '' : paneLastLine(pane.terminal)),
     }))],
   })), usage, worktrees, memory);
 }

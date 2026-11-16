@@ -38,6 +38,12 @@ export function rowLines(ask: PermissionAsk): string[] {
   return [rowTitle(ask), ...rowChoices(ask).map((choice, index) => `${index + 1}. ${choice.label}`)];
 }
 
+// Whether a digit on the row answers this question at all. The manager offers a key, and its status
+// bar names one, only where this is true; a key there goes to rowAnswer, which reads the same rows.
+export function takesDigit(ask: PermissionAsk): boolean {
+  return rowChoices(ask).length > 0;
+}
+
 // The answer a key gives, or null for a key that is not one of the digits offered.
 export function rowAnswer(ask: PermissionAsk, key: string): PermissionResult | null {
   const index = /^[1-9]$/.test(key) ? Number(key) - 1 : -1;

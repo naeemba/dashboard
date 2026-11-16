@@ -12,7 +12,8 @@ import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { createLiveBlock } from './chat-live-view';
 import { permissionTitle } from './chat-permission';
-import { rowAnswer, rowLines, rowTitle } from './chat-row-answers';
+import { rowAnswer, rowLines, rowTitle, takesDigit } from './chat-row-answers';
+import type { PaneAnswers } from '../../shared/manager/manager';
 import { revealed } from './chat-reveal';
 import { runScreenCommand, showFootSetting, type CommandScreen } from './chat-screen-dispatch';
 import { footSetting, MODE_LABELS, MODELS, MODES } from '../../shared/chat/foot-choices';
@@ -77,6 +78,9 @@ export type ChatView = {
   // and the digit there answering it; false for a key that answers nothing.
   questionLines(): string[];
   answerKey(key: string): boolean;
+  // What a key on that row answers: a listed digit, or nothing while no question is open or the open
+  // one is answered on the screen itself.
+  rowKeys(): Exclude<PaneAnswers, 'character'>;
 };
 
 const PAINT_MS = 80;
@@ -610,6 +614,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     element,
     question: () => (asks.length > 0 ? rowTitle(asks[0]) : null),
     questionLines: () => (asks.length > 0 ? rowLines(asks[0]) : []),
+    rowKeys: () => (asks.length > 0 && takesDigit(asks[0]) ? 'digit' : 'none'),
     answerKey(key) {
       const first = asks.at(0);
       const result = first ? rowAnswer(first, key) : null;

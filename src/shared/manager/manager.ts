@@ -91,10 +91,16 @@ export type PaneState = typeof ALERT_STATES[number] | 'quiet';
 // opened project are on screen, so reading them here would lay out thirty screens on every keystroke
 // to print none of them. Two accessors rather than one because a row asks for one or the other, never
 // both — and a whole screen laid out to keep one line of it is what the quiet rows would each pay.
+// What a key typed on a waiting pane's row answers: any character for a shell, only a digit the row
+// lists for a Claude screen, and nothing for a screen whose question is answered on the screen itself
+// (chat-row-answers.ts says which).
+export type PaneAnswers = 'character' | 'digit' | 'none';
+
 export type PaneSummary = {
   index: number;
   name: string;
   state: PaneState;
+  answers: PaneAnswers;
   lastPrintedAt: number;
   // What the agent in this pane has cost so far, or nought for a pane running no agent at all — which
   // is most of them, and which the row prints nothing for.
@@ -161,7 +167,7 @@ export type ManagerRow = {
 // live terminal: the row asks for it at the moment it draws, so no copy of a pane's screen is kept
 // anywhere to go stale.
 export type ManagerPane = {
-  index: number; name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+  index: number; name: string; bell: Bell; exited: boolean; lastPrintedAt: number; answers: PaneAnswers;
   tail(): string[]; lastPrinted(): string;
 };
 
@@ -201,6 +207,7 @@ export function managerRows(
       index: pane.index,
       name: pane.name,
       state: paneState(pane),
+      answers: pane.answers,
       lastPrintedAt: pane.lastPrintedAt,
       tokens: usage.panes[terminalId(page.slot, pane.index)] ?? 0,
       memory: memory[terminalId(page.slot, pane.index)],
@@ -342,15 +349,19 @@ export function lineKey(line: ManagerLine): string {
   return line.kind === 'project' ? `${slotOfLine(line)}` : terminalId(slotOfLine(line), line.pane.index);
 }
 
-// The pane a typed character on this line goes to, or null when the line is not a question. A queue
-// item asking a question is the same pane as its row under the project, so it answers the same way.
-// Main is one too: a Claude screen, like a worker drawn as one, takes the digit beside an answer its
-// row lists (chat-row-answers.ts).
-export function answerTarget(line: ManagerLine): { slot: number; index: number } | null {
-  if (line.kind === 'pane' && takesAnswer(line.pane)) return { slot: line.slot, index: line.pane.index };
-  return line.kind === 'need' && line.need.kind === 'asking' && line.need.target.kind === 'pane'
-    ? { slot: line.need.slot, index: line.need.target.index }
-    : null;
+// The pane a typed character on this line goes to and which keys answer it, or null when the line is
+// not a question a key can answer. A queue item asking a question is the same pane as its row under the
+// project, so it answers the same way. Main and a worker drawn as a Claude screen take only the digit
+// beside an answer their row lists, and nothing when their question is answered on the screen itself.
+export type AnswerTarget = { slot: number; index: number; answers: Exclude<PaneAnswers, 'none'> };
+
+export function answerTarget(line: ManagerLine): AnswerTarget | null {
+  const target = line.kind === 'pane' && takesAnswer(line.pane)
+    ? { slot: line.slot, index: line.pane.index, answers: line.pane.answers }
+    : line.kind === 'need' && line.need.kind === 'asking' && line.need.target.kind === 'pane'
+      ? { slot: line.need.slot, index: line.need.target.index, answers: line.need.answers ?? 'none' }
+      : null;
+  return target === null || target.answers === 'none' ? null : { ...target, answers: target.answers };
 }
 
 // How many lines at the front are the queue's. They always come first, so a count is enough.

@@ -20,6 +20,7 @@ const summary = (state: PaneSummary['state'], tail: string[] = []): PaneSummary 
   index: 0,
   name: 'terminal 1',
   state,
+  answers: 'character',
   lastPrintedAt: 0,
   tokens: 0,
   memory: undefined,
@@ -92,20 +93,20 @@ describe('managerRows', () => {
   const page = (
     name: string, slot: number,
     panes: {
-      name: string; bell: Bell; exited: boolean; lastPrintedAt: number;
+      name: string; bell: Bell; exited: boolean; lastPrintedAt: number; answers: PaneSummary['answers'];
       tail(): string[]; lastPrinted(): string;
     }[],
   ) => ({ project: { name, path: `/work/${name}` }, slot, panes: panes.map((entry, index) => ({ index, ...entry })) });
   const pane = (
     name: string, bell: Bell = 'quiet', exited = false, tail: string[] = [], lastPrintedAt = 0,
-  ) => ({ name, bell, exited, lastPrintedAt, tail: () => tail, lastPrinted: () => tail.at(-1) ?? '' });
+  ) => ({ name, bell, exited, lastPrintedAt, answers: 'character' as const, tail: () => tail, lastPrinted: () => tail.at(-1) ?? '' });
 
   it('gives a project one row with every pane on it, whatever they are doing', () => {
     const rows = managerRows([page('api', 3, [pane('terminal 1'), pane('terminal 2')])]);
     expect(rows.map((row) => ({ slot: row.slot, name: row.name }))).toEqual([{ slot: 3, name: 'api' }]);
     expect(drawn(rows[0].panes)).toEqual([
-      { index: 0, name: 'terminal 1', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
-      { index: 1, name: 'terminal 2', state: 'quiet', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
+      { index: 0, name: 'terminal 1', state: 'quiet', answers: 'character', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
+      { index: 1, name: 'terminal 2', state: 'quiet', answers: 'character', tail: [], lastPrinted: '', lastPrintedAt: 0, tokens: 0 },
     ]);
   });
 
@@ -147,7 +148,7 @@ describe('managerRows', () => {
     const rows = managerRows([page('api', 0, [pane('terminal 1', 'quiet', false, ['ok'], 1_000)])]);
     expect(drawn(rows[0].panes)).toEqual([
       {
-        index: 0, name: 'terminal 1', state: 'quiet', tail: ['ok'], lastPrinted: 'ok',
+        index: 0, name: 'terminal 1', state: 'quiet', answers: 'character', tail: ['ok'], lastPrinted: 'ok',
         lastPrintedAt: 1_000, tokens: 0,
       },
     ]);
@@ -162,6 +163,7 @@ describe('managerRows', () => {
       bell: 'quiet' as Bell,
       exited: false,
       lastPrintedAt: 0,
+      answers: 'character' as const,
       tail: () => {
         reads += 1;
         return [];
@@ -419,14 +421,14 @@ describe('removableWorktree', () => {
   });
 });
 
-const queued = (kind: Need['kind'], target: Need['target']): ManagerLine => ({
-  kind: 'need', need: { kind, slot: 2, project: 'api', projectPath: '/work/api', subject: 'x', since: 0, target },
+const queued = (kind: Need['kind'], target: Need['target'], answers: Need['answers'] = 'character'): ManagerLine => ({
+  kind: 'need', need: { kind, slot: 2, project: 'api', projectPath: '/work/api', subject: 'x', since: 0, target, answers },
 });
 
 describe('answerTarget', () => {
   it('sends a typed character from an asking queue item to its pane, as from the pane\'s own row', () => {
-    expect(answerTarget(queued('asking', { kind: 'pane', index: 3 }))).toEqual({ slot: 2, index: 3 });
-    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 3 } })).toEqual({ slot: 2, index: 3 });
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 3 }))).toEqual({ slot: 2, index: 3, answers: 'character' });
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 3 } })).toEqual({ slot: 2, index: 3, answers: 'character' });
   });
 
   it('takes nothing on a line that is not a question', () => {
@@ -435,10 +437,18 @@ describe('answerTarget', () => {
     expect(answerTarget({ kind: 'pane', slot: 2, pane: summary('quiet') })).toBeNull();
   });
 
-  // Main is a Claude screen, which takes the digit beside an answer its row lists.
-  it('sends a typed character on main\'s asking row or queue item to main', () => {
-    expect(answerTarget(queued('asking', { kind: 'pane', index: 0 }))).toEqual({ slot: 2, index: 0 });
-    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 0 } })).toEqual({ slot: 2, index: 0 });
+  // Main, or a worker drawn as a Claude screen, takes the digit beside an answer its row lists.
+  it('sends a digit on a Claude screen\'s asking row or queue item to it', () => {
+    const screen = { ...summary('waiting'), answers: 'digit' as const };
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 0 }, 'digit'))).toEqual({ slot: 2, index: 0, answers: 'digit' });
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: screen })).toEqual({ slot: 2, index: 0, answers: 'digit' });
+  });
+
+  // A form, several questions or a multi-pick is answered on the screen itself, so no key is offered.
+  it('takes nothing on a Claude screen whose question no digit answers', () => {
+    const screen = { ...summary('waiting'), answers: 'none' as const };
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 0 }, 'none'))).toBeNull();
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: screen })).toBeNull();
   });
 });
 

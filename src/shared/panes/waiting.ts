@@ -79,6 +79,13 @@ export function questionBell(asking: boolean): Bell {
   return asking ? 'waiting' : 'quiet';
 }
 
+// A worker screen's bell once a digit on its manager row has answered the first of its questions. It
+// rings once per ask, as each arrives, so one already queued behind the answered ask rings no more:
+// the bell stays up for it, and comes off only when nothing is left to answer.
+export function bellAfterAnswer(bell: Bell, stillAsking: boolean): Bell {
+  return stillAsking ? bell : 'quiet';
+}
+
 // What a worker's hooks report, read as a bell. Blocked is a permission prompt, which only you can
 // answer, so it rings; done is for the main session, which hears about it on its own, and a banner per
 // finished worker would bury the ones that are asking.

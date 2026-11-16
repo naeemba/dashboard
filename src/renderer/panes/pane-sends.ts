@@ -3,6 +3,7 @@ import { afterOpening, planSend, type SendPlan } from './free-pane';
 import { panesById, type Page } from '../app/page';
 import type { PaneUse } from '../../shared/panes/pane-reading';
 import { MAIN_INDEX, terminalId } from '../../shared/panes/terminals';
+import { bellAfterAnswer } from '../../shared/panes/waiting';
 
 // Two ways a key or a line reaches a pane without anybody going to it: the command screen's command
 // typed into one shell per project, and the manager's answer typed into the pane that asked. Out of
@@ -79,7 +80,8 @@ export function paneSends(ports: PaneSendPorts): {
   // for: the next character is dropped while the pane is quiet, and goes to that same pane the moment
   // it asks again, without anyone picking the row a second time.
   // Main, and a worker drawn as a Claude screen, are asked in their ask box, not a shell: the key is a
-  // digit picking one of the answers the row lists, and any other key answers nothing.
+  // digit picking one of the answers the row lists, and any other key answers nothing. A screen queues
+  // its questions, so its bell stays up while one is still waiting after the answer.
   function answerPane(slot: number, index: number, key: string): void {
     if (index === MAIN_INDEX) {
       if (ports.projectPages().find((page) => page.slot === slot)?.chat?.answerKey(key)) ports.renderStatus();
@@ -87,9 +89,14 @@ export function paneSends(ports: PaneSendPorts): {
     }
     const pane = panesById.get(terminalId(slot, index));
     if (!pane) return;
-    if (pane.screen && !pane.screen.answerKey(key)) return;
-    if (!pane.screen) pane.terminal.input(key);
-    pane.bell = 'quiet';
+    if (pane.screen) {
+      // A key that answers nothing leaves the bell as it is.
+      if (!pane.screen.answerKey(key)) return;
+      pane.bell = bellAfterAnswer(pane.bell, pane.screen.question() !== null);
+    } else {
+      pane.terminal.input(key);
+      pane.bell = 'quiet';
+    }
     ports.renderStatus();
   }
 

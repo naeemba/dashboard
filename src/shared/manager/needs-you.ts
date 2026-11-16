@@ -2,7 +2,7 @@ import { timeOf } from '../app/age';
 import {
   REVIEW_COLUMN, isFinishedColumn, columnNamed, pullRequestLabel, type Board, type Card,
 } from '../board/board';
-import { isAlerting, takesAnswer, type ManagerRow, type PaneSummary } from './manager';
+import { isAlerting, takesAnswer, type ManagerRow, type PaneAnswers, type PaneSummary } from './manager';
 import type { WorktreeEntry } from '../app/bridge';
 
 // Everything across the open projects that is waiting on you, as one list. The manager's rows say what
@@ -33,6 +33,8 @@ export type Need = {
   // The worktree a `leftover` item is about, which the remove key acts on. Enter goes to its card
   // instead: the worktree has usually lost its pane, and the card says why it was kept.
   worktree?: WorktreeEntry;
+  // What a key on an `asking` item answers, the same as on the pane's own row.
+  answers?: PaneAnswers;
 };
 
 // What each kind says it wants, in words.
@@ -58,6 +60,7 @@ function paneNeeds(row: ManagerRow, base: Base): Need[] {
     subject: pane.name,
     since: pane.lastPrintedAt,
     target: { kind: 'pane', index: pane.index },
+    answers: pane.answers,
   }));
 }
 
