@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-16T08:19:32.397Z",
-  "updatedAt": "2026-11-16T08:19:32.397Z",
-  "column": "Backlog",
-  "order": 45
+  "updatedAt": "2026-11-16T08:19:38.886Z",
+  "branch": "budget-verb-7-day-usage-against-a-cap-set-o",
+  "column": "Doing",
+  "order": 0
 }
