@@ -6,6 +6,7 @@ import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
+import { LONGEST_BACKGROUND_RUN } from '../ship/review';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -67,6 +68,8 @@ export const APP_SESSION_SETTINGS = { hooks: BOARD_GUARD_HOOKS, permissions: APP
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
 export function mainPrompt(projectPath: string, platform: string = process.platform): string {
   const manager = projectPath === MANAGER_FOLDER;
+  // The manager's folder is in no project, so the board and pr commands are told which.
+  const projectFlag = manager ? ' --project <name|aka>' : '';
   // What a plain run starts on this platform, so main is told: pane.dispatch's default.
   const runUsage = defaultPaneKind(platform) === 'screen'
     ? ['  run <id> [--card <card id> | --worktree] [--terminal] "<prompt>"',
@@ -94,11 +97,19 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '                         --all across every open project',
     '  report <id>            a worker\'s line from list and the last message it ended a turn with',
     '  release <id>           close a worker\'s pane now, before the app would',
+    '  finish <id>            release a worker once its card is Done or its branch merged',
     '',
-    'A card task takes --card: it runs in the worktree the board made when the card moved to Ship. Any'
+    `A card is dispatched with \`node "$DASHBOARD_BOARD" ship <id>${projectFlag}\`: it makes the card's worktree, a worker`
+      + ' pane and its agent. run --card is for a shipped card whose agent has stopped. Any'
       + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
       + ' committed, pushed and opened its pull request, and kept otherwise. Research takes neither and'
       + ' reads this checkout.',
+    '',
+    `Land a pull request you are asked to merge with \`node "$DASHBOARD_COMMAND" pr land <n>${projectFlag}\`, run in the`
+      + ` background (${LONGEST_BACKGROUND_RUN}): it waits for its checks and`
+      + ' merges the commit they passed on. A land stopped at that time limit has not failed: run it once'
+      + ' more, it notes the head again. To wait for anything,'
+      + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so, with the end of its"

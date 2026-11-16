@@ -60,6 +60,24 @@ describe('mainPrompt', () => {
   });
 });
 
+describe('mainPrompt verbs', () => {
+  // Main once rebuilt dispatch, finish and land as /tmp scripts it lost; the prompt names the verbs.
+  it('dispatches a card with board ship and names finish and pr land', () => {
+    const prompt = mainPrompt('/work/api');
+    expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id>`');
+    expect(prompt).toContain('finish <id>');
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n>`');
+  });
+
+  // ~/.dashboard is in no project: both commands refuse there without --project.
+  it('tells the manager\'s main which project ship and pr land run in', () => {
+    const prompt = mainPrompt(MANAGER_FOLDER);
+    expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id> --project <name|aka>`');
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n> --project <name|aka>`');
+    expect(prompt).toContain('timeout 7200000');
+  });
+});
+
 describe('workerSettings', () => {
   // Stop reports done whatever the worker remembered to say; the permission prompt reports blocked.
   it('hooks the end of the turn and the permission prompt to the session command', () => {

@@ -120,12 +120,15 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in.
+// The longest background run a session may ask for, shared by every prompt that waits on CI.
+export const LONGEST_BACKGROUND_RUN = 'run_in_background, timeout 7200000, the longest allowed';
+
 export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
   const watch = `gh pr checks ${pullRequest} --watch`;
   const waitForChecks = [
     `   wait for CI on the pull request's head commit: \`${watch}\`, run in the`,
-    '   background (run_in_background, timeout 7200000, the longest allowed), so you are woken when it',
+    `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it`,
     '   exits. A watch stopped at that time limit has not failed: run it once more. That is the whole wait: no',
     '   `gh pr view` or `gh pr checks` in between, and no foreground `sleep`, which is refused. Every check',
     '   must pass on the commit the pull request ends on, a commit pushed after the last review round',

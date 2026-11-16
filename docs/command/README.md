@@ -10,8 +10,20 @@ its own verbs; this feature only picks the program.
 | Noun | Program | Verbs |
 |---|---|---|
 | `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment; any of them with `--project <name>` |
-| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, report, notify |
+| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, finish, report, notify |
 | `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
+| `pr` | the `pr` program, here | land [--project] |
+
+`pr land <number|url|branch>` lands a pull request as a review worker with
+merging on does: it notes the head commit, waits on `gh pr checks --watch`,
+then runs `gh pr merge --merge --match-head-commit <sha>`. No checks reported is
+asked once more a minute later, and a repository that still has none is merged.
+A failed check or a refused merge exits 1 and merges nothing. The wait is as long as CI takes: main runs it in the background at the longest
+timeout, and runs it again if that limit stops it. A flag where the pull request
+goes (`pr land --help`) never reaches gh as the pull request. It is a merge by
+whoever runs it, so `review.autoMerge` does not gate it, and it is not in the
+rules the app allows every session (command-decision-5). It needs gh, never the
+app.
 
 `session` is another name for `pane`. `dashboard` with no words opens the app,
 or brings it to the front; a first word that is a flag (`--remote`) goes to the
@@ -39,7 +51,7 @@ writes `session-socket` where the command waits for it. Bare `dashboard` with a
 
 Every other `board` verb and move, `project list`, `find`, `init`, `add`, `set`
 and `remove` work on
-files and never start it:
+files and never start it, and `pr` needs only gh:
 the app already watches each project's `.dashboard` folder. Quitting,
 restarting or replacing the app is never the command's.
 
@@ -124,6 +136,7 @@ Folders: `src/main/command/`.
 - What every pane is handed to reach the app: `pane-environment.ts`, `pane-environment.test.ts`
 - The launcher: `scripts/rebuild.sh`
 - What a program prints when it throws: `failure-line.ts`, `failure-line.test.ts`
+- The `pr` noun: `pull-request-cli.ts`, `pull-request-cli.test.ts`, `pull-request-program.ts`
 
 ## Scenarios
 
@@ -139,6 +152,9 @@ Folders: `src/main/command/`.
 - Given a projects.yaml with a broken entry and a project open, when `dashboard project list` runs, then the file's error prints and it exits 1.
 - Given a plain terminal, when `dashboard pane send 9:1 hi` runs and page 9 is not open, then it is refused naming `9:1`, not the folder.
 - Given `dashboard --help` or `dashboard pane --help`, when it runs, then the usage prints and it exits 0.
+- Given an open pull request whose checks pass, when `dashboard pr land 12` runs, then it merges the head commit it noted before the wait and prints `merged 12 at <sha>`; a push during the wait makes gh refuse the merge, and it says so and exits 1.
+- Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print.
+- Given the manager's main in `~/.dashboard`, when it runs `pr land 12 --project crm`, then gh runs in crm's folder.
 
 ## Adding to it
 

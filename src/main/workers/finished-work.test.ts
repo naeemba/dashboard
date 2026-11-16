@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { unfinishedWork, type RunProgram } from './finished-work';
+import { pullRequestMerged, unfinishedWork, type RunProgram } from './finished-work';
 
 // A worktree whose every answer is given up front; a missing answer is the program failing.
 function answering(answers: Record<string, string>): RunProgram {
@@ -40,5 +40,20 @@ describe('unfinishedWork', () => {
   it('keeps pushed work with no pull request, and says so when gh cannot be asked', async () => {
     expect(await unfinishedWork(answering({ ...done, 'gh pr list': '[]' }), '/w')).toBe('rename-it has no pull request');
     expect(await unfinishedWork(answering(without(done, 'gh pr list')), '/w')).toMatch(/^gh could not say whether rename-it has a pull request/);
+  });
+});
+
+describe('pullRequestMerged', () => {
+  const pull = (number: number, state: string) => ({ number, state, title: 't', url: `https://github.com/o/r/pull/${number}` });
+  const listing = (...pulls: object[]) => answering({ 'git rev-parse': 'fix-login', 'gh pr list --head fix-login': JSON.stringify(pulls) });
+
+  it('says merged once the branch\'s pull request merged', async () => {
+    expect(await pullRequestMerged(listing(pull(40, 'MERGED')), '/w')).toBe(true);
+  });
+
+  // #40 merged, then a follow-up on the same branch opened #41: the work is not in yet.
+  it('is not merged while a newer pull request from the branch is open', async () => {
+    expect(await pullRequestMerged(listing(pull(41, 'OPEN'), pull(40, 'MERGED')), '/w')).toBe(false);
+    expect(await pullRequestMerged(listing(), '/w')).toBe(false);
   });
 });

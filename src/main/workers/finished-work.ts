@@ -1,5 +1,6 @@
 import { failureText } from '../../shared/errors/failure';
 import type { runProgram } from '../app/git';
+import { latestPullRequest, pullRequestListArguments } from '../board/pull-request-column';
 import { changedFiles } from '../ship/ship';
 
 // Whether a throwaway worktree's work has left it: committed, pushed, and a pull request open. Only
@@ -21,12 +22,35 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
     return 'its branch was never pushed';
   }
   if (ahead !== '0') return `${ahead} of its commits are not pushed`;
-  const branch = await run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
-  let pulls: unknown;
+  const branch = await branchOf(run, worktreePath);
   try {
-    pulls = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'all', '--json', 'number'], worktreePath));
+    return await hasPullRequest(run, worktreePath, branch) ? null : `${branch} has no pull request`;
   } catch (error: unknown) {
     return `gh could not say whether ${branch} has a pull request: ${failureText(error)}`;
   }
-  return Array.isArray(pulls) && pulls.length > 0 ? null : `${branch} has no pull request`;
+}
+
+const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
+
+// Whether gh lists a pull request from the branch in any state.
+async function hasPullRequest(run: RunProgram, worktreePath: string, branch: string): Promise<boolean> {
+  const pulls: unknown = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'all', '--json', 'number'], worktreePath));
+  return Array.isArray(pulls) && pulls.length > 0;
+}
+
+// Whether the pull request the worktree's branch stands for merged: what `pane finish` releases a
+// worker on when its card is not Done yet (the follow that moves it runs on a timer) or it has none.
+// The one the card follows (latestPullRequest), so a branch that merged one and opened another since
+// is not finished while the second is open.
+export async function pullRequestMerged(run: RunProgram, worktreePath: string): Promise<boolean> {
+  const branch = await branchOf(run, worktreePath);
+  return latestPullRequest(await run('gh', pullRequestListArguments(branch), worktreePath))?.state === 'MERGED';
+}
+
+// What a worktree's worker is asked before it is let go of, as session-requests.ts's ports take them.
+export function worktreeChecks(run: RunProgram) {
+  return {
+    unfinished: (worktreePath: string) => unfinishedWork(run, worktreePath),
+    merged: (worktreePath: string) => pullRequestMerged(run, worktreePath),
+  };
 }

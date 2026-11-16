@@ -15,6 +15,8 @@ export type SessionCommand =
   | { kind: 'list'; all: boolean }
   | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
+  // release, refused until the worker's card is Done or Cancelled or its branch's pull request merged.
+  | { kind: 'finish'; id: string }
   | { kind: 'report'; id: string }
   // `waiting` is what a Stop hook said its session waits on, when it said so; `told` the rest a hook's
   // input said.
@@ -42,6 +44,7 @@ export const SESSION_USAGE = `session — the Dashboard panes of the project you
   session list [--all]
   session send <id> "<text>"
   session release <id>
+  session finish <id>
   session report <id>
   session notify <id> running|blocked|done [--prompt-input | --stop-input]
 
@@ -52,11 +55,14 @@ in it with the prompt as its argument: --card runs it in the worktree the card w
 and neither in the project itself. The worker is a Claude screen; --terminal runs Claude Code in the
 pane's terminal. On Windows the terminal is the default, since a screen's turn there ends with the
 app, and --screen asks for a screen. send types the text into the pane and presses Enter, or hands
-it to a Claude screen as its next prompt. report prints the pane's line from list and the last
+it to a Claude screen as its next prompt. finish releases a worker whose work is in: its card is
+Done or Cancelled, or the branch of the worktree it is in has a merged pull request; it refuses
+otherwise. report prints the pane's line from list and the last
 message its worker ended a turn with. notify is what a worker's hooks call: --stop-input reads Claude
 Code's Stop hook input for how many background tasks and wakeups the session still waits on and its
 last message, --prompt-input the prompt hook's for who put the prompt in. list --all lists the panes
-of every open project and the manager.`;
+of every open project and the manager. A card is dispatched with \`board ship <id>\`, not here: it
+makes the card's worktree, a worker pane and its agent.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
 
@@ -247,6 +253,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       return { ok: true, command: { kind: 'send', id, text } };
     }
     case 'release':
+    case 'finish':
     case 'report': {
       const id = paneId(rest[0], verb);
       return typeof id === 'string' ? { ok: true, command: { kind: verb, id } } : id;
