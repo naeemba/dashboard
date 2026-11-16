@@ -3,7 +3,7 @@ import { clampIndex } from '../../shared/app/clamp-index';
 import type { Release } from '../../shared/app/update';
 import { byDate, entriesToShow, pullRequestUrl, shownRecord, whatsNewFooter, type ChangelogEntry } from '../../shared/app/whats-new';
 import { labelled } from './icons';
-import { answerKeys, holdFocus, openOverlay, searchRowElement } from './overlay';
+import { answerKeys, openOverlay, searchRowElement } from './overlay';
 import { isModified } from '../keys/shortcuts';
 
 // How far each key moves the selection; a Page key about one screen of the dialog's rows.
@@ -24,14 +24,11 @@ function openNotes(bridge: DashboardBridge, title: string, groups: NoteGroup[], 
   let selected = 0;
   return new Promise<void>((resolve) => {
     function close(): void {
-      releaseFocus();
       remove();
       resolve();
     }
 
     const { dialog, remove } = openOverlay('whats-new', close);
-    // A --remote join can land while this is up and focus the pane behind it.
-    const releaseFocus = holdFocus(dialog);
     dialog.append(labelled('h2', 'dialog-title', 'pullRequest', title));
     const rows: HTMLElement[] = [];
     const notes = groups.flatMap((group) => group.rows);

@@ -28,7 +28,17 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
     if (event.target === overlay) dismiss();
   });
 
-  return { dialog, remove: () => overlay.remove() };
+  // Every sheet holds the focus, so no dialog can forget to: Shift+Tab is a modified key no dialog
+  // reads, and without the hold it walks out to the pane behind while the sheet stays up, and the
+  // Escape meant to cancel the dialog reaches that pane instead.
+  const release = holdFocus(overlay, dialog);
+  return {
+    dialog,
+    remove: () => {
+      release();
+      overlay.remove();
+    },
+  };
 }
 
 // Enter and Escape answer every small dialog here, and a modified one answers none: Cmd+Enter is not
@@ -50,15 +60,11 @@ export function answerKeys(dialog: HTMLElement, answer: (key: 'Enter' | 'Escape'
 export function confirmOverlay(message: string, keysLine: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     function close(answer: boolean): void {
-      release();
       remove();
       resolve(answer);
     }
 
     const { dialog, remove } = openOverlay('confirm', () => close(false));
-    // Shift+Tab is a modified key, so answerKeys lets it by and the focus walks out to the pane
-    // behind; the hold brings it back, or the next Escape meant to cancel reaches that pane.
-    const release = holdFocus(dialog);
 
     const question = document.createElement('p');
     question.className = 'confirm-question';
@@ -92,17 +98,25 @@ export function pdfOverlay(pdf: Blob): void {
   viewerOverlay('pdf-viewer', frame, { closed: () => URL.revokeObjectURL(frame.src) });
 }
 
-// Focus that leaves the dialog comes back to it, unless it went to a sheet opened over this one, such
-// as an image opened from an agent's conversation: only the topmost sheet holds, or the two would pull
-// the focus back and forth. Returns the way to stop, which closing calls.
-export function holdFocus(dialog: HTMLElement): () => void {
-  const sheet = dialog.closest(`.${OVERLAY_CLASS}`);
+// Focus that leaves the dialog comes back to whatever in it had the focus last, so a box you were
+// typing in, such as the prompt's, gets what you type next; the dialog itself when that is gone.
+// Unless it went to a sheet opened over this one, such as an image opened from an agent's
+// conversation: only the topmost sheet holds, or the two would pull the focus back and forth.
+// Returns the way to stop, which closing calls.
+function holdFocus(sheet: HTMLElement, dialog: HTMLElement): () => void {
+  let last: HTMLElement = dialog;
+  function back(): void {
+    (last.isConnected && dialog.contains(last) ? last : dialog).focus();
+  }
   function hold(event: FocusEvent): void {
-    if (!(event.target instanceof Element)) return dialog.focus();
-    if (dialog.contains(event.target)) return;
+    if (!(event.target instanceof HTMLElement)) return back();
+    if (dialog.contains(event.target)) {
+      last = event.target;
+      return;
+    }
     const over = event.target.closest(`.${OVERLAY_CLASS}`);
-    if (sheet && over && sheet.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) return;
-    dialog.focus();
+    if (over && sheet.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) return;
+    back();
   }
   document.addEventListener('focusin', hold);
   return () => document.removeEventListener('focusin', hold);
@@ -123,17 +137,12 @@ export function viewerOverlay(
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
     closeViewer = null;
-    release();
     remove();
     // Focus goes back first, so a `closed` that opens another sheet keeps the keyboard in it.
     previous?.focus();
     closed?.();
   }
   const { dialog, remove } = openOverlay(name, close);
-  // Tab walks into the PDF's frame, which is how its pages are read by keyboard, and Shift+Tab walks
-  // back out past the sheet to whatever is behind it; holding focus keeps the next keys off the page
-  // under the overlay.
-  const release = holdFocus(dialog);
   dialog.append(shown);
   answerKeys(dialog, (key) => (key === 'Enter' && enter !== undefined ? enter() : close()));
   if (keys !== undefined) dialog.addEventListener('keydown', keys);
@@ -166,7 +175,6 @@ export function promptOverlay(
 ): Promise<string | null> {
   return new Promise<string | null>((resolve) => {
     function close(answer: string | null): void {
-      release();
       remove();
       resolve(answer);
     }
@@ -188,9 +196,6 @@ export function promptOverlay(
     keys.className = 'prompt-keys';
     keys.textContent = keysLine;
     dialog.append(label, input, keys);
-    // Held for confirmOverlay's reason, on the box rather than the dialog, so what you type after a
-    // stray Shift+Tab still lands in it.
-    const release = holdFocus(input);
     input.focus();
     input.select();
 

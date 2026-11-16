@@ -11,10 +11,12 @@ throws you out to the terminal grid instead of completing the word. You leave a
 mode by naming a different one.
 
 Inside an overlay the key goes nowhere — a dialog has focus, so no pane can
-receive it. A dialog that does not stop Tab itself keeps that focus with
-`holdFocus` in `overlay.ts`: Shift+Tab is a modified key no dialog reads, and
-without the hold it walks out to the pane behind while the sheet stays up, so
-the Escape meant to cancel the dialog reaches the pane instead.
+receive it. Every sheet `openOverlay` builds holds that focus, and gives it
+back to whatever in the dialog had it last: Shift+Tab is a modified key no
+dialog reads, and without the hold it walks out to the pane behind while the
+sheet stays up, so the Escape meant to cancel the dialog reaches the pane
+instead. The hold is in `openOverlay`, not in each dialog, because two dialogs
+that each had to remember it forgot it while five others never had it.
 
 **Every dialog that reads `event.key` for itself must check `if
 (isModified(event)) return;` first.** Take Ctrl+N in the card detail dialog and
