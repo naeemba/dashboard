@@ -1,0 +1,11 @@
+{
+  "id": "06536933-bf0b-4fb2-b576-062b82e6be45",
+  "title": "The sweep closes a --worktree worker whose PR merged",
+  "notes": "Follow-up from #295. pane finish releases a worker whose branch PR merged, but the auto-close sweep only closes card workers (card Done or Cancelled). A --worktree worker whose PR merged stays open until its idle timeout. Use pane finish's predicate in the sweep. Do not bump the version.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-16T00:51:15.779Z",
+  "updatedAt": "2026-11-16T00:51:15.780Z",
+  "column": "Backlog",
+  "order": 43
+}
