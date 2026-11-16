@@ -7,7 +7,7 @@ import { failureText } from '../../shared/errors/failure';
 import { isManagerPath } from '../../shared/manager/manager';
 import { baseBranch, git, gitNow, NO_HOOKS } from '../app/git';
 import { realPath } from '../app/real-path';
-import { BROKEN_SUFFIX } from './board-files';
+import { BROKEN_SUFFIX } from '../app/set-aside';
 import { BOARD_PATHSPECS, peekBoard, readBoard, writeBoard } from './board-store';
 import {
   FETCH_TIMEOUT,

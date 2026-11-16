@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { BOARD_FOLDER_PATH, BOARD_PATHSPECS, hasBoard, peekBoard, readBoard, writeBoard } from './board-store';
 import { runBoardCommand } from './board-cli';
-import { BROKEN_SUFFIX } from './board-files';
+import { BROKEN_SUFFIX } from '../app/set-aside';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
 import { NO_HOOKS } from '../app/git';

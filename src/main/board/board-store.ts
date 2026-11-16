@@ -2,10 +2,11 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
+import { BOARD_FOLDER, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
 import { byPlace, storedOrder } from './card-order';
 import { dashboardFolder } from '../app/dashboard-folder';
 import { readText } from '../app/missing-file';
+import { BROKEN_SUFFIX, setAsidePath } from '../app/set-aside';
 import { TEMPORARY_SUFFIX } from '../app/replace-file';
 import { isRecord } from '../../shared/app/is-record';
 import {
@@ -51,9 +52,6 @@ export const BOARD_PATHSPECS = [
   `:(exclude)${BOARD_DIRECTORY}/board*${BROKEN_SUFFIX}`,
   `:(exclude)${BOARD_DIRECTORY}/board*${TEMPORARY_SUFFIX}`,
 ] as const;
-// Where a board.json that could not be parsed is moved aside, so a crash mid-write or a bad hand-edit
-// loses nothing: the next read starts fresh, and the damaged file sits right next to it under this name.
-export const BROKEN_BOARD_FILE = `${BOARD_FILE}${BROKEN_SUFFIX}`;
 
 // Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: seeding only
 // writes a file that is not there, so those copies would otherwise drift the moment this text changes.
@@ -124,10 +122,6 @@ export function boardFolderPath(projectPath: string): string {
 // Whether a project has a board of either kind on disk, read or not.
 export function hasBoard(projectPath: string): boolean {
   return existsSync(boardPath(projectPath)) || existsSync(boardFolderPath(projectPath));
-}
-
-function brokenBoardPath(projectPath: string): string {
-  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, BROKEN_BOARD_FILE);
 }
 
 // The columns a board is read with. A project's are whatever parseBoard left; the manager's lose the
@@ -363,7 +357,7 @@ function readBoardFile(projectPath: string, salvage: boolean): { board: Board | 
     return { board: parseBoard(text), brokenFiles: [] };
   } catch {
     if (!salvage) return { board: null, brokenFiles: [filePath] };
-    const brokenFile = brokenBoardPath(projectPath);
+    const brokenFile = setAsidePath(filePath);
     // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
     // the header is about and goes out the same door.
     renameSync(filePath, brokenFile);

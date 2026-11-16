@@ -15,3 +15,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-16 #288 — A ship tells `/work-card` whether to bump the version, from projects.yaml (projects-decision-1)
 - 2026-11-16 #290 — The review prompt no longer moves the card to Done (board-decision-7)
 - 2026-11-16 — The review merges only with `review.autoMerge` or the project's `autoMerge` on, after CI passes on the head commit; off, it reports to main (ship-decision-1)
+- 2026-11-16 #305 — A worktrees.json that breaks twice keeps both damaged copies

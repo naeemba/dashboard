@@ -282,7 +282,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 - Model and file: `board.ts`, `board-store.ts`, `board-files.ts` (where the
   folder's bytes go), `card-order.ts` (a card's place in its column), `board-watch.ts`,
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
-  onto the file as it is now)
+  onto the file as it is now), `src/main/app/set-aside.ts` (the name a damaged file is moved to,
+  shared with `worktrees.json`)
 - The column from the pull request: `pull-request-column.ts` (its decisions),
   `pull-request-sweep.ts` (when), the card.follow and card.start actions in
   `src/main/actions/card/`, each beside its `.test.ts`
@@ -369,6 +370,7 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given the default branch has no board, neither `.dashboard/board/` nor `.dashboard/board.json`, when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with `--seed`.
 - Given a project still on `.dashboard/board.json`, when the board is first written, then every card is in its own file under `.dashboard/board/cards/`, `board.json` is gone, and the board reads back the same (`board-files.test.ts`, on a copy of this repository's own board).
 - Given a card file that does not parse, or parses to something that is not an object, when the board saves a change it read with a look, then that file is still there with its bytes; when the board next reads, it is set aside as `<id>.json.broken` (`<id>.json.2.broken` if that name is taken) and every file set aside is named (`board-files.test.ts`).
+- Given a `.dashboard/board.json` that does not parse, when the board reads, then it is moved aside as `board.json.broken` (`board.json.2.broken` and on if that name is taken, so a second break keeps the first damaged copy) and the board opens empty (`board-store.test.ts`).
 - Given a board file that does not parse, when the `board` command or a ship's Ship move would write, then the file is left under its own name, nothing is written or committed, the command exits 1 and the ship fails naming the file, and the same happens on every run after until the file is fixed (`board-files.test.ts`). Given a card file the app set aside, the review sweep does not mark that card as deleted (`review-flow.test.ts`).
 - Given two branches that each add a card, or each move a different card, when both merge, then git merges them with no conflict (`board-files.test.ts`, with real merges).
 - Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files, then none is rewritten.
