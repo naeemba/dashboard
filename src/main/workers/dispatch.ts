@@ -56,6 +56,8 @@ const APP_COMMAND_PERMISSIONS = {
     'Bash(node "$DASHBOARD_COMMAND" pane *)',
     'Bash(node "$DASHBOARD_COMMAND" session *)',
     'Bash(node "$DASHBOARD_BOARD" *)',
+    // A reading only: `budget --cap` changes the cap, and is asked.
+    'Bash(node "$DASHBOARD_COMMAND" budget)',
   ],
 };
 
@@ -110,6 +112,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' merges the commit they passed on. A land stopped at that time limit has not failed: run it once'
       + ' more, it notes the head again. To wait for anything,'
       + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.',
+    '',
+    'Check the 7-day usage with `node "$DASHBOARD_COMMAND" budget` before each round of a long unattended'
+      + ' loop: it exits 0 under the cap I set once, 1 at or over it, 2 when the reading is missing or'
+      + ' stale. Stop on anything but 0, and never ask me for the cap again; `budget --cap <n>` sets it.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so, with the end of its"
