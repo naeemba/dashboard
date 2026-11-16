@@ -28,7 +28,8 @@ so a line you write that already matches the default is taken out again. Delete
 it and everything is back to how it shipped. A change to the file while the app
 runs — by hand, or `dashboard budget --cap` — is taken at once (settings.adopt):
 a file that does not parse, as one half-saved in an editor, is ignored until it
-does, and a deleted one is put back by the app's next save. An open settings screen
+does, a deleted one is put back by the app's next save, and a file with no host
+token keeps the one the app holds. An open settings screen
 starts its next change from the new copy.
 
 The Review row (`review.autoLoop`, default on) says whether a shipped card whose
