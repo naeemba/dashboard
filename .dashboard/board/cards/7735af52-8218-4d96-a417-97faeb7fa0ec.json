@@ -1,0 +1,11 @@
+{
+  "id": "7735af52-8218-4d96-a417-97faeb7fa0ec",
+  "title": "pr land checks the PR state after a merge call that fails",
+  "notes": "Seen 2026-11-16: `pr land 301` printed 'gh refused to merge 301 ...: Post https://api.github.com/graphql: unexpected EOF', but the PR had merged. The merge went through and only the response was lost. When gh pr merge fails, read the PR's state: if it is MERGED at the noted head commit, report merged. Otherwise retry once on an API/network error, and refuse on a real refusal. Test the decision. Do not bump the version.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-16T10:30:46.834Z",
+  "updatedAt": "2026-11-16T10:30:46.834Z",
+  "column": "Backlog",
+  "order": 45
+}
