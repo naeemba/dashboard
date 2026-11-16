@@ -81,6 +81,8 @@ export function openSettings(
         // The confirmation had the keyboard; the settings screen needs it back either way.
         dialog.focus();
         if (!yes) return say('');
+        // The file may have moved while the confirmation waited.
+        refresh();
       }
       const bound = bindKey(settings, name, binding);
       commit(bound);
