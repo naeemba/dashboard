@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   claimsPane,
@@ -18,6 +18,8 @@ import {
 } from './worktree-store';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 import { temporaryFolder } from '../testing/temporary-folder';
+
+const posixModesOnly = it.skipIf(process.platform === 'win32');
 
 const entry: WorktreeEntry = {
   cardId: 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa',
@@ -83,12 +85,27 @@ describe('readWorktrees', () => {
     expect(() => readWorktrees(file)).toThrow(/EISDIR/);
   });
 
-  // A folder where the .broken file has to go: the only way to make the salvage rename fail on demand.
-  it('throws when a damaged file cannot be moved aside', () => {
+  // A folder that takes no rename: the salvage cannot move the file aside.
+  posixModesOnly('throws when a damaged file cannot be moved aside', () => {
     const file = worktreesFile();
     writeFileSync(file, '{"entries": [');
-    mkdirSync(`${file}.broken`);
-    expect(() => readWorktrees(file)).toThrow();
+    chmodSync(dirname(file), 0o500);
+    try {
+      expect(() => readWorktrees(file)).toThrow();
+    } finally {
+      chmodSync(dirname(file), 0o700);
+    }
+    expect(readFileSync(file, 'utf8')).toBe('{"entries": [');
+  });
+
+  it('keeps the first damaged file when a second one is moved aside', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{ first');
+    readWorktrees(file);
+    writeFileSync(file, '{ second');
+    readWorktrees(file);
+    expect(readFileSync(`${file}.broken`, 'utf8')).toBe('{ first');
+    expect(readFileSync(`${file}.2.broken`, 'utf8')).toBe('{ second');
   });
 });
 
