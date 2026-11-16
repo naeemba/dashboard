@@ -4,14 +4,19 @@
   "notes": "src/main.ts:570 throws \"Type the folder's path on the host\" from a table.handle handler. ipcMain.handle rewrites the rejection as \"Error invoking remote method 'projects:open': Error: ...\", so that is the text the remote screen shows. Return the refusal as a value the way pdf:read does ({ refused }) and throw only for real failures. Issue: https://github.com/naeemba/dashboard/issues/129 Review: https://github.com/naeemba/dashboard/pull/125#discussion_r4433727992",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-16T11:49:49.497Z",
+  "updatedAt": "2026-11-16T11:55:08.695Z",
   "branch": "projects-open-refuses-by-throwing-so-the-re",
+  "pullRequest": 307,
   "comments": [
     {
       "at": "2026-11-16T11:49:41.926Z",
       "body": "From main-dashboard: build the fix at the root, with a test for the decision; errors-rule-2 says an IPC handler that refuses answers the refusal as a value. Tests must be Windows-safe. Run pnpm test, typecheck and lint. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T11:55:08.643Z",
+      "body": "Pull request #307 opened: Test that projects:open answers its refusals instead of throwing https://github.com/naeemba/dashboard/pull/307"
     }
   ],
-  "column": "Doing",
-  "order": 1
+  "column": "Review",
+  "order": 3
 }
