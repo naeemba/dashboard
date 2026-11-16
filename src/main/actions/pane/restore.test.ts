@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { WorktreeEntry } from '../../../shared/app/bridge';
-import type { LogDraft } from '../../../shared/app/log-entry';
 import type { PaneCommand } from '../../../shared/panes/pane-reading';
 import { paneKey, type Survivor } from '../../panes/pane-host-protocol';
 import type { PaneShell } from '../../panes/pane-shell';
@@ -22,18 +21,13 @@ function survivor(index: number): Survivor {
   return { key: paneKey(API, index), pid: 1, file: 'zsh', args: ['claude'], cwd: API, cols: 80, rows: 24, foreground: 'claude', screen: '' };
 }
 
-function restoring(
-  saved: Map<number, PaneConversation>, kept: Survivor[] = [], screens: ScreenBack[] = [], failing: string | null = null,
-  stopScope: (unit: string) => Promise<void> = async () => undefined,
-) {
+function restoring(saved: Map<number, PaneConversation>, kept: Survivor[] = [], screens: ScreenBack[] = [], failing: string | null = null) {
   const commands = new Map<string, PaneCommand>();
   const dispatched: PaneDispatchInput[] = [];
   const records: WorktreeEntry[] = [];
   const mainsWorkers = new Map<string, string>();
   const killed: string[] = [];
   const listened: string[] = [];
-  const stopped: string[] = [];
-  const logged: LogDraft[] = [];
   const ports: PaneRestorePorts = {
     kept: () => kept.map((each) => ({ survivor: each, shell: { kill: () => killed.push(each.key) } as unknown as PaneShell })),
     listenTo: (id) => { listened.push(id); },
@@ -56,10 +50,8 @@ function restoring(
       if (input.id === failing) throw new Error(`${input.id} would not start`);
       return { output: 'started' };
     },
-    stopScope: async (unit) => { stopped.push(`${killed.length} killed, stop ${unit}`); await stopScope(unit); },
-    log: (draft) => { logged.push(draft); },
   };
-  return { restore: bind(paneRestore, ports), commands, dispatched, records, mainsWorkers, killed, listened, stopped, logged };
+  return { restore: bind(paneRestore, ports), commands, dispatched, records, mainsWorkers, killed, listened };
 }
 
 describe('pane.restore', () => {
@@ -84,29 +76,14 @@ describe('pane.restore', () => {
     expect(dispatched.map((each) => [each.id, each.resume])).toEqual([['2:1', OURS], ['2:2', MAINS]]);
   });
 
-  it('adopts the shells the host kept, before the resumes, and kills the editor\'s', async () => {
+  it('adopts the shells the host kept, the editor\'s as the editor, before the resumes', async () => {
     const { restore, commands, dispatched, listened, killed } = restoring(new Map(), [survivor(1), survivor(-1)]);
     await restore.call({ slot: 2, projectPath: API, firstPane: null });
     expect(commands.get('2:1')).toEqual({ args: ['claude'], directory: API });
-    expect(listened).toEqual(['2:1']);
-    expect(killed).toEqual([paneKey(API, -1)]);
+    expect(commands.get('2:-1')).toEqual({ args: 'editor', directory: API });
+    expect(listened).toEqual(['2:1', '2:-1']);
+    expect(killed).toEqual([]);
     expect(dispatched).toEqual([]);
-  });
-
-  it('stops the scope of a kept shell it kills, after the kill, and leaves an adopted one\'s alone', async () => {
-    const adopted = { ...survivor(1), unit: 'agent-api-1-k4f2.scope' };
-    const editor = { ...survivor(-1), unit: 'pane-api--1-a1b2.scope' };
-    const { restore, stopped, logged } = restoring(new Map(), [adopted, editor]);
-    await restore.call({ slot: 2, projectPath: API, firstPane: null });
-    expect(stopped).toEqual(['1 killed, stop pane-api--1-a1b2.scope']);
-    expect(logged).toEqual([]);
-  });
-
-  it('logs a kept shell\'s scope it could not stop, and restores the page all the same', async () => {
-    const editor = { ...survivor(-1), unit: 'pane-api--1-a1b2.scope' };
-    const { restore, logged } = restoring(new Map(), [editor], [], null, async () => { throw new Error('timed out'); });
-    expect(await restore.call({ slot: 2, projectPath: API, firstPane: null })).toEqual({ output: `0 conversations carried on in ${API}` });
-    expect(logged).toMatchObject([{ level: 'warn', action: 'pane.restore', message: 'pane-api--1-a1b2.scope was not stopped: timed out' }]);
   });
 
   it('opens a worker screen\'s pane again when it closed, and gives main its worker back', async () => {

@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -46,11 +47,11 @@ export function nvimFromOutput(stdout: string): string | null {
   return found === '' ? null : found;
 }
 
-// Where a project's editor listens. Named for the process as well as the slot: `app.getPath('temp')` is
-// the same folder for every copy of the app, and building into `out/` and running that beside the
-// installed app is the normal way to test a change here. Without the pid, spawning the dev build's
-// editor unlinks the installed app's live socket, and Ctrl+` in one app lands in the other app's nvim.
-// Nothing needs the name to survive a restart: the socket is removed before every spawn anyway.
+// Where a project's editor listens while this app runs it itself. Named for the process as well as the
+// slot: `app.getPath('temp')` is the same folder for every copy of the app, and building into `out/` and
+// running that beside the installed app is the normal way to test a change here. Without the pid,
+// spawning the dev build's editor unlinks the installed app's live socket, and Ctrl+` in one app lands
+// in the other app's nvim. Nothing needs this name to survive a restart: this nvim dies with the app.
 //
 // On Windows the same address has to be a named pipe — nvim's `--listen` takes a Unix domain socket
 // path everywhere else, and Windows has no such thing. A pipe is not a file, which is why the wait
@@ -60,6 +61,16 @@ export function editorSocket(temporaryDirectory: string, slot: number): string {
   return process.platform === 'win32'
     ? `\\\\.\\pipe\\${name}`
     : path.join(temporaryDirectory, `${name}.sock`);
+}
+
+// Where a project's editor listens while the pane host runs it (panes-decision-1): named for the
+// project, not the process or the page, so the next launch reaches the nvim the host kept. Beside the
+// host's own socket, so a copy on other user data never shares it; a copy on the same user data is
+// turned away by the host and runs its editor itself, under editorSocket's name. The hash keeps the
+// path short of a unix socket's hundred-odd bytes, and on Windows takes the user data into the name.
+export function keptEditorSocket(platform: string, userData: string, projectPath: string): string {
+  const name = `nvim-${createHash('sha256').update(`${userData}\0${projectPath}`).digest('hex').slice(0, 16)}`;
+  return platform === 'win32' ? `\\\\.\\pipe\\dashboard-${name}` : path.join(userData, 'pane-host', `${name}.sock`);
 }
 
 // nvim refuses to listen on a socket path that is already there, so one left behind by a crash or a
@@ -189,9 +200,10 @@ export function savedPrompt(contents: string, seen: string): string | null {
   return text === seen ? null : text;
 }
 
-// Which nvim a hand-over goes to: the project's slot, the temp folder its socket lives in, and the shell
-// that finds nvim on your PATH.
-export type EditorTarget = { temporaryDirectory: string; shellCommand: string; slot: number };
+// Which nvim a hand-over goes to: the project's slot, the socket its editor listens on (pane-shells.ts's
+// editorSocketOf says which), the temp folder the files handed over go in, and the shell that finds nvim
+// on your PATH.
+export type EditorTarget = { temporaryDirectory: string; shellCommand: string; slot: number; socket: string };
 
 // The hand-over the scrollback key, Ctrl+G's prompt and a path in a pane all go through: find nvim, get
 // ready, wait for the editor to answer, run each set of arguments. `what` names the thing in every message. Answers
@@ -214,7 +226,7 @@ async function handToEditor(
   if (nvim === null) return { ok: false, message: `nvim is not on your PATH, so there is nowhere to open ${what}` };
   const unready = await prepare();
   if (unready !== null) return { ok: false, message: unready };
-  const socket = editorSocket(editor.temporaryDirectory, editor.slot);
+  const { socket } = editor;
   // Said rather than swallowed. Every other outcome puts a file in front of you; this one leaves the
   // editor showing whatever it was showing, and without a message that reads as the key doing nothing.
   if (!await waitForSocket(socket)) return { ok: false, message: `nvim did not start, so there was nowhere to open ${what}` };
@@ -229,15 +241,9 @@ async function handToEditor(
 }
 
 // The whole of the key: write the pane out and hand it over.
-export function openScrollback(
-  temporaryDirectory: string,
-  shellCommand: string,
-  slot: number,
-  index: number,
-  text: string,
-): Promise<Handover> {
-  const file = scrollbackFile(temporaryDirectory, slot, index);
-  return handToEditor({ temporaryDirectory, shellCommand, slot }, 'the scrollback', async () => {
+export function openScrollback(editor: EditorTarget, index: number, text: string): Promise<Handover> {
+  const file = scrollbackFile(editor.temporaryDirectory, editor.slot, index);
+  return handToEditor(editor, 'the scrollback', async () => {
     try {
       await writeOwnFile(file, text);
       return null;
@@ -261,16 +267,11 @@ export function openFileInEditor(
 
 // Ctrl+G's half in main: the box written out and handed over the way the scrollback is, wiped and then
 // opened in a tab of its own, so `:wq` closes the tab and leaves what you were editing in front of you.
-export function openPrompt(
-  temporaryDirectory: string,
-  shellCommand: string,
-  slot: number,
-  text: string,
-): Promise<Handover> {
-  const file = promptFile(temporaryDirectory, slot);
-  return handToEditor({ temporaryDirectory, shellCommand, slot }, 'the prompt', async () => {
+export function openPrompt(editor: EditorTarget, text: string): Promise<Handover> {
+  const file = promptFile(editor.temporaryDirectory, editor.slot);
+  return handToEditor(editor, 'the prompt', async () => {
     try {
-      await writePrompt(temporaryDirectory, slot, text);
+      await writePrompt(editor.temporaryDirectory, editor.slot, text);
       return null;
     } catch (error) {
       return `could not write the prompt: ${(error as Error).message}`;

@@ -38,7 +38,9 @@ describe('adoptedPane', () => {
     expect(adoptedPane(survivor(1, '/project'), saved, [], new Map(), same)).toMatchObject({ worker: true });
   });
 
-  it('does not keep the editor, whose socket is named after a page the project may no longer be on', () => {
-    expect(adoptedPane(survivor(EDITOR_INDEX, '/project'), null, [], new Map(), same)).toBeUndefined();
+  // Restarted later, it runs nvim again rather than the arguments naming the socket it was given.
+  it('keeps the editor as the editor', () => {
+    expect(adoptedPane(survivor(EDITOR_INDEX, '/project', ['-lic', 'exec nvim']), null, [], new Map(), same))
+      .toEqual({ command: { args: 'editor', directory: '/project' }, card: undefined, worker: false });
   });
 });

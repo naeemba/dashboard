@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { terminalId, EDITOR_INDEX } from '../../shared/panes/terminals';
 import { screens } from '../../shared/remote-host/screens';
 import type { PaneHost } from './pane-host-client';
 import { foregroundName, type PaneShell } from './pane-shell';
 import type { SpawnRequest } from './pane-host-protocol';
 import { paneShells } from './pane-shells';
+import { editorSocket, keptEditorSocket } from '../nvim/nvim-remote';
 import type { ScopeRequest } from '../processes/scope';
 
 // A shell that never runs anything, kept or not.
@@ -16,28 +17,22 @@ function fakeShell(kept?: boolean): PaneShell {
   };
 }
 
-const inApp = vi.hoisted(() => ({ spawned: 0 }));
-vi.mock('./pane-shell', async (importOriginal) => ({
-  ...await importOriginal<typeof import('./pane-shell')>(),
-  spawnShell: () => { inApp.spawned += 1; return fakeShell(); },
-}));
-
 const EDITOR = terminalId(0, EDITOR_INDEX);
 const WORKER = terminalId(0, 1);
 const AGENT = terminalId(0, 2);
 
 // Every scope asked for is granted as `<kind>-<id>.scope`, wrapping the command in `scoped`.
-function shells() {
+function shells(holds = true) {
   let hostSpawned = 0;
   const requests: SpawnRequest[] = [];
-  const host = { spawn: (request: SpawnRequest) => { hostSpawned += 1; requests.push(request); return fakeShell(true); } } as unknown as PaneHost;
+  const host = { spawn: (request: SpawnRequest) => { hostSpawned += 1; requests.push(request); return fakeShell(true); }, holds: () => holds } as unknown as PaneHost;
   const made = paneShells({
     host,
     commands: new Map([
       [EDITOR, { args: 'editor', directory: '/work' }], [WORKER, { args: [], directory: '/work' }],
       [AGENT, { args: ['-ilc', 'claude'], directory: '/work' }],
     ]),
-    screens: screens(), environment: {}, temporary: '/nonexistent', shellCommand: () => '/bin/zsh',
+    screens: screens(), environment: {}, temporary: '/nonexistent', userData: '/nonexistent-user-data', shellCommand: () => '/bin/zsh',
     scoped: (request: ScopeRequest) => ({ file: 'scoped', args: [request.file, ...request.args], unit: `${request.kind}-${request.id}.scope` }),
     projectPath: () => '/home/me/dashboard', send: () => undefined, keepsScreens: () => false, ended: () => undefined,
   });
@@ -45,14 +40,20 @@ function shells() {
 }
 
 describe('paneShells', () => {
-  it('spawns the editor in this process and a worker through the host', () => {
+  // The next launch reaches a kept nvim only under a name it can work out again: the project's.
+  it('spawns the editor through the host, listening under the project\'s name while the host holds it', () => {
     const made = shells();
-    const before = inApp.spawned;
     made.spawn(EDITOR);
-    expect(inApp.spawned).toBe(before + 1);
-    expect(made.hostSpawned()).toBe(0);
-    made.spawn(WORKER);
     expect(made.hostSpawned()).toBe(1);
+    const kept = keptEditorSocket(process.platform, '/nonexistent-user-data', '/home/me/dashboard');
+    expect(made.editorSocketOf(0)).toBe(kept);
+    expect(made.requests[0].args.join(' ')).toContain(kept);
+  });
+
+  // A second Dashboard on the same user data is turned away by the host, and must not take the
+  // first one's editor socket.
+  it('names the editor\'s socket for this process when the host does not hold its shells', () => {
+    expect(shells(false).editorSocketOf(0)).toBe(editorSocket('/nonexistent', 0));
   });
 
   it('scopes an agent pane as an agent and a plain one as a shell, named after the project and pane', () => {

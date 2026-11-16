@@ -220,7 +220,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
-  temporary: app.getPath('temp'), shellCommand: () => shellCommand, scoped: scopes.scoped, projectPath: (slot) => projectIn(slot)?.path,
+  temporary: app.getPath('temp'), userData: app.getPath('userData'), shellCommand: () => shellCommand, scoped: scopes.scoped, projectPath: (slot) => projectIn(slot)?.path,
   send: sendToRenderer, keepsScreens: () => keepsScreenCopies(remoteHost !== null, remote.reachesWindow()),
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
@@ -354,7 +354,7 @@ setInterval(() => {
 }, WORKING_REPORT_MS).unref();
 
 registerPaneOpeners(table, {
-  shellCommand: () => shellCommand,
+  shellCommand: () => shellCommand, editorSocket: panes.editorSocketOf,
   paneFolders: (slot, index) => {
     const id = terminalId(slot, index);
     return { pid: shells.get(id)?.pid, startDirectory: terminalCommands.get(id)?.directory, projectPath: projectIn(slot)?.path };
@@ -566,6 +566,7 @@ const openProjects = (): OpenProjects => ({
   panes: projects.map((_project, slot) => openPanes(slot)),
   manager: openPanes(MANAGER_SLOT),
   screens: workerScreens.ids(),
+  editors: projects.flatMap((_project, slot) => (shells.has(terminalId(slot, EDITOR_INDEX)) ? [slot] : [])),
 });
 // Every screen redraws its pages from the list, so a worker opening or closing is the list again.
 const panesChanged = (): void => sendToRenderer('projects:change', openProjects());

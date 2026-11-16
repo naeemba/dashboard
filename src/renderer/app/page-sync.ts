@@ -82,6 +82,9 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
       // A worker opening or closing changes no page, only what is on one. Every page is asked, the
       // manager's too, since the list does not say which changed; one that already matches is left as it is.
       for (const page of pages) ports.syncPanes(page, openPanesOf(open, page.slot));
+      // An nvim already running is one the pane host kept through a restart: arriving on the editor
+      // shows it rather than starting a second over it.
+      for (const page of pages) if (open.editors?.includes(page.slot)) page.editorStarted = true;
       const landing = landingAfterMoves(standingSlot, moves, positionOfSlot, ports.activeIndex(), pages.length);
       if (landing.takeFocus) ports.landOn(landing.position);
       else {

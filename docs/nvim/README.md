@@ -10,7 +10,8 @@ What each screen does, in full. The help dialog keeps only a short
 blurb for it; this is where the rest lives.
 
 One nvim filling the window. It starts the first time you press the nvim key for
-this project, not at launch. Quit it and the pane says it exited; Enter starts
+this project, not at launch, and the pane host keeps it through a quit or an
+update like any pane, buffers and all (panes-decision-1). Quit it and the pane says it exited; Enter starts
 it again, and so does coming back to this screen — the scrollback key needs a
 running nvim to hand a file to. The status bar names the file nvim has open, and
 just says nvim while nothing is open.

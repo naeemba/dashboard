@@ -1,8 +1,9 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  dropWrittenFiles, editorSocket, nvimFromOutput, openFileArguments, openFileInEditor, openPrompt, openScrollback,
+  dropWrittenFiles, editorSocket, keptEditorSocket, nvimFromOutput, openFileArguments, openFileInEditor, openPrompt, openScrollback,
   readPrompt, savedPrompt, scrollbackFile, tabArguments, wipeArguments, writePrompt,
 } from './nvim-remote';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
@@ -31,6 +32,18 @@ describe('editorSocket and scrollbackFile', () => {
   it('gives each slot its own socket, under this process', () => {
     expect(editorSocket('/tmp', 0)).not.toBe(editorSocket('/tmp', 1));
     expect(editorSocket('/tmp', 0)).toContain(String(process.pid));
+  });
+
+  // The next launch reaches the nvim the host kept by working out the same name again; another user
+  // data, or another project, must not.
+  it('names a kept editor for its project and user data, the same every launch', () => {
+    const kept = keptEditorSocket('linux', '/home/me/.config/Dashboard', '/work/app');
+    expect(kept).toBe(keptEditorSocket('linux', '/home/me/.config/Dashboard', '/work/app'));
+    expect(path.dirname(kept)).toBe(path.join('/home/me/.config/Dashboard', 'pane-host'));
+    expect(kept).not.toContain(String(process.pid));
+    expect(keptEditorSocket('linux', '/home/me/.config/Dashboard', '/work/other')).not.toBe(kept);
+    expect(keptEditorSocket('win32', 'C:\\Users\\me\\Dashboard', '/work/app'))
+      .not.toBe(keptEditorSocket('win32', 'C:\\Users\\me\\Dashboard-dev', '/work/app'));
   });
 
   // Five panes sharing one filename is nvim reloading the same buffer over the transcript you opened
@@ -137,10 +150,10 @@ describe('readPrompt', () => {
 describe('the manager\'s slot', () => {
   it('refuses the scrollback, the prompt and a file without waiting for an editor', async () => {
     const temporaryDirectory = os.tmpdir();
-    const editor = { temporaryDirectory, shellCommand: '/bin/sh', slot: MANAGER_SLOT };
-    expect(await openScrollback(temporaryDirectory, '/bin/sh', MANAGER_SLOT, 1, 'text'))
+    const editor = { temporaryDirectory, shellCommand: '/bin/sh', slot: MANAGER_SLOT, socket: '/nowhere.sock' };
+    expect(await openScrollback(editor, 1, 'text'))
       .toEqual({ ok: false, message: 'the manager has no nvim, so there is nowhere to open the scrollback' });
-    expect(await openPrompt(temporaryDirectory, '/bin/sh', MANAGER_SLOT, 'text')).toMatchObject({ ok: false });
+    expect(await openPrompt(editor, 'text')).toMatchObject({ ok: false });
     expect(await openFileInEditor(editor, '/etc/hosts')).toMatchObject({ ok: false });
   });
 });

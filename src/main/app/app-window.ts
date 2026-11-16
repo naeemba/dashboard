@@ -85,7 +85,7 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
   // True while the quit question is on screen. Every close is stopped, so without it holding Cmd+Q
   // stacks a question per keypress and you answer the same one five times.
   let askingToQuit = false;
-  // Closing the window stops every Claude screen and the editor. The worker panes' shells are the pane
+  // Closing the window stops every Claude screen. The worker panes' shells and the editor are the pane
   // host's and go on running for the next launch (panes-decision-1); one the app runs itself this time
   // (no host, another Dashboard holds it, or it died) is killed, and the question says so. Cancel is
   // the default button, so Enter and Escape both mean "I hit that by accident".
@@ -107,7 +107,7 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
       message: 'Quit Dashboard?',
       detail: options.shellsDieAtQuit()
         ? 'Every Claude screen stops, and every shell in every open project is killed, including anything still running in one.'
-        : 'Every Claude screen stops, and so does the editor. The worker panes\' shells keep running and come back when Dashboard opens again.',
+        : 'Every Claude screen stops. The editor and the worker panes\' shells keep running and come back when Dashboard opens again.',
     }).then(async ({ response }) => {
       if (response !== 1) return;
       confirmed = true;
