@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outsidePaneRefusal, parseSessionCommand, readsStopInput, stopHookArguments, stopInputArguments } from './session-cli';
+import { hookArguments, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -69,6 +69,22 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['notify', '2:3', 'done', '--background', '2'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['notify', '2:3', 'done', '--background', 'two', '--scheduled', '0'])).toMatchObject({ ok: false });
   });
+
+  it('reads a done\'s last message and a running\'s prompt source, each only on its own state', () => {
+    expect(parseSessionCommand(['notify', '2:3', 'done', '--background', '0', '--scheduled', '0', '--last-message', 'Opened #12.'])).toEqual({
+      ok: true, command: { kind: 'notify', id: '2:3', state: 'done', waiting: { background: 0, scheduled: 0 }, told: { lastMessage: 'Opened #12.' } },
+    });
+    expect(parseSessionCommand(['notify', '2:3', 'running', '--prompt-source', 'user'])).toEqual({
+      ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { promptSource: 'user' } },
+    });
+    expect(parseSessionCommand(['notify', '2:3', 'running', '--last-message', 'x'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['notify', '2:3', 'done', '--last-message'])).toMatchObject({ ok: false });
+  });
+
+  it('reads report as a pane id', () => {
+    expect(parseSessionCommand(['report', '2:3'])).toEqual({ ok: true, command: { kind: 'report', id: '2:3' } });
+    expect(parseSessionCommand(['report'])).toMatchObject({ ok: false });
+  });
   it('answers nothing, or a word it does not know, with what it takes', () => {
     expect(parseSessionCommand([])).toMatchObject({ ok: false, message: expect.stringContaining('session claim') });
     expect(parseSessionCommand(['spawn'])).toMatchObject({ ok: false, message: expect.stringMatching(/^no such command: spawn/) });
@@ -89,14 +105,20 @@ describe('stopInputArguments', () => {
     session_crons: [],
   });
 
-  it('is read only for a done, the way the Stop hook spells it', () => {
-    expect(readsStopInput(['notify', '2:3', 'done', '--stop-input'])).toBe(true);
-    expect(readsStopInput(['notify', '2:3', 'running', '--stop-input'])).toBe(false);
-    expect(readsStopInput(['notify', '2:3', 'done'])).toBe(false);
+  it('is read only the way each hook spells it', () => {
+    expect(readsHookInput(['notify', '2:3', 'done', '--stop-input'])).toBe(true);
+    expect(readsHookInput(['notify', '2:3', 'running', '--prompt-input'])).toBe(true);
+    expect(readsHookInput(['notify', '2:3', 'running', '--stop-input'])).toBe(false);
+    expect(readsHookInput(['notify', '2:3', 'done'])).toBe(false);
   });
 
-  it('counts what the session still waits on', () => {
-    expect(stopInputArguments(input)).toEqual(['--background', '1', '--scheduled', '0']);
+  it('counts what the session still waits on, and sends its last message', () => {
+    expect(stopInputArguments(input)).toEqual(['--background', '1', '--scheduled', '0', '--last-message', 'started']);
+  });
+
+  it('sends who put a prompt in', () => {
+    expect(promptInputArguments(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: 'hi', source: 'user' }))).toEqual(['--prompt-source', 'user']);
+    expect(promptInputArguments(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: 'hi' }))).toEqual([]);
   });
 
   it('sends nothing for input from an older Claude Code, or none that parses', () => {
@@ -106,11 +128,19 @@ describe('stopInputArguments', () => {
   });
 
   it('sends the app the counts in place of the flag, and a notify the parser takes', () => {
-    const sent = stopHookArguments(['notify', '2:3', 'done', '--stop-input'], input);
-    expect(sent).toEqual(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0']);
+    const sent = hookArguments(['notify', '2:3', 'done', '--stop-input'], input);
+    expect(sent).toEqual(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0', '--last-message', 'started']);
     expect(parseSessionCommand(sent).ok).toBe(true);
-    expect(stopHookArguments(['notify', '2:3', 'done', '--stop-input'], undefined)).toEqual(['notify', '2:3', 'done']);
-    expect(stopHookArguments(['list', '--all'], undefined)).toEqual(['list', '--all']);
+    expect(hookArguments(['notify', '2:3', 'done', '--stop-input'], undefined)).toEqual(['notify', '2:3', 'done']);
+    expect(hookArguments(['list', '--all'], undefined)).toEqual(['list', '--all']);
+  });
+
+  // An app from before the last message is still sent the counts, which turn the pane.
+  it('drops the words an older app refuses, and keeps the rest', () => {
+    expect(olderNotifyArguments(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0', '--last-message', 'started']))
+      .toEqual(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0']);
+    expect(olderNotifyArguments(['notify', '2:3', 'running', '--prompt-source', 'user'])).toEqual(['notify', '2:3', 'running']);
+    expect(olderNotifyArguments(['send', '2:3', '--last-message'])).toEqual(['send', '2:3', '--last-message']);
   });
 });
 
