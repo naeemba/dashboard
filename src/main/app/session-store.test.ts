@@ -1,10 +1,11 @@
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { channels } from './channels';
 import { PROJECT_MODES } from '../../shared/keys/modes';
 import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 import { sessionStore } from './session-store';
+import { writeSession } from './session';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { temporaryFolder } from '../testing/temporary-folder';
@@ -49,7 +50,7 @@ describe('the manager\'s workers', () => {
     const directory = temporaryFolder('session-store-');
     const file = path.join(directory, 'session.json');
     const conversation = { session: 'ccaaf965-c864-48db-8044-30bf27d93087', directory, dispatched: true, dispatcher: MANAGER_FOLDER };
-    writeFileSync(file, JSON.stringify({ pages: [], activeIndex: 0, manager: [null, conversation] }));
+    writeSession(file, { pages: [], activeIndex: 0, manager: [null, conversation] });
     const sessions = sessionStore(channels(), file, () => -1, () => undefined);
     expect(sessions.owedResumes(MANAGER_FOLDER)).toEqual([1]);
     expect(sessions.takeResume(MANAGER_FOLDER, 1, `${MANAGER_SLOT}:1`)).toEqual(conversation);

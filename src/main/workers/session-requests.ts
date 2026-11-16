@@ -374,8 +374,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // the main it reports to (mainOf), with no prompt to say what it is about.
   function workers(): DispatchedWorker[] {
     const slots = new Map(ports.openSlots().map((each) => [each.slot, { name: each.name, open: ports.openPanes(each.slot) }]));
-    const restored = openPaneIds()
-      .filter((id) => !dispatched.has(id) && ports.dispatcherOf(id) !== undefined)
+    const restored = [...slots].flatMap(([slot, { open }]) => open.map((index) => terminalId(slot, index)))
+      .filter((id) => !dispatched.has(id) && mainsWorker(id))
       .map((id) => [id, { dispatcher: mainOf(id), about: '' }] as const);
     return [...dispatched, ...restored].flatMap(([id, { dispatcher, about }]) => {
       const { slot, index } = paneFromId(id);
