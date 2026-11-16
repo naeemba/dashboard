@@ -1,0 +1,11 @@
+{
+  "id": "5802a0b2-36ca-4397-a130-73e93fe6cef2",
+  "title": "A turn the session starts by itself shows on no Claude screen",
+  "notes": "Found while probing eb91abf1 (2026-11-16). When a background task finishes, the SDK session starts a follow-up turn by itself. No Claude screen shows it as a turn: there is no working line, and the foot says 'ready' while Claude works. The session's per-turn system init message could mark the turn's start, the same way a user prompt does. Put the decision in a module with a test. Do not bump the version.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-16T11:45:04.914Z",
+  "updatedAt": "2026-11-16T11:45:04.915Z",
+  "column": "Backlog",
+  "order": 46
+}
