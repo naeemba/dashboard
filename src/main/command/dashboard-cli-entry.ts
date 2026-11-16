@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { runBoardProgram } from '../board/board-program';
 import { runProjectProgram } from '../projects/project-program';
 import { runSessionProgram } from '../workers/session-program';
+import { runBudgetProgram } from './budget-program';
 import { routeDashboardCommand } from './dashboard-cli';
 import { runPullRequestProgram } from './pull-request-program';
 import { appStarter, appStartRefusal } from './start-app';
@@ -32,6 +33,7 @@ async function run(): Promise<number> {
         case 'pane': return runSessionProgram(route.commandArguments);
         case 'project': return runProjectProgram(route.commandArguments);
         case 'pr': return runPullRequestProgram(route.commandArguments);
+        case 'budget': return runBudgetProgram(route.commandArguments);
       }
   }
 }

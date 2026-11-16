@@ -37,6 +37,12 @@ describe('settingsRows', () => {
     expect(listening).toContainEqual({ kind: 'host-port', label: 'Port (next launch)', value: '7777' });
   });
 
+  it('lists the weekly cap under a Budget heading, empty when none is set', () => {
+    const label = 'Weekly cap, % of the 7-day usage';
+    expect(settingsRows(parseSettings({}, false))).toContainEqual({ kind: 'weekly-cap', label, value: '' });
+    expect(settingsRows(parseSettings({ budget: { weeklyCap: 74 } }, false))).toContainEqual({ kind: 'weekly-cap', label, value: '74' });
+  });
+
   it('opens with a heading, and headings are not selectable', () => {
     expect(rows[0].kind).toBe('heading');
     expect(stepSelection(rows, 0, 0)).toBe(1);

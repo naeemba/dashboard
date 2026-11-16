@@ -126,6 +126,9 @@ export type ProjectOpen = { index: number; open: OpenProjects } | { refused: str
 // panes (any you gave one among them), and whether only to check, before its question, closing nothing.
 export type ProjectClose = { slot: number; name: string; names: PaneName[]; onlyCheck: boolean };
 
+// The settings and the shell main resolved from them, as it answers a read and pushes a change.
+export type LoadedSettings = { settings: Settings; shellCommand: string };
+
 export type DashboardBridge = {
   platform: string;
   getRecentProjects(): Promise<Project[]>;
@@ -241,10 +244,12 @@ export type DashboardBridge = {
   writeInk(projectPath: string, text: string): Promise<void>;
   // The settings, and the shell that was resolved from them. One call, because the renderer needs
   // both before it builds a pane and they are decided together.
-  getSettings(): Promise<{ settings: Settings; shellCommand: string }>;
+  getSettings(): Promise<LoadedSettings>;
   // Answers with the shell main resolved from the new settings, which is the one a dropped path is
   // quoted for, or settings.write's refusal of what was not settings.
   saveSettings(settings: Settings): Promise<string | Refused>;
+  // settings.json changed on disk (`dashboard budget --cap`, or by hand) and main took it as its copy.
+  onSettingsChange(listener: (loaded: LoadedSettings) => void): void;
   // A card that changed column, handed to main's card.move: the move and what entering the column
   // starts — a ship, a review loop, or nothing.
   moveCard(request: CardMoveRequest): Promise<CardMoveAnswer>;

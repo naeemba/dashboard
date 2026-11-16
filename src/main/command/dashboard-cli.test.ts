@@ -14,6 +14,12 @@ describe('routeDashboardCommand', () => {
     expect(routeDashboardCommand(['pr', '--help'])).toMatchObject({ kind: 'help', text: expect.stringContaining('pr land <number|url|branch>') });
   });
 
+  it('hands budget, with or without words, to its own program', () => {
+    expect(routeDashboardCommand(['budget'])).toEqual({ kind: 'program', noun: 'budget', commandArguments: [] });
+    expect(routeDashboardCommand(['budget', '--cap', '74'])).toEqual({ kind: 'program', noun: 'budget', commandArguments: ['--cap', '74'] });
+    expect(routeDashboardCommand(['budget', '--help'])).toMatchObject({ kind: 'help', text: expect.stringContaining('budget --cap <n>') });
+  });
+
   it('reads session as pane', () => {
     expect(routeDashboardCommand(['session', 'claim'])).toEqual({ kind: 'program', noun: 'pane', commandArguments: ['claim'] });
   });

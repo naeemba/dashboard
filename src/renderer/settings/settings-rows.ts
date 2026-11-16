@@ -23,6 +23,7 @@ export type SettingsRow =
   | { kind: 'weather-place'; label: string; value: string }
   | { kind: 'host-port'; label: string; value: string }
   | { kind: 'host-token'; label: string; value: string }
+  | { kind: 'weekly-cap'; label: string; value: string }
   | { kind: 'toggle'; name: ToggleName; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
@@ -80,6 +81,10 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   rows.push({ kind: 'heading', label: 'Review' });
   rows.push(toggleRow(settings, 'autoLoop', 'Start the review loop when a pull request opens'));
   rows.push(toggleRow(settings, 'autoMerge', 'Merge the pull request once the loop and CI are green'));
+  rows.push({ kind: 'heading', label: 'Budget' });
+  rows.push({
+    kind: 'weekly-cap', label: 'Weekly cap, % of the 7-day usage', value: settings.budget.weeklyCap === null ? '' : String(settings.budget.weeklyCap),
+  });
   rows.push({ kind: 'heading', label: 'Updates' });
   rows.push(toggleRow(settings, 'updates', 'Check for a newer release on launch and every six hours'));
   rows.push({ kind: 'heading', label: 'Errors' });

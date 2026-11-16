@@ -33,6 +33,15 @@ describe('parseSettings', () => {
     }
   });
 
+  it('has no weekly cap until the file names a percentage above 0 and at most 100', () => {
+    expect(parseSettings({}, false).budget).toEqual({ weeklyCap: null });
+    expect(parseSettings({ budget: { weeklyCap: 74 } }, false).budget).toEqual({ weeklyCap: 74 });
+    expect(parseSettings({ budget: { weeklyCap: 100 } }, false).budget).toEqual({ weeklyCap: 100 });
+    for (const rubbish of [0, -5, 101, '74', null]) {
+      expect(parseSettings({ budget: { weeklyCap: rubbish } }, false).budget).toEqual({ weeklyCap: null });
+    }
+  });
+
   it('checks for updates unless the file turns it off', () => {
     expect(parseSettings({}, false).updates).toEqual({ check: true });
     expect(parseSettings({ updates: { check: false } }, false).updates).toEqual({ check: false });

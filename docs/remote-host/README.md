@@ -35,6 +35,7 @@ Folders: `src/main/remote-host/`, `src/shared/remote-host/`, `src/renderer/remot
 - Given only `host.port` is set, when the host starts, then it listens on `127.0.0.1` and a machine on the network cannot connect.
 - Given `host.bind` is set in the file, when the host starts, then it listens on that interface.
 - Given a hello with a token of a different length, when the host checks it, then it refuses the token without throwing.
+- Given the host holds no token, when a screen says hello with an empty one, then the host refuses it.
 - Given a screen connects, when its first frame is not a valid hello with the host's token, then the host reads nothing else from it.
 - Given a screen joins mid-run, when it arrives, then it is shown the projects and every pane's recent output.
 - Given two screens draw one pane, when they report sizes, then the shell gets the smallest columns and rows, the way tmux does.

@@ -25,7 +25,12 @@ font, the shell and the place the manager's weather is for. They are kept in
 only what you changed; anything you left alone follows the app's default,
 including when that default moves. The app tidies the file each time it starts,
 so a line you write that already matches the default is taken out again. Delete
-it and everything is back to how it shipped.
+it and everything is back to how it shipped. A change to the file while the app
+runs — by hand, or `dashboard budget --cap` — is taken at once (settings.adopt):
+a file that does not parse, as one half-saved in an editor, is ignored until it
+does, a deleted one is put back by the app's next save, and a file with no host
+token keeps the one the app holds. An open settings screen
+starts its next change from the new copy.
 
 The Review row (`review.autoLoop`, default on) says whether a shipped card whose
 pull request opens starts its review loop by itself. Enter turns it over. Off,
@@ -45,6 +50,11 @@ the updates key still checks when pressed (docs/updates).
 The Errors row (`errors.notify`, default on) says whether an error on the status
 bar raises a desktop notification while the window is not in front. Enter turns
 it over (docs/errors).
+
+The Budget row (`budget.weeklyCap`, default none) is the share of the 7-day
+usage, in percent, that `dashboard budget` calls over: above 0 and at most 100,
+empty for none. `dashboard budget --cap <n>` sets the same line
+([command](../command/README.md), command-decision-6).
 
 `workers.closeAfterMinutes` (default 10, in the file by hand only, no row) is how
 long a worker whose report main has read sits with nothing sent to it before the
@@ -81,7 +91,7 @@ the pull request it came from may still be open.
 Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
 
 - `settings.ts`, `settings-store.ts`, `settings-rows.ts`, `settings-view.ts`
-- every write goes through settings.write, `src/main/actions/settings/` (docs/actions)
+- the app's writes go through settings.write and `budget --cap`'s through settings.cap, `src/main/actions/settings/` (docs/actions); a change on disk comes in through settings.adopt
 
 ## Scenarios
 
@@ -89,3 +99,4 @@ Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
 - Given a setting left at its shipped default, when the file is saved, then the line is left out.
 - Given an old file holding a shipped default, when the app launches, then the launch tidy removes the line.
 - Given a font size the screen accepts, when the file is read back, then the same range check keeps it (errors-decision-1).
+- Given the app running, when `dashboard budget --cap 60` writes the file, then main and the window take it, and the next save keeps it.

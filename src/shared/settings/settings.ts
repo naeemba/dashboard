@@ -37,6 +37,9 @@ export type Settings = {
   // the app closes its pane (auto-release.ts); 0 closes one only when its card is finished. In the file
   // by hand only.
   workers: { closeAfterMinutes: number };
+  // weeklyCap: the share of the 7-day usage, in percent, that `dashboard budget` calls over (docs/command);
+  // null until one is set, on the settings screen or with `budget --cap`.
+  budget: { weeklyCap: number | null };
 };
 
 // The on/off settings: each a boolean in a section of the file, named as [section, field], read by
@@ -90,6 +93,13 @@ export function isFontSize(value: string): boolean {
   return value.trim() !== '' && Number.isFinite(size) && size >= 6 && size <= 72;
 }
 
+// The same range parseSettings holds a stored cap to, exported for the settings screen's and the
+// budget command's messages: above 0, at most 100.
+export function isWeeklyCap(value: string | number): boolean {
+  const cap = Number(value);
+  return String(value).trim() !== '' && Number.isFinite(cap) && cap > 0 && cap <= 100;
+}
+
 // The same range parseSettings holds a stored port to. Exported for the settings screen's message.
 export function isPort(value: string | number): boolean {
   const port = Number(value);
@@ -109,6 +119,7 @@ export function defaultSettings(isMac: boolean): Settings {
     updates: { check: true },
     errors: { notify: true },
     workers: { closeAfterMinutes: DEFAULT_CLOSE_AFTER_MINUTES },
+    budget: { weeklyCap: null },
   };
 }
 
@@ -167,6 +178,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
   const storedWorkers = asRecord(raw.workers);
+  const storedCap = asRecord(raw.budget).weeklyCap;
   // A toggle the file holds as a boolean, or the shipped one.
   const toggle = (name: ToggleName): boolean => {
     const [section, field] = TOGGLES[name];
@@ -210,6 +222,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     workers: {
       closeAfterMinutes: isMinutes(storedWorkers.closeAfterMinutes) ? storedWorkers.closeAfterMinutes : defaults.workers.closeAfterMinutes,
     },
+    budget: { weeklyCap: typeof storedCap === 'number' && isWeeklyCap(storedCap) ? storedCap : null },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 

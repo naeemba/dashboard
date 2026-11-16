@@ -58,6 +58,10 @@ describe('helloRefusal', () => {
     expect(helloRefusal('é', '1.17.0', 'a', '1.17.0')?.code).toBe(CLOSE_BAD_TOKEN);
   });
 
+  it('refuses everyone while the host has no token, an empty one included', () => {
+    expect(helloRefusal('', '1.17.0', '', '1.17.0')?.code).toBe(CLOSE_BAD_TOKEN);
+  });
+
   it('refuses a wrong token before it looks at the version', () => {
     expect(helloRefusal('x', '1.0.0', 't', '1.17.0')).toEqual({ code: CLOSE_BAD_TOKEN, reason: 'The host refused the token' });
   });
