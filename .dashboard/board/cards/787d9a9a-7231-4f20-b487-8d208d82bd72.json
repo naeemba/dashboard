@@ -5,8 +5,9 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-15T23:35:34.238Z",
-  "updatedAt": "2026-11-16T00:48:33.644Z",
+  "updatedAt": "2026-11-16T00:51:32.414Z",
   "branch": "move-the-manager-s-tmp-scripts-into-the-cli",
+  "pullRequest": 295,
   "comments": [
     {
       "at": "2026-11-16T00:35:03.118Z",
@@ -15,8 +16,12 @@
     {
       "at": "2026-11-16T00:48:33.644Z",
       "body": "budget left out: the only source of the 7-day usage is the Agent SDK's usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET (what the Claude screen's status line shows). It needs a live SDK session, which a terminal main does not have, and it is named not to be relied on, so a cap gate built on it would go quiet the day it changes. Recorded as command-decision-5. pane dispatch was not built either: board ship already makes the worktree, the pane and the agent, and main's prompt and pane --help now point to it (agreed with main-dashboard)."
+    },
+    {
+      "at": "2026-11-16T00:51:32.367Z",
+      "body": "Pull request #295 opened: Move the manager's /tmp scripts into the CLI: pane finish, pr land https://github.com/naeemba/dashboard/pull/295"
     }
   ],
-  "column": "Doing",
+  "column": "Review",
   "order": 0
 }
