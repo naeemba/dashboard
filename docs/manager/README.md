@@ -40,7 +40,9 @@ project shows all of its panes by name. The ones asking and the ones that have
 died carry the last few lines they printed, so the question or what it died of
 can be read from here; the rest carry the one line they last printed. Every pane
 says how long ago it printed, which is how you spot the one that has been quiet
-since this morning. A pane that wants nothing shows no status at all; a project
+since this morning. For main and a worker drawn as a Claude screen that is when
+its session last sent anything, not its hidden shell, and it is the same clock
+Needs you reads to call a worker quiet and to order its question among the rest. A pane that wants nothing shows no status at all; a project
 none of whose panes wants anything says nothing waiting. The terminals and the
 worktrees under a project each have their column names above them.
 

@@ -13,6 +13,7 @@ import './drawer/drawer.css';
 import './usage/usage.css';
 import './manager/manager.css';
 import { openHelp } from './keys/help';
+import { paneReading, screenReading } from './manager/pane-reading';
 import { openWhatsNew, whatsNewAtLaunch } from './app/whats-new-view';
 import { openUpdates, watchUpdates } from './app/update-view';
 import { preloadFont } from './app/font-preload';
@@ -225,8 +226,7 @@ function mainEntry(page: Page): ManagerPane[] {
   if (chat === null) return [];
   return [{
     index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(chat.question() !== null), exited: false,
-    answers: chat.rowKeys(), lastPrintedAt: 0, lastPrinted: () => chat.question() ?? '',
-    tail: () => chat.questionLines(),
+    ...screenReading(chat),
   }];
 }
 
@@ -238,12 +238,9 @@ function currentManagerRows(): ManagerRow[] {
     slot: entry.slot,
     panes: [...mainEntry(entry), ...namedPanes(entry).map((pane): ManagerPane => ({
       ...pane,
-      // A worker drawn as a screen is read like main: its shell is out of sight under it, so neither
-      // the shell's lines nor when it last printed are anything the worker did.
-      answers: pane.screen?.rowKeys() ?? 'character',
-      lastPrintedAt: pane.screen ? 0 : pane.lastPrintedAt,
-      tail: () => pane.screen?.questionLines() ?? paneTail(pane.terminal),
-      lastPrinted: () => (pane.screen ? pane.screen.question() ?? '' : paneLastLine(pane.terminal)),
+      ...paneReading(pane.screen, {
+        lastPrintedAt: pane.lastPrintedAt, tail: () => paneTail(pane.terminal), lastLine: () => paneLastLine(pane.terminal),
+      }),
     }))],
   })), usage, worktrees, memory);
 }

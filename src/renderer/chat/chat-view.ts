@@ -81,6 +81,8 @@ export type ChatView = {
   // What a key on that row answers: a listed digit, or nothing while no question is open or the open
   // one is answered on the screen itself.
   rowKeys(): Exclude<PaneAnswers, 'character'>;
+  // When the session last sent this screen anything, 0 before it has: the age on its manager row.
+  lastEventAt(): number;
 };
 
 const PAINT_MS = 80;
@@ -129,6 +131,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
+  let lastEventAt = 0;
   let drawn: DrawnEntry[] = [];
   let selected: number | null = null;
   // The block the copy key copied and the link the link key followed last, so the next press on the
@@ -615,6 +618,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     question: () => (asks.length > 0 ? rowTitle(asks[0]) : null),
     questionLines: () => (asks.length > 0 ? rowLines(asks[0]) : []),
     rowKeys: () => (asks.length > 0 && takesDigit(asks[0]) ? 'digit' : 'none'),
+    lastEventAt: () => lastEventAt,
     answerKey(key) {
       const first = asks.at(0);
       const result = first ? rowAnswer(first, key) : null;
@@ -635,6 +639,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     },
     focus,
     receive(event) {
+      lastEventAt = Date.now();
       if (event.kind === 'ask') return addAsk(event.ask);
       if (event.kind === 'ask-gone') return dropAsk(event.id);
       // A new conversation or one picked in /resume, from any screen: whatever the page is on now is
