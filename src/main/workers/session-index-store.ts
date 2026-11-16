@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { replaceFile } from '../app/replace-file';
-import { projectSlug } from './dispatch';
+import { projectName } from './project-names';
 import { paneLabel, paneFromId } from '../../shared/panes/terminals';
 import {
   NOT_IN_DRAWER, parseSessionIndex, projectOf, renamed, sessionPage, withKind, withLive, withSession, withUse, type SessionIndex,
@@ -73,7 +73,7 @@ export function sessionIndexStore(file: string, onScreen: (id: string) => string
   }
 
   const record = (projectPath: string, id: string, directory: string, card: string | null, kind?: PaneKind): void => (
-    save(withSession(index, projectPath, projectSlug(projectPath), { id, directory, card, at: Date.now(), kind }))
+    save(withSession(index, projectPath, projectName(projectPath), { id, directory, card, at: Date.now(), kind }))
   );
 
   return {

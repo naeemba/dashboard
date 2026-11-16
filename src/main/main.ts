@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
+import { holdProjectName, releaseProjectName } from './workers/project-names';
 import { git, runProgram } from './app/git';
 import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
@@ -409,6 +410,8 @@ function placeProject(projectPath: string): number {
   if (replacesProject(projects[index], picked)) {
     logStore.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
     projects[index] = picked;
+    // Before its shells, which are named after it.
+    holdProjectName(picked.path);
     spawnProject(picked, index);
     watchProjectBoard(boards, boardLog, picked.path);
   }
@@ -432,6 +435,7 @@ function closeProjectSlot(slot: number): void {
   // Answered first so a slot past the end of the list is not written into it as a hole.
   if (closing === undefined) return;
   projects[slot] = undefined;
+  releaseProjectName(closing.path);
   logStore.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
   boards.forget(closing.path);
   chats.stop(slot);

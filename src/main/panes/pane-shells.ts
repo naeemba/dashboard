@@ -6,7 +6,7 @@ import { screenCopyWhile, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
 import { foregroundName, spawnShell, type PaneShell } from './pane-shell';
 import { runsAnAgent, type PaneCommand } from '../../shared/panes/pane-reading';
-import { projectSlug } from '../workers/dispatch';
+import { projectName } from '../workers/project-names';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import type { Screens } from '../../shared/remote-host/screens';
 
@@ -66,7 +66,7 @@ export function paneShells(main: {
     // An agent's pane is the one running Claude Code as its command (pane.dispatch's terminal half).
     // A screen's Claude runs in the screen host; the shell under it is a plain one.
     const scoped = main.scoped({
-      kind: runsAnAgent(entry) ? 'agent' : 'shell', id: `${projectSlug(projectPath)}-${index}`, file: shellCommand, args: paneArguments,
+      kind: runsAnAgent(entry) ? 'agent' : 'shell', id: `${projectName(projectPath)}-${index}`, file: shellCommand, args: paneArguments,
     });
     let shell: PaneShell;
     try {

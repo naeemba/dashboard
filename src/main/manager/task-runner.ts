@@ -1,5 +1,5 @@
 import type { Channels } from '../app/channels';
-import { projectSlug } from '../workers/dispatch';
+import { projectName } from '../workers/project-names';
 import { spawnScoped } from '../processes/spawn-scoped';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import { tailLines } from '../../shared/manager/manager';
@@ -91,7 +91,7 @@ export function taskRunner(ports: TaskPorts): TaskRunner {
     const ask = ++asked;
     const shell = ports.shellCommand();
     const commands = await Promise.all(projectPaths.map((projectPath) =>
-      ports.scoped({ kind: 'task', id: projectSlug(projectPath), file: shell, args: taskArguments(shell, command) })));
+      ports.scoped({ kind: 'task', id: projectName(projectPath), file: shell, args: taskArguments(shell, command) })));
     // The cancel key or a newer run came while the scope check was still out: this run never starts,
     // and its rows say so rather than wait on `running` for nothing.
     if (ask !== asked) {

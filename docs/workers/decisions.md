@@ -31,6 +31,14 @@ the eighth, Alt+J/K walk the list.
 **Main is called `main-<project>`, not `main`.** Every open project has a main session, and a worker's
 SendMessage to `main` with two of them open names two sessions. dispatch.ts spells it.
 
+**`<project>` is unique among the open projects, not the folder's name.** `~/work/api` and
+`~/clients/api` both slug to `api`, and with both open a worker's SendMessage to `main-api` could land
+in the other project's main. The first to open keeps `api` and the second is `api-2`, held until it
+closes (`project-names.ts`) rather than worked out from what is open now, so closing the first does not
+rename a main its workers already report to. A closed project's name goes to the next one to open. A restart reopens the tabs one at a time in
+their order (renderer.ts `restore`), so the same names come back unless the tabs were reordered. Not
+the projects.yaml name: the file is optional, and an open project need not be in it.
+
 **The Stop hook goes through the app, not to main directly.** A hook is a shell command, and Claude
 Code has no command that sends a message to a named session; the mailbox under `~/.claude/sessions` is
 its own undocumented business. So the hook runs `session notify <id> done`: the pane gets a green edge,
