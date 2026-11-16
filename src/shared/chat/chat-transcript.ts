@@ -437,8 +437,10 @@ export function applyMessage(transcript: Transcript, message: Record<string, unk
       return { ...transcript, ...IDLE, entries };
     }
     case 'system':
+      // Every turn opens with an init, the ones the session starts by itself too, after a background
+      // task finishes: with no prompt sent, this is what shows Claude working.
       if (message.subtype === 'init') {
-        return { ...transcript, model: text(message.model) || transcript.model, version: text(message.claude_code_version) || transcript.version };
+        return { ...transcript, ...underWay(transcript, Date.now()), model: text(message.model) || transcript.model, version: text(message.claude_code_version) || transcript.version };
       }
       if (message.subtype === 'compact_boundary') {
         return { ...transcript, entries: [...transcript.entries, { kind: 'notice', text: 'Conversation compacted.' }] };
@@ -467,11 +469,15 @@ function taken(transcript: Transcript, message: Record<string, unknown>): Transc
   return joinTurn({ ...transcript, queued }, waiting.content);
 }
 
+// A turn under way from `now`, counted from nothing, unless one already is, whose count goes on.
+function underWay(transcript: Transcript, now: number): Partial<Transcript> {
+  return transcript.busy ? {} : { ...UNCOUNTED, started: now, busy: true };
+}
+
 // A prompt taken into a running turn joins it, so its count goes on.
 function joinTurn(transcript: Transcript, content: ChatContent): Transcript {
   const now = Date.now();
-  const fresh = transcript.busy ? {} : { ...UNCOUNTED, started: now };
-  return { ...user(transcript, content, { at: now }), busy: true, suggestion: null, ...fresh };
+  return { ...user(transcript, content, { at: now }), suggestion: null, ...underWay(transcript, now) };
 }
 
 export function applyEvent(transcript: Transcript, event: ChatEvent): Transcript {
