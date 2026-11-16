@@ -5,7 +5,7 @@ import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { peerSender, turnUnderWay } from '../../shared/chat/chat-events';
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { replaceFile } from '../app/replace-file';
 import { recordWeeklyUsage } from '../usage/weekly-usage-file';
@@ -28,6 +28,7 @@ import { failureText } from '../../shared/errors/failure';
 import { runningUnits } from '../processes/memory-sweep';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
+import { readStringRecord } from '../app/string-record-file';
 import { claudeExecutable, scopedQuery } from './claude-process';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import { nameMemoryFiles } from '../drawer/measured-memory';
@@ -145,17 +146,6 @@ export function relayed(message: Record<string, unknown>): boolean {
   return RELAYED_STREAM.has(String(event.type)) || RELAYED_STREAM.has(String(delta));
 }
 
-// A file that is missing, unreadable or not what this app wrote reads as nothing remembered: the cost
-// is a new conversation where the last one would have been resumed.
-export function rememberedSessions(file: string): Record<string, string> {
-  try {
-    const read: unknown = JSON.parse(readFileSync(file, 'utf8'));
-    return isRecord(read) ? Object.fromEntries(Object.entries(read).filter(([, id]) => typeof id === 'string')) as Record<string, string> : {};
-  } catch {
-    return {};
-  }
-}
-
 // The part of a change that goes through the session's flag layer, only the keys it names. An effort
 // of null goes back to the model's default.
 export function flagSettingsOf(change: ChatPreferences): { effortLevel?: EffortLevel | null; fastMode?: boolean } {
@@ -259,7 +249,7 @@ export function registerChatSessions(
   // not replay it. A choice clears it until the next report.
   const reportedFast = new Map<number, boolean>();
   const file = path.join(host.userData, 'chat-sessions.json');
-  const remembered = rememberedSessions(file);
+  const remembered = readStringRecord(file);
   // Per project, the message a /rewind of the conversation resumes up to, until the next prompt's
   // turn names the forked conversation. Any change of conversation drops it.
   // ponytail: kept in memory, so an app restart before that prompt resumes the whole conversation.

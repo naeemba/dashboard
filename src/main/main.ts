@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
-import { holdProjectName, releaseProjectName } from './workers/project-names';
+import { holdProjectName, readProjectNames } from './workers/project-names';
 import { git, runProgram } from './app/git';
 import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
@@ -153,6 +153,7 @@ const projectIn = (slot: number): Project | undefined => projectInSlot(projects,
 // The recently opened projects live next to the app's other per-user state.
 const recentsFile = path.join(app.getPath('userData'), RECENTS_FILE);
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
+readProjectNames(path.join(app.getPath('userData'), 'project-names.json'));
 // The record as this launch starts it, every pane cleared; worktree-record-at-launch.ts says why, and
 // stops the launch on a record it cannot read.
 const { entries: recordAtLaunch, panes: agentPanesBeforeLaunch } = worktreeRecordAtLaunch(worktreesFile);
@@ -435,7 +436,6 @@ function closeProjectSlot(slot: number): void {
   // Answered first so a slot past the end of the list is not written into it as a hole.
   if (closing === undefined) return;
   projects[slot] = undefined;
-  releaseProjectName(closing.path);
   logStore.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
   boards.forget(closing.path);
   chats.stop(slot);
