@@ -744,7 +744,7 @@ const workerAnswers = sessionRequests({
     return reading !== undefined && paneIsBusy(reading) ? programIn(reading) : null;
   },
   directoryOf: (id) => workerScreens.folder(id) ?? terminalCommands.get(id)?.directory,
-  mainsWorkerIn: (id) => mainsWorkers.has(id),
+  dispatcherOf: (id) => mainsWorkers.get(id),
   open: (slot) => pane.open.call({ slot }),
   // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
   // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
