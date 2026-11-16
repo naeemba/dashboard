@@ -1,0 +1,11 @@
+{
+  "id": "48379d66-33c2-4fbe-90eb-0fb92b58e7ff",
+  "title": "Experiment: keep the hidden manager page painted so Ctrl+1 skips the GPU repaint",
+  "notes": "From #314 (closed). Ctrl+1 to the manager takes about 88 ms median against 48 ms for a project tab. Most of the gap is the GPU redrawing the manager's text (~16 ms per arrival, ~30 ms in all), because hidden pages are moved off screen and lose their painted tiles. In one run, keeping the hidden manager painted brought Ctrl+1 to 56 ms, but alpha also moved to 56 ms. Hidden pages would also need `inert`, so they can't take focus or clicks.\n\nDo: measure with measure.mjs manager-switch, 5+ runs each way, for both the manager and a project tab. Try keeping hidden pages painted (for example visibility or content-visibility rather than off-screen) with inert. Report the numbers. Ship it only if the manager switch gets faster and no tab gets slower; otherwise write the result in docs/performance/history.md and close. Do not bump the version.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-16T14:49:26.436Z",
+  "updatedAt": "2026-11-16T14:49:26.437Z",
+  "column": "Backlog",
+  "order": 45
+}
