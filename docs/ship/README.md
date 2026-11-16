@@ -40,6 +40,9 @@ there is no file, and off when the file does not read. Off, it runs the loop,
 waits for CI, says the ending on the card and reports to the project's main; on,
 it merges the head commit it noted before the CI wait (ship-decision-1).
 
+The CI wait is one `gh pr checks <n> --watch` the agent runs in the background,
+woken when it exits, never a poll by hand or a foreground `sleep` (ship-decision-2).
+
 ## Scenarios
 
 - Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane, on a Claude screen off Windows.
