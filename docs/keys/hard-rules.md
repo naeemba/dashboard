@@ -16,8 +16,9 @@ back to whatever in the dialog had it last. Two things move the focus out to
 the pane behind while the sheet stays up, so the Escape meant to cancel the
 dialog reaches the pane instead: the keyboard (Shift+Tab, a modified key no
 dialog reads) and code (a `--remote` join, or a notification click that goes to
-a pane). A Tab trap on the dialog would stop only the first. The hold is in `openOverlay`, not in each dialog, because two dialogs
-that each had to remember it forgot it while five others never had it.
+a pane). A Tab trap on the dialog would stop only the first. The hold is in
+`openOverlay`, not in each dialog, because two dialogs that each had to
+remember it forgot it while five others never had it.
 
 **Every dialog that reads `event.key` for itself must check `if
 (isModified(event)) return;` first.** Take Ctrl+N in the card detail dialog and

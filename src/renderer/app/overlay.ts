@@ -111,6 +111,9 @@ function holdFocus(sheet: HTMLElement, dialog: HTMLElement): () => void {
   function focusBack(event: FocusEvent): void {
     // Stopped in the capture phase, so whatever the focus walked to never runs its own focus
     // listeners: a pane would mark itself focused and a box would move the selection to its row.
+    // That stops only the focus event's listeners. The focusin ones (a screen pane's container,
+    // main) stay quiet because Chromium skips focusin once a focus handler has moved the focus,
+    // so the focus() below must stay synchronous: no microtask, timeout or animation frame.
     event.stopImmediatePropagation();
     (lastFocused.isConnected && dialog.contains(lastFocused) ? lastFocused : dialog).focus();
   }
