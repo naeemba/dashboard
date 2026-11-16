@@ -10,11 +10,12 @@ export type SettingsCapPorts = {
   writeFile(cap: number): void;
 };
 
+// The one check of the cap: `budget --cap` passes the word as typed.
 export const settingsCap = action<SettingsCapPorts, { cap: number }, { output: string }>('settings.cap', {
   words: [],
-  input: ({ cap }) => (typeof cap === 'number' && isWeeklyCap(cap)
-    ? { cap }
-    : { refused: 'a cap is a percentage above 0 and at most 100' }),
+  input: ({ cap }) => ((typeof cap === 'number' || typeof cap === 'string') && isWeeklyCap(cap)
+    ? { cap: Number(cap) }
+    : { refused: `"${String(cap)}" is not a cap: a percentage above 0 and at most 100` }),
   async run(ports, { cap }) {
     ports.writeFile(cap);
     return { output: `weekly cap set to ${cap}%` };

@@ -7,8 +7,9 @@ describe('settings.cap', () => {
     const written: number[] = [];
     const cap = bind(settingsCap, { writeFile: (value) => { written.push(value); } });
     expect(await cap.call({ cap: 60 })).toEqual({ output: 'weekly cap set to 60%' });
-    expect(isRefused(await cap.call({ cap: 0 }))).toBe(true);
-    expect(isRefused(await cap.call({ cap: '60' }))).toBe(true);
-    expect(written).toEqual([60]);
+    expect(await cap.call({ cap: '62.5' })).toEqual({ output: 'weekly cap set to 62.5%' });
+    for (const bad of [0, '101', 'lots', '', true]) expect(isRefused(await cap.call({ cap: bad })), String(bad)).toBe(true);
+    expect(await cap.call({ cap: 'lots' })).toEqual({ refused: '"lots" is not a cap: a percentage above 0 and at most 100' });
+    expect(written).toEqual([60, 62.5]);
   });
 });

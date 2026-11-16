@@ -1,6 +1,5 @@
 import { relativeAge, timeOf } from '../../shared/app/age';
 import { isRecord } from '../../shared/app/is-record';
-import { isWeeklyCap } from '../../shared/settings/settings';
 import { readFlagList } from './flags';
 
 // The `budget` noun: the 7-day usage of the Claude account against the cap set once in settings.json
@@ -29,7 +28,7 @@ a Claude screen, so with no session on screen the reading goes stale, and a stal
 "under". A loop that must stop at the cap runs budget before each round and stops on anything but 0.
 Needs no app.`;
 
-export type BudgetCommand = { kind: 'read' } | { kind: 'cap'; cap: number } | { kind: 'refused'; message: string };
+export type BudgetCommand = { kind: 'read' } | { kind: 'cap'; cap: string } | { kind: 'refused'; message: string };
 
 // The words after `budget`, `--help` already answered by the router.
 export function parseBudgetCommand(commandArguments: readonly string[]): BudgetCommand {
@@ -37,8 +36,8 @@ export function parseBudgetCommand(commandArguments: readonly string[]): BudgetC
   if ('message' in read) return { kind: 'refused', message: `${read.message}\n\n${BUDGET_USAGE}` };
   const cap = read.flags.at(-1);
   if (cap === undefined) return { kind: 'read' };
-  if (!isWeeklyCap(cap[1])) return { kind: 'refused', message: `"${cap[1]}" is not a cap: a percentage above 0 and at most 100` };
-  return { kind: 'cap', cap: Number(cap[1]) };
+  // The word as typed: settings.cap is the one check of it.
+  return { kind: 'cap', cap: cap[1] };
 }
 
 export type BudgetVerdict = { exitCode: 0 | 1 | 2; line: string };
