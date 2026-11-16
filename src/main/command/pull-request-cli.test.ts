@@ -33,6 +33,7 @@ describe('parsePullRequestCommand', () => {
     expect(parsePullRequestCommand(['merge', '12'])).toMatchObject({ ok: false, message: expect.stringContaining('no such command: merge') });
     expect(parsePullRequestCommand(['land'])).toMatchObject({ ok: false });
     expect(parsePullRequestCommand(['land', '12', '13'])).toMatchObject({ ok: false });
+    expect(parsePullRequestCommand(['land', '--help'])).toEqual({ ok: false, message: PULL_REQUEST_USAGE });
   });
 });
 

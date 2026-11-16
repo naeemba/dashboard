@@ -24,6 +24,19 @@ describe('session finish', () => {
     expect(asked).toEqual(['/work/api.worktrees/card-one']);
   });
 
+  // gh pr merge --delete-branch removes the worktree, and git spawned into it fails.
+  it('releases a worker whose worktree is already gone without asking git', async () => {
+    const api = project({
+      directoryOf: () => '/work/api.worktrees/card-one',
+      exists: () => false,
+      merged: async () => { throw new Error('spawn git ENOENT'); },
+    });
+    await api.ask(['claim']);
+    await api.ask(['run', '2:1', '--card', 'card-1', 'work it']);
+    expect(await api.ask(['finish', '2:1'])).toMatchObject({ ok: true, output: expect.stringContaining('released 2:1') });
+    expect(api.closed).toEqual(['2:1']);
+  });
+
   it('refuses a worker whose work is not in, and leaves its pane open', async () => {
     const inWorktree = project({ directoryOf: () => '/work/api.worktrees/card-one' });
     await inWorktree.ask(['claim']);

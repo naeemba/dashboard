@@ -18,7 +18,9 @@ its own verbs; this feature only picks the program.
 merging on does: it notes the head commit, waits on `gh pr checks --watch`,
 then runs `gh pr merge --merge --match-head-commit <sha>`. No checks reported is
 asked once more a minute later, and a repository that still has none is merged.
-A failed check or a refused merge exits 1 and merges nothing. It is a merge by
+A failed check or a refused merge exits 1 and merges nothing. The wait is as long as CI takes: main runs it in the background at the longest
+timeout, and runs it again if that limit stops it. A flag where the pull request
+goes (`pr land --help`) prints the usage instead of reaching gh. It is a merge by
 whoever runs it, so `review.autoMerge` does not gate it, and it is not in the
 rules the app allows every session (command-decision-5). It needs gh, never the
 app.

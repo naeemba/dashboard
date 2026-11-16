@@ -67,6 +67,8 @@ export const APP_SESSION_SETTINGS = { hooks: BOARD_GUARD_HOOKS, permissions: APP
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
 export function mainPrompt(projectPath: string, platform: string = process.platform): string {
   const manager = projectPath === MANAGER_FOLDER;
+  // The manager's folder is in no project, so the board and pr commands are told which.
+  const projectFlag = manager ? ' --project <name|aka>' : '';
   // What a plain run starts on this platform, so main is told: pane.dispatch's default.
   const runUsage = defaultPaneKind(platform) === 'screen'
     ? ['  run <id> [--card <card id> | --worktree] [--terminal] "<prompt>"',
@@ -96,14 +98,16 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '  release <id>           close a worker\'s pane now, before the app would',
     '  finish <id>            release a worker once its card is Done or its branch merged',
     '',
-    'A card is dispatched with `node "$DASHBOARD_BOARD" ship <id>`: it makes the card\'s worktree, a worker'
+    `A card is dispatched with \`node "$DASHBOARD_BOARD" ship <id>${projectFlag}\`: it makes the card's worktree, a worker`
       + ' pane and its agent. run --card is for a shipped card whose agent has stopped. Any'
       + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
       + ' committed, pushed and opened its pull request, and kept otherwise. Research takes neither and'
       + ' reads this checkout.',
     '',
-    'Land a pull request you are asked to merge with `node "$DASHBOARD_COMMAND" pr land <n>`, run in the'
-      + ' background: it waits for its checks and merges the commit they passed on. To wait for anything,'
+    `Land a pull request you are asked to merge with \`node "$DASHBOARD_COMMAND" pr land <n>${projectFlag}\`, run in the`
+      + ' background (run_in_background, timeout 7200000, the longest allowed): it waits for its checks and'
+      + ' merges the commit they passed on. A land stopped at that time limit has not failed: run it once'
+      + ' more, it notes the head again. To wait for anything,'
       + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`

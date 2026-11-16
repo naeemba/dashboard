@@ -269,12 +269,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // Release once the work is in: the pane's card Done or Cancelled, or the branch of the worktree it
   // works in merged, which is the card's too before the follow moves it. A worker in the project's
-  // own checkout has no branch of its own, so only its card counts.
+  // own checkout has no branch of its own, so only its card counts. A worktree already gone was taken
+  // by the merge (`gh pr merge --delete-branch`), and git cannot be asked in it: release says so.
   async function finish(id: string): Promise<{ output: string } | Refused> {
     if (ports.finishedCard(id) === null) {
       const directory = ports.directoryOf(id);
       const ownBranch = directory !== undefined && directory !== paneProject(id);
-      if (!ownBranch || !(await ports.merged(directory))) {
+      if (!ownBranch || (ports.exists(directory) && !(await ports.merged(directory)))) {
         return { refused: `${id}'s work is not in: no card of its is Done or Cancelled${ownBranch ? ` and ${directory}'s branch has no merged pull request` : ''}` };
       }
     }

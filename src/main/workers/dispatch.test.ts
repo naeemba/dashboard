@@ -68,6 +68,14 @@ describe('mainPrompt verbs', () => {
     expect(prompt).toContain('finish <id>');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n>`');
   });
+
+  // ~/.dashboard is in no project: both commands refuse there without --project.
+  it('tells the manager\'s main which project ship and pr land run in', () => {
+    const prompt = mainPrompt(MANAGER_FOLDER);
+    expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id> --project <name|aka>`');
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n> --project <name|aka>`');
+    expect(prompt).toContain('timeout 7200000');
+  });
 });
 
 describe('workerSettings', () => {

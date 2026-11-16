@@ -11,7 +11,8 @@ land notes the pull request's head commit, waits for every check on it (gh pr ch
 merges that commit: gh pr merge --merge --match-head-commit <sha>, so a push during the wait is
 refused rather than merged unchecked. No checks reported a minute after asking is a repository with
 no CI, and it is merged. A failed check or a refused merge is printed and the pull request stays
-open. The wait is as long as CI takes: run it in the background. It runs in the project of the folder
+open. The wait is as long as CI takes: run it in the background with the longest timeout allowed;
+a land stopped at that limit has not failed, run it again. It runs in the project of the folder
 you are in, or with --project in that project's folder from ~/.dashboard/projects.yaml.`;
 
 type Parsed = { ok: true; target: string } | { ok: false; message: string };
@@ -21,6 +22,8 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
   const [verb, ...targets] = commandArguments;
   if (verb === undefined) return { ok: false, message: PULL_REQUEST_USAGE };
   if (verb !== 'land') return { ok: false, message: `no such command: ${verb}\n\n${PULL_REQUEST_USAGE}` };
+  // `pr land --help`, or any flag where the pull request goes, would reach gh as the pull request.
+  if (targets.some((target) => target.startsWith('-'))) return { ok: false, message: PULL_REQUEST_USAGE };
   if (targets.length !== 1) return { ok: false, message: 'pr land takes one pull request: its number, url or branch' };
   return { ok: true, target: targets[0] };
 }
