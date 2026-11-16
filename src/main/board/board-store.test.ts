@@ -1,6 +1,22 @@
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Lets one test make the salvage rename fail the way a held-open file does on Windows; every other
+// test renames for real.
+const renames = vi.hoisted(() => ({ failure: undefined as Error | undefined }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    renameSync: (...parameters: Parameters<typeof actual.renameSync>) => {
+      if (renames.failure) throw renames.failure;
+      return actual.renameSync(...parameters);
+    },
+  };
+});
+
+afterEach(() => { renames.failure = undefined; });
 
 // Lets one test stand in a fake home directory without touching the real one, since Vitest cannot
 // spy on a named ESM export directly.
@@ -13,7 +29,6 @@ import {
   BOARD_DIRECTORY,
   BOARD_FILE_PATH,
   BOARD_FOLDER_PATH,
-  BROKEN_BOARD_FILE,
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
   boardPath,
@@ -336,7 +351,7 @@ describe('peekBoard', () => {
     writeFileSync(boardPath(root), '{ not json');
     expect(peekBoard(root)).toBeNull();
     expect(readFileSync(boardPath(root), 'utf8')).toBe('{ not json');
-    expect(existsSync(join(root, BOARD_DIRECTORY, BROKEN_BOARD_FILE))).toBe(false);
+    expect(existsSync(join(root, BOARD_DIRECTORY, 'board.json.broken'))).toBe(false);
   });
 
   it('answers with the same board readBoard would', () => {
@@ -369,7 +384,7 @@ describe('readBoard', () => {
   it('does not treat a missing file as broken', () => {
     const path = project();
     expect(readBoard(path).brokenFiles).toEqual([]);
-    expect(existsSync(join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE))).toBe(false);
+    expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json.broken'))).toBe(false);
   });
 
   // A folder stands in for every errno that is not ENOENT — EMFILE, EIO, EACCES — because it is the
@@ -383,18 +398,31 @@ describe('readBoard', () => {
   it('moves a damaged file aside and says where it went', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    const brokenPath = join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE);
+    const brokenPath = join(path, BOARD_DIRECTORY, 'board.json.broken');
     const result = readBoard(path);
     expect(result.brokenFiles).toEqual([brokenPath]);
     expect(readFileSync(brokenPath, 'utf8')).toBe('{"columns": [');
   });
 
-  // A folder where the .broken file has to go: the only way to make the salvage rename fail on demand.
+  // The salvage cannot move the file aside, and the read says so rather than drawing an empty board
+  // that the next save writes over it.
   it('throws when a damaged file cannot be moved aside', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    mkdirSync(join(path, BOARD_DIRECTORY, BROKEN_BOARD_FILE), { recursive: true });
-    expect(() => readBoard(path)).toThrow();
+    renames.failure = Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' });
+    expect(() => readBoard(path)).toThrow(/EBUSY/);
+    expect(readFileSync(join(path, BOARD_FILE_PATH), 'utf8')).toBe('{"columns": [');
+  });
+
+  it('keeps the first damaged board.json when a second one is moved aside', () => {
+    const path = project();
+    writeRaw(path, '{ first');
+    readBoard(path);
+    writeRaw(path, '{ second');
+    const secondPath = join(path, BOARD_DIRECTORY, 'board.json.2.broken');
+    expect(readBoard(path).brokenFiles).toEqual([secondPath]);
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'board.json.broken'), 'utf8')).toBe('{ first');
+    expect(readFileSync(secondPath, 'utf8')).toBe('{ second');
   });
 
   it('takes the plain no-file path on the read after a salvage', () => {

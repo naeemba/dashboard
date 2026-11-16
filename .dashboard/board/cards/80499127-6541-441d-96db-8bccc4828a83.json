@@ -5,7 +5,19 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T11:32:09.992Z",
-  "updatedAt": "2026-11-16T11:32:09.992Z",
-  "column": "Backlog",
-  "order": 45
+  "updatedAt": "2026-11-16T11:55:17.136Z",
+  "branch": "board-command-crashes-with-epipe-when-its-o",
+  "pullRequest": 308,
+  "comments": [
+    {
+      "at": "2026-11-16T11:50:22.746Z",
+      "body": "From main-dashboard: tests must be Windows-safe. Run pnpm test, typecheck and lint."
+    },
+    {
+      "at": "2026-11-16T11:55:17.108Z",
+      "body": "Pull request #308 opened: End the commands quietly when their output is cut off (| head) https://github.com/naeemba/dashboard/pull/308"
+    }
+  ],
+  "column": "Review",
+  "order": 4
 }

@@ -53,6 +53,7 @@ woken when it exits, never a poll by hand or a foreground `sleep` (ship-decision
 - Given settings `review.autoMerge` is on but the project's entry says `autoMerge: false`, when its card is reviewed, then nothing is merged; the entry wins either way, and a folder the file does not list follows the setting.
 - Given merging is on and a fix was pushed after the last review round, when the loop ends, then the review waits for CI on that commit and merges it with `--match-head-commit`; a failed check stops it with a comment on the card.
 - Given the review merged the pull request, when the app next asks gh about the card, then the app moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
+- Given a `worktrees.json` that does not parse, when the app reads it, then it is moved aside as `worktrees.json.broken` (`worktrees.json.2.broken` and on if that name is taken) and the list opens empty (`worktree-store.test.ts`).
 - Given a worktree with modified files, when you remove it from the list, then the app says so instead of git's raw `fatal:`.
 
 ## Known limits

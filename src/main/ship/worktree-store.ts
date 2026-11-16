@@ -1,6 +1,6 @@
 import { readFileSync, renameSync } from 'node:fs';
-import { dirname, join } from 'node:path';
 import { replaceFile } from '../app/replace-file';
+import { setAsidePath } from '../app/set-aside';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 
 // What is in flight right now: one entry per worktree the app has made. Kept beside session.json and
@@ -64,8 +64,9 @@ export function readWorktrees(file: string): WorktreeEntry[] {
     return parseWorktrees(JSON.parse(text));
   } catch {
     // A rename that fails leaves the damaged bytes where they are, so it is one of the read failures
-    // the comment above is about and goes out the same door.
-    renameSync(file, join(dirname(file), 'worktrees.json.broken'));
+    // the comment above is about and goes out the same door. A second damaged file goes beside the
+    // first, not over it.
+    renameSync(file, setAsidePath(file));
     return [];
   }
 }
