@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-02T00:44:04.385Z",
-  "updatedAt": "2026-11-16T11:17:28.755Z",
+  "updatedAt": "2026-11-16T11:18:07.551Z",
   "branch": "finish-what-the-pane-host-left-stale-sessio",
   "pullRequest": 303,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-16T11:17:28.755Z",
       "body": "Review loop on #303: 2 rounds, floor-addressed. Round 1 fixed 5 findings (55859eb8), round 2 fixed 1 low (45d979f3, test pinning endOlderHost -> stopScope), not re-reviewed. 0 rejected, nothing blocked on a person, no conflict with main. CI 5/5 passed on 45d979f3. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-16T11:18:07.530Z",
+      "body": "Pull request #303 merged: Keep the editor in the pane host, and end kept shells nobody takes back https://github.com/naeemba/dashboard/pull/303"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 243
 }
