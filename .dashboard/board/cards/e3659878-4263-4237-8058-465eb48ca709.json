@@ -5,14 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-15T23:35:41.493Z",
-  "updatedAt": "2026-11-15T23:56:33.443Z",
+  "updatedAt": "2026-11-16T00:04:23.493Z",
   "branch": "add-a-pre-commit-hook-and-a-typecheck-scrip",
+  "pullRequest": 293,
   "comments": [
     {
       "at": "2026-11-15T23:56:03.142Z",
       "body": "Note from main-dashboard: the app and the board command commit board cards from throwaway worktrees with no node_modules. The pre-commit hook must not run, slow down or fail those commits: skip when only .dashboard/ is staged, or when the tools are missing. Prefer a plain git hooks path (core.hooksPath set by a prepare script) over adding husky, unless there is a reason. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T00:04:23.462Z",
+      "body": "Pull request #293 opened: Add a pre-commit hook and a typecheck script https://github.com/naeemba/dashboard/pull/293"
     }
   ],
-  "column": "Doing",
-  "order": 3
+  "column": "Review",
+  "order": 1
 }
