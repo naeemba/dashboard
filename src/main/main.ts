@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
+import { holdProjectName, readProjectNames } from './workers/project-names';
 import { git, runProgram } from './app/git';
 import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
@@ -152,6 +153,7 @@ const projectIn = (slot: number): Project | undefined => projectInSlot(projects,
 // The recently opened projects live next to the app's other per-user state.
 const recentsFile = path.join(app.getPath('userData'), RECENTS_FILE);
 const worktreesFile = path.join(app.getPath('userData'), 'worktrees.json');
+readProjectNames(path.join(app.getPath('userData'), 'project-names.json'));
 // The record as this launch starts it, every pane cleared; worktree-record-at-launch.ts says why, and
 // stops the launch on a record it cannot read.
 const { entries: recordAtLaunch, panes: agentPanesBeforeLaunch } = worktreeRecordAtLaunch(worktreesFile);
@@ -409,6 +411,8 @@ function placeProject(projectPath: string): number {
   if (replacesProject(projects[index], picked)) {
     logStore.log({ level: 'info', kind: 'project', project: picked.path, message: 'opened' });
     projects[index] = picked;
+    // Before its shells, which are named after it.
+    holdProjectName(picked.path);
     spawnProject(picked, index);
     watchProjectBoard(boards, boardLog, picked.path);
   }

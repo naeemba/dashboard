@@ -41,9 +41,9 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'key turns between them. No save key: written a moment after you stop, read only when you '
     + 'arrive. Draw with mouse, pen or touch; the keys pick tool, colour and width.',
   manager: 'The first tab, and no project: no shells, so the terminal and nvim keys do nothing here. '
-    + 'Needs you lists what waits on you across the open projects, oldest first; under it, every '
-    + 'project with its panes, token and memory figures and worktrees. A letter, digit or symbol answers the '
-    + 'selected waiting pane without leaving the page.',
+    + 'Needs you lists what waits on you across the open projects, oldest first; under it, each '
+    + 'project with its panes, figures and worktrees. A letter, digit or symbol answers the '
+    + 'selected waiting pane; a Claude screen takes the digit beside an answer.',
   command: 'One command, run in the projects you mark. The open key gives each its own process and shows '
     + 'how it exited and the last line it printed; the other key types it into a free shell in each, '
     + 'where it prints as it goes. The last line is a guess, and the command and its results '

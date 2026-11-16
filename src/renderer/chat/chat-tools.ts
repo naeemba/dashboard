@@ -12,20 +12,27 @@ function field(input: Record<string, unknown>, name: string): string | undefined
   return typeof value === 'string' ? value : undefined;
 }
 
+// The field that is a call, for each tool whose call is one field: its command, path, URL or query.
+// A manager row allows only a call it can show this way (chat-row-call.ts).
+export const CALL_FIELD: ReadonlyMap<string, string> = new Map([
+  ['Bash', 'command'], ['Read', 'file_path'], ['Write', 'file_path'], ['Edit', 'file_path'],
+  ['MultiEdit', 'file_path'], ['NotebookEdit', 'notebook_path'], ['Glob', 'pattern'], ['Grep', 'pattern'],
+  ['WebFetch', 'url'], ['WebSearch', 'query'],
+]);
+
+// How long a one-line summary of a call runs before it is cut with an ellipsis.
+export const CALL_WIDTH = 160;
+
 // The one thing worth reading about each call without unfolding it. A tool not listed here says its
 // first string argument, which for most MCP tools is the thing they were asked about. A checklist says
 // how much of it is done.
 export function toolSummary(name: string, input: Record<string, unknown>): string {
   const todos = todoChecklist(name, input);
   if (todos) return `${todos.filter((todo) => todo.status === 'completed').length}/${todos.length} done`;
-  const pick = {
-    Bash: 'command', Read: 'file_path', Write: 'file_path', Edit: 'file_path', MultiEdit: 'file_path',
-    NotebookEdit: 'notebook_path', Glob: 'pattern', Grep: 'pattern', WebFetch: 'url', WebSearch: 'query',
-    Agent: 'description', Task: 'description', Skill: 'skill',
-  }[name];
+  const pick = CALL_FIELD.get(name) ?? { Agent: 'description', Task: 'description', Skill: 'skill' }[name];
   const text = (pick ? field(input, pick) : Object.values(input).find((value) => typeof value === 'string')) ?? '';
   const line = String(text).split('\n')[0];
-  return line.length > 160 ? `${line.slice(0, 159)}…` : line;
+  return line.length > CALL_WIDTH ? `${line.slice(0, CALL_WIDTH - 1)}…` : line;
 }
 
 // The lines that changed, each run of them with the one unchanged line either side. Lines the two

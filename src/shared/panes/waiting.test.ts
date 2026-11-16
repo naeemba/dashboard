@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anyWaiting, looksBusy, markRings, marksWaiting, questionBell, raisesNotification, redrawsForBell, waitingNames } from './waiting';
+import { anyWaiting, bellAfterAnswer, looksBusy, markRings, marksWaiting, questionBell, raisesNotification, redrawsForBell, waitingNames } from './waiting';
 
 describe('looksBusy', () => {
   it('reads an agent still working from the seconds after its spinner', () => {
@@ -110,5 +110,16 @@ describe('questionBell', () => {
   it('marks main as waiting while a question is open, and quiet once it goes', () => {
     expect(anyWaiting([{ bell: questionBell(true) }])).toBe(true);
     expect(anyWaiting([{ bell: questionBell(false) }])).toBe(false);
+  });
+});
+
+describe('bellAfterAnswer', () => {
+  it('goes quiet once the answered question was the last one', () => {
+    expect(bellAfterAnswer('waiting', false)).toBe('quiet');
+  });
+
+  it('keeps ringing while another question is still waiting', () => {
+    expect(bellAfterAnswer('waiting', true)).toBe('waiting');
+    expect(bellAfterAnswer('notified', true)).toBe('notified');
   });
 });

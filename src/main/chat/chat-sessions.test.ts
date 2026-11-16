@@ -1,31 +1,5 @@
-import { writeFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, mainSessionStart, pathFromShell, relayed, rememberedSessions, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
-import { temporaryFolder } from '../testing/temporary-folder';
-
-describe('rememberedSessions', () => {
-  const folder = temporaryFolder('chat-sessions-');
-  const file = (name: string, text: string): string => {
-    const at = path.join(folder, name);
-    writeFileSync(at, text);
-    return at;
-  };
-
-  it('reads the id remembered for each project', () => {
-    expect(rememberedSessions(file('good.json', '{"/a": "id-1"}'))).toEqual({ '/a': 'id-1' });
-  });
-
-  it('leaves out anything that is not an id', () => {
-    expect(rememberedSessions(file('mixed.json', '{"/a": "id-1", "/b": 3}'))).toEqual({ '/a': 'id-1' });
-  });
-
-  it('reads a missing or broken file as nothing remembered', () => {
-    expect(rememberedSessions(path.join(folder, 'missing.json'))).toEqual({});
-    expect(rememberedSessions(file('broken.json', '{'))).toEqual({});
-    expect(rememberedSessions(file('list.json', '["id"]'))).toEqual({});
-  });
-});
+import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, mainSessionStart, pathFromShell, relayed, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('pathFromShell', () => {
   it('takes the last line, past whatever the shell printed on start', () => {

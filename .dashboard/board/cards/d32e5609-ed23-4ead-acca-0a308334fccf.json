@@ -5,13 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-02T00:44:04.385Z",
-  "updatedAt": "2026-11-16T10:31:04.672Z",
+  "updatedAt": "2026-11-16T10:51:07.376Z",
+  "branch": "finish-what-the-pane-host-left-stale-sessio",
+  "pullRequest": 303,
   "comments": [
     {
       "at": "2026-11-16T10:30:58.539Z",
       "body": "From main-dashboard: #301 (manager panes restored) is merged; build on it. Do not bump the version. Run typecheck, lint and test; tests are Windows-safe."
+    },
+    {
+      "at": "2026-11-16T10:51:07.349Z",
+      "body": "Pull request #303 opened: Keep the editor in the pane host, and end kept shells nobody takes back https://github.com/naeemba/dashboard/pull/303"
     }
   ],
-  "column": "Ship",
+  "column": "Review",
   "order": 0
 }
