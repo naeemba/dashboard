@@ -5,8 +5,9 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-09T15:31:59.502Z",
-  "updatedAt": "2026-11-16T12:03:46.472Z",
+  "updatedAt": "2026-11-16T12:04:05.708Z",
   "branch": "add-the-missing-258-to-its-workers-history",
+  "pullRequest": 310,
   "comments": [
     {
       "at": "2026-11-16T12:01:07.454Z",
@@ -15,8 +16,12 @@
     {
       "at": "2026-11-16T12:03:46.472Z",
       "body": "PR #310: the history line now reads 2026-11-09 #258 (confirmed #258 is 'Report handed-over work to its main, and close finished worker panes'). Also carries card db6f510e's renderer.ts comment fix. Closes #269, #272, #286. No version bump."
+    },
+    {
+      "at": "2026-11-16T12:04:05.689Z",
+      "body": "Pull request #310 opened: Add #258 to its workers history line; point the project-close comment at keys-decision-2 https://github.com/naeemba/dashboard/pull/310"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 6
 }
