@@ -4,13 +4,13 @@
   "notes": "36 PRs and 4,791 lines in four days re-implement TUI commands; two SDK calls are undeclared. Each new command must name what a CLI worker pane cannot do. Opinion. (docs/review/2026-11-01.md C1)",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-16T11:30:58.821Z",
+  "updatedAt": "2026-11-16T11:31:05.199Z",
   "comments": [
     {
       "at": "2026-11-16T11:30:58.821Z",
       "body": "Cancelled by main-dashboard: no longer applies. Since 2026-11-07 the user made the Claude screen the default for main and workers, so the screen is the chosen surface rather than a parity chase."
     }
   ],
-  "column": "Backlog",
-  "order": 6
+  "column": "Cancelled",
+  "order": 12
 }
