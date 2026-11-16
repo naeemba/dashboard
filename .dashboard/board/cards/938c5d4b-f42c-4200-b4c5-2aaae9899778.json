@@ -1,0 +1,11 @@
+{
+  "id": "938c5d4b-f42c-4200-b4c5-2aaae9899778",
+  "title": "reviewPrompt lands through pr land",
+  "notes": "Follow-up from #295. With review.autoMerge on, the review prompt (src/main/ship/review.ts) spells out its own wait-then-merge. Have it call `pr land <n>` instead, so there is one landing path. Do not bump the version.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-16T00:51:22.870Z",
+  "updatedAt": "2026-11-16T00:51:22.871Z",
+  "column": "Backlog",
+  "order": 44
+}
