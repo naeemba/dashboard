@@ -5,13 +5,13 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-15T23:35:34.238Z",
-  "updatedAt": "2026-11-16T00:35:03.118Z",
+  "updatedAt": "2026-11-16T00:35:10.898Z",
   "comments": [
     {
       "at": "2026-11-16T00:35:03.118Z",
       "body": "Scope from main-dashboard:\n- Merged in front of this card: #294 (pane report, prompt-source, session-cli.ts verbs), #291 (review.autoMerge / landsPullRequest), #292 (background gh pr checks --watch). Build on those and reuse landsPullRequest's wait-then-merge (--match-head-commit) for pr land. pr land is an explicit merge by whoever calls it, so autoMerge does not gate it.\n- pane dispatch <card> should be what main runs: claim + run --card with the brief, the brief kept as a template in the repo. pane finish <id> = release after its card or PR is done.\n- budget: find a reliable source for the 7-day usage first. If there is none, leave budget out and say so on the card; don't scrape.\n- Scheduled wake-up: Claude Code has a native ScheduleWakeup/Monitor. If the fix is only a prompt line for main, keep it to that line.\n- Help, usage text and docs change with it. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 46
+  "column": "Ship",
+  "order": 0
 }
