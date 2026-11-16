@@ -76,3 +76,26 @@ and never removed what they made left about 200 folders in `/tmp` per run; on
 stopped every worker. `pnpm exec eslint .` refuses `mkdtemp` and `mkdtempSync`
 imported into a `*.test.ts` or `*-fixture.ts` under `src/`, and
 `eslint.config.test.ts` pins it.
+
+## workflow-rule-5: A commit runs eslint and the typecheck first
+
+`.githooks/pre-commit` runs eslint on the staged `.ts`/`.js` files and `tsc --noEmit` on the whole project,
+and refuses the commit on either failure. `pnpm install` points `core.hooksPath` at `.githooks` (the
+`prepare` script), so every worktree of the checkout gets it. Before it, `tsc --noEmit` ran only in CI and a
+worker found "'wholePath' is defined but never used" mid-edit, a round trip after it had committed.
+
+It skips a commit with no staged code, which takes in every commit that only touches `.dashboard/`, and a
+checkout with no `node_modules`: the app and the board command commit cards from throwaway worktrees, and a
+card must never wait on, or fail on, tsc. `filesToCheck` in `scripts/pre-commit.mjs` decides, tested beside
+it; `scripts/pre-commit-step.mjs` runs the tools with node, so the same hook works on Windows. It reads the
+working tree, not the index: a half-staged file is checked as it stands on disk. `git commit --no-verify`
+gets past it; CI runs both anyway.
+
+## workflow-rule-6: A test that touches paths or processes passes on Windows
+
+Windows has been a target since #191, and `windows-latest` runs the tests on every pull request. #288 and #289
+built expected paths with `/` and reached that job only after their review loop had finished, so the fix
+was another round. A test that names a path builds it with `path.join`; one that needs POSIX paths, file
+modes, unix sockets or signals skips on `win32` with a named `it.skipIf` saying why (`posixPathsOnly` in
+`src/main/drawer/docs-list.test.ts`, `posixModesOnly` in `src/main/app/log-store.test.ts`). The CI job holds it,
+late; the line stays in `CLAUDE.md` so a review catches it first, an exception to workflow-decision-8.
