@@ -84,10 +84,12 @@ and refuses the commit on either failure. `pnpm install` points `core.hooksPath`
 `prepare` script), so every worktree of the checkout gets it. Before it, `tsc --noEmit` ran only in CI and a
 worker found "'wholePath' is defined but never used" mid-edit, a round trip after it had committed.
 
-It skips a commit with no staged code, which takes in every commit that only touches `.dashboard/`, and a
+eslint runs only when code is staged; tsc also runs when `tsconfig*.json`, `package.json` or `pnpm-lock.yaml`
+is, since those change what it reports. Both skip a commit that only touches `.dashboard/` or docs, and a
 checkout with no `node_modules`: the app and the board command commit cards from throwaway worktrees, and a
-card must never wait on, or fail on, tsc. `filesToCheck` in `scripts/pre-commit.mjs` decides, tested beside
-it; `scripts/pre-commit-step.mjs` runs the tools with node, so the same hook works on Windows. It reads the
+card must never wait on, or fail on, tsc. `filesToCheck` and `runsTypecheck` in `scripts/pre-commit.mjs`
+decide, tested beside it; `scripts/pre-commit-step.mjs` runs the tools with node, and `.gitattributes` pins
+the hook to LF, so the same hook works on Windows (a CRLF shebang refuses every commit). It reads the
 working tree, not the index: a half-staged file is checked as it stands on disk. `git commit --no-verify`
 gets past it; CI runs both anyway.
 
