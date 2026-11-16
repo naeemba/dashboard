@@ -28,11 +28,11 @@ app.
 
 `budget` reads the 7-day usage of the Claude account from
 `~/.claude/usage-7d.json`, which the user's statusline writes each time it draws
-(`{"usedPercentage": <number>, "at": "<ISO time>"}`), against `budget.weeklyCap`
+and the app at most once a minute when a Claude screen is measured (`{"usedPercentage": <number>, "at": "<ISO time>"}`), against `budget.weeklyCap`
 in settings.json. It prints the share used, the cap and how old the reading is,
 and exits 0 under the cap, 1 at or over it, and 2 when it cannot say: no cap
 set, no file, a file that does not read, or a reading older than 30 minutes. The
-statusline writes only while some session is on screen, so a loop left
+file is written only while some session is on screen, so a loop left
 overnight reads a stale figure, and stale is never under. `budget --cap <n>`
 sets the cap (above 0, at most 100), the settings screen's Budget row too; a
 running app takes the change at once. Main's prompt tells it to run `budget`
@@ -172,7 +172,8 @@ Folders: `src/main/command/`.
 - Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print.
 - Given the manager's main in `~/.dashboard`, when it runs `pr land 12 --project crm`, then gh runs in crm's folder.
 - Given a cap of 74 and a reading of 64% from three minutes ago, when `dashboard budget` runs, then it prints both and the age and exits 0; at 74% it exits 1.
-- Given no session has drawn its statusline for an hour, when `dashboard budget` runs, then it says the reading is too old and exits 2.
+- Given no statusline drawn and no Claude screen measured for an hour, when `dashboard budget` runs, then it says the reading is too old and exits 2.
+- Given a turn ends on a Claude screen in the app, when `dashboard budget` runs, then it reads that screen's 7-day figure from under a minute ago.
 - Given the app running, when `dashboard budget --cap 60` runs, then the settings screen shows 60 and the next save there keeps it.
 
 ## Adding to it

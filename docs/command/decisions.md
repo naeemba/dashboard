@@ -74,3 +74,13 @@ the settings screen put the old cap back. Exit 2, not 1, for a refused word too,
 since 1 means over. Reading it is allowed in the settings every session starts
 with (workers-decision-9); `--cap` is not.
 
+The statusline alone was not enough: the user works almost entirely in the
+app's Claude screens, which run through the SDK and never draw a statusline, so
+the file went a week unwritten and every reading was unknown. The app writes the
+same file from the 7-day figure the status line's measure already reads
+(`usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET`, no model request),
+at most once a minute (`src/main/usage/weekly-usage-file.ts`). The SDK's
+`rate_limit_event` was not used: it names only the limit currently binding.
+If the experimental call changes, the file goes stale and budget exits 2; it
+never says under.
+

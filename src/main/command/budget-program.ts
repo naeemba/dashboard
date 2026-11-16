@@ -1,12 +1,9 @@
 import { homedir } from 'node:os';
-import path from 'node:path';
 import { readText } from '../app/missing-file';
 import { readSettings, settingsFilePath, writeWeeklyCap } from '../settings/settings-store';
 import { budgetVerdict, parseBudgetCommand } from './budget-cli';
 import { failureLine } from './failure-line';
-
-// Where the user's statusline writes the last 7-day usage it was shown (command-decision-6).
-const USAGE_FILE = path.join(homedir(), '.claude', 'usage-7d.json');
+import { WEEKLY_USAGE_FILE } from '../usage/weekly-usage-file';
 
 // The whole of `dashboard budget` outside budget-cli.ts: the two files and the answer printed. 2 for a
 // refusal as well as an unknown reading, since 1 means over the cap.
@@ -31,7 +28,7 @@ export function runBudgetProgram(commandArguments: readonly string[]): number {
   // A reading that is there but cannot be read (a folder by that name, no permission) throws, and says so.
   let verdict;
   try {
-    verdict = budgetVerdict(readText(USAGE_FILE), weeklyCap, Date.now());
+    verdict = budgetVerdict(readText(WEEKLY_USAGE_FILE), weeklyCap, Date.now());
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);
     return 2;

@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { replaceFile } from '../app/replace-file';
+import { recordWeeklyUsage } from '../usage/weekly-usage-file';
 import path from 'node:path';
 import type { ChatContent, ExportWrite, ChatPreferences, ChatState, ChatSessions } from '../../shared/app/bridge';
 import type { Channels } from '../app/channels';
@@ -608,7 +609,9 @@ export function registerChatSessions(
       session.query.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }).catch(() => null),
     ]);
     nameMemoryFiles(projectPath, context.memoryFiles);
-    return measureOf(context, models, usage, Date.now());
+    const measure = measureOf(context, models, usage, Date.now());
+    recordWeeklyUsage(measure.sevenDay?.percentage, measure.at);
+    return measure;
   });
 
   // The conversation this page would resume, read back from its transcript, as far as a /rewind left it.
