@@ -1,0 +1,11 @@
+{
+  "id": "11bcffb5-3979-4f45-8102-bcb21a425457",
+  "title": "budget verb: 7-day usage against a cap set once",
+  "notes": "A `budget` verb that reads the 7-day usage against a cap the user sets once.\n\nSource: since dotfiles 37d4807, the user's statusline writes ~/.claude/usage-7d.json as {\"usedPercentage\": <number>, \"at\": \"<ISO time>\"} every time it renders. #295 left budget out for lack of a source, and this file is that source.\n\nWant:\n- `budget` prints the used %, the cap and how old the reading is. It exits 0 under the cap and 1 at or over it, so a long unattended loop can stop itself. Usage like \"don't go over 74%\" is set once, not restated.\n- The cap is a setting (for example `budget.weeklyCap`, a percentage) shown on the settings screen. `budget --cap <n>` sets it.\n- A missing file, a broken file, or a reading older than a threshold says so plainly and exits 2. The statusline only writes while some session is rendering, so a stale reading must not count as \"under the cap\".\n- The decision (under, over or unknown) goes in its own module with a test.\n- Main's prompt and the usage text name it next to pane finish and pr land.\n- Docs and help change with it. Do not bump the version.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-16T08:19:32.397Z",
+  "updatedAt": "2026-11-16T08:19:32.397Z",
+  "column": "Backlog",
+  "order": 45
+}
