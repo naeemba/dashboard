@@ -1,6 +1,8 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { runProgram } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
+import { isManagerHomeDirectory, projectRoot } from '../board/board-store';
+import { boardTarget } from '../board/board-target';
 import { projectNamedInFile } from '../projects/project-named';
 import { failureLine } from './failure-line';
 import { type GitHubAnswer, landPullRequest, parsePullRequestCommand } from './pull-request-cli';
@@ -19,25 +21,17 @@ function gh(folder: string) {
   };
 }
 
-// The whole of `dashboard pr` outside pull-request-cli.ts: the folder, gh, and the answer printed.
+// The whole of `dashboard pr` outside pull-request-cli.ts: the folder, gh, and the answer printed. The
+// project is found as `board` finds it (board-target.ts): --project, else the one the folder is in.
 export async function runPullRequestProgram(commandArguments: readonly string[]): Promise<number> {
-  const parsed = parsePullRequestCommand(commandArguments);
-  if (!parsed.ok) {
-    process.stderr.write(`${parsed.message}\n`);
+  const project = boardTarget(commandArguments, process.cwd(), { isHome: isManagerHomeDirectory, projectRoot, named: projectNamedInFile });
+  const parsed = project.ok ? parsePullRequestCommand(project.commandArguments) : project;
+  if (!project.ok || !parsed.ok) {
+    process.stderr.write(`${parsed.ok ? '' : parsed.message}\n`);
     return 1;
   }
-  const { target, project } = parsed.command;
-  let folder = process.cwd();
-  if (project !== null) {
-    const named = projectNamedInFile(project);
-    if (!named.ok) {
-      process.stderr.write(`${named.message}\n`);
-      return 1;
-    }
-    folder = named.path;
-  }
   try {
-    const answer = await landPullRequest({ gh: gh(folder), wait: (milliseconds) => delay(milliseconds) }, target);
+    const answer = await landPullRequest({ gh: gh(project.project), wait: delay }, parsed.target);
     (answer.ok ? process.stdout : process.stderr).write(`${answer.output}\n`);
     return answer.ok ? 0 : 1;
   } catch (error: unknown) {

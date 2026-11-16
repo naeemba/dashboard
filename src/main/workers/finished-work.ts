@@ -21,22 +21,26 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
     return 'its branch was never pushed';
   }
   if (ahead !== '0') return `${ahead} of its commits are not pushed`;
-  const branch = await run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
-  let pulls: unknown;
+  const branch = await branchOf(run, worktreePath);
   try {
-    pulls = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'all', '--json', 'number'], worktreePath));
+    return await hasPullRequest(run, worktreePath, branch, 'all') ? null : `${branch} has no pull request`;
   } catch (error: unknown) {
     return `gh could not say whether ${branch} has a pull request: ${failureText(error)}`;
   }
-  return Array.isArray(pulls) && pulls.length > 0 ? null : `${branch} has no pull request`;
+}
+
+const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
+
+// Whether gh lists a pull request from the branch in that state: `all` for release, `merged` for finish.
+async function hasPullRequest(run: RunProgram, worktreePath: string, branch: string, state: 'all' | 'merged'): Promise<boolean> {
+  const pulls: unknown = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', state, '--json', 'number'], worktreePath));
+  return Array.isArray(pulls) && pulls.length > 0;
 }
 
 // Whether the branch the worktree is on has a merged pull request: what `pane finish` releases a
 // worker on when its card is not Done yet (the follow that moves it runs on a timer) or it has none.
 export async function pullRequestMerged(run: RunProgram, worktreePath: string): Promise<boolean> {
-  const branch = await run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
-  const pulls: unknown = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'merged', '--json', 'number'], worktreePath));
-  return Array.isArray(pulls) && pulls.length > 0;
+  return hasPullRequest(run, worktreePath, await branchOf(run, worktreePath), 'merged');
 }
 
 // What a worktree's worker is asked before it is let go of, as session-requests.ts's ports take them.

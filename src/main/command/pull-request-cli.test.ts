@@ -19,12 +19,13 @@ function fakeGitHub(answers: Record<string, GitHubAnswer[]>) {
 }
 
 const open = { ok: true, output: 'OPEN abc123' };
+const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
 const MERGE = 'pr merge 12 --merge --match-head-commit abc123';
 
 describe('parsePullRequestCommand', () => {
-  it('reads land, its pull request and a --project', () => {
-    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, command: { kind: 'land', target: '12', project: null } });
-    expect(parsePullRequestCommand(['land', '--project', 'crm', '12'])).toEqual({ ok: true, command: { kind: 'land', target: '12', project: 'crm' } });
+  // --project is taken out before, by boardTarget, as for `board`.
+  it('reads land and its pull request', () => {
+    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, target: '12' });
   });
 
   it('answers no verb with the usage and refuses anything else', () => {
@@ -32,7 +33,6 @@ describe('parsePullRequestCommand', () => {
     expect(parsePullRequestCommand(['merge', '12'])).toMatchObject({ ok: false, message: expect.stringContaining('no such command: merge') });
     expect(parsePullRequestCommand(['land'])).toMatchObject({ ok: false });
     expect(parsePullRequestCommand(['land', '12', '13'])).toMatchObject({ ok: false });
-    expect(parsePullRequestCommand(['land', '12', '--project'])).toMatchObject({ ok: false });
   });
 });
 
@@ -50,14 +50,12 @@ describe('landPullRequest', () => {
   });
 
   it('asks again a minute on when no checks are reported, and merges a repository that runs none', async () => {
-    const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], 'pr merge': [{ ok: true, output: '' }] });
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123, with no checks reported' });
     expect(github.waited).toEqual([NO_CHECKS_WAIT_MS]);
   });
 
   it('waits on checks that started by the second ask', async () => {
-    const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, { ok: false, output: 'lint\tfail' }] });
     expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('a check failed') });
   });
