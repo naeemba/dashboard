@@ -371,7 +371,14 @@ export function queueLength(lines: readonly ManagerLine[]): number {
 }
 
 function sameKeys(first: readonly ManagerLine[], second: readonly ManagerLine[]): boolean {
-  return first.length === second.length && first.every((line, index) => lineKey(line) === lineKey(second[index]));
+  return sameItems(first.map(lineKey), second.map(lineKey));
+}
+
+// Two lists holding the same things in the same order, by `same` or by identity. The page asks it of
+// the elements it is about to put in a list against the ones already there: putting back the very
+// elements a list holds still takes them out and in again, and the window lays the page out afresh.
+export function sameItems<T>(first: readonly T[], second: readonly T[], same = (one: T, other: T) => one === other): boolean {
+  return first.length === second.length && first.every((item, index) => same(item, second[index]));
 }
 
 // What the half-minute refresh may do with the rows on screen. `render`: the list under the queue
@@ -383,9 +390,4 @@ export function queueRefresh(onScreen: readonly ManagerLine[], fresh: readonly M
   const freshQueue = queueLength(fresh);
   if (!sameKeys(fresh.slice(freshQueue), onScreen.slice(oldQueue))) return 'render';
   return sameKeys(fresh.slice(0, freshQueue), onScreen.slice(0, oldQueue)) ? 'rows' : 'queue';
-}
-
-// The row elements with the queue's swapped for fresh ones and every row under it kept, in place.
-export function withQueue<T>(elements: readonly T[], oldQueue: number, queued: readonly T[]): T[] {
-  return [...queued, ...elements.slice(oldQueue)];
 }
