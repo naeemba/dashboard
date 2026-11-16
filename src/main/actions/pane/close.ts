@@ -22,6 +22,8 @@ export type PaneClosePorts = {
   // Every process left in the scope ended, a dev server the shell detached included. A scope already
   // gone is not a failure (launch-scopes.ts).
   stopScope(unit: string): Promise<void>;
+  // The close key throws the answer away, so a scope left running is a warning here too.
+  log(draft: LogDraft): void;
 };
 
 // What a scope left running is called, wherever a stop of one fails: a pane closed, a project closed,
@@ -30,10 +32,10 @@ export function notStoppedText(unit: string, error: unknown): string {
   return `${unit} was not stopped: ${failureText(error)}`;
 }
 
-// A pane's old scope stopped where nobody reads the answer (pane.restart, pane.restore): one left
-// running is a warning in the log, and its text is answered too, or null when it stopped.
+// A pane's scope stopped where the answer may not be read (pane.close behind the close key,
+// pane.restart, pane.restore): one left running is a warning in the log, and its text is answered too, or null when it stopped.
 export async function stopOrWarn(
-  ports: Pick<PaneClosePorts, 'stopScope'> & { log(draft: LogDraft): void }, unit: string, action: string, id: string,
+  ports: Pick<PaneClosePorts, 'stopScope' | 'log'>, unit: string, action: string, id: string,
 ): Promise<string | null> {
   try {
     await ports.stopScope(unit);
@@ -58,14 +60,8 @@ export const paneClose = action<PaneClosePorts, { id: string }, { output: string
     ports.drop(id);
     ports.endClaim(ports.project(slot)?.path ?? '', index);
     ports.changed();
-    if (unit !== undefined) {
-      try {
-        await ports.stopScope(unit);
-      } catch (error: unknown) {
-        // The pane is gone either way; what it left running is said, not hidden.
-        return { output: `closed ${id}; ${notStoppedText(unit, error)}` };
-      }
-    }
-    return { output: `closed ${id}` };
+    // The pane is gone either way; what it left running is said, not hidden.
+    const notStopped = unit === undefined ? null : await stopOrWarn(ports, unit, 'pane.close', id);
+    return { output: notStopped === null ? `closed ${id}` : `closed ${id}; ${notStopped}` };
   },
 });
