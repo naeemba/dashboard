@@ -1,3 +1,4 @@
+import { endQuietlyWhenOutputCloses } from './closed-output';
 import { existsSync } from 'node:fs';
 import { runBoardProgram } from '../board/board-program';
 import { runProjectProgram } from '../projects/project-program';
@@ -38,4 +39,5 @@ async function run(): Promise<number> {
   }
 }
 
+endQuietlyWhenOutputCloses(process.stdout, (code) => process.exit(code));
 void run().then((code) => { process.exitCode = code; });
