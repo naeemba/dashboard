@@ -27,7 +27,9 @@ the old prompt merged it. The decision is `landsPullRequest` in
 which wakes the agent when it exits, and for nothing else during the wait: no
 `gh pr view` or `gh pr checks` by hand and no foreground `sleep`. A "no checks
 reported" right after a push gets one more background `sleep 60 && gh pr
-checks <n> --watch`; still none means the repository runs no CI.** The
+checks <n> --watch`; still none means the repository runs no CI. The watch asks
+for the longest background limit, two hours, and one stopped at that limit is
+run again, not read as a failed check.** The
 2026-11-16 retro of thirty sessions found 166 hand polls of `gh pr view` and
 `gh pr checks` in one new-crm manager session, and `sleep N; gh pr checks`
 refused six times, because a foreground `sleep` is blocked. A ci-wait script

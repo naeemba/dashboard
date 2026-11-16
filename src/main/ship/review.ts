@@ -125,7 +125,8 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
   const watch = `gh pr checks ${pullRequest} --watch`;
   const waitForChecks = [
     `   wait for CI on the pull request's head commit: \`${watch}\`, run in the`,
-    '   background (run_in_background), so you are woken when it exits. That is the whole wait: no',
+    '   background (run_in_background, timeout 7200000, the longest allowed), so you are woken when it',
+    '   exits. A watch stopped at that time limit has not failed: run it once more. That is the whole wait: no',
     '   `gh pr view` or `gh pr checks` in between, and no foreground `sleep`, which is refused. Every check',
     '   must pass on the commit the pull request ends on, a commit pushed after the last review round',
     '   included. "No checks reported" right after a push means CI has not started: run',
