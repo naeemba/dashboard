@@ -574,7 +574,7 @@ const showPicker = () => runPicker({
   settings: () => settings, setSettings: (next) => { settings = next; }, restore: () => showPage(activeIndex),
 });
 bridge.onHostReport((text) => showNotice('host', text));
-bridge.onPaneReleased((text) => showNotice('pane', text));
+bridge.onPaneReleased((text) => showNotice('pane', text, { logged: true }));
 
 // Ctrl+`: the pane you are looking at, as a file in the project's nvim.
 //

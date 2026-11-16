@@ -67,10 +67,12 @@ export function editorSocket(temporaryDirectory: string, slot: number): string {
 // Where a project's editor listens while the pane host runs it (panes-decision-1): named for the
 // project, not the process or the page, so the next launch reaches the nvim the host kept. Beside the
 // host's own socket, so a copy on other user data never shares it; a copy on the same user data is
-// turned away by the host and runs its editor itself, under editorSocket's name. The hash keeps the
-// path short of a unix socket's hundred-odd bytes, and on Windows takes the user data into the name.
+// turned away by the host and runs its editor itself, under editorSocket's name. The hash takes the
+// user data into the name on Windows, and is short because macOS holds a unix socket's path to 103
+// bytes: under ~/Library/Application Support/Dashboard/pane-host this name fits a user name of up to
+// 29 characters, the host's own panes-1.sock 35. Eight hex characters collide once in four billion.
 export function keptEditorSocket(platform: string, userData: string, projectPath: string): string {
-  const name = `nvim-${createHash('sha256').update(`${userData}\0${projectPath}`).digest('hex').slice(0, 16)}`;
+  const name = `nvim-${createHash('sha256').update(`${userData}\0${projectPath}`).digest('hex').slice(0, 8)}`;
   return platform === 'win32' ? `\\\\.\\pipe\\dashboard-${name}` : path.join(paneHostFolder(userData), `${name}.sock`);
 }
 

@@ -46,6 +46,12 @@ describe('editorSocket and scrollbackFile', () => {
       .not.toBe(keptEditorSocket('win32', 'C:\\Users\\me\\Dashboard-dev', '/work/app'));
   });
 
+  // macOS holds a unix socket's path to 103 bytes, and nvim cannot listen on a longer one.
+  it('fits a kept editor\'s socket under a macOS user data for a 29-character user name', () => {
+    const userData = `/Users/${'u'.repeat(29)}/Library/Application Support/Dashboard`;
+    expect(Buffer.byteLength(keptEditorSocket('darwin', userData, '/work/app'))).toBeLessThanOrEqual(103);
+  });
+
   // Five panes sharing one filename is nvim reloading the same buffer over the transcript you opened
   // a moment ago, instead of putting the two side by side.
   it('gives each pane of a project its own file', () => {

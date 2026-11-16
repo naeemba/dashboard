@@ -161,7 +161,8 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Given the installed app running, when a development build on the same user data starts, then the installed app keeps its panes and the development build runs its shells itself.
 - Given the editor open with a file in it, when the app quits and opens again, then the same nvim is back with the file, and the scrollback key and a path in a pane reach it.
 - Given no pane host this run, when the app quits, then nvim exits with it.
-- Given kept shells of a project the restored session does not name, when the window has put its session back, then they are killed, their scopes stopped, and the status bar names the project.
+- Given the host holding the workers but not the editor (it died, or the editor started without it), when you close the window, then the quit question says the editor stops with the app.
+- Given kept shells of a project the restored session does not name, when the window has put its session back, then they are killed, their scopes stopped, and the status bar names the project in a passing notice, with no desktop banner and one log line.
 - Given kept shells of a project the session names that failed to open (a disk not mounted, an open that threw), when the window has put its session back, then they keep running, the status bar names the project, and opening it later takes them back.
 - Given an update that bumps the pane host's protocol version, when the app opens, then the old host's shells are killed, unless an app of the old version still holds that host or the host has not answered within ten seconds.
 

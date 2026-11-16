@@ -19,6 +19,8 @@ export type AppWindowOptions = {
   // Some pane's shell runs in the app this time (no host answered, another Dashboard holds it, or it
   // died) and quitting kills it.
   shellsDieAtQuit(): boolean;
+  // The editor's shell runs in the app this time, so the quit stops it rather than keeping it.
+  editorDiesAtQuit(): boolean;
 };
 
 export function openAppWindow(options: AppWindowOptions): BrowserWindow {
@@ -87,8 +89,8 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
   let askingToQuit = false;
   // Closing the window stops every Claude screen. The worker panes' shells and the editor are the pane
   // host's and go on running for the next launch (panes-decision-1); one the app runs itself this time
-  // (no host, another Dashboard holds it, or it died) is killed, and the question says so. Cancel is
-  // the default button, so Enter and Escape both mean "I hit that by accident".
+  // (no host, another Dashboard holds it, or it died) is killed, and the question says so, the editor's
+  // included. Cancel is the default button, so Enter and Escape both mean "I hit that by accident".
   // Asked without blocking: showMessageBoxSync stops the whole main process, so anything already
   // waiting there — a folder panel, a board write — can never finish while the question is up. The
   // close is stopped every time; destroy() is what actually goes, and it raises no close to answer.
@@ -107,7 +109,9 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
       message: 'Quit Dashboard?',
       detail: options.shellsDieAtQuit()
         ? 'Every Claude screen stops, and every shell in every open project is killed, including anything still running in one.'
-        : 'Every Claude screen stops. The editor and the worker panes\' shells keep running and come back when Dashboard opens again.',
+        : options.editorDiesAtQuit()
+          ? 'Every Claude screen stops, and so does the editor. The worker panes\' shells keep running and come back when Dashboard opens again.'
+          : 'Every Claude screen stops. The editor and the worker panes\' shells keep running and come back when Dashboard opens again.',
     }).then(async ({ response }) => {
       if (response !== 1) return;
       confirmed = true;

@@ -44,6 +44,9 @@ export function paneHost(options: {
   answerWaitMs?: number;
   // Where hosts of older protocol versions listen, whose shells are ended (olderHostSockets).
   older?: readonly string[];
+  // The scope of a shell an older host kept, stopped once the shell is killed, so what it detached
+  // ends with it as pane.reap's does.
+  stopScope?(unit: string): void;
   // The host was never reached, or went: shells from then on are this process's and die with it.
   lost(message: string): void;
 }): PaneHost {
@@ -54,7 +57,11 @@ export function paneHost(options: {
 
   async function connect(): Promise<void> {
     // Not waited on: an older host has nothing the new one needs.
-    for (const older of options.older ?? []) void endOlderHost(older, options.answerWaitMs ?? ANSWER_WAIT_MS);
+    for (const older of options.older ?? []) {
+      void endOlderHost(older, options.answerWaitMs ?? ANSWER_WAIT_MS).then((ended) => {
+        for (const { unit } of ended) if (unit !== undefined) options.stopScope?.(unit);
+      });
+    }
     const socketPath = options.socket;
     if (socketPath === null) {
       options.lost('The pane host\'s pipe token could not be read or made; shells die with the app this run');
@@ -162,28 +169,29 @@ export function paneHost(options: {
 // still running on the same user data — is left alone, and so is one that has not answered within
 // `waitMs`: silence names no keys, and a host that hangs may be one an app of its version is still
 // greeting. An answer arriving after the wait kills nothing either; the next launch asks again. The
-// host exits by itself once its last shell has and no app is connected.
-export async function endOlderHost(socketPath: string, waitMs = ANSWER_WAIT_MS): Promise<number> {
+// host exits by itself once its last shell has and no app is connected. Answers the shells it killed,
+// whose scopes the caller stops.
+export async function endOlderHost(socketPath: string, waitMs = ANSWER_WAIT_MS): Promise<Survivor[]> {
   const open = await attempt(socketPath);
-  if (open === null) return 0;
+  if (open === null) return [];
   return new Promise((resolve) => {
     let settled = false;
-    const done = (ended: number): void => {
+    const done = (ended: Survivor[]): void => {
       settled = true;
       clearTimeout(silence);
       open.end();
       resolve(ended);
     };
-    const silence = setTimeout(() => done(0), waitMs);
-    open.on('error', () => done(0));
-    open.on('close', () => done(0));
+    const silence = setTimeout(() => done([]), waitMs);
+    open.on('error', () => done([]));
+    open.on('close', () => done([]));
     open.setEncoding('utf8');
     open.on('data', lineReader<FromHost>((message) => {
       if (settled) return;
-      if (message.type === 'busy') return done(0);
+      if (message.type === 'busy') return done([]);
       if (message.type !== 'panes') return;
       for (const { key } of message.panes) open.write(line({ type: 'kill', key }));
-      done(message.panes.length);
+      done(message.panes);
     }));
     open.write(line({ type: 'hello' }));
   });

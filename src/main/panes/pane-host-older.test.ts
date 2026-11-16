@@ -46,7 +46,7 @@ describe('endOlderHost', () => {
 
   it('kills every shell an older host kept', async () => {
     const { socketPath, killed, listener } = await olderHost();
-    expect(await endOlderHost(socketPath)).toBe(2);
+    expect((await endOlderHost(socketPath)).map(({ key }) => key)).toEqual([paneKey('/work', 1), paneKey('/work', 2)]);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(killed).toEqual([paneKey('/work', 1), paneKey('/work', 2)]);
     listener.close();
@@ -59,7 +59,7 @@ describe('endOlderHost', () => {
     await new Promise((resolve) => app.once('connect', resolve));
     app.write('{"type":"hello"}\n');
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(await endOlderHost(socketPath)).toBe(0);
+    expect(await endOlderHost(socketPath)).toEqual([]);
     expect(killed).toEqual([]);
     app.destroy();
     listener.close();
@@ -79,13 +79,13 @@ describe('endOlderHost', () => {
       }, 100);
     });
     await new Promise<void>((resolve) => listener.listen(socketPath, resolve));
-    expect(await endOlderHost(socketPath, 20)).toBe(0);
+    expect(await endOlderHost(socketPath, 20)).toEqual([]);
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(killed).toEqual([]);
     listener.close();
   });
 
   it('ends nothing where no host listens', async () => {
-    expect(await endOlderHost(path.join(temporaryFolder('pane-host-older-'), 'none.sock'))).toBe(0);
+    expect(await endOlderHost(path.join(temporaryFolder('pane-host-older-'), 'none.sock'))).toEqual([]);
   });
 });

@@ -112,7 +112,9 @@ Kept shells nobody takes back are ended only when nothing could want them: once
 the window has reopened its session and the manager has taken its own,
 `pane.reap` kills every shell no page took back whose project the session
 read at launch does not name (closed before the quit, or a session that was
-not saved), stops its scope, and says so on the status bar. A project the
+not saved), stops its scope, and says so on the status bar as a passing
+notice, not a failure. The manager counts as named, so a manager whose open
+threw keeps its workers. A project the
 session names that did not open (a disk not mounted yet, an open that threw)
 may have a worker mid-turn in its shells, so they are put back for its open
 and the bar names it instead. A project closed during the run killed its own.
@@ -120,5 +122,6 @@ The same goes for a host of an older protocol version after a bump
 (`olderHostSockets`): the app says hello there and kills every key it is told,
 unless that host is busy with an app of its own version or has not answered
 within ten seconds: silence names no keys, and an answer arriving after the
-wait is not acted on, so a slow host keeps its shells until the next launch. `hello`, `kill`,
+wait is not acted on, so a slow host keeps its shells until the next launch.
+Each shell killed there has its scope stopped too, as `pane.reap` does. `hello`, `kill`,
 `panes` and `busy` keep their shape in every version so this always works.

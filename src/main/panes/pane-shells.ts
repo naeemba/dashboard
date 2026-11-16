@@ -158,14 +158,17 @@ export function paneShells(main: {
     return [...scopeUnits].filter(([id]) => paneFromId(id).slot === slot).map(([, unit]) => unit);
   }
 
-  // Whether quitting now kills a shell you could lose work in: a worker pane running in this process
-  // this time (no host, another Dashboard holds it, or it died). The editor is left out: what it
-  // holds is files on disk and nvim's swap files, not a job to lose.
-  function workDiesAtQuit(): boolean {
-    return [...shells].some(([id, shell]) => diesAtQuit(shell) && paneFromId(id).index !== EDITOR_INDEX);
+  // Whether quitting now kills a shell running in this process this time (no host, another Dashboard
+  // holds it, or it died): a worker pane's, which the quit question warns of, or an editor's, which it
+  // names as stopping rather than coming back. The editor is not work to lose: what it holds is files
+  // on disk and nvim's swap files.
+  function diesAtQuitWhere(editor: boolean): boolean {
+    return [...shells].some(([id, shell]) => diesAtQuit(shell) && (paneFromId(id).index === EDITOR_INDEX) === editor);
   }
+  const workDiesAtQuit = (): boolean => diesAtQuitWhere(false);
+  const editorDiesAtQuit = (): boolean => diesAtQuitWhere(true);
 
-  return { shells, screenCopies, startedWith, scopeUnits, scopesIn, spawn, listenTo, foregroundOf, drop, workDiesAtQuit, editorSocketOf };
+  return { shells, screenCopies, startedWith, scopeUnits, scopesIn, spawn, listenTo, foregroundOf, drop, workDiesAtQuit, editorDiesAtQuit, editorSocketOf };
 }
 
 // A shell this process runs itself, which will-quit kills. One the pane host runs is left for the next

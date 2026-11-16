@@ -112,4 +112,15 @@ describe('paneShells', () => {
     made.listenTo(WORKER, fakeShell(), '/bin/zsh', undefined);
     expect(made.workDiesAtQuit()).toBe(true);
   });
+
+  // Otherwise the quit question promises an editor back that the quit kills.
+  it('says the editor dies at quit only when it runs in this process', () => {
+    const made = shells();
+    made.listenTo(WORKER, fakeShell(), '/bin/zsh', undefined);
+    expect(made.editorDiesAtQuit()).toBe(false);
+    made.listenTo(EDITOR, fakeShell(true), '/bin/zsh', undefined);
+    expect(made.editorDiesAtQuit()).toBe(false);
+    made.listenTo(EDITOR, fakeShell(), '/bin/zsh', undefined);
+    expect(made.editorDiesAtQuit()).toBe(true);
+  });
 });
