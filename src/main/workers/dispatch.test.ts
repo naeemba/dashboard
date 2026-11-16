@@ -60,6 +60,16 @@ describe('mainPrompt', () => {
   });
 });
 
+// Main once rebuilt dispatch, finish and land as /tmp scripts it lost; the prompt names the verbs instead.
+describe('mainPrompt verbs', () => {
+  it('dispatches a card with board ship and names finish and pr land', () => {
+    const prompt = mainPrompt('/work/api');
+    expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id>`');
+    expect(prompt).toContain('finish <id>');
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n>`');
+  });
+});
+
 describe('workerSettings', () => {
   // Stop reports done whatever the worker remembered to say; the permission prompt reports blocked.
   it('hooks the end of the turn and the permission prompt to the session command', () => {

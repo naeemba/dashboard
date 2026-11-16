@@ -94,11 +94,17 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '                         --all across every open project',
     '  report <id>            a worker\'s line from list and the last message it ended a turn with',
     '  release <id>           close a worker\'s pane now, before the app would',
+    '  finish <id>            release a worker once its card is Done or its branch merged',
     '',
-    'A card task takes --card: it runs in the worktree the board made when the card moved to Ship. Any'
+    'A card is dispatched with `node "$DASHBOARD_BOARD" ship <id>`: it makes the card\'s worktree, a worker'
+      + ' pane and its agent. run --card is for a shipped card whose agent has stopped. Any'
       + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
       + ' committed, pushed and opened its pull request, and kept otherwise. Research takes neither and'
       + ' reads this checkout.',
+    '',
+    'Land a pull request you are asked to merge with `node "$DASHBOARD_COMMAND" pr land <n>`, run in the'
+      + ' background: it waits for its checks and merges the commit they passed on. To wait for anything,'
+      + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so, with the end of its"
