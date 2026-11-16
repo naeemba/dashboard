@@ -54,5 +54,23 @@ A `budget` verb (the seven-day usage against a cap) was asked for with it and
 left out: the only source is the Agent SDK's
 `usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET`, which needs a live
 SDK session and is named not to be relied on. The Claude screen's status line
-shows it; a gate built on it says nothing the day it changes.
+shows it; a gate built on it says nothing the day it changes. Built since on
+another source: command-decision-6.
+
+## command-decision-6: `budget` reads the statusline's file, and stale is unknown
+
+The user's statusline writes `~/.claude/usage-7d.json` each time it draws
+(dotfiles 37d4807), the figure Claude Code hands it. That is the source
+command-decision-5 lacked: a file, read with no SDK session. It is written only
+while some session is on screen, so a reading over 30 minutes old exits 2, as a
+missing or broken one does: a new-crm manager ran a hand-made budget script 59
+times overnight, and a stale "under" is the loop running past the cap.
+
+The cap is `budget.weeklyCap` in settings.json, set once with `budget --cap` or
+on the settings screen, so a loop never has to be told it again. `--cap` writes
+the file with the app possibly running, so main watches the file and takes any
+change it did not write itself (settings.adopt); without that, the next save from
+the settings screen put the old cap back. Exit 2, not 1, for a refused word too,
+since 1 means over. Reading it is allowed in the settings every session starts
+with (workers-decision-9); `--cap` is not.
 

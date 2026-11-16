@@ -13,6 +13,7 @@ its own verbs; this feature only picks the program.
 | `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, finish, report, notify |
 | `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
 | `pr` | the `pr` program, here | land [--project] |
+| `budget` | the `budget` program, here | none, or --cap |
 
 `pr land <number|url|branch>` lands a pull request as a review worker with
 merging on does: it notes the head commit, waits on `gh pr checks --watch`,
@@ -24,6 +25,20 @@ goes (`pr land --help`) never reaches gh as the pull request. It is a merge by
 whoever runs it, so `review.autoMerge` does not gate it, and it is not in the
 rules the app allows every session (command-decision-5). It needs gh, never the
 app.
+
+`budget` reads the 7-day usage of the Claude account from
+`~/.claude/usage-7d.json`, which the user's statusline writes each time it draws
+(`{"usedPercentage": <number>, "at": "<ISO time>"}`), against `budget.weeklyCap`
+in settings.json. It prints the share used, the cap and how old the reading is,
+and exits 0 under the cap, 1 at or over it, and 2 when it cannot say: no cap
+set, no file, a file that does not read, or a reading older than 30 minutes. The
+statusline writes only while some session is on screen, so a loop left
+overnight reads a stale figure, and stale is never under. `budget --cap <n>`
+sets the cap (above 0, at most 100), the settings screen's Budget row too; a
+running app takes the change at once. Main's prompt tells it to run `budget`
+before each round of a long loop and stop on anything but 0, and reading it is
+allowed in every session the app starts; `--cap` is asked (command-decision-6).
+It needs no app and no gh.
 
 `session` is another name for `pane`. `dashboard` with no words opens the app,
 or brings it to the front; a first word that is a flag (`--remote`) goes to the
@@ -51,7 +66,7 @@ writes `session-socket` where the command waits for it. Bare `dashboard` with a
 
 Every other `board` verb and move, `project list`, `find`, `init`, `add`, `set`
 and `remove` work on
-files and never start it, and `pr` needs only gh:
+files and never start it, `pr` needs only gh and `budget` nothing:
 the app already watches each project's `.dashboard` folder. Quitting,
 restarting or replacing the app is never the command's.
 
@@ -137,6 +152,7 @@ Folders: `src/main/command/`.
 - The launcher: `scripts/rebuild.sh`
 - What a program prints when it throws: `failure-line.ts`, `failure-line.test.ts`
 - The `pr` noun: `pull-request-cli.ts`, `pull-request-cli.test.ts`, `pull-request-program.ts`
+- The `budget` noun: `budget-cli.ts`, `budget-cli.test.ts`, `budget-program.ts`; the cap's write is `writeWeeklyCap` in `src/main/settings/settings-store.ts`
 
 ## Scenarios
 
@@ -155,6 +171,9 @@ Folders: `src/main/command/`.
 - Given an open pull request whose checks pass, when `dashboard pr land 12` runs, then it merges the head commit it noted before the wait and prints `merged 12 at <sha>`; a push during the wait makes gh refuse the merge, and it says so and exits 1.
 - Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print.
 - Given the manager's main in `~/.dashboard`, when it runs `pr land 12 --project crm`, then gh runs in crm's folder.
+- Given a cap of 74 and a reading of 64% from three minutes ago, when `dashboard budget` runs, then it prints both and the age and exits 0; at 74% it exits 1.
+- Given no session has drawn its statusline for an hour, when `dashboard budget` runs, then it says the reading is too old and exits 2.
+- Given the app running, when `dashboard budget --cap 60` runs, then the settings screen shows 60 and the next save there keeps it.
 
 ## Adding to it
 

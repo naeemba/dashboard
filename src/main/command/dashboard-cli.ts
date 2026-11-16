@@ -1,6 +1,7 @@
 import { USAGE as BOARD_USAGE } from '../board/board-usage';
 import { PROJECT_USAGE } from '../projects/project-cli';
 import { SESSION_USAGE } from '../workers/session-cli';
+import { BUDGET_USAGE } from './budget-cli';
 import { PULL_REQUEST_USAGE } from './pull-request-cli';
 
 // The `dashboard` command's first word: which program the rest of the words go to, or whether they are
@@ -16,7 +17,7 @@ import { PULL_REQUEST_USAGE } from './pull-request-cli';
 // `session` is the old name of `pane`, kept so a skill written against the session command reads
 // the same with `dashboard` in front of it.
 
-export type Noun = 'board' | 'pane' | 'project' | 'pr';
+export type Noun = 'board' | 'pane' | 'project' | 'pr' | 'budget';
 
 const NOUNS = new Map<string, Noun>([
   ['board', 'board'],
@@ -24,6 +25,7 @@ const NOUNS = new Map<string, Noun>([
   ['session', 'pane'],
   ['project', 'project'],
   ['pr', 'pr'],
+  ['budget', 'budget'],
 ]);
 
 export const DASHBOARD_USAGE = `dashboard — drive the Dashboard app from any terminal
@@ -36,11 +38,12 @@ dispatches into, an editor and a kanban board kept in the project's .dashboard/b
   dashboard pane <command>      claim a worker pane, start Claude in it, type into it, release it
   dashboard project <command>   list, add, change, open, close and switch to the projects in ~/.dashboard/projects.yaml
   dashboard pr land <n>         wait for a pull request's checks, then merge the commit they passed on
+  dashboard budget [--cap <n>]  the 7-day usage against the cap you set once; exits 1 at the cap
   dashboard <noun> --help       what a noun takes
 
 pane, board ship and review, a board move into Ship or Review, and project open, close and focus
 need the running app and start it when none answers; every other board verb and move, and project
-list, find, init, add, set and remove, work on files alone; pr needs only gh. Outside a pane the command does not know which project you
+list, find, init, add, set and remove, work on files alone; pr needs only gh, budget nothing. Outside a pane the command does not know which project you
 mean: board uses the folder you are in, or --project <name>; pane claim needs --project.`;
 
 const NOUN_HELP: Record<Noun, string> = {
@@ -70,6 +73,7 @@ ${PROJECT_USAGE}`,
 Needs no app. The words after \`pr\` are these:
 
 ${PULL_REQUEST_USAGE}`,
+  budget: `dashboard ${BUDGET_USAGE}`,
 };
 
 const HELP = new Set(['--help', '-h', 'help']);
