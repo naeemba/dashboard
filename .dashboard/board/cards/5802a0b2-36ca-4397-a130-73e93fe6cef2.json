@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T11:45:04.914Z",
-  "updatedAt": "2026-11-16T12:11:30.381Z",
+  "updatedAt": "2026-11-16T12:22:21.968Z",
   "branch": "a-turn-the-session-starts-by-itself-shows-o",
   "pullRequest": 311,
   "comments": [
@@ -20,6 +20,10 @@
     {
       "at": "2026-11-16T12:11:30.350Z",
       "body": "Pull request #311 opened: A turn the session starts by itself shows as working on the Claude screen https://github.com/naeemba/dashboard/pull/311"
+    },
+    {
+      "at": "2026-11-16T12:22:21.967Z",
+      "body": "Review loop on PR #311: converged, ready to merge. 1 round, one low finding (busy field comment in chat-transcript.ts didn't cover a turn the session starts by itself) fixed in e859147d; nothing rejected, nothing open. No conflict with main. CI: 5/5 checks pass on head e859147d."
     }
   ],
   "column": "Review",
