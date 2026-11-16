@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-15T23:35:34.238Z",
-  "updatedAt": "2026-11-16T01:11:38.317Z",
+  "updatedAt": "2026-11-16T01:11:49.628Z",
   "branch": "move-the-manager-s-tmp-scripts-into-the-cli",
   "pullRequest": 295,
   "comments": [
@@ -20,6 +20,10 @@
     {
       "at": "2026-11-16T00:51:32.367Z",
       "body": "Pull request #295 opened: Move the manager's /tmp scripts into the CLI: pane finish, pr land https://github.com/naeemba/dashboard/pull/295"
+    },
+    {
+      "at": "2026-11-16T01:11:49.627Z",
+      "body": "Pull request #295 merged: Move the manager's /tmp scripts into the CLI: pane finish, pr land https://github.com/naeemba/dashboard/pull/295"
     }
   ],
   "column": "Done",
