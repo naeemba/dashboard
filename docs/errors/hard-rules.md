@@ -53,6 +53,8 @@ another screen's folder dialog that way, and that screen read `Error invoking
 remote method 'projects:open': Error: Type the folder's path on the host`
 instead of the sentence. It now answers `{ refused }`, the shape `pdf:read`
 already used, and the view prints the text as it is.
+`project-actions.test.ts` pins it for `projects:open`: each refusal the
+handler makes is answered, not thrown.
 
 Throwing stays right for a failure: `readBoard` on a broken file throws, and
 the status bar says something broke (errors-decision-2).
