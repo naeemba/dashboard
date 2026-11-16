@@ -2,6 +2,7 @@ import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { orMissing, readText } from '../app/missing-file';
 import { replaceFile } from '../app/replace-file';
+import { BROKEN_SUFFIX, setAsidePath } from '../app/set-aside';
 import { isRecord } from '../../shared/app/is-record';
 import type { Column } from '../../shared/board/board';
 import { cardOrders, storedOrder } from './card-order';
@@ -19,9 +20,6 @@ export const BOARD_FOLDER = 'board';
 const CARDS_FOLDER = 'cards';
 const COLUMNS_FILE = 'columns.json';
 const CARD_SUFFIX = '.json';
-// What a file that will not parse is renamed to, beside where it was.
-export const BROKEN_SUFFIX = '.broken';
-
 // What the folder holds, before board-store.ts decides what any of it means. `text` is every byte that
 // was read, for the ids a card written without one is given — the same for the same files. brokenFiles
 // is every file that did not parse: where this read set it aside, or, without salvage, where it still is.
@@ -51,15 +49,6 @@ function storedCard(name: string, text: string): Record<string, unknown> {
   const value: unknown = JSON.parse(text);
   if (!isRecord(value)) throw new Error(`${name} is not a card`);
   return typeof value.id === 'string' ? value : { ...value, id: decodeURIComponent(name.slice(0, -CARD_SUFFIX.length)) };
-}
-
-// Where a file is set aside: `<file>.broken`, or `<file>.2.broken` and on when that is taken, so a card
-// that breaks twice keeps both damaged copies. The first copy always has the plain name, which is what
-// isCardSetAside looks for.
-function setAsidePath(file: string): string {
-  let candidate = `${file}${BROKEN_SUFFIX}`;
-  for (let count = 2; existsSync(candidate); count += 1) candidate = `${file}.${count}${BROKEN_SUFFIX}`;
-  return candidate;
 }
 
 // Whether this card's file has been set aside: the card is off the board because its file broke, not

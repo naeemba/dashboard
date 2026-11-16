@@ -1,6 +1,22 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Lets one test make the salvage rename fail the way a held-open file does on Windows; every other
+// test renames for real.
+const renames = vi.hoisted(() => ({ failure: undefined as Error | undefined }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    renameSync: (...parameters: Parameters<typeof actual.renameSync>) => {
+      if (renames.failure) throw renames.failure;
+      return actual.renameSync(...parameters);
+    },
+  };
+});
+
+afterEach(() => { renames.failure = undefined; });
 import {
   claimsPane,
   entryForCard,
@@ -83,12 +99,22 @@ describe('readWorktrees', () => {
     expect(() => readWorktrees(file)).toThrow(/EISDIR/);
   });
 
-  // A folder where the .broken file has to go: the only way to make the salvage rename fail on demand.
   it('throws when a damaged file cannot be moved aside', () => {
     const file = worktreesFile();
     writeFileSync(file, '{"entries": [');
-    mkdirSync(`${file}.broken`);
-    expect(() => readWorktrees(file)).toThrow();
+    renames.failure = Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' });
+    expect(() => readWorktrees(file)).toThrow(/EBUSY/);
+    expect(readFileSync(file, 'utf8')).toBe('{"entries": [');
+  });
+
+  it('keeps the first damaged file when a second one is moved aside', () => {
+    const file = worktreesFile();
+    writeFileSync(file, '{ first');
+    readWorktrees(file);
+    writeFileSync(file, '{ second');
+    readWorktrees(file);
+    expect(readFileSync(`${file}.broken`, 'utf8')).toBe('{ first');
+    expect(readFileSync(`${file}.2.broken`, 'utf8')).toBe('{ second');
   });
 });
 

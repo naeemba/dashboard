@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-04T12:22:56.000Z",
-  "updatedAt": "2026-11-16T11:36:27.453Z",
+  "updatedAt": "2026-11-16T11:50:11.399Z",
   "branch": "salvaging-a-second-broken-board-json-overwr",
   "pullRequest": 305,
   "comments": [
@@ -20,8 +20,16 @@
     {
       "at": "2026-11-16T11:36:27.428Z",
       "body": "Pull request #305 opened: Board: a second broken board.json no longer overwrites the first set-aside copy https://github.com/naeemba/dashboard/pull/305"
+    },
+    {
+      "at": "2026-11-16T11:49:08.298Z",
+      "body": "Review loop on PR #305: converged, ready to merge. Merged main in (card-file conflict, kept main's state, 77c2a459). 1 round: 2 low findings fixed in 0eefb398 (rename-failure tests now mock node:fs instead of a read-only folder; setAsidePath/BROKEN_SUFFIX moved out of the board module). No re-review after that last fix commit. CI 5/5 passed on 0eefb398. Nothing open."
+    },
+    {
+      "at": "2026-11-16T11:50:11.379Z",
+      "body": "Pull request #305 merged: A second broken board.json or worktrees.json no longer overwrites the first set-aside copy https://github.com/naeemba/dashboard/pull/305"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 245
 }
