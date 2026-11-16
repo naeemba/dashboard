@@ -230,7 +230,12 @@ hook states `pane list` already reads, so the done report, the foot's count and 
 read the one record rather than a store of their own. It is not `dispatchers`, which says who may run a
 pane, not who did: a project's own main may run a pane the manager claimed on its page, and then its
 own main hears the report. Kept in memory, as `dispatchers` is, so after a restart a resumed worker is
-listed by nobody and reports to its own page's main.
+listed by nobody. Its report still goes to the main that dispatched it: main.ts saves each worker's
+dispatcher path with the pane in session.json, `dispatcherOf` hands it over, and that page's main hears
+the report and may report on or release the worker, as the claimer could before. Only when that page is
+not open does the report go to the pane's own page's main. Before 2026-11-16 a worker the manager
+dispatched into another project came back reporting to that project's main, which never ran it, and the
+manager heard nothing (issue #187).
 
 **A pane reference is an address, not a bare id.** `pane run` and the done report print
 `dashboard://pane/<slot>:<index>`; the screen links only that, so `2:1` in a reply about a time or a
