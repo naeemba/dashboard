@@ -50,6 +50,69 @@ describe('closeFinished', () => {
     expect(released).toEqual(['2:1 card done: released 2:1']);
   });
 
+  // A --worktree worker has no card, so before this it waited out its grace period.
+  const inWorktree = { directoryOf: () => '/work/api.worktrees/fix-the-tests' };
+
+  it('releases a worker in a worktree whose branch merged as soon as its turn ends', async () => {
+    const { answer, closed, released } = await reported({ ...inWorktree, merged: async () => true });
+    await answer.closeFinished();
+    expect(closed).toEqual(['2:1']);
+    expect(released).toEqual(['2:1 pull request merged: released 2:1']);
+  });
+
+  it('keeps a worker in a worktree when gh cannot say whether its branch merged', async () => {
+    const { answer, closed } = await reported({ ...inWorktree, merged: async () => { throw new Error('gh: not logged in'); } });
+    await answer.closeFinished();
+    expect(closed).toEqual([]);
+  });
+
+  it('skips a sweep that comes due while the last still waits on gh', async () => {
+    let answerGh: (merged: boolean) => void = () => undefined;
+    let asked = 0;
+    const gh = () => { asked += 1; return new Promise<boolean>((resolve) => { answerGh = resolve; }); };
+    const { answer, closed } = await reported({ ...inWorktree, merged: gh });
+    const first = answer.closeFinished();
+    await answer.closeFinished();
+    expect(asked).toBe(1);
+    answerGh(true);
+    await first;
+    expect(closed).toEqual(['2:1']);
+  });
+
+  // You click into the pane while gh answers: it must not close under you.
+  it('keeps a worker that took the keyboard while gh was answering, asking gh once', async () => {
+    let answerGh: (merged: boolean) => void = () => undefined;
+    let asked = 0;
+    const gh = () => { asked += 1; return new Promise<boolean>((resolve) => { answerGh = resolve; }); };
+    const { answer, closed, keyboard } = await reported({ ...inWorktree, merged: gh });
+    const sweep = answer.closeFinished();
+    await Promise.resolve();
+    keyboard.add('2:1');
+    answerGh(true);
+    await sweep;
+    expect(closed).toEqual([]);
+    expect(asked).toBe(1);
+  });
+
+  // A pane must not close while its main's turn may be reading the report.
+  it('keeps a worker whose main started a turn while gh was answering', async () => {
+    let answerGh: (merged: boolean) => void = () => undefined;
+    const gh = () => new Promise<boolean>((resolve) => { answerGh = resolve; });
+    const { answer, closed } = await reported({ ...inWorktree, merged: gh });
+    const sweep = answer.closeFinished();
+    await Promise.resolve();
+    answer.mainTurn(2, true);
+    answerGh(true);
+    await sweep;
+    expect(closed).toEqual([]);
+  });
+
+  it('never asks about the branch of a worker in the project\'s own checkout', async () => {
+    const { answer, closed } = await reported({ merged: async () => true });
+    await answer.closeFinished();
+    expect(closed).toEqual([]);
+  });
+
   it('tells main of a worker closed for its card before main read a report from it', async () => {
     const { ports, closed, told, finishedCards } = project();
     const answer = sessionRequests(ports);

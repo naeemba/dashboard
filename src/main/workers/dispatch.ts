@@ -114,9 +114,9 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' work. A turn the user typed into a worker is theirs, and you are told nothing of it. Read a worker\'s'
       + ' state with `report`, never its session log.',
     '',
-    'The app closes a finished worker\'s pane itself: once its card is Done or Cancelled, or once you'
-      + ' have read its report and sent it nothing for a while. Text you `send` an agent tells it to'
-      + ' report to you too.',
+    'The app closes a finished worker\'s pane itself: once its card is Done or Cancelled, once its'
+      + ' worktree\'s pull request merged, or once you have read its report and sent it nothing for a'
+      + ' while. Text you `send` an agent tells it to report to you too.',
     '',
     BOARD_INSTRUCTIONS,
     'So a worker you dispatch on a card is never asked to move it either.',
