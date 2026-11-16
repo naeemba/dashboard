@@ -104,7 +104,11 @@ Neither door holds any of the logic; each only asks.
   saving its address): the settings' one writer. Keeps the change as main's
   live copy with the shell it picks, then writes the file; a pane already
   running keeps its shell. The launch tidy (`tidySettingsFile`,
-  `settings-store.ts`) still rewrites the file's own lines outside it.
+  `settings-store.ts`) still rewrites the file's own lines outside it, and so
+  does `budget --cap` (`writeWeeklyCap`), from outside the app.
+- **settings.adopt** (main's watch on the settings folder): a file that changed
+  on disk to something main does not hold becomes main's live copy with its
+  shell, and the window's; nothing is written back.
 
 - **processes.install-slices** (launch, on Linux once systemd answers): writes
   `agents.slice` and `panes.slice` into the user's systemd folder where missing,
@@ -176,7 +180,7 @@ Folder: `src/main/actions/`.
 - `session/start.ts`, `session/reset.ts`, `session/resume.ts`, `session/branch.ts`, `session/rewind.ts`, `session/rename.ts`, `session/configure.ts`
 - `session/conversation-ports.ts` — what reset, resume, branch and rewind ask of the session, and `keepsItsConversation`
 - `settings/settings-actions.ts` — main's wiring: settings.write and the screen's `settings:write`
-- `settings/write.ts`
+- `settings/write.ts`, `settings/adopt.ts`
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios

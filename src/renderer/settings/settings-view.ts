@@ -4,7 +4,7 @@ import { labelled } from '../app/icons';
 import { keycaps } from '../keys/keycaps';
 import { confirmOverlay, openOverlay } from '../app/overlay';
 import {
-  bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, resetKeys,
+  bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, isWeeklyCap, resetAll, resetKeys,
   type Settings,
 } from '../../shared/settings/settings';
 import { settingsRows, stepSelection, toggled, type SettingsRow } from './settings-rows';
@@ -111,6 +111,8 @@ export function openSettings(
             value.textContent = 'Enter';
           } else if (row.kind === 'host-port' && row.value === '') {
             value.textContent = 'not listening';
+          } else if (row.kind === 'weekly-cap' && row.value === '') {
+            value.textContent = 'none';
           } else {
             value.textContent = row.value === '' ? 'from the environment' : row.value;
           }
@@ -171,6 +173,10 @@ export function openSettings(
           // the operating system's setting, not this one.
           if (text !== '' && !isPort(text)) say(`"${text}" is not a port. Anything from 1 to 65535, or empty to stop listening.`);
           else commit({ ...settings, host: { ...settings.host, port: text === '' ? null : Number(text) } });
+        } else if (row.kind === 'weekly-cap') {
+          // Empty means no cap, and `dashboard budget` then says it cannot tell.
+          if (text !== '' && !isWeeklyCap(text)) say(`"${text}" is not a cap. A percentage above 0 and at most 100, or empty for none.`);
+          else commit({ ...settings, budget: { weeklyCap: text === '' ? null : Number(text) } });
         } else {
           // The shell. Empty is the file saying "work it out from the environment", which is a real
           // answer rather than a blank, so there is nothing to refuse.

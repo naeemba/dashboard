@@ -63,6 +63,7 @@ const bridge: DashboardBridge = {
   writeInk: (projectPath, text) => ipcRenderer.invoke('ink:write', projectPath, text),
   getSettings: () => ipcRenderer.invoke('settings:read'),
   saveSettings: (settings) => ipcRenderer.invoke('settings:write', settings),
+  onSettingsChange: (listener) => ipcRenderer.on('settings:change', (_event, loaded) => listener(loaded)),
   moveCard: (request) => ipcRenderer.invoke('card:move', request),
   listWorktrees: () => ipcRenderer.invoke('worktree:list'),
   onWorktreeChange: (listener) =>

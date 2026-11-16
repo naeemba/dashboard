@@ -163,9 +163,11 @@ const shellFor = (chosen: Settings) => pickShell(chosen, process.env, process.pl
 let settings = readSettings(settingsFile, isMac);
 let shellCommand = shellFor(settings);
 const settingsDoors = settingsActions(table, {
+  file: settingsFile, isMac, current: () => settings,
   writeFile: (next) => writeSettings(settingsFile, next, isMac),
   pickShell: shellFor,
   keep(next, shell) { settings = next; shellCommand = shell; },
+  tell: (next, shell) => liveWindow()?.webContents.send('settings:change', { settings: next, shellCommand: shell }),
 });
 keepHostToken(settings, (made) => { void settingsDoors.write.call({ settings: made }); });
 // A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and

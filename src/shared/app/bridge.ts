@@ -245,6 +245,8 @@ export type DashboardBridge = {
   // Answers with the shell main resolved from the new settings, which is the one a dropped path is
   // quoted for, or settings.write's refusal of what was not settings.
   saveSettings(settings: Settings): Promise<string | Refused>;
+  // settings.json changed on disk (`dashboard budget --cap`, or by hand) and main took it as its copy.
+  onSettingsChange(listener: (loaded: { settings: Settings; shellCommand: string }) => void): void;
   // A card that changed column, handed to main's card.move: the move and what entering the column
   // starts — a ship, a review loop, or nothing.
   moveCard(request: CardMoveRequest): Promise<CardMoveAnswer>;

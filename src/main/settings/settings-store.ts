@@ -1,6 +1,8 @@
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { isRecord } from '../../shared/app/is-record';
 import { parseSettings, withoutShipped, type Settings } from '../../shared/settings/settings';
+import { ExpectedFailure } from '../command/failure-line';
 
 // Beside the .env file main already reads, not in Electron's userData directory. userData is
 // ~/Library/Application Support/Dashboard on macOS, and the point of this file is that a person opens
@@ -64,4 +66,36 @@ export function tidySettingsFile(file: string, isMac: boolean): void {
   } catch {
     // No file, nothing readable in it, or nowhere to write it back. All three mean: leave it alone.
   }
+}
+
+// `budget --cap`, the file's second writer beside settings.write: the app need not be running, and a
+// running one adopts the change when the file does (adoptedSettings). Only budget.weeklyCap changes;
+// every other line is written back as it was. A file that does not read as an object is refused
+// rather than replaced: the cap is not worth the rest of somebody's settings.
+export function writeWeeklyCap(file: string, cap: number): void {
+  let stored: unknown = {};
+  try {
+    stored = JSON.parse(readFileSync(file, 'utf8'));
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw new ExpectedFailure(`${file} does not read as JSON; fix it, then set the cap again`);
+  }
+  if (!isRecord(stored)) throw new ExpectedFailure(`${file} does not hold an object; fix it, then set the cap again`);
+  const budget = isRecord(stored.budget) ? stored.budget : {};
+  mkdirSync(path.dirname(file), { recursive: true });
+  writePrivately(file, serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }));
+}
+
+// What the app takes from the file when it changes on disk: `budget --cap`, or an edit by hand. Null
+// leaves the app's settings as they are: a file that is gone (the app's own next write brings it back,
+// and the host token with it) or that does not parse, as one half-saved in an editor does, and one
+// that says what the app already holds, as its own writes do.
+export function adoptedSettings(file: string, current: Settings, isMac: boolean): Settings | null {
+  let next: Settings;
+  try {
+    next = parseSettings(JSON.parse(readFileSync(file, 'utf8')), isMac);
+  } catch {
+    return null;
+  }
+  // Both parsed, so the key order a screen's copy was built in is not a change.
+  return JSON.stringify(next) === JSON.stringify(parseSettings(current, isMac)) ? null : next;
 }

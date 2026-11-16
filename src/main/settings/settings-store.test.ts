@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings-store';
+import { adoptedSettings, readSettings, settingsFilePath, tidySettingsFile, writeSettings, writeWeeklyCap } from './settings-store';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
 import { temporaryFolder } from '../testing/temporary-folder';
 
@@ -68,7 +68,7 @@ describe('writeSettings', () => {
     const path = file();
     writeSettings(path, { ...defaultSettings(true), font: { name: 'Menlo', size: 14 } }, true);
     expect(JSON.parse(readFileSync(path, 'utf8')))
-      .toEqual({ font: { name: 'Menlo', size: 14 }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {}, workers: {} });
+      .toEqual({ font: { name: 'Menlo', size: 14 }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {}, workers: {}, budget: {} });
   });
 
   it('writes a key you chose, a key you cleared, and a colour you changed', () => {
@@ -101,7 +101,7 @@ describe('tidySettingsFile', () => {
     writeFileSync(path, JSON.stringify({ ...shipped, font: { name: 'Menlo', size: shipped.font.size } }));
     tidySettingsFile(path, true);
     expect(JSON.parse(readFileSync(path, 'utf8')))
-      .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {}, workers: {} });
+      .toEqual({ font: { name: 'Menlo' }, theme: {}, keys: {}, host: {}, remote: {}, review: {}, updates: {}, errors: {}, workers: {}, budget: {} });
   });
 
   // The rule is "this is what we ship, so leave it out", not "this line is called shellCommand". Nothing
@@ -188,5 +188,47 @@ describe('tidySettingsFile', () => {
     const missing = file();
     tidySettingsFile(missing, true);
     expect(existsSync(missing)).toBe(false);
+  });
+});
+
+describe('writeWeeklyCap', () => {
+  it('sets the cap and leaves every other line as it was', () => {
+    const path = file();
+    writeFileSync(path, JSON.stringify({ font: { size: 130 }, budget: { other: 1 } }));
+    writeWeeklyCap(path, 74);
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ font: { size: 130 }, budget: { other: 1, weeklyCap: 74 } });
+  });
+
+  it('makes the file when there is none', () => {
+    const path = join(temporaryFolder('dashboard-settings-'), 'dashboard', 'settings.json');
+    writeWeeklyCap(path, 50);
+    expect(readSettings(path, false).budget).toEqual({ weeklyCap: 50 });
+  });
+
+  it('refuses a file that is not a JSON object, and leaves it alone', () => {
+    for (const text of ['{ "font": ', '[1]']) {
+      const path = file();
+      writeFileSync(path, text);
+      expect(() => writeWeeklyCap(path, 74)).toThrow('fix it, then set the cap again');
+      expect(readFileSync(path, 'utf8')).toBe(text);
+    }
+  });
+});
+
+describe('adoptedSettings', () => {
+  it('takes a file that says something new, and nothing from one that says what the app holds', () => {
+    const path = file();
+    const current = defaultSettings(false);
+    writeFileSync(path, JSON.stringify({ budget: { weeklyCap: 74 } }));
+    expect(adoptedSettings(path, current, false)?.budget).toEqual({ weeklyCap: 74 });
+    writeSettings(path, current, false);
+    expect(adoptedSettings(path, current, false)).toBeNull();
+  });
+
+  it('takes nothing from a file that is gone or half-saved', () => {
+    const path = file();
+    expect(adoptedSettings(path, defaultSettings(false), false)).toBeNull();
+    writeFileSync(path, '{ "budget": ');
+    expect(adoptedSettings(path, defaultSettings(false), false)).toBeNull();
   });
 });

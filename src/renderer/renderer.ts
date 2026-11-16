@@ -900,6 +900,8 @@ async function start(): Promise<void> {
   settings = loaded.settings;
   settingsLoaded = true;
   shellCommand = loaded.shellCommand;
+  // ponytail: a settings screen open at that moment keeps the copy it opened with; its next change saves that.
+  bridge.onSettingsChange((changed) => { settings = changed.settings; shellCommand = changed.shellCommand; applyAppearance(); renderStatus(); });
   // Read before anything is on screen, because the first page to open starts saving over it.
   const session = await bridge.getSession();
   // xterm measures cell size when a pane opens, so the font must be in before openProject() builds one.
