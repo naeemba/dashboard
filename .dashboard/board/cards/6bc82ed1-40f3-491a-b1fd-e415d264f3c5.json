@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-02T01:02:00.310Z",
-  "updatedAt": "2026-11-16T15:06:06.247Z",
+  "updatedAt": "2026-11-16T15:06:51.501Z",
   "branch": "skip-xterm-s-selection-redraw-on-scroll-whe",
   "pullRequest": 313,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-16T15:06:06.247Z",
       "body": "Review loop: converged, ready to merge. 1 round (floor-addressed): 3 low/nit findings posted, all 3 fixed in 384ac0c3 (comment and docs wording on what a silent xterm rename costs, selection redraw wrapper restructured, docs spacing/wrapping). Main merged in to clear a board-card conflict (45692795). Nothing open, nothing blocked on a person. CI: 5/5 checks passed on head 384ac0c3. The final fix commit had no re-review after it."
+    },
+    {
+      "at": "2026-11-16T15:06:51.483Z",
+      "body": "Pull request #313 merged: Skip a shown terminal's selection redraw when nothing is selected https://github.com/naeemba/dashboard/pull/313"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 254
 }
