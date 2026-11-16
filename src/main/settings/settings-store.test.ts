@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { adoptedSettings, readSettings, settingsFilePath, tidySettingsFile, writeSettings, writeWeeklyCap } from './settings-store';
@@ -205,6 +205,16 @@ describe('writeWeeklyCap', () => {
     expect(readSettings(path, false).budget).toEqual({ weeklyCap: 50 });
   });
 
+  posixModesOnly('writes through a symlinked file, leaving the link in place', () => {
+    const target = file();
+    writeFileSync(target, '{}');
+    const link = file();
+    symlinkSync(target, link);
+    writeWeeklyCap(link, 60);
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readSettings(target, false).budget).toEqual({ weeklyCap: 60 });
+  });
+
   it('refuses a file that is not a JSON object, and leaves it alone', () => {
     for (const text of ['{ "font": ', '[1]']) {
       const path = file();
@@ -223,6 +233,15 @@ describe('adoptedSettings', () => {
     expect(adoptedSettings(path, current, false)?.budget).toEqual({ weeklyCap: 74 });
     writeSettings(path, current, false);
     expect(adoptedSettings(path, current, false)).toBeNull();
+  });
+
+  it('keeps the live host token when the file has none', () => {
+    const path = file();
+    const current = { ...defaultSettings(false), host: { ...defaultSettings(false).host, token: 'secret' } };
+    writeFileSync(path, '{}');
+    expect(adoptedSettings(path, current, false)).toBeNull();
+    writeFileSync(path, JSON.stringify({ budget: { weeklyCap: 74 } }));
+    expect(adoptedSettings(path, current, false)?.host.token).toBe('secret');
   });
 
   it('takes nothing from a file that is gone or half-saved', () => {

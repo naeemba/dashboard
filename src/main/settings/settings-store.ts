@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '../../shared/app/is-record';
 import { parseSettings, withoutShipped, type Settings } from '../../shared/settings/settings';
@@ -70,22 +70,23 @@ export function tidySettingsFile(file: string, isMac: boolean): void {
   }
 }
 
-// `budget --cap`, the file's second writer beside settings.write: the app need not be running, and a
+// settings.cap's port (`budget --cap`), the file's second writer beside settings.write: the app need not be running, and a
 // running one adopts the change when the file does (adoptedSettings). Only budget.weeklyCap changes;
 // every other line is written back as it was. A file that does not read as an object is refused
 // rather than replaced: the cap is not worth the rest of somebody's settings.
 export function writeWeeklyCap(file: string, cap: number): void {
-  const text = readText(file) ?? '{}';
+  const text = readText(file);
   let stored: unknown;
   try {
-    stored = JSON.parse(text);
+    stored = JSON.parse(text ?? '{}');
   } catch {
     throw new ExpectedFailure(`${file} does not read as JSON; fix it, then set the cap again`);
   }
   if (!isRecord(stored)) throw new ExpectedFailure(`${file} does not hold an object; fix it, then set the cap again`);
   const budget = isRecord(stored.budget) ? stored.budget : {};
-  // Whole or not at all: the app reads this file while the command writes it.
-  replaceFile(file, serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }), 0o600);
+  // Whole or not at all: the app reads this file while the command writes it. Renamed over the link's
+  // target, not the link, so a settings.json symlinked from a dotfiles repo stays a link.
+  replaceFile(text === null ? file : realpathSync(file), serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }), 0o600);
 }
 
 // What the app takes from the file when it changes on disk: `budget --cap`, or an edit by hand. Null
@@ -99,6 +100,9 @@ export function adoptedSettings(file: string, current: Settings, isMac: boolean)
   } catch {
     return null;
   }
+  // A file with no host token (reset to {}, or the host block deleted) keeps the live one: an empty
+  // token would lock out the screen that holds it, as resetAll's keeping it avoids.
+  if (next.host.token === '') next = { ...next, host: { ...next.host, token: current.host.token } };
   // Both parsed, so the key order a screen's copy was built in is not a change.
   return JSON.stringify(next) === JSON.stringify(parseSettings(current, isMac)) ? null : next;
 }

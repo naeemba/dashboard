@@ -77,7 +77,9 @@ export function isReply(frame: Frame): frame is Reply {
 
 // Constant time (remote-host-decision-3). Byte lengths first: timingSafeEqual throws on unequal ones, and
 // 'é' is one character but two bytes.
+// An empty expected token lets nobody in: no token is not a token everyone holds.
 function sameToken(token: string, expectedToken: string): boolean {
+  if (expectedToken === '') return false;
   const given = Buffer.from(token);
   const expected = Buffer.from(expectedToken);
   return given.length === expected.length && timingSafeEqual(given, expected);
