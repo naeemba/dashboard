@@ -14,7 +14,7 @@ shipped one (board-decision-8).
 
 Folders: `src/main/workers/`, `src/shared/workers/`.
 
-- Dispatch: `dispatch.ts`, `../projects/project-named.ts` (the project `--project` names), `worker-channels.ts`, `finished-work.ts` (also whether a worktree's branch merged, for `pane finish`, tested in `session-finish.test.ts`)
+- Dispatch: `dispatch.ts`, `../projects/project-named.ts` (the project `--project` names), `project-names.ts` (the name each project's sessions go by), `worker-channels.ts`, `finished-work.ts` (also whether a worktree's branch merged, for `pane finish`, tested in `session-finish.test.ts`)
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))

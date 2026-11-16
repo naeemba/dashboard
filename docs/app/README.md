@@ -110,6 +110,7 @@ its own side. `eslint.config.test.ts` pins each of those.
   `close-refusal.ts` (in `src/shared/panes/`), `chrome-bars.ts`, `status.ts`
 - Restore: `session.ts`, `session-store.ts`
 - Atomic write, and a write skipped when the bytes match (`replaceFileIfChanged`): `replace-file.ts`
+- A JSON file of string values read as empty when broken: `string-record-file.ts`
 - Whether a socket is listening (the nvim server, the `dashboard` command finding the app): `can-connect.ts`
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`, `default-branch.ts` (which branch on a remote is its default, for the ship and `/create-task` alike)
 - Log: `log-entry.ts`, `log-error.ts`, `log-ipc.ts`, `log-store.ts`

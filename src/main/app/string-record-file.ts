@@ -7,7 +7,7 @@ import { isRecord } from '../../shared/app/is-record';
 export function readStringRecord(file: string): Record<string, string> {
   try {
     const read: unknown = JSON.parse(readFileSync(file, 'utf8'));
-    return isRecord(read) ? Object.fromEntries(Object.entries(read).filter(([, id]) => typeof id === 'string')) as Record<string, string> : {};
+    return isRecord(read) ? Object.fromEntries(Object.entries(read).filter(([, value]) => typeof value === 'string')) as Record<string, string> : {};
   } catch {
     return {};
   }

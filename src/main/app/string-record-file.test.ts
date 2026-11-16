@@ -12,11 +12,11 @@ describe('readStringRecord', () => {
     return at;
   };
 
-  it('reads the id remembered for each project', () => {
+  it('reads each string kept by path', () => {
     expect(readStringRecord(file('good.json', '{"/a": "id-1"}'))).toEqual({ '/a': 'id-1' });
   });
 
-  it('leaves out anything that is not an id', () => {
+  it('leaves out anything that is not a string', () => {
     expect(readStringRecord(file('mixed.json', '{"/a": "id-1", "/b": 3}'))).toEqual({ '/a': 'id-1' });
   });
 
