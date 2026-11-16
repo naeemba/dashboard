@@ -4,7 +4,7 @@
   "notes": "Measured: focused terminal, nothing happening: renderer 3.7-5% CPU, ~70 style recalcs/s, +1% main, +1% GPU; 0.1% with xterm's animation off. Where: cursorBlink: true at src/renderer/app/page.ts:318; xterm DOM renderer blinks via CSS keyframes on background-color. Fix (small): cursorBlink off, or a setting defaulting off. Rerun: measure.mjs keys (last step). From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-16T12:17:07.664Z",
+  "updatedAt": "2026-11-16T12:29:41.094Z",
   "branch": "turn-off-the-terminal-cursor-blink-that-cos",
   "pullRequest": 312,
   "comments": [
@@ -15,6 +15,10 @@
     {
       "at": "2026-11-16T12:17:07.640Z",
       "body": "Pull request #312 opened: Turn off the terminal cursor blink that costs idle CPU https://github.com/naeemba/dashboard/pull/312"
+    },
+    {
+      "at": "2026-11-16T12:29:41.094Z",
+      "body": "Review loop on PR #312: converged, ready to merge. 1 round (floor-addressed): one low finding (keys idle step in measure.mjs was named for the cursor blink it missed) fixed in 9f56ec03; merge of main resolved a board-card conflict (8f811841). Nothing open, nothing blocked on a person. CI 5/5 passed on head 9f56ec03."
     }
   ],
   "column": "Review",
