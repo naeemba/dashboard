@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:35:13.286Z",
-  "updatedAt": "2026-11-16T00:10:44.248Z",
+  "updatedAt": "2026-11-16T00:34:27.448Z",
   "branch": "worker-notices-one-per-turn-only-when-the-w",
   "pullRequest": 294,
   "comments": [
@@ -18,6 +18,6 @@
       "body": "Pull request #294 opened: Worker notices carry the last message, skip turns you typed, and pane report https://github.com/naeemba/dashboard/pull/294"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 234
 }
