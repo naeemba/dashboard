@@ -2,6 +2,7 @@
 
 One line per merged change: date, pull request, why.
 
+- 2026-11-16 #297 — A pane whose scope its close could not stop is a warning in the log, as the close key shows nothing (#259)
 - 2026-11-09 #268 — Each pane's and session's memory read from its scope every five seconds, shown on the manager's rows and the status bar; the screen host answers each kept session's unit
 - 2026-11-09 #260 — Enter on an exited pane (pane.restart) and a kept shell pane.restore does not take back stop the old shell's scope
 - 2026-11-09 #257 — Closing a project, and a dispatch that starts a pane's shell over, stop the scope the old shell ran in

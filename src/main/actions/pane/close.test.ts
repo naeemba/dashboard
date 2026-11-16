@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bind } from '../action';
+import type { LogDraft } from '../../../shared/app/log-entry';
 import { paneClose, type PaneClosePorts } from './close';
 
 function closeWith(done: string[], ports: Partial<PaneClosePorts> = {}) {
@@ -11,6 +12,7 @@ function closeWith(done: string[], ports: Partial<PaneClosePorts> = {}) {
     endClaim: (projectPath, index) => { done.push(`claim ${projectPath} ${index}`); },
     changed: () => { done.push('changed'); },
     stopScope: async (unit) => { done.push(`stop ${unit}`); },
+    log: (draft) => { done.push(`${draft.level} ${draft.message}`); },
     ...ports,
   });
 }
@@ -38,13 +40,18 @@ describe('pane.close', () => {
     expect(done).toEqual(['drop 2:2', 'claim /work/api 2', 'changed', 'stop agent-api-2-k4f2.scope']);
   });
 
-  it('closes the pane anyway when its scope will not stop, and says so', async () => {
+  it('closes the pane anyway when its scope will not stop, says so and warns in the log', async () => {
     const done: string[] = [];
+    const logged: LogDraft[] = [];
     const close = closeWith(done, {
       scopeOf: () => 'pane-api-2-k4f2.scope',
       stopScope: async () => { throw new Error('Access denied'); },
+      log: (draft) => { logged.push(draft); },
     });
     expect(await close.call({ id: '2:2' })).toEqual({ output: 'closed 2:2; pane-api-2-k4f2.scope was not stopped: Access denied' });
     expect(done).toEqual(['drop 2:2', 'claim /work/api 2', 'changed']);
+    expect(logged).toMatchObject([{
+      level: 'warn', action: 'pane.close', message: 'pane-api-2-k4f2.scope was not stopped: Access denied', context: { slot: 2, pane: 2 },
+    }]);
   });
 });
