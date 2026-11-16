@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { bytesPerSource, ownerOf } from './calculations.mjs';
+import { bytesPerSource, ownerOf, spread } from './calculations.mjs';
 import {
   connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, paneHostFolder, paneHostPids, press, retry, run, wait, withInstance,
 } from './demo-instance.mjs';
@@ -183,6 +183,24 @@ const measurements = {
     print('tab-switch beta alpha gamma alpha manager alpha delta alpha', await keyToPaint(page, ['Ctrl+3', 'Ctrl+2', 'Ctrl+4', 'Ctrl+2', 'Ctrl+1', 'Ctrl+2', 'Ctrl+5', 'Ctrl+2']));
     await openWorkers(page);
     print('cursor-blink-terminal-focused', await cpuWindow(10));
+  }),
+
+  // Input to next paint for <rounds> trips from alpha to the manager and back, each press observed on
+  // its own: Event Timing drops a press under 16 ms, so the two directions of one observed run cannot
+  // be told apart by position. Alpha is a project tab, so the second line is what the first is held
+  // to. Then the same trips under a renderer profile, into $D/manager-switch-renderer.cpuprofile.
+  'manager-switch': (rounds = '10') => withInstance(demo, {}, async ({ page }) => {
+    const samples = { 'to-manager': [], 'to-alpha': [] };
+    for (let round = 0; round < Number(rounds); round++) {
+      samples['to-manager'].push(await keyToPaint(page, ['Ctrl+1']));
+      samples['to-alpha'].push(await keyToPaint(page, ['Ctrl+2']));
+    }
+    for (const [step, taken] of Object.entries(samples)) {
+      print(step, { ...spread(taken.map((sample) => sample.inOrder[0] ?? 0)), handler: spread(taken.map((sample) => sample.handler[0] ?? 0)) });
+    }
+    await page.send('Profiler.enable'); await page.send('Profiler.start');
+    await keys(page, ...Array(Number(rounds)).fill(['Ctrl+1', 'Ctrl+2']).flat());
+    writeFileSync(path.join(demo, 'manager-switch-renderer.cpuprofile'), JSON.stringify((await page.send('Profiler.stop')).profile));
   }),
 
   // Messages and bytes per IPC channel, both ways, with four workers streaming 200 lines a second.
