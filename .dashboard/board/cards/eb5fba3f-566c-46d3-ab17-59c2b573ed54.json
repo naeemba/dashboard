@@ -5,13 +5,13 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-09T12:52:40.233Z",
-  "updatedAt": "2026-11-16T09:30:51.210Z",
+  "updatedAt": "2026-11-16T09:30:58.164Z",
   "comments": [
     {
       "at": "2026-11-16T09:30:51.210Z",
       "body": "From main-dashboard: the PR description says 'Closes #259' (GitHub issue #259). Run the checks, including pnpm typecheck and a Windows-safe test (path.join, or a win32 guard). Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 40
+  "column": "Ship",
+  "order": 0
 }
