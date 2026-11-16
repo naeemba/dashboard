@@ -5,7 +5,14 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-05T16:29:23.491Z",
-  "updatedAt": "2026-11-05T16:29:23.491Z",
-  "column": "Backlog",
-  "order": 32
+  "updatedAt": "2026-11-16T11:31:45.814Z",
+  "branch": "worker-screens-the-working-line-kept-counti",
+  "comments": [
+    {
+      "at": "2026-11-16T11:31:39.350Z",
+      "body": "From main-dashboard: build the fix at the root, with a test for the decision. Tests must be Windows-safe (path.join, or a win32 guard). Run pnpm test, typecheck and lint. If the card references a GitHub issue, the PR says 'Closes #N'. Do not bump the version."
+    }
+  ],
+  "column": "Doing",
+  "order": 2
 }

@@ -1,0 +1,11 @@
+{
+  "id": "80499127-6541-441d-96db-8bccc4828a83",
+  "title": "board command crashes with EPIPE when its output is cut off (| head)",
+  "notes": "Seen 2026-11-16: `board list | head` and `board show <id> | head` throw an unhandled 'write EPIPE' with a Node stack trace (board-cli-entry.js). A closed stdout should end the command quietly with exit 0, like any Unix tool. Handle EPIPE on stdout in board-cli-entry.ts, check the pane/session command entries for the same bug, and add a test. Do not bump the version.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-16T11:32:09.992Z",
+  "updatedAt": "2026-11-16T11:32:09.992Z",
+  "column": "Backlog",
+  "order": 45
+}
