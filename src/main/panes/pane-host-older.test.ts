@@ -1,7 +1,7 @@
 import net from 'node:net';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { endOlderHost } from './pane-host-client';
+import { endOlderHost, paneHost } from './pane-host-client';
 import { olderHostSockets, paneHostAddress, paneKey, pipeName, prepareHostSocket } from './pane-host-protocol';
 import { acceptApps } from './host-socket';
 import { paneHostServer } from './pane-host-server';
@@ -34,7 +34,11 @@ describe('endOlderHost', () => {
       pid: 1, process: 'zsh', cols: 80, rows: 24, kill: () => killed.push(request.key),
       write: () => undefined, resize: () => undefined, pause: () => undefined, resume: () => undefined, onData: () => undefined, onExit: () => undefined,
     }) as PaneShell, () => undefined);
-    for (const index of [1, 2]) host.receive({ type: 'spawn', key: paneKey('/work', index), file: 'zsh', args: [], cwd: '/work', env: {}, cols: 80, rows: 24 });
+    // The first runs in a systemd scope, the second without one.
+    for (const index of [1, 2]) {
+      const scope = index === 1 ? { file: 'systemd-run', args: [], unit: 'agent-x.scope' } : undefined;
+      host.receive({ type: 'spawn', key: paneKey('/work', index), file: 'zsh', args: [], cwd: '/work', env: {}, cols: 80, rows: 24, scope });
+    }
     const accept = acceptApps(host);
     const listener = net.createServer((socket) => {
       accepted.push(socket);
@@ -49,6 +53,17 @@ describe('endOlderHost', () => {
     expect((await endOlderHost(socketPath)).map(({ key }) => key)).toEqual([paneKey('/work', 1), paneKey('/work', 2)]);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(killed).toEqual([paneKey('/work', 1), paneKey('/work', 2)]);
+    listener.close();
+  });
+
+  // What a killed shell detached would otherwise outlive it in its scope.
+  it('stops the scope of each shell it kills, and only those with one', async () => {
+    const { socketPath, killed, listener } = await olderHost();
+    const stopped: string[] = [];
+    paneHost({ socket: null, older: [socketPath], stopScope: (unit) => stopped.push(unit), launch: () => undefined, lost: () => undefined });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(killed).toEqual([paneKey('/work', 1), paneKey('/work', 2)]);
+    expect(stopped).toEqual(['agent-x.scope']);
     listener.close();
   });
 
