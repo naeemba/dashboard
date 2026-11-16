@@ -5,6 +5,7 @@ import { slug } from '../../shared/app/slug';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
+import { reportAsk } from '../../shared/workers/done-report';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -142,7 +143,7 @@ export function workerSettings(id: string): string {
 
 // What a worker is handed, in a terminal or on a Claude screen: the task, and who to tell once it is done.
 export function workerPrompt(prompt: string, dispatcherPath: string): string {
-  return `${prompt}\n\nSendMessage to ${mainSessionName(dispatcherPath)} when done, saying what you did.`;
+  return `${prompt}\n\n${reportAsk(mainSessionName(dispatcherPath))}`;
 }
 
 // What a worker runs under, started or resumed: auto mode, its hooks and the board instructions.

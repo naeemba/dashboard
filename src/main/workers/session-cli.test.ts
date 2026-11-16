@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hookArguments, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, refusedNotifyWords, readsHookInput, stopInputArguments } from './session-cli';
+import { hookArguments, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -77,6 +77,9 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['notify', '2:3', 'running', '--prompt-source', 'user'])).toEqual({
       ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { promptSource: 'user' } },
     });
+    expect(parseSessionCommand(['notify', '2:3', 'running', '--prompt-source', 'user', '--handed', 'yes'])).toEqual({
+      ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { promptSource: 'user', handed: true } },
+    });
     expect(parseSessionCommand(['notify', '2:3', 'running', '--last-message', 'x'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'running' } });
     expect(parseSessionCommand(['notify', '2:3', 'done', '--last-message'])).toMatchObject({ ok: false });
     // A flag a later build's hook grows is read past.
@@ -121,6 +124,9 @@ describe('stopInputArguments', () => {
   it('sends who put a prompt in', () => {
     expect(promptInputArguments(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: 'hi', source: 'user' }))).toEqual(['--prompt-source', 'user']);
     expect(promptInputArguments(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: 'hi' }))).toEqual([]);
+    const handed = 'fix it\n\nSendMessage to main-api when done, saying what you did.';
+    expect(promptInputArguments(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: handed, source: 'sdk' })))
+      .toEqual(['--prompt-source', 'sdk', '--handed', 'yes']);
   });
 
   it('sends nothing for input from an older Claude Code, or none that parses', () => {
@@ -141,13 +147,21 @@ describe('stopInputArguments', () => {
   it('drops the words an older app refuses, and keeps the rest', () => {
     expect(olderNotifyArguments(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0', '--last-message', 'started']))
       .toEqual(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0']);
-    expect(olderNotifyArguments(['notify', '2:3', 'running', '--prompt-source', 'user'])).toEqual(['notify', '2:3', 'running']);
+    expect(olderNotifyArguments(['notify', '2:3', 'running', '--prompt-source', 'user', '--handed', 'yes'])).toEqual(['notify', '2:3', 'running']);
     expect(olderNotifyArguments(['send', '2:3', '--last-message'])).toEqual(['send', '2:3', '--last-message']);
-    // Only a refusal of the words is sent again, in this build's spelling and the one before.
+  });
+
+  it('sends a notify again in older words only for a refusal of its words, and only when they differ', () => {
+    const grown = ['notify', '2:3', 'done', '--last-message', 'started'];
+    const older = olderNotifyArguments(grown);
     const refusal = parseSessionCommand(['notify', '2:3', 'done', '--background', 'two', '--scheduled', '0']);
-    expect(!refusal.ok && refusedNotifyWords(refusal.message)).toBe(true);
-    expect(refusedNotifyWords('session notify takes nothing after its state, except --stop-input after done')).toBe(true);
-    expect(refusedNotifyWords('2:3 is not open')).toBe(false);
+    const wordsRefused = { ok: false, output: refusal.ok ? '' : refusal.message };
+    // This build's spelling and the one before.
+    expect(retriesInOlderWords(wordsRefused, grown, older)).toBe(true);
+    expect(retriesInOlderWords({ ok: false, output: 'session notify takes nothing after its state, except --stop-input after done' }, grown, older)).toBe(true);
+    expect(retriesInOlderWords(wordsRefused, older, older)).toBe(false);
+    expect(retriesInOlderWords({ ok: false, output: '2:3 is not open' }, grown, older)).toBe(false);
+    expect(retriesInOlderWords({ ok: true, output: '' }, grown, older)).toBe(false);
   });
 });
 

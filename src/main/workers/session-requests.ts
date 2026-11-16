@@ -267,9 +267,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // Text main sends an agent is work handed to it (pane.send): listed as main's worker if no run made
   // it one, and at work from now, as its prompt hook will say, so nothing closes it on its last stop.
-  // Handed before it is sent: a screen's prompt hook can fire before the send answers.
   async function send(id: string, slot: number, dispatcherPath: string, text: string): Promise<{ output: string } | Refused> {
-    prompts.handed(id);
     const sent = await ports.send(id, text, dispatcherPath);
     if (isRefused(sent) || !sent.handed) return sent;
     if (!dispatched.has(id)) dispatched.set(id, { dispatcher: slot, about: workerAbout(text) });
@@ -369,7 +367,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
     if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
     if (state === 'running') {
-      prompts.prompted(id, told.promptSource);
+      prompts.prompted(id, told.promptSource, told.handed === true);
       states.delete(id);
     } else states.set(id, { state, waiting });
     if (state === 'done') quietFrom(id, quiet.get(id)?.reportRead ?? false);

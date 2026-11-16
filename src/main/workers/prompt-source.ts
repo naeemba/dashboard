@@ -4,9 +4,10 @@
 // (workers-decision-1). So stop-notices.ts tells main nothing of a turn whose last typed prompt was
 // yours.
 //
-// The prompt hook cannot tell who typed: main's `pane send` types into the pane, or hands a Claude
-// screen its prompt, the way you do. What tells them apart is the app's own record: a typed prompt
-// after main handed the pane work is main's, and one with nothing handed since the last is yours.
+// The prompt hook's source cannot tell who typed: main's `pane send` types into the pane, or hands a
+// Claude screen its prompt, the way you do. What tells them apart is the prompt itself: every one main
+// hands a worker ends with the line asking for a report (asksForReport), whatever order its prompts
+// and yours are submitted in.
 
 // UserPromptSubmit's `source`: `user` from Claude Code's composer, `sdk` from an Agent SDK session, a
 // Claude screen's. Both are a prompt somebody typed or sent. Anything else (`system` for a task
@@ -17,10 +18,8 @@ export function isTyped(source: string | undefined): boolean {
 }
 
 export type PromptSources = {
-  // Main ran the pane's worker or sent it work: the next typed prompt is main's.
-  handed(id: string): void;
-  // The pane's prompt hook fired, with the source it named.
-  prompted(id: string, source: string | undefined): void;
+  // The pane's prompt hook fired, with the source it named and whether the prompt asks for a report.
+  prompted(id: string, source: string | undefined, handed: boolean): void;
   // Whether the last typed prompt in the pane was yours.
   fromUser(id: string): boolean;
   // The pane's worker is gone or started again: the first typed prompt after is the one it was
@@ -29,19 +28,15 @@ export type PromptSources = {
 };
 
 export function promptSources(): PromptSources {
-  // Per pane, once a typed prompt has been seen: whether main handed it work since, and whether the
-  // last typed prompt was yours.
-  const panes = new Map<string, { handed: boolean; fromUser: boolean }>();
+  // Per pane, once a typed prompt has been seen: whether the last typed prompt was yours. The first is
+  // main's even without the line, since a ship's or the review loop's agent is started on a prompt of
+  // its own.
+  const panes = new Map<string, boolean>();
   return {
-    handed(id) {
-      panes.set(id, { handed: true, fromUser: panes.get(id)?.fromUser ?? false });
+    prompted(id, source, handed) {
+      if (isTyped(source)) panes.set(id, panes.has(id) && !handed);
     },
-    prompted(id, source) {
-      if (!isTyped(source)) return;
-      const pane = panes.get(id);
-      panes.set(id, { handed: false, fromUser: pane !== undefined && !pane.handed });
-    },
-    fromUser: (id) => panes.get(id)?.fromUser ?? false,
+    fromUser: (id) => panes.get(id) ?? false,
     forget(id) {
       panes.delete(id);
     },

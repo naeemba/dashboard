@@ -6,7 +6,7 @@ import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
 import type { PaneKind } from '../../shared/panes/pane-kind';
-import { LAST_MESSAGE_KEPT, tail } from '../../shared/workers/done-report';
+import { asksForReport, LAST_MESSAGE_KEPT, tail } from '../../shared/workers/done-report';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -21,9 +21,10 @@ export type SessionCommand =
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold };
 
 // What a worker's hooks say beside its state: a Stop hook its last message, a prompt hook who put the
-// prompt in (UserPromptSubmit's `source`, read by prompt-source.ts). Either is left out by a Claude
-// Code too old to send it.
-export type HookTold = { lastMessage?: string; promptSource?: string };
+// prompt in (UserPromptSubmit's `source`) and whether the prompt is one main handed the worker, ending
+// with the line asking for a report (both read by prompt-source.ts). Each is left out by a Claude Code
+// too old to send it.
+export type HookTold = { lastMessage?: string; promptSource?: string; handed?: boolean };
 
 // What goes over the socket and what comes back. The folder is where the command was run, which is how
 // main tells which project is asking; a worker's hook runs in its worktree and is found the same way.
@@ -102,16 +103,24 @@ const COUNT = /^\d+$/;
 // How every build since the counts opens its refusal of a notify's words, this one's included.
 const NOTIFY_WORDS_REFUSED = 'session notify takes nothing after its state';
 
-// Whether the app refused a notify for its words, not for the pane or for being unreachable: only
-// then is it sent again in an older app's words (session-socket.ts).
-export function refusedNotifyWords(output: string): boolean {
-  return output.startsWith(NOTIFY_WORDS_REFUSED);
+// The words a notify grew after the counts, which an app from before them refuses.
+const LAST_MESSAGE_FLAG = '--last-message';
+const PROMPT_SOURCE_FLAG = '--prompt-source';
+const HANDED_FLAG = '--handed';
+const GROWN_FLAGS = [LAST_MESSAGE_FLAG, PROMPT_SOURCE_FLAG, HANDED_FLAG];
+
+// Whether a refused notify is sent again in an older app's words (session-socket.ts): only when the
+// app refused it for its words, not for the pane or for being unreachable, and only when the older
+// words differ, or the same refusal comes back twice.
+export function retriesInOlderWords(reply: SessionReply, commandArguments: readonly string[], older: readonly string[]): boolean {
+  return !reply.ok && older.length !== commandArguments.length && reply.output.startsWith(NOTIFY_WORDS_REFUSED);
 }
 
 // What a notify says after its state, as flag and value pairs. Every pair is optional, so a hook of any
 // build is still heard: no counts is a Stop hook that said nothing, which the app gives the grace
 // period. A flag this build does not know is read past, so a hook that grows one never needs the
-// command's retry in an older app's words again (workers-decision-4).
+// command's retry in an older app's words again, as long as the flag takes a value: an odd number of
+// words is refused (workers-decision-4).
 function parseNotify(id: string, state: WorkerState, words: readonly string[]): Parsed {
   const flags = new Map<string, string>();
   for (let at = 0; at < words.length; at += 2) flags.set(words[at], words[at + 1] ?? '');
@@ -122,10 +131,11 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
     return refuse(`${NOTIFY_WORDS_REFUSED}, except --prompt-input after running and --stop-input after done`);
   }
   const told: HookTold = {};
-  const lastMessage = flags.get('--last-message');
-  const promptSource = flags.get('--prompt-source');
+  const lastMessage = flags.get(LAST_MESSAGE_FLAG);
+  const promptSource = flags.get(PROMPT_SOURCE_FLAG);
   if (lastMessage !== undefined && state === 'done') told.lastMessage = lastMessage;
   if (promptSource !== undefined && state === 'running') told.promptSource = promptSource;
+  if (flags.get(HANDED_FLAG) === 'yes' && state === 'running') told.handed = true;
   const command: SessionCommand = { kind: 'notify', id, state };
   if (counts) command.waiting = { background: Number(background), scheduled: Number(scheduled) };
   if (Object.keys(told).length > 0) command.told = told;
@@ -154,19 +164,22 @@ function parsedInput(input: string): unknown {
 // lacks either list, an older Claude Code, so the app falls back to its grace period.
 export function stopInputArguments(input: string): string[] {
   const parsed = parsedInput(input);
-  // Cut here too, so a long final message is not sent whole only for the app to keep its end.
   const waiting = stopWaiting(parsed);
   const { lastMessage } = hookTold(parsed);
   return [
     ...(waiting === undefined ? [] : ['--background', String(waiting.background), '--scheduled', String(waiting.scheduled)]),
-    ...(lastMessage === undefined ? [] : ['--last-message', tail(lastMessage, LAST_MESSAGE_KEPT)]),
+    // Cut here too, so a long final message is not sent whole only for the app to keep its end.
+    ...(lastMessage === undefined ? [] : [LAST_MESSAGE_FLAG, tail(lastMessage, LAST_MESSAGE_KEPT)]),
   ];
 }
 
 // A prompt hook's input: the arguments the app is sent in place of --prompt-input.
 export function promptInputArguments(input: string): string[] {
-  const { promptSource } = hookTold(parsedInput(input));
-  return promptSource === undefined ? [] : ['--prompt-source', promptSource];
+  const { promptSource, handed } = hookTold(parsedInput(input));
+  return [
+    ...(promptSource === undefined ? [] : [PROMPT_SOURCE_FLAG, promptSource]),
+    ...(handed === true ? [HANDED_FLAG, 'yes'] : []),
+  ];
 }
 
 // What a Stop hook's input says its session still waits on, or undefined when it lacks either list.
@@ -179,13 +192,14 @@ export function stopWaiting(input: unknown): StopWaiting | undefined {
 }
 
 // What a Stop or prompt hook's input says beside the counts. Claude Code calls them
-// `last_assistant_message` and `source`.
+// `last_assistant_message`, `source` and `prompt`.
 export function hookTold(input: unknown): HookTold {
   if (!isRecord(input)) return {};
-  const { last_assistant_message: lastMessage, source: promptSource } = input;
+  const { last_assistant_message: lastMessage, source: promptSource, prompt } = input;
   return {
     ...(typeof lastMessage === 'string' && lastMessage !== '' && { lastMessage }),
     ...(typeof promptSource === 'string' && { promptSource }),
+    ...(typeof prompt === 'string' && asksForReport(prompt) && { handed: true }),
   };
 }
 
@@ -197,14 +211,14 @@ export function hookArguments(given: readonly string[], input: string | undefine
   return [...given.slice(0, 3), ...(given[2] === 'done' ? stopInputArguments(input) : promptInputArguments(input))];
 }
 
-// The words an app from before the last message and the prompt source takes for the same notify. A
+// The words an app from before the last message, the prompt source and the handoff takes for the same notify. A
 // rebuild swaps the command under an app still running the old build, which refuses those words, and
 // the pane would stay `running` with its main never told until the restart (workers-decision-4).
 export function olderNotifyArguments(commandArguments: readonly string[]): string[] {
   if (commandArguments[0] !== 'notify') return [...commandArguments];
   const older: string[] = [];
   for (let at = 0; at < commandArguments.length; at++) {
-    if (commandArguments[at] === '--last-message' || commandArguments[at] === '--prompt-source') at++;
+    if (GROWN_FLAGS.includes(commandArguments[at])) at++;
     else older.push(commandArguments[at]);
   }
   return older;

@@ -132,10 +132,14 @@ Whose turn it is comes from UserPromptSubmit's `source` (the SDK's `UserPromptSu
 `user` from Claude Code's composer, `sdk` from an Agent SDK session, `system` for a task notification
 or a peer's message, and the wakeups. `user` and `sdk` are a prompt somebody typed, but main's `pane
 send` types into the pane, or hands a screen its prompt, exactly as you do, so the source alone cannot
-say whose. prompt-source.ts adds the app's own record: a typed prompt after main handed the pane work
-is main's, one with nothing handed since the last is yours, and the first a worker was started or
-resumed on is main's, since a ship's or the review loop's agent is started on its prompt with no send
-behind it. A stop whose last typed prompt was yours is told to nobody; a `system` prompt, the worker
+say whose. The prompt can: every prompt main hands a worker goes through `workerPrompt` and ends with
+the line asking for a report, which the hook input's `prompt` carries, so the command sends `--handed
+yes` when it does (`asksForReport`). prompt-source.ts counts a typed prompt with that line as main's and
+one without as yours, whatever order they are submitted in: two sends queued behind a turn, or yours
+typed while main's waits, are each told apart. A first version kept a flag set by each send and
+cleared by the next typed prompt, which read the second of two queued sends as yours. The first prompt
+a worker was started or resumed on is main's with or without the line, since a ship's or the review
+loop's agent is started on its own prompt with no send behind it. A stop whose last typed prompt was yours is told to nobody; a `system` prompt, the worker
 waking on its own background work, leaves the turn whose it was. A source the hook does not name, an
 older Claude Code, decides nothing, so its stops are told as before.
 
@@ -252,8 +256,9 @@ one exception, let through from any build: it is what a worker's hooks send, a r
 hook log nobody reads, and the worker would stay `running` with its main never told. Its words only
 grow after the state, an unknown state is still refused by the parser, and a notify an older app
 refuses for words it does not know is sent again in the words it does (`olderNotifyArguments`),
-only for that refusal. Since the last message, the parser reads past a flag it does not know, so the
-retry is for apps from before it.
+only for that refusal (`retriesInOlderWords`). Since the last message, the parser reads past a flag it
+does not know, so the retry is for apps from before it, as long as every flag a hook grows takes a
+value: the parser reads the words in pairs and refuses an odd number of them.
 
 **The app accepts a request before answering it, and only the acceptance is timed.** An app from before
 the stamp cannot refuse anything; it hung waiting for a half close the command no longer sends. So the

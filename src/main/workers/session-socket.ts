@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import { refusedNotifyWords, type SessionReply, type SessionRequest } from './session-cli';
+import { retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
 import { appUserDataFolder, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
@@ -125,7 +125,7 @@ export async function askRunningApp(commandArguments: readonly string[], older: 
   }
   const ask = (args: readonly string[]) => askApp(reached.socket, { directory: process.cwd(), args, version: __BUILD_VERSION__ });
   let reply = await ask(commandArguments);
-  if (!reply.ok && older.length !== commandArguments.length && refusedNotifyWords(reply.output)) reply = await ask(older);
+  if (retriesInOlderWords(reply, commandArguments, older)) reply = await ask(older);
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
 }

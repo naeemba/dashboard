@@ -49,6 +49,16 @@ const DONE_REPORT = new RegExp(`^\\S+ in pane -?\\d+:\\d+ \\(${PANE_ADDRESS.sour
   + `has finished its turn\\. ${escape(IF_REPORTED)})`
   + ` \`pane list\` shows where every worker stands\\.(?: ${escape(LAST_SAID)}.*)?$`);
 
+// The line every prompt main hands a worker ends with (workerPrompt in dispatch.ts), and so what a
+// worker's prompt hook reads to tell main's prompt from one you typed (prompt-source.ts).
+const REPORT_ASKED = ' when done, saying what you did.';
+export const reportAsk = (mainName: string) => `SendMessage to ${mainName}${REPORT_ASKED}`;
+const ASKS_FOR_REPORT = new RegExp(`\\n\\nSendMessage to \\S+${escape(REPORT_ASKED)}\\s*$`);
+
+export function asksForReport(prompt: string): boolean {
+  return ASKS_FOR_REPORT.test(prompt);
+}
+
 // Whether a prompt is one doneReport or closedReport wrote, live or read back from a saved conversation.
 export function isDoneReport(text: string): boolean {
   return DONE_REPORT.test(text);

@@ -45,7 +45,10 @@ describe('a worker\'s turns, as main hears them', () => {
     stop(answer, 'still yours');
     expect(told).toHaveLength(1);
     await answer({ directory: '/work/api', args: ['send', '2:1', 'now merge it'] });
-    answer.notify('2:1', 'running', undefined, { promptSource: 'user' });
+    await answer({ directory: '/work/api', args: ['send', '2:1', 'and rerun the tests'] });
+    // Both sends queued, each submitted with the line asking for a report.
+    answer.notify('2:1', 'running', undefined, { promptSource: 'user', handed: true });
+    answer.notify('2:1', 'running', undefined, { promptSource: 'user', handed: true });
     stop(answer, 'merged');
     expect(told).toHaveLength(2);
     expect(told[1]).toContain('Its last message: merged');

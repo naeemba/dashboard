@@ -7,7 +7,7 @@ import { askRunningApp } from './session-socket';
 // run it: session-cli-entry.ts, the file DASHBOARD_SESSION names, and `dashboard pane`.
 export async function runSessionProgram(given: readonly string[]): Promise<number> {
   // A hook hands its input on stdin. A terminal has none to hand, and reading one would wait for good,
-  // so a --stop-input typed by hand sends no counts.
+  // so a --stop-input or --prompt-input typed by hand sends nothing from the hook.
   const input = readsHookInput(given) && !process.stdin.isTTY ? await readStdin() : undefined;
   const commandArguments = hookArguments(given, input);
   const parsed = parseSessionCommand(commandArguments);
