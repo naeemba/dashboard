@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-09T19:34:48.857Z",
-  "updatedAt": "2026-11-16T12:18:09.113Z",
+  "updatedAt": "2026-11-16T12:18:20.756Z",
   "comments": [
     {
       "at": "2026-11-16T12:03:40.229Z",
@@ -16,6 +16,6 @@
       "body": "Done in #310 (merged)."
     }
   ],
-  "column": "Backlog",
-  "order": 42
+  "column": "Done",
+  "order": 250
 }
