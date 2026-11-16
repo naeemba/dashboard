@@ -182,6 +182,27 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
   });
 
+  // #300 and #313: the worker had stopped when the sweep looked, was back at work when the start looked
+  // again after the board's push, and was then closed by the finished-worker sweep. The card waited in
+  // Review with no review, because the refused start left the sweep's mark on.
+  it('starts the review on a later tick when the start found the agent back at work, after its pane closed', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, intoReview(boardWithCard(12), CARD) as Board);
+    let current = entry;
+    const looks = [false, true];
+    const { ports: made, log } = ports(entry, {
+      worktrees: () => [current],
+      agentWorksIn: (_slot, pane) => pane !== null && (looks.shift() ?? false),
+    });
+    const sweep = sweepWith(made);
+    await sweep.run();
+    expect(log.started).toEqual([]);
+    current = { ...entry, pane: null };
+    await sweep.run();
+    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(columnOfCard(projectPath)).toBe('Review');
+  });
+
   // A review that ended the way it was meant to: the pull request merged and the card in Done, still
   // carrying its number, and the worktree carrying the same one from a base card.follow's board commit
   // came in with. The card's own column is the only thing saying the review already happened — and once

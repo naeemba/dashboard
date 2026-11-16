@@ -289,7 +289,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (entry.reviewing) return;
     // Marked whatever the move goes on to do. With review.autoLoop off the card waits in Review, and
     // unmarked the sweep would move it there again every five seconds; `review` takes the mark off
-    // again for a card that was only early.
+    // again for a card that was only early: its agent back at work, its project closed, or its
+    // worktree dirty.
     //
     // A card a person started by hand that was only early goes back to `review` directly: through
     // card.move it is the sweep's move, and with the loop off that starts nothing, so the review the
@@ -322,8 +323,17 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (entry === undefined) return { refused: `card ${id} has no worktree to review; ship it first` };
     if (entry.reviewing || starting.has(id)) return { refused: `"${entry.title}" is already being reviewed` };
     const slot = ports.slotOf(entry.projectPath);
-    if (slot === -1) return { refused: notOpenRefusal(entry.title) };
-    if (ports.agentWorksIn(slot, entry.pane)) return { refused: `the agent on "${entry.title}" is still working` };
+    const early = slot === -1 ? notOpenRefusal(entry.title)
+      : ports.agentWorksIn(slot, entry.pane) ? `the agent on "${entry.title}" is still working` : null;
+    if (early !== null) {
+      // Only early, as a dirty worktree is, so the mark comes off. The sweep marks the card before its
+      // move, and the move waits on the board's push to origin before it gets here: a worker that
+      // stopped for its background agents and went back to work in those seconds was refused here, the
+      // mark stayed, and the card sat in Review with no review for the rest of the run (#300, #313).
+      // Closing its pane later changed nothing; the mark was what held it.
+      reviewed.delete(id);
+      return { refused: early };
+    }
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };
