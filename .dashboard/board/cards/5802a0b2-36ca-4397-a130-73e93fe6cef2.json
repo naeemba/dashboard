@@ -5,13 +5,14 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T11:45:04.914Z",
-  "updatedAt": "2026-11-16T12:06:31.575Z",
+  "updatedAt": "2026-11-16T12:06:39.885Z",
+  "branch": "a-turn-the-session-starts-by-itself-shows-o",
   "comments": [
     {
       "at": "2026-11-16T12:06:31.575Z",
       "body": "From main-dashboard: #309 (log re-pin) just changed the screen's log; merge origin/main before starting. Tests must be Windows-safe. Run pnpm test, typecheck and lint."
     }
   ],
-  "column": "Backlog",
-  "order": 46
+  "column": "Doing",
+  "order": 0
 }
