@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-09T12:52:40.233Z",
-  "updatedAt": "2026-11-16T09:35:11.018Z",
+  "updatedAt": "2026-11-16T09:45:23.811Z",
   "branch": "the-close-key-on-a-pane-hides-a-scope-pane",
   "pullRequest": 297,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-16T09:35:10.982Z",
       "body": "Pull request #297 opened: pane.close warns in the log when a pane's scope will not stop https://github.com/naeemba/dashboard/pull/297"
+    },
+    {
+      "at": "2026-11-16T09:45:23.811Z",
+      "body": "Review loop on PR #297: converged, ready to merge. 1 round. Main merged in first (13ec6417, board card conflict resolved). Review found 2 findings (low: close.test.ts log assertion via toMatchObject; nit: close.ts comment wrap), both fixed in 6bfb20f7, no re-review after (floor). CI 5/5 passed on head 6bfb20f7."
     }
   ],
   "column": "Review",
