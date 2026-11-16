@@ -19,7 +19,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))
 - What the command and the app agree on before an answer, the build stamp and the acceptance timeout: `app-handshake.ts`
-- When main hears a worker stopped: `stop-notices.ts`, `done-report.ts`
+- When main hears a worker stopped: `stop-notices.ts`, `done-report.ts`, and whose turn it was, `prompt-source.ts`
 - Work sent into a pane reported to the main that sent it: `../actions/pane/send.ts`, `../actions/pane/dispatch.ts` (workers-decision-1)
 - Finished workers closed by the app: `auto-release.ts`, the sweep in `session-requests.ts`, the keyboard's pane from `../app/session-store.ts` (workers-decision-1)
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
@@ -44,6 +44,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a worker waiting on its own background work, when its turn ends with a background task in flight or a wakeup scheduled, then main is told nothing, and `pane list` says `paused, waiting on 2 background tasks` and the workers popup `waiting on 2 background tasks`; its next stop decides again, and a pause that lasts 30 minutes is told to main once.
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks` or `session_crons`, when its turn ends, then main is told only once it has stayed out of `running` for three minutes, as before them (workers-decision-1).
 - Given a worker that sent main a report, when its turn ends, then main is told nothing more.
+- Given a worker whose Stop hook input has `last_assistant_message`, when main is told it stopped, then the notice ends `Its last message: ` and the message's last 600 characters on one line, and `pane report <id>` prints the pane's line from `pane list` and the message's last 4000 characters, kept while the worker works again and dropped when the pane is run again or released (workers-decision-1).
+- Given main's worker in a pane, when you type a prompt into it yourself and its turn ends, then main is told nothing of that stop, nor of the turns its own background work wakes it for after, until main sends it work with `pane send` and that prompt is submitted, however many of either are queued; the first prompt a worker was started or resumed on counts as main's (workers-decision-1).
+- Given a rebuild swapped the command under an app still running the old build, when a worker's Stop hook sends its last message, then the old app's refusal is answered by sending the notify again without it, and the pane still goes green.
 - Given main is mid-turn when a worker reports and stops, when the notice was queued before main reads the report, then the notice is taken back out of main's queue.
 - Given main is mid-turn when a worker's notice comes due, when that turn read the worker's report, then main is told nothing, and when it did not, main is told once the turn ends, or, for a turn held open by main's background work, once the turn has run 30 minutes; a notice due after that is queued behind the turn.
 - Given a worker reported and stopped, when main releases it in the turn that read the report and the notice was queued meanwhile, then the notice is taken back and main is told nothing of that worker afterwards, nor of a hook it fires late into a new worker at the same number.

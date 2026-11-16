@@ -5,6 +5,7 @@ import { slug } from '../../shared/app/slug';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
+import { reportAsk } from '../../shared/workers/done-report';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -91,6 +92,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     ...runUsage,
     '  list [--all]           every pane, and whether its worker is running, blocked or done;',
     '                         --all across every open project',
+    '  report <id>            a worker\'s line from list and the last message it ended a turn with',
     '  release <id>           close a worker\'s pane now, before the app would',
     '',
     'A card task takes --card: it runs in the worktree the board made when the card moved to Ship. Any'
@@ -99,8 +101,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' reads this checkout.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
-      + " worker stops with nothing left running and has not written, the app tells you so; `list` says done the moment"
-      + ' its turn ends, or paused while it waits on its own background work.',
+      + " worker stops with nothing left running and has not written, the app tells you so, with the end of its"
+      + ' last message; `list` says done the moment its turn ends, or paused while it waits on its own background'
+      + ' work. A turn the user typed into a worker is theirs, and you are told nothing of it. Read a worker\'s'
+      + ' state with `report`, never its session log.',
     '',
     'The app closes a finished worker\'s pane itself: once its card is Done or Cancelled, or once you'
       + ' have read its report and sent it nothing for a while. Text you `send` an agent tells it to'
@@ -117,6 +121,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
 // runs, which the hook's input tells apart (stop-notices.ts). permission_prompt is the one Notification
 // that needs a person; the app marks the pane and raises a banner. A prompt submitted, or a tool that
 // has run (so any permission was granted), is the worker back at work, which takes either mark off.
+// The prompt hook's input says who put the prompt in, which tells main's turns from yours
+// (prompt-source.ts).
 // None of them reads the pane's screen. PreToolUse is the board guard (board-guard.ts).
 export function workerSettings(id: string): string {
   const notify = (state: string) => ({ type: 'command', command: `node "$DASHBOARD_SESSION" notify ${id} ${state}` });
@@ -128,7 +134,7 @@ export function workerSettings(id: string): string {
     hooks: {
       Stop: [{ hooks: [notify('done --stop-input')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
-      UserPromptSubmit: [{ hooks: [notify('running')] }],
+      UserPromptSubmit: [{ hooks: [notify('running --prompt-input')] }],
       PostToolUse: [{ hooks: [notify('running')] }],
       ...APP_SESSION_SETTINGS.hooks,
     },
@@ -137,7 +143,7 @@ export function workerSettings(id: string): string {
 
 // What a worker is handed, in a terminal or on a Claude screen: the task, and who to tell once it is done.
 export function workerPrompt(prompt: string, dispatcherPath: string): string {
-  return `${prompt}\n\nSendMessage to ${mainSessionName(dispatcherPath)} when done, saying what you did.`;
+  return `${prompt}\n\n${reportAsk(mainSessionName(dispatcherPath))}`;
 }
 
 // What a worker runs under, started or resumed: auto mode, its hooks and the board instructions.

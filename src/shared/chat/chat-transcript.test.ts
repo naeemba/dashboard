@@ -243,6 +243,9 @@ describe('applyMessage', () => {
     const paused = doneReport('api-terminal-2', '2:1', true);
     expect(paused).toContain('paused for 30 minutes');
     expect(prompted(paused).entries).toEqual([{ kind: 'notice', text: paused }]);
+    const said = doneReport('api-terminal-2', '2:1', false, `${'x'.repeat(700)}\n\nOpened #12.`);
+    expect(said).toMatch(/Its last message: …x+ Opened #12\.$/);
+    expect(prompted(said).entries).toEqual([{ kind: 'notice', text: said }]);
     const closed = closedReport('api-terminal-2', '2:1', 'card done');
     expect(prompted(closed).entries).toEqual([{ kind: 'notice', text: closed }]);
     const saved = 'api-terminal-2 in pane 2:1 (dashboard://pane/2:1) has finished its turn. If it sent you a report, that says what it did;'

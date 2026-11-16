@@ -8,7 +8,7 @@ import { screenKey } from '../../shared/workers/screen-key';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { replaceFile } from '../app/replace-file';
 import type { ScreenSession } from '../chat/chat-sessions';
-import { stopWaiting } from './session-cli';
+import { hookTold, stopWaiting, type HookTold } from './session-cli';
 import type { ScreenHost } from './screen-host-client';
 import { screenOwner } from './screen-owner';
 
@@ -48,7 +48,7 @@ export type ScreenPorts = {
   start(key: number): void;
   // Where the sessions run, and which ones it kept through the restart (screen-host-client.ts).
   host: ScreenHost;
-  notify(id: string, state: WorkerState, waiting?: StopWaiting): void;
+  notify(id: string, state: WorkerState, waiting?: StopWaiting, told?: HookTold): void;
   // A new conversation id for the project, in the session index the drawer lists as a screen's.
   newSession(projectPath: string, directory: string, card: string | null, kind: 'screen'): string;
   // A conversation picked in a screen's /resume, which the next resume of it opens on a screen.
@@ -103,23 +103,23 @@ export function screenWorkers(ports: ScreenPorts) {
 
   // The worker's hooks, beside whatever the user's settings hold, saying what a terminal worker's
   // workerSettings hooks say. A permission prompt is the screen's ask, which screenSignal reads.
-  function report(id: string, state: WorkerState, waiting?: StopWaiting): void {
+  function report(id: string, state: WorkerState, waiting?: StopWaiting, told?: HookTold): void {
     const worker = live.get(id);
     if (worker) worker.done = state === 'done';
-    ports.notify(id, state, waiting);
+    ports.notify(id, state, waiting, told);
   }
 
   // Heard only while the pane is still this worker's (`saved` is one per worker): a hook of one released
   // a moment ago, landing after the next worker started at the same number, would read as that one's stop.
   function hooks(id: string, saved: Saved): Options['hooks'] {
     const mine = () => live.get(id)?.saved === saved;
-    const reporting = (state: WorkerState): HookCallbackMatcher[] => [{ hooks: [async () => {
-      if (mine()) report(id, state);
+    const reporting = (state: WorkerState): HookCallbackMatcher[] => [{ hooks: [async (input) => {
+      if (mine()) report(id, state, undefined, hookTold(input));
       return {};
     }] }];
     return {
       Stop: [{ hooks: [async (input) => {
-        if (mine()) report(id, 'done', stopWaiting(input));
+        if (mine()) report(id, 'done', stopWaiting(input), hookTold(input));
         return {};
       }] }],
       UserPromptSubmit: reporting('running'),

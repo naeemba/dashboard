@@ -4,10 +4,22 @@ import { PANE_ADDRESS, paneLink } from './pane-link';
 // reporting (stop-notices.ts). The hook knows nothing of what the worker did, so it names the worker
 // and where to look. Main reads it as a prompt; the Claude screen draws it as a status line, since
 // nobody typed it. A worker still paused on its own background work at the ceiling has not stopped,
-// and saying so would invite main to release it and kill the work it waits on.
-export function doneReport(name: string, id: string, paused = false): string {
+// and saying so would invite main to release it and kill the work it waits on. The tail of the last
+// message the worker ended a turn with says what it got to, so main need not read its session log;
+// `pane report` prints more of it.
+export function doneReport(name: string, id: string, paused = false, lastMessage?: string): string {
   const what = paused ? PAUSED : STOPPED;
-  return `${name} in pane ${id} (${paneLink(id)}) ${what} \`pane list\` shows where every worker stands.`;
+  const said = lastMessage === undefined ? '' : ` ${LAST_SAID}${tail(lastMessage.replace(/\s+/g, ' ').trim(), NOTICE_TAIL)}`;
+  return `${name} in pane ${id} (${paneLink(id)}) ${what} \`pane list\` shows where every worker stands.${said}`;
+}
+
+// How much of a worker's last message the app keeps for `pane report`, and how much a notice carries:
+// the end of a message is where a worker says what it did.
+export const LAST_MESSAGE_KEPT = 4000;
+const NOTICE_TAIL = 600;
+
+export function tail(text: string, characters: number): string {
+  return text.length <= characters ? text : `…${text.slice(-characters)}`;
 }
 
 // What main is told about a worker the app closed (auto-release.ts) before main read a report from it:
@@ -24,6 +36,7 @@ export const PAUSE_CEILING_MS = 30 * 60 * 1000;
 
 const UNREPORTED = 'without sending you a report.';
 const IF_REPORTED = 'If it sent you a report, that says what it did;';
+const LAST_SAID = 'Its last message: ';
 const STOPPED = `has stopped ${UNREPORTED}`;
 const PAUSED = `has been paused for ${PAUSE_CEILING_MS / 60_000} minutes, waiting on its own background work, ${UNREPORTED}`;
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -34,7 +47,20 @@ const DONE_REPORT = new RegExp(`^\\S+ in pane -?\\d+:\\d+ \\(${PANE_ADDRESS.sour
   + `(?:${escape(STOPPED)}|${escape(PAUSED)}|`
   + `was closed by the app, [^,]+\\. ${escape(IF_REPORTED)}|`
   + `has finished its turn\\. ${escape(IF_REPORTED)})`
-  + ' `pane list` shows where every worker stands\\.$');
+  + ` \`pane list\` shows where every worker stands\\.(?: ${escape(LAST_SAID)}.*)?$`);
+
+// The line every prompt main hands a worker ends with (workerPrompt in dispatch.ts), and so what a
+// worker's prompt hook reads to tell main's prompt from one you typed (prompt-source.ts). It is
+// matched on a line of its own anywhere in the prompt, not only at the end: queued prompts may reach
+// the hook joined into one, with yours after main's, and a main's prompt read as yours leaves main
+// waiting on a worker that finished, while the other mistake costs one extra notice.
+const REPORT_ASKED = ' when done, saying what you did.';
+export const reportAsk = (mainName: string) => `SendMessage to ${mainName}${REPORT_ASKED}`;
+const ASKS_FOR_REPORT = new RegExp(`(?:^|\\n)[ \\t]*SendMessage to \\S+${escape(REPORT_ASKED)}[ \\t]*(?:\\r?\\n|$)`);
+
+export function asksForReport(prompt: string): boolean {
+  return ASKS_FOR_REPORT.test(prompt);
+}
 
 // Whether a prompt is one doneReport or closedReport wrote, live or read back from a saved conversation.
 export function isDoneReport(text: string): boolean {

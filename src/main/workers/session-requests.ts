@@ -3,13 +3,14 @@ import { failureText } from '../../shared/errors/failure';
 import { worktreesRoot } from '../ship/ship';
 import { ranInProject } from '../../shared/usage/usage';
 import type { ProjectNamed } from '../projects/project-named';
-import { answered, namesItsTarget, parseSessionCommand, refused, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
+import { answered, namesItsTarget, parseSessionCommand, refused, type HookTold, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { closedReport, doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
+import { closedReport, doneReport, LAST_MESSAGE_KEPT, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
+import { promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
 import { paneClaim } from '../actions/pane/claim';
@@ -117,7 +118,7 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // notice due in between waits for the end, so the report that turn read drops it.
   mainTurn(slot: number, running: boolean): void;
   // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
-  notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply;
+  notify(id: string, state: WorkerState, waiting?: StopWaiting, told?: HookTold): SessionReply;
   // Every finished worker pane released, each for the reason auto-release.ts gives. Run on a timer.
   closeFinished(): Promise<void>;
 };
@@ -158,12 +159,23 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // notice is held no longer than the turn's ceiling, whenever it came due.
   const busyMains = new Map<number, { overCeiling: boolean; stop: () => void }>();
   const midTurn = (slot: number) => busyMains.get(slot)?.overCeiling === false;
+  // The last message each worker ended a turn with, its tail, for its notice and `pane report`. Kept
+  // while it works again, so a report still says what it got to; gone with the worker.
+  const lastMessages = new Map<string, string>();
+  const prompts = promptSources();
+  // Every time a worker is let go of: its stop, its last message and whose turn it was on.
+  const forgetWorker = (id: string) => {
+    notices.forget(id);
+    lastMessages.delete(id);
+    prompts.forget(id);
+  };
   const notices = stopNotices({
     midTurn: (id) => midTurn(mainOf(id)),
+    // Not for a turn you typed into the worker yourself (prompt-source.ts).
     notice(id, paused) {
-      if (!mainsWorker(id)) return;
+      if (!mainsWorker(id) || prompts.fromUser(id)) return;
       const slot = mainOf(id);
-      const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused));
+      const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused, lastMessages.get(id)));
       return () => ports.withdraw(slot, messageId);
     },
   });
@@ -228,7 +240,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     const { index } = paneFromId(id);
     states.delete(id);
-    notices.forget(id);
+    forgetWorker(id);
     const started = await ports.startWorker(id, { directory, prompt, as, cardId: card, dispatcherPath });
     if (isRefused(started)) return refused(started.refused);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
@@ -243,7 +255,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     mainsWorker,
     forget(id) {
       states.delete(id);
-      notices.forget(id);
+      forgetWorker(id);
       dispatchers.delete(id);
       dispatched.delete(id);
       quiet.delete(id);
@@ -310,11 +322,20 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return refusal === null ? sessionReply(await act()) : refused(refusal);
   }
 
+  function paneLine(id: string, prefix = ''): string {
+    return `${prefix}${id}\t${paneLabel(paneFromId(id).index)}\t${stateOf(id)}\t${ports.directoryOf(id) ?? ''}`;
+  }
+
   function paneLines(slot: number, prefix: string): string[] {
-    return ports.openPanes(slot).map((index) => {
-      const id = terminalId(slot, index);
-      return `${prefix}${id}\t${paneLabel(index)}\t${stateOf(id)}\t${ports.directoryOf(id) ?? ''}`;
-    });
+    return ports.openPanes(slot).map((index) => paneLine(terminalId(slot, index), prefix));
+  }
+
+  // A worker's line from list and the last message it ended a turn with, so main learns what a worker
+  // got to without reading its session log by hand.
+  function report(id: string, slot: number): SessionReply {
+    const refusal = worker(id, slot);
+    if (refusal !== null) return refused(refusal);
+    return answered(`${paneLine(id)}\n\n${lastMessages.get(id) ?? 'It has not ended a turn since it was started.'}`);
   }
 
   // --all puts the project's name first on each line, so the lines of two projects tell apart.
@@ -341,11 +362,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }
 
   // The hooks report from wherever their worker stands, so a pane id is all a notify needs.
-  function notify(id: string, state: WorkerState, waiting?: StopWaiting): SessionReply {
+  function notify(id: string, state: WorkerState, waiting?: StopWaiting, told: HookTold = {}): SessionReply {
     const { slot, index } = paneFromId(id);
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
-    if (state === 'running') states.delete(id);
-    else states.set(id, { state, waiting });
+    if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
+    if (state === 'running') {
+      prompts.prompted(id, told.promptSource, told.handed === true);
+      states.delete(id);
+    } else states.set(id, { state, waiting });
     if (state === 'done') quietFrom(id, quiet.get(id)?.reportRead ?? false);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
@@ -356,7 +380,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const parsed = parseSessionCommand(request.args);
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
-    if (command.kind === 'notify') return notify(command.id, command.state, command.waiting);
+    if (command.kind === 'notify') return notify(command.id, command.state, command.waiting, command.told);
     const folderSlot = ports.slotOf(request.directory);
     const slot = askingSlot(command, folderSlot);
     // From outside every project only words that name their target are answered: a claim --project
@@ -374,6 +398,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'send': return await onWorker(command.id, slot, () => send(command.id, slot, projectPath ?? '', command.text));
         case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, command.as);
         case 'release': return await onWorker(command.id, slot, () => release.call({ id: command.id }));
+        case 'report': return report(command.id, slot);
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
@@ -382,7 +407,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     workers,
     notify,
     closeFinished,
-    forget: (id: string) => { dispatched.delete(id); quiet.delete(id); notices.forget(id); },
+    forget: (id: string) => { dispatched.delete(id); quiet.delete(id); forgetWorker(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two
     // projects in folders of one name give their workers one name.
