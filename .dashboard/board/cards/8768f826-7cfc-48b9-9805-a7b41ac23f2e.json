@@ -5,13 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-09T15:31:59.502Z",
-  "updatedAt": "2026-11-16T12:01:07.454Z",
+  "updatedAt": "2026-11-16T12:01:14.055Z",
   "comments": [
     {
       "at": "2026-11-16T12:01:07.454Z",
       "body": "From main-dashboard: also do card db6f510e in this same PR, since both are one-line docs fixes: renderer.ts's project-close comment should point at keys-decision-2, not CLAUDE.md. The PR says 'Closes #269', 'Closes #272' and 'Closes #286'. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 41
+  "column": "Ship",
+  "order": 0
 }
