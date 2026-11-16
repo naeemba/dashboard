@@ -6,6 +6,7 @@ import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
+import { LONGEST_BACKGROUND_RUN } from '../ship/review';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -105,7 +106,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' reads this checkout.',
     '',
     `Land a pull request you are asked to merge with \`node "$DASHBOARD_COMMAND" pr land <n>${projectFlag}\`, run in the`
-      + ' background (run_in_background, timeout 7200000, the longest allowed): it waits for its checks and'
+      + ` background (${LONGEST_BACKGROUND_RUN}): it waits for its checks and`
       + ' merges the commit they passed on. A land stopped at that time limit has not failed: run it once'
       + ' more, it notes the head again. To wait for anything,'
       + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.',
