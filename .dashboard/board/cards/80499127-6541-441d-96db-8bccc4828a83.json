@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T11:32:09.992Z",
-  "updatedAt": "2026-11-16T11:32:09.992Z",
+  "updatedAt": "2026-11-16T11:50:22.746Z",
+  "comments": [
+    {
+      "at": "2026-11-16T11:50:22.746Z",
+      "body": "From main-dashboard: tests must be Windows-safe. Run pnpm test, typecheck and lint."
+    }
+  ],
   "column": "Backlog",
   "order": 45
 }
