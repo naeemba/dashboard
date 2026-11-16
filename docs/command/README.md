@@ -21,8 +21,10 @@ then runs `gh pr merge --merge --match-head-commit <sha>`. No checks reported is
 asked once more a minute later, and a repository that still has none is merged.
 A merge call that fails is read back from the pull request: merged at the
 noted commit is reported merged (the merge went through and only gh's answer
-was lost), and a network error is tried once more. A network error on the
-wait is watched once more, not read as a failed check. A failed check or a refused
+was lost), and a network error is tried once more five seconds on. A network
+error on the wait is watched once more five seconds on, not read as a failed
+check. A second network error says gh's answer was lost, never that a check
+failed or the merge was refused. A failed check or a refused
 merge exits 1 and merges nothing. The wait is as long as CI takes: main runs it in the background at the longest
 timeout, and runs it again if that limit stops it. A flag where the pull request
 goes (`pr land --help`) never reaches gh as the pull request. It is a merge by

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type GitHubAnswer, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE } from './pull-request-cli';
+import { type GitHubAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, RETRY_WAIT_MS } from './pull-request-cli';
 
 // A gh that answers each command's first two words from the table, in order when a row has several.
 function fakeGitHub(answers: Record<string, GitHubAnswer[]>) {
@@ -68,10 +68,11 @@ describe('landPullRequest', () => {
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123' });
   });
 
-  it('says a check failed only after a second lost wait', async () => {
+  it('says the answer was lost, not that a check failed, after a second lost wait', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: lostAnswer }, { ok: false, output: lostAnswer }] });
-    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining(lostAnswer) });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `lost gh's answer twice waiting on the checks of 12; nothing is merged, run it again\n\n${lostAnswer}` });
     expect(merges(github)).toBe(0);
+    expect(github.waited).toEqual([RETRY_WAIT_MS]);
   });
 
   // A push during the wait moves the head off the noted commit, and GitHub refuses the merge.
@@ -96,8 +97,9 @@ describe('landPullRequest', () => {
 
   it('stops after the second network error', async () => {
     const github = fakeGitHub({ 'pr view': [open, open, open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }, { ok: false, output: lostAnswer }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `gh refused to merge 12 at abc123: ${lostAnswer}` });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `lost gh's answer merging 12 at abc123; it may have merged, check before running it again: ${lostAnswer}` });
     expect(merges(github)).toBe(2);
+    expect(github.waited).toEqual([RETRY_WAIT_MS]);
   });
 
   // Merged at another commit is not the commit whose checks passed.
@@ -110,5 +112,28 @@ describe('landPullRequest', () => {
     const github = fakeGitHub({ 'pr view': [{ ok: true, output: 'MERGED abc123' }] });
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'pull request 12 is merged, not open' });
     expect(github.asked).toHaveLength(1);
+  });
+});
+
+describe('isNetworkError', () => {
+  // Real gh lines: a lost request or answer is tried again, a refusal never.
+  it.each([
+    ['Post "https://api.github.com/graphql": unexpected EOF', true],
+    ['Get "https://api.github.com/repos/o/r": dial tcp: lookup api.github.com: no such host', true],
+    ['read tcp 10.0.0.2:5123->140.82.112.6:443: read: connection reset by peer', true],
+    ['dial tcp 140.82.112.6:443: connect: connection refused', true],
+    ['dial tcp 140.82.112.6:443: i/o timeout', true],
+    ['net/http: TLS handshake timeout', true],
+    ['HTTP 502: Bad Gateway (https://api.github.com/graphql)', true],
+    ['GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)', false],
+    ['HTTP 422: Validation Failed (https://api.github.com/repos/o/r/pulls/12/merge)', false],
+    ['Pull request o/r#12 is not mergeable: the merge commit cannot be cleanly created.', false],
+    ['test\tfail', false],
+  ])('%s → %s', (output, expected) => {
+    expect(isNetworkError({ ok: false, output })).toBe(expected);
+  });
+
+  it('is never a call that succeeded', () => {
+    expect(isNetworkError({ ok: true, output: 'Post "https://api.github.com/graphql": unexpected EOF' })).toBe(false);
   });
 });
