@@ -171,6 +171,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       unfilled.get(each.target)?.();
       unfilled.delete(each.target);
     }
+    // A fill lands after the paint that scrolled, so the entry it grew would hang below the end.
+    keepEnd();
   }, { root: log, rootMargin: '800px 0px' });
 
   const atBottom = () => nearBottom(log);
@@ -261,6 +263,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let revealing = 0;
   let pinned = true;
   log.addEventListener('scroll', () => { pinned = atBottom(); }, { passive: true });
+  // A log under a hidden page or view has no layout, so a paint's scroll to the end does nothing there:
+  // a reply that lands while the screen is out of sight would sit below the prompt once it is back. Its
+  // box going from nothing to a size is the screen coming back, and a pinned log goes to its end then.
+  new ResizeObserver(keepEnd).observe(log);
+  function keepEnd(): void {
+    if (pinned) log.scrollTop = log.scrollHeight;
+  }
   function reveal(): void {
     revealing = 0;
     paintedLive = revealed(paintedLive, transcript.live);
