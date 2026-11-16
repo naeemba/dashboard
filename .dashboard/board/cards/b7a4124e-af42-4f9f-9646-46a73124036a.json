@@ -4,7 +4,7 @@
   "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T10:42:01.215Z",
+  "updatedAt": "2026-11-16T10:42:51.377Z",
   "branch": "agent-state-per-pane-from-claude-code-hooks",
   "pullRequest": 302,
   "comments": [
@@ -31,8 +31,12 @@
     {
       "at": "2026-11-16T10:42:01.215Z",
       "body": "3b697aaa merges main again (#298, #301). One conflict, in docs/manager/decisions.md: kept main's new paragraph on restoring the manager's workers and kept manager-decision-3. Typecheck, lint and 3311 tests pass. Full CI on 3b697aaa: 5 of 5 pass. Mergeable, ready to merge."
+    },
+    {
+      "at": "2026-11-16T10:42:51.356Z",
+      "body": "Pull request #302 merged: Answer a Claude screen's question from the manager row https://github.com/naeemba/dashboard/pull/302"
     }
   ],
-  "column": "Review",
-  "order": 5
+  "column": "Done",
+  "order": 241
 }
