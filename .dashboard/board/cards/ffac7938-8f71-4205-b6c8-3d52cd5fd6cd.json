@@ -4,7 +4,7 @@
   "notes": "Follow-up from #155 (manager terminals). The manager's worker panes (manager-terminal-<n>) do not come back after the app restarts: session-store keys saved pages by project path, and the manager is not in that list. Project pages already restore their panes and resume their Claude sessions; the manager's should too.",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T09:52:56.970Z",
+  "updatedAt": "2026-11-16T10:02:46.659Z",
   "branch": "bring-the-manager-s-worker-panes-back-after",
   "comments": [
     {
@@ -14,6 +14,10 @@
     {
       "at": "2026-11-16T09:52:50.572Z",
       "body": "#299 is merged. Do not bump the version. Run typecheck, lint and test; tests are Windows-safe."
+    },
+    {
+      "at": "2026-11-16T10:02:46.659Z",
+      "body": "PR #301: manager workers' conversations saved under session.json's manager list and resumed by the manager's folder; workers popup lists restored workers under their saved dispatcher. Checks pass; restart path not hand-checked."
     }
   ],
   "column": "Doing",
