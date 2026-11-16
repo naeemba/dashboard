@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T09:36:06.013Z",
-  "updatedAt": "2026-11-16T09:36:06.013Z",
+  "updatedAt": "2026-11-16T09:38:28.645Z",
+  "comments": [
+    {
+      "at": "2026-11-16T09:38:28.645Z",
+      "body": "Done in #298 instead (https://github.com/naeemba/dashboard/pull/298): the hold moved into openOverlay there."
+    }
+  ],
   "column": "Backlog",
   "order": 45
 }
