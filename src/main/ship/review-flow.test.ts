@@ -182,9 +182,7 @@ describe('reviewSweep', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
   });
 
-  // #300 and #313: the worker had stopped when the sweep looked, was back at work when the start looked
-  // again after the board's push, and was then closed by the finished-worker sweep. The card waited in
-  // Review with no review, because the refused start left the sweep's mark on.
+  // #300 and #313: stopped when the sweep looked, at work when the start looked, then its pane closed.
   it('starts the review on a later tick when the start found the agent back at work, after its pane closed', async () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, intoReview(boardWithCard(12), CARD) as Board);

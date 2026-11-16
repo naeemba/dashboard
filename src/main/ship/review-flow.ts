@@ -323,17 +323,12 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (entry === undefined) return { refused: `card ${id} has no worktree to review; ship it first` };
     if (entry.reviewing || starting.has(id)) return { refused: `"${entry.title}" is already being reviewed` };
     const slot = ports.slotOf(entry.projectPath);
-    const early = slot === -1 ? notOpenRefusal(entry.title)
-      : ports.agentWorksIn(slot, entry.pane) ? `the agent on "${entry.title}" is still working` : null;
-    if (early !== null) {
-      // Only early, as a dirty worktree is, so the mark comes off. The sweep marks the card before its
-      // move, and the move waits on the board's push to origin before it gets here: a worker that
-      // stopped for its background agents and went back to work in those seconds was refused here, the
-      // mark stayed, and the card sat in Review with no review for the rest of the run (#300, #313).
-      // Closing its pane later changed nothing; the mark was what held it.
-      reviewed.delete(id);
-      return { refused: early };
-    }
+    // Only early, as a dirty worktree is, so the mark sweepOne put on before its move comes off. The
+    // move waits on the board's push first, and an agent back at work by then was refused here with
+    // the mark left on: no review for the rest of the run (#300, #313).
+    const early = (refused: string): Refused => { reviewed.delete(id); return { refused }; };
+    if (slot === -1) return early(notOpenRefusal(entry.title));
+    if (ports.agentWorksIn(slot, entry.pane)) return early(`the agent on "${entry.title}" is still working`);
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };
@@ -343,9 +338,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // Null is refused as well, as sweepOne leaves it alone: a card the project's board does not show,
     // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
     const awaits = board === null ? null : awaitsReview(board, id);
-    if (board !== null && isCancelled(board, id)) {
-      return { refused: `"${entry.title}" is cancelled; move it out of Cancelled to review it` };
-    }
+    // Unmarked as sweepOne leaves it, so moving it out of Cancelled lets the next tick review it.
+    if (board !== null && isCancelled(board, id)) return early(`"${entry.title}" is cancelled; move it out of Cancelled to review it`);
     if (awaits === false) return { refused: `"${entry.title}" is past Review; its review has run` };
     if (awaits === null) return { refused: `"${entry.title}" is not on the project's board, or the board could not be read` };
     reviewed.add(id);
