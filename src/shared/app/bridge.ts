@@ -88,7 +88,9 @@ export type ExportWrite = { path: string } | { refused: string };
 // list for both, because a worker opening or closing is a change to what every screen has to draw.
 // `manager` is the manager's workers, which have no slot in `projects`; openPanesOf reads both.
 // `screens` is the worker panes drawn as a Claude screen rather than a terminal (pane run, the default off Windows).
-export type OpenProjects = { projects: (Project | null)[]; panes: number[][]; manager?: number[]; screens?: string[] };
+// `editors` is the slots whose nvim is running, which after a restart is one the pane host kept: the
+// screen must not start it over.
+export type OpenProjects = { projects: (Project | null)[]; panes: number[][]; manager?: number[]; screens?: string[]; editors?: number[] };
 
 // What the board hands main when a card is moved into Ship. The slot is the project's page, which is
 // what says whose workers are candidates for the agent.
@@ -212,7 +214,8 @@ export type DashboardBridge = {
   closePane(slot: number, index: number): Promise<void>;
   // A worker's hooks saying it is waiting on a permission or has finished its turn.
   onPaneMark(listener: (id: string, state: WorkerState) => void): void;
-  // A finished worker the app closed itself, said as a passing notice (auto-release.ts).
+  // A finished worker the app closed itself (auto-release.ts), or the kept shells pane.reap ended or
+  // kept back: said as a passing notice main has already logged.
   onPaneReleased(listener: (text: string) => void): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;

@@ -15,7 +15,7 @@ import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
 import { launchPaneHost, paneHost } from './panes/pane-host-client';
-import { paneHostAddress, renewPipeToken } from './panes/pane-host-protocol';
+import { olderHostSockets, paneHostAddress, renewPipeToken } from './panes/pane-host-protocol';
 import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
@@ -23,6 +23,7 @@ import { openAppWindow } from './app/app-window';
 import { EDITOR_INDEX, MAIN_INDEX, paneFromId, terminalId, workersOfSlot } from '../shared/panes/terminals';
 import { nextPaneIndex } from '../shared/panes/pane-layout';
 import { paneActions } from './actions/pane/pane-actions';
+import { stopOrWarn } from './actions/pane/close';
 import { projectActions, registerProjectChannels } from './actions/project/project-actions';
 import { actionRequests, isRefused } from './actions/action';
 import { updateActions } from './actions/update/update-actions';
@@ -194,12 +195,12 @@ const paneHostEntry = path.join(buildFolder, 'pane-host-entry.js');
 const paneAddress = paneHostAddress(process.platform, app.getPath('userData'));
 const shellHost = paneHost({
   socket: paneAddress?.socket ?? null,
-  token: paneAddress?.token,
+  token: paneAddress?.token, older: olderHostSockets(process.platform, app.getPath('userData'), paneAddress?.token),
   launch: () => {
     if (paneAddress !== null) launchPaneHost(process.env.SHELL, paneHostEntry, paneAddress.socket, app.getPath('home'), paneAddress.tokenFile);
   },
   impostor: () => renewPipeToken(app.getPath('userData')),
-  lost: failures.hold,
+  lost: failures.hold, stopScope: (unit) => void stopOrWarn({ stopScope, log: (draft) => logStore.log(draft) }, unit, 'pane-host.older', {}),
 });
 // The systemd scope each pane's shell starts in, once the check at launch has answered: docs/processes.
 // Every pane waits on it with the host (panesReady), so no pane starts unscoped for being early.
@@ -222,7 +223,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
-  temporary: app.getPath('temp'), shellCommand: () => shellCommand, scoped: scopes.scoped, projectPath: (slot) => projectIn(slot)?.path,
+  temporary: app.getPath('temp'), userData: app.getPath('userData'), shellCommand: () => shellCommand, scoped: scopes.scoped, projectPath: (slot) => projectIn(slot)?.path,
   send: sendToRenderer, keepsScreens: () => keepsScreenCopies(remoteHost !== null, remote.reachesWindow()),
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
@@ -356,7 +357,7 @@ setInterval(() => {
 }, WORKING_REPORT_MS).unref();
 
 registerPaneOpeners(table, {
-  shellCommand: () => shellCommand,
+  shellCommand: () => shellCommand, editorSocket: panes.editorSocketOf,
   paneFolders: (slot, index) => {
     const id = terminalId(slot, index);
     return { pid: shells.get(id)?.pid, startDirectory: terminalCommands.get(id)?.directory, projectPath: projectIn(slot)?.path };
@@ -507,6 +508,7 @@ const pane = paneActions({
   agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
+  unclaimed: shellHost.unclaimed, keep: shellHost.keep, killKept: shellHost.killKept, inSession: (projectPath) => projectPath === MANAGER_FOLDER || claudeSessions.launchedWith(projectPath),
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
   worktrees: worktrees.entries, panesBeforeLaunch: agentPanesBeforeLaunch, realPath, givePane: giveCardPane,
 });
@@ -536,11 +538,12 @@ registerSessionChannels(table, session);
 // The manager's main, opened at launch the way a project's is when it opens, and started the same way:
 // shown, told something, or a worker it dispatched kept through a restart. Its folder is made first, since
 // a session cannot start in a folder that is not there.
+const managerBack = Promise.all([panesReady, workerScreens.host.ready]);
 try {
   mkdirSync(MANAGER_FOLDER, { recursive: true });
   chats.open(MANAGER_SLOT);
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
-  void Promise.all([panesReady, workerScreens.host.ready]).then(() => {
+  void managerBack.then(() => {
     restorePanes(MANAGER_SLOT, MANAGER_FOLDER, null);
     startMainsWaitedOn();
   });
@@ -570,6 +573,7 @@ const openProjects = (): OpenProjects => ({
   panes: projects.map((_project, slot) => openPanes(slot)),
   manager: openPanes(MANAGER_SLOT),
   screens: workerScreens.ids(),
+  editors: projects.flatMap((_project, slot) => (shells.has(terminalId(slot, EDITOR_INDEX)) ? [slot] : [])),
 });
 // Every screen redraws its pages from the list, so a worker opening or closing is the list again.
 const panesChanged = (): void => sendToRenderer('projects:change', openProjects());
@@ -820,7 +824,7 @@ function createWindow(): void {
       if (placement !== null) claudeSessions.placed(placement);
       await updates.beforeQuit();
     },
-    loaded: () => failures.drain(), shellsDieAtQuit: panes.workDiesAtQuit, quitCancelled: updates.quitCancelled,
+    loaded: () => failures.drain(), shellsDieAtQuit: panes.workDiesAtQuit, editorDiesAtQuit: panes.editorDiesAtQuit, quitCancelled: updates.quitCancelled,
   });
   // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
   // that was never finished.
@@ -840,6 +844,10 @@ const remote = registerRemote(held, {
 });
 // Before registerWithIpc, which only answers the channels already in the table.
 // A second launch is read the way this one was, once it has brought the window forward.
+// Once the window has reopened its projects, and after the manager's restore (registered on managerBack
+// first), the kept shells no page took back are ended: pane.reap.
+table.on('session:restored', () => void managerBack.then(() => pane.reap.call({}))
+  .then((result) => { if ('output' in result && result.output !== '') sendToRenderer('pane:released', result.output); }));
 whenLaunchedAgain(liveWindow, connectAtLaunch(process.argv, () => settings, table, failures.hold, remote.joinedTo));
 registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);

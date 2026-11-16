@@ -4,6 +4,7 @@ import { paneFromId } from '../../../shared/panes/terminals';
 import { bind, type BoundAction } from '../action';
 import { paneClose, type PaneClosePorts } from './close';
 import { paneDispatch, type PaneDispatchPorts } from './dispatch';
+import { paneReap, type PaneReapPorts } from './reap';
 import { paneOpen, type PaneOpenPorts } from './open';
 import { paneRestart } from './restart';
 import { paneRestore, type PaneRestorePorts } from './restore';
@@ -15,7 +16,7 @@ import { paneSend, type PaneSendPorts } from './send';
 // is tested in pane-actions.test.ts, every other decision in its action's own test.
 export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand' | 'newSession' | 'ranAs'>
   & Omit<PaneClosePorts, 'project'> & Pick<PaneOpenPorts, 'project'> & Omit<PaneSendPorts, 'handTo' | 'mainsWorkerIn'>
-  & Omit<PaneRestorePorts, 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & {
+  & Omit<PaneRestorePorts, 'dispatch' | 'mainsWorkers' | 'hasCommand' | 'reserve'> & Pick<PaneReapPorts, 'unclaimed' | 'keep' | 'inSession' | 'killKept'> & {
     // The session command's answers about the pane, forgotten: it is the new agent's.
     forgetAnswers(id: string): void;
     // Main's claim on each pane: the main its worker reports to.
@@ -36,6 +37,7 @@ export type PaneActions = {
   send: BoundAction<{ output: string; handed: boolean }>;
   restore: BoundAction;
   restart: BoundAction;
+  reap: BoundAction;
 };
 
 export function paneActions(main: PaneActionsMain): PaneActions {
@@ -90,5 +92,6 @@ export function paneActions(main: PaneActionsMain): PaneActions {
       reserve: (id, directory) => main.commands.set(id, { args: [], directory }),
       dispatch: dispatch.call,
     }),
+    reap: bind(paneReap, main),
   };
 }

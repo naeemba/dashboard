@@ -1,17 +1,17 @@
 import { editorArguments } from '../../shared/panes/shell';
 import { EDITOR_INDEX, paneFromId, sizeOfPane } from '../../shared/panes/terminals';
-import { editorSocket, removeSocket } from '../nvim/nvim-remote';
+import { editorSocket, keptEditorSocket, removeSocket } from '../nvim/nvim-remote';
 import { paneKey } from './pane-host-protocol';
 import { screenCopyWhile, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
-import { foregroundName, spawnShell, type PaneShell } from './pane-shell';
+import { foregroundName, type PaneShell } from './pane-shell';
 import { runsAnAgent, type PaneCommand } from '../../shared/panes/pane-reading';
 import { projectName } from '../workers/project-names';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import type { Screens } from '../../shared/remote-host/screens';
 
-// Every pane's shell as main holds it: a worker's spawned through the pane host or taken back from it
-// after a restart, the editor's spawned in this process, and listened to the one way every way.
+// Every pane's shell as main holds it, the editor's included: spawned through the pane host or taken
+// back from it after a restart, and listened to the one way every way.
 // Main-process spawning, out of main.ts because main had reached its 600-line ceiling; main hands
 // over what only it has.
 export function paneShells(main: {
@@ -20,6 +20,8 @@ export function paneShells(main: {
   screens: Screens;
   environment: Record<string, string>;
   temporary: string;
+  // Where a kept editor's socket goes (nvim-remote.ts's keptEditorSocket).
+  userData: string;
   shellCommand(): string;
   // The command as it starts inside its systemd scope, or as it is (processes/scope-support.ts).
   scoped(request: ScopeRequest): ScopedCommand;
@@ -44,23 +46,31 @@ export function paneShells(main: {
   // stops a scope treats "no such unit" as already stopped.
   const scopeUnits = new Map<string, string>();
 
+  // Where the editor of a page listens, for its spawn and for every hand-over to it. Named for the
+  // project while the pane host holds the shells, so the nvim it keeps is reached again after a
+  // restart; for this process and the page otherwise, when it dies with the app. A host lost mid-run
+  // takes the editor with it, and the next one is spawned here under the other name.
+  function editorSocketOf(slot: number): string {
+    const projectPath = main.projectPath(slot);
+    return main.host.holds() && projectPath !== undefined
+      ? keptEditorSocket(process.platform, main.userData, projectPath)
+      : editorSocket(main.temporary, slot);
+  }
+
   function spawn(id: string): void {
     const entry = main.commands.get(id);
     if (entry === undefined) return;
     const shellCommand = main.shellCommand();
-    // The editor's socket is named after the slot, so the pane that is restarted listens where the
+    // The editor listens where editorSocketOf says, so the pane that is restarted listens where the
     // same pane listened before and nothing has to be told the name again. Anything left behind by a
     // previous run — a crash, a kill -9 — is cleared first: nvim refuses to listen on a path that
     // already exists, and the pane would show a one-line error instead of an editor.
     let paneArguments = entry.args;
     if (paneArguments === 'editor') {
-      const socket = editorSocket(main.temporary, paneFromId(id).slot);
+      const socket = editorSocketOf(paneFromId(id).slot);
       removeSocket(socket);
       paneArguments = editorArguments(shellCommand, socket);
     }
-    // The editor runs in this process, never the host: no launch could reach its nvim again
-    // (adopted-pane.ts), so kept it would only hold its buffers and swap file until the next launch.
-    const spawnPane = entry.args === 'editor' ? spawnShell : main.host.spawn;
     const { slot, index } = paneFromId(id);
     const projectPath = main.projectPath(slot) ?? '';
     // An agent's pane is the one running Claude Code as its command (pane.dispatch's terminal half).
@@ -71,7 +81,7 @@ export function paneShells(main: {
     let shell: PaneShell;
     try {
       const { cols, rows } = sizeOfPane(main.screens, id);
-      shell = spawnPane({
+      shell = main.host.spawn({
         key: paneKey(projectPath, index),
         file: shellCommand, args: paneArguments, cwd: entry.directory, env: main.environment, cols, rows,
         scope: scoped.unit === null ? undefined : scoped,
@@ -148,14 +158,17 @@ export function paneShells(main: {
     return [...scopeUnits].filter(([id]) => paneFromId(id).slot === slot).map(([, unit]) => unit);
   }
 
-  // Whether quitting now kills a shell you could lose work in: a worker pane running in this process
-  // this time (no host, another Dashboard holds it, or it died). The editor is always one, and starts
-  // fresh either way.
-  function workDiesAtQuit(): boolean {
-    return [...shells].some(([id, shell]) => diesAtQuit(shell) && paneFromId(id).index !== EDITOR_INDEX);
+  // Whether quitting now kills a shell running in this process this time (no host, another Dashboard
+  // holds it, or it died): a worker pane's, which the quit question warns of, or an editor's, which it
+  // names as stopping rather than coming back. The editor is not work to lose: what it holds is files
+  // on disk and nvim's swap files.
+  function diesAtQuitWhere(editor: boolean): boolean {
+    return [...shells].some(([id, shell]) => diesAtQuit(shell) && (paneFromId(id).index === EDITOR_INDEX) === editor);
   }
+  const workDiesAtQuit = (): boolean => diesAtQuitWhere(false);
+  const editorDiesAtQuit = (): boolean => diesAtQuitWhere(true);
 
-  return { shells, screenCopies, startedWith, scopeUnits, scopesIn, spawn, listenTo, foregroundOf, drop, workDiesAtQuit };
+  return { shells, screenCopies, startedWith, scopeUnits, scopesIn, spawn, listenTo, foregroundOf, drop, workDiesAtQuit, editorDiesAtQuit, editorSocketOf };
 }
 
 // A shell this process runs itself, which will-quit kills. One the pane host runs is left for the next

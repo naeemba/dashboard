@@ -24,3 +24,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-07 #228 — The new-pane button is two halves, New Terminal and New Claude, each with its key (workers-decision-7)
 - 2026-11-09 #283 — A pane host starting leaves the socket to one already answering on it (workers-decision-6)
 - 2026-11-16 #289 — A pane whose shell systemd-run is still starting reads as at its prompt, not running systemd-run
+- 2026-11-16 #303 — The editor is kept by the pane host, kept shells no page takes back are ended, and so are an older host's

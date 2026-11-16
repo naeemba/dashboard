@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import net from 'node:net';
 import { hostProof, line, lineReader, paneOfKey, type FromHost, type SpawnRequest, type Survivor, type ToHost } from './pane-host-protocol';
 import { spawnShell, type PaneShell } from './pane-shell';
-import { reachHost } from './host-socket';
+import { attempt, reachHost } from './host-socket';
 import { posixQuoted, taskArguments } from '../../shared/panes/shell';
 
 // The app's half of the pane host: the shells main asks for, run in the host when there is one and in
@@ -15,6 +15,14 @@ export type PaneHost = {
   spawn(request: SpawnRequest): PaneShell;
   // Takes back the shells the host kept for this project, each once.
   adopt(projectPath: string): { survivor: Survivor; shell: PaneShell }[];
+  // Takes every kept shell no project has taken back, for the launch to end once its restore is done.
+  unclaimed(): Survivor[];
+  // Puts kept shells back for a later adopt: a project the session named that has not opened yet.
+  keep(survivors: readonly Survivor[]): void;
+  // Kills a kept shell by its key, taken back or not.
+  killKept(key: string): void;
+  // Whether a shell spawned now runs in the host, and so outlives this process.
+  holds(): boolean;
 };
 
 type HostShell = PaneShell & { hear(message: FromHost): void; lose(): void };
@@ -34,6 +42,11 @@ export function paneHost(options: {
   impostor?(): void;
   // In place of ANSWER_WAIT_MS, for a test.
   answerWaitMs?: number;
+  // Where hosts of older protocol versions listen, whose shells are ended (olderHostSockets).
+  older?: readonly string[];
+  // The scope of a shell an older host kept, stopped once the shell is killed, so what it detached
+  // ends with it as pane.reap's does.
+  stopScope?(unit: string): void;
   // The host was never reached, or went: shells from then on are this process's and die with it.
   lost(message: string): void;
 }): PaneHost {
@@ -43,6 +56,12 @@ export function paneHost(options: {
   const send = (message: ToHost): void => { connection?.write(line(message)); };
 
   async function connect(): Promise<void> {
+    // Not waited on: an older host has nothing the new one needs.
+    for (const older of options.older ?? []) {
+      void endOlderHost(older, options.answerWaitMs ?? ANSWER_WAIT_MS).then((ended) => {
+        for (const { unit } of ended) if (unit !== undefined) options.stopScope?.(unit);
+      });
+    }
     const socketPath = options.socket;
     if (socketPath === null) {
       options.lost('The pane host\'s pipe token could not be read or made; shells die with the app this run');
@@ -134,7 +153,48 @@ export function paneHost(options: {
       kept = kept.filter((survivor) => !taken.includes(survivor));
       return taken.map((survivor) => ({ survivor, shell: track(survivor.key, hostShell(survivor.key, survivor, survivor.screen, send)) }));
     },
+    unclaimed() {
+      const taken = kept;
+      kept = [];
+      return taken;
+    },
+    keep(survivors) { kept.push(...survivors); },
+    killKept: (key) => send({ type: 'kill', key }),
+    holds: () => connection !== null,
   };
+}
+
+// The shells a host of an older protocol version kept, killed: said in the messages every version keeps
+// (pane-host-protocol.ts's olderHostSockets). One busy with an app of its own version — an older build
+// still running on the same user data — is left alone, and so is one that has not answered within
+// `waitMs`: silence names no keys, and a host that hangs may be one an app of its version is still
+// greeting. An answer arriving after the wait kills nothing either; the next launch asks again. The
+// host exits by itself once its last shell has and no app is connected. Answers the shells it killed,
+// whose scopes the caller stops.
+export async function endOlderHost(socketPath: string, waitMs = ANSWER_WAIT_MS): Promise<Survivor[]> {
+  const open = await attempt(socketPath);
+  if (open === null) return [];
+  return new Promise((resolve) => {
+    let settled = false;
+    const done = (ended: Survivor[]): void => {
+      settled = true;
+      clearTimeout(silence);
+      open.end();
+      resolve(ended);
+    };
+    const silence = setTimeout(() => done([]), waitMs);
+    open.on('error', () => done([]));
+    open.on('close', () => done([]));
+    open.setEncoding('utf8');
+    open.on('data', lineReader<FromHost>((message) => {
+      if (settled) return;
+      if (message.type === 'busy') return done([]);
+      if (message.type !== 'panes') return;
+      for (const { key } of message.panes) open.write(line({ type: 'kill', key }));
+      done(message.panes);
+    }));
+    open.write(line({ type: 'hello' }));
+  });
 }
 
 // A shell the host runs, as main sees it. What arrives before main has listened is held, and handed

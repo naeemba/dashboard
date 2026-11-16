@@ -88,12 +88,40 @@ long), the app runs ptys itself as before, and the status bar says the
 shells die with it this run. If the host dies mid-run every pane it held reads as
 exited and new panes run in the app.
 
-Not kept: the editor, because nvim's socket is named after the project's page
-(`nvim-remote.ts`) and a project can come back on another one. It is spawned in
-the app, not the host, so it dies on quit instead of holding its buffers until
-the next launch. A second Dashboard on the same user data (a development build
+The editor is kept like any pane. While the host holds the shells, nvim listens
+on a socket named after the user data and the project (`keptEditorSocket` in
+`nvim-remote.ts`), beside the host's own socket, so the next launch works out
+the same name and reaches the nvim the host kept; the page tells the screen it
+runs (`editors` in the project list), so arriving on it shows that nvim rather
+than starting one over it. Without the host it is named after the pid and page
+as before, since a second Dashboard on the same user data runs its editor itself
+and must not take the first one's socket. A second Dashboard on the same user data (a development build
 beside the installed app) is turned away by the host with `busy` while the
 first is connected, and runs its shells itself. The Claude
 screens run in the app and still stop on quit. workflow-rule-1 stays: a restart
-still stops every Claude screen and every kept shell's `DASHBOARD_SOCKET` goes
-stale (README, Open questions).
+still stops every Claude screen.
+
+A kept shell's `DASHBOARD_SOCKET` names the session socket of the run that
+started it, gone after a restart. The socket was not given a stable path: a
+second Dashboard on the same user data would collide on it, and nothing needs
+it, since `dashboard` tries the pane's socket and then the one the app last
+wrote to `session-socket` in the user data (`reach-app.ts`), so a kept pane
+reaches the restarted app.
+
+Kept shells nobody takes back are ended only when nothing could want them: once
+the window has reopened its session and the manager has taken its own,
+`pane.reap` kills every shell no page took back whose project the session
+read at launch does not name (closed before the quit, or a session that was
+not saved), stops its scope, and says so on the status bar as a passing
+notice, not a failure. The manager counts as named, so a manager whose open
+threw keeps its workers. A project the
+session names that did not open (a disk not mounted yet, an open that threw)
+may have a worker mid-turn in its shells, so they are put back for its open
+and the bar names it instead. A project closed during the run killed its own.
+The same goes for a host of an older protocol version after a bump
+(`olderHostSockets`): the app says hello there and kills every key it is told,
+unless that host is busy with an app of its own version or has not answered
+within ten seconds: silence names no keys, and an answer arriving after the
+wait is not acted on, so a slow host keeps its shells until the next launch.
+Each shell killed there has its scope stopped too, as `pane.reap` does. `hello`, `kill`,
+`panes` and `busy` keep their shape in every version so this always works.

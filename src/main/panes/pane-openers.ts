@@ -10,26 +10,30 @@ import { openFileInEditor, openPrompt, openScrollback, readPrompt, type EditorTa
 // holds — the shell in force and where a pane's shell is.
 export function registerPaneOpeners(table: Channels, main: {
   shellCommand(): string;
+  // Where the page's editor listens (pane-shells.ts).
+  editorSocket(slot: number): string;
   paneFolders(slot: number, index: number): PaneFolders;
 }): void {
+  const editorOf = (slot: number): EditorTarget => ({
+    temporaryDirectory: app.getPath('temp'), shellCommand: main.shellCommand(), slot, socket: main.editorSocket(slot),
+  });
   table.on('link:open', (_screen, url: string) => {
     if (isOpenableLink(url)) void shell.openExternal(url);
   });
   // Ctrl+`: the focused pane's scrollback, written to a file and opened in the project's nvim. Every
   // decision in that is nvim-remote.ts; what is here is the channel and the temp folder it works in.
   table.handle('scrollback:open', (_screen, slot: number, index: number, text: string) => (
-    openScrollback(app.getPath('temp'), main.shellCommand(), slot, index, text)
+    openScrollback(editorOf(slot), index, text)
   ));
   // Ctrl+G on the Claude screen: the prompt box out to a file for nvim, and back once saved.
   table.handle('prompt:open', (_screen, slot: number, text: string) => (
-    openPrompt(app.getPath('temp'), main.shellCommand(), slot, text)
+    openPrompt(editorOf(slot), text)
   ));
   table.handle('prompt:read', (_screen, slot: number) => readPrompt(slot));
   // A path a pane printed, looked for where that pane's shell is standing now; file-open.ts says why.
   table.handle('file:open', async (_screen, slot: number, index: number, link: FileLink) => {
     const file = await findPaneFile(link.path, main.paneFolders(slot, index), app.getPath('home'));
     if (file === undefined) return { ok: false, message: noSuchFile(link.path) };
-    const editor: EditorTarget = { temporaryDirectory: app.getPath('temp'), shellCommand: main.shellCommand(), slot };
-    return openFileInEditor(editor, file, link.line, link.column);
+    return openFileInEditor(editorOf(slot), file, link.line, link.column);
   });
 }

@@ -29,7 +29,8 @@ export type RemoteTarget = {
 
 export function channels(): Channels {
   const handlers = new Map<string, { handler: ChannelHandler; action?: string }>();
-  const listeners = new Map<string, ChannelHandler>();
+  // Every listener a channel has, in the order they were added: `session:restored` has two.
+  const listeners = new Map<string, ChannelHandler[]>();
   let thrown: (channel: string, error: unknown, action: string | undefined) => void = () => undefined;
   function fail(channel: string, error: unknown): never {
     thrown(channel, error, handlers.get(channel)?.action);
@@ -37,17 +38,17 @@ export function channels(): Channels {
   }
   return {
     handle(channel, handler, action) { handlers.set(channel, { handler, action }); },
-    on(channel, handler) { listeners.set(channel, handler); },
+    on(channel, handler) { listeners.set(channel, [...(listeners.get(channel) ?? []), handler]); },
     // A send arriving as a request, which is how a remote screen sends everything, is dispatched and
     // answered null: it has no reply of its own, but the screen's frame has an id that waits for one.
     // A throw or a rejection either way is told to whenThrown, then fails the call as before.
     async invoke(screen, channel, channelArguments) {
       const handler = handlers.get(channel)?.handler;
-      const listener = listeners.get(channel);
-      if (!handler && !listener) throw new Error(`No such channel: ${channel}`);
+      const heard = listeners.get(channel);
+      if (!handler && !heard) throw new Error(`No such channel: ${channel}`);
       try {
         if (handler) return await handler(screen, ...channelArguments);
-        listener?.(screen, ...channelArguments);
+        for (const listener of heard ?? []) listener(screen, ...channelArguments);
         return null;
       } catch (error: unknown) {
         return fail(channel, error);
@@ -57,7 +58,7 @@ export function channels(): Channels {
     // says it on the bar.
     dispatch(screen, channel, channelArguments) {
       try {
-        listeners.get(channel)?.(screen, ...channelArguments);
+        for (const listener of listeners.get(channel) ?? []) listener(screen, ...channelArguments);
       } catch (error: unknown) {
         fail(channel, error);
       }

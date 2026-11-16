@@ -31,6 +31,18 @@ describe('channels', () => {
     ]);
   });
 
+  // session:restored is heard by --remote's join and by pane.reap: a second listener must not replace the first.
+  it('tells every listener of a channel, in the order they were added', async () => {
+    const table = channels();
+    const heard: string[] = [];
+    table.on('session:restored', () => heard.push('join'));
+    table.on('session:restored', () => heard.push('reap'));
+    table.dispatch('mac', 'session:restored', []);
+    await table.invoke('mac', 'session:restored', []);
+    expect(heard).toEqual(['join', 'reap', 'join', 'reap']);
+    expect(table.listened()).toEqual(['session:restored']);
+  });
+
   it('rejects an unknown channel by name', async () => {
     const table = channels();
     await expect(table.invoke('mac', 'nope:nothing', [])).rejects.toThrow('No such channel: nope:nothing');

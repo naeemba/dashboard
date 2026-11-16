@@ -12,7 +12,8 @@ export type StatusError = {
 
 // `stays` is for a line that says how things stand rather than what just happened — a newer release is
 // out — and is gone by the time anyone looks if it fades. A click or a bare Escape still clears it.
-export type NoticeOptions = { stays?: boolean };
+// `logged` is for a line main has already written to the log, so it is on record once, not twice.
+export type NoticeOptions = { stays?: boolean; logged?: boolean };
 
 // The status bar's error span. Out of renderer.ts, which had reached its 600-line ceiling.
 //
@@ -61,7 +62,7 @@ export function createStatusError(bridge: DashboardBridge, notifies: () => boole
 
   // A clear is never logged, so the owner rule is draw's alone.
   function notice(owner: string, message: string, options: NoticeOptions = {}): void {
-    if (logsStatusMessage(logged, message, Date.now())) bridge.writeLog(noticeDraft(owner, message));
+    if (options.logged !== true && logsStatusMessage(logged, message, Date.now())) bridge.writeLog(noticeDraft(owner, message));
     draw(owner, message, options.stays ? null : 'notice');
   }
 

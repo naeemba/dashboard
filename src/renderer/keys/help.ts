@@ -30,7 +30,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'edge: a worker waits on you; green: its turn is over. Panes outlive their page and a restart. '
     + 'Ctrl+C is the shell\'s interrupt; off a mac copy and paste have keys.',
   nvim: 'One nvim filling the window, started the first time you press the nvim key here, not at '
-    + 'launch. Quit it and Enter starts it again. The scrollback key on the terminals screen sends a '
+    + 'launch, and kept through a restart. Quit it and Enter starts it again. The scrollback key on the terminals screen sends a '
     + 'pane here as a file in a tab of its own: a copy, so editing it changes nothing in the pane.',
   board: 'A kanban board in .dashboard/board, saved on every change, pushed to '
     + 'main when git tracks it. Ship hands a card to an agent; its pull request moves it: open into '

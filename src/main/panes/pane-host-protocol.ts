@@ -8,8 +8,8 @@ import type { ScopedCommand } from '../processes/scope';
 // panes-decision-1 says why the shells live in a process of their own.
 
 // In the socket's name, so an app built against another shape of these messages never talks to a host
-// that would misread them. It starts a host of its own instead, and the old host's shells run on
-// unseen until they exit. Bump it with any change to the types below that an older host would misread.
+// that would misread them. It starts a host of its own instead, and ends the old host's shells
+// (olderHostSockets), which no app of its version is left to show. Bump it with any change to the types below that an older host would misread.
 // A message type it has never heard of it drops (pane-host-server.ts's receive), so adding one, as
 // pause, resume and hello were, keeps the running host and its shells: an older host just never pauses.
 // The bump is weighed against an older app too: one meeting a newer host that waits on a message it
@@ -31,7 +31,7 @@ const PROTOCOL_VERSION = 1;
 export type PaneHostAddress = { socket: string; token?: string; tokenFile?: string };
 
 export function paneHostAddress(platform: string, userData: string): PaneHostAddress | null {
-  if (platform !== 'win32') return { socket: path.join(userData, 'pane-host', `panes-${PROTOCOL_VERSION}.sock`) };
+  if (platform !== 'win32') return { socket: hostSocketOf(userData, PROTOCOL_VERSION) };
   try {
     const token = pipeToken(userData);
     return { socket: pipeName(token), token, tokenFile: pipeTokenFile(userData) };
@@ -40,8 +40,28 @@ export function paneHostAddress(platform: string, userData: string): PaneHostAdd
   }
 }
 
-export function pipeName(token: string): string {
-  return `\\\\.\\pipe\\dashboard-panes-${PROTOCOL_VERSION}-${createHash('sha256').update(token).digest('hex').slice(0, 32)}`;
+// The host's folder in the user data: its socket, its pipe token and the kept editors' sockets.
+export function paneHostFolder(userData: string): string {
+  return path.join(userData, 'pane-host');
+}
+
+function hostSocketOf(userData: string, version: number): string {
+  return path.join(paneHostFolder(userData), `panes-${version}.sock`);
+}
+
+export function pipeName(token: string, version = PROTOCOL_VERSION): string {
+  return `\\\\.\\pipe\\dashboard-panes-${version}-${createHash('sha256').update(token).digest('hex').slice(0, 32)}`;
+}
+
+// Where a host of every version before this one listens, for the app to end the shells it kept: after
+// an update that bumped the version, no app of the old one is left to show them, and each Claude
+// conversation in them is resumed in a pane of the new host besides. A host of an older version is
+// reached with hello and told to kill each key it names, the three messages every version keeps.
+// `token` is the pipe's on Windows (paneHostAddress), without which no older pipe can be named.
+export function olderHostSockets(platform: string, userData: string, token: string | undefined, version = PROTOCOL_VERSION): string[] {
+  const older = Array.from({ length: version - 1 }, (_unused, index) => index + 1);
+  if (platform !== 'win32') return older.map((each) => hostSocketOf(userData, each));
+  return token === undefined ? [] : older.map((each) => pipeName(token, each));
 }
 
 // What the host answers a hello's nonce with, which only a holder of the token can work out.
@@ -52,7 +72,7 @@ export function hostProof(token: string, nonce: string): string {
 const PIPE_TOKEN = /^[0-9a-f]{32}$/;
 
 export function pipeTokenFile(userData: string): string {
-  return path.join(userData, 'pane-host', 'pipe-token');
+  return path.join(paneHostFolder(userData), 'pipe-token');
 }
 
 // The token, made on the first launch and kept: a new one names a new pipe, and a host running on the
@@ -137,6 +157,8 @@ export type SpawnRequest = {
   rows: number;
 };
 
+// `hello`, `kill` and the `panes` and `busy` answers are what an app of a later version says to this
+// host to end its shells (olderHostSockets): their shape never changes.
 export type ToHost =
   // The app's first line, before which the host says nothing (pane-host-server.ts's acceptApps). An
   // older host drops it and answers anyway; an older app says none and waits on a newer host for good.
