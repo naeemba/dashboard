@@ -5,6 +5,32 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-16: a shown terminal skips the selection redraw when nothing is selected
+
+Same machine, compositor and tooling as the first profile, `measure.mjs
+streams <demo> 200`: four workers at 200 lines/s each, alpha shown. "Before"
+is `main` built the same day, three runs; "after" is this branch, three runs.
+Another worktree was running its own demo measurements on the same machine
+between these runs, never during one (`withInstance` refuses while the ports
+answer).
+
+| | before | after |
+|---|---|---|
+| Renderer CPU, alpha shown | 22.9%, 26.1%, 26.5% | 20.2%, 21.9%, 23.8% |
+| Renderer task time, alpha shown | 15.9–18.3% | 14.6–16.9% |
+| Layouts per 10 s, alpha shown | 199, 370, 382 | 195, 199, 229 |
+| Typing beside four streams, median | 24–29 ms | 25–27 ms |
+| Renderer CPU, alpha hidden | 8.6–10.7% | 5.7–12.2% |
+
+- Every scroll asks xterm's selection to redraw, and the DOM renderer answers
+  by rebuilding every row on top of the rows the scroll itself redrew.
+  `paused-selection.ts` now only stores the selection when there was none
+  before and is none after; a selection made, moved or cleared draws as
+  before.
+- The spreads overlap: the first before run sat with the after runs, on the
+  layout count too. Medians fall from 26.1% to 21.9%. Hidden did not change,
+  as expected: the hidden path was already held.
+
 ## 2026-11-16: a terminal's cursor no longer blinks (finding 6)
 
 Same machine and compositor as the first profile. One worker opened on alpha
@@ -144,10 +170,8 @@ without the fix, rebuilt and measured the same day, 2 runs; "after" is 5 runs.
   check of the pause. What is left hidden is xterm parsing the bytes into the
   buffer, which it must do to keep the scrollback.
 
-Not done: the same selection redraw rebuilds every row of a shown terminal on
-every scroll as well, on top of the regular redraw, even with nothing
-selected. Skipping it when no selection exists before or after would cut the
-shown cost too.
+The same selection redraw on a shown terminal was left for later; done
+2026-11-16, above.
 
 ## 2026-11-02: usage sweep on its own thread
 

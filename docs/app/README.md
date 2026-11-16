@@ -157,9 +157,11 @@ with its reason and the condition that lifts it.
 - `@xterm/xterm` stays on 6.0.0 exactly: `src/renderer/panes/paused-selection.ts`
   reaches its private render service. A bump checks those fields still exist
   and reruns `measure.mjs streams` (docs/performance/), since a rename turns the
-  patch off silently and hidden projects go back to drawing every line.
+  patch off silently and every terminal, shown or hidden, goes back to
+  rebuilding every row on each scroll.
   The hold and `paused-selection.ts` both go once
-  `RenderService.handleSelectionChanged` checks `_isPaused` upstream.
+  `RenderService.handleSelectionChanged` checks `_isPaused` upstream and skips
+  a redraw from no selection to none.
 - `typescript` is an alias to `@typescript/typescript6`, so typescript-eslint
   keeps the 6.0 API while `@typescript/native` (7.x) runs `tsc`. The alias goes
   when typescript-eslint supports TypeScript 7.

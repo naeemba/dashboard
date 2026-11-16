@@ -1,4 +1,5 @@
-// Keeps an off-screen terminal from redrawing every row each time it scrolls.
+// Keeps a terminal from redrawing every row each time it scrolls: always while off screen, and while
+// shown whenever nothing is selected.
 //
 // xterm stops drawing a terminal while its IntersectionObserver sees it off screen: refreshRows only
 // notes that a full redraw is due. But every scroll, which is every new line at the bottom, also asks
@@ -10,11 +11,19 @@
 // So while paused, the selection is only stored and marked due, the way refreshRows marks the rows. The
 // full redraw xterm runs when the terminal comes back draws the stored selection with it.
 //
+// A shown terminal pays the same rebuild on every scroll, on top of the rows the scroll itself redraws,
+// though there is almost never a selection to move. When there was none before and there is none now,
+// the selection is only stored: nothing on screen changes, so there is nothing to draw. The renderer
+// treats a missing start or end as no selection (DomRenderer.handleSelectionChanged), and so does this.
+//
 // ponytail: reaches xterm's private render service. If an upgrade renames it, `pauseSelectionRedraws`
-// finds nothing and changes nothing: hidden panes go back to costing CPU, nothing breaks. Drop this
-// once xterm checks the pause in handleSelectionChanged itself.
+// finds nothing and changes nothing: every pane, hidden or shown, goes back to rebuilding all its rows
+// on each scroll; nothing breaks. Drop this once xterm's handleSelectionChanged checks the pause and
+// skips a redraw from no selection to none.
 
 type Point = [number, number] | undefined;
+
+const isSelection = (start: Point, end: Point): boolean => Boolean(start && end);
 
 export type RenderServiceInternals = {
   _isPaused: boolean;
@@ -32,9 +41,13 @@ export function pauseSelectionRedraws(terminal: object): void {
   const render = service as RenderServiceInternals;
   const redraw = render.handleSelectionChanged.bind(render);
   render.handleSelectionChanged = (start, end, columnSelectMode) => {
-    if (!render._isPaused) return redraw(start, end, columnSelectMode);
+    const changesScreen = isSelection(start, end)
+      || isSelection(render._selectionState.start, render._selectionState.end);
+    if (!render._isPaused && changesScreen) return redraw(start, end, columnSelectMode);
     render._selectionState = { start, end, columnSelectMode };
-    render._needsSelectionRefresh = true;
-    render._needsFullRefresh = true;
+    if (render._isPaused) {
+      render._needsSelectionRefresh = true;
+      render._needsFullRefresh = true;
+    }
   };
 }
