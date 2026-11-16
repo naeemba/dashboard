@@ -42,9 +42,10 @@ can be read from here; the rest carry the one line they last printed. Every pane
 says how long ago it printed, which is how you spot the one that has been quiet
 since this morning. For main and a worker drawn as a Claude screen that is when
 its session last sent anything, not its hidden shell, and it is the same clock
-Needs you reads to call a worker quiet and to order its question among the rest. A pane that wants nothing shows no status at all; a project
-none of whose panes wants anything says nothing waiting. The terminals and the
-worktrees under a project each have their column names above them.
+Needs you reads to call a worker quiet and to order its question among the rest.
+A pane that wants nothing shows no status at all; a project none of whose panes
+wants anything says nothing waiting. The terminals and the worktrees under a
+project each have their column names above them.
 
 Every project also carries three token figures at the end of its row, each with
 its name: the last five hours, this week counting from Monday, and all time. A
