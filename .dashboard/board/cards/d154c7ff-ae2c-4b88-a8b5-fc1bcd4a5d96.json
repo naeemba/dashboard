@@ -5,8 +5,14 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-16T15:28:44.386Z",
-  "updatedAt": "2026-11-16T15:28:51.512Z",
+  "updatedAt": "2026-11-16T15:38:49.621Z",
   "branch": "a-card-in-review-gets-its-review-even-when",
+  "comments": [
+    {
+      "at": "2026-11-16T15:38:49.621Z",
+      "body": "PR #315. Root cause: sweepOne marks the card before its move into Review. The move waits on the board push, then review() re-checks the agent; a worker back at work by then was refused and the mark stayed for the rest of the run. Closing the pane later changed nothing. Fix: review() takes the mark off for early refusals (agent at work, project closed, card cancelled). Test in review-flow.test.ts. Follow-up, not fixed: with merging off a finished review leaves the card in Review, and an app restart reviews it again."
+    }
+  ],
   "column": "Doing",
   "order": 0
 }
