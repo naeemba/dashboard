@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T11:45:04.914Z",
-  "updatedAt": "2026-11-16T12:29:59.493Z",
+  "updatedAt": "2026-11-16T12:30:39.656Z",
   "branch": "a-turn-the-session-starts-by-itself-shows-o",
   "pullRequest": 311,
   "comments": [
@@ -28,8 +28,12 @@
     {
       "at": "2026-11-16T12:29:59.492Z",
       "body": "Merged origin/main (#309, #310) into the branch as fd7dafd7. Git merged it with no conflicts, and the PR diff has no .dashboard/board file. Typecheck, lint and tests (3369) pass locally. CI passes 5/5 on fd7dafd7. Ready to merge."
+    },
+    {
+      "at": "2026-11-16T12:30:39.610Z",
+      "body": "Pull request #311 merged: A turn the session starts by itself shows as working on the Claude screen https://github.com/naeemba/dashboard/pull/311"
     }
   ],
-  "column": "Review",
-  "order": 7
+  "column": "Done",
+  "order": 253
 }
