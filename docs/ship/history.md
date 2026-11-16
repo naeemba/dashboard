@@ -17,4 +17,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-16 — The review merges only with `review.autoMerge` or the project's `autoMerge` on, after CI passes on the head commit; off, it reports to main (ship-decision-1)
 - 2026-11-16 #305 — A worktrees.json that breaks twice keeps both damaged copies
 - 2026-11-16 — A review start refused because the agent was back at work, or its project closed, is tried again on a later tick instead of never (#300, #313)
-- 2026-11-16 — A card in Review whose loop finished at the pull request's head is not reviewed again after a restart
+- 2026-11-16 — A card in Review whose loop finished after the pull request's newest commit date is not reviewed again after a restart

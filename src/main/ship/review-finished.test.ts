@@ -12,7 +12,7 @@ describe('reviewFinishedAtHead', () => {
     expect(reviewFinishedAtHead(view([started, finished], ['2026-11-16T12:40:00Z', '2026-11-16T15:00:00Z']))).toBe(true);
   });
 
-  it('is false when a commit was pushed after the loop finished', () => {
+  it('is false when a commit is dated after the loop finished', () => {
     expect(reviewFinishedAtHead(view([started, finished], ['2026-11-16T15:00:00Z', '2026-11-16T16:00:00Z']))).toBe(false);
   });
 
@@ -25,7 +25,7 @@ describe('reviewFinishedAtHead', () => {
     expect(reviewFinishedAtHead(view([finished, again], ['2026-11-16T16:00:00Z']))).toBe(true);
   });
 
-  it.each([['not json'], ['{}'], ['{"comments":"x"}']])('is false for what it cannot read: %s', (text) => {
+  it.each([['not json'], ['{}'], ['{"comments":"x"}'], ['{"comments":[null],"commits":[null]}']])('is false for what it cannot read: %s', (text) => {
     expect(reviewFinishedAtHead(text)).toBe(false);
   });
 });

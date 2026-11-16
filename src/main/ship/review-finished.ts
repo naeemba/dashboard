@@ -5,7 +5,9 @@
 //
 // The signal is the comment /pr-loop leaves on the pull request when it ends, `Review loop finished:
 // <status>`, read off GitHub rather than the card: the card's line is the review agent's own words.
-// A commit after that comment is work the loop has not seen, so it is reviewed again.
+// A commit dated after that comment is work the loop has not seen, so it is reviewed again. The date
+// is the commit's own committer date, not when it reached the pull request: a commit made before the
+// comment and pushed after it reads as seen.
 
 // The argument list for the gh call whose output reviewFinishedAtHead reads.
 export function reviewViewArguments(pullRequest: number): string[] {
@@ -32,8 +34,9 @@ export function reviewFinishedAtHead(view: string): boolean {
   return finished !== null && head !== null && head <= finished;
 }
 
-function listOf<T>(value: T[] | undefined): T[] {
-  return Array.isArray(value) ? value : [];
+// Only the elements that are objects: gh's JSON is read, not trusted, and a null element would throw.
+function listOf<T extends object>(value: T[] | undefined): T[] {
+  return Array.isArray(value) ? value.filter((element: unknown) => typeof element === 'object' && element !== null) : [];
 }
 
 // The newest of these timestamps in milliseconds, or null when none reads as one.
