@@ -1,6 +1,22 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Lets one test make the salvage rename fail the way a held-open file does on Windows; every other
+// test renames for real.
+const renames = vi.hoisted(() => ({ failure: undefined as Error | undefined }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    renameSync: (...parameters: Parameters<typeof actual.renameSync>) => {
+      if (renames.failure) throw renames.failure;
+      return actual.renameSync(...parameters);
+    },
+  };
+});
+
+afterEach(() => { renames.failure = undefined; });
 
 // Lets one test stand in a fake home directory without touching the real one, since Vitest cannot
 // spy on a named ESM export directly.
@@ -27,8 +43,6 @@ import {
 } from './board-store';
 import { MANAGER_PROJECT } from '../../shared/manager/manager';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-const posixModesOnly = it.skipIf(process.platform === 'win32');
 
 // Runs a test with a fake home directory standing in for the real one, so nothing it writes lands in
 // the .dashboard of whoever runs the tests.
@@ -390,18 +404,13 @@ describe('readBoard', () => {
     expect(readFileSync(brokenPath, 'utf8')).toBe('{"columns": [');
   });
 
-  // A folder that takes no rename: the salvage cannot move the file aside, and the read says so rather
-  // than drawing an empty board that the next save writes over it.
-  posixModesOnly('throws when a damaged file cannot be moved aside', () => {
+  // The salvage cannot move the file aside, and the read says so rather than drawing an empty board
+  // that the next save writes over it.
+  it('throws when a damaged file cannot be moved aside', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    const folder = join(path, BOARD_DIRECTORY);
-    chmodSync(folder, 0o500);
-    try {
-      expect(() => readBoard(path)).toThrow();
-    } finally {
-      chmodSync(folder, 0o700);
-    }
+    renames.failure = Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' });
+    expect(() => readBoard(path)).toThrow(/EBUSY/);
     expect(readFileSync(join(path, BOARD_FILE_PATH), 'utf8')).toBe('{"columns": [');
   });
 

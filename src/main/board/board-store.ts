@@ -2,10 +2,11 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { BOARD_FOLDER, BROKEN_SUFFIX, boardFolderSnapshot, readBoardFolder, setAsidePath, writeBoardFolder, type StoredBoard } from './board-files';
+import { BOARD_FOLDER, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
 import { byPlace, storedOrder } from './card-order';
 import { dashboardFolder } from '../app/dashboard-folder';
 import { readText } from '../app/missing-file';
+import { BROKEN_SUFFIX, setAsidePath } from '../app/set-aside';
 import { TEMPORARY_SUFFIX } from '../app/replace-file';
 import { isRecord } from '../../shared/app/is-record';
 import {

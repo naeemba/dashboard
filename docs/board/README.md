@@ -282,7 +282,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
 - Model and file: `board.ts`, `board-store.ts`, `board-files.ts` (where the
   folder's bytes go), `card-order.ts` (a card's place in its column), `board-watch.ts`,
   `board-writes.ts`, `board-changes.ts`, `card-moves.ts`, `board-merge.ts` (an app save replayed
-  onto the file as it is now)
+  onto the file as it is now), `src/main/app/set-aside.ts` (the name a damaged file is moved to,
+  shared with `worktrees.json`)
 - The column from the pull request: `pull-request-column.ts` (its decisions),
   `pull-request-sweep.ts` (when), the card.follow and card.start actions in
   `src/main/actions/card/`, each beside its `.test.ts`

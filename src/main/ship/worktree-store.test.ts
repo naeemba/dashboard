@@ -1,6 +1,22 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Lets one test make the salvage rename fail the way a held-open file does on Windows; every other
+// test renames for real.
+const renames = vi.hoisted(() => ({ failure: undefined as Error | undefined }));
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    renameSync: (...parameters: Parameters<typeof actual.renameSync>) => {
+      if (renames.failure) throw renames.failure;
+      return actual.renameSync(...parameters);
+    },
+  };
+});
+
+afterEach(() => { renames.failure = undefined; });
 import {
   claimsPane,
   entryForCard,
@@ -18,8 +34,6 @@ import {
 } from './worktree-store';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-const posixModesOnly = it.skipIf(process.platform === 'win32');
 
 const entry: WorktreeEntry = {
   cardId: 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa',
@@ -85,16 +99,11 @@ describe('readWorktrees', () => {
     expect(() => readWorktrees(file)).toThrow(/EISDIR/);
   });
 
-  // A folder that takes no rename: the salvage cannot move the file aside.
-  posixModesOnly('throws when a damaged file cannot be moved aside', () => {
+  it('throws when a damaged file cannot be moved aside', () => {
     const file = worktreesFile();
     writeFileSync(file, '{"entries": [');
-    chmodSync(dirname(file), 0o500);
-    try {
-      expect(() => readWorktrees(file)).toThrow();
-    } finally {
-      chmodSync(dirname(file), 0o700);
-    }
+    renames.failure = Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' });
+    expect(() => readWorktrees(file)).toThrow(/EBUSY/);
     expect(readFileSync(file, 'utf8')).toBe('{"entries": [');
   });
 
