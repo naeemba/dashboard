@@ -98,7 +98,8 @@ export type Transcript = {
   // The text block being streamed. It is shown under the entries and dropped when the finished
   // message arrives, which carries the same text whole.
   live: string;
-  // Between sending a prompt and the turn's result. What Escape has something to interrupt in.
+  // From a turn's start, a prompt sent or the init of one the session starts by itself, to its result.
+  // What Escape has something to interrupt in.
   busy: boolean;
   // The model the session says it is on, for the foot line until a model is picked there.
   model: string | null;
