@@ -446,6 +446,21 @@ describe('the working line\'s count', () => {
     expect(turnTokens(streaming)).toBe(2);
   });
 
+  it('starts a turn the session opens by itself, with no prompt, from its init', () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(1_000);
+      const started = applyMessage(EMPTY_TRANSCRIPT, { type: 'system', subtype: 'init' });
+      expect([started.busy, started.started]).toEqual([true, 1_000]);
+      const counting = fold([delta('abcd')], prompted('hi'));
+      vi.setSystemTime(5_000);
+      const init = applyMessage(counting, { type: 'system', subtype: 'init' });
+      expect([init.started, init.streamed]).toEqual([counting.started, counting.streamed]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('goes on counting, from the same start, when the running turn takes a queued prompt', () => {
     vi.useFakeTimers();
     try {
