@@ -158,7 +158,7 @@ describe('sessionRequests', () => {
   // Pane numbers are reused, so the record goes with the pane: closed by hand and claimed again, or
   // forgotten when main closes it or starts something else there, the number is nobody's worker.
   it('drops a worker from the list once its pane is claimed again or forgotten', async () => {
-    const { ports } = project();
+    const { ports, workers } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
@@ -166,7 +166,9 @@ describe('sessionRequests', () => {
     expect(await answer({ directory: '/work/api', args: ['claim'] })).toEqual({ ok: true, output: '2:1' });
     expect(answer.workers()).toEqual([]);
     await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
+    // Something that is not main's worker starting there clears main's record with the forget.
     answer.forget('2:1');
+    workers.delete('2:1');
     expect(answer.workers()).toEqual([]);
   });
 
@@ -504,6 +506,16 @@ describe('sessionRequests across projects', () => {
     stayStopped();
     expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
     expect(await answer({ directory: '/work/desk', args: ['release', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
+  });
+
+  // The popup reads the same saved dispatcher, so the worker is listed under the main it reports to.
+  it('lists a worker resumed on another page after a restart under the main that dispatched it', () => {
+    const { answer, panes, working } = pages();
+    panes.set(2, [0, 1]);
+    working.set('2:1', '/work/desk');
+    expect(answer.workers()).toEqual([
+      { id: '2:1', dispatcher: -2, project: 'api', name: 'api-terminal-2', about: '', status: 'working' },
+    ]);
   });
 
   it('takes a report read by the main that claimed the pane from another page', async () => {

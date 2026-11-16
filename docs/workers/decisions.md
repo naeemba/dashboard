@@ -231,11 +231,13 @@ only exits keeps its record and is listed idle. It sits beside the
 hook states `pane list` already reads, so the done report, the foot's count and the workers popup all
 read the one record rather than a store of their own. It is not `dispatchers`, which says who may run a
 pane, not who did: a project's own main may run a pane the manager claimed on its page, and then its
-own main hears the report. Kept in memory, as `dispatchers` is, so after a restart a resumed worker is
-listed by nobody. Its report still goes to the main that dispatched it: main.ts saves each worker's
-dispatcher path with the pane in session.json, `dispatcherOf` hands it over, and that page's main hears
-the report and may report on, send to, finish or release the worker, as the claimer could before. Only when that page is
-not open does the report go to the pane's own page's main. Before 2026-11-16 a worker the manager
+own main hears the report. Kept in memory, as `dispatchers` is, so after a restart a resumed worker has no record. Its report
+still goes to the main that dispatched it: main.ts saves each worker's dispatcher path with the pane in
+session.json, `dispatcherOf` hands it over, and that page's main hears the report and may report on,
+send to, finish or release the worker, as the claimer could before. The workers popup lists it under
+that main too, after the workers run this launch and with no prompt words. Only when that page is not
+open does the report, and the listing, go to the pane's own page's main. Before 2026-11-16 the popup
+listed a resumed worker under nobody. Before 2026-11-16 a worker the manager
 dispatched into another project came back reporting to that project's main, which never ran it, and the
 manager heard nothing (issue #187).
 
