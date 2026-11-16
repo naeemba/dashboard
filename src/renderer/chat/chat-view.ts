@@ -242,7 +242,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function paint(): void {
     painting = 0;
-    const stick = pinned;
     if (transcript.entries !== drawnEntries) drawEntries();
     if (transcript.live !== paintedLive && !revealing) reveal();
     drawFoot();
@@ -253,7 +252,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     agents.update();
     workflows.update();
     queue.render(transcript.queued);
-    if (stick) log.scrollTop = log.scrollHeight;
+    keepEnd();
   }
 
   // The streaming block catches up with what has arrived a few characters a frame (chat-reveal.ts),
@@ -274,7 +273,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     revealing = 0;
     paintedLive = revealed(paintedLive, transcript.live);
     drawLive(paintedLive);
-    if (pinned) log.scrollTop = log.scrollHeight;
+    keepEnd();
     if (paintedLive !== transcript.live) revealing = requestAnimationFrame(reveal);
   }
 
