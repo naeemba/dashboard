@@ -9,6 +9,11 @@ describe('routeDashboardCommand', () => {
       .toEqual({ kind: 'program', noun: 'pane', commandArguments: ['run', '2:3', '--card', 'x', 'do it'] });
   });
 
+  it('hands pr to its own program, which needs no app', () => {
+    expect(routeDashboardCommand(['pr', 'land', '12'])).toEqual({ kind: 'program', noun: 'pr', commandArguments: ['land', '12'] });
+    expect(routeDashboardCommand(['pr', '--help'])).toMatchObject({ kind: 'help', text: expect.stringContaining('pr land <number|url|branch>') });
+  });
+
   it('reads session as pane', () => {
     expect(routeDashboardCommand(['session', 'claim'])).toEqual({ kind: 'program', noun: 'pane', commandArguments: ['claim'] });
   });
