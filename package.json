@@ -14,7 +14,9 @@
     "make": "electron-forge make",
     "release": "electron-forge release",
     "lint": "eslint .",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "keywords": [],
   "author": {
