@@ -20,7 +20,9 @@ function fakeGitHub(answers: Record<string, GitHubAnswer[]>) {
 
 const open = { ok: true, output: 'OPEN abc123' };
 const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
+const lostAnswer = 'Post https://api.github.com/graphql: unexpected EOF';
 const MERGE = 'pr merge 12 --merge --match-head-commit abc123';
+const merges = (github: { asked: string[] }) => github.asked.filter((each) => each === MERGE).length;
 
 describe('parsePullRequestCommand', () => {
   // --project is taken out before, by boardTarget, as for `board`.
@@ -65,6 +67,32 @@ describe('landPullRequest', () => {
   it('says the merge gh refused', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: 'Head branch was modified' }] });
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'gh refused to merge 12 at abc123: Head branch was modified' });
+    expect(merges(github)).toBe(1);
+  });
+
+  // Seen: the merge went through and only gh's answer was lost.
+  it('reports merged when the merge call failed but the pull request merged at the noted commit', async () => {
+    const github = fakeGitHub({ 'pr view': [open, { ok: true, output: 'MERGED abc123' }], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }] });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123' });
+    expect(merges(github)).toBe(1);
+  });
+
+  it('tries a merge lost to a network error once more', async () => {
+    const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }, { ok: true, output: '' }] });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123' });
+    expect(merges(github)).toBe(2);
+  });
+
+  it('stops after the second network error', async () => {
+    const github = fakeGitHub({ 'pr view': [open, open, open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }, { ok: false, output: lostAnswer }] });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `gh refused to merge 12 at abc123: ${lostAnswer}` });
+    expect(merges(github)).toBe(2);
+  });
+
+  // Merged at another commit is not the commit whose checks passed.
+  it('does not count a merge at another commit', async () => {
+    const github = fakeGitHub({ 'pr view': [open, { ok: true, output: 'MERGED def456' }], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: 'Head branch was modified' }] });
+    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false });
   });
 
   it('lands nothing that is not open', async () => {
