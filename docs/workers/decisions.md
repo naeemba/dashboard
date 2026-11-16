@@ -218,7 +218,9 @@ project.open, the action the picker's open uses, so it starts, watches its board
 the recent list the same way. The pane belongs to the page it is on: its worker is named for that
 project, works in it and takes that project's cards and worktrees. Only its report goes elsewhere, to the
 main that claimed it. The claimer and the pane's own project may both run and release it; nobody else.
-Which slot claimed a pane is kept in memory only, so after a restart the pane is its own project's.
+Which slot claimed a pane is kept in memory only, so after a restart the pane is its own project's,
+except that the main that dispatched a worker still running in it may report on, send to, finish or
+release it (workers-decision-3).
 
 ## workers-decision-3: Who dispatched a worker, and the screen's links and popup
 
@@ -232,7 +234,7 @@ pane, not who did: a project's own main may run a pane the manager claimed on it
 own main hears the report. Kept in memory, as `dispatchers` is, so after a restart a resumed worker is
 listed by nobody. Its report still goes to the main that dispatched it: main.ts saves each worker's
 dispatcher path with the pane in session.json, `dispatcherOf` hands it over, and that page's main hears
-the report and may report on or release the worker, as the claimer could before. Only when that page is
+the report and may report on, send to, finish or release the worker, as the claimer could before. Only when that page is
 not open does the report go to the pane's own page's main. Before 2026-11-16 a worker the manager
 dispatched into another project came back reporting to that project's main, which never ran it, and the
 manager heard nothing (issue #187).
