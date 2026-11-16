@@ -1,6 +1,7 @@
 import type { PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import { permissionChoices, permissionTitle, questionAnswer, questionsOf, type Question } from './chat-permission';
 import { ELICITATION, type PermissionAsk } from '../../shared/chat/chat-elicitation';
+import { rowCall } from './chat-row-call';
 
 // What a Claude screen's question looks like from somewhere else — the manager's row for a worker
 // drawn as a screen — and which of its answers a digit there picks. A screen has no terminal to type a
@@ -17,7 +18,8 @@ function loneQuestion(ask: PermissionAsk): Question | undefined {
 
 // The answers a single key can give, numbered from 1 in the order the ask box lists them: a tool
 // call's rows that need nothing typed, or the options of a lone single-pick question. A form, several
-// questions, a multi-pick or a reason to type are answered on the screen itself, so they offer none.
+// questions, a multi-pick, a reason to type, or a tool call the row cannot show (chat-row-call.ts) are
+// answered on the screen itself, so they offer none.
 function rowChoices(ask: PermissionAsk): RowChoice[] {
   if (ask.toolName === ELICITATION) return [];
   if (ask.toolName === 'AskUserQuestion') {
@@ -25,12 +27,15 @@ function rowChoices(ask: PermissionAsk): RowChoice[] {
     if (!asked || asked.multiSelect) return [];
     return asked.options.map(({ label }) => ({ label, answer: () => questionAnswer(ask.input, [[label]]) }));
   }
+  if (rowCall(ask) === null) return [];
   return permissionChoices(ask).choices.flatMap((choice) => ('result' in choice ? [{ label: choice.label, answer: () => choice.result }] : []));
 }
 
-// The sentence a question is known by: a lone question's own text, else the ask box's title.
+// The sentence a question is known by: a lone question's own text, else the tool call itself, which
+// a digit on the row would allow, and only then the ask box's title. The session's own title is never
+// printed over a call a digit answers: it can say less than the call does.
 export function rowTitle(ask: PermissionAsk): string {
-  return loneQuestion(ask)?.question ?? permissionTitle(ask);
+  return loneQuestion(ask)?.question ?? rowCall(ask) ?? permissionTitle(ask);
 }
 
 // What the row prints under the pane: the question, then each answer with the digit that gives it.

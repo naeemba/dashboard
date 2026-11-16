@@ -27,6 +27,12 @@ describe('rowLines', () => {
     expect(rowLines(ask({ toolName: 'AskUserQuestion', input: { questions: [question(false)] } }))).toEqual(['Which?', '1. A', '2. B']);
   });
 
+  it('prints the call itself over the session\'s title, and no digit for a call it cannot show', () => {
+    expect(rowLines(ask({ title: 'Claude wants to tidy up' }))).toEqual(['Bash: rm -rf build', '1. Yes', '2. No']);
+    expect(rowLines(ask({ toolName: 'ExitPlanMode', input: { plan: 'Rewrite it' } }))).toEqual(['Claude has a plan. Go ahead with it?']);
+    expect(rowLines(ask({ toolName: 'mcp__github__merge', input: { repository: 'app' }, title: 'Merge?' }))).toEqual(['Merge?']);
+  });
+
   it('prints only the title for what the screen has to answer itself', () => {
     expect(rowLines(ask({ toolName: 'AskUserQuestion', input: { questions: [question(true)] } }))).toEqual(['Which?']);
     expect(rowLines(ask({ toolName: ELICITATION, title: 'Sign in' }))).toEqual(['Sign in']);
@@ -64,5 +70,6 @@ describe('takesDigit', () => {
     expect(takesDigit(ask())).toBe(true);
     expect(takesDigit(ask({ toolName: 'AskUserQuestion', input: { questions: [question(true)] } }))).toBe(false);
     expect(takesDigit(ask({ toolName: ELICITATION, title: 'Sign in' }))).toBe(false);
+    expect(takesDigit(ask({ toolName: 'Agent', input: { description: 'tidy', prompt: 'delete the tests' } }))).toBe(false);
   });
 });

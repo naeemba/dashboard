@@ -40,3 +40,17 @@ or a click on the strip get out.
 
 Not done: the session file does not record the manager's workers, so a
 restart brings back its main's conversation but not its workers.
+
+## manager-decision-3: A digit allows only a call the row shows
+
+A digit on a Claude screen's row answers a permission prompt only when the
+row prints the call: the tool's name and the command, path or URL it is about
+to use (`chat-row-call.ts`). With the wrong row highlighted, a `1` would
+otherwise allow a call nobody read. The session's own title is not printed in
+its place, since it can say less than the call does, and a command's later
+lines are joined onto the first with ⏎, so `echo ok` above `rm -rf ~` never
+reads as `echo ok`. A long call is cut with an ellipsis that shows the cut.
+
+A plan, an agent's prompt or an MCP tool's arguments do not fit one line, so
+their rows take no digit and they are answered on the screen. A single
+question with one pick allows nothing beyond the answer, and stays one key.
