@@ -5,14 +5,17 @@ import { isFinishedColumn, selectionOf, type Board } from '../../shared/board/bo
 // (workers-decision-1). Mains were told to release a worker once they had its report, and often did
 // not: finished panes piled up until the user closed them by hand.
 //
-// A pane is closed only once its turn has ended with nothing left running, and then for one of two
-// reasons: its card is finished, or it reported, main read the report, and nothing was sent to it
-// for the grace period. Never one nobody handed to a main, one with the keyboard (which a zoomed pane
+// A pane is closed only once its turn has ended with nothing left running, and then for one of
+// three reasons: its card is finished, the branch of the worktree it works in merged (what `pane
+// finish` releases on), or it reported, main read the report, and nothing was sent to it for the
+// grace period. Never one nobody handed to a main, one with the keyboard (which a zoomed pane
 // always has), one waiting on a question, or one paused on its own background work.
 
 // How often the app looks. A card finished closes its worker within this; the grace period after a
 // report is minutes, so a half-minute late is nothing. The board is main's copy in memory
 // (board-changes.ts), so a look reads nothing from disk once the project's board has been seen.
+// ponytail: a finished worker in a worktree whose card is not finished asks gh about its branch on
+// every look, two calls a minute each; remember the answer per branch if gh's rate limit ever bites.
 export const CLOSE_SWEEP_MS = 30 * 1000;
 
 export type WorkerLook = {
@@ -27,6 +30,9 @@ export type WorkerLook = {
   // The column its card is in when that is Done or Cancelled, or null. Asked only once nothing before
   // it has kept the pane, since it reads the project's board.
   finishedCard(): string | null;
+  // Whether the branch of the worktree it works in merged, as `pane finish` asks it. Asked only once
+  // nothing before it has kept the pane, since it runs gh.
+  branchMerged(): Promise<boolean>;
   // Main read a report from it since work was last sent to it.
   reportRead: boolean;
   // Since the last of: work sent to it, its report read, its turn ended.
@@ -35,8 +41,8 @@ export type WorkerLook = {
 
 export type ReleaseVerdict = { release: true; reason: string } | { release: false; why: string };
 
-// `closeAfterMs` is the grace period after a report; 0 closes a pane only for its card.
-export function releaseVerdict(look: WorkerLook, closeAfterMs: number): ReleaseVerdict {
+// `closeAfterMs` is the grace period after a report; 0 closes a pane only for its card or a merged branch.
+export async function releaseVerdict(look: WorkerLook, closeAfterMs: number): Promise<ReleaseVerdict> {
   if (!look.handedToMain) return { release: false, why: 'no main handed it work' };
   if (look.hasKeyboard) return { release: false, why: 'it has the keyboard' };
   if (look.state === 'blocked') return { release: false, why: 'it is waiting on a question' };
@@ -44,6 +50,7 @@ export function releaseVerdict(look: WorkerLook, closeAfterMs: number): ReleaseV
   if (look.state === 'running') return { release: false, why: 'it is at work' };
   const card = look.finishedCard();
   if (card !== null) return { release: true, reason: `card ${card.toLowerCase()}` };
+  if (await look.branchMerged()) return { release: true, reason: 'pull request merged' };
   if (closeAfterMs <= 0) return { release: false, why: 'closing on a report is off' };
   if (!look.reportRead) return { release: false, why: 'main has not read a report from it' };
   if (look.quietMs < closeAfterMs) return { release: false, why: 'its grace period is still running' };

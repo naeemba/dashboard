@@ -70,7 +70,7 @@ export type SessionPorts = {
   exists(worktreePath: string): boolean;
   prune(projectPath: string): Promise<void>;
   unfinished(worktreePath: string): Promise<string | null>;
-  // Whether the branch a worktree is on has a merged pull request (pane finish).
+  // Whether the branch a worktree is on has a merged pull request (pane finish, the sweep).
   merged(worktreePath: string): Promise<boolean>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
   // What closeFinished asks of a worker beside what is held here (auto-release.ts): whether its page
@@ -277,17 +277,26 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     },
   });
 
-  // Release once the work is in: the pane's card Done or Cancelled, or the branch of the worktree it
-  // works in merged, which is the card's too before the follow moves it. A worker in the project's
-  // own checkout has no branch of its own, so only its card counts. A worktree already gone was taken
-  // by the merge (`gh pr merge --delete-branch`), and git cannot be asked in it: release says so.
+  // The worktree the pane works in, when it is not the project's own checkout: that one has no branch
+  // of its own, and the merged pull requests of the branch it is on are anybody's.
+  function ownWorktree(id: string): string | undefined {
+    const directory = ports.directoryOf(id);
+    return directory === paneProject(id) ? undefined : directory;
+  }
+
+  // Whether the branch of the pane's own worktree merged, which is the card's too before the follow
+  // moves it: what `pane finish` and the sweep release on beside the card. A worktree already gone was
+  // taken by the merge (`gh pr merge --delete-branch`), and git cannot be asked in it: release says so.
+  async function branchMerged(id: string): Promise<boolean> {
+    const worktree = ownWorktree(id);
+    return worktree !== undefined && (!ports.exists(worktree) || await ports.merged(worktree));
+  }
+
+  // Release once the work is in: the pane's card Done or Cancelled, or its branch merged.
   async function finish(id: string): Promise<{ output: string } | Refused> {
-    if (ports.finishedCard(id) === null) {
-      const directory = ports.directoryOf(id);
-      const ownBranch = directory !== undefined && directory !== paneProject(id);
-      if (!ownBranch || (ports.exists(directory) && !(await ports.merged(directory)))) {
-        return { refused: `${id}'s work is not in: no card of its is Done or Cancelled${ownBranch ? ` and ${directory}'s branch has no merged pull request` : ''}` };
-      }
+    if (ports.finishedCard(id) === null && !(await branchMerged(id))) {
+      const worktree = ownWorktree(id);
+      return { refused: `${id}'s work is not in: no card of its is Done or Cancelled${worktree === undefined ? '' : ` and ${worktree}'s branch has no merged pull request`}` };
     }
     return release.call({ id });
   }
@@ -317,6 +326,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       state: said?.state ?? 'running',
       paused: isPaused(said?.waiting),
       finishedCard: () => ports.finishedCard(id),
+      // gh failing (offline, signed out) keeps the pane, and the next sweep asks again, rather than
+      // stopping the sweep for every other worker.
+      branchMerged: () => branchMerged(id).catch(() => false),
       reportRead,
       quietMs: Date.now() - since,
     };
@@ -326,13 +338,25 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // as it is, and the next sweep decides again. Release takes back the worker's stop notice, so a
   // worker closed for its card before main read a report from it is told to main here instead. Not
   // while its main is mid-turn: the turn may have read the report, heard only at its end, and a close
-  // told meanwhile is taken the moment it ends (workers-decision-1).
+  // told meanwhile is taken the moment it ends (workers-decision-1). A sweep that comes due while the
+  // last is still waiting on gh is skipped, so a hung gh does not pile up a sweep every half minute.
+  let sweeping = false;
   async function closeFinished(): Promise<void> {
+    if (sweeping) return;
+    sweeping = true;
+    try {
+      await sweep();
+    } finally {
+      sweeping = false;
+    }
+  }
+
+  async function sweep(): Promise<void> {
     const closeAfterMs = ports.closeAfterMs();
     for (const id of openPaneIds().filter(mainsWorker)) {
       if (midTurn(mainOf(id))) continue;
       const seen = look(id);
-      const verdict = releaseVerdict(seen, closeAfterMs);
+      const verdict = await releaseVerdict(seen, closeAfterMs);
       if (!verdict.release) continue;
       const slot = mainOf(id);
       const name = nameOfPane(id);
