@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-16T15:28:44.386Z",
-  "updatedAt": "2026-11-16T15:28:44.387Z",
-  "column": "Backlog",
-  "order": 46
+  "updatedAt": "2026-11-16T15:28:51.512Z",
+  "branch": "a-card-in-review-gets-its-review-even-when",
+  "column": "Doing",
+  "order": 0
 }
