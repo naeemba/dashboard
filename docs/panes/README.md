@@ -128,7 +128,7 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   `pane-output-wiring.ts` (output, exit and the working report), `terminals.ts`, `jumps.ts`
 - Shell and process: `shell.ts`, `process-tree.ts`, `shell-directory.ts`,
   `shell-directory-lookup.ts`, `working-panes.ts`, `free-pane.ts`, `waiting.ts`
-- Pane host: `pane-host-protocol.ts`, `host-socket.ts` (shared with the screen host, workers-decision-6), `pane-host-server.ts`,
+- Pane host: `pane-host-protocol.ts` (with the older versions' sockets, `olderHostSockets`), `host-socket.ts` (shared with the screen host, workers-decision-6), `pane-host-server.ts`,
   `pane-host-entry.ts`, `pane-host-client.ts`, `pane-shell.ts`, `pane-shells.ts`,
   `adopted-pane.ts`, and `vite.pane-host.config.ts` at the root
 - Output no faster than it draws: `output-pauses.ts`, and `write-flow.ts` in
@@ -159,7 +159,10 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 - Given no `node` on the login shell's PATH (on Windows, the PATH), when the app starts, then the status bar says shells die with the app this run, and the panes work as before.
 - Given no pane host this run, when you close the window, then the quit question says every shell is killed.
 - Given the installed app running, when a development build on the same user data starts, then the installed app keeps its panes and the development build runs its shells itself.
-- Given the editor open, when the app quits, then nvim exits with it.
+- Given the editor open with a file in it, when the app quits and opens again, then the same nvim is back with the file, and the scrollback key and a path in a pane reach it.
+- Given no pane host this run, when the app quits, then nvim exits with it.
+- Given kept shells of a project the launch does not reopen, when the window has put its session back, then they are killed, their scopes stopped, and the status bar names the project.
+- Given an update that bumps the pane host's protocol version, when the app opens, then the old host's shells are killed, unless an app of the old version still holds that host.
 
 ## Open questions
 
@@ -167,13 +170,10 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   read (`pane run` straight after `pane claim`, within the host's 500 ms poll)
   reads as nothing until it ends, so the pane looks free while it runs.
 
-- A kept shell's `DASHBOARD_SOCKET` names the session socket of the run that
-  started it, which is gone after a restart: `dashboard pane …` from that pane
-  answers that the app has quit until the pane is restarted.
-- A project not reopened after a restart leaves its kept shells running unseen
-  until they exit or the machine restarts.
-- An app whose protocol version differs from the running host's starts a host of
-  its own; the old host's shells run on unseen.
+- Every byte a pane prints is parsed by two headless xterms, the host's screen
+  copy and the app's; the screens of kept shells sit in main until a page takes
+  them back; and the host sends one JSON line per pty read. None has been
+  measured costing anything yet.
 - A host started by a build before systemd scopes runs every pane unscoped
   until it exits (processes README).
 - A host started by a build before #289 reads a pane it has just spawned as
