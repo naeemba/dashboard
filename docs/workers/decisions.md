@@ -218,7 +218,9 @@ project.open, the action the picker's open uses, so it starts, watches its board
 the recent list the same way. The pane belongs to the page it is on: its worker is named for that
 project, works in it and takes that project's cards and worktrees. Only its report goes elsewhere, to the
 main that claimed it. The claimer and the pane's own project may both run and release it; nobody else.
-Which slot claimed a pane is kept in memory only, so after a restart the pane is its own project's.
+Which slot claimed a pane is kept in memory only, so after a restart the pane is its own project's,
+except that the main that dispatched a worker still running in it may report on, send to, finish or
+release it (workers-decision-3).
 
 ## workers-decision-3: Who dispatched a worker, and the screen's links and popup
 
@@ -230,7 +232,12 @@ hook states `pane list` already reads, so the done report, the foot's count and 
 read the one record rather than a store of their own. It is not `dispatchers`, which says who may run a
 pane, not who did: a project's own main may run a pane the manager claimed on its page, and then its
 own main hears the report. Kept in memory, as `dispatchers` is, so after a restart a resumed worker is
-listed by nobody and reports to its own page's main.
+listed by nobody. Its report still goes to the main that dispatched it: main.ts saves each worker's
+dispatcher path with the pane in session.json, `dispatcherOf` hands it over, and that page's main hears
+the report and may report on, send to, finish or release the worker, as the claimer could before. Only when that page is
+not open does the report go to the pane's own page's main. Before 2026-11-16 a worker the manager
+dispatched into another project came back reporting to that project's main, which never ran it, and the
+manager heard nothing (issue #187).
 
 **A pane reference is an address, not a bare id.** `pane run` and the done report print
 `dashboard://pane/<slot>:<index>`; the screen links only that, so `2:1` in a reply about a time or a
