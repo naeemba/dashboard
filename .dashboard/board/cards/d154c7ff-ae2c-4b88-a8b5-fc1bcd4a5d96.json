@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-16T15:28:44.386Z",
-  "updatedAt": "2026-11-16T16:01:34.529Z",
+  "updatedAt": "2026-11-16T16:03:08.024Z",
   "branch": "a-card-in-review-gets-its-review-even-when",
   "pullRequest": 315,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-16T16:01:34.528Z",
       "body": "Review loop on PR #315: converged, ready to merge (floor-addressed after 1 round). Merged main in to resolve a conflict in this card's board file. 4 low/nit findings: 3 fixed in 6e7b1f32, 1 nit rejected (move the reviewFinished gh call into main.ts; main.ts is near the line limit). CI 5/5 passed on head 6e7b1f32."
+    },
+    {
+      "at": "2026-11-16T16:03:07.998Z",
+      "body": "Pull request #315 merged: A card in Review gets its review after a refused start https://github.com/naeemba/dashboard/pull/315"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 255
 }
