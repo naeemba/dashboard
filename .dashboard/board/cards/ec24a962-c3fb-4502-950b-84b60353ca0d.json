@@ -5,14 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:35:13.286Z",
-  "updatedAt": "2026-11-15T23:56:22.824Z",
+  "updatedAt": "2026-11-16T00:10:44.248Z",
   "branch": "worker-notices-one-per-turn-only-when-the-w",
+  "pullRequest": 294,
   "comments": [
     {
       "at": "2026-11-15T23:56:09.821Z",
       "body": "Note from main-dashboard: build on #258 (auto-close) and #265 (notices held while main is mid-turn); read their code first. The `pane report <id>` verb belongs to this card. Card 787d9a9a (pane dispatch/finish, pr land) runs after this one, so keep the pane command's verb table easy to extend. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T00:10:44.223Z",
+      "body": "Pull request #294 opened: Worker notices carry the last message, skip turns you typed, and pane report https://github.com/naeemba/dashboard/pull/294"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 2
 }
