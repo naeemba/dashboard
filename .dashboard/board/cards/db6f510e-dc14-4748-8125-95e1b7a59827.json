@@ -5,13 +5,17 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-09T19:34:48.857Z",
-  "updatedAt": "2026-11-16T12:03:40.230Z",
+  "updatedAt": "2026-11-16T12:18:20.756Z",
   "comments": [
     {
       "at": "2026-11-16T12:03:40.229Z",
       "body": "Fixed in https://github.com/naeemba/dashboard/pull/310 (with card 8768f826): the comment now points at keys-decision-2. Left in Backlog; this card has no branch, so move it when #310 merges."
+    },
+    {
+      "at": "2026-11-16T12:18:09.113Z",
+      "body": "Done in #310 (merged)."
     }
   ],
-  "column": "Backlog",
-  "order": 42
+  "column": "Done",
+  "order": 250
 }

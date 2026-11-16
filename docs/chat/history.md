@@ -52,3 +52,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #265 — Main's session runs with `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS`, so a worker's stop notice can wait for main's turn to end (workers-decision-1)
 - 2026-11-09 #271 — Claude screens get Claude in Chrome when Claude Code's config turns it on by default
 - 2026-11-09 #264 — Remove any attached image from the prompt: an x on each thumbnail, Alt+D walks them
+- 2026-11-16 — A log at its end goes to its end when its screen is shown again, so a reply that arrived out of sight is not left below the prompt

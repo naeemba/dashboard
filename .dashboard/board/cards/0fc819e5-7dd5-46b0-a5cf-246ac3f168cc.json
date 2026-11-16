@@ -4,13 +4,19 @@
   "notes": "Measured: focused terminal, nothing happening: renderer 3.7-5% CPU, ~70 style recalcs/s, +1% main, +1% GPU; 0.1% with xterm's animation off. Where: cursorBlink: true at src/renderer/app/page.ts:318; xterm DOM renderer blinks via CSS keyframes on background-color. Fix (small): cursorBlink off, or a setting defaulting off. Rerun: measure.mjs keys (last step). From profiling card dca04e6f, docs/performance/history.md 2026-11-02.",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-16T12:07:49.903Z",
+  "updatedAt": "2026-11-16T12:17:07.664Z",
+  "branch": "turn-off-the-terminal-cursor-blink-that-cos",
+  "pullRequest": 312,
   "comments": [
     {
       "at": "2026-11-16T12:07:43.992Z",
       "body": "From main-dashboard: measure idle CPU before and after (for example top or pidstat on the renderer process, with a pane idle for 30s), and put the numbers in the PR. Keep a visible cursor. If blink is a user setting, keep it as an option and default it off. Tests must be Windows-safe. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T12:17:07.640Z",
+      "body": "Pull request #312 opened: Turn off the terminal cursor blink that costs idle CPU https://github.com/naeemba/dashboard/pull/312"
     }
   ],
-  "column": "Ship",
-  "order": 0
+  "column": "Review",
+  "order": 8
 }

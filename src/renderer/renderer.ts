@@ -678,7 +678,7 @@ function apply(action: Action): void {
   // The manager is not a project and has nothing of its own to close, so there it falls through to its
   // list, where the highlight says which project is meant. Its other three sections — board, command
   // and notes — have no highlight naming one project, so the key does nothing on them and Ctrl+H still
-  // lists it; CLAUDE.md's help section says why.
+  // lists it; keys-decision-2 says why.
   if (action.kind === 'project-close' && isProjectPage(page)) return void closeProject(page.slot);
   switch (action.kind) {
     case 'project-last': {
