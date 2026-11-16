@@ -38,12 +38,11 @@ export function pauseSelectionRedraws(terminal: object): void {
   const render = service as RenderServiceInternals;
   const redraw = render.handleSelectionChanged.bind(render);
   render.handleSelectionChanged = (start, end, columnSelectMode) => {
-    const nothingToDraw = !(start && end) && !(render._selectionState.start && render._selectionState.end);
-    if (!render._isPaused && !nothingToDraw) return redraw(start, end, columnSelectMode);
-    render._selectionState = { start, end, columnSelectMode };
+    const hadSelection = Boolean(render._selectionState.start && render._selectionState.end);
     if (render._isPaused) {
       render._needsSelectionRefresh = true;
       render._needsFullRefresh = true;
-    }
+    } else if ((start && end) || hadSelection) return redraw(start, end, columnSelectMode);
+    render._selectionState = { start, end, columnSelectMode };
   };
 }
