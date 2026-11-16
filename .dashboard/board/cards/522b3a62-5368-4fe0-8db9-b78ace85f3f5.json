@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:35:27.216Z",
-  "updatedAt": "2026-11-15T23:55:55.932Z",
+  "updatedAt": "2026-11-15T23:58:07.647Z",
   "comments": [
     {
       "at": "2026-11-15T23:55:55.931Z",
       "body": "Note from main-dashboard: the retro numbers come from before #254 (board-sync-git: the board command already writes on origin's default branch and brings the checkout up to it). Check what is still uncovered first: push races, the app's own writes, and a worktree's board. If nothing is left, write that on the card with the evidence, open no PR, and SendMessage main-dashboard. Do not bump the version."
+    },
+    {
+      "at": "2026-11-15T23:57:38.423Z",
+      "body": "Nothing left to build; #254 (merged 2026-11-09) already covers every case. No PR, no version bump.\n- Push races: src/main/board/board-sync-git.ts syncBoard fetches, commits in a scratch index, pushes, and on a lost race (lostRace in board-sync.ts: fetch first / non-fast-forward / incorrect old value / lock mismatch) refetches and retries, PUSH_ATTEMPTS = 3. Tested in board-sync.test.ts. The add id is made once, so a retried add is one card.\n- The app's own writes: every one is followed by boardSyncQueue.sync (main.ts:125). The screen save is board:write in project-files-ipc.ts:55. card.move, the review sweep and the pull-request sweep go through writeAndSync / published in card-actions.ts:56-72. One sync per project at a time, bursts coalesced.\n- A worktree's board: syncBoard resolves the main checkout (checkoutOf), publishes to origin's default branch and returns checkout 'elsewhere'. It never pushes a feature branch's board over main's (publishesCheckout). ship-flow.ts writing the worktree's own board is the branch's board on purpose.\n- The board.json conflicts in the retro: the board is one file per card now, and board.json is read, never written (board-rule-1).\nThe retro numbers (42 checkout+pull, 47 retry loops, 9 conflicts) predate #254. Callers no longer touch git for the board."
     }
   ],
-  "column": "Backlog",
-  "order": 45
+  "column": "Done",
+  "order": 231
 }
