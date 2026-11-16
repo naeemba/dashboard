@@ -28,7 +28,18 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
     if (event.target === overlay) dismiss();
   });
 
-  return { dialog, remove: () => overlay.remove() };
+  // Every sheet holds the focus, so no dialog can forget to. Two things move it out to the pane
+  // behind while the sheet stays up, and the Escape meant to cancel the dialog then reaches that
+  // pane: the keyboard, as Shift+Tab, a modified key no dialog reads; and code, as a --remote join or
+  // a notification click that focuses a pane. A Tab trap on the dialog would stop only the first.
+  const release = holdFocus(overlay, dialog);
+  return {
+    dialog,
+    remove: () => {
+      release();
+      overlay.remove();
+    },
+  };
 }
 
 // Enter and Escape answer every small dialog here, and a modified one answers none: Cmd+Enter is not
@@ -88,20 +99,36 @@ export function pdfOverlay(pdf: Blob): void {
   viewerOverlay('pdf-viewer', frame, { closed: () => URL.revokeObjectURL(frame.src) });
 }
 
-// Focus that leaves the dialog comes back to it, unless it went to a sheet opened over this one, such
-// as an image opened from an agent's conversation: only the topmost sheet holds, or the two would pull
-// the focus back and forth. Returns the way to stop, which closing calls.
-export function holdFocus(dialog: HTMLElement): () => void {
-  const sheet = dialog.closest(`.${OVERLAY_CLASS}`);
-  function hold(event: FocusEvent): void {
-    if (!(event.target instanceof Element)) return dialog.focus();
-    if (dialog.contains(event.target)) return;
-    const over = event.target.closest(`.${OVERLAY_CLASS}`);
-    if (sheet && over && sheet.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) return;
-    dialog.focus();
+// Focus that leaves the dialog comes back to whatever in it had the focus last, so a box you were
+// typing in, such as the prompt's, gets what you type next; the dialog itself when that is gone. A
+// box that ends itself on blur (card detail's subtask box, a settings edit box) is gone by then, so
+// the focus lands on the dialog.
+// Unless it went to a sheet opened over this one, such as an image opened from an agent's
+// conversation: only the topmost sheet holds, or the two would pull the focus back and forth.
+// Returns the way to stop, which closing calls.
+function holdFocus(sheet: HTMLElement, dialog: HTMLElement): () => void {
+  let lastFocused: HTMLElement = dialog;
+  function focusBack(event: FocusEvent): void {
+    // Stopped in the capture phase, so whatever the focus walked to never runs its own focus
+    // listeners: a pane would mark itself focused and a box would move the selection to its row.
+    // That stops only the focus event's listeners. The focusin ones (a screen pane's container,
+    // main) stay quiet because Chromium skips focusin once a focus handler has moved the focus,
+    // so the focus() below must stay synchronous: no microtask, timeout or animation frame.
+    event.stopImmediatePropagation();
+    (lastFocused.isConnected && dialog.contains(lastFocused) ? lastFocused : dialog).focus();
   }
-  document.addEventListener('focusin', hold);
-  return () => document.removeEventListener('focusin', hold);
+  function hold(event: FocusEvent): void {
+    if (!(event.target instanceof HTMLElement)) return focusBack(event);
+    if (dialog.contains(event.target)) {
+      lastFocused = event.target;
+      return;
+    }
+    const over = event.target.closest(`.${OVERLAY_CLASS}`);
+    if (over && sheet.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) return;
+    focusBack(event);
+  }
+  document.addEventListener('focus', hold, true);
+  return () => document.removeEventListener('focus', hold, true);
 }
 
 // The viewer on screen, if any, for the Escape main hands over from the PDF's frame.
@@ -119,17 +146,12 @@ export function viewerOverlay(
   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   function close(): void {
     closeViewer = null;
-    release();
     remove();
     // Focus goes back first, so a `closed` that opens another sheet keeps the keyboard in it.
     previous?.focus();
     closed?.();
   }
   const { dialog, remove } = openOverlay(name, close);
-  // Tab walks into the PDF's frame, which is how its pages are read by keyboard, and Shift+Tab walks
-  // back out past the sheet to whatever is behind it; holding focus keeps the next keys off the page
-  // under the overlay.
-  const release = holdFocus(dialog);
   dialog.append(shown);
   answerKeys(dialog, (key) => (key === 'Enter' && enter !== undefined ? enter() : close()));
   if (keys !== undefined) dialog.addEventListener('keydown', keys);
