@@ -3,6 +3,7 @@ import { runBoardProgram } from '../board/board-program';
 import { runProjectProgram } from '../projects/project-program';
 import { runSessionProgram } from '../workers/session-program';
 import { runBudgetProgram } from './budget-program';
+import { endQuietlyWhenOutputCloses } from './closed-output';
 import { routeDashboardCommand } from './dashboard-cli';
 import { runPullRequestProgram } from './pull-request-program';
 import { appStarter, appStartRefusal } from './start-app';
@@ -38,4 +39,5 @@ async function run(): Promise<number> {
   }
 }
 
+endQuietlyWhenOutputCloses();
 void run().then((code) => { process.exitCode = code; });
