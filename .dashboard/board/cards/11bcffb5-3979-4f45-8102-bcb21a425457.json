@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-16T08:19:32.397Z",
-  "updatedAt": "2026-11-16T08:19:38.748Z",
-  "column": "Ship",
+  "updatedAt": "2026-11-16T08:37:07.301Z",
+  "branch": "budget-verb-7-day-usage-against-a-cap-set-o",
+  "pullRequest": 296,
+  "comments": [
+    {
+      "at": "2026-11-16T08:37:07.273Z",
+      "body": "Pull request #296 opened: budget verb: 7-day usage against a cap set once https://github.com/naeemba/dashboard/pull/296"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
