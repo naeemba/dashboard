@@ -146,8 +146,6 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   // and that is what made arriving here the slowest tab key. Only what changed is written, so a draw
   // with nothing new touches nothing. Lines gone from the page are let go at the end of each draw.
   const built = new Map<string, HTMLElement>();
-  // Its click finds the line's place when it fires rather than when it was built: the queue redraws on
-  // its own, and a row built before an item joined it sits one place further down.
   function lineElement(line: ManagerLine): HTMLElement {
     const key = lineKey(line);
     const item = built.get(key) ?? createLine(line);
@@ -182,7 +180,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
 
   function createLine(line: ManagerLine): HTMLElement {
     const item = createRow(line);
-    // A click moves the selection to the row first and then does what Enter does there.
+    // A click moves the selection to the row first and then does what Enter does there. It finds the
+    // line's place when it fires rather than when it was built: the queue redraws on its own, and a row
+    // built before an item joined it sits one place further down.
     item.addEventListener('click', () => {
       setSelection(rowElements.indexOf(item));
       open();

@@ -8,6 +8,7 @@ import { finishedAfter, keptConversations, resultUsage, type FinishedTask } from
 import { hookFailure, runningHook } from './chat-hooks';
 import { isRecord, stringOrEmpty } from '../app/is-record';
 import { timeOf } from '../app/age';
+import { sameItems } from '../app/same-items';
 import type { PermissionAsk } from './chat-elicitation';
 import { cacheUseOf, type CacheUse } from '../usage/cache-warmth';
 import { tokensOf } from '../usage/usage';
@@ -405,7 +406,7 @@ function stepsAfter(steps: ChatEntry[], message: Record<string, unknown>): ChatE
     }
     return step;
   });
-  return next.length === steps.length && next.every((step, index) => step === steps[index]) ? steps : next;
+  return sameItems(next, steps) ? steps : next;
 }
 
 // One message folded into the transcript. A subagent's own messages carry the id of the tool call

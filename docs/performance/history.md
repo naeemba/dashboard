@@ -39,6 +39,7 @@ the same day.
 - Every fifth second a manager arrival also re-reads every board
   (`BOARD_STALE_MS`). Arrivals 6 s apart paint 64–128 ms after the key; 0.3 s
   apart, 72 ms. Not changed here.
+
 ## 2026-11-16: a terminal's cursor no longer blinks (finding 6)
 
 Same machine and compositor as the first profile. One worker opened on alpha

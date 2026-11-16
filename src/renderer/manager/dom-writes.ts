@@ -2,7 +2,7 @@
 // or `hidden` to what it already was, or putting a list's own children back, still marks the element
 // changed, and one changed element is enough for the window to lay the whole page out again before the
 // next frame. The manager's page draws on every arrival, so a draw with nothing new must touch nothing.
-import { sameItems } from '../../shared/manager/manager';
+import { sameItems } from '../../shared/app/same-items';
 
 export function writeText(cell: Element | null | undefined, text: string): void {
   if (cell && cell.textContent !== text) cell.textContent = text;
