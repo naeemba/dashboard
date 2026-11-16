@@ -64,7 +64,9 @@ The user's statusline writes `~/.claude/usage-7d.json` each time it draws
 command-decision-5 lacked: a file, read with no SDK session. It is written only
 while some session is on screen, so a reading over 30 minutes old exits 2, as a
 missing or broken one does: a new-crm manager ran a hand-made budget script 59
-times overnight, and a stale "under" is the loop running past the cap.
+times overnight, and a stale "under" is the loop running past the cap. A
+reading dated more than 5 minutes ahead exits 2 too: a clock three hours fast
+when it wrote would otherwise make it fresh for three and a half hours.
 
 The cap is `budget.weeklyCap` in settings.json, set once with `budget --cap` or
 on the settings screen, so a loop never has to be told it again. `--cap` writes

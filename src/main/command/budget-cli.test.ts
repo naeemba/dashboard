@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { budgetVerdict, parseBudgetCommand, STALE_AFTER_MS } from './budget-cli';
+import { AHEAD_ALLOWED_MS, budgetVerdict, parseBudgetCommand, STALE_AFTER_MS } from './budget-cli';
 
 const NOW = Date.parse('2026-11-16T12:00:00Z');
 const reading = (usedPercentage: unknown, at: number) => JSON.stringify({ usedPercentage, at: new Date(at).toISOString() });
@@ -27,8 +27,11 @@ describe('budgetVerdict', () => {
     expect(stale.line).toContain(': too old to say');
   });
 
-  it('counts a reading from a clock ahead as fresh', () => {
-    expect(budgetVerdict(reading(10, NOW + 60_000), 74, NOW).line).toContain('read just now');
+  it('counts a reading from a clock a little ahead as fresh, and one far ahead as unknown', () => {
+    expect(budgetVerdict(reading(10, NOW + AHEAD_ALLOWED_MS), 74, NOW).line).toContain('read just now');
+    const ahead = budgetVerdict(reading(10, NOW + 3_600_000), 74, NOW);
+    expect(ahead.exitCode).toBe(2);
+    expect(ahead.line).toContain('dated in the future');
   });
 });
 

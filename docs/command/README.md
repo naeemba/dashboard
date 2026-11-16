@@ -31,7 +31,8 @@ app.
 and the app at most once a minute when a Claude screen is measured (`{"usedPercentage": <number>, "at": "<ISO time>"}`), against `budget.weeklyCap`
 in settings.json. It prints the share used, the cap and how old the reading is,
 and exits 0 under the cap, 1 at or over it, and 2 when it cannot say: no cap
-set, no file, a file that does not read, or a reading older than 30 minutes. The
+set, no file, a file that does not read, a reading older than 30 minutes, or
+one dated more than 5 minutes ahead (a clock that was wrong when it wrote). The
 file is written only while some session is on screen, so a loop left
 overnight reads a stale figure, and stale is never under. `budget --cap <n>`
 sets the cap (above 0, at most 100), the settings screen's Budget row too; a
