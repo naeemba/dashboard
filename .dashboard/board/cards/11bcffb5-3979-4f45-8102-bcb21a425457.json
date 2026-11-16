@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-16T08:19:32.397Z",
-  "updatedAt": "2026-11-16T09:05:59.877Z",
+  "updatedAt": "2026-11-16T09:21:56.543Z",
   "branch": "budget-verb-7-day-usage-against-a-cap-set-o",
   "pullRequest": 296,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-16T09:05:59.876Z",
       "body": "Converged, ready to merge. Added the app-side writer of ~/.claude/usage-7d.json (cf6fe9df): each Claude screen's measure records the 7-day figure from usage_EXPERIMENTAL, at most once a minute, from src/main/usage/weekly-usage-file.ts with a test; no extra model request; if the call changes the file goes stale and budget exits 2. Review loop: floor-addressed in 2 rounds, conflict in the card file resolved by merging main. Round 1 fixed 6 findings, round 2 fixed 4 low/nit ones with no re-review after: dangling settings symlink, cap checked twice, remote-host docs, comment reflow. All 5 CI checks pass on head c6039ce7. Nothing blocked on a person."
+    },
+    {
+      "at": "2026-11-16T09:21:56.512Z",
+      "body": "Pull request #296 merged: budget verb: 7-day usage against a cap set once https://github.com/naeemba/dashboard/pull/296"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 236
 }
