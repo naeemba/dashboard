@@ -4,6 +4,13 @@
   "notes": "review.ts:117-131 runs gh pr merge itself once pr-loop converges. Alternative: stop at converged, list it on needs-you, merge with one key; per-project setting for auto-merge. Opinion. (docs/review/2026-11-01.md W3)",
   "priority": "medium",
   "parent": null,
+  "updatedAt": "2026-11-16T09:29:47.746Z",
+  "comments": [
+    {
+      "at": "2026-11-16T09:29:47.746Z",
+      "body": "Settled by #291: review.autoMerge, off by default, overridable per project in projects.yaml."
+    }
+  ],
   "column": "Backlog",
   "order": -7
 }
