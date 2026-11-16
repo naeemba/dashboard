@@ -5,14 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:35:20.206Z",
-  "updatedAt": "2026-11-15T23:56:26.800Z",
+  "updatedAt": "2026-11-16T00:00:49.479Z",
   "branch": "wait-on-ci-without-polling-and-stop-pr-loop",
+  "pullRequest": 292,
   "comments": [
     {
       "at": "2026-11-15T23:55:48.944Z",
       "body": "Scope from main-dashboard: change only this repo (the landing and review prompts in src/main/ship/review.ts, and any ci-wait script here). Do NOT edit the pr-loop skill: it lives in the user's dotfiles and serves other projects, and the user said to leave it alone. Put the proposed pr-loop change (drop gh run cancel; name the wait) in the PR description for the user. review.ts changed in #291 (autoMerge); merge origin/main first. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T00:00:49.454Z",
+      "body": "Pull request #292 opened: Wait on CI with one background watch in the review prompt https://github.com/naeemba/dashboard/pull/292"
     }
   ],
-  "column": "Doing",
-  "order": 1
+  "column": "Review",
+  "order": 0
 }
