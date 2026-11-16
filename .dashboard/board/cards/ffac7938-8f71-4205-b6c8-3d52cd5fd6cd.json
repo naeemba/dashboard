@@ -4,7 +4,7 @@
   "notes": "Follow-up from #155 (manager terminals). The manager's worker panes (manager-terminal-<n>) do not come back after the app restarts: session-store keys saved pages by project path, and the manager is not in that list. Project pages already restore their panes and resume their Claude sessions; the manager's should too.",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T10:17:40.147Z",
+  "updatedAt": "2026-11-16T10:29:09.922Z",
   "branch": "bring-the-manager-s-worker-panes-back-after",
   "pullRequest": 301,
   "comments": [
@@ -27,8 +27,12 @@
     {
       "at": "2026-11-16T10:17:40.147Z",
       "body": "Review loop converged in 2 rounds, ready to merge. Merged main in to resolve a board-card conflict (cabeb0cf); round 1 posted 2 findings, both fixed in c59326b3; round 2 re-review left 0 open threads. CI: 5/5 checks pass on head c59326b3."
+    },
+    {
+      "at": "2026-11-16T10:29:09.892Z",
+      "body": "Pull request #301 merged: Bring the manager's worker panes back after a restart https://github.com/naeemba/dashboard/pull/301"
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 240
 }

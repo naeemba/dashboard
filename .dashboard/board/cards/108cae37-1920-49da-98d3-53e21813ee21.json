@@ -4,7 +4,7 @@
   "notes": "confirmOverlay and promptOverlay in src/renderer/app/overlay.ts hold no focus: Shift+Tab is a modified key, so answerKeys lets it through, and focus moves to the last focusable element before the overlay (a prompt box or a pane) while the sheet stays up. An Escape meant to cancel the dialog then reaches the page behind it. Fix with a shared focus hold in overlay.ts, as viewerOverlay does with its focusin listener; no key handling changes, so keys-rule-1 is untouched.\n\nIssue: https://github.com/naeemba/dashboard/issues/182\nReview: https://github.com/naeemba/dashboard/pull/180#discussion_r4438105899",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T10:01:46.684Z",
+  "updatedAt": "2026-11-16T10:28:07.545Z",
   "branch": "hold-focus-inside-confirmoverlay-and-prompt",
   "pullRequest": 298,
   "comments": [
@@ -27,8 +27,12 @@
     {
       "at": "2026-11-16T10:01:46.684Z",
       "body": "PR #298 review loop: converged, ready to merge. Ended floor-addressed after 2 rounds: 7 findings fixed, 0 rejected. First merged main in (abc7fe01) and hand-resolved a conflict in this card file. Fix commits d483700e and 3b0fd51a. Nobody re-reviewed the last low/nit fixes (a comment in overlay.ts and a re-wrap in docs/keys/hard-rules.md). CI on 3b0fd51a: 5/5 passed."
+    },
+    {
+      "at": "2026-11-16T10:28:07.519Z",
+      "body": "Pull request #298 merged: Hold the focus in every dialog openOverlay builds https://github.com/naeemba/dashboard/pull/298"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 239
 }
