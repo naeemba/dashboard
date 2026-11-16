@@ -1,0 +1,5 @@
+#!/bin/sh
+# Lints and type-checks the staged code before a commit (workflow-rule-5). What it skips is
+# scripts/pre-commit.mjs; a machine without node commits unchecked rather than not at all.
+command -v node >/dev/null 2>&1 || exit 0
+exec node scripts/pre-commit-step.mjs
