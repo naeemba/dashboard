@@ -13,7 +13,7 @@ then its pull request moves it (board-decision-6).
 Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 
 - Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`
-- Review: `review.ts`, `review-flow.ts`
+- Review: `review.ts`, `review-flow.ts`, `review-finished.ts`
 - Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`, `worktree-scan.ts`,
   `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
   `worktree-removal.ts`, `worktrees.css`
@@ -50,6 +50,7 @@ woken when it exits, never a poll by hand or a foreground `sleep` (ship-decision
 - Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it stopped for its background agents), then nothing is marked and a later tick starts the review, after its pane closes too (#300, #313; `review-flow.test.ts`).
+- Given merging is off and a card waits in Review after its loop posted `Review loop finished:` on the pull request, when the app restarts, then no second review starts unless a commit was pushed after that comment (`review-finished.ts`, `review-flow.test.ts`).
 - Given merging is off (the default), when the review loop and CI finish, then the review merges nothing, the card stays in Review with the ending in a comment on it, and the project's main hears the rounds, the fixes, what is open and the CI state.
 - Given settings `review.autoMerge` is on but the project's entry says `autoMerge: false`, when its card is reviewed, then nothing is merged; the entry wins either way, and a folder the file does not list follows the setting.
 - Given merging is on and a fix was pushed after the last review round, when the loop ends, then the review waits for CI on that commit and merges it with `--match-head-commit`; a failed check stops it with a comment on the card.

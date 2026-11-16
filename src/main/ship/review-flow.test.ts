@@ -79,6 +79,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       writeBoard: (projectPath, board) => { writeBoard(projectPath, board); },
       arrived: async () => undefined,
       landsPullRequest: () => false,
+      reviewFinished: async () => false,
       ...over,
     },
   };
@@ -199,6 +200,21 @@ describe('reviewSweep', () => {
     await sweep.run();
     expect(log.started[0].prompt).toContain('/pr-loop 12');
     expect(columnOfCard(projectPath)).toBe('Review');
+  });
+
+  // Merging off: the loop finished and the card waits in Review for the user. A restart wiped the
+  // sweep's mark, and without asking the pull request the first tick ran a second loop at it.
+  it('starts no second review of a card in Review whose loop finished at the head commit', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, intoReview(boardWithCard(12), CARD) as Board);
+    const asked: number[] = [];
+    const { ports: made, log } = ports(entry, { reviewFinished: async (_path, pullRequest) => { asked.push(pullRequest); return true; } });
+    const sweep = sweepWith(made);
+    await sweep.run();
+    await sweep.run();
+    expect(asked).toEqual([12]);
+    expect(log.removed).toEqual([]);
+    expect(log.started).toEqual([]);
   });
 
   // A review that ended the way it was meant to: the pull request merged and the card in Done, still

@@ -11,6 +11,8 @@ import { realPath } from '../../app/real-path';
 import { bumpsVersion, landsPullRequest, readProjectsFile } from '../../projects/projects-file';
 import { isProjectBoard } from './project-board';
 import { isLinkedWorktree } from '../../board/linked-worktree';
+import { runProgram } from '../../app/git';
+import { reviewFinishedAtHead, reviewViewArguments } from '../../ship/review-finished';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { entryForCard } from '../../ship/worktree-store';
 import { followedBranch, type PullRequest } from '../../board/pull-request-column';
@@ -26,7 +28,7 @@ import { cardStart } from './start';
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
 export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
-  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest'> & {
+  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished'> & {
     table: Channels;
     boardLog: BoardChanges;
     // Every board write here goes to origin behind it (board-sync-queue.ts).
@@ -72,6 +74,9 @@ export function cardActions(main: CardActionsMain): CardActions {
     writeBoard: writeShown,
     arrived: (entry: WorktreeEntry) => move.call({ projectPath: entry.projectPath, id: entry.cardId, column: REVIEW_COLUMN, source: 'automatic' }),
     landsPullRequest: (projectPath) => landsPullRequest(() => readProjectsFile().text, projectPath, homedir(), realPath, main.autoMerge()),
+    // gh failing (offline, signed out) is not knowing, which starts the review as before.
+    reviewFinished: (projectPath, pullRequest) => runProgram('gh', reviewViewArguments(pullRequest), projectPath, { timeout: 20_000 })
+      .then(reviewFinishedAtHead, () => false),
   });
   const shipCard = shipFlow({
     ...main,

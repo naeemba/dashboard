@@ -54,6 +54,9 @@ export type ReviewPorts = {
   // Whether the review may merge its pull request (landsPullRequest), read at each start so a change on
   // the settings screen or in projects.yaml holds for the next review.
   landsPullRequest: (projectPath: string) => boolean;
+  // Whether this pull request's review loop already finished at its head commit, asked of gh before
+  // the sweep's own start. False when gh cannot say.
+  reviewFinished: (projectPath: string, pullRequest: number) => Promise<boolean>;
 };
 
 // The pull request this card's work opened, or null while there is none yet. That number is the whole
@@ -300,6 +303,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       await review(entry.cardId);
       return;
     }
+    // A loop that already finished at the pull request's head, which a card waiting in Review with
+    // merging off is after a restart wipes the mark (review-finished.ts). It stays marked: a fix pushed
+    // later comes through a worker, whose start forgets the mark.
+    if (await ports.reviewFinished(entry.projectPath, pullRequest)) return;
     arriving.add(entry.cardId);
     try {
       await ports.arrived(entry);
