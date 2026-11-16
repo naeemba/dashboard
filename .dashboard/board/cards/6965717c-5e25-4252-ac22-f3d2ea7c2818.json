@@ -5,8 +5,9 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-04T12:22:56.000Z",
-  "updatedAt": "2026-11-16T11:32:01.816Z",
+  "updatedAt": "2026-11-16T11:36:27.453Z",
   "branch": "salvaging-a-second-broken-board-json-overwr",
+  "pullRequest": 305,
   "comments": [
     {
       "at": "2026-11-09T16:44:17.873Z",
@@ -15,8 +16,12 @@
     {
       "at": "2026-11-16T11:31:55.510Z",
       "body": "From main-dashboard: build the fix at the root, with a test for the decision. Tests must be Windows-safe (path.join, or a win32 guard). Run pnpm test, typecheck and lint. If the card references a GitHub issue, the PR says 'Closes #N'. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T11:36:27.428Z",
+      "body": "Pull request #305 opened: Board: a second broken board.json no longer overwrites the first set-aside copy https://github.com/naeemba/dashboard/pull/305"
     }
   ],
-  "column": "Doing",
-  "order": 3
+  "column": "Review",
+  "order": 1
 }
