@@ -4,7 +4,7 @@
   "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T10:03:15.653Z",
+  "updatedAt": "2026-11-16T10:34:03.360Z",
   "branch": "agent-state-per-pane-from-claude-code-hooks",
   "pullRequest": 302,
   "comments": [
@@ -19,6 +19,14 @@
     {
       "at": "2026-11-16T10:03:15.628Z",
       "body": "Pull request #302 opened: Answer a Claude screen's question from the manager row https://github.com/naeemba/dashboard/pull/302"
+    },
+    {
+      "at": "2026-11-16T10:30:50.112Z",
+      "body": "Converged, ready to merge. Review loop: 3 rounds, 7 findings fixed, 0 rejected (c610ab4e, 02f399ef, abbeb805), after main was merged in to clear a board-card conflict (c0e778cd). Then main-dashboard's safety check (8fa48152): a digit on a manager row allows a tool call only when the row shows the call itself (tool + command/path/URL, every command line kept, cut with …). A plan, an agent or an MCP call takes no digit and is answered on the screen. manager-decision-3, chat-row-call.ts with a test. CI green on 8fa48152. The final nit fix (README rewrap) had no re-review."
+    },
+    {
+      "at": "2026-11-16T10:34:03.360Z",
+      "body": "f4a2c086: a call cut to fit the row's 160 characters is printed cut but takes no digit, so a dangerous tail hidden behind the … cannot be approved from the manager. Tested with cd x && <harmless> && rm -rf ~. CI green on f4a2c086. Still ready to merge; not reviewed by a loop round, not checked by hand."
     }
   ],
   "column": "Review",

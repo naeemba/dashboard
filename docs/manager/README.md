@@ -146,12 +146,10 @@ Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
 - Given the manager page, when you press the terminals key, then its main session `main-manager` is on the left, working in `~/.dashboard` (made if missing), with its worker panes on the right.
 - Given the manager's main, when it runs `session claim` and `session run`, then a worker opens on the manager page in `~/.dashboard` as `manager-terminal-<n>` and reports to `main-manager`.
 - Given the manager's terminals, when you press a key that opens something in nvim (the scrollback, Ctrl+G, a path a pane printed), then the status bar says at once that the manager has no nvim.
+- Given the manager's main dispatched a worker, when the app restarts, then the worker comes back on the manager page resumed as `main-manager`'s, and the workers popup lists it under `main-manager` (manager-decision-2).
 - Given the manager's terminals on screen, when the window connects to another host or comes back home, then they are emptied and drawn again from that host: its `main-manager` conversation and its workers.
 
 ## Known limits
-
-- The manager's workers do not come back after a restart; its main's
-  conversation does (manager-decision-2).
 
 - Ctrl+Q and three board-scope keys are listed on manager screens where they
   do nothing (keys-decision-1, keys-decision-2).

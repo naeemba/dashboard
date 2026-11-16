@@ -23,3 +23,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #256 — A command run across projects runs in a systemd scope per project under agents.slice (processes-decision-5)
 - 2026-11-09 #268 — Each pane's Memory column and the status bar's figure, read from its systemd scopes
 - 2026-11-16 #302 — A Claude screen's question answered from its row by a digit, main's included
+- 2026-11-16 #301 — The manager's workers come back after a restart, listed under main-manager (manager-decision-2)

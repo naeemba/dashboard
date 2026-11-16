@@ -5,7 +5,9 @@ import { channels } from './channels';
 import { PROJECT_MODES } from '../../shared/keys/modes';
 import { LOCAL_SCREEN } from '../../shared/remote-host/screens';
 import { sessionStore } from './session-store';
+import { writeSession } from './session';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
+import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 const layout = { pages: [{ path: '/code/api', mode: PROJECT_MODES[0], focused: 0, names: [null] }], activeIndex: 0 };
@@ -35,10 +37,23 @@ describe('session:write', () => {
 describe('session:read', () => {
   it("answers the host window's latest layout, which another screen's never replaces", async () => {
     const { table } = store();
-    expect(await table.invoke(LOCAL_SCREEN, 'session:read', [])).toEqual({ pages: [], activeIndex: 0 });
+    expect(await table.invoke(LOCAL_SCREEN, 'session:read', [])).toEqual({ pages: [], activeIndex: 0, manager: [] });
     table.dispatch(LOCAL_SCREEN, 'session:write', [layout]);
     table.dispatch('couch', 'session:write', [{ pages: [], activeIndex: 0 }]);
     expect(await table.invoke(LOCAL_SCREEN, 'session:read', [])).toEqual(layout);
+  });
+});
+
+// The manager's restore asks by its folder, the one its panes run in.
+describe('the manager\'s workers', () => {
+  it('are owed to the manager\'s folder after a restart', () => {
+    const directory = temporaryFolder('session-store-');
+    const file = path.join(directory, 'session.json');
+    const conversation = { session: 'ccaaf965-c864-48db-8044-30bf27d93087', directory, dispatched: true, dispatcher: MANAGER_FOLDER };
+    writeSession(file, { pages: [], activeIndex: 0, manager: [null, conversation] });
+    const sessions = sessionStore(channels(), file, () => -1, () => undefined);
+    expect(sessions.owedResumes(MANAGER_FOLDER)).toEqual([1]);
+    expect(sessions.takeResume(MANAGER_FOLDER, 1, `${MANAGER_SLOT}:1`)).toEqual(conversation);
   });
 });
 

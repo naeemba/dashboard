@@ -3,7 +3,7 @@ import { clampIndex } from '../../shared/app/clamp-index';
 import { UPDATE_ROW_LABELS, updateFooter, updateNotice, updateRows, updateTitle, type UpdateRow, type UpdateState } from '../../shared/app/update';
 import { failureText } from '../../shared/errors/failure';
 import { labelled } from './icons';
-import { answerKeys, holdFocus, openOverlay, searchRowElement } from './overlay';
+import { answerKeys, openOverlay, searchRowElement } from './overlay';
 import { openReleaseNotes } from './whats-new-view';
 import { isModified } from '../keys/shortcuts';
 
@@ -42,13 +42,11 @@ export function openUpdates(bridge: DashboardBridge, report: (message: string) =
     // `after` is a sheet opened in this one's place, which the caller waits for too.
     function close(after?: Promise<void>): void {
       redraw = null;
-      releaseFocus();
       remove();
       resolve(after);
     }
 
     const { dialog, remove } = openOverlay('updates', () => close());
-    const releaseFocus = holdFocus(dialog);
 
     function say(text: string): void {
       message = text;

@@ -33,8 +33,9 @@ type ResumeLedger = {
   held(): ReadonlyMap<string, PaneConversation>;
 };
 
+// A saved page, or the manager's conversations filed under its folder, which is the path its restore asks by.
 export function resumeLedger(
-  pages: readonly SavedPage[],
+  pages: readonly Pick<SavedPage, 'path' | 'claude'>[],
   exists: (directory: string) => boolean,
 ): ResumeLedger {
   const pending = new Map(pages.map((page) => [page.path, [...page.claude]]));
