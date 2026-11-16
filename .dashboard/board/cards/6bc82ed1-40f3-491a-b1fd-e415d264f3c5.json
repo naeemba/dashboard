@@ -5,14 +5,23 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-02T01:02:00.310Z",
-  "updatedAt": "2026-11-16T12:18:54.579Z",
+  "updatedAt": "2026-11-16T12:48:29.130Z",
   "branch": "skip-xterm-s-selection-redraw-on-scroll-whe",
+  "pullRequest": 313,
   "comments": [
     {
       "at": "2026-11-16T12:18:48.132Z",
       "body": "From main-dashboard: measure before and after (CPU or frame time, or switch latency for the tab card), and put the numbers in the PR. Fix it at the root. Tests must be Windows-safe. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T12:47:07.550Z",
+      "body": "Pull request #313 opened: Skip a shown terminal's selection redraw when nothing is selected https://github.com/naeemba/dashboard/pull/313"
+    },
+    {
+      "at": "2026-11-16T12:48:29.129Z",
+      "body": "PR #313. paused-selection.ts now also skips a shown terminal's selection redraw when there was no selection and still is none. measure.mjs streams 200, 3 runs each: renderer CPU with alpha shown 22.9/26.1/26.5% -> 20.2/21.9/23.8% (median 26.1 -> 21.9); spreads overlap. Numbers in docs/performance/history.md."
     }
   ],
-  "column": "Doing",
+  "column": "Review",
   "order": 0
 }

@@ -174,7 +174,7 @@ const measurements = {
   }),
 
   // Input to next paint for the board's arrows and for tab switches, on alpha's 153-card board, then idle
-  // CPU with a terminal focused, which is the cursor blinking.
+  // CPU with a terminal focused. Too late after launch to catch a cursor blink (history.md, 2026-11-16).
   keys: () => withInstance(demo, {}, async ({ page }) => {
     print('board-open', await keyToPaint(page, ['Ctrl+B']));
     print('board-arrow-down', await keyToPaint(page, Array(15).fill('ArrowDown')));
@@ -182,7 +182,7 @@ const measurements = {
     await keys(page, 'Ctrl+T');
     print('tab-switch beta alpha gamma alpha manager alpha delta alpha', await keyToPaint(page, ['Ctrl+3', 'Ctrl+2', 'Ctrl+4', 'Ctrl+2', 'Ctrl+1', 'Ctrl+2', 'Ctrl+5', 'Ctrl+2']));
     await openWorkers(page);
-    print('cursor-blink-terminal-focused', await cpuWindow(10));
+    print('idle-terminal-focused', await cpuWindow(10));
   }),
 
   // Input to next paint for <rounds> trips from alpha to the manager and back, each press observed on
