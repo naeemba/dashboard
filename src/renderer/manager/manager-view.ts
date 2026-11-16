@@ -464,7 +464,9 @@ export function createManagerView(options: ManagerOptions): ManagerView {
   }
 
   // Everything the window did not claim: a typed character on a waiting row goes straight to that
-  // pane's shell, so a menu is answered without leaving this page. The arrows and Enter never reach
+  // pane — into a shell's pty, or as the digit picking a Claude screen's answer, which takes no other
+  // key — so a menu is answered without leaving this page. A screen whose question is answered on the
+  // screen itself has no answer target, so its keys fall through. The arrows and Enter never reach
   // here — the window's one lookup matches them first and stops them — and shortcuts.ts says which
   // keystrokes count as typed and why the rest are kept out.
   element.addEventListener('keydown', (event) => {
@@ -579,7 +581,8 @@ export function createManagerView(options: ManagerOptions): ManagerView {
       const line = lines[selected];
       if (!line) return '';
       const removeHint = ` · ${options.binding('manager-remove')} removes it`;
-      const answer = answerTarget(line) ? ' · type a character to answer it' : '';
+      const target = answerTarget(line);
+      const answer = target === null ? '' : ` · type ${target.answers === 'digit' ? 'a listed digit' : 'a character'} to answer it`;
       if (line.kind === 'need') {
         const remove = removableWorktree(line) ? removeHint : '';
         return `${line.need.project} · ${line.need.subject} · ${NEED_LABELS[line.need.kind]}${remove}${answer}`;

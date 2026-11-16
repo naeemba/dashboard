@@ -13,6 +13,7 @@ import './drawer/drawer.css';
 import './usage/usage.css';
 import './manager/manager.css';
 import { openHelp } from './keys/help';
+import { paneReading, screenReading } from './manager/pane-reading';
 import { openWhatsNew, whatsNewAtLaunch } from './app/whats-new-view';
 import { openUpdates, watchUpdates } from './app/update-view';
 import { preloadFont } from './app/font-preload';
@@ -225,11 +226,7 @@ function mainEntry(page: Page): ManagerPane[] {
   if (chat === null) return [];
   return [{
     index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(chat.question() !== null), exited: false,
-    lastPrintedAt: 0, lastPrinted: () => chat.question() ?? '',
-    tail: () => {
-      const question = chat.question();
-      return question === null ? [] : [question];
-    },
+    ...screenReading(chat),
   }];
 }
 
@@ -239,10 +236,11 @@ function currentManagerRows(): ManagerRow[] {
   return managerRows(projectPages().map((entry) => ({
     project: entry.project,
     slot: entry.slot,
-    panes: [...mainEntry(entry), ...namedPanes(entry).map((pane) => ({
+    panes: [...mainEntry(entry), ...namedPanes(entry).map((pane): ManagerPane => ({
       ...pane,
-      tail: () => paneTail(pane.terminal),
-      lastPrinted: () => paneLastLine(pane.terminal),
+      ...paneReading(pane.screen, {
+        lastPrintedAt: pane.lastPrintedAt, tail: () => paneTail(pane.terminal), lastLine: () => paneLastLine(pane.terminal),
+      }),
     }))],
   })), usage, worktrees, memory);
 }

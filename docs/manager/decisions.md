@@ -43,3 +43,19 @@ one by, so its workers' conversations are kept beside the pages, under
 `manager`, and handed to the manager's restore filed under `~/.dashboard`,
 the folder it asks by. Before 2026-11-16 that list did not exist, and a
 restart brought back the manager's main but not its workers.
+
+## manager-decision-3: A digit allows only a call the row shows
+
+A digit on a Claude screen's row answers a permission prompt only when the
+row prints the call: the tool's name and the command, path or URL it is about
+to use (`chat-row-call.ts`). With the wrong row highlighted, a `1` would
+otherwise allow a call nobody read. The session's own title is not printed in
+its place, since it can say less than the call does, and a command's later
+lines are joined onto the first with ⏎, so `echo ok` above `rm -rf ~` never
+reads as `echo ok`. A call longer than the row's 160 characters is printed cut,
+with an ellipsis, and takes no digit: in `cd x && <150 harmless characters> &&
+rm -rf ~` the cut is the `rm`.
+
+A plan, an agent's prompt or an MCP tool's arguments do not fit one line, so
+their rows take no digit and they are answered on the screen. A single
+question with one pick allows nothing beyond the answer, and stays one key.

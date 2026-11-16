@@ -1,6 +1,6 @@
 import './chat.css';
 import './chat-foot.css';
-import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk';
+import type { PermissionMode, PermissionResult } from '@anthropic-ai/claude-agent-sdk';
 import type { ChatCommand } from '../../shared/keys/actions';
 import type { ChatContent, DashboardBridge, ChatPreferences } from '../../shared/app/bridge';
 import { createAskPanel } from './chat-ask-view';
@@ -12,6 +12,8 @@ import { createCommandMenu, type MenuRow } from './chat-menu-view';
 import { fileRows, mentionAt, pickMention } from './chat-mentions';
 import { createLiveBlock } from './chat-live-view';
 import { permissionTitle } from './chat-permission';
+import { rowAnswer, rowLines, rowTitle, takesDigit } from './chat-row-answers';
+import type { PaneAnswers } from '../../shared/manager/manager';
 import { revealed } from './chat-reveal';
 import { runScreenCommand, showFootSetting, type CommandScreen } from './chat-screen-dispatch';
 import { footSetting, MODE_LABELS, MODELS, MODES } from '../../shared/chat/foot-choices';
@@ -70,9 +72,17 @@ export type ChatView = {
   focus(): void;
   receive(event: ChatEvent): void;
   runCommand(command: ChatCommand): void;
-  // The title of the question the session is waiting on, or null. Having one is main's bell, and the
-  // title is what the manager's row prints under main, as a worker's row prints its last line.
+  // The title of the question the session is waiting on, or null. Having one is main's bell.
   question(): string | null;
+  // The question with its numbered answers, as a worker's manager row prints it (chat-row-answers.ts),
+  // and the digit there answering it; false for a key that answers nothing.
+  questionLines(): string[];
+  answerKey(key: string): boolean;
+  // What a key on that row answers: a listed digit, or nothing while no question is open or the open
+  // one is answered on the screen itself.
+  rowKeys(): Exclude<PaneAnswers, 'character'>;
+  // When the session last sent this screen anything, 0 before it has: the age on its manager row.
+  lastEventAt(): number;
 };
 
 const PAINT_MS = 80;
@@ -94,10 +104,12 @@ export function createChatView(options: ChatViewOptions): ChatView {
   live.className = 'chat-entry chat-text chat-live';
   log.append(live);
   const drawLive = createLiveBlock(live);
-  const ask = createAskPanel((id, result) => {
+  // The ask box's rows and a digit on a manager row both answer here.
+  const answer = (id: string, result: PermissionResult): void => {
     bridge.chatAnswer(slot, id, result);
     dropAsk(id);
-  }, bridge.openExternal);
+  };
+  const ask = createAskPanel(answer, bridge.openExternal);
   const prompt = document.createElement('textarea');
   prompt.className = 'chat-prompt';
   prompt.placeholder = PLACEHOLDER;
@@ -119,6 +131,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
   element.append(log, queue.element, tasks.element, activity, ask.element, menu.element, attachments.element, prompt, foot);
 
   let transcript: Transcript = EMPTY_TRANSCRIPT;
+  let lastEventAt = 0;
   let drawn: DrawnEntry[] = [];
   let selected: number | null = null;
   // The block the copy key copied and the link the link key followed last, so the next press on the
@@ -602,7 +615,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   return {
     element,
-    question: () => (asks.length > 0 ? permissionTitle(asks[0]) : null),
+    question: () => (asks.length > 0 ? rowTitle(asks[0]) : null),
+    questionLines: () => (asks.length > 0 ? rowLines(asks[0]) : []),
+    rowKeys: () => (asks.length > 0 && takesDigit(asks[0]) ? 'digit' : 'none'),
+    lastEventAt: () => lastEventAt,
+    answerKey(key) {
+      const first = asks.at(0);
+      const result = first ? rowAnswer(first, key) : null;
+      if (!first || result === null) return false;
+      answer(first.id, result);
+      return true;
+    },
     // Reads the conversation in; the page calls it once, when it is built.
     open() {
       readEarlier();
@@ -616,6 +639,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     },
     focus,
     receive(event) {
+      lastEventAt = Date.now();
       if (event.kind === 'ask') return addAsk(event.ask);
       if (event.kind === 'ask-gone') return dropAsk(event.id);
       // A new conversation or one picked in /resume, from any screen: whatever the page is on now is
