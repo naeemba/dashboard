@@ -5,13 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-02T01:02:00.310Z",
-  "updatedAt": "2026-11-16T12:18:48.133Z",
+  "updatedAt": "2026-11-16T12:18:54.418Z",
   "comments": [
     {
       "at": "2026-11-16T12:18:48.132Z",
       "body": "From main-dashboard: measure before and after (CPU or frame time, or switch latency for the tab card), and put the numbers in the PR. Fix it at the root. Tests must be Windows-safe. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 16
+  "column": "Ship",
+  "order": 0
 }
