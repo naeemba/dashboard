@@ -355,7 +355,17 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const closeAfterMs = ports.closeAfterMs();
     for (const id of openPaneIds().filter(mainsWorker)) {
       if (midTurn(mainOf(id))) continue;
-      const seen = look(id);
+      // gh is asked at most once per pane: the second look below reuses its answer.
+      let merged: Promise<boolean> | undefined;
+      const lookNow = (): WorkerLook => {
+        const fresh = look(id);
+        return { ...fresh, branchMerged: () => (merged ??= fresh.branchMerged()) };
+      };
+      if (!(await releaseVerdict(lookNow(), closeAfterMs)).release) continue;
+      // gh may have taken seconds, in which the pane got the keyboard, was sent work, or its main
+      // started a turn: decide again on the pane as it is now.
+      if (midTurn(mainOf(id))) continue;
+      const seen = lookNow();
       const verdict = await releaseVerdict(seen, closeAfterMs);
       if (!verdict.release) continue;
       const slot = mainOf(id);

@@ -79,6 +79,21 @@ describe('closeFinished', () => {
     expect(closed).toEqual(['2:1']);
   });
 
+  // You click into the pane while gh answers: it must not close under you.
+  it('keeps a worker that took the keyboard while gh was answering, asking gh once', async () => {
+    let answerGh: (merged: boolean) => void = () => undefined;
+    let asked = 0;
+    const gh = () => { asked += 1; return new Promise<boolean>((resolve) => { answerGh = resolve; }); };
+    const { answer, closed, keyboard } = await reported({ ...inWorktree, merged: gh });
+    const sweep = answer.closeFinished();
+    await Promise.resolve();
+    keyboard.add('2:1');
+    answerGh(true);
+    await sweep;
+    expect(closed).toEqual([]);
+    expect(asked).toBe(1);
+  });
+
   it('never asks about the branch of a worker in the project\'s own checkout', async () => {
     const { answer, closed } = await reported({ merged: async () => true });
     await answer.closeFinished();
