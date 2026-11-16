@@ -16,8 +16,11 @@ project `/adopt-docs` reaches afterwards gets the old pattern. (skills-decision-
 ## Checks
 
     pnpm test                # vitest, node environment only
-    pnpm exec tsc --noEmit
-    pnpm exec eslint .
+    pnpm typecheck           # tsc --noEmit
+    pnpm lint                # eslint .
+
+`pnpm install` turns on a pre-commit hook that runs eslint on the staged code and
+the typecheck (workflow-rule-5).
 
 There is no DOM test environment: jsdom is not installed and nothing in `src/`
 declares one. A `*.test.ts` can test a decision module, never a view. DOM

@@ -76,3 +76,33 @@ and never removed what they made left about 200 folders in `/tmp` per run; on
 stopped every worker. `pnpm exec eslint .` refuses `mkdtemp` and `mkdtempSync`
 imported into a `*.test.ts` or `*-fixture.ts` under `src/`, and
 `eslint.config.test.ts` pins it.
+
+## workflow-rule-5: A commit runs eslint and the typecheck first
+
+`.githooks/pre-commit` runs eslint on the staged `.ts`/`.js` files and `tsc --noEmit` on the whole project,
+and refuses the commit on either failure. `pnpm install` points `core.hooksPath` at `.githooks` (the
+`prepare` script), so every worktree of the checkout gets it. Before it, `tsc --noEmit` ran only in CI and a
+worker found "'wholePath' is defined but never used" mid-edit, a round trip after it had committed.
+
+eslint runs only when code is staged, and on the whole project (`eslint .`) when `eslint.config.*`,
+`package.json` or `pnpm-lock.yaml` is: a new rule otherwise passed on the config file alone and refused
+the files it targets only in CI. tsc also runs when `tsconfig*.json`, `package.json` or `pnpm-lock.yaml`
+is, since those change what it reports. Both skip a commit that only touches `.dashboard/` or docs, and a
+checkout with no `node_modules`: the app and the board command commit cards from throwaway worktrees, and a
+card must never wait on, or fail on, tsc. `filesToCheck` and `runsTypecheck` in `scripts/pre-commit.mjs`
+decide, tested beside it; `scripts/pre-commit-step.mjs` runs the tools with node, and `.gitattributes` pins
+the hook to LF, so the same hook works on Windows (a CRLF shebang refuses every commit). It reads the
+working tree, not the index: a half-staged file is checked as it stands on disk. `git commit --no-verify`
+gets past it; CI runs both anyway.
+
+## workflow-rule-6: A test that touches paths or processes passes on Windows
+
+Windows has been a target since #191, and `windows-latest` runs the tests on every pull request. #288 and #289
+built expected paths with `/` and reached that job only after their review loop had finished, so the fix
+was another round. A test that names a path builds it with `path.join`; one that needs POSIX paths, file
+modes, unix sockets or signals skips on `win32` with a named `it.skipIf` saying why (`posixPathsOnly` in
+`src/main/drawer/docs-list.test.ts`, `posixModesOnly` in `src/main/app/log-store.test.ts`). CI's Windows job holds it,
+after review. No lint or test holds it earlier: 24 of the 40 test files with a `/tmp/`-style literal have no
+`win32` guard and pass on Windows, since they use the path as a string and never touch the disk, so a check
+on the literal would flag mostly correct tests. Card 43ceddd8 (make the POSIX path-literal tests portable
+instead of skipping them) is the way to a check that holds.
