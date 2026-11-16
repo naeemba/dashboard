@@ -23,6 +23,8 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: "'worktree', 'add'", allowed: { 'src/main/actions/worktree/make.ts': 2, 'src/main/board/create-task-program.ts': 1 } },
   // settings.json: its definition, and settings.write's `writeFile` port.
   { call: 'writeSettings(', allowed: { 'src/main/main.ts': 1, 'src/main/settings/settings-store.ts': 1 } },
+  // settings.json from outside the app: `budget --cap`, which a running app adopts (settings.adopt).
+  { call: 'writeWeeklyCap(', allowed: { 'src/main/settings/settings-store.ts': 1, 'src/main/command/budget-program.ts': 1 } },
   // The channel behind Enter on an exited pane, pane.restart's door.
   { call: "'pty:restart'", allowed: { 'src/main/panes/pane-channels.ts': 1 } },
   // What the session actions do, handed to them as ports and called nowhere else: main's start, only

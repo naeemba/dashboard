@@ -1,3 +1,4 @@
+import { relativeAge, timeOf } from '../../shared/app/age';
 import { isRecord } from '../../shared/app/is-record';
 import { isWeeklyCap } from '../../shared/settings/settings';
 import { readFlagList } from './flags';
@@ -36,12 +37,13 @@ export function parseBudgetCommand(commandArguments: readonly string[]): BudgetC
 
 export type BudgetVerdict = { exitCode: 0 | 1 | 2; line: string };
 
-function ago(milliseconds: number): string {
-  const minutes = Math.floor(milliseconds / 60_000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 120) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-  const hours = Math.floor(minutes / 60);
-  return hours < 48 ? `${hours} hours ago` : `${Math.floor(hours / 24)} days ago`;
+function parsedRecord(text: string): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 // Under, over, or unknown. `reading` is the file's text, null when there is none. A reading dated in
@@ -49,19 +51,14 @@ function ago(milliseconds: number): string {
 export function budgetVerdict(reading: string | null, cap: number | null, now: number): BudgetVerdict {
   if (cap === null) return { exitCode: 2, line: 'no weekly cap set: set one with `budget --cap <n>` or on the settings screen' };
   if (reading === null) return { exitCode: 2, line: 'no reading: ~/.claude/usage-7d.json is missing; the statusline writes it while a Claude session draws it' };
-  let stored: unknown;
-  try {
-    stored = JSON.parse(reading);
-  } catch {
-    stored = null;
-  }
-  const used = isRecord(stored) ? stored.usedPercentage : undefined;
-  const at = isRecord(stored) && typeof stored.at === 'string' ? Date.parse(stored.at) : Number.NaN;
-  if (typeof used !== 'number' || !Number.isFinite(used) || Number.isNaN(at)) {
+  const stored = parsedRecord(reading);
+  const used = stored.usedPercentage;
+  const at = typeof stored.at === 'string' ? timeOf(stored.at) : undefined;
+  if (typeof used !== 'number' || !Number.isFinite(used) || at === undefined) {
     return { exitCode: 2, line: `no reading: ~/.claude/usage-7d.json is not {"usedPercentage": <number>, "at": "<ISO time>"}` };
   }
   const age = Math.max(0, now - at);
-  const figures = `${used}% of the 7-day usage used, cap ${cap}%, read ${ago(age)}`;
+  const figures = `${used}% of the 7-day usage used, cap ${cap}%, read ${relativeAge(now - age, now)}`;
   if (age > STALE_AFTER_MS) return { exitCode: 2, line: `${figures}: too old to say, no Claude session has drawn its statusline since` };
   return used >= cap
     ? { exitCode: 1, line: `${figures}: at or over the cap` }

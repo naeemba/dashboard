@@ -32,7 +32,7 @@ import {
   EDITOR_INDEX, MAIN_INDEX, paneFromId, paneLabel, paneName, startsEditor, terminalId,
 } from '../shared/panes/terminals';
 import { terminalStatus, type StatusPage } from './app/status';
-import type { WorktreeList, Project, Session, WorktreeEntry } from '../shared/app/bridge';
+import type { LoadedSettings, WorktreeList, Project, Session, WorktreeEntry } from '../shared/app/bridge';
 import { createPageSync } from './app/page-sync';
 import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
 import type { MemorySnapshot } from '../shared/processes/scope-memory';
@@ -319,6 +319,11 @@ function saveSession(): void {
 //
 // The window's own background is not here. Main paints it before the renderer exists, so it keeps the
 // old colour until the next launch — visible only in the margin around the panes.
+function applySettings(loaded: LoadedSettings): void {
+  settings = loaded.settings;
+  shellCommand = loaded.shellCommand;
+}
+
 function applyAppearance(): void {
   publishTheme(settings.theme);
   restylePanes(settings);
@@ -639,7 +644,7 @@ function showHelp(): void {
 }
 
 function showSettings(): void {
-  openSettings(settings, isMac, (next) => {
+  openSettings(() => settings, isMac, (next) => {
     settings = next;
     void bridge.saveSettings(next).then((shell) => { if (typeof shell === 'string') shellCommand = shell; });
     applyAppearance();
@@ -896,12 +901,9 @@ async function start(): Promise<void> {
   void bridge.readUsage().then(applyUsage, () => undefined);
   bridge.onUsageChange(applyUsage);
   void bridge.readMemory().then(applyMemory, () => undefined); bridge.onMemoryChange(applyMemory);
-  const loaded = await bridge.getSettings();
-  settings = loaded.settings;
+  applySettings(await bridge.getSettings());
   settingsLoaded = true;
-  shellCommand = loaded.shellCommand;
-  // ponytail: a settings screen open at that moment keeps the copy it opened with; its next change saves that.
-  bridge.onSettingsChange((changed) => { settings = changed.settings; shellCommand = changed.shellCommand; applyAppearance(); renderStatus(); });
+  bridge.onSettingsChange((changed) => { applySettings(changed); applyAppearance(); renderStatus(); });
   // Read before anything is on screen, because the first page to open starts saving over it.
   const session = await bridge.getSession();
   // xterm measures cell size when a pane opens, so the font must be in before openProject() builds one.

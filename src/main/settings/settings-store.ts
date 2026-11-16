@@ -2,6 +2,8 @@ import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '../../shared/app/is-record';
 import { parseSettings, withoutShipped, type Settings } from '../../shared/settings/settings';
+import { readText } from '../app/missing-file';
+import { replaceFile } from '../app/replace-file';
 import { ExpectedFailure } from '../command/failure-line';
 
 // Beside the .env file main already reads, not in Electron's userData directory. userData is
@@ -73,16 +75,17 @@ export function tidySettingsFile(file: string, isMac: boolean): void {
 // every other line is written back as it was. A file that does not read as an object is refused
 // rather than replaced: the cap is not worth the rest of somebody's settings.
 export function writeWeeklyCap(file: string, cap: number): void {
-  let stored: unknown = {};
+  const text = readText(file) ?? '{}';
+  let stored: unknown;
   try {
-    stored = JSON.parse(readFileSync(file, 'utf8'));
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw new ExpectedFailure(`${file} does not read as JSON; fix it, then set the cap again`);
+    stored = JSON.parse(text);
+  } catch {
+    throw new ExpectedFailure(`${file} does not read as JSON; fix it, then set the cap again`);
   }
   if (!isRecord(stored)) throw new ExpectedFailure(`${file} does not hold an object; fix it, then set the cap again`);
   const budget = isRecord(stored.budget) ? stored.budget : {};
-  mkdirSync(path.dirname(file), { recursive: true });
-  writePrivately(file, serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }));
+  // Whole or not at all: the app reads this file while the command writes it.
+  replaceFile(file, serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }), 0o600);
 }
 
 // What the app takes from the file when it changes on disk: `budget --cap`, or an edit by hand. Null

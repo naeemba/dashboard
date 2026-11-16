@@ -14,6 +14,7 @@ export type SettingsAdoptPorts = Omit<SettingsWritePorts, 'writeFile'> & {
 
 export const settingsAdopt = action<SettingsAdoptPorts, { settings: Settings }, { output: string; shellCommand: string }>('settings.adopt', {
   words: [],
+  // adoptedSettings has already parsed it; its one caller is the watch.
   input: ({ settings }) => ({ settings: settings as Settings }),
   async run(ports, { settings }) {
     const shellCommand = ports.pickShell(settings);

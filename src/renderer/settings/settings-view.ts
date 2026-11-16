@@ -15,12 +15,19 @@ import { chatShadowPartner, isModified } from '../keys/shortcuts';
 const MODIFIER_CODES = /^(Control|Shift|Alt|Meta)(Left|Right)$/;
 
 export function openSettings(
-  initial: Settings,
+  // The window's live copy, which a change to settings.json made while the screen is open replaces.
+  current: () => Settings,
   isMac: boolean,
   onChange: (next: Settings) => void,
 ): Promise<void> {
   return new Promise<void>((resolve) => {
-    let settings = initial;
+    let settings = current();
+    // Every change starts from the live copy, so saving here never puts back lines the file has moved
+    // past since the screen opened (`dashboard budget --cap`, an edit by hand).
+    function refresh(): void {
+      settings = current();
+      rows = settingsRows(settings);
+    }
     let rows = settingsRows(settings);
     let selected = stepSelection(rows, 0, 0);
     // The row waiting for a keystroke, or null. While a row is armed this screen reads modified keys,
@@ -152,6 +159,7 @@ export function openSettings(
       // safe to call twice: dialog.focus() fires this same input's blur synchronously, and the blur
       // listener below only re-enters finish while editor still points at the input it belongs to.
       function finish(): void {
+        refresh();
         editor = null;
         const text = input.value.trim();
         if (row.kind === 'color') {
@@ -221,6 +229,7 @@ export function openSettings(
     }
 
     dialog.addEventListener('keydown', (event) => {
+      refresh();
       // The one deliberate exception to "check isModified first". A row waiting for a key has to read
       // Ctrl, Cmd, Alt and Shift, or those are the only keys you could never bind.
       if (armed !== null) {

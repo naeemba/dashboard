@@ -2,7 +2,7 @@ import type { Settings } from '../../../shared/settings/settings';
 import { isRecord } from '../../../shared/app/is-record';
 import { action } from '../action';
 
-// The one writer of the settings: the settings screen, launch's host token and a remote join saving the
+// The app's one writer of the settings (`dashboard budget --cap` is the command's, writeWeeklyCap): the settings screen, launch's host token and a remote join saving the
 // address it joined. Each change is kept as main's live copy with the shell it picks, then written. The
 // launch tidy (tidySettingsFile, settings-store.ts) still rewrites the file's own lines outside it.
 
