@@ -4,6 +4,7 @@ import type { ManagerRow } from '../../shared/manager/manager';
 import type { Dirtiness } from './manager-reads';
 import { barHeights, formatTokens, sumDays, sumTotals, WEEK_DAYS, weekdayIndex } from '../../shared/usage/usage';
 import { dirtySummary } from '../../shared/ship/worktree-rows';
+import { putChildren, sameNode, writeHidden, writeText } from './dom-writes';
 
 // The parts of the manager's general screen that are not the list: the figures along the top and the
 // recent activity beside the list. Neither takes the keyboard — there is nothing on them to press —
@@ -104,16 +105,13 @@ export function createOverview(): Overview {
     element,
     draw(rows, { checked, dirty, unreadable }, paths) {
       const totals = sumTotals(rows.map((row) => row.tokens));
-      fiveHours.value.textContent = formatTokens(totals.fiveHours);
-      week.value.textContent = formatTokens(totals.week);
-      allTime.value.textContent = formatTokens(totals.allTime);
-      week.detail.replaceChildren(
-        trendBars(sumDays(rows.map((row) => row.days)), weekdayIndex(Date.now())),
-        dayNames,
-      );
-      worktrees.value.textContent = `${paths.length}`;
+      writeText(fiveHours.value, formatTokens(totals.fiveHours));
+      writeText(week.value, formatTokens(totals.week));
+      writeText(allTime.value, formatTokens(totals.allTime));
+      putChildren(week.detail, [trendBars(sumDays(rows.map((row) => row.days)), weekdayIndex(Date.now())), dayNames], sameNode);
+      writeText(worktrees.value, `${paths.length}`);
       const summary = dirtySummary(paths, checked, dirty, unreadable);
-      worktrees.detail.textContent = summary.text;
+      writeText(worktrees.detail, summary.text);
       worktrees.element.classList.toggle('attention', summary.attention);
     },
   };
@@ -141,8 +139,8 @@ export function createActivity(): Activity {
   return {
     element,
     draw(entries) {
-      empty.hidden = entries.length > 0;
-      list.replaceChildren(...entries.map((entry) => {
+      writeHidden(empty, entries.length > 0);
+      putChildren(list, entries.map((entry) => {
         const item = document.createElement('li');
         const title = document.createElement('div');
         title.className = 'manager-activity-title';
@@ -157,7 +155,7 @@ export function createActivity(): Activity {
         detail.append(project, columnChip(entry.column), age);
         item.append(title, detail);
         return item;
-      }));
+      }), sameNode);
     },
   };
 }
