@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T11:45:04.914Z",
-  "updatedAt": "2026-11-16T12:22:21.968Z",
+  "updatedAt": "2026-11-16T12:29:59.493Z",
   "branch": "a-turn-the-session-starts-by-itself-shows-o",
   "pullRequest": 311,
   "comments": [
@@ -24,6 +24,10 @@
     {
       "at": "2026-11-16T12:22:21.967Z",
       "body": "Review loop on PR #311: converged, ready to merge. 1 round, one low finding (busy field comment in chat-transcript.ts didn't cover a turn the session starts by itself) fixed in e859147d; nothing rejected, nothing open. No conflict with main. CI: 5/5 checks pass on head e859147d."
+    },
+    {
+      "at": "2026-11-16T12:29:59.492Z",
+      "body": "Merged origin/main (#309, #310) into the branch as fd7dafd7. Git merged it with no conflicts, and the PR diff has no .dashboard/board file. Typecheck, lint and tests (3369) pass locally. CI passes 5/5 on fd7dafd7. Ready to merge."
     }
   ],
   "column": "Review",
