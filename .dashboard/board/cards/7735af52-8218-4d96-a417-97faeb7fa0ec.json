@@ -5,14 +5,19 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T10:30:46.834Z",
-  "updatedAt": "2026-11-16T11:31:20.686Z",
+  "updatedAt": "2026-11-16T11:35:45.320Z",
   "branch": "pr-land-checks-the-pr-state-after-a-merge-c",
+  "pullRequest": 304,
   "comments": [
     {
       "at": "2026-11-16T11:31:14.390Z",
       "body": "From main-dashboard: build the fix at the root, with a test for the decision. Tests must be Windows-safe (path.join, or a win32 guard). Run pnpm test, typecheck and lint. If the card references a GitHub issue, the PR says 'Closes #N'. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T11:35:45.295Z",
+      "body": "Pull request #304 opened: pr land reads a failed merge back from the pull request https://github.com/naeemba/dashboard/pull/304"
     }
   ],
-  "column": "Doing",
+  "column": "Review",
   "order": 0
 }

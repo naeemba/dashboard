@@ -5,13 +5,19 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T00:51:15.779Z",
-  "updatedAt": "2026-11-16T11:31:30.133Z",
+  "updatedAt": "2026-11-16T11:38:52.671Z",
+  "branch": "the-sweep-closes-a-worktree-worker-whose-pr",
+  "pullRequest": 306,
   "comments": [
     {
       "at": "2026-11-16T11:31:23.545Z",
       "body": "From main-dashboard: build the fix at the root, with a test for the decision. Tests must be Windows-safe (path.join, or a win32 guard). Run pnpm test, typecheck and lint. If the card references a GitHub issue, the PR says 'Closes #N'. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T11:38:52.654Z",
+      "body": "Pull request #306 opened: The sweep closes a --worktree worker whose PR merged https://github.com/naeemba/dashboard/pull/306"
     }
   ],
-  "column": "Ship",
-  "order": 0
+  "column": "Review",
+  "order": 2
 }
