@@ -4,7 +4,7 @@
   "notes": "session-requests.ts tells dispatched.get(id)?.dispatcher ?? slot, and dispatched/dispatchers are only in memory. A worker that project A's main (or the manager) dispatched into project X with pane claim --project comes back after a restart in X, so its done notice goes to X's main, which never dispatched it, and A hears nothing. Fix: persist the dispatcher with the worker mark in session.json; the same record fixes which main starts at open (PR #186). Issue: https://github.com/naeemba/dashboard/issues/187 Review: https://github.com/naeemba/dashboard/pull/186#discussion_r4438204842",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T09:36:37.818Z",
+  "updatedAt": "2026-11-16T09:49:09.277Z",
   "branch": "after-a-restart-a-cross-project-worker-s-do",
   "pullRequest": 299,
   "comments": [
@@ -19,6 +19,10 @@
     {
       "at": "2026-11-16T09:36:37.772Z",
       "body": "Pull request #299 opened: Tell a restored worker's report to the main that dispatched it https://github.com/naeemba/dashboard/pull/299"
+    },
+    {
+      "at": "2026-11-16T09:49:09.277Z",
+      "body": "Review loop: floor-addressed after 1 round, converged, ready to merge. Merged main in first (card-file conflict, 7250bf93). Round 1 found 2 low findings (no test for mainOf's fallback when the dispatcher's page is not open; workers-decision-2/3 wording), both fixed in fbe24a6f and c78865f0, not re-reviewed. CI: 5/5 checks passed on head c78865f0. Nothing blocked on a person."
     }
   ],
   "column": "Review",
