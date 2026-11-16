@@ -5,6 +5,41 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-16: the manager keeps its rows from one draw to the next (finding 8)
+
+Same machine and compositor as the first profile, `measure.mjs manager-switch
+$D 15`: fifteen trips from alpha to the manager and back, each press observed
+on its own. Three runs each; "before" is this branch without the change, built
+the same day.
+
+| | before | after |
+|---|---|---|
+| Ctrl+1 to the manager, input to paint, median | 88 ms (all three runs) | 80 ms (all three runs) |
+| Ctrl+1, p90 | 112–128 ms | 112–120 ms |
+| Ctrl+1, handler median | 29–30 ms | 21–23 ms |
+| Ctrl+2 back to alpha, median (a project tab) | 48 ms | 48 ms |
+| Layouts forced per arrival (trace) | 2, the second over ~450 dirty objects | 1 |
+
+- What changed: each row's element is kept by its line's key and written over
+  (`manager-rows.ts`), the lists are put back only when their order changed,
+  and every write compares first (`dom-writes.ts`). The overview's trend bars
+  and the activity list are built and compared with `isEqualNode` rather than
+  put back every draw. The half-minute refresh writes through the same writer.
+- The manager is not yet as quick as a project tab. What is left, from the
+  trace: the GPU rasters the manager's text afresh on every arrival (about
+  16 ms of `RendererRasterWorker`, against 2–5 ms for alpha's mostly-WebGL
+  page), because a hidden page is translated off screen and loses its tiles;
+  and the focus on arrival forces style and layout of the newly visible page,
+  which alpha pays too.
+- Tried and not kept: leaving the hidden manager painted under the project
+  page (`.page-manager[hidden] { visibility: visible; translate: none }`).
+  One run: Ctrl+1 median 56 ms, but alpha went from 48 to 56 ms, p90 stayed
+  at 112 ms, and it needs `inert` on hidden pages and keeps the manager
+  painting under every project page. A decision of its own, not this fix.
+- Every fifth second a manager arrival also re-reads every board
+  (`BOARD_STALE_MS`). Arrivals 6 s apart paint 64–128 ms after the key; 0.3 s
+  apart, 72 ms. Not changed here.
+
 ## 2026-11-02: a streaming reply redraws only its tail (finding 5)
 
 Same machine, compositor and tooling as the first profile, `measure.mjs chat

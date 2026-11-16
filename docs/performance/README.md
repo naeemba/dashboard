@@ -82,6 +82,7 @@ instance:
 | `measure.mjs flood $D [shown\|hidden] [host\|no-host]` | One worker runs `seq 1 inf` flat out. CPU of Electron's processes and the pane host, main and renderer profiles, then Ctrl+C, how long the pane keeps printing, and whether it stopped. `no-host` puts a file where the pane host's socket folder goes, so the app runs the pty itself |
 | `measure.mjs chat $D [characters] [per delta] [ms]` | A long answer streamed into alpha's Claude screen as SDK `text_delta` events sent from main; no model call |
 | `measure.mjs keys $D` | Input to next paint for board arrows and tab switches, then idle CPU with a terminal focused (cursor blink) |
+| `measure.mjs manager-switch $D [rounds]` | Input to next paint and handler time for Ctrl+1 to the manager and Ctrl+2 back to alpha, each press observed alone, then a renderer profile of the same trips into `$D/manager-switch-renderer.cpuprofile` |
 | `measure.mjs ipc $D [seconds]` | Messages and bytes per IPC channel with four streams running: `send` and `invoke` to main, `invoke` replies, and everything main sends |
 | `measure.mjs cycles $D [count]` | Opens and closes zeta from a pane. Renderer heap, DOM nodes, listeners, main handles and CLI count after each batch |
 | `measure.mjs soak $D [minutes]` | Five streaming workers and a tab-and-board round every minute, with memory after a GC each minute |

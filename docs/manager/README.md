@@ -121,6 +121,8 @@ keeps its last good numbers on screen until the new ones land.
 Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
 
 - Page: `manager.ts`, `manager-page.ts`, `manager-view.ts`,
+  `manager-rows.ts` (each row built once and written over on every draw),
+  `dom-writes.ts` (writes that leave an unchanged element alone),
   `manager-panels.ts`, `manager-reads.ts`, `manager-sections.ts`,
   `section-strip.ts`, `manager.css`
 - What wants you: `needs-you.ts`, `board-summary.ts`
