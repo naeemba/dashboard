@@ -41,5 +41,5 @@ or a click on the strip get out.
 The session file has no page for the manager, which has no folder to name
 one by, so its workers' conversations are kept beside the pages, under
 `manager`, and handed to the manager's restore filed under `~/.dashboard`,
-the folder it asks by. Before 2026-11-16 that list did not exist, and a restart brought back
-the manager's main but not its workers.
+the folder it asks by. Before 2026-11-16 that list did not exist, and a
+restart brought back the manager's main but not its workers.

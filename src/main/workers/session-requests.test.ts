@@ -172,6 +172,18 @@ describe('sessionRequests', () => {
     expect(answer.workers()).toEqual([]);
   });
 
+  // A card shipped from the board, or a Claude handed work with pane send, holds main's worker with no
+  // run behind it: it reports to main, so it is listed under main, as a resumed worker is.
+  it('lists a pane holding main\'s worker that no run started, with no prompt words', () => {
+    const { ports, open, agents, workers } = project();
+    open.push(1);
+    agents.add('2:1');
+    workers.set('2:1', '/work/api');
+    expect(sessionRequests(ports).workers()).toEqual([
+      { id: '2:1', dispatcher: 2, project: 'api', name: 'api-terminal-2', about: '', status: 'working' },
+    ]);
+  });
+
   // A worker resumed at launch whose dispatcher's page is not open: its own page's main hears it.
   it('tells the pane\'s own main when a resumed worker\'s dispatcher page is not open', async () => {
     const { ports, open, agents, workers, told } = project();

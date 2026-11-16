@@ -107,8 +107,9 @@ function askingSlot(command: SessionCommand, folderSlot: number): number {
 }
 
 export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
-  // Every worker a session run started that is still open, in the order they ran, then every one back
-  // after a restart, each naming the slot whose main it reports to: one read serves every page's status
+  // Every worker a session run started that is still open, in the order they ran, then every other open
+  // pane holding main's worker (back after a restart, a card shipped from the board, a Claude handed work
+  // with pane send), each naming the slot whose main it reports to: one read serves every page's status
   // line and popup.
   workers(): DispatchedWorker[];
   // The pane stopped being that worker's for good: it closed, or something else started in it. Pane
@@ -370,8 +371,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
   }
 
-  // A worker back after a restart was run by nobody this launch, so it follows the ones that were, under
-  // the main it reports to (mainOf), with no prompt to say what it is about.
+  // A pane holding main's worker that no run started this launch (resumed after a restart, a shipped
+  // card, a Claude handed work) follows the ones that were, under the main it reports to (mainOf), with
+  // no prompt to say what it is about.
   function workers(): DispatchedWorker[] {
     const slots = new Map(ports.openSlots().map((each) => [each.slot, { name: each.name, open: ports.openPanes(each.slot) }]));
     const restored = [...slots].flatMap(([slot, { open }]) => open.map((index) => terminalId(slot, index)))
