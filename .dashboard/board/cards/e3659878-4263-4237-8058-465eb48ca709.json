@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-15T23:35:41.493Z",
-  "updatedAt": "2026-11-16T00:04:23.493Z",
+  "updatedAt": "2026-11-16T00:18:40.828Z",
   "branch": "add-a-pre-commit-hook-and-a-typecheck-scrip",
   "pullRequest": 293,
   "comments": [
@@ -18,6 +18,6 @@
       "body": "Pull request #293 opened: Add a pre-commit hook and a typecheck script https://github.com/naeemba/dashboard/pull/293"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 233
 }
