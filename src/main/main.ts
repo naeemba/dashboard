@@ -486,7 +486,7 @@ registerPaneChannels(table, {
 const workerScreens = screenWorkers({
   // The screen host runs their sessions, so they outlive this process too (workers-decision-6).
   file: path.join(app.getPath('userData'), 'screen-workers.json'), changed: () => panesChanged(), newSession: sessionIndex.launched, ranAs: sessionIndex.ranAs, host: workerScreenHost(app.getPath('userData'), buildFolder, app.getPath('home')),
-  tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => { session.start.call({ slot: key, from: 'kept' }).catch(() => undefined); }, notify: (id, state, waiting) => workerAnswers.notify(id, state, waiting),
+  tell: (key, text) => chats.tell(key, text), stop: (key) => chats.stop(key), start: (key) => { session.start.call({ slot: key, from: 'kept' }).catch(() => undefined); }, notify: (id, state, waiting, told) => workerAnswers.notify(id, state, waiting, told),
 });
 // Every change to a pane, from every door: every agent a pane starts, of every kind (workers-decision-8),
 // a pane opened, closed, typed into, and each one back after a restart.
