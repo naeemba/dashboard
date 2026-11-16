@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nearBottom } from './chat-scroll';
+import { fillReachesEnd, nearBottom } from './chat-scroll';
 
 const box = (scrollHeight: number, scrollTop: number, clientHeight: number): HTMLElement =>
   ({ scrollHeight, scrollTop, clientHeight }) as HTMLElement;
@@ -17,5 +17,22 @@ describe('nearBottom', () => {
   // A screen under a hidden page reads all zeros: it stays pinned, so it goes to its end when shown.
   it('counts a hidden box as at the bottom', () => {
     expect(nearBottom(box(0, 0, 0))).toBe(true);
+  });
+});
+
+const entry = (isIntersecting: boolean, bottom: number) =>
+  ({ isIntersecting, boundingClientRect: { bottom } as DOMRectReadOnly });
+
+describe('fillReachesEnd', () => {
+  it('does not re-pin for a fill up in the margin above the log', () => {
+    expect(fillReachesEnd([entry(true, 50)], 100)).toBe(false);
+  });
+
+  it('re-pins for a fill in the visible log', () => {
+    expect(fillReachesEnd([entry(true, 300)], 100)).toBe(true);
+  });
+
+  it('does not re-pin for an entry that stopped intersecting', () => {
+    expect(fillReachesEnd([entry(false, 300)], 100)).toBe(false);
   });
 });

@@ -28,7 +28,7 @@ import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, turnTokens, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
 } from '../../shared/chat/chat-transcript';
 import { promptParts, withdrawable } from './chat-queue';
-import { nearBottom } from './chat-scroll';
+import { fillReachesEnd, nearBottom } from './chat-scroll';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
 import { createAgentsView } from './chat-agents-view';
@@ -171,11 +171,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       unfilled.get(each.target)?.();
       unfilled.delete(each.target);
     }
-    // A fill lands after the paint that scrolled, so the entry it grew would hang below the end. Only
-    // a fill in or below the visible log can push the end down; one up in the margin re-pinning would
-    // snap a reader's first small scroll up back to the bottom.
-    const top = log.getBoundingClientRect().top;
-    if (seen.some((each) => each.isIntersecting && each.boundingClientRect.bottom > top)) keepEnd();
+    // A fill lands after the paint that scrolled, so the entry it grew would hang below the end.
+    if (fillReachesEnd(seen, log.getBoundingClientRect().top)) keepEnd();
   }, { root: log, rootMargin: '800px 0px' });
 
   const atBottom = () => nearBottom(log);
