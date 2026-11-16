@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T13:32:54.951Z",
-  "updatedAt": "2026-11-16T10:44:06.295Z",
+  "updatedAt": "2026-11-16T10:45:06.407Z",
   "branch": "two-open-projects-with-the-same-folder-name",
   "pullRequest": 300,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-16T10:44:06.295Z",
       "body": "Review loop on PR #300: converged, ready to merge. 1 round (floor-addressed): merged main in to resolve a conflict on this card's file (ef6fcdf3), then fixed the review's 2 findings, a low (README Files lists missing project-names.ts and string-record-file.ts) and a nit (id to value naming in string-record-file) in e3015c12. No re-review ran after those last fixes. Nothing open. CI on e3015c12: 5/5 passed."
+    },
+    {
+      "at": "2026-11-16T10:45:06.372Z",
+      "body": "Pull request #300 merged: Give each open project a session name of its own https://github.com/naeemba/dashboard/pull/300"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 242
 }
