@@ -1,7 +1,7 @@
 import { baseName } from '../../shared/app/base-name';
 import { claudeArguments } from '../../shared/panes/shell';
 import { paneLabel } from '../../shared/panes/terminals';
-import { slug } from '../../shared/app/slug';
+import { projectName } from './project-names';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
 import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
@@ -12,24 +12,15 @@ import { LONGEST_BACKGROUND_RUN } from '../ship/review';
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
 // it remembers to. What happens to a running one is session-requests.ts's.
 
-// The project's name as it can go in a session name: SendMessage addresses a session by it, and a
-// space or a slash there is one more thing to quote in a message.
-// The manager's folder is `.dashboard`, which would slug to the same `dashboard` as a checkout of this
-// app, and its main would then share a name with that project's main.
-export function projectSlug(projectPath: string): string {
-  if (projectPath === MANAGER_FOLDER) return 'manager';
-  return slug(baseName(projectPath)) || 'project';
-}
-
 // `main-<project>` rather than the card's plain `main`: every open project has one, and two sessions
 // both called main are two a worker's SendMessage cannot tell apart.
 export function mainSessionName(projectPath: string): string {
-  return `main-${projectSlug(projectPath)}`;
+  return `main-${projectName(projectPath)}`;
 }
 
 // After its pane, so the name in the title and the label on the pane say the same number.
 export function workerSessionName(projectPath: string, index: number): string {
-  return `${projectSlug(projectPath)}-${paneLabel(index).replace(' ', '-')}`;
+  return `${projectName(projectPath)}-${paneLabel(index).replace(' ', '-')}`;
 }
 
 // What every session the app starts is told about the board, appended to Claude Code's own system
