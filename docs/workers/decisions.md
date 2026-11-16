@@ -354,8 +354,10 @@ are watched on real cards rather than held against the default:
 
 - ~~A worker screen's Claude is the app's child, so a restart ends the turn it was in.~~ It runs in the
   screen host now, off Windows (workers-decision-6).
-- The working line once kept counting after the turn ended, and the real card's screen once showed no
-  reply after a `pane send` its transcript had. Neither was reproduced.
+- The working line once kept counting after the turn ended; not reproduced.
+- ~~The real card's screen once showed no reply after a `pane send` its transcript had.~~ The reply was
+  drawn, below the end: it arrived while the screen was out of sight, where a scroll does nothing, and
+  nothing scrolled the long log on its return. A pinned log now goes to its end when shown (card 8309bbf6).
 - The task strip was never caught with a row in it, so it is unchecked on a worker screen.
 - A worker screen is not read by the working-panes sweep, so the review sweep counts it working until its
   Stop hook says done rather than by its spinner.

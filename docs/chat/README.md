@@ -237,7 +237,9 @@ The conversation outlives the app: the next launch shows it again and carries on
 from it once the screen is shown. The new conversation key starts over; the old one
 stays in Claude Code's own history on disk. A very long conversation scrolls
 fine, but only the part near the screen is drawn properly at any moment, so fast
-scrolling shows plain text for a moment first.
+scrolling shows plain text for a moment first. A log left at its end stays
+there: a reply that arrives while the screen is out of sight, under another page
+or view, is in view when you come back, and one scrolled up stays where it was.
 
 ## Files
 
@@ -273,6 +275,7 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given the app launches with five projects, when you have shown none of their Claude screens, then no project runs a `claude` CLI; showing one starts that page's session and its status line fills in, and a page one of main's workers came back on starts at launch so the worker's report has somewhere to arrive.
 - Given a conversation is under way, when you send `/branch`, then the page carries on in a copy of it and the original stays in `/resume`.
 - Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
+- Given a long conversation at its end on a worker screen, when `pane send` gives it a prompt and the reply arrives while another page or view is in front, then coming back shows the reply at the bottom, not the log stopped at the prompt; a log you scrolled up stays where you left it.
 - Given Claude is working, when you send a message, then it waits grey under the conversation until the session takes it, and Up in the empty box takes it back.
 - Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
 - Given you type `/effort high`, when you send it, then the next turn runs at high and the foot says `high effort`; `ultrathink` in a prompt shows in the foot while its turn runs.

@@ -28,7 +28,7 @@ import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, turnTokens, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
 } from '../../shared/chat/chat-transcript';
 import { promptParts, withdrawable } from './chat-queue';
-import { nearBottom } from './chat-scroll';
+import { fillReachesEnd, nearBottom } from './chat-scroll';
 import { createQueueStrip } from './chat-queue-view';
 import { createTaskStrip } from './chat-task-strip';
 import { createAgentsView } from './chat-agents-view';
@@ -171,6 +171,8 @@ export function createChatView(options: ChatViewOptions): ChatView {
       unfilled.get(each.target)?.();
       unfilled.delete(each.target);
     }
+    // A fill lands after the paint that scrolled, so the entry it grew would hang below the end.
+    if (fillReachesEnd(seen, log.getBoundingClientRect().top)) keepEnd();
   }, { root: log, rootMargin: '800px 0px' });
 
   const atBottom = () => nearBottom(log);
@@ -240,7 +242,6 @@ export function createChatView(options: ChatViewOptions): ChatView {
 
   function paint(): void {
     painting = 0;
-    const stick = pinned;
     if (transcript.entries !== drawnEntries) drawEntries();
     if (transcript.live !== paintedLive && !revealing) reveal();
     drawFoot();
@@ -251,7 +252,7 @@ export function createChatView(options: ChatViewOptions): ChatView {
     agents.update();
     workflows.update();
     queue.render(transcript.queued);
-    if (stick) log.scrollTop = log.scrollHeight;
+    keepEnd();
   }
 
   // The streaming block catches up with what has arrived a few characters a frame (chat-reveal.ts),
@@ -261,11 +262,18 @@ export function createChatView(options: ChatViewOptions): ChatView {
   let revealing = 0;
   let pinned = true;
   log.addEventListener('scroll', () => { pinned = atBottom(); }, { passive: true });
+  // A log under a hidden page or view has no layout, so a paint's scroll to the end does nothing there:
+  // a reply that lands while the screen is out of sight would sit below the prompt once it is back. Its
+  // box going from nothing to a size is the screen coming back, and a pinned log goes to its end then.
+  new ResizeObserver(keepEnd).observe(log);
+  function keepEnd(): void {
+    if (pinned) log.scrollTop = log.scrollHeight;
+  }
   function reveal(): void {
     revealing = 0;
     paintedLive = revealed(paintedLive, transcript.live);
     drawLive(paintedLive);
-    if (pinned) log.scrollTop = log.scrollHeight;
+    keepEnd();
     if (paintedLive !== transcript.live) revealing = requestAnimationFrame(reveal);
   }
 

@@ -158,6 +158,7 @@ Folders: `src/main/command/`.
 - What every pane is handed to reach the app: `pane-environment.ts`, `pane-environment.test.ts`
 - The launcher: `scripts/rebuild.sh`
 - What a program prints when it throws: `failure-line.ts`, `failure-line.test.ts`
+- Ending quietly when the reader of the output goes away (`| head`): `closed-output.ts`, `closed-output.test.ts`, installed by every `*-cli-entry.ts`
 - The `pr` noun: `pull-request-cli.ts`, `pull-request-cli.test.ts`, `pull-request-program.ts`
 - The `budget` noun: `budget-cli.ts`, `budget-cli.test.ts`, `budget-program.ts`; the cap is written through settings.cap (`src/main/actions/settings/cap.ts`), its port `writeWeeklyCap` in `src/main/settings/settings-store.ts`
 
@@ -175,6 +176,7 @@ Folders: `src/main/command/`.
 - Given a projects.yaml with a broken entry and a project open, when `dashboard project list` runs, then the file's error prints and it exits 1.
 - Given a plain terminal, when `dashboard pane send 9:1 hi` runs and page 9 is not open, then it is refused naming `9:1`, not the folder.
 - Given `dashboard --help` or `dashboard pane --help`, when it runs, then the usage prints and it exits 0.
+- Given a board of forty cards, when `node "$DASHBOARD_BOARD" list | head` runs, then ten lines print and it exits 0, with no `write EPIPE` stack; the same for `$DASHBOARD_SESSION`, `$DASHBOARD_COMMAND` and create-task.
 - Given an open pull request whose checks pass, when `dashboard pr land 12` runs, then it merges the head commit it noted before the wait and prints `merged 12 at <sha>`; a push during the wait makes gh refuse the merge, and it says so and exits 1.
 - Given `gh pr merge` fails with `Post https://api.github.com/graphql: unexpected EOF` and the pull request is merged at the noted commit, when `pr land` reads it back, then it prints `merged 12 at <sha>`; still open, it tries the merge once more.
 - Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print.

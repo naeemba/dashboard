@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-05T16:29:23.557Z",
-  "updatedAt": "2026-11-16T11:59:21.911Z",
+  "updatedAt": "2026-11-16T12:19:08.329Z",
   "branch": "worker-screens-check-the-last-turn-is-drawn",
   "pullRequest": 309,
   "comments": [
@@ -20,8 +20,16 @@
     {
       "at": "2026-11-16T11:59:21.911Z",
       "body": "Reproduced: the reply was drawn but sat below the end. It arrived while the screen was hidden, where scrolling does nothing, and nothing re-pinned the long log once it was shown. Fixed with a ResizeObserver re-pin. In a Chromium probe the end went from 1000px below the view to 0px. The trial transcript reads back whole, so the disk read was not the cause. PR #309."
+    },
+    {
+      "at": "2026-11-16T12:16:51.892Z",
+      "body": "PR #309 review loop: converged, ready to merge. Ended floor-addressed after 2 rounds, 2 findings fixed, 0 rejected (commits 99212da2, c55d58e0). The board-card conflict with main was merged as b2dfaeb8. The last low fix, moving fillReachesEnd into chat-scroll.ts with tests, had no re-review after it. CI: 5/5 passed on head c55d58e0. Nothing is blocked on a person."
+    },
+    {
+      "at": "2026-11-16T12:19:08.304Z",
+      "body": "Pull request #309 merged: Keep a pinned Claude screen at its end when it is shown again https://github.com/naeemba/dashboard/pull/309"
     }
   ],
-  "column": "Review",
-  "order": 5
+  "column": "Done",
+  "order": 251
 }

@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T11:32:09.992Z",
-  "updatedAt": "2026-11-16T11:55:17.136Z",
+  "updatedAt": "2026-11-16T12:07:57.117Z",
   "branch": "board-command-crashes-with-epipe-when-its-o",
   "pullRequest": 308,
   "comments": [
@@ -16,8 +16,16 @@
     {
       "at": "2026-11-16T11:55:17.108Z",
       "body": "Pull request #308 opened: End the commands quietly when their output is cut off (| head) https://github.com/naeemba/dashboard/pull/308"
+    },
+    {
+      "at": "2026-11-16T12:07:06.930Z",
+      "body": "PR #308 review loop converged in 2 rounds, ready to merge. Merged main in first to fix a conflict in this card's file (ce622709). Round 1 found 2 issues and fixed both in 41c5bf92. Round 2 confirmed both fixes and left 0 open threads. CI passed 5 of 5 checks on head 41c5bf92."
+    },
+    {
+      "at": "2026-11-16T12:07:57.093Z",
+      "body": "Pull request #308 merged: End the commands quietly when their output is cut off (| head) https://github.com/naeemba/dashboard/pull/308"
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 248
 }

@@ -53,3 +53,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #271 — Claude screens get Claude in Chrome when Claude Code's config turns it on by default
 - 2026-11-09 #264 — Remove any attached image from the prompt: an x on each thumbnail, Alt+D walks them
 - 2026-11-16 #311 — A turn the session starts by itself, after a background task finishes, shows the working line
+- 2026-11-16 — A log at its end goes to its end when its screen is shown again, so a reply that arrived out of sight is not left below the prompt
