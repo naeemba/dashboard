@@ -4,6 +4,7 @@ import {
   type PaneConversation,
 } from './claude-resume';
 import type { WorktreeEntry } from '../../shared/app/bridge';
+import { MANAGER_SLOT } from '../../shared/manager/manager';
 
 const ID = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const OTHER = '4a8480d2-4e1d-4dca-8cac-f7a8e29548a3';
@@ -49,7 +50,15 @@ describe('withClaude', () => {
         { ...layout.pages[0], claude: [null, conversation(ID)] },
         { ...layout.pages[1], claude: [null, null, null, null, conversation(OTHER, '/work/web')] },
       ],
+      manager: [],
     });
+  });
+
+  // The layout has no page for the manager, so its workers go beside the pages.
+  it('puts the manager\'s workers beside the pages, with whose main dispatched them', () => {
+    const held = new Map([[`${MANAGER_SLOT}:2`, conversation(ID, '/home/.dashboard/board')]]);
+    expect(withClaude(layout, slotOf, held, () => '/home/.dashboard/board').manager)
+      .toEqual([null, null, { ...conversation(ID, '/home/.dashboard/board'), dispatched: true, dispatcher: '/home/.dashboard/board' }]);
   });
 
   // The live reading carries the pid; only the two fields a resume needs are written.

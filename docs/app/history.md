@@ -24,3 +24,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #248 — Log entries carry an error's stack, cause, source, build and context; old ones still read (app-decision-2)
 - 2026-11-09 #275 — A test holds every IPC channel name to <noun>:<verb> (app-rule-1)
 - 2026-11-15 #287 — `pnpm start` on Windows opens the app instead of an empty window: the dev server on 127.0.0.1, its reload let through, the PDF viewer's rule kept off the window's main frame
+- 2026-11-16 #298 — Every sheet holds the focus in `openOverlay`; the per-dialog holds in the viewers, updates, what's new and anchored popups are gone (keys-rule-1)

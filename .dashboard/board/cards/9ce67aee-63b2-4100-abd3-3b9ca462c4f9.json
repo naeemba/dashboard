@@ -1,0 +1,17 @@
+{
+  "id": "9ce67aee-63b2-4100-abd3-3b9ca462c4f9",
+  "title": "Hold focus in every openOverlay sheet, not dialog by dialog",
+  "notes": "help, worktree-view, chat-btw-view, board-detail and settings-view open a sheet through openOverlay without holdFocus, so Shift+Tab walks the focus out to the pane behind them and the next Escape reaches that pane (found in review of PR #298). Root-cause fix: openOverlay calls holdFocus and its remove() releases it; then drop the explicit pairs in confirmOverlay, promptOverlay (keep its hold on the input), viewerOverlay, update-view, whats-new-view and anchored-popup, and the 'a dialog that does not stop Tab' sentence in docs/keys/hard-rules.md. Hand-check each sheet, inputs inside board-detail/settings/filter and a sheet opened over another.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-16T09:36:06.013Z",
+  "updatedAt": "2026-11-16T09:38:39.747Z",
+  "comments": [
+    {
+      "at": "2026-11-16T09:38:28.645Z",
+      "body": "Done in #298 instead (https://github.com/naeemba/dashboard/pull/298): the hold moved into openOverlay there."
+    }
+  ],
+  "column": "Cancelled",
+  "order": 10
+}

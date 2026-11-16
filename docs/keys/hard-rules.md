@@ -11,7 +11,14 @@ throws you out to the terminal grid instead of completing the word. You leave a
 mode by naming a different one.
 
 Inside an overlay the key goes nowhere — a dialog has focus, so no pane can
-receive it.
+receive it. Every sheet `openOverlay` builds holds that focus, and gives it
+back to whatever in the dialog had it last. Two things move the focus out to
+the pane behind while the sheet stays up, so the Escape meant to cancel the
+dialog reaches the pane instead: the keyboard (Shift+Tab, a modified key no
+dialog reads) and code (a `--remote` join, or a notification click that goes to
+a pane). A Tab trap on the dialog would stop only the first. The hold is in
+`openOverlay`, not in each dialog, because two dialogs that each had to
+remember it forgot it while five others never had it.
 
 **Every dialog that reads `event.key` for itself must check `if
 (isModified(event)) return;` first.** Take Ctrl+N in the card detail dialog and

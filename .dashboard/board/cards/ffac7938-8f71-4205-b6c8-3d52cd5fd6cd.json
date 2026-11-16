@@ -4,6 +4,35 @@
   "notes": "Follow-up from #155 (manager terminals). The manager's worker panes (manager-terminal-<n>) do not come back after the app restarts: session-store keys saved pages by project path, and the manager is not in that list. Project pages already restore their panes and resume their Claude sessions; the manager's should too.",
   "priority": "medium",
   "parent": null,
-  "column": "Backlog",
-  "order": -8
+  "updatedAt": "2026-11-16T10:29:09.922Z",
+  "branch": "bring-the-manager-s-worker-panes-back-after",
+  "pullRequest": 301,
+  "comments": [
+    {
+      "at": "2026-11-16T09:36:56.580Z",
+      "body": "From #299 (#187): after a restart, the workers popup lists a restored worker under nobody, though session.json keeps its dispatcher (dispatcherOf in session-requests.ts). Fix that here too, since this card restores the workers. Builds on #299; start after it merges."
+    },
+    {
+      "at": "2026-11-16T09:52:50.572Z",
+      "body": "#299 is merged. Do not bump the version. Run typecheck, lint and test; tests are Windows-safe."
+    },
+    {
+      "at": "2026-11-16T10:02:46.659Z",
+      "body": "PR #301: manager workers' conversations saved under session.json's manager list and resumed by the manager's folder; workers popup lists restored workers under their saved dispatcher. Checks pass; restart path not hand-checked."
+    },
+    {
+      "at": "2026-11-16T10:03:07.792Z",
+      "body": "Pull request #301 opened: Bring the manager's worker panes back after a restart https://github.com/naeemba/dashboard/pull/301"
+    },
+    {
+      "at": "2026-11-16T10:17:40.147Z",
+      "body": "Review loop converged in 2 rounds, ready to merge. Merged main in to resolve a board-card conflict (cabeb0cf); round 1 posted 2 findings, both fixed in c59326b3; round 2 re-review left 0 open threads. CI: 5/5 checks pass on head c59326b3."
+    },
+    {
+      "at": "2026-11-16T10:29:09.892Z",
+      "body": "Pull request #301 merged: Bring the manager's worker panes back after a restart https://github.com/naeemba/dashboard/pull/301"
+    }
+  ],
+  "column": "Done",
+  "order": 240
 }

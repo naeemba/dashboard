@@ -6,8 +6,9 @@ import { sessionRequests, type SessionPorts, type WorkerStart } from './session-
 export function project(overrides: Partial<SessionPorts> = {}) {
   const open = [0];
   const agents = new Set<string>(['2:0']);
-  // Main's record of its workers, which main.ts keeps: added by a run, gone with the agent or the pane.
-  const workers = new Set<string>();
+  // Main's record of its workers and whose main dispatched each, which main.ts keeps: added by a run,
+  // gone with the agent or the pane.
+  const workers = new Map<string, string>();
   const started: ({ id: string } & WorkerStart)[] = [];
   const closed: string[] = [];
   const marked: string[] = [];
@@ -30,7 +31,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     agentIn: (id) => agents.has(id),
     busyWith: (id) => (agents.has(id) ? 'an agent' : null),
     directoryOf: () => '/work/api',
-    mainsWorkerIn: (id) => workers.has(id),
+    dispatcherOf: (id) => workers.get(id),
     open: async () => {
       const index = open.length;
       open.push(index);
@@ -38,7 +39,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     },
     startWorker: async (id, start) => {
       agents.add(id);
-      workers.add(id);
+      workers.set(id, start.dispatcherPath);
       started.push({ id, ...start });
       return { output: '' };
     },
@@ -50,10 +51,10 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       return { output: '' };
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
-    send: async (id, text) => {
+    send: async (id, text, dispatcherPath) => {
       typed.push(`${id} ${text}`);
       const handed = agents.has(id);
-      if (handed) workers.add(id);
+      if (handed) workers.set(id, dispatcherPath);
       return { output: `typed into ${id}`, handed };
     },
     tell: (slot, text) => String(told.push(`${slot} ${text}`) - 1),

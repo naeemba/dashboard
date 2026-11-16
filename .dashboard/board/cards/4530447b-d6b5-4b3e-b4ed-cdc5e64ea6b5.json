@@ -5,13 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-07T13:32:54.951Z",
-  "updatedAt": "2026-11-16T09:30:42.098Z",
+  "updatedAt": "2026-11-16T09:38:07.610Z",
+  "branch": "two-open-projects-with-the-same-folder-name",
+  "pullRequest": 300,
   "comments": [
     {
       "at": "2026-11-16T09:30:35.457Z",
       "body": "From main-dashboard: the PR description says 'Closes #230' (GitHub issue #230). Run the checks, including pnpm typecheck and a Windows-safe test (path.join, or a win32 guard). Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T09:38:07.584Z",
+      "body": "Pull request #300 opened: Give each open project a session name of its own https://github.com/naeemba/dashboard/pull/300"
     }
   ],
-  "column": "Ship",
-  "order": 0
+  "column": "Review",
+  "order": 3
 }

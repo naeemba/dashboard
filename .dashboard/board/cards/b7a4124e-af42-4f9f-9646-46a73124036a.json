@@ -4,6 +4,27 @@
   "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
   "priority": "medium",
   "parent": null,
-  "column": "Todo",
-  "order": 4
+  "updatedAt": "2026-11-16T10:30:50.112Z",
+  "branch": "agent-state-per-pane-from-claude-code-hooks",
+  "pullRequest": 302,
+  "comments": [
+    {
+      "at": "2026-11-16T09:53:27.037Z",
+      "body": "From main-dashboard: much of this may exist already. workerSettings (src/main/workers/dispatch.ts) installs Notification (permission_prompt to 'blocked'), UserPromptSubmit and PostToolUse notify hooks, and #294 added stop notices with the last message and pane report. Check what is left first: the manager row showing the state and question text, and a key answering from the row. Build only that, following keyboard-first and the help rule. If nothing is left, say so on the card. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T10:02:54.642Z",
+      "body": "Hooks per pane, the asking row and bell fallback already existed. Built the gap: a Claude-screen worker's manager row printed its hidden shell and typed keys went there. Now the row shows the question with numbered answers and a digit answers it (main too). PR #302."
+    },
+    {
+      "at": "2026-11-16T10:03:15.628Z",
+      "body": "Pull request #302 opened: Answer a Claude screen's question from the manager row https://github.com/naeemba/dashboard/pull/302"
+    },
+    {
+      "at": "2026-11-16T10:30:50.112Z",
+      "body": "Converged, ready to merge. Review loop: 3 rounds, 7 findings fixed, 0 rejected (c610ab4e, 02f399ef, abbeb805), after main was merged in to clear a board-card conflict (c0e778cd). Then main-dashboard's safety check (8fa48152): a digit on a manager row allows a tool call only when the row shows the call itself (tool + command/path/URL, every command line kept, cut with …). A plan, an agent or an MCP call takes no digit and is answered on the screen. manager-decision-3, chat-row-call.ts with a test. CI green on 8fa48152. The final nit fix (README rewrap) had no re-review."
+    }
+  ],
+  "column": "Review",
+  "order": 5
 }

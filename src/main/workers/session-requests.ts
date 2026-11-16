@@ -42,11 +42,12 @@ export type SessionPorts = {
   // What is running in the pane when something is (pane-reading.ts's paneIsBusy), or null.
   busyWith(id: string): string | null;
   directoryOf(id: string): string | undefined;
-  // Whether main's worker is in the pane now: one a session run started, or one resumed at launch
-  // because the pane held one when the app quit. Main clears it the moment that stops being true — the
-  // agent exits, something else is started in the pane, or the pane closes — so release never kills
-  // what somebody else put there afterwards.
-  mainsWorkerIn(id: string): boolean;
+  // The path of the page whose main dispatched the worker in the pane now, or undefined when it holds
+  // none of main's: one a session run started, or one resumed at launch because the pane held one when
+  // the app quit, its dispatcher read back from session.json. Main clears it the moment that stops
+  // being true — the agent exits, something else is started in the pane, or the pane closes — so
+  // release never kills what somebody else put there afterwards.
+  dispatcherOf(id: string): string | undefined;
   // pane.open: a fresh worker, a shell in the project, at the lowest number going.
   open(slot: number): Promise<{ index: number } | Refused>;
   // pane.dispatch, for a card's or a throwaway's worker as main sets it up. `dispatcherPath` is the page
@@ -106,8 +107,10 @@ function askingSlot(command: SessionCommand, folderSlot: number): number {
 }
 
 export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
-  // Every worker a session run started that is still open, in the order they ran, each naming the slot
-  // whose main ran it: one read serves every page's status line and popup.
+  // Every worker a session run started that is still open, in the order they ran, then every other open
+  // pane holding main's worker (back after a restart, a card shipped from the board, a Claude handed work
+  // with pane send), each naming the slot whose main it reports to: one read serves every page's status
+  // line and popup.
   workers(): DispatchedWorker[];
   // The pane stopped being that worker's for good: it closed, or something else started in it. Pane
   // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
@@ -135,7 +138,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
   // running there is somebody else's — a dev server, a card a ship gave an agent — and release would
   // kill it. Main's worker always runs as the pane's agent, so a pane that is not running one is not it.
-  const mainsWorker = (id: string): boolean => ports.agentIn(id) && ports.mainsWorkerIn(id);
+  const mainsWorker = (id: string): boolean => ports.agentIn(id) && ports.dispatcherOf(id) !== undefined;
   // The slot that claimed each pane opened with --project on another project's page. That slot may run
   // and release it as its own, and its main hears the worker's report. Slots are never reused, so an
   // entry left by a project closed since names nobody.
@@ -152,9 +155,16 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   const quietFrom = (id: string, reportRead: boolean) => quiet.set(id, { since: Date.now(), reportRead });
   // Only main's worker: one it ran or sent work, or a card's agent; a Claude opened by hand and never
   // sent work reports to nobody. The main that claimed it hears, which is another project's when
-  // it was claimed with --project. Asked again when the wait ends, since the pane may have been given
-  // to something else by then.
-  const mainOf = (id: string): number => dispatched.get(id)?.dispatcher ?? paneFromId(id).slot;
+  // it was claimed with --project. `dispatched` is gone after a restart, so a resumed worker's main is
+  // the page its saved dispatcher names, and its own page's only when that page is not open. Asked
+  // again when the wait ends, since the pane may have been given to something else by then.
+  function mainOf(id: string): number {
+    const ran = dispatched.get(id);
+    if (ran !== undefined) return ran.dispatcher;
+    const dispatcherPath = ports.dispatcherOf(id);
+    const slot = dispatcherPath === undefined ? -1 : ports.slotOf(dispatcherPath);
+    return slot === -1 ? paneFromId(id).slot : slot;
+  }
   // The mains mid-turn now, by slot, each with whether the turn has run PAUSE_CEILING_MS and the
   // timer that says so. One past it counts as idle, and every notice held for it is told then:
   // `idle` waits on main's background work too, which may never end. One clock for the turn, so a
@@ -183,11 +193,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   });
 
   // A worker the asking project may run or release, open, or why it is not one: one of its own panes,
-  // or one it claimed elsewhere. Main and the editor are never a worker: one is where the asking
-  // happens, the other holds nvim.
+  // or one it claimed or dispatched elsewhere, the last kept across a restart. Main and the editor are
+  // never a worker: one is where the asking happens, the other holds nvim.
   function worker(id: string, slot: number): string | null {
     const { slot: paneSlot, index } = paneFromId(id);
-    if (paneSlot !== slot && dispatchers.get(id) !== slot) return `${id} is not a pane of this project`;
+    if (paneSlot !== slot && dispatchers.get(id) !== slot && mainOf(id) !== slot) return `${id} is not a pane of this project`;
     if (!ports.openPanes(paneSlot).includes(index)) return `${id} is not open — claim prints one that is`;
     if (index === MAIN_INDEX) return `${id} is the main session, which is never a worker`;
     return null;
@@ -361,10 +371,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
   }
 
+  // A pane holding main's worker that no run started this launch (resumed after a restart, a shipped
+  // card, a Claude handed work) follows the ones that were, under the main it reports to (mainOf), with
+  // no prompt to say what it is about.
   function workers(): DispatchedWorker[] {
-    if (dispatched.size === 0) return [];
     const slots = new Map(ports.openSlots().map((each) => [each.slot, { name: each.name, open: ports.openPanes(each.slot) }]));
-    return [...dispatched].flatMap(([id, { dispatcher, about }]) => {
+    const restored = [...slots].flatMap(([slot, { open }]) => open.map((index) => terminalId(slot, index)))
+      .filter((id) => !dispatched.has(id) && mainsWorker(id))
+      .map((id) => [id, { dispatcher: mainOf(id), about: '' }] as const);
+    return [...dispatched, ...restored].flatMap(([id, { dispatcher, about }]) => {
       const { slot, index } = paneFromId(id);
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];

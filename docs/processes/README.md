@@ -85,8 +85,9 @@ or watcher the shell detached goes with it instead of outliving the pane.
 systemd sends SIGTERM to what is left and SIGKILL after its stop timeout;
 `--no-block` keeps a program that ignores SIGTERM from holding the close. A
 scope already gone (exit 5, "not loaded") is taken as stopped. Any other
-failure still closes the pane, and the close's answer names the unit left
-running. A pane with no scope recorded (unscoped, a mac, Windows) stops
+failure still closes the pane, the close's answer names the unit left
+running, and it is a warning in the log, since the close key throws the
+answer away. A pane with no scope recorded (unscoped, a mac, Windows) stops
 nothing.
 
 Two other ways a pane's shell goes stop its scope the same way. Closing a

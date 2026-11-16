@@ -14,12 +14,14 @@ import type { SessionPage } from '../../shared/app/bridge';
 // running, one entry per pane number like `names`. Main fills these in; the renderer never sees them change.
 // claude-resume.ts holds why each entry carries its folder.
 export type SavedPage = SessionPage & { claude: (PaneConversation | null)[] };
-export type SavedSession = { pages: SavedPage[]; activeIndex: number };
+// `manager` is the manager's panes' conversations, as `claude` is a page's: the layout has no page for
+// the manager, which has no folder of its own to name one by (manager-decision-2).
+export type SavedSession = { pages: SavedPage[]; activeIndex: number; manager: (PaneConversation | null)[] };
 
 // In the app's userData folder; main writes it, `project init` reads its pages as the open projects.
 export const SESSION_FILE = 'session.json';
 
-const EMPTY: SavedSession = { pages: [], activeIndex: 0 };
+const EMPTY: SavedSession = { pages: [], activeIndex: 0, manager: [] };
 
 // The modes a project can be left on are already spelled once, in modes.ts. Reading them back off
 // that list is what keeps a new project view from being restorable everywhere except out of this
@@ -52,18 +54,22 @@ function toSessionPage(stored: unknown): SavedPage | null {
     // anything else in an entry would be drawn on the pane exactly as it is. Its length is not forced to
     // the panes: the restore reads it by pane, so an entry with no pane behind it is skipped anyway.
     names: (Array.isArray(names) ? names : []).map((name) => (typeof name === 'string' ? name : null)),
-    // An entry that is not a whole one is no conversation at all, never half of one: its id is typed into a
-    // shell. A file written before the field existed resumes nothing.
-    claude: (Array.isArray(claude) ? claude : []).map((conversation) => (isPaneConversation(conversation) ? conversation : null)),
+    claude: conversations(claude),
   };
 }
 
+// An entry that is not a whole one is no conversation at all, never half of one: its id is typed into a
+// shell. A file written before the field existed resumes nothing.
+function conversations(stored: unknown): (PaneConversation | null)[] {
+  return (Array.isArray(stored) ? stored : []).map((conversation) => (isPaneConversation(conversation) ? conversation : null));
+}
+
 export function parseSession(stored: unknown): SavedSession {
-  const { pages, activeIndex } = (stored ?? {}) as { pages?: unknown; activeIndex?: unknown };
+  const { pages, activeIndex, manager } = (stored ?? {}) as { pages?: unknown; activeIndex?: unknown; manager?: unknown };
   const restored = (Array.isArray(pages) ? pages : []).flatMap((entry) => toSessionPage(entry) ?? []);
   // An activeIndex pointing past the end would open on a page that is not there. First page instead.
   const active = typeof activeIndex === 'number' && Number.isInteger(activeIndex) ? activeIndex : 0;
-  return { pages: restored, activeIndex: active >= 0 && active < restored.length ? active : 0 };
+  return { pages: restored, activeIndex: active >= 0 && active < restored.length ? active : 0, manager: conversations(manager) };
 }
 
 // Like the recents file, this is a convenience rather than state to recover, reading and writing alike:

@@ -158,7 +158,7 @@ describe('sessionRequests', () => {
   // Pane numbers are reused, so the record goes with the pane: closed by hand and claimed again, or
   // forgotten when main closes it or starts something else there, the number is nobody's worker.
   it('drops a worker from the list once its pane is claimed again or forgotten', async () => {
-    const { ports } = project();
+    const { ports, workers } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
@@ -166,16 +166,30 @@ describe('sessionRequests', () => {
     expect(await answer({ directory: '/work/api', args: ['claim'] })).toEqual({ ok: true, output: '2:1' });
     expect(answer.workers()).toEqual([]);
     await answer({ directory: '/work/api', args: ['run', '2:1', 'research the cache'] });
+    // Something that is not main's worker starting there clears main's record with the forget.
     answer.forget('2:1');
+    workers.delete('2:1');
     expect(answer.workers()).toEqual([]);
   });
 
-  // A worker resumed at launch has no run behind it, so its own page's main hears it.
-  it('tells the pane\'s own main when a resumed worker no run started is done', async () => {
+  // A card shipped from the board, or a Claude handed work with pane send, holds main's worker with no
+  // run behind it: it reports to main, so it is listed under main, as a resumed worker is.
+  it('lists a pane holding main\'s worker that no run started, with no prompt words', () => {
+    const { ports, open, agents, workers } = project();
+    open.push(1);
+    agents.add('2:1');
+    workers.set('2:1', '/work/api');
+    expect(sessionRequests(ports).workers()).toEqual([
+      { id: '2:1', dispatcher: 2, project: 'api', name: 'api-terminal-2', about: '', status: 'working' },
+    ]);
+  });
+
+  // A worker resumed at launch whose dispatcher's page is not open: its own page's main hears it.
+  it('tells the pane\'s own main when a resumed worker\'s dispatcher page is not open', async () => {
     const { ports, open, agents, workers, told } = project();
     open.push(1);
     agents.add('2:1');
-    workers.add('2:1');
+    workers.set('2:1', '/work/gone');
     const answer = sessionRequests(ports);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
@@ -376,7 +390,7 @@ describe('sessionRequests', () => {
     open.push(1, 2, 3);
     agents.add('2:2');
     agents.add('2:3');
-    workers.add('2:2');
+    workers.set('2:2', '/work/api');
     const answer = sessionRequests(ports);
     expect(await answer({ directory: '/work/api', args: ['release', '2:1'] })).toMatchObject({ ok: false });
     expect(await answer({ directory: '/work/api', args: ['release', '2:2'] })).toEqual({ ok: true, output: 'released 2:2' });
@@ -431,7 +445,8 @@ function pages() {
   const panes = new Map<number, number[]>([[-2, [0]], [2, [0]]]);
   const started: ({ id: string } & WorkerStart)[] = [];
   const opened: string[] = [];
-  const working = new Set<string>();
+  // Each pane with a worker in it, and the path of the page whose main dispatched it.
+  const working = new Map<string, string>();
   const known: Record<string, string> = { api: '/work/api', shop: '/work/shop', gone: '/work/gone' };
   const { ports, told } = project({
     slotOf: (directory) => [...paths].find(([, folder]) => directory.startsWith(folder))?.[0] ?? -1,
@@ -456,9 +471,9 @@ function pages() {
     },
     directoryOf: (id) => paths.get(Number(id.split(':')[0])),
     agentIn: (id) => working.has(id),
-    mainsWorkerIn: (id) => working.has(id),
+    dispatcherOf: (id) => working.get(id),
     startWorker: async (id, start) => {
-      working.add(id);
+      working.set(id, start.dispatcherPath);
       started.push({ id, ...start });
       return { output: '' };
     },
@@ -471,7 +486,7 @@ function pages() {
   });
   const answer = sessionRequests(ports);
   const ask = (words: string[], directory = '/work/desk') => answer({ directory, args: words });
-  return { ask, answer, ports, started, opened, told };
+  return { ask, answer, ports, started, opened, told, panes, working };
 }
 
 describe('sessionRequests across projects', () => {
@@ -492,6 +507,27 @@ describe('sessionRequests across projects', () => {
     await ask(['notify', '2:1', 'done'], '/anywhere');
     stayStopped();
     expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+  });
+
+  // A restart forgets who ran it; the dispatcher main saved with the pane in session.json says.
+  it('tells the main that dispatched a worker resumed on another page after a restart', async () => {
+    const { answer, told, panes, working } = pages();
+    panes.set(2, [0, 1]);
+    working.set('2:1', '/work/desk');
+    await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
+    stayStopped();
+    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(await answer({ directory: '/work/desk', args: ['release', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
+  });
+
+  // The popup reads the same saved dispatcher, so the worker is listed under the main it reports to.
+  it('lists a worker resumed on another page after a restart under the main that dispatched it', () => {
+    const { answer, panes, working } = pages();
+    panes.set(2, [0, 1]);
+    working.set('2:1', '/work/desk');
+    expect(answer.workers()).toEqual([
+      { id: '2:1', dispatcher: -2, project: 'api', name: 'api-terminal-2', about: '', status: 'working' },
+    ]);
   });
 
   it('takes a report read by the main that claimed the pane from another page', async () => {

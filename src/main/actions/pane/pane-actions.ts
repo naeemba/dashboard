@@ -1,4 +1,4 @@
-import { agentStartEntry, type LogDraft } from '../../../shared/app/log-entry';
+import { agentStartEntry } from '../../../shared/app/log-entry';
 import type { PaneCommand } from '../../../shared/panes/pane-reading';
 import { paneFromId } from '../../../shared/panes/terminals';
 import { bind, type BoundAction } from '../action';
@@ -27,7 +27,6 @@ export type PaneActionsMain = Pick<PaneDispatchPorts, 'platform' | 'shellCommand
     // read the pane as quiet and take the folder away from the agent.
     agentStarted(id: string): void;
     startScreen: PaneDispatchPorts['screen'];
-    log(draft: LogDraft): void;
   };
 
 export type PaneActions = {
