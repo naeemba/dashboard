@@ -435,10 +435,10 @@ describe('answerTarget', () => {
     expect(answerTarget({ kind: 'pane', slot: 2, pane: summary('quiet') })).toBeNull();
   });
 
-  // Main is the Claude screen: a typed character has no terminal to go to, so Enter is the way in.
-  it('takes nothing on main\'s row or its queue item, asking or not', () => {
-    expect(answerTarget(queued('asking', { kind: 'pane', index: 0 }))).toBeNull();
-    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 0 } })).toBeNull();
+  // Main is a Claude screen, which takes the digit beside an answer its row lists.
+  it('sends a typed character on main\'s asking row or queue item to main', () => {
+    expect(answerTarget(queued('asking', { kind: 'pane', index: 0 }))).toEqual({ slot: 2, index: 0 });
+    expect(answerTarget({ kind: 'pane', slot: 2, pane: { ...summary('waiting'), index: 0 } })).toEqual({ slot: 2, index: 0 });
   });
 });
 

@@ -1,7 +1,7 @@
 import { relativeAge } from '../app/age';
 import { baseName } from '../app/base-name';
 import type { GitWorktree, ScannedWorktree, WorktreeSize } from '../ship/git-worktrees';
-import { MAIN_INDEX, terminalId } from '../panes/terminals';
+import { terminalId } from '../panes/terminals';
 import { needKey, type Need } from './needs-you';
 import { NO_DAYS, NO_TOTALS, NO_USAGE, type Totals, type UsageSnapshot } from '../usage/usage';
 import { isRinging, type Bell } from '../panes/waiting';
@@ -344,14 +344,13 @@ export function lineKey(line: ManagerLine): string {
 
 // The pane a typed character on this line goes to, or null when the line is not a question. A queue
 // item asking a question is the same pane as its row under the project, so it answers the same way.
-// Main is never one: it is the Claude screen, not a terminal, and its question is answered in its
-// own ask box, so the key falls through and Enter takes you there.
+// Main is one too: a Claude screen, like a worker drawn as one, takes the digit beside an answer its
+// row lists (chat-row-answers.ts).
 export function answerTarget(line: ManagerLine): { slot: number; index: number } | null {
-  const target = line.kind === 'pane' && takesAnswer(line.pane) ? { slot: line.slot, index: line.pane.index }
-    : line.kind === 'need' && line.need.kind === 'asking' && line.need.target.kind === 'pane'
-      ? { slot: line.need.slot, index: line.need.target.index }
-      : null;
-  return target !== null && target.index !== MAIN_INDEX ? target : null;
+  if (line.kind === 'pane' && takesAnswer(line.pane)) return { slot: line.slot, index: line.pane.index };
+  return line.kind === 'need' && line.need.kind === 'asking' && line.need.target.kind === 'pane'
+    ? { slot: line.need.slot, index: line.need.target.index }
+    : null;
 }
 
 // How many lines at the front are the queue's. They always come first, so a count is enough.

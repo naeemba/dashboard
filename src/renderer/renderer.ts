@@ -226,10 +226,7 @@ function mainEntry(page: Page): ManagerPane[] {
   return [{
     index: MAIN_INDEX, name: paneLabel(MAIN_INDEX), bell: questionBell(chat.question() !== null), exited: false,
     lastPrintedAt: 0, lastPrinted: () => chat.question() ?? '',
-    tail: () => {
-      const question = chat.question();
-      return question === null ? [] : [question];
-    },
+    tail: () => chat.questionLines(),
   }];
 }
 
@@ -241,7 +238,7 @@ function currentManagerRows(): ManagerRow[] {
     slot: entry.slot,
     panes: [...mainEntry(entry), ...namedPanes(entry).map((pane) => ({
       ...pane,
-      tail: () => paneTail(pane.terminal),
+      tail: () => pane.screen?.questionLines() ?? paneTail(pane.terminal),
       lastPrinted: () => paneLastLine(pane.terminal),
     }))],
   })), usage, worktrees, memory);
