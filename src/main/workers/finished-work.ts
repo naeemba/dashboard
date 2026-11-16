@@ -2,6 +2,7 @@ import { failureText } from '../../shared/errors/failure';
 import type { runProgram } from '../app/git';
 import { latestPullRequest, pullRequestListArguments } from '../board/pull-request-column';
 import { changedFiles } from '../ship/ship';
+import { FETCH_TIMEOUT } from '../board/board-sync';
 
 // Whether a throwaway worktree's work has left it: committed, pushed, and a pull request open. Only
 // then is the folder thrown away when its worker is released — before that, removing it would take the
@@ -42,9 +43,11 @@ async function hasPullRequest(run: RunProgram, worktreePath: string, branch: str
 // worker on when its card is not Done yet (the follow that moves it runs on a timer) or it has none.
 // The one the card follows (latestPullRequest), so a branch that merged one and opened another since
 // is not finished while the second is open.
+// Bounded, because the sweep waits on it before it looks at any other worker: a gh that never answers
+// rejects here instead, which keeps the pane until the next sweep asks again.
 export async function pullRequestMerged(run: RunProgram, worktreePath: string): Promise<boolean> {
   const branch = await branchOf(run, worktreePath);
-  return latestPullRequest(await run('gh', pullRequestListArguments(branch), worktreePath))?.state === 'MERGED';
+  return latestPullRequest(await run('gh', pullRequestListArguments(branch), worktreePath, { timeout: FETCH_TIMEOUT }))?.state === 'MERGED';
 }
 
 // What a worktree's worker is asked before it is let go of, as session-requests.ts's ports take them.
