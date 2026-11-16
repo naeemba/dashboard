@@ -107,8 +107,10 @@ function askingSlot(command: SessionCommand, folderSlot: number): number {
 }
 
 export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>) & {
-  // Every worker a session run started that is still open, in the order they ran, each naming the slot
-  // whose main ran it: one read serves every page's status line and popup.
+  // Every worker a session run started that is still open, in the order they ran, then every other open
+  // pane holding main's worker (back after a restart, a card shipped from the board, a Claude handed work
+  // with pane send), each naming the slot whose main it reports to: one read serves every page's status
+  // line and popup.
   workers(): DispatchedWorker[];
   // The pane stopped being that worker's for good: it closed, or something else started in it. Pane
   // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
@@ -369,10 +371,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
   }
 
+  // A pane holding main's worker that no run started this launch (resumed after a restart, a shipped
+  // card, a Claude handed work) follows the ones that were, under the main it reports to (mainOf), with
+  // no prompt to say what it is about.
   function workers(): DispatchedWorker[] {
-    if (dispatched.size === 0) return [];
     const slots = new Map(ports.openSlots().map((each) => [each.slot, { name: each.name, open: ports.openPanes(each.slot) }]));
-    return [...dispatched].flatMap(([id, { dispatcher, about }]) => {
+    const restored = [...slots].flatMap(([slot, { open }]) => open.map((index) => terminalId(slot, index)))
+      .filter((id) => !dispatched.has(id) && mainsWorker(id))
+      .map((id) => [id, { dispatcher: mainOf(id), about: '' }] as const);
+    return [...dispatched, ...restored].flatMap(([id, { dispatcher, about }]) => {
       const { slot, index } = paneFromId(id);
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];

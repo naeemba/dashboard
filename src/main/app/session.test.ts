@@ -9,13 +9,14 @@ describe('parseSession', () => {
       .toEqual({
         pages: [{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [], claude: [] }],
         activeIndex: 0,
+        manager: [],
       });
   });
 
   it('reads nothing out of a file that is not a session', () => {
-    expect(parseSession(null)).toEqual({ pages: [], activeIndex: 0 });
-    expect(parseSession('[]')).toEqual({ pages: [], activeIndex: 0 });
-    expect(parseSession({})).toEqual({ pages: [], activeIndex: 0 });
+    expect(parseSession(null)).toEqual({ pages: [], activeIndex: 0, manager: [] });
+    expect(parseSession('[]')).toEqual({ pages: [], activeIndex: 0, manager: [] });
+    expect(parseSession({})).toEqual({ pages: [], activeIndex: 0, manager: [] });
   });
 
   // A page with no project cannot be opened, so it goes. The rest of the layout still comes back.
@@ -72,6 +73,13 @@ describe('parseSession', () => {
     const resume = { session: 'ccaaf965-c864-48db-8044-30bf27d93087', directory: '/Users/sharp/work/api' };
     const stored = { pages: [{ ...page, claude: [resume, null, { session: 'x; rm -rf ~', directory: '/' }, 7] }] };
     expect(parseSession(stored).pages[0].claude).toEqual([resume, null, null, null]);
+  });
+
+  // The manager has no page in the layout, so its workers are kept beside the pages.
+  it('keeps the manager\'s Claude sessions and drops a slot that is not one', () => {
+    const resume = { session: 'ccaaf965-c864-48db-8044-30bf27d93087', directory: '/Users/sharp/.dashboard/board' };
+    expect(parseSession({ pages: [], manager: [null, resume, 'abc'] }).manager).toEqual([null, resume, null]);
+    expect(parseSession({ pages: [], manager: 'abc' }).manager).toEqual([]);
   });
 
   it('resumes nothing from a file written before sessions were kept', () => {

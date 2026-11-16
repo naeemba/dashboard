@@ -1,6 +1,7 @@
 import type { SavedSession } from '../app/session';
 import { isWorker, paneFromId } from '../../shared/panes/terminals';
 import type { Session, WorktreeEntry } from '../../shared/app/bridge';
+import { MANAGER_SLOT } from '../../shared/manager/manager';
 
 // Which Claude Code conversation each pane was running, and how a launch gets it back.
 //
@@ -33,7 +34,8 @@ export function isPaneConversation(value: unknown): value is PaneConversation {
 
 // The renderer's layout with each page's panes filled in. A page is matched to its slot by path, the
 // way the restore matches them, and a page with no open slot gets no sessions rather than another
-// project's. Only the fields a resume needs are copied: the live reading carries the pid as well.
+// project's. The manager's workers go beside the pages, since the layout has no page for the manager
+// (manager-decision-2). Only the fields a resume needs are copied: the live reading carries the pid as well.
 // The list runs to the highest-numbered terminal holding one, since workers have no fixed count.
 // `dispatcherOf` says which panes hold main's worker now, and whose main dispatched it, which only main knows. Workers only: the
 // editor runs nvim, and main is the Claude screen, which keeps its own conversation. Pane 0's saved one
@@ -45,21 +47,22 @@ export function withClaude(
   held: ReadonlyMap<string, PaneConversation>,
   dispatcherOf: (id: string) => string | undefined,
 ): SavedSession {
+  function heldIn(slot: number): (PaneConversation | null)[] {
+    const claude: (PaneConversation | null)[] = [];
+    if (slot === -1) return claude;
+    for (const [id, found] of held) {
+      const pane = paneFromId(id);
+      if (pane.slot !== slot || !isWorker(pane.index)) continue;
+      while (claude.length <= pane.index) claude.push(null);
+      const dispatcher = dispatcherOf(id);
+      claude[pane.index] = { session: found.session, directory: found.directory, ...(dispatcher !== undefined ? { dispatched: true, dispatcher } : {}) };
+    }
+    return claude;
+  }
   return {
     ...layout,
-    pages: layout.pages.map((page) => {
-      const slot = slotOf(page.path);
-      if (slot === -1) return { ...page, claude: [] };
-      const claude: (PaneConversation | null)[] = [];
-      for (const [id, found] of held) {
-        const pane = paneFromId(id);
-        if (pane.slot !== slot || !isWorker(pane.index)) continue;
-        while (claude.length <= pane.index) claude.push(null);
-        const dispatcher = dispatcherOf(id);
-        claude[pane.index] = { session: found.session, directory: found.directory, ...(dispatcher !== undefined ? { dispatched: true, dispatcher } : {}) };
-      }
-      return { ...page, claude };
-    }),
+    pages: layout.pages.map((page) => ({ ...page, claude: heldIn(slotOf(page.path)) })),
+    manager: heldIn(MANAGER_SLOT),
   };
 }
 
