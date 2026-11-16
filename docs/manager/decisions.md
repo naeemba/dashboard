@@ -49,7 +49,9 @@ to use (`chat-row-call.ts`). With the wrong row highlighted, a `1` would
 otherwise allow a call nobody read. The session's own title is not printed in
 its place, since it can say less than the call does, and a command's later
 lines are joined onto the first with ⏎, so `echo ok` above `rm -rf ~` never
-reads as `echo ok`. A long call is cut with an ellipsis that shows the cut.
+reads as `echo ok`. A call longer than the row's 160 characters is printed cut,
+with an ellipsis, and takes no digit: in `cd x && <150 harmless characters> &&
+rm -rf ~` the cut is the `rm`.
 
 A plan, an agent's prompt or an MCP tool's arguments do not fit one line, so
 their rows take no digit and they are answered on the screen. A single

@@ -18,7 +18,7 @@ function loneQuestion(ask: PermissionAsk): Question | undefined {
 
 // The answers a single key can give, numbered from 1 in the order the ask box lists them: a tool
 // call's rows that need nothing typed, or the options of a lone single-pick question. A form, several
-// questions, a multi-pick, a reason to type, or a tool call the row cannot show (chat-row-call.ts) are
+// questions, a multi-pick, a reason to type, or a tool call the row cannot show whole (chat-row-call.ts) are
 // answered on the screen itself, so they offer none.
 function rowChoices(ask: PermissionAsk): RowChoice[] {
   if (ask.toolName === ELICITATION) return [];
@@ -27,7 +27,7 @@ function rowChoices(ask: PermissionAsk): RowChoice[] {
     if (!asked || asked.multiSelect) return [];
     return asked.options.map(({ label }) => ({ label, answer: () => questionAnswer(ask.input, [[label]]) }));
   }
-  if (rowCall(ask) === null) return [];
+  if (rowCall(ask)?.whole !== true) return [];
   return permissionChoices(ask).choices.flatMap((choice) => ('result' in choice ? [{ label: choice.label, answer: () => choice.result }] : []));
 }
 
@@ -35,7 +35,7 @@ function rowChoices(ask: PermissionAsk): RowChoice[] {
 // a digit on the row would allow, and only then the ask box's title. The session's own title is never
 // printed over a call a digit answers: it can say less than the call does.
 export function rowTitle(ask: PermissionAsk): string {
-  return loneQuestion(ask)?.question ?? rowCall(ask) ?? permissionTitle(ask);
+  return loneQuestion(ask)?.question ?? rowCall(ask)?.line ?? permissionTitle(ask);
 }
 
 // What the row prints under the pane: the question, then each answer with the digit that gives it.

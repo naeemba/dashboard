@@ -71,5 +71,9 @@ describe('takesDigit', () => {
     expect(takesDigit(ask({ toolName: 'AskUserQuestion', input: { questions: [question(true)] } }))).toBe(false);
     expect(takesDigit(ask({ toolName: ELICITATION, title: 'Sign in' }))).toBe(false);
     expect(takesDigit(ask({ toolName: 'Agent', input: { description: 'tidy', prompt: 'delete the tests' } }))).toBe(false);
+    const cut = ask({ input: { command: `cd x && ${'echo fine; '.repeat(15)}&& rm -rf ~` } });
+    expect(takesDigit(cut)).toBe(false);
+    expect(rowAnswer(cut, '1')).toBeNull();
+    expect(rowLines(cut)).toHaveLength(1);
   });
 });
