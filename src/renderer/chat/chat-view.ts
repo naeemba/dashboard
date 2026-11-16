@@ -171,8 +171,11 @@ export function createChatView(options: ChatViewOptions): ChatView {
       unfilled.get(each.target)?.();
       unfilled.delete(each.target);
     }
-    // A fill lands after the paint that scrolled, so the entry it grew would hang below the end.
-    keepEnd();
+    // A fill lands after the paint that scrolled, so the entry it grew would hang below the end. Only
+    // a fill in or below the visible log can push the end down; one up in the margin re-pinning would
+    // snap a reader's first small scroll up back to the bottom.
+    const top = log.getBoundingClientRect().top;
+    if (seen.some((each) => each.isIntersecting && each.boundingClientRect.bottom > top)) keepEnd();
   }, { root: log, rootMargin: '800px 0px' });
 
   const atBottom = () => nearBottom(log);
