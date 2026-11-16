@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-09T15:31:59.502Z",
-  "updatedAt": "2026-11-16T12:04:05.708Z",
+  "updatedAt": "2026-11-16T12:10:56.621Z",
   "branch": "add-the-missing-258-to-its-workers-history",
   "pullRequest": 310,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-16T12:04:05.689Z",
       "body": "Pull request #310 opened: Add #258 to its workers history line; point the project-close comment at keys-decision-2 https://github.com/naeemba/dashboard/pull/310"
+    },
+    {
+      "at": "2026-11-16T12:10:56.621Z",
+      "body": "PR #310 review loop converged in 1 round with 0 findings, ready to merge. Main was merged in first to resolve a conflict on this card's file (344012e7). CI: 5/5 checks passed on head 344012e7."
     }
   ],
-  "column": "Ship",
-  "order": 0
+  "column": "Review",
+  "order": 6
 }
