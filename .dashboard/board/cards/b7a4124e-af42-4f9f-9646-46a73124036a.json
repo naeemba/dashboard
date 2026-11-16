@@ -4,8 +4,9 @@
   "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T10:02:54.642Z",
+  "updatedAt": "2026-11-16T10:03:15.653Z",
   "branch": "agent-state-per-pane-from-claude-code-hooks",
+  "pullRequest": 302,
   "comments": [
     {
       "at": "2026-11-16T09:53:27.037Z",
@@ -14,8 +15,12 @@
     {
       "at": "2026-11-16T10:02:54.642Z",
       "body": "Hooks per pane, the asking row and bell fallback already existed. Built the gap: a Claude-screen worker's manager row printed its hidden shell and typed keys went there. Now the row shows the question with numbered answers and a digit answers it (main too). PR #302."
+    },
+    {
+      "at": "2026-11-16T10:03:15.628Z",
+      "body": "Pull request #302 opened: Answer a Claude screen's question from the manager row https://github.com/naeemba/dashboard/pull/302"
     }
   ],
-  "column": "Doing",
-  "order": 1
+  "column": "Review",
+  "order": 5
 }
