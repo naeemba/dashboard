@@ -1,0 +1,11 @@
+{
+  "id": "d154c7ff-ae2c-4b88-a8b5-fc1bcd4a5d96",
+  "title": "A card in Review gets its review even when the sweep closed its worker's pane",
+  "notes": "A card in Review whose review never started stays that way, unseen.\n\nSeen twice on 2026-11-16, with #300 and #313. The card worker opened its PR and reported to main. The card moved to Review. Then the finished-worker sweep closed the worker's pane (main had read the report and sent nothing for a while), and no review loop ever ran. The PR had no review comments and no review pane. `board review <id>` started it by hand. For #306, the app did start the review by itself, so the gap is a race between the sweep and the review start.\n\nWant:\n- Find the race first: where the review start (review.autoLoop on a move into Review) and the sweep (closeAfterMinutes) meet, and why a closed pane loses the review. Cite file:line.\n- Fix it at the root, so a card in Review with autoLoop on always gets its review. Either the sweep never closes a pane whose card is in Review with no review yet, or the follow/review sweep starts the review for any Review card whose PR has no loop running and no loop comment.\n- One decision module, with a test for the case: worker done, card in Review, pane closed, so a review starts.\n- Don't start a second review on a PR that already has one running or finished.\n- Docs (ship, workers) change with it. Do not bump the version. Tests must be Windows-safe.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-16T15:28:44.386Z",
+  "updatedAt": "2026-11-16T15:28:44.387Z",
+  "column": "Backlog",
+  "order": 46
+}
