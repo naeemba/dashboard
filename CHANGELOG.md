@@ -1,5 +1,34 @@
 # Changelog
 
+## v2.47.0 (2026-11-16)
+
+### What's new
+
+- Audit 10: hook that refuses a zsh path= assignment (dotfiles)
+- App-owned /work-card skill; version bump is a per-project setting
+- pane run refuses a just-claimed pane as busy (systemd-run seen as a command)
+- App holds pane-command permissions; review prompt stops moving cards to Done
+- Review worker merges only with review.autoMerge on (off by default; global + per-project)
+- board move/comment/add commit and push by themselves, so the board never conflicts
+- Wait on CI without polling, and stop pr-loop's blocked run-cancel step
+- Add a pre-commit hook and a typecheck script
+- Worker notices: one per turn, only when the worker has no background work left
+- Move the manager's /tmp scripts into the CLI: dispatch, finish, land, budget
+
+### What's Changed
+* Windows: pnpm start opens the app, plus a step-by-step setup guide by @sanabandi in https://github.com/naeemba/dashboard/pull/287
+* App-owned /work-card skill; version bump is a per-project setting by @naeemba in https://github.com/naeemba/dashboard/pull/288
+* pane run refuses a just claimed pane as bus by @naeemba in https://github.com/naeemba/dashboard/pull/289
+* App holds pane-command permissions; review prompt stops moving cards to Done by @naeemba in https://github.com/naeemba/dashboard/pull/290
+* Review worker merges only with review.autoMerge on by @naeemba in https://github.com/naeemba/dashboard/pull/291
+* Wait on CI with one background watch in the review prompt by @naeemba in https://github.com/naeemba/dashboard/pull/292
+* Add a pre-commit hook and a typecheck script by @naeemba in https://github.com/naeemba/dashboard/pull/293
+* Worker notices carry the last message, skip turns you typed, and pane report by @naeemba in https://github.com/naeemba/dashboard/pull/294
+* Move the manager's /tmp scripts into the CLI: pane finish, pr land by @naeemba in https://github.com/naeemba/dashboard/pull/295
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.46.0...v2.47.0
+
 ## v2.46.0 (2026-11-09)
 
 ### What's new
