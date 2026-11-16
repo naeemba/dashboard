@@ -108,13 +108,17 @@ it, since `dashboard` tries the pane's socket and then the one the app last
 wrote to `session-socket` in the user data (`reach-app.ts`), so a kept pane
 reaches the restarted app.
 
-Kept shells nobody takes back are ended, not left running: once the window has
-reopened its session and the manager has taken its own, `pane.reap` kills every
-shell no page took back and stops its scope (a project not reopened, because
-its folder went or its session was not saved), and says so on the status bar.
-Offering them instead was weighed: nothing could show them but reopening the
-project, and a Claude conversation saved for one of them is resumed beside it.
+Kept shells nobody takes back are ended only when nothing could want them: once
+the window has reopened its session and the manager has taken its own,
+`pane.reap` kills every shell no page took back whose project the session
+read at launch does not name (closed before the quit, or a session that was
+not saved), stops its scope, and says so on the status bar. A project the
+session names that did not open (a disk not mounted yet, an open that threw)
+may have a worker mid-turn in its shells, so they are put back for its open
+and the bar names it instead. A project closed during the run killed its own.
 The same goes for a host of an older protocol version after a bump
 (`olderHostSockets`): the app says hello there and kills every key it is told,
-unless that host is busy with an app of its own version. `hello`, `kill`,
+unless that host is busy with an app of its own version or has not answered
+within ten seconds: silence names no keys, and an answer arriving after the
+wait is not acted on, so a slow host keeps its shells until the next launch. `hello`, `kill`,
 `panes` and `busy` keep their shape in every version so this always works.

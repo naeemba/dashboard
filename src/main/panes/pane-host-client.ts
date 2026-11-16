@@ -17,6 +17,8 @@ export type PaneHost = {
   adopt(projectPath: string): { survivor: Survivor; shell: PaneShell }[];
   // Takes every kept shell no project has taken back, for the launch to end once its restore is done.
   unclaimed(): Survivor[];
+  // Puts kept shells back for a later adopt: a project the session named that has not opened yet.
+  keep(survivors: readonly Survivor[]): void;
   // Kills a kept shell by its key, taken back or not.
   killKept(key: string): void;
   // Whether a shell spawned now runs in the host, and so outlives this process.
@@ -149,6 +151,7 @@ export function paneHost(options: {
       kept = [];
       return taken;
     },
+    keep(survivors) { kept.push(...survivors); },
     killKept: (key) => send({ type: 'kill', key }),
     holds: () => connection !== null,
   };
@@ -156,13 +159,17 @@ export function paneHost(options: {
 
 // The shells a host of an older protocol version kept, killed: said in the messages every version keeps
 // (pane-host-protocol.ts's olderHostSockets). One busy with an app of its own version — an older build
-// still running on the same user data — is left alone, and so is nothing answering. The host exits by
-// itself once its last shell has and no app is connected.
+// still running on the same user data — is left alone, and so is one that has not answered within
+// `waitMs`: silence names no keys, and a host that hangs may be one an app of its version is still
+// greeting. An answer arriving after the wait kills nothing either; the next launch asks again. The
+// host exits by itself once its last shell has and no app is connected.
 export async function endOlderHost(socketPath: string, waitMs = ANSWER_WAIT_MS): Promise<number> {
   const open = await attempt(socketPath);
   if (open === null) return 0;
   return new Promise((resolve) => {
+    let settled = false;
     const done = (ended: number): void => {
+      settled = true;
       clearTimeout(silence);
       open.end();
       resolve(ended);
@@ -172,6 +179,7 @@ export async function endOlderHost(socketPath: string, waitMs = ANSWER_WAIT_MS):
     open.on('close', () => done(0));
     open.setEncoding('utf8');
     open.on('data', lineReader<FromHost>((message) => {
+      if (settled) return;
       if (message.type === 'busy') return done(0);
       if (message.type !== 'panes') return;
       for (const { key } of message.panes) open.write(line({ type: 'kill', key }));

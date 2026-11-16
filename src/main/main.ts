@@ -502,7 +502,8 @@ const pane = paneActions({
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
   agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
-  kept: shellHost.adopt, unclaimed: shellHost.unclaimed, killKept: shellHost.killKept, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
+  kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
+  unclaimed: shellHost.unclaimed, keep: shellHost.keep, killKept: shellHost.killKept, inSession: claudeSessions.launchedWith,
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
   worktrees: worktrees.entries, panesBeforeLaunch: agentPanesBeforeLaunch, realPath, givePane: giveCardPane,
 });

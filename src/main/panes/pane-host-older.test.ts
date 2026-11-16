@@ -65,6 +65,26 @@ describe('endOlderHost', () => {
     listener.close();
   });
 
+  // Silence names no keys, and a late answer is not acted on: the next launch asks again.
+  it('kills nothing on a host that answers only after the wait', async () => {
+    const socketPath = paneHostAddress(process.platform, temporaryFolder('pane-host-older-'))?.socket ?? '';
+    prepareHostSocket(process.platform, socketPath);
+    const killed: string[] = [];
+    const listener = net.createServer((socket) => {
+      accepted.push(socket);
+      socket.setEncoding('utf8');
+      socket.on('data', (text: string) => { if (text.includes('"kill"')) killed.push(text); });
+      setTimeout(() => {
+        if (!socket.destroyed) socket.write(`${JSON.stringify({ type: 'panes', panes: [{ key: paneKey('/work', 1) }] })}\n`);
+      }, 100);
+    });
+    await new Promise<void>((resolve) => listener.listen(socketPath, resolve));
+    expect(await endOlderHost(socketPath, 20)).toBe(0);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(killed).toEqual([]);
+    listener.close();
+  });
+
   it('ends nothing where no host listens', async () => {
     expect(await endOlderHost(path.join(temporaryFolder('pane-host-older-'), 'none.sock'))).toBe(0);
   });

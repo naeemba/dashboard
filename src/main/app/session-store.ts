@@ -34,6 +34,8 @@ type ClaudeSessions = {
   hasKeyboard(id: string): boolean;
   // A couch that left: its last layout no longer keeps a pane's keyboard.
   forgetScreen(screen: string): void;
+  // Whether session.json named the project when this launch read it (pane.reap).
+  launchedWith(projectPath: string): boolean;
 };
 
 // `dispatcherOf` is main's record of the panes holding its workers and whose main dispatched each, saved
@@ -71,6 +73,7 @@ export function sessionStore(
   return {
     takeResume: (projectPath, index, id) => ledger.take(projectPath, index, id, Date.now()),
     owedResumes: (projectPath) => ledger.owed(projectPath),
+    launchedWith: (projectPath) => saved.pages.some((page) => page.path === projectPath),
     moveResume: (fromId, toId) => ledger.move(fromId, toId),
     placed(placement) {
       ledger.place(placement);

@@ -61,8 +61,9 @@ Neither door holds any of the logic; each only asks.
   conversation through pane.dispatch, a worker screen over its pane, the
   editor's nvim as the editor.
 - **pane.reap** (the window saying it has reopened its session, after the
-  manager's restore): every kept shell no page took back killed and its scope
-  stopped, and the status bar names the projects.
+  manager's restore): every kept shell no page took back whose project the
+  session never named killed and its scope stopped; one of a session project
+  that did not open kept for its open. The status bar names both.
 - **pane.restart** (`pty:restart`, Enter on an exited pane, and a dispatch
   starting a pane's shell over): the shell started again unless one runs, and
   the old shell's scope stopped.
