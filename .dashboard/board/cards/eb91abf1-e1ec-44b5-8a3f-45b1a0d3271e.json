@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-05T16:29:23.491Z",
-  "updatedAt": "2026-11-16T11:44:19.736Z",
+  "updatedAt": "2026-11-16T11:44:46.510Z",
   "branch": "worker-screens-the-working-line-kept-counti",
   "comments": [
     {
@@ -15,6 +15,10 @@
     {
       "at": "2026-11-16T11:44:19.736Z",
       "body": "Not fixed: no root cause found, and the card's guess is ruled out. No PR.\n\nRuled out by probing the pinned SDK (0.3.316, haiku, temp folder): a turn that leaves a background Bash running gets its result at once (5.1s), before the command ends. A background Agent does the same. The background work never holds a result back. When the background work finishes, the session starts a turn of its own (init, assistant, result), which also ends with a result.\n\nTraced and consistent: the line (drawWorking) and the foot (drawFoot) both read turnState(). Every paint calls both, and the 1s tick re-checks and hides the line once busy is false, so with this code the line cannot show 'Working…' while the foot says 'ready'. busy is set only by joinTurn (a prompt the screen sent, or the command_lifecycle of one it queued) and cleared by result/ended. Main relays every result. For prompts queued mid-turn, the lifecycle order is always queued, started, completed, result, then the owner's completed, so nothing starts a turn after its result. A rebuilt pane drops its old view's element.\n\nUnproven candidate: drawFoot records its key before footSides builds the foot. If footSides threw once, later draws would skip and the foot would stay on its last state while the line went on correctly. Unproven; it would mean the foot was wrong, not the line.\n\nA real gap found on the way, not this card: a turn the session starts by itself (a background task's notification) never reaches the screen as a turn. Example: a worker's background pnpm test finishes, Claude spends 30s reading the output and replying, and the whole time the screen shows no working line and the foot says ready. The session's per-turn system init would mark the start (it arrives at every turn start in the probes). Worth its own card if wanted.\n\nIf it shows again, note the line's seconds against the turn's real start, and what the foot and the pane list say at that moment."
+    },
+    {
+      "at": "2026-11-16T11:44:46.510Z",
+      "body": "Cancelled by main-dashboard: not reproducible on current code. The worker's probes rule out the background-task cause (see the comment above). Reopen if it is seen again, with the screen and the turn."
     }
   ],
   "column": "Doing",
