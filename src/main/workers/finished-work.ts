@@ -33,9 +33,10 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
 
 const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
 
-// Whether gh lists a pull request from the branch in any state.
+// Whether gh lists a pull request from the branch in any state. Bounded like pullRequestMerged: the
+// sweep waits on a release, and a gh that never answers would stop it; a timeout keeps the worktree.
 async function hasPullRequest(run: RunProgram, worktreePath: string, branch: string): Promise<boolean> {
-  const pulls: unknown = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'all', '--json', 'number'], worktreePath));
+  const pulls: unknown = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'all', '--json', 'number'], worktreePath, { timeout: FETCH_TIMEOUT }));
   return Array.isArray(pulls) && pulls.length > 0;
 }
 

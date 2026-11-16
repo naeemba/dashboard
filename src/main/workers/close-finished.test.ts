@@ -94,6 +94,20 @@ describe('closeFinished', () => {
     expect(asked).toBe(1);
   });
 
+  // Its turn may be the one reading the report: a close told now would land mid-turn.
+  it('keeps a worker whose main started a turn while gh was answering', async () => {
+    let answerGh: (merged: boolean) => void = () => undefined;
+    const gh = () => new Promise<boolean>((resolve) => { answerGh = resolve; });
+    const { answer, closed, told } = await reported({ ...inWorktree, merged: gh });
+    const sweep = answer.closeFinished();
+    await Promise.resolve();
+    answer.mainTurn(2, true);
+    answerGh(true);
+    await sweep;
+    expect(closed).toEqual([]);
+    expect(told).toEqual([]);
+  });
+
   it('never asks about the branch of a worker in the project\'s own checkout', async () => {
     const { answer, closed } = await reported({ merged: async () => true });
     await answer.closeFinished();
