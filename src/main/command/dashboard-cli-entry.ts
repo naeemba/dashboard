@@ -39,5 +39,5 @@ async function run(): Promise<number> {
   }
 }
 
-endQuietlyWhenOutputCloses(process.stdout, (code) => process.exit(code));
+endQuietlyWhenOutputCloses();
 void run().then((code) => { process.exitCode = code; });

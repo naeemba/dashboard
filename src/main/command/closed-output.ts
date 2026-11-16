@@ -4,9 +4,9 @@ import type { EventEmitter } from 'node:events';
 // lines: it ends quietly with exit 0, like any Unix tool. Without a listener the stream's 'error' is
 // unhandled, and node prints `write EPIPE` and a stack. By then the work is done: every program writes
 // its files before it prints. Any other write failure is still thrown.
-export function endQuietlyWhenOutputCloses(output: EventEmitter, exit: (code: number) => void): void {
+export function endQuietlyWhenOutputCloses(output: EventEmitter = process.stdout, exit: () => void = () => process.exit(0)): void {
   output.on('error', (error: NodeJS.ErrnoException) => {
     if (error.code !== 'EPIPE') throw error;
-    exit(0);
+    exit();
   });
 }
