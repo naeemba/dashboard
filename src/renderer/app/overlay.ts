@@ -28,9 +28,10 @@ export function openOverlay(name: string, dismiss: () => void): { dialog: HTMLDi
     if (event.target === overlay) dismiss();
   });
 
-  // Every sheet holds the focus, so no dialog can forget to: Shift+Tab is a modified key no dialog
-  // reads, and without the hold it walks out to the pane behind while the sheet stays up, and the
-  // Escape meant to cancel the dialog reaches that pane instead.
+  // Every sheet holds the focus, so no dialog can forget to. Two things move it out to the pane
+  // behind while the sheet stays up, and the Escape meant to cancel the dialog then reaches that
+  // pane: the keyboard, as Shift+Tab, a modified key no dialog reads; and code, as a --remote join or
+  // a notification click that focuses a pane. A Tab trap on the dialog would stop only the first.
   const release = holdFocus(overlay, dialog);
   return {
     dialog,
@@ -99,27 +100,32 @@ export function pdfOverlay(pdf: Blob): void {
 }
 
 // Focus that leaves the dialog comes back to whatever in it had the focus last, so a box you were
-// typing in, such as the prompt's, gets what you type next; the dialog itself when that is gone.
+// typing in, such as the prompt's, gets what you type next; the dialog itself when that is gone. A
+// box that ends itself on blur (card detail's subtask box, a settings edit box) is gone by then, so
+// the focus lands on the dialog.
 // Unless it went to a sheet opened over this one, such as an image opened from an agent's
 // conversation: only the topmost sheet holds, or the two would pull the focus back and forth.
 // Returns the way to stop, which closing calls.
 function holdFocus(sheet: HTMLElement, dialog: HTMLElement): () => void {
-  let last: HTMLElement = dialog;
-  function back(): void {
-    (last.isConnected && dialog.contains(last) ? last : dialog).focus();
+  let lastFocused: HTMLElement = dialog;
+  function focusBack(event: FocusEvent): void {
+    // Stopped in the capture phase, so whatever the focus walked to never runs its own focus
+    // listeners: a pane would mark itself focused and a box would move the selection to its row.
+    event.stopImmediatePropagation();
+    (lastFocused.isConnected && dialog.contains(lastFocused) ? lastFocused : dialog).focus();
   }
   function hold(event: FocusEvent): void {
-    if (!(event.target instanceof HTMLElement)) return back();
+    if (!(event.target instanceof HTMLElement)) return focusBack(event);
     if (dialog.contains(event.target)) {
-      last = event.target;
+      lastFocused = event.target;
       return;
     }
     const over = event.target.closest(`.${OVERLAY_CLASS}`);
     if (over && sheet.compareDocumentPosition(over) & Node.DOCUMENT_POSITION_FOLLOWING) return;
-    back();
+    focusBack(event);
   }
-  document.addEventListener('focusin', hold);
-  return () => document.removeEventListener('focusin', hold);
+  document.addEventListener('focus', hold, true);
+  return () => document.removeEventListener('focus', hold, true);
 }
 
 // The viewer on screen, if any, for the Escape main hands over from the PDF's frame.
