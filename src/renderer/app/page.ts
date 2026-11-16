@@ -355,7 +355,9 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     }
 
     const terminal = new Terminal({
-      cursorBlink: true,
+      // A steady cursor: xterm blinks with a CSS animation that restyles every frame, about 4% of a core
+      // while a focused pane sits idle (docs/performance/history.md).
+      cursorBlink: false,
       fontSize: options.settings().font.size,
       fontFamily: fontFamily(options.settings()),
       theme: options.settings().theme as ITheme,

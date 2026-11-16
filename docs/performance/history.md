@@ -5,6 +5,25 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-16: a terminal's cursor no longer blinks (finding 6)
+
+Same machine and compositor as the first profile. One worker opened on alpha
+and focused (`Ctrl+T`, `Ctrl+Shift+T`, `Alt+2`), then 30 s of `cpuWindow` with
+nothing typed. "Before" is `cursorBlink: true`, "after" `false`; two runs each.
+
+| | before | after |
+|---|---|---|
+| Renderer CPU | 4.2–4.3% | 0.4% |
+| GPU process CPU | 1.1–1.3% | 0.2–0.4% |
+| Style recalculations in 30 s | 2,068–2,112 | 3–6 |
+| Running animations | `blink_block_6` | none |
+
+- The cursor is a steady block: the focused pane still draws `.xterm-cursor`,
+  filled with the theme's cursor colour.
+- `measure.mjs keys` read 0.1% on the renderer before the change too, with one
+  style recalculation, so its last step does not catch the blink as it stands;
+  these numbers come from opening the worker straight after launch instead.
+
 ## 2026-11-02: a streaming reply redraws only its tail (finding 5)
 
 Same machine, compositor and tooling as the first profile, `measure.mjs chat
