@@ -6,8 +6,8 @@
 //
 // The prompt hook's source cannot tell who typed: main's `pane send` types into the pane, or hands a
 // Claude screen its prompt, the way you do. What tells them apart is the prompt itself: every one main
-// hands a worker ends with the line asking for a report (asksForReport), whatever order its prompts
-// and yours are submitted in.
+// hands a worker carries the line asking for a report on a line of its own (asksForReport), whatever
+// order its prompts and yours are submitted in, even joined into one.
 
 // UserPromptSubmit's `source`: `user` from Claude Code's composer, `sdk` from an Agent SDK session, a
 // Claude screen's. Both are a prompt somebody typed or sent. Anything else (`system` for a task

@@ -50,10 +50,13 @@ const DONE_REPORT = new RegExp(`^\\S+ in pane -?\\d+:\\d+ \\(${PANE_ADDRESS.sour
   + ` \`pane list\` shows where every worker stands\\.(?: ${escape(LAST_SAID)}.*)?$`);
 
 // The line every prompt main hands a worker ends with (workerPrompt in dispatch.ts), and so what a
-// worker's prompt hook reads to tell main's prompt from one you typed (prompt-source.ts).
+// worker's prompt hook reads to tell main's prompt from one you typed (prompt-source.ts). It is
+// matched on a line of its own anywhere in the prompt, not only at the end: queued prompts may reach
+// the hook joined into one, with yours after main's, and a main's prompt read as yours leaves main
+// waiting on a worker that finished, while the other mistake costs one extra notice.
 const REPORT_ASKED = ' when done, saying what you did.';
 export const reportAsk = (mainName: string) => `SendMessage to ${mainName}${REPORT_ASKED}`;
-const ASKS_FOR_REPORT = new RegExp(`\\n\\nSendMessage to \\S+${escape(REPORT_ASKED)}\\s*$`);
+const ASKS_FOR_REPORT = new RegExp(`(?:^|\\n)[ \\t]*SendMessage to \\S+${escape(REPORT_ASKED)}[ \\t]*(?:\\r?\\n|$)`);
 
 export function asksForReport(prompt: string): boolean {
   return ASKS_FOR_REPORT.test(prompt);

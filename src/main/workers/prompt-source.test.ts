@@ -44,6 +44,8 @@ describe('asksForReport', () => {
   it('reads the line every prompt main hands a worker ends with, and nothing you would type', () => {
     expect(asksForReport(workerPrompt('rebase on main', '/work/api'))).toBe(true);
     expect(asksForReport(`${workerPrompt('rebase on main', '/work/api')}\n`)).toBe(true);
+    expect(asksForReport(`${workerPrompt('rebase on main', '/work/api')}\nalso bump the version`)).toBe(true);
+    expect(asksForReport('rebase on main\r\nSendMessage to main-api when done, saying what you did.')).toBe(true);
     expect(asksForReport('rebase on main')).toBe(false);
     expect(asksForReport('what does "SendMessage to main-api when done, saying what you did." mean?')).toBe(false);
   });

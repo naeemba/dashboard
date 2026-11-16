@@ -134,7 +134,9 @@ or a peer's message, and the wakeups. `user` and `sdk` are a prompt somebody typ
 send` types into the pane, or hands a screen its prompt, exactly as you do, so the source alone cannot
 say whose. The prompt can: every prompt main hands a worker goes through `workerPrompt` and ends with
 the line asking for a report, which the hook input's `prompt` carries, so the command sends `--handed
-yes` when it does (`asksForReport`). prompt-source.ts counts a typed prompt with that line as main's and
+yes` when the line stands on a line of its own anywhere in it (`asksForReport`), so queued prompts
+joined into one, yours after main's, still count as main's: a main's prompt read as yours leaves main
+waiting on a finished worker, the other mistake costs one extra notice. prompt-source.ts counts a typed prompt with that line as main's and
 one without as yours, whatever order they are submitted in: two sends queued behind a turn, or yours
 typed while main's waits, are each told apart. A first version kept a flag set by each send and
 cleared by the next typed prompt, which read the second of two queued sends as yours. The first prompt
