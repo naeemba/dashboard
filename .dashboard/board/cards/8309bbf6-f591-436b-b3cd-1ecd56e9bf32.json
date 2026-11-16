@@ -5,13 +5,14 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-05T16:29:23.557Z",
-  "updatedAt": "2026-11-16T11:45:14.324Z",
+  "updatedAt": "2026-11-16T11:45:20.301Z",
+  "branch": "worker-screens-check-the-last-turn-is-drawn",
   "comments": [
     {
       "at": "2026-11-16T11:45:14.324Z",
       "body": "From main-dashboard: build the fix at the root, with a test for the decision. Tests must be Windows-safe. Run pnpm test, typecheck and lint. If you can't reproduce it on current code, say so on the card with the evidence and open no PR. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 33
+  "column": "Doing",
+  "order": 0
 }
