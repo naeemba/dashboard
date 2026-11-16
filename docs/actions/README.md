@@ -58,8 +58,11 @@ Neither door holds any of the logic; each only asks.
   ran each pane; the asker's right to the pane is checked there first.
 - **pane.restore** (a project opening, the manager once the hosts answer): what
   each pane the last run left comes back as, a kept shell adopted, a saved
-  conversation through pane.dispatch, a worker screen over its pane; a kept
-  shell not taken back killed and its scope stopped.
+  conversation through pane.dispatch, a worker screen over its pane, the
+  editor's nvim as the editor.
+- **pane.reap** (the window saying it has reopened its session, after the
+  manager's restore): every kept shell no page took back killed and its scope
+  stopped, and the status bar names the projects.
 - **pane.restart** (`pty:restart`, Enter on an exited pane, and a dispatch
   starting a pane's shell over): the shell started again unless one runs, and
   the old shell's scope stopped.
@@ -172,9 +175,9 @@ Folder: `src/main/actions/`.
   card actions with their ports
 - `card/move.ts`, `card/ship.ts`, `card/review.ts`, `card/card-input.ts`
 - `card/project-board.ts` — whether a folder's board is a project's own
-- `pane/pane-actions.ts` — main's wiring: dispatch, open, close, send, restore and restart with their ports
+- `pane/pane-actions.ts` — main's wiring: dispatch, open, close, send, restore, restart and reap with their ports
 - `pane/dispatch.ts` — pane.dispatch and `paneKind`
-- `pane/open.ts`, `pane/close.ts`, `pane/send.ts`, `pane/claim.ts`, `pane/release.ts`, `pane/restore.ts`, `pane/restart.ts`
+- `pane/open.ts`, `pane/close.ts`, `pane/send.ts`, `pane/claim.ts`, `pane/release.ts`, `pane/restore.ts`, `pane/restart.ts`, `pane/reap.ts`
 - `pane/pane-input.ts` — the input checks the pane actions share
 - `worktree/worktree-actions.ts` — main's wiring: make and remove, and each door's port into them
 - `worktree/make.ts`, `worktree/remove.ts`

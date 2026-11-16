@@ -15,6 +15,8 @@ export type PaneHost = {
   spawn(request: SpawnRequest): PaneShell;
   // Takes back the shells the host kept for this project, each once.
   adopt(projectPath: string): { survivor: Survivor; shell: PaneShell }[];
+  // Takes every kept shell no project has taken back, for the launch to end once its restore is done.
+  unclaimed(): { survivor: Survivor; shell: PaneShell }[];
   // Whether a shell spawned now runs in the host, and so outlives this process.
   holds(): boolean;
 };
@@ -135,6 +137,11 @@ export function paneHost(options: {
       const taken = kept.filter((survivor) => paneOfKey(survivor.key).projectPath === projectPath);
       kept = kept.filter((survivor) => !taken.includes(survivor));
       return taken.map((survivor) => ({ survivor, shell: track(survivor.key, hostShell(survivor.key, survivor, survivor.screen, send)) }));
+    },
+    unclaimed() {
+      const taken = kept;
+      kept = [];
+      return taken.map((survivor) => ({ survivor, shell: hostShell(survivor.key, survivor, '', send) }));
     },
     holds: () => connection !== null,
   };

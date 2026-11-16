@@ -502,7 +502,7 @@ const pane = paneActions({
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
   agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
   typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
-  kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
+  kept: shellHost.adopt, unclaimed: shellHost.unclaimed, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
   worktrees: worktrees.entries, panesBeforeLaunch: agentPanesBeforeLaunch, realPath, givePane: giveCardPane,
 });
@@ -532,11 +532,12 @@ registerSessionChannels(table, session);
 // The manager's main, opened at launch the way a project's is when it opens, and started the same way:
 // shown, told something, or a worker it dispatched kept through a restart. Its folder is made first, since
 // a session cannot start in a folder that is not there.
+const managerBack = Promise.all([panesReady, workerScreens.host.ready]);
 try {
   mkdirSync(MANAGER_FOLDER, { recursive: true });
   chats.open(MANAGER_SLOT);
   // The manager has no project to open, so its kept shells are taken back once the host has answered.
-  void Promise.all([panesReady, workerScreens.host.ready]).then(() => {
+  void managerBack.then(() => {
     restorePanes(MANAGER_SLOT, MANAGER_FOLDER, null);
     startMainsWaitedOn();
   });
@@ -837,7 +838,11 @@ const remote = registerRemote(held, {
 });
 // Before registerWithIpc, which only answers the channels already in the table.
 // A second launch is read the way this one was, once it has brought the window forward.
-whenLaunchedAgain(liveWindow, connectAtLaunch(process.argv, () => settings, table, failures.hold, remote.joinedTo));
+// Once the window has reopened its projects, and after the manager's restore (registered on managerBack
+// first), the kept shells no page took back are ended: pane.reap.
+const reapUnclaimed = (): void => void managerBack.then(() => pane.reap.call({}))
+  .then((result) => { if (!isRefused(result) && result.output !== '') failures.hold(result.output); });
+whenLaunchedAgain(liveWindow, connectAtLaunch(process.argv, () => settings, table, failures.hold, remote.joinedTo, reapUnclaimed));
 registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);
 
