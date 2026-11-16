@@ -7,6 +7,7 @@ import { readSession, writeSession } from './session';
 import type { Session } from '../../shared/app/bridge';
 import { paneFromId, terminalId } from '../../shared/panes/terminals';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
+import { MANAGER_FOLDER } from '../manager/manager-terminals';
 
 // session.json, read once at launch and written by main alone. The renderer sends the layout whenever it
 // changes, as it always has; main writes it with which Claude Code conversation each pane is running,
@@ -41,7 +42,8 @@ export function sessionStore(
   table: Channels, file: string, slotOf: (projectPath: string) => number, dispatcherOf: (id: string) => string | undefined,
 ): ClaudeSessions {
   const saved = readSession(file);
-  const ledger = resumeLedger(saved.pages, existsSync);
+  // The manager's restore asks for its panes by the folder they run in.
+  const ledger = resumeLedger([...saved.pages, { path: MANAGER_FOLDER, claude: saved.manager }], existsSync);
   let layout: Session | null = null;
   // Every screen's latest layout, the host window's and each couch's, for hasKeyboard alone.
   const screenLayouts = new Map<string, Session>();
