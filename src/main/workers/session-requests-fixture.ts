@@ -66,6 +66,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     exists: () => true,
     prune: async () => undefined,
     unfinished: async () => null,
+    merged: async () => false,
     removeWorktree: async (worktreePath, projectPath) => { removed.push(`${worktreePath} from ${projectPath}`); },
     hasKeyboard: (id) => keyboard.has(id),
     finishedCard: (id) => finishedCards.get(id) ?? null,

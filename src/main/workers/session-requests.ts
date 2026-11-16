@@ -69,6 +69,8 @@ export type SessionPorts = {
   exists(worktreePath: string): boolean;
   prune(projectPath: string): Promise<void>;
   unfinished(worktreePath: string): Promise<string | null>;
+  // Whether the branch a worktree is on has a merged pull request (pane finish).
+  merged(worktreePath: string): Promise<boolean>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
   // What closeFinished asks of a worker beside what is held here (auto-release.ts): whether its page
   // puts the keyboard back on it, and the column its card is in when that is Done or Cancelled, asked
@@ -265,6 +267,20 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     },
   });
 
+  // Release once the work is in: the pane's card Done or Cancelled, or the branch of the worktree it
+  // works in merged, which is the card's too before the follow moves it. A worker in the project's
+  // own checkout has no branch of its own, so only its card counts.
+  async function finish(id: string): Promise<{ output: string } | Refused> {
+    if (ports.finishedCard(id) === null) {
+      const directory = ports.directoryOf(id);
+      const ownBranch = directory !== undefined && directory !== paneProject(id);
+      if (!ownBranch || !(await ports.merged(directory))) {
+        return { refused: `${id}'s work is not in: no card of its is Done or Cancelled${ownBranch ? ` and ${directory}'s branch has no merged pull request` : ''}` };
+      }
+    }
+    return release.call({ id });
+  }
+
   // Text main sends an agent is work handed to it (pane.send): listed as main's worker if no run made
   // it one, and at work from now, as its prompt hook will say, so nothing closes it on its last stop.
   async function send(id: string, slot: number, dispatcherPath: string, text: string): Promise<{ output: string } | Refused> {
@@ -398,6 +414,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'send': return await onWorker(command.id, slot, () => send(command.id, slot, projectPath ?? '', command.text));
         case 'run': return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, command.as);
         case 'release': return await onWorker(command.id, slot, () => release.call({ id: command.id }));
+        case 'finish': return await onWorker(command.id, slot, () => finish(command.id));
         case 'report': return report(command.id, slot);
       }
     } catch (error: unknown) {

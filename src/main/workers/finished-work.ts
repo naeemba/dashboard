@@ -30,3 +30,19 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
   }
   return Array.isArray(pulls) && pulls.length > 0 ? null : `${branch} has no pull request`;
 }
+
+// Whether the branch the worktree is on has a merged pull request: what `pane finish` releases a
+// worker on when its card is not Done yet (the follow that moves it runs on a timer) or it has none.
+export async function pullRequestMerged(run: RunProgram, worktreePath: string): Promise<boolean> {
+  const branch = await run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
+  const pulls: unknown = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'merged', '--json', 'number'], worktreePath));
+  return Array.isArray(pulls) && pulls.length > 0;
+}
+
+// What a worktree's worker is asked before it is let go of, as session-requests.ts's ports take them.
+export function worktreeChecks(run: RunProgram) {
+  return {
+    unfinished: (worktreePath: string) => unfinishedWork(run, worktreePath),
+    merged: (worktreePath: string) => pullRequestMerged(run, worktreePath),
+  };
+}

@@ -34,7 +34,7 @@ import { MANAGER_SLOT } from '../shared/manager/manager';
 import { announceSocket, clearSocketPointer } from './command/app-address';
 import { environmentForPanes, paneCommands } from './command/pane-environment';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
-import { unfinishedWork } from './workers/finished-work';
+import { worktreeChecks } from './workers/finished-work';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
@@ -771,7 +771,7 @@ const workerAnswers = sessionRequests({
   makeWorktree: worktree.makeThrowaway,
   exists: existsSync,
   prune: async (projectPath) => { await git(['worktree', 'prune'], projectPath); },
-  unfinished: (worktreePath) => unfinishedWork(runProgram, worktreePath),
+  ...worktreeChecks(runProgram),
   removeWorktree: worktree.removeForRelease,
   hasKeyboard: claudeSessions.hasKeyboard,
   finishedCard(id) {

@@ -51,6 +51,8 @@ describe('parseSessionCommand', () => {
   // The editor is numbered below the terminals, and nothing here is for it.
   it('takes only a terminal id', () => {
     expect(parseSessionCommand(['release', '2:3'])).toEqual({ ok: true, command: { kind: 'release', id: '2:3' } });
+    expect(parseSessionCommand(['finish', '2:3'])).toEqual({ ok: true, command: { kind: 'finish', id: '2:3' } });
+    expect(parseSessionCommand(['finish'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['release', '2:-1'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['release'])).toMatchObject({ ok: false });
   });
