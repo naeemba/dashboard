@@ -10,7 +10,7 @@ its own verbs; this feature only picks the program.
 | Noun | Program | Verbs |
 |---|---|---|
 | `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment; any of them with `--project <name>` |
-| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, notify |
+| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, report, notify |
 | `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
 
 `session` is another name for `pane`. `dashboard` with no words opens the app,

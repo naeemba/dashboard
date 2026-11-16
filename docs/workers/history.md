@@ -29,3 +29,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #284 — A resumed conversation opens as what it last ran as: a screen stays a screen, a terminal a terminal, one of unknown kind pane run's default (workers-decision-8)
 - 2026-11-16 #290 — Every session the app starts allows the pane, session and board commands in its own settings (workers-decision-9)
 - 2026-11-16 — A review worker with merging off reports its rounds, fixes, open items and CI to main instead of merging (ship-decision-1)
+- 2026-11-16 — A stop notice carries the end of the worker's last message, `pane report` prints it, and a turn you typed into a worker is not told to main (workers-decision-1)

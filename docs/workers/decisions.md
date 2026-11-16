@@ -119,6 +119,35 @@ held a ceiling of its own past one told before it. A
 session state the CLI stops sending leaves nothing held: the notice is queued as before and taken
 back only if main has not yet taken it.
 
+**The notice says what the worker said, and a turn you typed is not told.** A retro of 30 sessions
+(2026-11-16) found a manager that read worker session logs under `~/.claude/projects` by hand 62
+times to learn what a worker had done, and 12 notices for a pane the user was talking to directly.
+Claude Code's Stop hook input carries `last_assistant_message` (in the 2.1.318 input above, and in the
+agent SDK 0.3.316's `StopHookInput`), so the command sends it as `--last-message` beside the counts,
+the app keeps its last 4000 characters per pane, a notice ends with the last 600 on one line, and
+`pane report <id>` prints the pane's `pane list` line and the kept message. The end of a message is
+where a worker says what it did, so it is the tail that is kept.
+
+Whose turn it is comes from UserPromptSubmit's `source` (the SDK's `UserPromptSubmitHookInput`):
+`user` from Claude Code's composer, `sdk` from an Agent SDK session, `system` for a task notification
+or a peer's message, and the wakeups. `user` and `sdk` are a prompt somebody typed, but main's `pane
+send` types into the pane, or hands a screen its prompt, exactly as you do, so the source alone cannot
+say whose. prompt-source.ts adds the app's own record: a typed prompt after main handed the pane work
+is main's, one with nothing handed since the last is yours, and the first a worker was started or
+resumed on is main's, since a ship's or the review loop's agent is started on its prompt with no send
+behind it. A stop whose last typed prompt was yours is told to nobody; a `system` prompt, the worker
+waking on its own background work, leaves the turn whose it was. A source the hook does not name, an
+older Claude Code, decides nothing, so its stops are told as before.
+
+Watch for: a worker resumed after a restart counts the first prompt you type into it as main's, and
+main hears that one stop. A turn you typed whose work you then want main to pick up is never told:
+send it through main, or tell main yourself.
+
+The words grew, and an app of the build before refuses `--last-message`. A rebuild leaves that app
+running under the new command until the restart, and a refused Stop hook leaves the pane `running` with
+main never told, so the command sends a refused notify again without the grown words
+(workers-decision-4).
+
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and
 release removes it only once `unfinishedWork` in finished-work.ts says its work is committed, pushed
@@ -220,8 +249,9 @@ bump one when a request changes shape: any rebuild from another commit is refuse
 both builds and saying to restart. A command older than the stamp sends none and is refused the same,
 whether it ends its request with a newline or, from before #196, by closing its side. `notify` is the
 one exception, let through from any build: it is what a worker's hooks send, a refusal there lands in a
-hook log nobody reads, and the worker would stay `running` with its main never told. Its words have not
-changed, and an unknown state is still refused by the parser.
+hook log nobody reads, and the worker would stay `running` with its main never told. Its words only
+grow after the state, an unknown state is still refused by the parser, and a notify an older app
+refuses for words it does not know is sent again in the words it does (`olderNotifyArguments`).
 
 **The app accepts a request before answering it, and only the acceptance is timed.** An app from before
 the stamp cannot refuse anything; it hung waiting for a half close the command no longer sends. So the
