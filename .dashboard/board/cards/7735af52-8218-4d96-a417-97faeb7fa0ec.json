@@ -5,13 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T10:30:46.834Z",
-  "updatedAt": "2026-11-16T11:31:14.390Z",
+  "updatedAt": "2026-11-16T11:31:20.473Z",
   "comments": [
     {
       "at": "2026-11-16T11:31:14.390Z",
       "body": "From main-dashboard: build the fix at the root, with a test for the decision. Tests must be Windows-safe (path.join, or a win32 guard). Run pnpm test, typecheck and lint. If the card references a GitHub issue, the PR says 'Closes #N'. Do not bump the version."
     }
   ],
-  "column": "Backlog",
-  "order": 45
+  "column": "Ship",
+  "order": 0
 }
