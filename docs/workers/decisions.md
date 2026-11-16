@@ -201,11 +201,13 @@ which keeps a worktree with no pull request as before. It is closed only once it
 nothing in flight or scheduled, and then when its card (the worktree record naming the pane) is Done or
 Cancelled on the project's own board, when the branch of the worktree it works in merged (the
 predicate `pane finish` releases on, so a `--worktree` worker with no card does not wait out its grace
-period; asked of gh only once nothing else has kept the pane), or when main has read a report from it since work was last sent
-and nothing was sent, read or stopped for `workers.closeAfterMinutes` (settings.json, default 10, 0
-for the card or a merged branch only). Never a pane no main handed work, the pane a page of any screen puts the
-keyboard back on (a zoomed pane always is), a worker blocked on a question or paused on its own
-background work. Nor any pane on the manager page: the saved layout has no manager page, so the pane
+period; asked of gh only once nothing else has kept the pane), or when main has read a report from
+it since work was last sent and nothing was sent, read or stopped for `workers.closeAfterMinutes`
+(settings.json, default 10, 0 for the card or a merged branch only). Never a pane no main handed
+work, the pane a page of any screen puts the keyboard back on (a zoomed pane always is), a worker
+blocked on a question or paused on its own background work. gh is given ten seconds, and a pane it
+released is looked at again once it answers, since the keyboard or a turn may have moved meanwhile.
+Nor any pane on the manager page: the saved layout has no manager page, so the pane
 you are typing in there cannot be told apart, and the manager's main releases its own workers. Each close
 is logged with pane.release's answer and shown as a passing notice, `Closed pane 2:3: card done`.
 
