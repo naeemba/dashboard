@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-05T16:29:23.491Z",
-  "updatedAt": "2026-11-16T11:44:53.192Z",
+  "updatedAt": "2026-11-16T11:44:58.981Z",
   "comments": [
     {
       "at": "2026-11-16T11:31:39.350Z",
@@ -20,6 +20,6 @@
       "body": "Cancelled by main-dashboard: not reproducible on current code. The worker's probes rule out the background-task cause (see the comment above). Reopen if it is seen again, with the screen and the turn."
     }
   ],
-  "column": "Doing",
-  "order": 2
+  "column": "Cancelled",
+  "order": 13
 }
