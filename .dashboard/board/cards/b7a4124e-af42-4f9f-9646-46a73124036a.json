@@ -4,12 +4,16 @@
   "notes": "A hook script posts permission_prompt, idle_prompt, agent_needs_input and agent_completed to the app. Main keeps a state per pane, keyed by an environment variable the app sets at spawn. The manager row shows the state and the question text; a key on the row sends the answer to that pane. Bell detection stays as the fallback for shells that are not Claude Code.",
   "priority": "medium",
   "parent": null,
-  "updatedAt": "2026-11-16T09:53:33.395Z",
+  "updatedAt": "2026-11-16T10:02:54.642Z",
   "branch": "agent-state-per-pane-from-claude-code-hooks",
   "comments": [
     {
       "at": "2026-11-16T09:53:27.037Z",
       "body": "From main-dashboard: much of this may exist already. workerSettings (src/main/workers/dispatch.ts) installs Notification (permission_prompt to 'blocked'), UserPromptSubmit and PostToolUse notify hooks, and #294 added stop notices with the last message and pane report. Check what is left first: the manager row showing the state and question text, and a key answering from the row. Build only that, following keyboard-first and the help rule. If nothing is left, say so on the card. Do not bump the version."
+    },
+    {
+      "at": "2026-11-16T10:02:54.642Z",
+      "body": "Hooks per pane, the asking row and bell fallback already existed. Built the gap: a Claude-screen worker's manager row printed its hidden shell and typed keys went there. Now the row shows the question with numbered answers and a digit answers it (main too). PR #302."
     }
   ],
   "column": "Doing",
