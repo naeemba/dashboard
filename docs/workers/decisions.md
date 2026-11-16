@@ -251,7 +251,9 @@ whether it ends its request with a newline or, from before #196, by closing its 
 one exception, let through from any build: it is what a worker's hooks send, a refusal there lands in a
 hook log nobody reads, and the worker would stay `running` with its main never told. Its words only
 grow after the state, an unknown state is still refused by the parser, and a notify an older app
-refuses for words it does not know is sent again in the words it does (`olderNotifyArguments`).
+refuses for words it does not know is sent again in the words it does (`olderNotifyArguments`),
+only for that refusal. Since the last message, the parser reads past a flag it does not know, so the
+retry is for apps from before it.
 
 **The app accepts a request before answering it, and only the acceptance is timed.** An app from before
 the stamp cannot refuse anything; it hung waiting for a half close the command no longer sends. So the

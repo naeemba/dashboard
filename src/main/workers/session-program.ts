@@ -21,10 +21,7 @@ export async function runSessionProgram(given: readonly string[]): Promise<numbe
     process.stderr.write(`${refusal}\n`);
     return 1;
   }
-  const asked = await askRunningApp(commandArguments);
-  // An app older than this command refuses the words a hook grew; its older words still turn the pane.
-  const older = olderNotifyArguments(commandArguments);
-  return asked !== 0 && older.length !== commandArguments.length ? askRunningApp(older) : asked;
+  return askRunningApp(commandArguments, olderNotifyArguments(commandArguments));
 }
 
 async function readStdin(): Promise<string> {

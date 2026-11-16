@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import type { SessionReply, SessionRequest } from './session-cli';
+import { refusedNotifyWords, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
 import { appUserDataFolder, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
@@ -107,7 +107,9 @@ export function listenForSessions(
 
 // A command's whole conversation with the app, whichever noun it was: the words out, the answer
 // printed, the exit code back. Which app, and starting it when none answers, is reach-app.ts's.
-export async function askRunningApp(commandArguments: readonly string[]): Promise<number> {
+// `older` is the same request in an older app's words, sent instead when the app refuses this one's
+// words: a notify whose hook grew words an app from before them does not take (workers-decision-4).
+export async function askRunningApp(commandArguments: readonly string[], older: readonly string[] = commandArguments): Promise<number> {
   const userData = appUserDataFolder();
   const reached = await reachApp({
     paneSocket: process.env.DASHBOARD_SOCKET,
@@ -121,7 +123,9 @@ export async function askRunningApp(commandArguments: readonly string[]): Promis
     process.stderr.write(`${reached.message}\n`);
     return 1;
   }
-  const reply = await askApp(reached.socket, { directory: process.cwd(), args: commandArguments, version: __BUILD_VERSION__ });
+  const ask = (args: readonly string[]) => askApp(reached.socket, { directory: process.cwd(), args, version: __BUILD_VERSION__ });
+  let reply = await ask(commandArguments);
+  if (!reply.ok && older.length !== commandArguments.length && refusedNotifyWords(reply.output)) reply = await ask(older);
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
 }

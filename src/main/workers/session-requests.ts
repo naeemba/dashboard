@@ -368,9 +368,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const { slot, index } = paneFromId(id);
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
     if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
-    if (state === 'running') prompts.prompted(id, told.promptSource);
-    if (state === 'running') states.delete(id);
-    else states.set(id, { state, waiting });
+    if (state === 'running') {
+      prompts.prompted(id, told.promptSource);
+      states.delete(id);
+    } else states.set(id, { state, waiting });
     if (state === 'done') quietFrom(id, quiet.get(id)?.reportRead ?? false);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);

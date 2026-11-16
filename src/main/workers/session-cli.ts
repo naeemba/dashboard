@@ -6,6 +6,7 @@ import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
 import type { PaneKind } from '../../shared/panes/pane-kind';
+import { LAST_MESSAGE_KEPT, tail } from '../../shared/workers/done-report';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -98,24 +99,36 @@ function parseRun(words: readonly string[]): Parsed {
 
 const COUNT = /^\d+$/;
 
-// What a notify says after its state. Every word is optional, so a hook of any build is still heard:
-// no counts is a Stop hook that said nothing, which the app gives the grace period.
+// How every build since the counts opens its refusal of a notify's words, this one's included.
+const NOTIFY_WORDS_REFUSED = 'session notify takes nothing after its state';
+
+// Whether the app refused a notify for its words, not for the pane or for being unreachable: only
+// then is it sent again in an older app's words (session-socket.ts).
+export function refusedNotifyWords(output: string): boolean {
+  return output.startsWith(NOTIFY_WORDS_REFUSED);
+}
+
+// What a notify says after its state, as flag and value pairs. Every pair is optional, so a hook of any
+// build is still heard: no counts is a Stop hook that said nothing, which the app gives the grace
+// period. A flag this build does not know is read past, so a hook that grows one never needs the
+// command's retry in an older app's words again (workers-decision-4).
 function parseNotify(id: string, state: WorkerState, words: readonly string[]): Parsed {
-  let waiting: StopWaiting | undefined;
-  const told: HookTold = {};
-  for (let at = 0; at < words.length; at += 2) {
-    const [flag, value] = [words[at], words[at + 1]];
-    if (state === 'done' && flag === '--background' && words[at + 2] === '--scheduled'
-      && COUNT.test(value ?? '') && COUNT.test(words[at + 3] ?? '')) {
-      waiting = { background: Number(value), scheduled: Number(words[at + 3]) };
-      at += 2;
-    } else if (state === 'done' && flag === '--last-message' && value !== undefined) told.lastMessage = value;
-    else if (state === 'running' && flag === '--prompt-source' && value !== undefined) told.promptSource = value;
-    else return refuse('session notify takes nothing after its state, except --prompt-input after running and --stop-input after done');
+  const flags = new Map<string, string>();
+  for (let at = 0; at < words.length; at += 2) flags.set(words[at], words[at + 1] ?? '');
+  const background = flags.get('--background');
+  const scheduled = flags.get('--scheduled');
+  const counts = background !== undefined || scheduled !== undefined;
+  if (words.length % 2 !== 0 || (counts && (state !== 'done' || !COUNT.test(background ?? '') || !COUNT.test(scheduled ?? '')))) {
+    return refuse(`${NOTIFY_WORDS_REFUSED}, except --prompt-input after running and --stop-input after done`);
   }
+  const told: HookTold = {};
+  const lastMessage = flags.get('--last-message');
+  const promptSource = flags.get('--prompt-source');
+  if (lastMessage !== undefined && state === 'done') told.lastMessage = lastMessage;
+  if (promptSource !== undefined && state === 'running') told.promptSource = promptSource;
   const command: SessionCommand = { kind: 'notify', id, state };
-  if (waiting !== undefined) command.waiting = waiting;
-  if (told.lastMessage !== undefined || told.promptSource !== undefined) command.told = told;
+  if (counts) command.waiting = { background: Number(background), scheduled: Number(scheduled) };
+  if (Object.keys(told).length > 0) command.told = told;
   return { ok: true, command };
 }
 
@@ -141,11 +154,12 @@ function parsedInput(input: string): unknown {
 // lacks either list, an older Claude Code, so the app falls back to its grace period.
 export function stopInputArguments(input: string): string[] {
   const parsed = parsedInput(input);
+  // Cut here too, so a long final message is not sent whole only for the app to keep its end.
   const waiting = stopWaiting(parsed);
   const { lastMessage } = hookTold(parsed);
   return [
     ...(waiting === undefined ? [] : ['--background', String(waiting.background), '--scheduled', String(waiting.scheduled)]),
-    ...(lastMessage === undefined ? [] : ['--last-message', lastMessage]),
+    ...(lastMessage === undefined ? [] : ['--last-message', tail(lastMessage, LAST_MESSAGE_KEPT)]),
   ];
 }
 
@@ -187,10 +201,10 @@ export function hookArguments(given: readonly string[], input: string | undefine
 // rebuild swaps the command under an app still running the old build, which refuses those words, and
 // the pane would stay `running` with its main never told until the restart (workers-decision-4).
 export function olderNotifyArguments(commandArguments: readonly string[]): string[] {
+  if (commandArguments[0] !== 'notify') return [...commandArguments];
   const older: string[] = [];
   for (let at = 0; at < commandArguments.length; at++) {
-    const grown = commandArguments[at] === '--last-message' || commandArguments[at] === '--prompt-source';
-    if (commandArguments[0] === 'notify' && grown) at++;
+    if (commandArguments[at] === '--last-message' || commandArguments[at] === '--prompt-source') at++;
     else older.push(commandArguments[at]);
   }
   return older;

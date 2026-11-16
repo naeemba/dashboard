@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hookArguments, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, stopInputArguments } from './session-cli';
+import { hookArguments, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, refusedNotifyWords, readsHookInput, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -77,8 +77,10 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['notify', '2:3', 'running', '--prompt-source', 'user'])).toEqual({
       ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { promptSource: 'user' } },
     });
-    expect(parseSessionCommand(['notify', '2:3', 'running', '--last-message', 'x'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['notify', '2:3', 'running', '--last-message', 'x'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'running' } });
     expect(parseSessionCommand(['notify', '2:3', 'done', '--last-message'])).toMatchObject({ ok: false });
+    // A flag a later build's hook grows is read past.
+    expect(parseSessionCommand(['notify', '2:3', 'done', '--mood', 'calm'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'done' } });
   });
 
   it('reads report as a pane id', () => {
@@ -141,6 +143,11 @@ describe('stopInputArguments', () => {
       .toEqual(['notify', '2:3', 'done', '--background', '1', '--scheduled', '0']);
     expect(olderNotifyArguments(['notify', '2:3', 'running', '--prompt-source', 'user'])).toEqual(['notify', '2:3', 'running']);
     expect(olderNotifyArguments(['send', '2:3', '--last-message'])).toEqual(['send', '2:3', '--last-message']);
+    // Only a refusal of the words is sent again, in this build's spelling and the one before.
+    const refusal = parseSessionCommand(['notify', '2:3', 'done', '--background', 'two', '--scheduled', '0']);
+    expect(!refusal.ok && refusedNotifyWords(refusal.message)).toBe(true);
+    expect(refusedNotifyWords('session notify takes nothing after its state, except --stop-input after done')).toBe(true);
+    expect(refusedNotifyWords('2:3 is not open')).toBe(false);
   });
 });
 

@@ -113,8 +113,8 @@ export function screenWorkers(ports: ScreenPorts) {
   // a moment ago, landing after the next worker started at the same number, would read as that one's stop.
   function hooks(id: string, saved: Saved): Options['hooks'] {
     const mine = () => live.get(id)?.saved === saved;
-    const reporting = (state: WorkerState): HookCallbackMatcher[] => [{ hooks: [async () => {
-      if (mine()) report(id, state);
+    const reporting = (state: WorkerState): HookCallbackMatcher[] => [{ hooks: [async (input) => {
+      if (mine()) report(id, state, undefined, hookTold(input));
       return {};
     }] }];
     return {
@@ -122,10 +122,7 @@ export function screenWorkers(ports: ScreenPorts) {
         if (mine()) report(id, 'done', stopWaiting(input), hookTold(input));
         return {};
       }] }],
-      UserPromptSubmit: [{ hooks: [async (input) => {
-        if (mine()) report(id, 'running', undefined, hookTold(input));
-        return {};
-      }] }],
+      UserPromptSubmit: reporting('running'),
       PostToolUse: reporting('running'),
     };
   }
