@@ -1,4 +1,6 @@
 import { homedir } from 'node:os';
+import { bind, isRefused } from '../actions/action';
+import { settingsCap } from '../actions/settings/cap';
 import { readText } from '../app/missing-file';
 import { readSettings, settingsFilePath, writeWeeklyCap } from '../settings/settings-store';
 import { budgetVerdict, parseBudgetCommand } from './budget-cli';
@@ -7,7 +9,7 @@ import { WEEKLY_USAGE_FILE } from '../usage/weekly-usage-file';
 
 // The whole of `dashboard budget` outside budget-cli.ts: the two files and the answer printed. 2 for a
 // refusal as well as an unknown reading, since 1 means over the cap.
-export function runBudgetProgram(commandArguments: readonly string[]): number {
+export async function runBudgetProgram(commandArguments: readonly string[]): Promise<number> {
   const settingsFile = settingsFilePath(homedir(), process.env.XDG_CONFIG_HOME);
   const command = parseBudgetCommand(commandArguments);
   if (command.kind === 'refused') {
@@ -15,13 +17,19 @@ export function runBudgetProgram(commandArguments: readonly string[]): number {
     return 2;
   }
   if (command.kind === 'cap') {
+    const cap = bind(settingsCap, { writeFile: (value) => writeWeeklyCap(settingsFile, value) });
+    let written;
     try {
-      writeWeeklyCap(settingsFile, command.cap);
+      written = await cap.call({ cap: command.cap });
     } catch (error: unknown) {
       process.stderr.write(`${failureLine(error)}\n`);
       return 2;
     }
-    process.stdout.write(`weekly cap set to ${command.cap}% in ${settingsFile}\n`);
+    if (isRefused(written)) {
+      process.stderr.write(`${written.refused}\n`);
+      return 2;
+    }
+    process.stdout.write(`${written.output} in ${settingsFile}\n`);
     return 0;
   }
   const { weeklyCap } = readSettings(settingsFile, process.platform === 'darwin').budget;

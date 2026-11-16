@@ -90,7 +90,7 @@ the pull request it came from may still be open.
 Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
 
 - `settings.ts`, `settings-store.ts`, `settings-rows.ts`, `settings-view.ts`
-- every write goes through settings.write, `src/main/actions/settings/` (docs/actions), except `writeWeeklyCap`, the `budget --cap` command's; a change on disk comes in through settings.adopt
+- the app's writes go through settings.write and `budget --cap`'s through settings.cap, `src/main/actions/settings/` (docs/actions); a change on disk comes in through settings.adopt
 
 ## Scenarios
 

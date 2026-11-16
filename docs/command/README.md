@@ -153,7 +153,7 @@ Folders: `src/main/command/`.
 - The launcher: `scripts/rebuild.sh`
 - What a program prints when it throws: `failure-line.ts`, `failure-line.test.ts`
 - The `pr` noun: `pull-request-cli.ts`, `pull-request-cli.test.ts`, `pull-request-program.ts`
-- The `budget` noun: `budget-cli.ts`, `budget-cli.test.ts`, `budget-program.ts`; the cap's write is `writeWeeklyCap` in `src/main/settings/settings-store.ts`
+- The `budget` noun: `budget-cli.ts`, `budget-cli.test.ts`, `budget-program.ts`; the cap is written through settings.cap (`src/main/actions/settings/cap.ts`), its port `writeWeeklyCap` in `src/main/settings/settings-store.ts`
 
 ## Scenarios
 
