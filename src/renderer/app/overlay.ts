@@ -50,11 +50,15 @@ export function answerKeys(dialog: HTMLElement, answer: (key: 'Enter' | 'Escape'
 export function confirmOverlay(message: string, keysLine: string): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     function close(answer: boolean): void {
+      release();
       remove();
       resolve(answer);
     }
 
     const { dialog, remove } = openOverlay('confirm', () => close(false));
+    // Shift+Tab is a modified key, so answerKeys lets it by and the focus walks out to the pane
+    // behind; the hold brings it back, or the next Escape meant to cancel reaches that pane.
+    const release = holdFocus(dialog);
 
     const question = document.createElement('p');
     question.className = 'confirm-question';
@@ -162,6 +166,7 @@ export function promptOverlay(
 ): Promise<string | null> {
   return new Promise<string | null>((resolve) => {
     function close(answer: string | null): void {
+      release();
       remove();
       resolve(answer);
     }
@@ -183,6 +188,9 @@ export function promptOverlay(
     keys.className = 'prompt-keys';
     keys.textContent = keysLine;
     dialog.append(label, input, keys);
+    // Held for confirmOverlay's reason, on the box rather than the dialog, so what you type after a
+    // stray Shift+Tab still lands in it.
+    const release = holdFocus(input);
     input.focus();
     input.select();
 
