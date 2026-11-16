@@ -30,3 +30,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-16 #290 — Every session the app starts allows the pane, session and board commands in its own settings (workers-decision-9)
 - 2026-11-16 — A review worker with merging off reports its rounds, fixes, open items and CI to main instead of merging (ship-decision-1)
 - 2026-11-16 — A stop notice carries the end of the worker's last message, `pane report` prints it, and a turn you typed into a worker is not told to main (workers-decision-1)
+- 2026-11-16 — `pane finish` releases a worker once its card is Done or its branch merged; main's prompt dispatches a card with `board ship` and waits with a wake-up, not a sleep loop

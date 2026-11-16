@@ -38,3 +38,21 @@ app writes its path to `session-socket` in its userData folder, 0600, removed at
 quit. A fixed path would let a second build take over the first's socket; the
 file only names one, and reaching it still takes the 0700 folder.
 
+## command-decision-5: `pr land` is a command, and not allowed unasked
+
+Managers kept the land steps in a `/tmp` script (land.sh ran 130 times in one
+retro, and was lost when `/tmp` filled). The steps are the review worker's
+(`reviewPrompt`, ship/review.ts): note the head, wait on the checks, merge that
+commit with `--match-head-commit`. As a verb they cannot be copied out wrong.
+
+It is not added to the `permissions.allow` rules every session starts with
+(workers-decision-9), unlike `pane` and `board`: a merge is outward-facing, and
+#290 was merged by a prompt with nobody's go-ahead. A session asked to land runs
+it under its own permissions.
+
+A `budget` verb (the seven-day usage against a cap) was asked for with it and
+left out: the only source is the Agent SDK's
+`usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET`, which needs a live
+SDK session and is named not to be relied on. The Claude screen's status line
+shows it; a gate built on it says nothing the day it changes.
+

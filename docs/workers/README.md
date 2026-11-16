@@ -14,7 +14,7 @@ shipped one (board-decision-8).
 
 Folders: `src/main/workers/`, `src/shared/workers/`.
 
-- Dispatch: `dispatch.ts`, `../projects/project-named.ts` (the project `--project` names), `worker-channels.ts`, `finished-work.ts`
+- Dispatch: `dispatch.ts`, `../projects/project-named.ts` (the project `--project` names), `worker-channels.ts`, `finished-work.ts` (also whether a worktree's branch merged, for `pane finish`, tested in `session-finish.test.ts`)
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))
@@ -61,6 +61,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a card is shipped or its review loop starts, when its agent starts, then it is told to SendMessage its project's main when done, and its stop is told to that main as a worker's is.
 - Given merging is off for the project, when a review worker finishes, then its report to main names the loop's rounds, what each fixed, what is still open and the CI state, and the merge is the user's (ship-decision-1).
 - Given a worker main handed work, when its turn ends with nothing in flight or scheduled and its card is Done or Cancelled on the project's board, then within half a minute the app releases the pane through pane.release, logs it, and the status bar says `Closed pane 2:3: card done`.
+- Given a worker whose card is Done or Cancelled, or whose worktree's branch has a merged pull request the follow has not yet moved its card for, when main runs `pane finish <id>`, then the pane is released as `pane release` would; otherwise it is refused saying the work is not in and the pane stays open. A worker in the project's own checkout is finished only by its card.
+- Given main is asked to work a card, when it reads its prompt and `pane --help`, then both send it to `board ship <id>`, which makes the worktree, the pane and the agent; there is no pane verb for it.
 - Given a worker whose report main has read, when it has been sent nothing for `workers.closeAfterMinutes` (default 10) after the last of the work sent, the report read and its stop, then the app releases it with `Closed pane 2:3: reported done`; 0 turns this off and leaves only the card's close.
 - Given a worker the app would close, when a page of any screen has the keyboard on it (zoomed or not), it is on the manager page, it is blocked on a question, it is paused on its own background work, or no main ever handed it work, then the app leaves it open.
 - Given a plain terminal outside every project, when `dashboard pane claim --project crm` runs, then a worker opens on crm's page and reports to crm's main; `pane run`, `send` and `release` there act on the project their pane id names.
