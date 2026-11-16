@@ -1,5 +1,54 @@
 # Changelog
 
+## v2.48.0 (2026-11-16)
+
+### What's new
+
+- budget verb: 7-day usage against a cap set once
+- The close key on a pane hides a scope pane.close could not stop
+- After a restart, a cross-project worker's done notice goes to the wrong main
+- Hold focus inside confirmOverlay and promptOverlay so Shift+Tab cannot leave them
+- Bring the manager's worker panes back after a restart
+- Agent state per pane from Claude Code hooks, answered from the manager list
+- Two open projects with the same folder name share one main session name
+- Finish what the pane host left: stale session socket, editor, orphans
+- pr land checks the PR state after a merge call that fails
+- Salvaging a second broken board.json overwrites the first board.json.broken
+- The sweep closes a --worktree worker whose PR merged
+- projects:open refuses by throwing, so the remote screen reads Electron's invoke prefix
+- board command crashes with EPIPE when its output is cut off (| head)
+- Add the missing #258 to its workers history line
+- renderer.ts project-close comment points at CLAUDE.md instead of keys-decision-2
+- Worker screens: check the last turn is drawn after a pane send
+- Turn off the terminal cursor blink that costs idle CPU
+- A turn the session starts by itself shows on no Claude screen
+- Skip xterm's selection redraw on scroll when nothing is selected
+- A card in Review gets its review even when the sweep closed its worker's pane
+
+### What's Changed
+* budget verb: 7-day usage against a cap set once by @naeemba in https://github.com/naeemba/dashboard/pull/296
+* pane.close warns in the log when a pane's scope will not stop by @naeemba in https://github.com/naeemba/dashboard/pull/297
+* Tell a restored worker's report to the main that dispatched it by @naeemba in https://github.com/naeemba/dashboard/pull/299
+* Hold the focus in every dialog openOverlay builds by @naeemba in https://github.com/naeemba/dashboard/pull/298
+* Bring the manager's worker panes back after a restart by @naeemba in https://github.com/naeemba/dashboard/pull/301
+* Answer a Claude screen's question from the manager row by @naeemba in https://github.com/naeemba/dashboard/pull/302
+* Give each open project a session name of its own by @naeemba in https://github.com/naeemba/dashboard/pull/300
+* Keep the editor in the pane host, and end kept shells nobody takes back by @naeemba in https://github.com/naeemba/dashboard/pull/303
+* pr land reads a failed merge back from the pull request by @naeemba in https://github.com/naeemba/dashboard/pull/304
+* A second broken board.json or worktrees.json no longer overwrites the first set-aside copy by @naeemba in https://github.com/naeemba/dashboard/pull/305
+* The sweep closes a --worktree worker whose PR merged by @naeemba in https://github.com/naeemba/dashboard/pull/306
+* Test that projects:open answers its refusals instead of throwing by @naeemba in https://github.com/naeemba/dashboard/pull/307
+* End the commands quietly when their output is cut off (| head) by @naeemba in https://github.com/naeemba/dashboard/pull/308
+* Add #258 to its workers history line; point the project-close comment at keys-decision-2 by @naeemba in https://github.com/naeemba/dashboard/pull/310
+* Keep a pinned Claude screen at its end when it is shown again by @naeemba in https://github.com/naeemba/dashboard/pull/309
+* Turn off the terminal cursor blink that costs idle CPU by @naeemba in https://github.com/naeemba/dashboard/pull/312
+* A turn the session starts by itself shows as working on the Claude screen by @naeemba in https://github.com/naeemba/dashboard/pull/311
+* Skip a shown terminal's selection redraw when nothing is selected by @naeemba in https://github.com/naeemba/dashboard/pull/313
+* A card in Review gets its review after a refused start by @naeemba in https://github.com/naeemba/dashboard/pull/315
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.47.0...v2.48.0
+
 ## v2.47.0 (2026-11-16)
 
 ### What's new
