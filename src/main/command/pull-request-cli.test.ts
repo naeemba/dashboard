@@ -63,6 +63,17 @@ describe('landPullRequest', () => {
     expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('a check failed') });
   });
 
+  it('watches once more when the wait on the checks lost its answer', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: lostAnswer }, { ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123' });
+  });
+
+  it('says a check failed only after a second lost wait', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: lostAnswer }, { ok: false, output: lostAnswer }] });
+    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining(lostAnswer) });
+    expect(merges(github)).toBe(0);
+  });
+
   // A push during the wait moves the head off the noted commit, and GitHub refuses the merge.
   it('says the merge gh refused', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: 'Head branch was modified' }] });

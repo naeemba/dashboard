@@ -11,11 +11,11 @@ land notes the pull request's head commit, waits for every check on it (gh pr ch
 merges that commit: gh pr merge --merge --match-head-commit <sha>, so a push during the wait is
 refused rather than merged unchecked. No checks reported a minute after asking is a repository with
 no CI, and it is merged. A merge call that fails is checked against the pull request: merged at
-that commit is merged, a network error is tried once more. A failed check or a refused merge is
-printed and the pull request stays open. The wait is as long as CI takes: run it in the background
-with the longest timeout allowed; a land stopped at that limit has not failed, run it again. It runs
-in the project of the folder you are in, or with --project in that project's folder from
-~/.dashboard/projects.yaml.`;
+that commit is merged. A network error on the merge or the wait is tried once more. A failed
+check or a refused merge is printed and the pull request stays open. The wait is as long as CI
+takes: run it in the background with the longest timeout allowed; a land stopped at that limit has
+not failed, run it again. It runs in the project of the folder you are in, or with --project in
+that project's folder from ~/.dashboard/projects.yaml.`;
 
 type Parsed = { ok: true; target: string } | { ok: false; message: string };
 
@@ -47,7 +47,12 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
   if (!head.ok) return head;
   const [state, sha] = head.output.trim().split(' ');
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
-  const watch = () => ports.gh(['pr', 'checks', target, '--watch']);
+  // A watch whose answer was lost is not a failed check: watch once more.
+  const watchOnce = () => ports.gh(['pr', 'checks', target, '--watch']);
+  const watch = async () => {
+    const answer = await watchOnce();
+    return !answer.ok && NETWORK_ERROR.test(answer.output) ? watchOnce() : answer;
+  };
   let checks = await watch();
   // Right after a push CI may not have started: ask once more a minute on.
   if (reportsNoChecks(checks)) {
