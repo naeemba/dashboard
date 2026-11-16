@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-15T23:35:20.206Z",
-  "updatedAt": "2026-11-16T00:06:29.951Z",
+  "updatedAt": "2026-11-16T00:06:46.322Z",
   "branch": "wait-on-ci-without-polling-and-stop-pr-loop",
   "pullRequest": 292,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-16T00:00:49.454Z",
       "body": "Pull request #292 opened: Wait on CI with one background watch in the review prompt https://github.com/naeemba/dashboard/pull/292"
+    },
+    {
+      "at": "2026-11-16T00:06:46.322Z",
+      "body": "Pull request #292 merged: Wait on CI with one background watch in the review prompt https://github.com/naeemba/dashboard/pull/292"
     }
   ],
   "column": "Done",
