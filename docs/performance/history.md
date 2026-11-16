@@ -30,6 +30,7 @@ answer).
 - The spreads overlap: the first before run sat with the after runs, on the
   layout count too. Medians fall from 26.1% to 21.9%. Hidden did not change,
   as expected: the hidden path was already held.
+
 ## 2026-11-16: a terminal's cursor no longer blinks (finding 6)
 
 Same machine and compositor as the first profile. One worker opened on alpha
@@ -169,8 +170,8 @@ without the fix, rebuilt and measured the same day, 2 runs; "after" is 5 runs.
   check of the pause. What is left hidden is xterm parsing the bytes into the
   buffer, which it must do to keep the scrollback.
 
-Not done here: the same selection redraw rebuilds every row of a shown
-terminal on every scroll as well. Done 2026-11-16, above.
+The same selection redraw on a shown terminal was left for later; done
+2026-11-16, above.
 
 ## 2026-11-02: usage sweep on its own thread
 

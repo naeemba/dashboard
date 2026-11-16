@@ -17,10 +17,13 @@
 // treats a missing start or end as no selection (DomRenderer.handleSelectionChanged), and so does this.
 //
 // ponytail: reaches xterm's private render service. If an upgrade renames it, `pauseSelectionRedraws`
-// finds nothing and changes nothing: hidden panes go back to costing CPU, nothing breaks. Drop this
-// once xterm's handleSelectionChanged checks the pause and skips a redraw from no selection to none.
+// finds nothing and changes nothing: every pane, hidden or shown, goes back to rebuilding all its rows
+// on each scroll; nothing breaks. Drop this once xterm's handleSelectionChanged checks the pause and
+// skips a redraw from no selection to none.
 
 type Point = [number, number] | undefined;
+
+const isSelection = (start: Point, end: Point): boolean => Boolean(start && end);
 
 export type RenderServiceInternals = {
   _isPaused: boolean;
@@ -38,11 +41,13 @@ export function pauseSelectionRedraws(terminal: object): void {
   const render = service as RenderServiceInternals;
   const redraw = render.handleSelectionChanged.bind(render);
   render.handleSelectionChanged = (start, end, columnSelectMode) => {
-    const hadSelection = Boolean(render._selectionState.start && render._selectionState.end);
+    const changesScreen = isSelection(start, end)
+      || isSelection(render._selectionState.start, render._selectionState.end);
+    if (!render._isPaused && changesScreen) return redraw(start, end, columnSelectMode);
+    render._selectionState = { start, end, columnSelectMode };
     if (render._isPaused) {
       render._needsSelectionRefresh = true;
       render._needsFullRefresh = true;
-    } else if ((start && end) || hadSelection) return redraw(start, end, columnSelectMode);
-    render._selectionState = { start, end, columnSelectMode };
+    }
   };
 }

@@ -135,8 +135,9 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   the renderer
 - Links in output: `links.ts`, `wrapped-links.ts`, `print-widths.ts`
 - Off screen: `paused-selection.ts`, which keeps xterm from redrawing a
-  terminal it has paused, or a shown one's selection when there is none; `.page[hidden]` in `index.css` is what moves a hidden
-  page off screen so xterm pauses it
+  terminal it has paused, or a shown one's selection when there is none;
+  `.page[hidden]` in `index.css` is what moves a hidden page off screen so
+  xterm pauses it
 
 ## Scenarios
 
