@@ -120,14 +120,10 @@ export function registerRemote(held: HeldForRemote, window: {
 // when it does if not. A window already joined to the remembered host stays joined: host:connect drops
 // the client first whatever the address, so a launcher entry used to bring the window forward would
 // otherwise replay the host's whole session, and a key typed in the gap would reach a local shell.
-// Every flag the app reads off a launch is read here, for both. `restored` is told each time the window
-// says it has put its session back, since the table takes one listener a channel.
-export function connectAtLaunch(
-  argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void, joinedTo: () => string | null,
-  restored: () => void = () => undefined,
-): (argv: string[]) => void {
+// Every flag the app reads off a launch is read here, for both.
+export function connectAtLaunch(argv: string[], settings: () => Settings, table: Channels, hold: (message: string) => void, joinedTo: () => string | null): (argv: string[]) => void {
   let waiting = argv.includes('--remote');
-  let restoredOnce = false;
+  let restored = false;
   const connect = (): void => {
     const { address, token } = settings().remote;
     if (address === '') return hold('No host remembered for --remote: connect to one from the project list once');
@@ -135,14 +131,13 @@ export function connectAtLaunch(
       .then((refusal) => { if (refusal) hold(String(refusal)); });
   };
   table.on('session:restored', () => {
-    restoredOnce = true;
-    restored();
+    restored = true;
     if (waiting) { waiting = false; connect(); }
   });
   return (laterArgv) => {
     if (!laterArgv.includes('--remote')) return;
-    if (restoredOnce && joinedTo() === settings().remote.address) return;
-    if (restoredOnce) connect();
+    if (restored && joinedTo() === settings().remote.address) return;
+    if (restored) connect();
     else waiting = true;
   };
 }

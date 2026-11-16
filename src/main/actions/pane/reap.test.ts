@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { paneKey, type Survivor } from '../../panes/pane-host-protocol';
-import type { PaneShell } from '../../panes/pane-shell';
 import { bind } from '../action';
 import { paneReap } from './reap';
 
@@ -11,7 +10,8 @@ function survivor(projectPath: string, index: number, unit?: string): Survivor {
 function ending(kept: Survivor[], stopScope: (unit: string) => Promise<void> = async () => undefined) {
   const done: string[] = [];
   const end = bind(paneReap, {
-    unclaimed: () => kept.splice(0).map((each) => ({ survivor: each, shell: { kill: () => done.push(`kill ${each.key}`) } as unknown as PaneShell })),
+    unclaimed: () => kept.splice(0),
+    killKept: (key) => { done.push(`kill ${key}`); },
     stopScope: async (unit) => { done.push(`stop ${unit}`); await stopScope(unit); },
     log: (draft) => { done.push(`${draft.level} ${draft.message}`); },
   });

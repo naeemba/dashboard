@@ -26,10 +26,9 @@ function restoring(saved: Map<number, PaneConversation>, kept: Survivor[] = [], 
   const dispatched: PaneDispatchInput[] = [];
   const records: WorktreeEntry[] = [];
   const mainsWorkers = new Map<string, string>();
-  const killed: string[] = [];
   const listened: string[] = [];
   const ports: PaneRestorePorts = {
-    kept: () => kept.map((each) => ({ survivor: each, shell: { kill: () => killed.push(each.key) } as unknown as PaneShell })),
+    kept: () => kept.map((each) => ({ survivor: each, shell: {} as PaneShell })),
     listenTo: (id) => { listened.push(id); },
     takeResume: (_projectPath, index) => saved.get(index) ?? null,
     owedResumes: () => [...saved.keys()].filter((index) => index > 0 && !kept.some((each) => each.key === paneKey(API, index))),
@@ -51,7 +50,7 @@ function restoring(saved: Map<number, PaneConversation>, kept: Survivor[] = [], 
       return { output: 'started' };
     },
   };
-  return { restore: bind(paneRestore, ports), commands, dispatched, records, mainsWorkers, killed, listened };
+  return { restore: bind(paneRestore, ports), commands, dispatched, records, mainsWorkers, listened };
 }
 
 describe('pane.restore', () => {
@@ -77,12 +76,11 @@ describe('pane.restore', () => {
   });
 
   it('adopts the shells the host kept, the editor\'s as the editor, before the resumes', async () => {
-    const { restore, commands, dispatched, listened, killed } = restoring(new Map(), [survivor(1), survivor(-1)]);
+    const { restore, commands, dispatched, listened } = restoring(new Map(), [survivor(1), survivor(-1)]);
     await restore.call({ slot: 2, projectPath: API, firstPane: null });
     expect(commands.get('2:1')).toEqual({ args: ['claude'], directory: API });
     expect(commands.get('2:-1')).toEqual({ args: 'editor', directory: API });
     expect(listened).toEqual(['2:1', '2:-1']);
-    expect(killed).toEqual([]);
     expect(dispatched).toEqual([]);
   });
 

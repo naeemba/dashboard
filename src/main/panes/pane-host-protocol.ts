@@ -40,8 +40,13 @@ export function paneHostAddress(platform: string, userData: string): PaneHostAdd
   }
 }
 
+// The host's folder in the user data: its socket, its pipe token and the kept editors' sockets.
+export function paneHostFolder(userData: string): string {
+  return path.join(userData, 'pane-host');
+}
+
 function hostSocketOf(userData: string, version: number): string {
-  return path.join(userData, 'pane-host', `panes-${version}.sock`);
+  return path.join(paneHostFolder(userData), `panes-${version}.sock`);
 }
 
 export function pipeName(token: string, version = PROTOCOL_VERSION): string {
@@ -67,7 +72,7 @@ export function hostProof(token: string, nonce: string): string {
 const PIPE_TOKEN = /^[0-9a-f]{32}$/;
 
 export function pipeTokenFile(userData: string): string {
-  return path.join(userData, 'pane-host', 'pipe-token');
+  return path.join(paneHostFolder(userData), 'pipe-token');
 }
 
 // The token, made on the first launch and kept: a new one names a new pipe, and a host running on the

@@ -33,20 +33,25 @@ export function notStoppedText(unit: string, error: unknown): string {
 }
 
 // A pane's scope stopped where the answer may not be read (pane.close behind the close key,
-// pane.restart, pane.restore): one left running is a warning in the log, and its text is answered
-// too, or null when it stopped.
+// pane.restart, pane.reap): one left running is a warning in the log, and its text is answered
+// too, or null when it stopped. `where` is the pane's place in the log (paneWhere), or the project of
+// a kept shell no page holds.
 export async function stopOrWarn(
-  ports: Pick<PaneClosePorts, 'stopScope' | 'log'>, unit: string, action: string, id: string,
+  ports: Pick<PaneClosePorts, 'stopScope' | 'log'>, unit: string, action: string, where: Pick<LogDraft, 'project' | 'context'>,
 ): Promise<string | null> {
   try {
     await ports.stopScope(unit);
     return null;
   } catch (error: unknown) {
     const message = notStoppedText(unit, error);
-    const { slot, index } = paneFromId(id);
-    ports.log({ level: 'warn', kind: 'pane', action, message, context: { slot, pane: index } });
+    ports.log({ level: 'warn', kind: 'pane', action, message, ...where });
     return message;
   }
+}
+
+export function paneWhere(id: string): Pick<LogDraft, 'context'> {
+  const { slot, index } = paneFromId(id);
+  return { context: { slot, pane: index } };
 }
 
 export const paneClose = action<PaneClosePorts, { id: string }, { output: string }>('pane.close', {
@@ -62,7 +67,7 @@ export const paneClose = action<PaneClosePorts, { id: string }, { output: string
     ports.endClaim(ports.project(slot)?.path ?? '', index);
     ports.changed();
     // The pane is gone either way; what it left running is said, not hidden.
-    const notStopped = unit === undefined ? null : await stopOrWarn(ports, unit, 'pane.close', id);
+    const notStopped = unit === undefined ? null : await stopOrWarn(ports, unit, 'pane.close', paneWhere(id));
     return { output: notStopped === null ? `closed ${id}` : `closed ${id}; ${notStopped}` };
   },
 });

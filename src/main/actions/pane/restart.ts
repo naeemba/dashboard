@@ -1,7 +1,7 @@
 import type { Refused } from '../../../shared/app/bridge';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import { action } from '../action';
-import { stopOrWarn, type PaneClosePorts } from './close';
+import { paneWhere, stopOrWarn, type PaneClosePorts } from './close';
 import { isFilledText } from './pane-input';
 
 // A pane's shell started again where it ran: Enter on a pane whose shell exited (`pty:restart`), and a
@@ -28,7 +28,7 @@ export const paneRestart = action<PaneRestartPorts, { id: string }, { output: st
     const replaced = ports.scopeOf(id);
     ports.spawn(id);
     const keptByNewShell = ports.running(id) && replaced === ports.scopeOf(id);
-    const notStopped = replaced === undefined || keptByNewShell ? null : await stopOrWarn(ports, replaced, 'pane.restart', id);
+    const notStopped = replaced === undefined || keptByNewShell ? null : await stopOrWarn(ports, replaced, 'pane.restart', paneWhere(id));
     return { output: notStopped === null ? `restarted ${id}` : `restarted ${id}; ${notStopped}` };
   },
 });

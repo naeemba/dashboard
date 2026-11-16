@@ -8,6 +8,7 @@ import { locateCommand, taskArguments } from '../../shared/panes/shell';
 import type { Handover } from '../../shared/app/bridge';
 import { MANAGER_SLOT } from '../../shared/manager/manager';
 import { canConnect } from '../app/can-connect';
+import { paneHostFolder } from '../panes/pane-host-protocol';
 
 const runCommand = promisify(execFile);
 
@@ -70,7 +71,7 @@ export function editorSocket(temporaryDirectory: string, slot: number): string {
 // path short of a unix socket's hundred-odd bytes, and on Windows takes the user data into the name.
 export function keptEditorSocket(platform: string, userData: string, projectPath: string): string {
   const name = `nvim-${createHash('sha256').update(`${userData}\0${projectPath}`).digest('hex').slice(0, 16)}`;
-  return platform === 'win32' ? `\\\\.\\pipe\\dashboard-${name}` : path.join(userData, 'pane-host', `${name}.sock`);
+  return platform === 'win32' ? `\\\\.\\pipe\\dashboard-${name}` : path.join(paneHostFolder(userData), `${name}.sock`);
 }
 
 // nvim refuses to listen on a socket path that is already there, so one left behind by a crash or a
