@@ -59,9 +59,6 @@ Rules a test, lint or CI step holds are not repeated here (workflow-decision-8).
   all read it); a screen that does something new gets its blurb updated, kept to
   `BLURB_WORD_LIMIT` words, with the detail in its feature's README.
   (keys-rule-2)
-- **A test that touches paths or processes passes on Windows**: `path.join`,
-  never a `/` in a string, and what needs POSIX is a named
-  `it.skipIf(process.platform === 'win32')` like its neighbours. (workflow-rule-6)
 - **A decision gets its own module and a test.** `renderer.ts` is wiring. A
   rule with branches goes in a small module beside a `.test.ts`. Main-process
   event wiring and spawning are exempt wherever they live; a branch owes a test

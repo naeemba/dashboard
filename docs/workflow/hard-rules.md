@@ -97,5 +97,8 @@ Windows has been a target since #191, and `windows-latest` runs the tests on eve
 built expected paths with `/` and reached that job only after their review loop had finished, so the fix
 was another round. A test that names a path builds it with `path.join`; one that needs POSIX paths, file
 modes, unix sockets or signals skips on `win32` with a named `it.skipIf` saying why (`posixPathsOnly` in
-`src/main/drawer/docs-list.test.ts`, `posixModesOnly` in `src/main/app/log-store.test.ts`). The CI job holds it,
-late; the line stays in `CLAUDE.md` so a review catches it first, an exception to workflow-decision-8.
+`src/main/drawer/docs-list.test.ts`, `posixModesOnly` in `src/main/app/log-store.test.ts`). CI's Windows job holds it,
+after review. No lint or test holds it earlier: 24 of the 40 test files with a `/tmp/`-style literal have no
+`win32` guard and pass on Windows, since they use the path as a string and never touch the disk, so a check
+on the literal would flag mostly correct tests. Card 43ceddd8 (make the POSIX path-literal tests portable
+instead of skipping them) is the way to a check that holds.
