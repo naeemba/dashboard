@@ -129,21 +129,23 @@ the app keeps its last 4000 characters per pane, a notice ends with the last 600
 where a worker says what it did, so it is the tail that is kept.
 
 Whose turn it is comes from UserPromptSubmit's `source` (the SDK's `UserPromptSubmitHookInput`):
-`user` from Claude Code's composer, `sdk` from an Agent SDK session, `system` for a task notification
-or a peer's message, and the wakeups. `user` and `sdk` are a prompt somebody typed, but main's `pane
-send` types into the pane, or hands a screen its prompt, exactly as you do, so the source alone cannot
-say whose. The prompt can: every prompt main hands a worker goes through `workerPrompt` and ends with
-the line asking for a report, which the hook input's `prompt` carries, so the command sends `--handed
-yes` when the line stands on a line of its own anywhere in it (`asksForReport`), so queued prompts
-joined into one, yours after main's, still count as main's: a main's prompt read as yours leaves main
-waiting on a finished worker, the other mistake costs one extra notice. prompt-source.ts counts a typed prompt with that line as main's and
-one without as yours, whatever order they are submitted in: two sends queued behind a turn, or yours
-typed while main's waits, are each told apart. A first version kept a flag set by each send and
-cleared by the next typed prompt, which read the second of two queued sends as yours. The first prompt
-a worker was started or resumed on is main's with or without the line, since a ship's or the review
-loop's agent is started on its own prompt with no send behind it. A stop whose last typed prompt was yours is told to nobody; a `system` prompt, the worker
-waking on its own background work, leaves the turn whose it was. A source the hook does not name, an
-older Claude Code, decides nothing, so its stops are told as before.
+`user` from Claude Code's composer, `sdk` from an Agent SDK session, `system` for a task
+notification or a peer's message, and the wakeups. `user` and `sdk` are a prompt somebody typed, but
+main's `pane send` types into the pane, or hands a screen its prompt, exactly as you do, so the
+source alone cannot say whose. The prompt can: every prompt main hands a worker goes through
+`workerPrompt` and ends with the line asking for a report, which the hook input's `prompt` carries,
+so the command sends `--handed yes` when the line stands on a line of its own anywhere in it
+(`asksForReport`), so queued prompts joined into one, yours after main's, still count as main's: a
+main's prompt read as yours leaves main waiting on a finished worker, the other mistake costs one
+extra notice. prompt-source.ts counts a typed prompt with that line as main's and one without as
+yours, whatever order they are submitted in: two sends queued behind a turn, or yours typed while
+main's waits, are each told apart. A first version kept a flag set by each send and cleared by the
+next typed prompt, which read the second of two queued sends as yours. The first prompt a worker was
+started or resumed on is main's with or without the line, since a ship's or the review loop's agent
+is started on its own prompt with no send behind it. A stop whose last typed prompt was yours is
+told to nobody; a `system` prompt, the worker waking on its own background work, leaves the turn
+whose it was. A source the hook does not name, an older Claude Code, decides nothing, so its stops
+are told as before.
 
 Watch for: a worker resumed after a restart counts the first prompt you type into it as main's, and
 main hears that one stop. A turn you typed whose work you then want main to pick up is never told:
