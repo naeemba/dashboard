@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-07T18:07:55.051Z",
-  "updatedAt": "2026-11-07T18:12:53.045Z",
+  "updatedAt": "2026-11-16T11:30:46.148Z",
+  "comments": [
+    {
+      "at": "2026-11-16T11:30:46.147Z",
+      "body": "Cancelled by main-dashboard: superseded. Every agent start goes through the pane dispatch action, and shipped cards run as Claude screens."
+    }
+  ],
   "column": "Backlog",
   "order": 38
 }
