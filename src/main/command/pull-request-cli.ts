@@ -10,10 +10,12 @@ export const PULL_REQUEST_USAGE = `pr — land a pull request of the project you
 land notes the pull request's head commit, waits for every check on it (gh pr checks --watch), then
 merges that commit: gh pr merge --merge --match-head-commit <sha>, so a push during the wait is
 refused rather than merged unchecked. No checks reported a minute after asking is a repository with
-no CI, and it is merged. A failed check or a refused merge is printed and the pull request stays
-open. The wait is as long as CI takes: run it in the background with the longest timeout allowed;
-a land stopped at that limit has not failed, run it again. It runs in the project of the folder
-you are in, or with --project in that project's folder from ~/.dashboard/projects.yaml.`;
+no CI, and it is merged. A merge call that fails is checked against the pull request: merged at
+that commit is merged. A network error on the merge or the wait is tried once more, five seconds
+on. A failed check or a refused merge is printed and the pull request stays open. The wait is as
+long as CI takes: run it in the background with the longest timeout allowed; a land stopped at that
+limit has not failed, run it again. It runs in the project of the folder you are in, or with
+--project in that project's folder from ~/.dashboard/projects.yaml.`;
 
 type Parsed = { ok: true; target: string } | { ok: false; message: string };
 
@@ -37,12 +39,29 @@ const NO_CHECKS = 'no checks reported';
 export const NO_CHECKS_WAIT_MS = 60_000;
 const reportsNoChecks = (answer: GitHubAnswer) => !answer.ok && answer.output.includes(NO_CHECKS);
 
+// gh's words when the request or its answer was lost on the way, not refused by GitHub: Go's
+// `Post "https://...": unexpected EOF`, a reset or timed-out connection, a 5xx from the API.
+const NETWORK_ERROR = /\b(?:Get|Post) "?https?:\/\/|unexpected EOF|connection (?:reset|refused)|i\/o timeout|TLS handshake timeout|HTTP 5\d\d/;
+export const isNetworkError = (answer: GitHubAnswer) => !answer.ok && NETWORK_ERROR.test(answer.output);
+// A second try a few seconds on, so a Wi-Fi rejoin or a VPN reconnect does not fail both.
+export const RETRY_WAIT_MS = 5_000;
+
+// The pull request's state and head commit, as `OPEN <sha>`.
+const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid', '-q', '.state + " " + .headRefOid'];
+
 export async function landPullRequest(ports: LandPorts, target: string): Promise<GitHubAnswer> {
-  const head = await ports.gh(['pr', 'view', target, '--json', 'state,headRefOid', '-q', '.state + " " + .headRefOid']);
+  const head = await ports.gh(stateAndHead(target));
   if (!head.ok) return head;
   const [state, sha] = head.output.trim().split(' ');
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
-  const watch = () => ports.gh(['pr', 'checks', target, '--watch']);
+  // A watch whose answer was lost is not a failed check: watch once more.
+  const watchOnce = () => ports.gh(['pr', 'checks', target, '--watch']);
+  const watch = async () => {
+    const answer = await watchOnce();
+    if (!isNetworkError(answer)) return answer;
+    await ports.wait(RETRY_WAIT_MS);
+    return watchOnce();
+  };
   let checks = await watch();
   // Right after a push CI may not have started: ask once more a minute on.
   if (reportsNoChecks(checks)) {
@@ -50,8 +69,22 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
     checks = await watch();
   }
   const noChecks = reportsNoChecks(checks);
+  if (isNetworkError(checks)) return { ok: false, output: `lost gh's answer twice waiting on the checks of ${target}; nothing is merged, run it again\n\n${checks.output}` };
   if (!checks.ok && !noChecks) return { ok: false, output: `a check failed on ${sha}; ${target} is not merged\n\n${checks.output}` };
-  const merged = await ports.gh(['pr', 'merge', target, '--merge', '--match-head-commit', sha]);
+  const merged = await mergeAt(ports, target, sha);
+  if (isNetworkError(merged)) return { ok: false, output: `lost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again: ${merged.output}` };
   if (!merged.ok) return { ok: false, output: `gh refused to merge ${target} at ${sha}: ${merged.output}` };
   return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', with no checks reported' : ''}` };
+}
+
+// A merge whose answer was lost may have gone through: a failed call is read back from the
+// pull request, merged at the noted commit is merged, and a network error is tried once more.
+async function mergeAt(ports: LandPorts, target: string, sha: string, retries = 1): Promise<GitHubAnswer> {
+  const merged = await ports.gh(['pr', 'merge', target, '--merge', '--match-head-commit', sha]);
+  if (merged.ok) return merged;
+  const state = await ports.gh(stateAndHead(target));
+  if (state.ok && state.output.trim() === `MERGED ${sha}`) return state;
+  if (retries === 0 || !isNetworkError(merged)) return merged;
+  await ports.wait(RETRY_WAIT_MS);
+  return mergeAt(ports, target, sha, retries - 1);
 }
