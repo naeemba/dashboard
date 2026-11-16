@@ -54,9 +54,9 @@ function storedCard(name: string, text: string): Record<string, unknown> {
 }
 
 // Where a file is set aside: `<file>.broken`, or `<file>.2.broken` and on when that is taken, so a card
-// that breaks twice keeps both damaged copies. The first copy always has the plain name, which is what
-// isCardSetAside looks for.
-function setAsidePath(file: string): string {
+// or a board.json that breaks twice keeps both damaged copies, and the first may be the one still
+// holding the cards. The first copy always has the plain name, which is what isCardSetAside looks for.
+export function setAsidePath(file: string): string {
   let candidate = `${file}${BROKEN_SUFFIX}`;
   for (let count = 2; existsSync(candidate); count += 1) candidate = `${file}.${count}${BROKEN_SUFFIX}`;
   return candidate;
