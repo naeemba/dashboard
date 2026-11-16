@@ -54,6 +54,9 @@ export type ReviewPorts = {
   // Whether the review may merge its pull request (landsPullRequest), read at each start so a change on
   // the settings screen or in projects.yaml holds for the next review.
   landsPullRequest: (projectPath: string) => boolean;
+  // Whether this pull request's review loop already finished at its head commit, asked of gh before
+  // the sweep's own start. False when gh cannot say.
+  reviewFinished: (projectPath: string, pullRequest: number) => Promise<boolean>;
 };
 
 // The pull request this card's work opened, or null while there is none yet. That number is the whole
@@ -289,7 +292,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (entry.reviewing) return;
     // Marked whatever the move goes on to do. With review.autoLoop off the card waits in Review, and
     // unmarked the sweep would move it there again every five seconds; `review` takes the mark off
-    // again for a card that was only early.
+    // again for a card that was only early: its agent back at work, its project closed, or its
+    // worktree dirty.
     //
     // A card a person started by hand that was only early goes back to `review` directly: through
     // card.move it is the sweep's move, and with the loop off that starts nothing, so the review the
@@ -299,6 +303,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       await review(entry.cardId);
       return;
     }
+    // A loop that already finished at the pull request's head, which a card waiting in Review with
+    // merging off is after a restart wipes the mark (review-finished.ts). It stays marked: a fix pushed
+    // later comes through a worker, whose start forgets the mark.
+    if (await ports.reviewFinished(entry.projectPath, pullRequest)) return;
     arriving.add(entry.cardId);
     try {
       await ports.arrived(entry);
@@ -322,8 +330,12 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (entry === undefined) return { refused: `card ${id} has no worktree to review; ship it first` };
     if (entry.reviewing || starting.has(id)) return { refused: `"${entry.title}" is already being reviewed` };
     const slot = ports.slotOf(entry.projectPath);
-    if (slot === -1) return { refused: notOpenRefusal(entry.title) };
-    if (ports.agentWorksIn(slot, entry.pane)) return { refused: `the agent on "${entry.title}" is still working` };
+    // Only early, as a dirty worktree is, so the mark sweepOne put on before its move comes off. The
+    // move waits on the board's push first, and an agent back at work by then was refused here with
+    // the mark left on: no review for the rest of the run (#300, #313).
+    const early = (refused: string): Refused => { reviewed.delete(id); return { refused }; };
+    if (slot === -1) return early(notOpenRefusal(entry.title));
+    if (ports.agentWorksIn(slot, entry.pane)) return early(`the agent on "${entry.title}" is still working`);
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return { refused: `"${entry.title}" has no pull request on ${entry.branch} yet` };
@@ -333,9 +345,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // Null is refused as well, as sweepOne leaves it alone: a card the project's board does not show,
     // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
     const awaits = board === null ? null : awaitsReview(board, id);
-    if (board !== null && isCancelled(board, id)) {
-      return { refused: `"${entry.title}" is cancelled; move it out of Cancelled to review it` };
-    }
+    // Unmarked as sweepOne leaves it, so moving it out of Cancelled lets the next tick review it.
+    if (board !== null && isCancelled(board, id)) return early(`"${entry.title}" is cancelled; move it out of Cancelled to review it`);
     if (awaits === false) return { refused: `"${entry.title}" is past Review; its review has run` };
     if (awaits === null) return { refused: `"${entry.title}" is not on the project's board, or the board could not be read` };
     reviewed.add(id);

@@ -79,6 +79,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       writeBoard: (projectPath, board) => { writeBoard(projectPath, board); },
       arrived: async () => undefined,
       landsPullRequest: () => false,
+      reviewFinished: async () => false,
       ...over,
     },
   };
@@ -180,6 +181,75 @@ describe('reviewSweep', () => {
     working = false;
     await sweep.run();
     expect(log.removed).toEqual([entry.worktreePath]);
+  });
+
+  // #300 and #313: stopped when the sweep looked, at work when the start looked, then its pane closed.
+  it('starts the review on a later tick when the start found the agent back at work, after its pane closed', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, intoReview(boardWithCard(12), CARD) as Board);
+    let current = entry;
+    const looks = [false, true];
+    const { ports: made, log } = ports(entry, {
+      worktrees: () => [current],
+      agentWorksIn: (_slot, pane) => pane !== null && (looks.shift() ?? false),
+    });
+    const sweep = sweepWith(made);
+    await sweep.run();
+    expect(log.started).toEqual([]);
+    current = { ...entry, pane: null };
+    await sweep.run();
+    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(columnOfCard(projectPath)).toBe('Review');
+  });
+
+  // The project closes while the sweep's move waits on the board's push: refused, and unmarked.
+  it('starts the review on a later tick when the project closed before the start looked', async () => {
+    const { entry } = flight(12);
+    const slots = [0, -1];
+    const { ports: made, log } = ports(entry, { slotOf: () => slots.shift() ?? 0 });
+    const sweep = sweepWith(made);
+    await sweep.run();
+    expect(log.started).toEqual([]);
+    await sweep.run();
+    expect(log.started[0].prompt).toContain('/pr-loop 12');
+  });
+
+  // Cancelled while the sweep's move waits: refused, and unmarked, so moving it back reviews it.
+  it('starts the review once a card cancelled before the start looked is moved back to Review', async () => {
+    const { entry, projectPath } = flight(12);
+    let cancelOnce = true;
+    const { ports: made, log } = ports(entry);
+    const sweep: ReviewSweep = reviewSweep({
+      ...made,
+      arrived: (arrived) => {
+        if (cancelOnce) {
+          cancelOnce = false;
+          const board = boardWithCard(null);
+          writeBoard(projectPath, moveCardById(board, CARD, columnNamed(board, CANCELLED_COLUMN)) ?? board);
+        }
+        return sweep.review(arrived.cardId);
+      },
+    });
+    await sweep.run();
+    expect(log.started).toEqual([]);
+    writeBoard(projectPath, intoReview(boardWithCard(null), CARD) as Board);
+    await sweep.run();
+    expect(log.started[0].prompt).toContain('/pr-loop 12');
+  });
+
+  // Merging off: the loop finished and the card waits in Review for the user. A restart wiped the
+  // sweep's mark, and without asking the pull request the first tick ran a second loop at it.
+  it('starts no second review of a card in Review whose loop finished at the head commit', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, intoReview(boardWithCard(12), CARD) as Board);
+    const asked: number[] = [];
+    const { ports: made, log } = ports(entry, { reviewFinished: async (_path, pullRequest) => { asked.push(pullRequest); return true; } });
+    const sweep = sweepWith(made);
+    await sweep.run();
+    await sweep.run();
+    expect(asked).toEqual([12]);
+    expect(log.removed).toEqual([]);
+    expect(log.started).toEqual([]);
   });
 
   // A review that ended the way it was meant to: the pull request merged and the card in Done, still
