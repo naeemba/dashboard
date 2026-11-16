@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { chmodSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '../../shared/app/is-record';
 import { parseSettings, withoutShipped, type Settings } from '../../shared/settings/settings';
@@ -70,10 +70,10 @@ export function tidySettingsFile(file: string, isMac: boolean): void {
   }
 }
 
-// settings.cap's port (`budget --cap`), the file's second writer beside settings.write: the app need not be running, and a
-// running one adopts the change when the file does (adoptedSettings). Only budget.weeklyCap changes;
-// every other line is written back as it was. A file that does not read as an object is refused
-// rather than replaced: the cap is not worth the rest of somebody's settings.
+// settings.cap's port (`budget --cap`), the file's second writer beside settings.write: the app need
+// not be running, and a running one adopts the change when the file does (adoptedSettings). Only
+// budget.weeklyCap changes; every other line is written back as it was. A file that does not read as
+// an object is refused rather than replaced: the cap is not worth the rest of somebody's settings.
 export function writeWeeklyCap(file: string, cap: number): void {
   const text = readText(file);
   let stored: unknown;
@@ -84,9 +84,19 @@ export function writeWeeklyCap(file: string, cap: number): void {
   }
   if (!isRecord(stored)) throw new ExpectedFailure(`${file} does not hold an object; fix it, then set the cap again`);
   const budget = isRecord(stored.budget) ? stored.budget : {};
-  // Whole or not at all: the app reads this file while the command writes it. Renamed over the link's
-  // target, not the link, so a settings.json symlinked from a dotfiles repo stays a link.
-  replaceFile(text === null ? file : realpathSync(file), serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }), 0o600);
+  // Whole or not at all: the app reads this file while the command writes it.
+  replaceFile(linkTarget(file), serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }), 0o600);
+}
+
+// Renamed over the link's target, not the link, so a settings.json symlinked from a dotfiles repo
+// stays a link, even one whose target does not exist yet.
+function linkTarget(file: string): string {
+  try {
+    if (lstatSync(file).isSymbolicLink()) return path.resolve(path.dirname(file), readlinkSync(file));
+  } catch {
+    return file;
+  }
+  return realpathSync(file);
 }
 
 // What the app takes from the file when it changes on disk: `budget --cap`, or an edit by hand. Null

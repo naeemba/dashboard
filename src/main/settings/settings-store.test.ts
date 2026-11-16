@@ -215,6 +215,15 @@ describe('writeWeeklyCap', () => {
     expect(readSettings(target, false).budget).toEqual({ weeklyCap: 60 });
   });
 
+  posixModesOnly('writes through a symlink whose target does not exist yet, leaving the link in place', () => {
+    const target = file();
+    const link = file();
+    symlinkSync(target, link);
+    writeWeeklyCap(link, 40);
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readSettings(target, false).budget).toEqual({ weeklyCap: 40 });
+  });
+
   it('refuses a file that is not a JSON object, and leaves it alone', () => {
     for (const text of ['{ "font": ', '[1]']) {
       const path = file();
