@@ -5,15 +5,19 @@ const installed = { toolsInstalled: true };
 
 describe('filesToCheck', () => {
   it('keeps the staged code files', () => {
-    expect(filesToCheck(['src/main/main.ts', 'scripts/release.mjs', 'eslint.config.mjs'], installed)).toEqual([
+    expect(filesToCheck(['src/main/main.ts', 'scripts/release.mjs'], installed)).toEqual([
       'src/main/main.ts',
       'scripts/release.mjs',
-      'eslint.config.mjs',
     ]);
   });
 
   it('lints nothing in a commit that touches no code', () => {
-    expect(filesToCheck(['docs/workflow/README.md', 'package.json', '.githooks/pre-commit'], installed)).toEqual([]);
+    expect(filesToCheck(['docs/workflow/README.md', '.githooks/pre-commit'], installed)).toEqual([]);
+  });
+
+  it('lints the whole project when the eslint settings or the installed plugins change', () => {
+    expect(filesToCheck(['eslint.config.mjs', 'eslint.config.test.ts'], installed)).toEqual(['.']);
+    expect(filesToCheck(['package.json', 'pnpm-lock.yaml'], installed)).toEqual(['.']);
   });
 
   it('checks nothing in a checkout with no tools installed, even with code staged', () => {

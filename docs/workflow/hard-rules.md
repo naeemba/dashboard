@@ -84,7 +84,9 @@ and refuses the commit on either failure. `pnpm install` points `core.hooksPath`
 `prepare` script), so every worktree of the checkout gets it. Before it, `tsc --noEmit` ran only in CI and a
 worker found "'wholePath' is defined but never used" mid-edit, a round trip after it had committed.
 
-eslint runs only when code is staged; tsc also runs when `tsconfig*.json`, `package.json` or `pnpm-lock.yaml`
+eslint runs only when code is staged, and on the whole project (`eslint .`) when `eslint.config.*`,
+`package.json` or `pnpm-lock.yaml` is: a new rule otherwise passed on the config file alone and refused
+the files it targets only in CI. tsc also runs when `tsconfig*.json`, `package.json` or `pnpm-lock.yaml`
 is, since those change what it reports. Both skip a commit that only touches `.dashboard/` or docs, and a
 checkout with no `node_modules`: the app and the board command commit cards from throwaway worktrees, and a
 card must never wait on, or fail on, tsc. `filesToCheck` and `runsTypecheck` in `scripts/pre-commit.mjs`
