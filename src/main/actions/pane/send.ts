@@ -49,7 +49,8 @@ export function reportsTurns(ports: Pick<PaneSendPorts, 'agentIn' | 'screenIn' |
 // by name or by path, read the way the running-app guard reads a command line, `sh -c '…'` bodies too.
 // Only asked of a shell at its prompt, since an agent or a program takes the same text as input.
 // ponytail: it reads the text. `npx @anthropic-ai/claude-code`, a `$(…)` or a script of your own that
-// runs claude still gets through; matching those means running the shell.
+// runs claude still gets through; matching those means running the shell. A program that does not read
+// its input, npm test or make, leaves the text for the shell to run once it exits.
 export function startsClaude(text: string): boolean {
   return simpleCommands(text).some((part) => {
     const body = shellBody(part);
