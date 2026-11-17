@@ -202,6 +202,20 @@ putting the board's files back to HEAD and laying the checkout's edits over the
 new tip. A `board` command in another process can still land there; the same
 read-then-write ceiling `runBoardCommandOnLatest` names.
 
+**A change the command cannot get onto origin is refused in a worktree, not
+written there.** The fallback that writes the board in place is safe in the
+project's checkout, whose next sync replays the uncommitted edit. In a worktree
+the card file is the branch's: it is committed with the work and merged onto
+main with whatever column it had that day. On 2026-11-17, 2 of about 8 board
+writes from one checkout failed with `cannot fetch origin/main` (`Connection
+closed by <host> port 22`) and went through when run again, so the fallback is
+hit, not hypothetical. A failed fetch is now tried three times, a second apart,
+before anything falls back; one that ran out of time is not, or a `board` command
+offline would take half a minute. Keeping a fallback write out of the branch's
+commits instead (`skip-worktree`, a path the commit leaves out) was not taken:
+the agent would read back a move origin never got, and the refusal says to run
+it again, which the retries above say usually works.
+
 **What it costs.** A commit on main per save. A fetch per `board` command, reads
 included, about a second. A repository whose main refuses pushes keeps its
 board in the checkout, uncommitted, with a warning; before this the review

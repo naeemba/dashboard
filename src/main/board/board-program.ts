@@ -3,13 +3,13 @@ import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
 import { asksApp, BOARD_REQUEST, brokenFilesRefusal, readsBoard, runBoardCommand, runBoardCommandOnLatest, type CommandResult } from './board-cli';
 import { syncBoard, type BoardSync } from './board-sync-git';
-import { notSyncedWarning } from './board-sync';
+import { notSyncedRefusal, notSyncedWarning } from './board-sync';
 import { rebaseBoardChange } from '../../shared/board/board-merge';
 import { failureText } from '../../shared/errors/failure';
 import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
-import { isLinkedWorktree } from './linked-worktree';
+import { isLinkedWorktree, worktreeCheckoutOf } from './linked-worktree';
 import { boardGuard } from './board-guard';
 import { runningAppGuard, runningProcess, type ProcessList, type RunningProcess } from '../workflow/running-app-guard';
 import { packageManagerGuard } from '../workflow/package-manager-guard';
@@ -47,9 +47,11 @@ async function run(words: readonly string[]): Promise<number> {
 
   // A board git tracks is read and written on origin's default branch, and this checkout brought up to
   // it (board-sync-git.ts). The id is made once, so an `add` retried on a fresh fetch is one card. A
-  // sync that throws is one more way of not reaching origin: the board is written here, with the warning.
+  // sync that throws is one more way of not reaching origin: the board is written here, with the
+  // warning, or refused in a worktree (notSyncedRefusal).
   const id = crypto.randomUUID();
   const makeId = () => id;
+  let notSynced: string | null = null;
   if (readsBoard(commandArguments)) {
     // Each board the command ran on and what it answered; the last is what went up, when a lost race retried.
     const tries: { before: Board; result: CommandResult }[] = [];
@@ -57,7 +59,7 @@ async function run(words: readonly string[]): Promise<number> {
       const result = runBoardCommand(board, commandArguments, makeId);
       tries.push({ before: board, result });
       return result.ok && result.board !== null ? result.board : board;
-    }).catch((error: unknown): BoardSync => ({ synced: false, warning: notSyncedWarning(failureText(error)) }));
+    }).catch((error: unknown): BoardSync => ({ synced: false, reason: failureText(error) }));
     const onOrigin = tries.at(-1);
     if (sync.synced && onOrigin !== undefined) {
       const { before, result } = onOrigin;
@@ -69,17 +71,23 @@ async function run(words: readonly string[]): Promise<number> {
       }
       return answer(result);
     }
-    if (!sync.synced && sync.warning !== null) process.stderr.write(`${sync.warning}\n`);
+    if (!sync.synced) notSynced = sync.reason;
   }
-  return answer(writeHere(project, read.board, commandArguments, makeId));
+  return answer(writeHere(project, read.board, commandArguments, makeId, notSynced));
 }
 
 // The command run on this folder's board and written here. Against the board as it stands a moment
 // before the write, not the one opened: runBoardCommandOnLatest says why. Written before the line is
 // printed, so a failed write is what you see rather than a success message about a change that is not
-// on disk.
-function writeHere(project: string, opened: Board, commandArguments: readonly string[], makeId: () => string): CommandResult {
+// on disk. `notSynced` is why origin could not take it, when that was tried and failed.
+function writeHere(project: string, opened: Board, commandArguments: readonly string[], makeId: () => string, notSynced: string | null): CommandResult {
   const result = runBoardCommandOnLatest(opened, commandArguments, () => readBoard(project, false).board, makeId);
+  const changes = result.ok && result.board !== null;
+  if (notSynced !== null) {
+    const refusal = notSyncedRefusal(worktreeCheckoutOf(project) !== undefined, changes, notSynced);
+    if (refusal !== null) return { ok: false, message: refusal };
+    process.stderr.write(`${notSyncedWarning(notSynced)}\n`);
+  }
   if (result.ok && result.board !== null) writeBoard(project, result.board);
   return result;
 }

@@ -222,7 +222,8 @@ A board git tracks is the default branch's, wherever it is written from
 (board-decision-5). Every write, from the screen, card.move, the review sweep
 or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
 
-1. fetch origin's default branch (10 seconds at most);
+1. fetch origin's default branch (10 seconds at most), a fetch that failed
+   tried again a second apart, three tries in all, unless it ran out of time;
 2. read origin's board there, with the checkout's own uncommitted board edits
    replayed onto it (`rebaseBoardChange`), then the command's edit on top;
 3. commit that, and only the board's files, onto origin's tip with a plain
@@ -259,7 +260,11 @@ ship cuts a branch. Offline, with no `origin`, or with a push refused for any
 other reason, or with a sync that fails any other way, the board is written
 where it is as before, and the app logs one
 warning per project (`board` kind) until a sync goes through; the command prints
-it on each run. A board git does not track, and the manager's, are untouched.
+it on each run. Not in a worktree: there the `board` command refuses the change
+with the same reason and writes nothing, since a card file written in a worktree
+is its branch's and would be merged onto main with the column it had that day
+(`notSyncedRefusal`). A read there still answers from the worktree's board. A
+board git does not track, and the manager's, are untouched.
 
 ## Agents and the board
 

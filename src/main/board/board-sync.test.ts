@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addCard, deleteCard, emptyBoard, moveCardToColumn, renameCard, selectionOf } from '../../shared/board/board';
-import { checkoutStep, damagedBoardRefusal, lostRace, publishesCheckout, syncCommitMessage, type CheckoutState } from './board-sync';
+import { checkoutStep, damagedBoardRefusal, FETCH_ATTEMPTS, lostRace, notSyncedRefusal, publishesCheckout, retriesFetch, syncCommitMessage, type CheckoutState } from './board-sync';
 
 const behind: CheckoutState = { branch: 'main', defaultBranch: 'main', current: false, behind: true, porcelain: '' };
 
@@ -72,5 +72,31 @@ describe('damagedBoardRefusal', () => {
   it('refuses only when a board file does not parse, and names it', () => {
     expect(damagedBoardRefusal([])).toBeNull();
     expect(damagedBoardRefusal(['.dashboard/board/cards/a.json'])).toContain('(.dashboard/board/cards/a.json)');
+  });
+});
+
+describe('retriesFetch', () => {
+  it('tries a failed fetch again until the last attempt', () => {
+    expect(retriesFetch(1, false)).toBe(true);
+    expect(retriesFetch(FETCH_ATTEMPTS - 1, false)).toBe(true);
+    expect(retriesFetch(FETCH_ATTEMPTS, false)).toBe(false);
+  });
+
+  it('does not wait out a timeout twice', () => {
+    expect(retriesFetch(1, true)).toBe(false);
+  });
+});
+
+describe('notSyncedRefusal', () => {
+  it('refuses a change in a worktree, naming why origin did not take it', () => {
+    expect(notSyncedRefusal(true, true, 'cannot fetch origin/main: Connection closed')).toMatch(/^board not changed: cannot fetch origin\/main: Connection closed\./);
+  });
+
+  it('lets a read through in a worktree', () => {
+    expect(notSyncedRefusal(true, false, 'offline')).toBeNull();
+  });
+
+  it('lets the project\'s checkout write the change where it is', () => {
+    expect(notSyncedRefusal(false, true, 'offline')).toBeNull();
   });
 });

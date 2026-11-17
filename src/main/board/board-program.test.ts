@@ -81,6 +81,30 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
     expect(card?.comments?.map((comment) => comment.body)).toEqual(['hello']);
   });
 
+  // A worktree's board is its branch's: a card file written there would be committed with the work and
+  // merged onto main with a stale column, so a change origin could not take is refused, not written.
+  it('refuses a change in a worktree when origin cannot be reached, and leaves its board alone', async () => {
+    const bare = remote();
+    const checkout = clone(bare, false);
+    git(checkout, 'checkout', '--quiet', 'main');
+    seedBoardDirectory(checkout);
+    writeBoard(checkout, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'board');
+    git(checkout, 'push', '--quiet', 'origin', 'main');
+    const worktree = join(temporaryFolder('board-program-worktrees-'), 'card');
+    git(checkout, 'worktree', 'add', '--quiet', '-b', 'card', worktree);
+    git(checkout, 'remote', 'set-url', 'origin', join(temporaryFolder('board-program-gone-'), 'missing.git'));
+    vi.spyOn(process, 'cwd').mockReturnValue(worktree);
+    const stdout = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    const stderr = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+    expect(await runBoardProgram(['comment', 'card', 'hello'])).toBe(1);
+    expect(String(stderr.mock.calls.at(-1)?.[0])).toMatch(/^board not changed: cannot fetch origin\/main/);
+    expect(git(worktree, 'status', '--porcelain')).toBe('');
+    expect(await runBoardProgram(['show', 'card'])).toBe(0);
+    expect(String(stdout.mock.calls.at(-1)?.[0])).toContain('the card');
+  });
+
   // A sync that throws for a reason nobody planned for is one more way of not reaching origin: the
   // change is written here, with the warning, rather than refused.
   it('writes the change here when the sync throws, and warns', async () => {

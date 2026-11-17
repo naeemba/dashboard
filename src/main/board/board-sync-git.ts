@@ -10,14 +10,15 @@ import { realPath } from '../app/real-path';
 import { BROKEN_SUFFIX } from '../app/set-aside';
 import { BOARD_PATHSPECS, peekBoard, readBoard, writeBoard } from './board-store';
 import {
+  FETCH_PAUSE,
   FETCH_TIMEOUT,
   PUSH_ATTEMPTS,
   PUSH_TIMEOUT,
   checkoutStep,
   damagedBoardRefusal,
   lostRace,
-  notSyncedWarning,
   publishesCheckout,
+  retriesFetch,
   syncCommitMessage,
   type CheckoutStep,
 } from './board-sync';
@@ -45,30 +46,27 @@ export type BoardEdit = (board: Board) => Board;
 // folder asked about: `current`, it holds that board on disk too (it was up to date or was
 // fast-forwarded); `stale`, it is the project's checkout but could not be moved (checkoutStep says
 // why), so a caller with an edit writes it there as well; `elsewhere`, it is a worktree, whose board is
-// its branch's and is left alone. Not synced: the caller
-// writes the board where it is, as before there was a sync, and says the warning when there is one.
-// A board git does not track has no warning: there is nothing for it to be in step with.
-export type BoardSync = { synced: true; checkout: 'current' | 'stale' | 'elsewhere' } | { synced: false; warning: string | null };
+// its branch's and is left alone. Not synced: the caller writes the board where it is, as before there
+// was a sync, or refuses (notSyncedRefusal), and says why when there is a reason: notSyncedWarning
+// words it. A board git does not track has no reason: there is nothing for it to be in step with.
+export type BoardSync = { synced: true; checkout: 'current' | 'stale' | 'elsewhere' } | { synced: false; reason: string | null };
 
 export async function syncBoard(folder: string, edit: BoardEdit = (board) => board): Promise<BoardSync> {
-  if (isManagerPath(folder)) return { synced: false, warning: null };
+  if (isManagerPath(folder)) return { synced: false, reason: null };
   const top = await answer(['rev-parse', '--show-toplevel'], folder);
-  if (top === null) return { synced: false, warning: null };
+  if (top === null) return { synced: false, reason: null };
   const [tracked, branch, checkout, gitDirectory] = await Promise.all([
     answer(['ls-files', '--', ...BOARD_PATHSPECS], top),
     baseBranch(top).catch((error: unknown) => new Error(failureText(error))),
     checkoutOf(top),
     git(['rev-parse', '--absolute-git-dir'], top),
   ]);
-  if ((tracked ?? '') === '') return { synced: false, warning: null };
+  if ((tracked ?? '') === '') return { synced: false, reason: null };
   if (branch instanceof Error) return notSynced(branch.message);
 
   for (let attempt = 1; ; attempt += 1) {
-    try {
-      await git(['fetch', '--quiet', REMOTE, branch], top, { timeout: FETCH_TIMEOUT });
-    } catch (error: unknown) {
-      return notSynced(`cannot fetch ${REMOTE}/${branch}: ${gitMessage(error)}`);
-    }
+    const fetchFailure = await fetchBranch(top, branch);
+    if (fetchFailure !== null) return notSynced(fetchFailure);
     const tip = await git(['rev-parse', '--verify', `refs/remotes/${REMOTE}/${branch}^{commit}`], top);
     const scratch = mkdtempSync(join(tmpdir(), 'board-sync-'));
     try {
@@ -97,7 +95,22 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
 }
 
 function notSynced(reason: string): BoardSync {
-  return { synced: false, warning: notSyncedWarning(reason) };
+  return { synced: false, reason };
+}
+
+// Origin's default branch fetched, tried again as retriesFetch says; null once it is, else why not.
+async function fetchBranch(top: string, branch: string): Promise<string | null> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await git(['fetch', '--quiet', REMOTE, branch], top, { timeout: FETCH_TIMEOUT });
+      return null;
+    } catch (error: unknown) {
+      // execFile kills a git that runs past its timeout, and says so on the error.
+      const timedOut = (error as { killed?: unknown } | null)?.killed === true;
+      if (!retriesFetch(attempt, timedOut)) return `cannot fetch ${REMOTE}/${branch}: ${gitMessage(error)}`;
+      await new Promise((resolve) => setTimeout(resolve, FETCH_PAUSE));
+    }
+  }
 }
 
 async function answer(gitArguments: string[], cwd: string): Promise<string | null> {

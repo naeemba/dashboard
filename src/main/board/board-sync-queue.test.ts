@@ -3,7 +3,7 @@ import type { BoardSync } from './board-sync-git';
 import { boardSyncQueue } from './board-sync-queue';
 
 const synced: BoardSync = { synced: true, checkout: 'current' };
-const offline: BoardSync = { synced: false, warning: 'offline' };
+const offline: BoardSync = { synced: false, reason: 'offline' };
 
 // A sync that finishes only when the test says so.
 function heldSync() {
@@ -74,7 +74,7 @@ describe('boardSyncQueue', () => {
     const answers = [offline, offline, synced, offline];
     const queue = boardSyncQueue(async () => answers.shift()!, (projectPath, message) => warnings.push(`${projectPath}: ${message}`));
     for (let count = 0; count < 4; count += 1) await queue.sync('/p');
-    expect(warnings).toEqual(['/p: offline', '/p: offline']);
+    expect(warnings).toEqual(['/p: board written here only, not on origin: offline', '/p: board written here only, not on origin: offline']);
   });
 
   it('warns about a sync that throws, and goes on to the next', async () => {
@@ -94,7 +94,7 @@ describe('boardSyncQueue', () => {
 
   it('says nothing about a board git does not track', async () => {
     const warnings: string[] = [];
-    const queue = boardSyncQueue(async () => ({ synced: false, warning: null }), (_projectPath, message) => warnings.push(message));
+    const queue = boardSyncQueue(async () => ({ synced: false, reason: null }), (_projectPath, message) => warnings.push(message));
     await queue.sync('/p');
     expect(warnings).toEqual([]);
   });

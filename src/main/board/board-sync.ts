@@ -23,6 +23,18 @@ export function lostRace(gitMessage: string): boolean {
 export const FETCH_TIMEOUT = 10_000;
 export const PUSH_TIMEOUT = 30_000;
 
+// A fetch that fails is tried again, up to this many tries in all, a pause apart, before the write
+// falls back to this folder: on 2026-11-17, 2 of about 8 board writes from one checkout failed with
+// `Connection closed by <host> port 22` and went through when run again by hand.
+export const FETCH_ATTEMPTS = 3;
+export const FETCH_PAUSE = 1_000;
+
+// Whether a failed fetch is tried again. Not one that ran out of time: offline on a train, three of
+// those is half a minute before the command answers.
+export function retriesFetch(attempt: number, timedOut: boolean): boolean {
+  return !timedOut && attempt < FETCH_ATTEMPTS;
+}
+
 // What a project's checkout is, as git says it, when the sync is done: the branch it stands on (null
 // when detached), whether HEAD is the commit the sync left origin's default branch at, whether HEAD is
 // an ancestor of it, and `git status --porcelain`.
@@ -81,4 +93,14 @@ export function syncCommitMessage(before: Board, after: Board): string {
 // always was.
 export function notSyncedWarning(reason: string): string {
   return `board written here only, not on origin: ${reason}`;
+}
+
+// Why the `board` command refuses a change it could not get onto origin, or null where it writes the
+// change here with notSyncedWarning. Refused in a linked worktree: its board is its branch's, so a card
+// file written there is committed with the work and merged onto main with the column it had that day.
+// The project's checkout keeps the fallback, since its next sync replays the uncommitted edit onto
+// origin. A read changes nothing and is never refused.
+export function notSyncedRefusal(inWorktree: boolean, changes: boolean, reason: string): string | null {
+  if (!inWorktree || !changes) return null;
+  return `board not changed: ${reason}. A card written in a worktree rides its branch onto main; run the command again once origin answers.`;
 }

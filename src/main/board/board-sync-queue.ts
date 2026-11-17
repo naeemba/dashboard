@@ -31,12 +31,12 @@ export function boardSyncQueue(
     try {
       outcome = await syncBoard(projectPath);
     } catch (error: unknown) {
-      outcome = { synced: false, warning: notSyncedWarning(failureText(error)) };
+      outcome = { synced: false, reason: failureText(error) };
     }
     if (outcome.synced) warned.delete(projectPath);
-    else if (outcome.warning !== null && !warned.has(projectPath)) {
+    else if (outcome.reason !== null && !warned.has(projectPath)) {
       warned.add(projectPath);
-      warn(projectPath, outcome.warning);
+      warn(projectPath, notSyncedWarning(outcome.reason));
     }
   }
 

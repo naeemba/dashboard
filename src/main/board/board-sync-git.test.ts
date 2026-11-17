@@ -158,10 +158,10 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     const { bare, checkout } = project();
     writeFileSync(join(checkout, BOARD_FOLDER_PATH, 'cards', 'a.json'), '<<<<<<< HEAD\n{');
     const inPlace = await syncBoard(checkout);
-    expect(!inPlace.synced && inPlace.warning).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
+    expect(!inPlace.synced && inPlace.reason).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
     openBoard(checkout);
     const setAside = await syncBoard(checkout);
-    expect(!setAside.synced && setAside.warning).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
+    expect(!setAside.synced && setAside.reason).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
     expect(columns(boardOn(bare))).toEqual({ a: 'Todo', b: 'Todo' });
   });
 
@@ -180,13 +180,13 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     git(checkout, 'remote', 'set-url', 'origin', join(temporaryFolder('board-sync-gone-'), 'missing.git'));
     const outcome = await syncBoard(checkout, command('move', 'a', 'Doing'));
     expect(outcome.synced).toBe(false);
-    expect(!outcome.synced && outcome.warning).toMatch(/^board written here only, not on origin: cannot fetch origin\/main/);
+    expect(!outcome.synced && outcome.reason).toMatch(/^cannot fetch origin\/main/);
   });
 
   it('stays quiet about a board git does not track', async () => {
     const checkout = temporaryFolder('board-sync-untracked-');
     git(checkout, 'init', '--quiet', '-b', 'main');
     writeBoard(checkout, seeded());
-    expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toEqual({ synced: false, warning: null });
+    expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toEqual({ synced: false, reason: null });
   });
 });
