@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:58:51.697Z",
-  "updatedAt": "2026-11-17T13:31:27.749Z",
+  "updatedAt": "2026-11-17T13:45:39.101Z",
   "branch": "a-board-write-that-cannot-reach-origin-writ",
   "pullRequest": 322,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-17T13:31:27.749Z",
       "body": "Review loop: floor-addressed after 2 rounds (commits c080217c merge of main, 5a1620ce, 0140b1d0); the card file is now main's copy and out of the diff. NOT ready to merge: main took #317 during the loop and the PR conflicts again in docs/board/README.md, src/main/board/board-program.ts, board-program.test.ts, board-sync-git.ts. CI not waited on because of the conflict. The last fix round (dropped-push refusal wording, 'rejected 3 times' wording) has no re-review behind it."
+    },
+    {
+      "at": "2026-11-17T13:45:39.101Z",
+      "body": "Converged, ready to merge. Merged main (#317) in (6f491b19): kept both the seeded-docs sync and the retry/worktree refusal; a worktree whose read wrote a seeded doc origin could not take now gets it put back, with a test. Windows CI had been failing since 5a1620ce: the dropped-connection tests fake the drop with a POSIX shell script, now skipped on win32 (b73157ce). Head b73157ce: CI 5/5 green, mergeable."
     }
   ],
   "column": "Review",
