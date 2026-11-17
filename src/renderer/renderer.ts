@@ -575,6 +575,7 @@ const showPicker = () => runPicker({
 });
 bridge.onHostReport((text) => showNotice('host', text));
 bridge.onPaneReleased((text) => showNotice('pane', text, { logged: true }));
+bridge.onReviewLoopNotice((text) => showNotice('review-loop', text, { stays: true }));
 
 // Ctrl+`: the pane you are looking at, as a file in the project's nvim.
 //

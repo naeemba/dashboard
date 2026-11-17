@@ -14,6 +14,7 @@ import { isLinkedWorktree } from '../../board/linked-worktree';
 import { runProgram } from '../../app/git';
 import { reviewFinishedAtHead, reviewViewArguments } from '../../ship/review-finished';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
+import { CLAUDE_FOLDER, reviewLoopMissing } from '../../ship/review-loop-install';
 import { entryForCard } from '../../ship/worktree-store';
 import { followedBranch, type PullRequest } from '../../board/pull-request-column';
 import { pullRequestSweep, type PullRequestSweep } from '../../board/pull-request-sweep';
@@ -28,7 +29,7 @@ import { cardStart } from './start';
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
 export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
-  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished'> & {
+  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished' | 'loopMissing'> & {
     table: Channels;
     boardLog: BoardChanges;
     // Every board write here goes to origin behind it (board-sync-queue.ts).
@@ -77,6 +78,7 @@ export function cardActions(main: CardActionsMain): CardActions {
     // gh failing (offline, signed out) is not knowing, which starts the review as before.
     reviewFinished: (projectPath, pullRequest) => runProgram('gh', reviewViewArguments(pullRequest), projectPath, { timeout: 20_000 })
       .then(reviewFinishedAtHead, () => false),
+    loopMissing: () => reviewLoopMissing(CLAUDE_FOLDER),
   });
   const shipCard = shipFlow({
     ...main,

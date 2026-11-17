@@ -80,6 +80,8 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       arrived: async () => undefined,
       landsPullRequest: () => false,
       reviewFinished: async () => false,
+      loopMissing: () => null,
+      loopChecked: () => undefined,
       ...over,
     },
   };
@@ -448,6 +450,24 @@ describe('reviewSweep', () => {
   });
 
   // Nothing on screen is waiting on a review, so the card is the only place this can be said.
+  it('refuses a review whose /pr-loop is missing, says so on the card, and checks nothing', async () => {
+    const { entry, projectPath } = flight(12);
+    let checked = 0;
+    const { ports: made, log } = ports(entry, { loopMissing: () => '/pr-loop is not installed', loopChecked: () => { checked += 1; } });
+    expect(await sweepWith(made).review(CARD)).toEqual({ refused: '/pr-loop is not installed' });
+    expect(log.removed).toEqual([]);
+    expect(commentsOnCard(projectPath)).toEqual(['No review worktree: /pr-loop is not installed']);
+    expect(checked).toBe(0);
+  });
+
+  it('checks the installed /pr-loop at each review start', async () => {
+    const { entry } = flight(12);
+    let checked = 0;
+    const { ports: made } = ports(entry, { loopChecked: () => { checked += 1; } });
+    await sweepWith(made).run();
+    expect(checked).toBe(1);
+  });
+
   it('lands the card in Review and says on it when the worktree is dirty', async () => {
     const { entry, projectPath } = flight(12);
     const { ports: made, log } = ports(entry, {
