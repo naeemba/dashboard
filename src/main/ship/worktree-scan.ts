@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import { git } from '../app/git';
 import { realPath } from '../app/real-path';
 import {
-  diskUsageBytes, distinctWorktrees, parseWorktreeList, type ScannedWorktree, type WorktreeRecord,
+  diskUsageBytes, distinctWorktrees, parseWorktreeList, type GitWorktree, type ScannedWorktree, type WorktreeRecord,
 } from '../../shared/ship/git-worktrees';
 import { changedFiles } from './ship';
 import { createWorktreeSizes } from './worktree-sizes';
@@ -38,18 +38,22 @@ const sizes = createWorktreeSizes({
 
 export const forgetSize = sizes.forget;
 
-// A project git cannot list answers with nothing rather than failing the whole scan. `records` are the
-// app's own, so a worktree git lists is answered under the path and project its record names.
+// Every worktree git lists for a project, its own checkout left out. A project git cannot list answers
+// with nothing rather than failing: the scan below and `pane run --in` (run-folder.ts) both ask.
+export async function listWorktrees(projectPath: string): Promise<GitWorktree[]> {
+  try {
+    return parseWorktreeList(await git(['worktree', 'list', '--porcelain'], projectPath), projectPath);
+  } catch {
+    return [];
+  }
+}
+
+// `records` are the app's own, so a worktree git lists is answered under the path and project its
+// record names.
 export async function scanWorktrees(
   projectPaths: readonly string[], records: readonly WorktreeRecord[],
 ): Promise<ScannedWorktree[]> {
-  const listed = await Promise.all(projectPaths.map(async (projectPath) => {
-    try {
-      return parseWorktreeList(await git(['worktree', 'list', '--porcelain'], projectPath), projectPath);
-    } catch {
-      return [];
-    }
-  }));
+  const listed = await Promise.all(projectPaths.map(listWorktrees));
   const byRealPath = new Map(records.map((record) => [realPath(record.worktreePath), record]));
   const openFolders = new Set(projectPaths.map(realPath));
   return Promise.all(distinctWorktrees(listed.flat(), byRealPath, openFolders).map(async (worktree) => (
