@@ -85,8 +85,6 @@ project is held to.
 - Do not touch the main branch, or any file outside this worktree.
 - Do not quit, kill, restart or rebuild any running app, including the one
   whose pane you are running in.
-- Do not remove this worktree when you are finished — that is done by hand,
-  from the app's worktree list.
 - If the card turns out to be wrong or impossible, stop, say why — as a
   comment on the pull request if one is already open, otherwise in a comment
   on the card.

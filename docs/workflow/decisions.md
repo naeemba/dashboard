@@ -195,3 +195,23 @@ hook cannot read: a script of your own.
   a hard rule may be held there instead of in `CLAUDE.md`. Code, tests and history lines cite the
   ids; moving each entry to `decisions.md` under a new id would have broken every citation for a
   change of heading.
+
+## workflow-decision-9: An agent stays in its own worktree, held by a hook
+
+Agreed on 2026-11-17, from the md audit. "Do not remove this worktree" (the `/work-card` skill and the
+review prompt) and "any file outside this worktree" were lines an agent had to remember; now `board
+guard` refuses, after the board's and the running app's questions, cutting the command into simple
+commands as the running-app guard does (`src/main/workflow/worktree-guard.ts`):
+
+- a `git worktree remove` of the folder the hook's `cwd` is in, or a folder holding it. Removing it kills
+  the session's shell and leaves its pane in a folder that is gone. The path is read from the `cwd`, the
+  last `cd` before it in the same command and its `git -C`; removing any other worktree goes through, so
+  `/adopt-docs` still cleans up the worktree it made;
+- an Edit, Write or NotebookEdit of a file in another worktree of the same repository, the main checkout
+  included: the deepest worktree `git worktree list` names for the file against the one for the `cwd`.
+  A file outside every worktree goes through, and so does a shell write (`sed -i`, `>`) into another
+  worktree, so `/work-card` keeps "any file outside this worktree". git runs only for a file tool, never
+  for a Bash call.
+
+It reads the command's text, as the other two do: a `cd` in an earlier call, a link to a worktree or a
+path built at run time still gets through.
