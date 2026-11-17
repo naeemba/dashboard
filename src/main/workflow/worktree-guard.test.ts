@@ -14,6 +14,7 @@ describe('removesOwnWorktree', () => {
     'git -C /p worktree remove ../p.worktrees/card',
     'git status && git worktree remove -f ./',
     'sudo git worktree remove .',
+    'git -c core.x=y worktree remove .',
   ])('refuses %s', (command) => {
     expect(removesOwnWorktree(command, own)).toBe(true);
   });
@@ -32,8 +33,15 @@ describe('removesOwnWorktree', () => {
     expect(removesOwnWorktree(command, own)).toBe(false);
   });
 
-  it('reads ~ as home', () => {
+  it('reads ~ as home, and a bare cd as a cd home', () => {
     expect(removesOwnWorktree('git worktree remove ~/w', `${os.homedir()}/w`)).toBe(true);
+    expect(removesOwnWorktree('cd && git worktree remove w', `${os.homedir()}/w`)).toBe(true);
+  });
+
+  it('lets a nested worktree go once the command has left it, unless the session started there', () => {
+    const command = 'cd /p && git worktree remove /p/.adopt-docs';
+    expect(removesOwnWorktree(command, '/p/.adopt-docs', '/p')).toBe(false);
+    expect(removesOwnWorktree(command, '/p/.adopt-docs', '/p/.adopt-docs')).toBe(true);
   });
 });
 

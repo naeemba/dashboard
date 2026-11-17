@@ -203,15 +203,17 @@ review prompt) and "any file outside this worktree" were lines an agent had to r
 guard` refuses, after the board's and the running app's questions, cutting the command into simple
 commands as the running-app guard does (`src/main/workflow/worktree-guard.ts`):
 
-- a `git worktree remove` of the folder the hook's `cwd` is in, or a folder holding it. Removing it kills
-  the session's shell and leaves its pane in a folder that is gone. The path is read from the `cwd`, the
-  last `cd` before it in the same command and its `git -C`; removing any other worktree goes through, so
-  `/adopt-docs` still cleans up the worktree it made;
+- a `git worktree remove` of a folder holding where that command runs (the hook's `cwd`, then the last
+  `cd` before it in the same command) or the session's start folder (`CLAUDE_PROJECT_DIR`), where its
+  shell goes back to. Removing it kills the session's shell and leaves its pane in a folder that is
+  gone. The path is read from where it runs and its `git -C`; removing any other worktree goes through,
+  so `/adopt-docs`, which moves into the worktree it made inside the checkout, still removes it with
+  `cd <checkout> && git worktree remove <worktree>`;
 - an Edit, Write or NotebookEdit of a file in another worktree of the same repository, the main checkout
   included: the deepest worktree `git worktree list` names for the file against the one for the `cwd`.
   A file outside every worktree goes through, and so does a shell write (`sed -i`, `>`) into another
   worktree, so `/work-card` keeps "any file outside this worktree". git runs only for a file tool, never
   for a Bash call.
 
-It reads the command's text, as the other two do: a `cd` in an earlier call, a link to a worktree or a
+It reads the command's text, as the other two do: a link to a worktree or a
 path built at run time still gets through.

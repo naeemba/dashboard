@@ -98,15 +98,16 @@ function answer(result: CommandResult): number {
 // `board guard`, a PreToolUse hook: the board guard (board-guard.ts), then the running-app guard
 // (running-app-guard.ts), then the worktree guard (worktree-guard.ts). The hook's input in, the refusal to print or ''. The board's refusal names
 // the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
-// (`boardVariable` set) and this program's own path outside one.
-export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList, listWorktrees: WorktreeList): string {
+// (`boardVariable` set) and this program's own path outside one. `startFolder` is the session's
+// (`CLAUDE_PROJECT_DIR`), the hook's `cwd` when unset.
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList, listWorktrees: WorktreeList, startFolder?: string): string {
   const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };
   const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
   const cwd = typeof input.cwd === 'string' ? input.cwd : '';
   const refused = boardGuard(toolName, input.tool_input, command)
     ?? runningAppGuard(toolName, input.tool_input, listProcesses)
-    ?? worktreeGuard(toolName, input.tool_input, cwd, listWorktrees);
+    ?? worktreeGuard(toolName, input.tool_input, cwd, listWorktrees, startFolder);
   return refused === undefined ? '' : JSON.stringify(refused);
 }
 
@@ -140,7 +141,7 @@ function gitWorktrees(folder: string): string[] | null {
 }
 
 function guard(): number {
-  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procProcesses, gitWorktrees));
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procProcesses, gitWorktrees, process.env.CLAUDE_PROJECT_DIR));
   return 0;
 }
 

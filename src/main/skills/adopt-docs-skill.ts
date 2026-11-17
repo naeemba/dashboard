@@ -60,8 +60,9 @@ No branch, no pull request.
 ## 2. Work in a worktree of your own
 
 Every shell command you run starts a fresh shell: a variable set in one is
-empty in the next, and a \`cd\` does not carry over. So the worktree gets a
-fixed path, written out in full every time. Run:
+empty in the next, and a \`cd\` carries over only when it ends inside the
+working directory. So the worktree gets a fixed path, written out in full every
+time. Run:
 
     git rev-parse --show-toplevel
 
@@ -74,7 +75,10 @@ wherever \`<worktree>\` appears below, never a shell variable:
     git worktree add --no-track -b docs/adopt-docs <worktree> origin/<default branch>
     mkdir -p "$(git rev-parse --git-path info)" && echo /.adopt-docs/ >> "$(git rev-parse --git-path info/exclude)"
 
-Both run in the checkout you started in. The second line hides the folder from
+Both run in the checkout you started in. Then move into the worktree with a
+lone \`cd <worktree>\`, which carries over because the worktree is inside the
+working directory; a hook refuses an edit of a file in another worktree than
+the one the session is in. The second line hides the folder from
 that checkout: without it, a \`git add .\` there commits the worktree as an
 embedded repository on someone's branch. Write the line with that one shell
 command, never by editing a file under \`.git\`. It is the only mark this run
@@ -250,8 +254,9 @@ the docs hold the why.
   features there are, what moved where, every doc left unplaced and why, every
   file left unclaimed, and every code comment or card still naming a moved doc.
   Do not merge.
-- Remove your worktree with \`git worktree remove <worktree>\`, run from
-  outside it; the branch stays, and so does the \`/.adopt-docs/\` exclude line.
+- Remove your worktree with \`cd <checkout> && git worktree remove <worktree>\`,
+  \`<checkout>\` being the path \`git rev-parse --show-toplevel\` printed in
+  step 2; the branch stays, and so does the \`/.adopt-docs/\` exclude line.
 
 Print the pull request's URL and stop.
 `;

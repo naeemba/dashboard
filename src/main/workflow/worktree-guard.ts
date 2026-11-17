@@ -5,8 +5,8 @@
 //
 // It runs inside `board guard` (board-program.ts), beside the board guard and the running-app guard,
 // so it reaches every door they do.
-// ponytail: it reads the command's text. A `cd` is followed only when it comes earlier in the same
-// command, `$PWD` and `~` are the only expansions read, and a link to a worktree is not resolved;
+// ponytail: it reads the command's text. A `cd` is followed when it comes earlier in the same command
+// or carried over into the hook's `cwd`, `$PWD` and `~` are the only expansions read, and a link to a worktree is not resolved;
 // matching more means running the shell, and this is a guard rail.
 
 import os from 'node:os';
@@ -30,9 +30,10 @@ function resolveWord(word: string, base: string): string {
   return path.resolve(base, expanded);
 }
 
-// Whether a `git … worktree remove` in `command` names the folder `cwd` is in, or one holding it: each
-// read from `cwd`, the `cd` before it and its `git -C`.
-export function removesOwnWorktree(command: string, cwd: string): boolean {
+// Whether a `git … worktree remove` in `command` names a folder holding where it runs (`cwd`, then the
+// `cd` before it) or `startFolder`, the folder the session started in, where its shell goes back to.
+// The target is read from where it runs and its `git -C`.
+export function removesOwnWorktree(command: string, cwd: string, startFolder = cwd): boolean {
   let base = cwd;
   return simpleCommands(command).some((part) => {
     const changed = invocation(part, 'cd');
@@ -47,7 +48,9 @@ export function removesOwnWorktree(command: string, cwd: string): boolean {
     }
     if (words[index] !== 'worktree' || words[index + 1] !== 'remove') return false;
     const target = words.slice(index + 2).find((word) => !word.startsWith('-'));
-    return target !== undefined && isInside(cwd, resolveWord(target, from));
+    if (target === undefined) return false;
+    const removed = resolveWord(target, from);
+    return isInside(base, removed) || isInside(startFolder, removed);
   });
 }
 
@@ -65,10 +68,10 @@ export function editsOtherWorktree(file: string, cwd: string, worktrees: readonl
 
 // The hook's answer, as `board guard` prints it on stdout; undefined lets the call through. The
 // worktrees are listed only for a file tool, so a Bash call runs no git.
-export function worktreeGuard(toolName: string, toolInput: unknown, cwd: string, listWorktrees: WorktreeList) {
+export function worktreeGuard(toolName: string, toolInput: unknown, cwd: string, listWorktrees: WorktreeList, startFolder = cwd) {
   if (cwd === '') return undefined;
   if (toolName === 'Bash') {
-    return removesOwnWorktree(textField(toolInput, 'command'), cwd) ? hookRefusal(REMOVE_REASON) : undefined;
+    return removesOwnWorktree(textField(toolInput, 'command'), cwd, startFolder) ? hookRefusal(REMOVE_REASON) : undefined;
   }
   if (!Object.hasOwn(FILE_FIELDS, toolName)) return undefined;
   const file = textField(toolInput, FILE_FIELDS[toolName]);
