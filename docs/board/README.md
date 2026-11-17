@@ -219,8 +219,8 @@ with an older text that spelled out the card format gets the new one. A file of
 the app's version or a later one is left alone, edited or not, and a checkout
 the sync brings up keeps an edit to it. Where git tracks the file, the rewrite
 is committed to origin's default branch by the sync below, as a card write is.
-Only a checkout on origin's default branch, or a folder outside git, has an
-older file rewritten; a feature branch's worktree keeps its copy until it
+Only a checkout on origin's default branch, a folder outside git, or a
+repository with no origin default branch has an older file rewritten; a feature branch's worktree keeps its copy until it
 merges main, so that merge has nothing in its way (board-decision-8).
 
 ## Kept in step with git

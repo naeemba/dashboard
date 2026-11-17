@@ -334,7 +334,11 @@ that is there: rewritten in place it was a change nobody committed, and in
 insta-experiences' card worktrees the worker's `git merge` of the target branch
 refused over it and stalled mid-task. The board guard refuses the hand edit the
 old text describes, so the branch's copy costs a turn at most
-(`seeded-docs-checkout.ts`). What an agent should know about a project goes in
+(`seeded-docs-checkout.ts`). A repository with no origin default branch (no
+origin remote, or none of origin/HEAD, main and master) is treated like a
+folder outside git and rewritten on any branch: no merge of main will ever bring
+the new text there and the sync cannot push it, so left alone a local-only repo
+would keep telling an agent to edit board.json for good. What an agent should know about a project goes in
 the project's own `CLAUDE.md`.
 
 **An agent records no pull request: the review starts from the one the app

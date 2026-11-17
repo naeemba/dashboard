@@ -15,9 +15,15 @@ describe('rewritesStaleSeededDocs', () => {
     expect(rewritesStaleSeededDocs({ ...onMain, branch: 'card-174' })).toBe(false);
   });
 
-  it('leaves a detached checkout and one with no default branch alone', () => {
+  it('leaves a detached checkout alone', () => {
     expect(rewritesStaleSeededDocs({ ...onMain, branch: null })).toBe(false);
-    expect(rewritesStaleSeededDocs({ ...onMain, branch: null, defaultBranch: null })).toBe(false);
+  });
+
+  // No origin remote, or a default branch git cannot name: nothing will ever bring main's copy.
+  it('rewrites in a repository with no origin default branch, on any branch', () => {
+    expect(rewritesStaleSeededDocs({ ...onMain, defaultBranch: null })).toBe(true);
+    expect(rewritesStaleSeededDocs({ ...onMain, branch: 'card-174', defaultBranch: null })).toBe(true);
+    expect(rewritesStaleSeededDocs({ ...onMain, branch: null, defaultBranch: null })).toBe(true);
   });
 
   it('rewrites in a folder git does not manage', () => {
@@ -26,12 +32,16 @@ describe('rewritesStaleSeededDocs', () => {
 });
 
 describe('rewritesStaleSeededDocsAt', () => {
-  // A folder the answer was asked of, then put under git with no origin: the kept answer holds for a
-  // minute, so a board read every five seconds does not ask git each time, and is asked again after.
+  // A folder the answer was asked of, then made a checkout on a feature branch of a repository whose
+  // origin has main: the kept answer holds for a minute, so a board read every five seconds does not
+  // ask git each time, and git is asked again after.
   it('keeps the answer a minute', () => {
     const folder = temporaryFolder('seeded-docs-');
     expect(rewritesStaleSeededDocsAt(folder, 0)).toBe(true);
-    execFileSync('git', ['init', '--quiet'], { cwd: folder });
+    const run = (...gitArguments: string[]) => execFileSync('git', ['-c', 'user.name=test', '-c', 'user.email=test@example.com', ...gitArguments], { cwd: folder });
+    run('init', '--quiet', '--initial-branch', 'feature');
+    run('commit', '--quiet', '--allow-empty', '-m', 'start');
+    run('update-ref', 'refs/remotes/origin/main', 'HEAD');
     expect(rewritesStaleSeededDocsAt(folder, 59_999)).toBe(true);
     expect(rewritesStaleSeededDocsAt(folder, 60_000)).toBe(false);
   });

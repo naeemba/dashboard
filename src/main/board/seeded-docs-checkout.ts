@@ -15,9 +15,13 @@ export type SeededDocsCheckout =
   | { insideWorkTree: false }
   | { insideWorkTree: true; branch: string | null; defaultBranch: string | null };
 
+//
+// A repository with no origin default branch (no origin remote, or none of origin/HEAD, main and
+// master) counts as outside git: no merge of the default branch will ever bring the new text there,
+// and the sync cannot push it either, so left alone the doc would stay stale for good.
 export function rewritesStaleSeededDocs(checkout: SeededDocsCheckout): boolean {
-  if (!checkout.insideWorkTree) return true;
-  return checkout.defaultBranch !== null && publishesCheckout(checkout.branch, checkout.defaultBranch);
+  if (!checkout.insideWorkTree || checkout.defaultBranch === null) return true;
+  return publishesCheckout(checkout.branch, checkout.defaultBranch);
 }
 
 // The answer for a folder, kept a minute. Asked only when a doc is there and stale, and off the default
