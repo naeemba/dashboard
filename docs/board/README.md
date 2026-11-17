@@ -302,7 +302,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `board-usage.ts`, `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
 - The guard: `board-guard.ts` (which tools and paths are refused), `board-guard-install.ts`
   (the program and the entry under `~/.claude`), each beside its `.test.ts`; `board guard` in
-  `board-program.ts` is the hook's command, and asks the running-app guard (workflow-decision-7) and the package-manager guard (workflow-decision-9) too;
+  `board-program.ts` is the hook's command, and asks the running-app guard (workflow-decision-7), the
+  package-manager guard (workflow-decision-9) and the worktree guard (workflow-decision-10) too;
   `hook-answer.ts` is what the guards share
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
@@ -377,7 +378,7 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a project still on `.dashboard/board.json`, when the board is first written, then every card is in its own file under `.dashboard/board/cards/`, `board.json` is gone, and the board reads back the same (`board-files.test.ts`, on a copy of this repository's own board).
 - Given a card file that does not parse, or parses to something that is not an object, when the board saves a change it read with a look, then that file is still there with its bytes; when the board next reads, it is set aside as `<id>.json.broken` (`<id>.json.2.broken` if that name is taken) and every file set aside is named (`board-files.test.ts`).
 - Given a `.dashboard/board.json` that does not parse, when the board reads, then it is moved aside as `board.json.broken` (`board.json.2.broken` and on if that name is taken, so a second break keeps the first damaged copy) and the board opens empty (`board-store.test.ts`).
-- Given a board file that does not parse, when the `board` command or a ship's Ship move would write, then the file is left under its own name, nothing is written or committed, the command exits 1 and the ship fails naming the file, and the same happens on every run after until the file is fixed (`board-files.test.ts`). Given a card file the app set aside, the review sweep does not mark that card as deleted (`review-flow.test.ts`).
+- Given a board file that does not parse, when the `board` command or card.move would write, then the file is left under its own name, nothing is written or committed, the command exits 1 naming the file (card.move answers `{ refused }` instead), and the same happens on every run after until the file is fixed (`board-files.test.ts` holds the read that leaves the file and names it; `src/main/actions/card/move.test.ts` holds card.move refusing and writing nothing). Given a card file the app set aside, the review sweep does not mark that card as deleted (`review-flow.test.ts`).
 - Given two branches that each add a card, or each move a different card, when both merge, then git merges them with no conflict (`board-files.test.ts`, with real merges).
 - Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files, then none is rewritten.
 - Given an installed `create-task.js` with mode 0644, when the app launches, then it is 0755 and runs as a command, its bytes not rewritten.

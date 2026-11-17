@@ -167,8 +167,6 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     `1. Run /pr-loop ${pullRequest} and let it finish.`,
     ...(merge ? land : report),
     '',
-    'Do not remove this worktree yourself: this pane is in it. The app removes it once the card is',
-    "in Done on the project's board and this pane has been closed. Do not quit, kill or rebuild any",
-    'running app.',
+    'Do not quit, kill or rebuild any running app.',
   ].join('\n');
 }

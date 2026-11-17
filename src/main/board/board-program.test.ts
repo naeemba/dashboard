@@ -130,29 +130,40 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
 });
 
 describe('board guard', () => {
-  const nothing = { listProcesses: () => null, exists: () => false };
+  const nothing = { listProcesses: () => null, exists: () => false, listWorktrees: () => null };
   const write = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/p/.dashboard/board/cards/a.json' } });
 
   it('names $DASHBOARD_BOARD in a pane the app opened, and its own path outside one', () => {
-    expect(guardAnswer(write, '/app/board.js', '/home/me/.claude/dashboard/board.js', nothing)).toContain('node \\"$DASHBOARD_BOARD\\"');
-    expect(guardAnswer(write, undefined, '/home/me/.claude/dashboard/board.js', nothing)).toContain('node \\"/home/me/.claude/dashboard/board.js\\"');
+    expect(guardAnswer(write, '/app/board.js', '/home/me/.claude/dashboard/board.js', nothing, undefined)).toContain('node \\"$DASHBOARD_BOARD\\"');
+    expect(guardAnswer(write, undefined, '/home/me/.claude/dashboard/board.js', nothing, undefined)).toContain('node \\"/home/me/.claude/dashboard/board.js\\"');
   });
 
   it('prints nothing for a call it lets through', () => {
-    expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js', nothing)).toBe('');
+    expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js', nothing, undefined)).toBe('');
   });
 
   it('refuses killing the running app, with its own reason', () => {
     const kill = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'kill 4242' } });
     const app = () => [{ pid: 4242, names: ['Dashboard'], commandLine: '/home/me/.local/opt/dashboard/Dashboard --type=renderer' }];
-    expect(JSON.parse(guardAnswer(kill, undefined, 'board.js', { ...nothing, listProcesses: app })).hookSpecificOutput.permissionDecisionReason).toContain('rebuild');
-    expect(guardAnswer(kill, undefined, 'board.js', nothing)).toBe('');
+    expect(JSON.parse(guardAnswer(kill, undefined, 'board.js', { ...nothing, listProcesses: app }, undefined)).hookSpecificOutput.permissionDecisionReason).toContain('rebuild');
+    expect(guardAnswer(kill, undefined, 'board.js', nothing, undefined)).toBe('');
   });
 
   it("refuses npm in the session folder's pnpm project, with its own reason", () => {
     const install = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'npm install' }, cwd: '/p' });
     const pnpmProject = (path: string) => ['/p/.git', '/p/pnpm-lock.yaml'].includes(path.replaceAll('\\', '/'));
-    expect(JSON.parse(guardAnswer(install, undefined, 'board.js', { ...nothing, exists: pnpmProject })).hookSpecificOutput.permissionDecisionReason).toContain('with pnpm');
-    expect(guardAnswer(install, undefined, 'board.js', nothing)).toBe('');
+    expect(JSON.parse(guardAnswer(install, undefined, 'board.js', { ...nothing, exists: pnpmProject }, undefined)).hookSpecificOutput.permissionDecisionReason).toContain('with pnpm');
+    expect(guardAnswer(install, undefined, 'board.js', nothing, undefined)).toBe('');
+  });
+
+  it("refuses an edit in another worktree, read from the hook's cwd", () => {
+    const edit = JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: '/p/src/a.ts' }, cwd: '/p.worktrees/card' });
+    const reason = JSON.parse(guardAnswer(edit, undefined, 'board.js', { ...nothing, listWorktrees: () => ['/p', '/p.worktrees/card'] }, undefined));
+    expect(reason.hookSpecificOutput.permissionDecisionReason).toContain('another worktree');
+  });
+
+  it('lets a session leave and remove the worktree it moved into, read from its start folder', () => {
+    const removal = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cd /p && git worktree remove /p/.adopt-docs' }, cwd: '/p/.adopt-docs' });
+    expect(guardAnswer(removal, undefined, 'board.js', nothing, '/p')).toBe('');
   });
 });

@@ -313,7 +313,7 @@ function folderBoard(stored: StoredBoard, legacy: Board | null): Board {
 //
 // Without `salvage`, nothing is moved: a damaged file is skipped, left under its own name, and named in
 // brokenFiles on every read until it is fixed. That is the read for a write that gets committed — the
-// `board` command and the ship move — which refuses whenever brokenFiles is not empty. A rename there
+// `board` command and card.move — which refuses whenever brokenFiles is not empty. A rename there
 // would take the tracked file away, so the second read would come back clean and the next `git add -A`
 // would commit that card as deleted.
 export function readBoard(projectPath: string, salvage = true): BoardRead {

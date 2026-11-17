@@ -8,10 +8,7 @@
 // a terminal worker's, a Claude screen's, and the user's own ~/.claude/settings.json
 // (board-guard-install.ts).
 
-import { hookRefusal, SHELL_REDIRECT, textField } from './hook-answer';
-
-// The tools whose input names the file they write, and the field it is in.
-const FILE_FIELDS: Record<string, string> = { Edit: 'file_path', Write: 'file_path', NotebookEdit: 'notebook_path' };
+import { FILE_FIELDS, hookRefusal, SHELL_REDIRECT, textField } from './hook-answer';
 
 // What a hook's matcher has to let through for this to see every call it refuses.
 const GUARDED_TOOLS = [...Object.keys(FILE_FIELDS), 'Bash'].join('|');

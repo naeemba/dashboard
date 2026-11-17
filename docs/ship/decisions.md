@@ -38,3 +38,17 @@ review worktree, where a script in this repository is not on disk. A watch that
 hangs is covered by the worker's pause ceiling (docs/workers/decisions.md).
 `/pr-loop` itself lives in the user's dotfiles and is not changed here.
 (2026-11-16)
+
+## ship-decision-3: A ship writes no board on the branch
+
+**A ship commits nothing to its branch. The card's column lives on origin's
+main and only there: card.move puts it in Ship and publishes before the ship
+cuts the branch, the agent's start moves it to Doing, and its pull request
+moves it after that (board-decision-6).** Until 2026-11-17 every ship began its
+branch with a `board: ship` commit setting the card's file to Ship. The pull
+request carried that file, so its merge wrote the card back to Ship on main,
+over the Doing or Review the app had moved it to, and a card in Ship is one the
+app starts an agent for: #310 got a second agent for work already done, and
+#317 and #318 carried the same commit that day. The first-ship and resumed-ship
+tests in `ship-flow.test.ts` hold that the branch is left at origin's tip.
+(2026-11-17)

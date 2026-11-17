@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:58:51.697Z",
-  "updatedAt": "2026-11-17T13:03:44.694Z",
-  "column": "Ship",
-  "order": 0
+  "updatedAt": "2026-11-17T13:12:27.460Z",
+  "branch": "a-board-write-that-cannot-reach-origin-writ",
+  "pullRequest": 322,
+  "comments": [
+    {
+      "at": "2026-11-17T13:12:27.437Z",
+      "body": "Pull request #322 opened: Board: a write that cannot reach origin is refused in a worktree, and a dropped connection is retried https://github.com/naeemba/dashboard/pull/322"
+    }
+  ],
+  "column": "Review",
+  "order": 5
 }

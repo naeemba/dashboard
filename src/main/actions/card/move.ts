@@ -58,8 +58,8 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
     });
     if (entry === 'nothing') return { output: moved.output, ran: entry, started: '' };
     // A ship cuts its branch off origin, so the Ship move is on origin first, the screen's own save of it
-    // included: a branch cut before it carries a Ship move of its own, and that card's file then
-    // conflicts with main's at the merge.
+    // included: the worktree's board then shows the card where main has it. The ship itself writes no
+    // board on the branch (ship-decision-3).
     await ports.published(projectPath);
     const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id });
     // The move stays written: a card refused a ship or a review is still where it was put, and the

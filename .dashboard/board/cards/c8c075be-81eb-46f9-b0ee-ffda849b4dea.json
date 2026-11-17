@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:20:46.956Z",
-  "updatedAt": "2026-11-17T13:02:27.657Z",
+  "updatedAt": "2026-11-17T13:03:29.553Z",
   "branch": "board-guard-refuses-npm-yarn-in-a-pnpm-proj",
   "pullRequest": 319,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-17T13:02:27.657Z",
       "body": "Converged, ready to merge. The conflict with main is resolved by merging main in (feee9dce, no rebase). Main's pane-send change is kept: its shellBody helper moved into hook-answer.ts beside the other shell helpers, and pane/send.ts now imports from there. The card file is main's copy. pnpm test (3451 passed), typecheck and lint pass. CI is green on head feee9dce (checks, windows, CodeQL), and the PR is mergeable."
+    },
+    {
+      "at": "2026-11-17T13:03:29.504Z",
+      "body": "Pull request #319 merged: board guard refuses another package manager than the lockfile names https://github.com/naeemba/dashboard/pull/319"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 258
 }

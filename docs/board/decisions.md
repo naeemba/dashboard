@@ -221,10 +221,9 @@ it again, which the retries above say usually works.
 **What it costs.** A commit on main per save. A fetch per `board` command, reads
 included, about a second. A repository whose main refuses pushes keeps its
 board in the checkout, uncommitted, with a warning; before this the review
-landed Done through the branch, and now the app's move into Done lands in the checkout only. And a
-ship still commits its Ship move on the new branch when origin did not have it
-yet; card.move waits for the sync before the ship so that origin has it, which
-leaves that commit empty and skipped.
+landed Done through the branch, and now the app's move into Done lands in the checkout only. A ship
+used to commit its Ship move on the new branch as well; it no longer writes the
+branch's board at all (ship-decision-3).
 
 ## board-decision-7: A card with a pull request open sits in Review, and the app keeps it there
 

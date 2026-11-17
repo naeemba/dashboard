@@ -1,6 +1,4 @@
 import type { ShipRequest, ShipResult, WorktreeEntry } from '../../shared/app/bridge';
-import { moveCardById, shipColumnIndex } from '../../shared/board/board';
-import { BOARD_PATHSPECS, readBoard, writeBoard } from '../board/board-store';
 import { failureText } from '../../shared/errors/failure';
 import { baseBranch, git } from '../app/git';
 import { isManagerPath } from '../../shared/manager/manager';
@@ -8,7 +6,7 @@ import { blockingChanges, uncommittedCount, workPrompt } from './ship';
 import { entryForCard } from './worktree-store';
 import type { ShipWorktree, ShipWorktreeRequest } from '../actions/worktree/make';
 
-// A card moved into Ship: the worktree, the branch, the board move and the pane. Out of main.ts because
+// A card moved into Ship: the worktree, the branch and the pane. Out of main.ts because
 // main had reached its 600-line ceiling; what it needs from there is the records and the panes, handed
 // over as ports. The decisions inside are ship.ts's and are tested there.
 
@@ -27,38 +25,6 @@ export type ShipPorts = {
   // Ships in one project run one after another, never together; ship.ts says why.
   queue<T>(projectPath: string, run: () => Promise<T>): Promise<T>;
 };
-
-// The card's Ship move, on the branch. The only board write that belongs to a ship; the agent makes
-// every move after it. The Ship column is there to move it into whatever the branch's file holds:
-// readBoard gives every board one, and a board with no file at all is the shipped four columns.
-//
-// Run again by a ship that is being finished rather than started, so it has to be safe to repeat: a
-// card already in Ship stages nothing, and `git commit` with nothing to commit exits 1, which would
-// fail the ship in git's own words with the branch and the folder already made. Nothing staged also
-// covers the card never having been on the base branch's board at all.
-//
-// A board file that does not parse writes nothing and answers why, for the ship to say. The read does
-// not salvage, so the file stays under its own name and a resumed ship refuses again until it is fixed;
-// readBoard says why a rename here would commit that card as deleted under a ship message.
-async function commitShipMove(entry: WorktreeEntry): Promise<string | null> {
-  const { board, brokenFiles } = readBoard(entry.worktreePath, false);
-  if (brokenFiles.length > 0) {
-    return `"${entry.title}" is on ${entry.branch}, but board files there do not parse: ${brokenFiles.join(', ')}; fix them and ship again`;
-  }
-  const moved = moveCardById(board, entry.cardId, shipColumnIndex(board));
-  if (!moved) return null;
-  writeBoard(entry.worktreePath, moved);
-  // Both halves name the board's files. A resumed ship runs in a worktree that has been lived in, so
-  // "is anything staged" would answer yes to whatever the agent had `git add`ed and commit its
-  // half-finished work under a board message. -A takes in board.json's removal when this write is the
-  // one that moved the board into its folder.
-  await git(['add', '-A', '--', ...BOARD_PATHSPECS], entry.worktreePath);
-  const staged = await git(['diff', '--cached', '--name-only', '--', ...BOARD_PATHSPECS], entry.worktreePath);
-  if (staged !== '') {
-    await git(['commit', '-m', `board: ship "${entry.title}"`, '--', ...BOARD_PATHSPECS], entry.worktreePath);
-  }
-  return null;
-}
 
 export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<ShipResult> {
   // The cards whose ship is running right now. Two ships of one card both get past the already-shipped
@@ -93,16 +59,17 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
 
     const { branch, worktreePath } = await ports.makeWorktree({ projectPath, title, cardId, base });
 
-    // Recorded the moment the folder is on disk, and before the pane and before the commit below, so a
-    // worktree that exists is always one the worktree list can show you and remove. An orphan worktree
-    // nothing knows about is the thing that piles up unseen.
+    // Recorded the moment the folder is on disk, and before the pane, so a worktree that exists is always
+    // one the worktree list can show you and remove. An orphan worktree nothing knows about is the thing
+    // that piles up unseen.
+    //
+    // The branch gets no board commit. The card's columns are origin's main's, moved by the app (Doing
+    // when the agent starts, then from the pull request); a card file on the branch rides the merge into
+    // main and puts the card back in whatever column the branch said (ship-decision-3).
     const entry = ports.recordWorktree({
       cardId, title, projectPath, branch, worktreePath, pane: null, startedAt: new Date().toISOString(),
       reviewing: false,
     });
-
-    const refusal = await commitShipMove(entry);
-    if (refusal !== null) return { ok: false, message: refusal };
     return ports.attachPane(entry, slot, prompt(projectPath, cardId, base));
   }
 
@@ -134,13 +101,10 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
       return await ports.queue(projectPath, async () => {
         if (!existing) return runShip(request);
         // An existing record that got past the refusal is a card nothing is running for: a ship that
-        // stopped part way — the project closed mid-ship, or a step failed after the worktree was made — or one whose agent has
-        // since exited. Which of those it was is not written down, so this finishes the work
-        // rather than assuming only the pane is missing — an agent started in a worktree whose Ship move
-        // is sitting uncommitted would have nothing left to commit it. Queued like a first ship, because
-        // it runs git in the same repository.
-        const refusal = await commitShipMove(existing);
-        if (refusal !== null) return { ok: false, message: refusal };
+        // stopped part way — the project closed mid-ship, or a step failed after the worktree was made —
+        // or one whose agent has since exited. Either way the worktree is there and only the agent is
+        // missing. Queued like a first ship so that its pane is picked after a first ship in flight
+        // has attached its own, not at the same moment; the base-branch read itself takes no lock.
         // `reviewing: false` is the other half of the forget above. A record that was the review keeps
         // the flag through this spread otherwise, and the sweep skips the card for good: the pull
         // request this ship opens is never reviewed, with nothing on screen saying why.
