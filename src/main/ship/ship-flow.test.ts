@@ -53,7 +53,7 @@ function expectBranchUntouched(worktreePath: string): void {
 // read by the project's path: a worktree folder is never listed there, so asking about it would
 // quietly turn every bump off.
 describe('the prompt a ship starts its agent on', () => {
-  it('asks about the project, not the worktree, and names its base, on a first ship', async () => {
+  it('asks about the project, not the worktree, names its base, and leaves the branch at origin\'s tip with a clean tree, on a first ship', async () => {
     const projectPath = project();
     const { shipCard, asked, prompts } = ports(projectPath, []);
     await shipCard(request(projectPath));
@@ -62,7 +62,7 @@ describe('the prompt a ship starts its agent on', () => {
     expectBranchUntouched(projectPath);
   });
 
-  it('does the same when it finishes a ship that stopped part way', async () => {
+  it('does the same, branch left at origin\'s tip with a clean tree, when it finishes a ship that stopped part way', async () => {
     const projectPath = project();
     const worktreePath = temporaryFolder('ship-worktree-');
     git(worktreePath, 'clone', '-q', git(projectPath, 'remote', 'get-url', 'origin'), '.');
@@ -77,4 +77,3 @@ describe('the prompt a ship starts its agent on', () => {
     expectBranchUntouched(worktreePath);
   });
 });
-

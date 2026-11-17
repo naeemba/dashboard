@@ -103,7 +103,8 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
         // An existing record that got past the refusal is a card nothing is running for: a ship that
         // stopped part way — the project closed mid-ship, or a step failed after the worktree was made —
         // or one whose agent has since exited. Either way the worktree is there and only the agent is
-        // missing. Queued like a first ship, because it reads the repository's base branch.
+        // missing. Queued like a first ship so that its pane is picked after a first ship in flight
+        // has attached its own, not at the same moment; the base-branch read itself takes no lock.
         // `reviewing: false` is the other half of the forget above. A record that was the review keeps
         // the flag through this spread otherwise, and the sweep skips the card for good: the pull
         // request this ship opens is never reviewed, with nothing on screen saying why.
