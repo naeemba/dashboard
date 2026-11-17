@@ -4,11 +4,15 @@
   "notes": "PR #197 skips 26 tests on Windows with `posixPathsOnly` because their expected values are POSIX literals such as /work/app. Every function behind them goes through node:path (exportTarget, docScope, fileCandidates, worktreePathFor, projectOfFolder, pickedFolder, projectNamed, firstProjectsFile, the project CLI and requests), so building fixtures with path.resolve(\"/work/app\") and expecting path.join(base, \"notes\", \"a.txt\") keeps them on both platforms. Skipped, the Windows job never runs the branches only Windows reaches: for example exportTarget's startsWith(`..${path.sep}`) check takes a backslash there, and nothing checks that a name like notes\\a.txt stays inside the folder.\n\nFiles: src/main/app/projects.test.ts, src/main/chat/chat-export-target.test.ts, src/main/drawer/docs-list.test.ts, src/main/nvim/file-open.test.ts, src/main/projects/project-cli.test.ts, src/main/projects/project-named.test.ts, src/main/projects/project-requests.test.ts, src/main/projects/projects-first.test.ts, src/main/ship/ship.test.ts, src/main/workers/session-requests.test.ts.\n\nDone when `grep -rn posixPathsOnly src/` prints nothing.\n\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441552042",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-17T10:41:37.458Z",
+  "updatedAt": "2026-11-17T13:46:32.965Z",
   "comments": [
     {
       "at": "2026-11-17T10:41:37.458Z",
       "body": "Also covers the 5 pane run --in tests from #316, now skipped on win32 (posixPathsOnly)."
+    },
+    {
+      "at": "2026-11-17T13:46:32.965Z",
+      "body": "Add the 4 dropsFirstConnection tests from #322 (board sync retry on a dropped connection): skipped on win32 because the fake is a POSIX shell script git on Windows cannot run."
     }
   ],
   "column": "Backlog",
