@@ -1,0 +1,17 @@
+{
+  "id": "bcb5f09e-3258-4fb1-8819-d8fbfa6fd0c4",
+  "title": "board ship commits the card, column Ship, onto the work branch",
+  "notes": "Every shipped card's branch starts with a 'board: ship' commit (e.g. c6d62239 on pane-send-refuses-text-that-starts-claude) that sets the card's column to Ship in .dashboard/board/cards/<id>.json. The PR carries that file; when it merges, main's card is written back to Ship, which can start an agent on a card already done (#310 hit this). Seen on #317 and #318 the same day. The ship should write the card on origin's default branch only, never into the worktree's branch, and a test should hold it. Found 2026-11-17.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-17T12:28:13.923Z",
+  "updatedAt": "2026-11-17T12:28:34.305Z",
+  "comments": [
+    {
+      "at": "2026-11-17T12:28:34.305Z",
+      "body": "Carded from the main session while four workers run; ship when a pane frees."
+    }
+  ],
+  "column": "Backlog",
+  "order": 46
+}
