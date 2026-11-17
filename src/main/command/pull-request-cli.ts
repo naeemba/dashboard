@@ -1,5 +1,5 @@
-// The `pr` noun: a pull request landed the way a review worker with merging on lands one (reviewPrompt
-// in ship/review.ts), as a command instead of steps a session copies out of a prompt. Note the head
+// The `pr` noun: a pull request landed as a command instead of steps a session copies out of a prompt.
+// A review worker with merging on runs it too (reviewPrompt in ship/review.ts). Note the head
 // commit, wait for every check on it, merge that commit and no other. It is a merge by whoever runs it,
 // so review.autoMerge, which gates only what a review worker does unasked, does not gate it.
 
