@@ -18,13 +18,16 @@ describe('parseSessionCommand', () => {
   // The prompt comes in as one quoted word or several; either way it is what the worker is handed.
   it('reads a run, its prompt and where it runs', () => {
     expect(parseSessionCommand(['run', '2:3', 'fix', 'the', 'tests'])).toEqual({
-      ok: true, command: { kind: 'run', id: '2:3', prompt: 'fix the tests', card: null, worktree: false, as: null },
+      ok: true, command: { kind: 'run', id: '2:3', prompt: 'fix the tests', card: null, worktree: false, folder: null, as: null },
     });
     expect(parseSessionCommand(['run', '2:3', '--card', 'abc', 'work the card'])).toMatchObject({
       ok: true, command: { card: 'abc', worktree: false, prompt: 'work the card' },
     });
     expect(parseSessionCommand(['run', '2:3', '--worktree', 'rename it'])).toMatchObject({
       ok: true, command: { card: null, worktree: true },
+    });
+    expect(parseSessionCommand(['run', '2:3', '--in', '../api-mr174', 'review it'])).toMatchObject({
+      ok: true, command: { card: null, worktree: false, folder: '../api-mr174', prompt: 'review it' },
     });
     expect(parseSessionCommand(['run', '2:3', '--card', 'abc', '--screen', 'work the card'])).toMatchObject({
       ok: true, command: { card: 'abc', as: 'screen', prompt: 'work the card' },
@@ -46,6 +49,9 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['run', '2:3'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['run', '2:3', '--card'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['run', '2:3', '--card', 'abc', '--worktree', 'go'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['run', '2:3', '--in', '../api-mr174', '--worktree', 'go'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['run', '2:3', '--card', 'abc', '--in', '../api-mr174', 'go'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['run', '2:3', 'go', '--in'])).toMatchObject({ ok: false });
   });
 
   // The editor is numbered below the terminals, and nothing here is for it.

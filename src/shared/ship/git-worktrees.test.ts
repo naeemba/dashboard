@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diskUsageBytes, distinctWorktrees, formatSize, parseWorktreeList } from './git-worktrees';
+import { diskUsageBytes, distinctWorktrees, formatSize, parseEveryWorktree, parseWorktreeList } from './git-worktrees';
 
 const LIST = [
   'worktree /code/crm',
@@ -31,6 +31,14 @@ describe('parseWorktreeList', () => {
 
   it('finds nothing in a project with no worktrees', () => {
     expect(parseWorktreeList('worktree /code/crm\nHEAD 1\nbranch refs/heads/main', '/code/crm')).toEqual([]);
+  });
+});
+
+// A project opened at a linked worktree: git still prints the main checkout first, and --in may name it.
+describe('parseEveryWorktree', () => {
+  it('keeps the main checkout git lists first', () => {
+    expect(parseEveryWorktree(LIST, '/code/crm.worktrees/feature').map((worktree) => worktree.worktreePath))
+      .toEqual(['/code/crm', '/code/crm.worktrees/feature', '/code/crm/.worktrees/pr 7', '/code/gone']);
   });
 });
 

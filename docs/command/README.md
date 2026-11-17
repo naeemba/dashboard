@@ -10,7 +10,7 @@ its own verbs; this feature only picks the program.
 | Noun | Program | Verbs |
 |---|---|---|
 | `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment; any of them with `--project <name>` |
-| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run, list [--all], send, release, finish, report, notify |
+| `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run [--card \| --worktree \| --in <folder>], list [--all], send, release, finish, report, notify |
 | `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
 | `pr` | the `pr` program, here | land [--project] |
 | `budget` | the `budget` program, here | none, or --cap |

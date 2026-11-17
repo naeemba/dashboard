@@ -5,7 +5,7 @@ import { replaceFile } from './replace-file';
 import type { Project } from '../../shared/app/bridge';
 import { wholePath } from '../nvim/file-open';
 
-function isDirectory(path: string): boolean {
+export function isDirectory(path: string): boolean {
   return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
 }
 

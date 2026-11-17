@@ -22,7 +22,17 @@ export type ScannedWorktree = GitWorktree & { dirty: boolean; unreadable: boolea
 // comes back among the others; `distinctWorktrees` drops it with the rest of the open folders. A
 // detached worktree has no branch line, and is named by the start of the commit it sits on.
 export function parseWorktreeList(porcelain: string, projectPath: string): GitWorktree[] {
-  return porcelain.split(/\n\n+/).slice(1).flatMap((block): GitWorktree[] => {
+  return worktreeBlocks(porcelain.split(/\n\n+/).slice(1), projectPath);
+}
+
+// The same listing with the main checkout kept: `pane run --in` may start a worker there when the
+// project was opened at a linked worktree, and git's first block is that checkout, not the project.
+export function parseEveryWorktree(porcelain: string, projectPath: string): GitWorktree[] {
+  return worktreeBlocks(porcelain.split(/\n\n+/), projectPath);
+}
+
+function worktreeBlocks(blocks: readonly string[], projectPath: string): GitWorktree[] {
+  return blocks.flatMap((block): GitWorktree[] => {
     const fields = new Map(block.split('\n').map((line) => {
       const space = line.indexOf(' ');
       return space === -1 ? [line, ''] : [line.slice(0, space), line.slice(space + 1)];

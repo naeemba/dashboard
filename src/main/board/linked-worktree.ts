@@ -14,11 +14,18 @@ import { worktreesRoot } from '../ship/ship';
 // anything, and isProjectBoard asks it as well. A relative gitdir (`worktree.useRelativePaths`) is
 // resolved against the folder, not the process's directory. Both sides go through realPath.
 export function isLinkedWorktree(folder: string): boolean {
+  const checkout = worktreeCheckoutOf(folder);
+  return checkout !== undefined && dirname(realPath(folder)) === realPath(worktreesRoot(checkout));
+}
+
+// The checkout whose linked worktree the folder is the top of, from the `gitdir:` of its `.git` file,
+// or undefined: a checkout's own `.git` folder, a submodule's (`.git/modules/`), a bare repository's
+// checkout and a folder with no `.git` are none. A relative gitdir is resolved against the folder.
+export function worktreeCheckoutOf(folder: string): string | undefined {
   try {
     const checkout = /^gitdir: (.*)[/\\]\.git[/\\]worktrees[/\\]/.exec(readFileSync(join(folder, '.git'), 'utf8'))?.[1];
-    if (checkout === undefined) return false;
-    return dirname(realPath(folder)) === realPath(worktreesRoot(resolve(folder, checkout)));
+    return checkout === undefined ? undefined : resolve(folder, checkout);
   } catch {
-    return false;
+    return undefined;
   }
 }
