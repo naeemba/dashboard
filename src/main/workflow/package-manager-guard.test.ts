@@ -12,6 +12,14 @@ describe('nearestLockfile', () => {
     expect(nearestLockfile('/work/app/src', files('/work/app/.git', '/work/package-lock.json'))).toBeNull();
   });
 
+  it('takes the nearest, so a monorepo package with its own lockfile is read before the root', () => {
+    expect(nearestLockfile('/work/app/tools/cli/src', files('/work/app/.git', '/work/app/pnpm-lock.yaml', '/work/app/tools/cli/package-lock.json'))).toEqual({ lockfile: 'package-lock.json', manager: 'npm' });
+  });
+
+  it('reads none in a folder with no lockfile and no repository above it', () => {
+    expect(nearestLockfile('/home/someone/scratch', files())).toBeNull();
+  });
+
   it('reads none where one folder holds lockfiles of two managers', () => {
     expect(nearestLockfile('/work/app', files('/work/app/yarn.lock', '/work/app/package-lock.json'))).toBeNull();
     expect(nearestLockfile('/work/app', files('/work/app/bun.lock', '/work/app/bun.lockb'))).toEqual({ lockfile: 'bun.lock', manager: 'bun' });
@@ -30,7 +38,7 @@ describe('managersUsed', () => {
     ['bun install', 'bun'],
     ['git pull && npm install && pnpm test', 'npm'],
     ['pnpm install', 'pnpm'],
-    ['sudo /usr/bin/npm install -g x', 'npm'],
+    ['sudo /usr/bin/npm install --save-dev x', 'npm'],
   ])('reads %s as installing or running through %s', (command, used) => {
     expect(managersUsed(command)).toContain(used);
   });
@@ -39,6 +47,16 @@ describe('managersUsed', () => {
     'npm version minor --no-git-tag-version',
     'npm view vitest version',
     'npx tsc --noEmit',
+    'npm i -g x',
+    'sudo npm install --global x',
+    'npm install --location=global x',
+    'pnpm add -g x',
+    'yarn global add x',
+    'bun add -g x',
+    'pnpm dlx create-vite app',
+    'npm exec -- tsc',
+    'yarn dlx create-vite app',
+    'bunx tsc',
     'git commit -m "npm install broke"',
     'grep -rn "npm install" docs',
   ])('reads %s as neither', (command) => {
@@ -60,6 +78,23 @@ describe('packageManagerGuard', () => {
     expect(packageManagerGuard('Bash', { command: 'pnpm install' }, '/work/app', npmProject)).toBeDefined();
     expect(packageManagerGuard('Bash', { command: 'npm install' }, '/work/app', npmProject)).toBeUndefined();
     expect(packageManagerGuard('Bash', { command: 'pnpm install && pnpm run lint' }, '/work/app', pnpmProject)).toBeUndefined();
+  });
+
+  it('lets a global install and a one-off run through in any project', () => {
+    for (const command of ['npm i -g x', 'pnpm add -g x', 'yarn global add x', 'pnpm dlx x', 'npm exec x', 'yarn dlx x']) {
+      expect(packageManagerGuard('Bash', { command }, '/work/app', files('/work/app/bun.lock'))).toBeUndefined();
+    }
+  });
+
+  it('follows the nearest lockfile in a monorepo package, not the root one', () => {
+    const monorepo = files('/work/app/.git', '/work/app/pnpm-lock.yaml', '/work/app/tools/cli/package-lock.json');
+    expect(packageManagerGuard('Bash', { command: 'npm install' }, '/work/app/tools/cli', monorepo)).toBeUndefined();
+    expect(packageManagerGuard('Bash', { command: 'pnpm install' }, '/work/app/tools/cli', monorepo)).toBeDefined();
+    expect(packageManagerGuard('Bash', { command: 'npm install' }, '/work/app/packages/core', monorepo)).toBeDefined();
+  });
+
+  it('lets anything through in a folder with no lockfile', () => {
+    expect(packageManagerGuard('Bash', { command: 'yarn add x' }, '/home/someone/scratch', files())).toBeUndefined();
   });
 
   it('checks no file for a command naming no manager', () => {

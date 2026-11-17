@@ -29,11 +29,14 @@ export function nearestLockfile(folder: string, exists: (path: string) => boolea
   }
 }
 
-// The managers a command installs or runs a script through; a bare `yarn` installs.
+// A global install (`npm i -g x`, `pnpm add --global x`) writes no project's tree or lockfile.
+const GLOBAL_FLAGS = new Set(['-g', '--global', '--location=global']);
+
+// The managers a command installs or runs a script through in the project; a bare `yarn` installs.
 export function managersUsed(command: string): string[] {
   return simpleCommands(command).flatMap((part) => {
     const call = invocation(part, 'npm|pnpm|yarn|bun');
-    if (call === null) return [];
+    if (call === null || call.words.some((word) => GLOBAL_FLAGS.has(word))) return [];
     const subcommand = call.words.find((word) => !word.startsWith('-'));
     return (subcommand === undefined ? call.verb === 'yarn' : INSTALLS_OR_RUNS.has(subcommand)) ? [call.verb] : [];
   });

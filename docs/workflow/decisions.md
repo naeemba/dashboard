@@ -210,5 +210,7 @@ every project the user's `~/.claude/settings.json` reaches, and the line is gone
 - **Only installs and script runs are refused**: `install`, `ci`, `add`, `remove`, `update`, `run`,
   `test`, `start` and their short forms, and a bare `yarn`. `npm version --no-git-tag-version` is how
   `/work-card` bumps in any project, and `npx` or `npm view` touch neither the tree nor the lockfile.
+  Nor do a global install (`-g`, `--global`, `--location=global`, `yarn global`) or a one-off run
+  (`pnpm dlx`, `npm exec`, `yarn dlx`), so those go through in any project.
 - **It reads the command's text**, as the other two guards do: a `cd` earlier in the command, an
   `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through.
