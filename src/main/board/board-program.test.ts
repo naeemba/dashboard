@@ -2,7 +2,7 @@ import { readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addCard, emptyBoard } from '../../shared/board/board';
-import { BOARD_FOLDER_PATH, readBoard, seedBoardDirectory, writeBoard } from './board-store';
+import { BOARD_FOLDER_PATH, EXPLANATION_FOR_AGENTS, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { guardAnswer, runBoardProgram } from './board-program';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { syncBoard } from './board-sync-git';
@@ -79,6 +79,26 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
     await syncBoard(checkout);
     const card = boardOn(bare)?.columns.flatMap((column) => column.cards).find((entry) => entry.id === 'card');
     expect(card?.comments?.map((comment) => comment.body)).toEqual(['hello']);
+  });
+
+  // The usage changes no card, but the read rewrote a stale doc: the sync commits it, so the checkout
+  // is clean rather than holding a modified file nothing will ever commit.
+  it('commits the doc the usage read rewrote, and leaves the checkout clean', async () => {
+    const bare = remote();
+    const checkout = clone(bare, false);
+    git(checkout, 'checkout', '--quiet', 'main');
+    seedBoardDirectory(checkout);
+    writeBoard(checkout, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
+    writeFileSync(join(checkout, '.dashboard', 'CLAUDE.md'), 'Edit board.json directly.\n');
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'old docs');
+    git(checkout, 'push', '--quiet', 'origin', 'main');
+    vi.spyOn(process, 'cwd').mockReturnValue(checkout);
+    vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+    await runBoardProgram([]);
+    expect(git(bare, 'show', 'main:.dashboard/CLAUDE.md')).toBe(EXPLANATION_FOR_AGENTS.trimEnd());
+    expect(git(checkout, 'status', '--porcelain')).toBe('');
   });
 
   // A sync that throws for a reason nobody planned for is one more way of not reaching origin: the
