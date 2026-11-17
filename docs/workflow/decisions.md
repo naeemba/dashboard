@@ -195,3 +195,20 @@ hook cannot read: a script of your own.
   a hard rule may be held there instead of in `CLAUDE.md`. Code, tests and history lines cite the
   ids; moving each entry to `decisions.md` under a new id would have broken every citation for a
   change of heading.
+
+## workflow-decision-9: A project's lockfile picks its package manager, held by a hook
+
+Agreed on 2026-11-17, from the md audit. "Use the package manager the lockfile names" was a line in the
+`/work-card` skill an agent had to remember; npm in a pnpm project installs a tree pnpm never resolved
+and leaves a `package-lock.json` in the diff. Now the PreToolUse hook `board guard` runs refuses it, in
+every project the user's `~/.claude/settings.json` reaches, and the line is gone from the skill.
+
+- **The nearest lockfile names the manager**: `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`/`bun.lockb`,
+  `package-lock.json`, looked for from the session's folder up to the repository's top (the folder
+  holding `.git`), so a monorepo package finds its root's and a stray lockfile above the repository is
+  never read. No lockfile, or two naming different managers in one folder, and nothing is refused.
+- **Only installs and script runs are refused**: `install`, `ci`, `add`, `remove`, `update`, `run`,
+  `test`, `start` and their short forms, and a bare `yarn`. `npm version --no-git-tag-version` is how
+  `/work-card` bumps in any project, and `npx` or `npm view` touch neither the tree nor the lockfile.
+- **It reads the command's text**, as the other two guards do: a `cd` earlier in the command, an
+  `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through.
