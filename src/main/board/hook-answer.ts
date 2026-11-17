@@ -57,6 +57,11 @@ export const simpleCommands = (command: string) => split(command, true);
 // A command's words, without their quotes or the `)` or `}` closing a subshell or group.
 export const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
 
+// The quoted body of `sh -c '…'` (bash, zsh, dash too), which runs as a command line of its own.
+export function shellBody(part: string): string | null {
+  return invocation(part, 'sh|bash|zsh|dash') ? /\s-\w*c\s+(["'])(.*)\1/.exec(part)?.[2] ?? null : null;
+}
+
 // What may stand before a verb: a subshell or group opening, then sudo (with its flags), command,
 // exec, nohup, nice (with its flags), `timeout <duration>` (with its flags) or env (with its
 // assignments), in any order.
