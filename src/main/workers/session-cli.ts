@@ -11,7 +11,8 @@ import { asksForReport, LAST_MESSAGE_KEPT, tail } from '../../shared/workers/don
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
   // `as` is --screen or --terminal, or null for neither: pane.dispatch picks then (workers-decision-5).
-  | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; as: PaneKind | null }
+  // `folder` is --in's, as typed: the app resolves it from the folder the command ran in.
+  | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; folder: string | null; as: PaneKind | null }
   | { kind: 'list'; all: boolean }
   | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
@@ -40,7 +41,7 @@ export const refused = (output: string): SessionReply => ({ ok: false, output })
 export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
 
   session claim [--project <name|aka>]
-  session run <id> [--card <card id> | --worktree] [--terminal] "<prompt>"
+  session run <id> [--card <card id> | --worktree | --in <folder>] [--terminal] "<prompt>"
   session list [--all]
   session send <id> "<text>"
   session release <id>
@@ -52,7 +53,10 @@ claim opens a worker pane and prints its id: --project opens it on the page of t
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
-and neither in the project itself. The worker is a Claude screen; --terminal runs Claude Code in the
+--in in a folder that is already there, inside the project or a worktree of its repository (one on
+a branch you keep yourself), which nothing makes or removes, and none of them in the project itself.
+Never start Claude by typing \`claude\` with send: that worker gets none of the app's settings,
+hooks or report to main. The worker is a Claude screen; --terminal runs Claude Code in the
 pane's terminal. On Windows the terminal is the default, since a screen's turn there ends with the
 app, and --screen asks for a screen. send types the text into the pane and presses Enter, or hands
 it to a Claude screen as its next prompt. finish releases a worker whose work is in: its card is
@@ -85,6 +89,7 @@ function parseRun(words: readonly string[]): Parsed {
   if (typeof id !== 'string') return id;
   let card: string | null = null;
   let worktree = false;
+  let folder: string | null = null;
   let as: PaneKind | null = null;
   const prompt: string[] = [];
   for (let at = 1; at < words.length; at++) {
@@ -97,11 +102,16 @@ function parseRun(words: readonly string[]): Parsed {
     else if (words[at] === '--card') {
       card = words[++at] ?? '';
       if (card === '') return refuse('--card needs the card id, the one `board list` prints');
+    } else if (words[at] === '--in') {
+      folder = words[++at] ?? '';
+      if (folder.trim() === '') return refuse('--in needs the folder the worker runs in');
     } else prompt.push(words[at]);
   }
-  if (card !== null && worktree) return refuse('a task runs in its card\'s worktree or a throwaway one, not both');
+  if ([card !== null, worktree, folder !== null].filter(Boolean).length > 1) {
+    return refuse('a task runs in its card\'s worktree, a throwaway one or a folder you name with --in, only one of them');
+  }
   if (prompt.join(' ').trim() === '') return refuse('session run needs a prompt for the worker');
-  return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, as } };
+  return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, folder, as } };
 }
 
 const COUNT = /^\d+$/;
