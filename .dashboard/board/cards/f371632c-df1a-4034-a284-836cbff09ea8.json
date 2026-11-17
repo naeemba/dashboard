@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T13:49:35.346Z",
-  "updatedAt": "2026-11-17T13:49:35.347Z",
-  "column": "Backlog",
-  "order": 46
+  "updatedAt": "2026-11-17T13:49:43.232Z",
+  "branch": "review-loop-merges-through-pr-land",
+  "column": "Doing",
+  "order": 0
 }
