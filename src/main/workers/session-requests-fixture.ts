@@ -69,7 +69,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       { '/work/api-mr174': { worktree: '/work/api-mr174' }, '/work/api.worktrees/card-one': { worktree: '/work/api.worktrees/card-one' }, '/work/api/.claude/worktrees/x': { worktree: '/work/api/.claude/worktrees/x' } }[folder]
       ?? (folder === '/work/api/packages/web' ? { worktree: undefined } : { refused: `${folder} is not a folder` })
     ),
-    isLinkedWorktree: (folder) => /\/(api-mr174|api\.worktrees\/[^/]+|\.claude\/worktrees\/[^/]+)$/.test(folder),
+    holdsWorktree: (folder) => /\/(api-mr174|api\.worktrees\/[^/]+|\.claude\/worktrees\/[^/]+)$/.test(folder),
     exists: () => true,
     prune: async () => undefined,
     unfinished: async () => null,

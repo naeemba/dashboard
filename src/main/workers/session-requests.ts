@@ -72,8 +72,8 @@ export type SessionPorts = {
   // Why `run --in` may not start a worker in the folder, or the worktree of the repository it is in,
   // undefined for a folder of the project's own checkout (run-folder.ts).
   checkRunFolder(projectPath: string, folder: string): Promise<{ worktree: string | undefined } | Refused>;
-  // Whether the folder is a linked worktree's top, holding a `.git` file (run-folder.ts).
-  isLinkedWorktree(folder: string): boolean;
+  // Whether the folder is a linked worktree's top, from its `.git` file (run-folder.ts).
+  holdsWorktree(folder: string): boolean;
   // Whether a throwaway's folder is still there (pane.release).
   exists(worktreePath: string): boolean;
   prune(projectPath: string): Promise<void>;
@@ -302,12 +302,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // The worktree the pane works in, when it is not the project's own checkout: that one has no branch
   // of its own, and the merged pull requests of the branch it is on are anybody's.
   // A folder inside the checkout (`run --in packages/web`) is the checkout too, unless it is in a
-  // worktree nested there (`.claude/worktrees/x`).
+  // worktree nested there (`.claude/worktrees/x`). A folder already gone is handed back as it is, since
+  // its `.git` file went with it: a nested worktree removed after its merge is then taken by the merge in
+  // branchMerged. So is a deleted folder of the checkout, whose worker has nowhere left to work.
   function ownWorktree(id: string): string | undefined {
     const directory = ports.directoryOf(id);
     const project = paneProject(id);
     if (directory === undefined || project === undefined || !isInside(directory, project)) return directory;
-    return worktreeWithin(directory, project, ports.isLinkedWorktree);
+    if (!ports.exists(directory)) return directory;
+    return worktreeWithin(directory, project, ports.holdsWorktree);
   }
 
   // Another pane whose agent is at work in the worktree, which two agents write over each other's work
@@ -315,7 +318,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   const agentAtWorkIn = (worktree: string, exceptId: string): string | undefined => openPaneIds().find((each) => {
     const there = ports.directoryOf(each);
     return each !== exceptId && ports.agentIn(each) && there !== undefined && isInside(there, worktree)
-      && worktreeWithin(there, worktree, ports.isLinkedWorktree) === undefined;
+      && worktreeWithin(there, worktree, ports.holdsWorktree) === undefined;
   });
 
   // Whether the branch of the pane's own worktree merged, which is the card's too before the follow

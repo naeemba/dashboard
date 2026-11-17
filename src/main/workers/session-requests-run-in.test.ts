@@ -49,6 +49,19 @@ describe('sessionRequests run --in', () => {
     expect(await answer({ directory: '/work/api', args: ['finish', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
   });
 
+  // A nested worktree removed after its merge has no `.git` file left to find it by: gone, it was taken.
+  it('finishes a worker whose nested worktree is gone', async () => {
+    const { ports } = project({
+      directoryOf: (id) => (id === '2:1' ? '/work/api/.claude/worktrees/x' : '/work/api'),
+      exists: (folder) => folder !== '/work/api/.claude/worktrees/x',
+      holdsWorktree: () => false,
+    });
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    expect(await answer({ directory: '/work/api', args: ['finish', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
+  });
+
   // The other order of the --in refusal below: the --in agent is in no card's record.
   it('refuses --card a worktree an --in agent is at work in', async () => {
     const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api.worktrees/card-one' : '/work/api') });

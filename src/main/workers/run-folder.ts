@@ -1,7 +1,7 @@
-import { statSync } from 'node:fs';
 import path from 'node:path';
 import { isDirectory } from '../app/projects';
 import { realPath } from '../app/real-path';
+import { worktreeCheckoutOf } from '../board/linked-worktree';
 import { isInside } from '../panes/shell-directory';
 import { listWorktrees } from '../ship/worktree-scan';
 import { parseEveryWorktree } from '../../shared/ship/git-worktrees';
@@ -46,17 +46,16 @@ export async function checkRunFolder(projectPath: string, folder: string): Promi
 }
 
 // The linked worktree a folder inside `root` is in below `root`, or undefined when it is root's own:
-// the first folder up from it holding a `.git` file, which a linked worktree has and a checkout does not
-// (a `.git` folder). Read from disk rather than remembered from `run --in`, so a worker resumed at
+// the first folder up from it that holdsWorktree. Read from disk rather than remembered from `run --in`, so a worker resumed at
 // launch is in the same worktree as before the restart.
-// ponytail: a submodule has a `.git` file too and reads as a worktree; its own branch is what it merges.
-export function worktreeWithin(directory: string, root: string, isLinkedWorktree: (folder: string) => boolean): string | undefined {
+export function worktreeWithin(directory: string, root: string, holdsWorktree: (folder: string) => boolean): string | undefined {
   for (let folder = directory; !isInside(root, folder); folder = path.dirname(folder)) {
-    if (isLinkedWorktree(folder)) return folder;
+    if (holdsWorktree(folder)) return folder;
   }
   return undefined;
 }
 
-export function isLinkedWorktree(folder: string): boolean {
-  return statSync(path.join(folder, '.git'), { throwIfNoEntry: false })?.isFile() ?? false;
+// Whether the folder is the top of a linked worktree, wherever it sits: a submodule's `.git` file is not one.
+export function holdsWorktree(folder: string): boolean {
+  return worktreeCheckoutOf(folder) !== undefined;
 }

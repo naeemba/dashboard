@@ -37,7 +37,7 @@ import { announceSocket, clearSocketPointer } from './command/app-address';
 import { environmentForPanes, paneCommands } from './command/pane-environment';
 import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
 import { worktreeChecks } from './workers/finished-work';
-import { checkRunFolder, isLinkedWorktree } from './workers/run-folder';
+import { checkRunFolder, holdsWorktree } from './workers/run-folder';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
@@ -781,7 +781,7 @@ const workerAnswers = sessionRequests({
   },
   makeWorktree: worktree.makeThrowaway,
   checkRunFolder,
-  isLinkedWorktree,
+  holdsWorktree,
   exists: existsSync,
   prune: async (projectPath) => { await git(['worktree', 'prune'], projectPath); },
   ...worktreeChecks(runProgram),

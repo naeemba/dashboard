@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { isLinkedWorktree } from './linked-worktree';
+import { isLinkedWorktree, worktreeCheckoutOf } from './linked-worktree';
 
 function folderWithGit(git: string | null, folder = temporaryFolder('linked-worktree-')): string {
   mkdirSync(folder, { recursive: true });
@@ -40,5 +40,15 @@ describe('isLinkedWorktree', () => {
     const work = temporaryFolder('linked-worktree-');
     mkdirSync(join(work, 'api'));
     expect(isLinkedWorktree(folderWithGit(`gitdir: ${join(work, 'api', '.git', 'worktrees', 'side')}\n`, join(work, 'side')))).toBe(false);
+  });
+});
+
+describe('worktreeCheckoutOf', () => {
+  it('names the checkout of a worktree wherever it sits, and none for a checkout or a submodule', () => {
+    const work = temporaryFolder('linked-worktree-');
+    const nested = folderWithGit('gitdir: ../../../.git/worktrees/x\n', join(work, 'api', '.claude', 'worktrees', 'x'));
+    expect(worktreeCheckoutOf(nested)).toBe(join(work, 'api'));
+    expect(worktreeCheckoutOf(folderWithGit(null))).toBeUndefined();
+    expect(worktreeCheckoutOf(folderWithGit('gitdir: ../.git/modules/vendor\n'))).toBeUndefined();
   });
 });
