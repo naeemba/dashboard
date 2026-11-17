@@ -71,11 +71,7 @@ project is held to.
   version, merge \`origin/$2\` the same way, keep its number and bump again
   from it.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
-  type-check and lint scripts. Run them through the package manager its
-  lockfile names — \`pnpm-lock.yaml\` is pnpm, \`yarn.lock\` yarn, \`bun.lock\` or
-  \`bun.lockb\` bun, \`package-lock.json\` npm — never a different one: npm in a
-  pnpm project writes a \`package-lock.json\` nobody wants. All of them must
-  pass. If one fails and you cannot fix it, stop: do not open the pull
+  type-check and lint scripts. All of them must pass. If one fails and you cannot fix it, stop: do not open the pull
   request, and say what failed and why in a comment on the card.
 - Commit in small pieces with messages that say what changed and why.
 - Push the branch and open the pull request with \`gh pr create\`.

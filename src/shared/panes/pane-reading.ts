@@ -79,7 +79,7 @@ export type PaneUse = PaneReading & { exited: boolean };
 //
 // docs/board/README.md says both out loud, in the paragraph on what counts as running, because that
 // is where someone learns what a ship can take.
-function runsAProgram(foreground: string | undefined, shell: string | undefined): boolean {
+export function runsAProgram(foreground: string | undefined, shell: string | undefined): boolean {
   // No shell recorded means no pty was ever spawned, which is the same nothing-is-running answer an
   // undefined foreground gives.
   return foreground !== undefined && shell !== undefined && baseName(foreground) !== baseName(shell);

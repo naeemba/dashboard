@@ -1,4 +1,4 @@
-// The PreToolUse hook that keeps an agent inside its own worktree (workflow-decision-9). It refuses a
+// The PreToolUse hook that keeps an agent inside its own worktree (workflow-decision-10). It refuses a
 // `git worktree remove` of the folder the session runs in, which kills the session's own shell and
 // leaves its pane in a folder that is gone, and an Edit, Write or NotebookEdit of a file in another
 // worktree of the same repository, which writes over the work of whoever is in that one.

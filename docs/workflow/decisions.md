@@ -196,11 +196,36 @@ hook cannot read: a script of your own.
   ids; moving each entry to `decisions.md` under a new id would have broken every citation for a
   change of heading.
 
-## workflow-decision-9: An agent stays in its own worktree, held by a hook
+## workflow-decision-9: A project's lockfile picks its package manager, held by a hook
+
+Agreed on 2026-11-17, from the md audit. "Use the package manager the lockfile names" was a line in the
+`/work-card` skill an agent had to remember; npm in a pnpm project installs a tree pnpm never resolved
+and leaves a `package-lock.json` in the diff. Now the PreToolUse hook `board guard` runs refuses it, in
+every project the user's `~/.claude/settings.json` reaches, and the line is gone from the skill.
+
+- **The nearest lockfile names the manager**: `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`/`bun.lockb`,
+  `package-lock.json`, looked for from the session's folder up to the repository's top (the folder
+  holding `.git`), so a monorepo package finds its root's and a stray lockfile above the repository is
+  never read. Outside a repository nothing is refused: `~/package-lock.json` from an old `npm i` would
+  otherwise decide every un-initialised folder under `~`. No lockfile, or two naming different managers
+  in one folder, and nothing is refused.
+- **Only installs are refused**: `install`, `ci`, `add`, `remove`, `update` and their short forms, and
+  a bare `yarn`. Script runs go through: the words differ per manager (`yarn test` runs a script, `bun
+  test` is bun's runner, `bun run x.ts` runs a file), and a run writes neither the tree nor the
+  lockfile. `npm version --no-git-tag-version` is how `/work-card` bumps in any project, and `npx` or
+  `npm view` touch neither.
+  Nor do a global install (`-g`, `--global`, `--location=global`, `yarn global`) or a one-off run
+  (`pnpm dlx`, `npm exec`, `yarn dlx`), so those go through in any project.
+- **It reads the command's text**, as the other two guards do: a `cd` earlier in the command, an
+  `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through. The
+  refusal names the lockfile and the manager and leaves the translation to the agent: `npm ci` has no
+  `pnpm ci`, and `yarn` has no `i`.
+
+## workflow-decision-10: An agent stays in its own worktree, held by a hook
 
 Agreed on 2026-11-17, from the md audit. "Do not remove this worktree" (the `/work-card` skill and the
 review prompt) and "any file outside this worktree" were lines an agent had to remember; now `board
-guard` refuses, after the board's and the running app's questions, cutting the command into simple
+guard` refuses, after the board's, the running app's and the package manager's questions, cutting the command into simple
 commands as the running-app guard does (`src/main/workflow/worktree-guard.ts`):
 
 - a `git worktree remove` of a folder holding where that command runs (the hook's `cwd`, then the last
@@ -219,5 +244,5 @@ commands as the running-app guard does (`src/main/workflow/worktree-guard.ts`):
   worktree, so `/work-card` keeps "any file outside this worktree". git runs only for a file tool, never
   for a Bash call.
 
-It reads the command's text, as the other two do: a link to a worktree or a
+It reads the command's text, as the other guards do: a link to a worktree or a
 path built at run time still gets through.

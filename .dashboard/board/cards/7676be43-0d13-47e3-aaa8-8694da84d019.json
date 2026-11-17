@@ -1,0 +1,11 @@
+{
+  "id": "7676be43-0d13-47e3-aaa8-8694da84d019",
+  "title": "A board write that cannot reach origin writes a worktree's card file in place, and it can ride a merge",
+  "notes": "board-program.ts writeHere fallback: when the sync to origin fails, a card write from a worktree lands in the worktree's .dashboard/board/cards/, gets committed with the work and merged onto main with a stale column. Today 2 of ~8 board writes from the main checkout failed 'cannot fetch origin/main' and worked on retry, so the fallback is hit in practice. Retry the fetch before falling back, and keep a fallback write out of the branch's commits (or refuse it in a worktree). Split out of bcb5f09e / #321, 2026-11-17.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-17T12:58:51.697Z",
+  "updatedAt": "2026-11-17T12:58:51.697Z",
+  "column": "Backlog",
+  "order": 46
+}

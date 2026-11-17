@@ -18,7 +18,7 @@
 // with a verb is refused, and a lone `'` in a heredoc body (`Don't`) hides every command after it;
 // matching those means running the shell, and this is a guard rail.
 
-import { hookRefusal, invocation, pipelines, SHELL_REDIRECT, simpleCommands, textField, wordsOf } from '../board/hook-answer';
+import { hookRefusal, invocation, pipelines, SHELL_REDIRECT, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
 
 // A process as /proc shows it: its names (comm, argv[0] and argv[0]'s basename) and its command line.
 export type RunningProcess = {
@@ -127,9 +127,8 @@ export function stopsRunningApp(command: string, listProcesses: ProcessList): bo
 
   if (pipelines(command).some((pipeline) => foundAndKilled(pipeline).some(hitsApp))) return true;
   return simpleCommands(command).some((part) => {
-    // `sh -c '…'` runs its quoted body as a command line of its own.
-    const body = invocation(part, 'sh|bash|zsh|dash') && /\s-\w*c\s+(["'])(.*)\1/.exec(part);
-    if (body && stopsRunningApp(body[2], listProcesses)) return true;
+    const body = shellBody(part);
+    if (body !== null && stopsRunningApp(body, listProcesses)) return true;
     const finder = invocation(part, 'pkill|killall');
     if (finder) return selectors(finder.verb, finder.words).some(hitsApp);
     const kill = invocation(part, 'kill');

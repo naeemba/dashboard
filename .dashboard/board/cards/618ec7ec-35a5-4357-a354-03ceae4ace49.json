@@ -5,7 +5,23 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:20:59.850Z",
-  "updatedAt": "2026-11-17T12:20:59.850Z",
-  "column": "Backlog",
-  "order": 49
+  "updatedAt": "2026-11-17T12:49:36.340Z",
+  "branch": "pane-send-refuses-text-that-starts-claude",
+  "pullRequest": 318,
+  "comments": [
+    {
+      "at": "2026-11-17T12:27:18.278Z",
+      "body": "Pull request #318 opened: pane send refuses text that starts claude https://github.com/naeemba/dashboard/pull/318"
+    },
+    {
+      "at": "2026-11-17T12:47:57.869Z",
+      "body": "PR #318 review loop: converged, ready to merge. 2 rounds: round 1 fixed 2 findings (800e0a7d: refuse claude only at a shell prompt, read sh -c bodies); round 2 fixed 1 low (b2ff2328: docs note that a program not reading input lets claude through; not re-reviewed). Card file restored to main's copy and main merged in, so it is out of the diff. No conflicts, nothing open. CI: 5/5 passed on b2ff2328."
+    },
+    {
+      "at": "2026-11-17T12:49:36.317Z",
+      "body": "Pull request #318 merged: pane send refuses text that starts claude https://github.com/naeemba/dashboard/pull/318"
+    }
+  ],
+  "column": "Done",
+  "order": 257
 }

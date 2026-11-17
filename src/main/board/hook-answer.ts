@@ -1,8 +1,9 @@
 import { isRecord } from '../../shared/app/is-record';
 
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
-// worktree-guard.ts): a field of the tool's input, the file tools, a command line cut into its simple
-// commands, the shell's redirect or tee into a file, and the refusal they print.
+// package-manager-guard.ts, worktree-guard.ts): a field of the tool's input, the file tools, the
+// shell's redirect or tee into a file, a command line cut into its simple commands and the verb each
+// runs, and the refusal they print.
 
 export function textField(input: unknown, field: string): string {
   const value = isRecord(input) ? input[field] : undefined;
@@ -59,6 +60,11 @@ export const simpleCommands = (command: string) => split(command, true);
 
 // A command's words, without their quotes or the `)` or `}` closing a subshell or group.
 export const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
+
+// The quoted body of `sh -c '…'` (bash, zsh, dash too), which runs as a command line of its own.
+export function shellBody(part: string): string | null {
+  return invocation(part, 'sh|bash|zsh|dash') ? /\s-\w*c\s+(["'])(.*)\1/.exec(part)?.[2] ?? null : null;
+}
 
 // What may stand before a verb: a subshell or group opening, then sudo (with its flags), command,
 // exec, nohup, nice (with its flags), `timeout <duration>` (with its flags) or env (with its
