@@ -220,3 +220,29 @@ every project the user's `~/.claude/settings.json` reaches, and the line is gone
   `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through. The
   refusal names the lockfile and the manager and leaves the translation to the agent: `npm ci` has no
   `pnpm ci`, and `yarn` has no `i`.
+
+## workflow-decision-10: An agent stays in its own worktree, held by a hook
+
+Agreed on 2026-11-17, from the md audit. "Do not remove this worktree" (the `/work-card` skill and the
+review prompt) and "any file outside this worktree" were lines an agent had to remember; now `board
+guard` refuses, after the board's, the running app's and the package manager's questions, cutting the command into simple
+commands as the running-app guard does (`src/main/workflow/worktree-guard.ts`):
+
+- a `git worktree remove` of a folder holding where that command runs (the hook's `cwd`, then the last
+  `cd` before it in the same command), where the session's shell is left by that command (a `cd`
+  inside a `( … )` subshell does not move it, and closing the subshell puts where the command runs
+  back there), or the session's start folder (`CLAUDE_PROJECT_DIR`), where its shell goes back to. So
+  from the worktree, in a session started in `/p`, `cd /p && git worktree remove /p/.adopt-docs` goes through while
+  `(cd /p && git worktree remove /p/.adopt-docs)` is refused: the second leaves the shell in the
+  folder it removes. Removing it kills the session's shell and leaves its pane in a folder that is
+  gone. The path is read from where it runs and its `git -C`; removing any other worktree goes through,
+  so `/adopt-docs`, which moves into the worktree it made inside the checkout, still removes it with
+  `cd <checkout> && git worktree remove <worktree>`;
+- an Edit, Write or NotebookEdit of a file in another worktree of the same repository, the main checkout
+  included: the deepest worktree `git worktree list` names for the file against the one for the `cwd`.
+  A file outside every worktree goes through, and so does a shell write (`sed -i`, `>`) into another
+  worktree, so `/work-card` keeps "any file outside this worktree". git runs only for a file tool, never
+  for a Bash call.
+
+It reads the command's text, as the other guards do: a link to a worktree or a
+path built at run time still gets through.

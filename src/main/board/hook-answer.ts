@@ -1,13 +1,17 @@
 import { isRecord } from '../../shared/app/is-record';
 
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
-// package-manager-guard.ts): a field of the tool's input, the shell's redirect or tee into a file, a
-// command line cut into its simple commands and the verb each runs, and the refusal they print.
+// package-manager-guard.ts, worktree-guard.ts): a field of the tool's input, the file tools, the
+// shell's redirect or tee into a file, a command line cut into its simple commands and the verb each
+// runs, and the refusal they print.
 
 export function textField(input: unknown, field: string): string {
   const value = isRecord(input) ? input[field] : undefined;
   return typeof value === 'string' ? value : '';
 }
+
+// The tools whose input names the file they write, and the field it is in.
+export const FILE_FIELDS: Record<string, string> = { Edit: 'file_path', Write: 'file_path', NotebookEdit: 'notebook_path' };
 
 // A `>`, `>>`, `tee` or `tee -a` into whatever follows.
 export const SHELL_REDIRECT = String.raw`(?:>>?|\btee(?:\s+-a)?)`;

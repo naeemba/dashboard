@@ -60,12 +60,18 @@ No branch, no pull request.
 ## 2. Work in a worktree of your own
 
 Every shell command you run starts a fresh shell: a variable set in one is
-empty in the next, and a \`cd\` does not carry over. So the worktree gets a
-fixed path, written out in full every time. Run:
+empty in the next, and a \`cd\` carries over only when it ends inside the
+working directory. So the worktree gets a fixed path, written out in full every
+time. Run:
 
-    git rev-parse --show-toplevel
+    pwd && pwd -P && git rev-parse --show-toplevel
 
-and call that path followed by \`/.adopt-docs\` \`<worktree>\`
+If the last two lines differ, print "start the session at the repository's top
+level" and stop: from a subfolder the worktree is outside the working
+directory, and the move into it below would not carry over. (\`pwd -P\` and git
+both read links, so a checkout reached through one is not a subfolder.)
+Otherwise call the first path, the one the session's working directory is
+named by, \`<checkout>\`, and \`<checkout>/.adopt-docs\` \`<worktree>\`
 (\`/home/me/app/.adopt-docs\`, say). It sits inside the working directory, so
 writing there asks no permission, and outside \`.git\`, which is guarded more
 strictly than any other path. Print it once, then write the literal path
@@ -80,12 +86,17 @@ embedded repository on someone's branch. Write the line with that one shell
 command, never by editing a file under \`.git\`. It is the only mark this run
 leaves in that checkout, and it stays after step 8.
 
+Then move into the worktree with a lone \`cd <worktree>\`, which carries over
+because the worktree is inside the working directory; a hook refuses an edit of
+a file in another worktree than the one the session is in.
+
 \`--no-track\`, so no later push can land on the default branch. Everything
 below happens in that worktree: every git command is \`git -C <worktree> ...\`,
 every other command (\`gh\`, \`glab\`, a check script) is
 \`cd <worktree> && ...\` in the same command, and every file is read, written
-or edited by its absolute path under \`<worktree>\`. A command without one of
-those runs in the checkout you started in, on someone else's branch.
+or edited by its absolute path under \`<worktree>\`. A command with neither
+runs where the session is, which after the \`cd\` is the worktree; the \`-C\`
+and the \`cd <worktree> &&\` keep it there where a \`cd\` does not carry over.
 
 ## 3. Read before writing
 
@@ -250,8 +261,8 @@ the docs hold the why.
   features there are, what moved where, every doc left unplaced and why, every
   file left unclaimed, and every code comment or card still naming a moved doc.
   Do not merge.
-- Remove your worktree with \`git worktree remove <worktree>\`, run from
-  outside it; the branch stays, and so does the \`/.adopt-docs/\` exclude line.
+- Remove your worktree with \`cd <checkout> && git worktree remove <worktree>\`,
+  \`<checkout>\` being the path \`pwd\` printed in step 2; the branch stays, and so does the \`/.adopt-docs/\` exclude line.
 
 Print the pull request's URL and stop.
 `;
