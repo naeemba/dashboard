@@ -65,10 +65,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
   const projectFlag = manager ? ' --project <name|aka>' : '';
   // What a plain run starts on this platform, so main is told: pane.dispatch's default.
   const runUsage = defaultPaneKind(platform) === 'screen'
-    ? ['  run <id> [--card <card id> | --worktree] [--terminal] "<prompt>"',
+    ? ['  run <id> [--card <card id> | --worktree | --in <folder>] [--terminal] "<prompt>"',
       '                         start Claude in that pane with the prompt, as a Claude screen;',
       '                         --terminal runs Claude Code in its terminal instead']
-    : ['  run <id> [--card <card id> | --worktree] [--screen] "<prompt>"',
+    : ['  run <id> [--card <card id> | --worktree | --in <folder>] [--screen] "<prompt>"',
       '                         start Claude Code in that pane\'s terminal with the prompt;',
       '                         --screen runs it as a Claude screen instead'];
   return [
@@ -95,8 +95,11 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     `A card is dispatched with \`node "$DASHBOARD_BOARD" ship <id>${projectFlag}\`: it makes the card's worktree, a worker`
       + ' pane and its agent. run --card is for a shipped card whose agent has stopped. Any'
       + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
-      + ' committed, pushed and opened its pull request, and kept otherwise. Research takes neither and'
-      + ' reads this checkout.',
+      + ' committed, pushed and opened its pull request, and kept otherwise. A worktree that is already'
+      + ' there, one of this repository\'s on a branch you keep, takes --in <folder>: nothing makes or'
+      + ' removes it. Research takes none of them and reads this checkout. Never start Claude in a pane'
+      + ' by typing `claude` with `pane send`: that worker gets none of the app\'s settings and never'
+      + ' reports to you.',
     '',
     `Land a pull request you are asked to merge with \`node "$DASHBOARD_COMMAND" pr land <n>${projectFlag}\`, run in the`
       + ` background (${LONGEST_BACKGROUND_RUN}): it waits for its checks and`

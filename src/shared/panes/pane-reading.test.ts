@@ -50,6 +50,14 @@ describe('paneIsBusy', () => {
     expect(paneIsBusy({ ...idle, foreground: 'bash', shell: '/bin/zsh' })).toBe(true);
   });
 
+  // `pane send "$id" "claude ..."` leaves no agent record, and the pty on Linux names the program by its
+  // argv[0], the whole path a packaged Claude Code runs as: busy by the reading alone, so no claim, ship
+  // or run takes it.
+  it('reads Claude Code typed at the shell as busy, by the path the pty names it by', () => {
+    expect(paneIsBusy(running('/opt/claude-code/bin/claude'))).toBe(true);
+    expect(programIn(running('/opt/claude-code/bin/claude'))).toBe('/opt/claude-code/bin/claude');
+  });
+
   it('reads an agent as busy by its record, not by what the pty says', () => {
     expect(paneIsBusy({ ...agent, foreground: 'zsh' })).toBe(true);
   });
