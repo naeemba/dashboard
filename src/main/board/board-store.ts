@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { BOARD_FOLDER, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
@@ -8,6 +8,7 @@ import { dashboardFolder } from '../app/dashboard-folder';
 import { readText } from '../app/missing-file';
 import { BROKEN_SUFFIX, setAsidePath } from '../app/set-aside';
 import { TEMPORARY_SUFFIX } from '../app/replace-file';
+import { rewritesStaleSeededDocsAt } from './seeded-docs-checkout';
 import { isRecord } from '../../shared/app/is-record';
 import {
   BACKLOG_COLUMN,
@@ -53,9 +54,23 @@ export const BOARD_PATHSPECS = [
   `:(exclude)${BOARD_DIRECTORY}/board*${TEMPORARY_SUFFIX}`,
 ] as const;
 
-// Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: seeding only
-// writes a file that is not there, so those copies would otherwise drift the moment this text changes.
-export const EXPLANATION_FOR_AGENTS = `# .dashboard
+// The first line of both seeded files. A file is rewritten only when its version is lower than this one
+// or it has none, so a build older than the text on origin never pushes its own text back over it, and
+// an edit to a file the app wrote is kept until a later version. Raise it with any change to either
+// text, or the change never reaches a project that has the old one; a test pins the two together.
+export const SEEDED_DOCS_VERSION = 1;
+const VERSION_LINE = `<!-- .dashboard docs version ${SEEDED_DOCS_VERSION}, written by the Dashboard app -->`;
+
+// The version a seeded file's text carries, 0 for none: every text seeded before there was a version.
+function seededDocsVersion(text: string): number {
+  const match = /^<!-- \.dashboard docs version (\d+),/.exec(text);
+  return match === null ? 0 : Number(match[1]);
+}
+
+// Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: a change to this
+// text rewrites them at the next board read, and the pin makes that rewrite part of the same commit.
+export const EXPLANATION_FOR_AGENTS = `${VERSION_LINE}
+# .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B: \`board/\`, one
 file per card, or \`board.json\` in a project the app has not written to since.
@@ -67,7 +82,8 @@ the \`board guard\` hook the app installs. Every pane the app opens carries \`DA
     node "$DASHBOARD_BOARD" list     every card, with the id the other commands want
 `;
 
-export const EXPLANATION_FOR_PEOPLE = `# .dashboard
+export const EXPLANATION_FOR_PEOPLE = `${VERSION_LINE}
+# .dashboard
 
 Project state for the Dashboard app. \`board/\` holds this project's kanban board, one file per card
 (\`board.json\` in a project the app has not written to since), and
@@ -77,6 +93,13 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 
 \`CLAUDE.md\` beside this file tells an agent how to change the board.
 `;
+
+// Each explanation file the app seeds, by its path in the project, with the text it is to hold. The
+// paths are git's, relative and with `/`, so the sync can hand them to git as they are.
+export const SEEDED_FILES: Readonly<Record<string, string>> = {
+  [`${BOARD_DIRECTORY}/CLAUDE.md`]: EXPLANATION_FOR_AGENTS,
+  [`${BOARD_DIRECTORY}/README.md`]: EXPLANATION_FOR_PEOPLE,
+};
 
 // Which project a directory belongs to. The command line is pointed at a project by the directory you
 // run it from, and an agent that has `cd src` first is still working the same project: without this,
@@ -404,31 +427,73 @@ export function writeBoard(projectPath: string, board: Board): string {
 // `board` command that moves its cards, and that command refuses to run in the home directory — an
 // agent reading them there would be told how to do something it cannot. The folder is still made, so
 // the watch main starts after this read has something to watch.
-export function openBoard(projectPath: string, salvage = true): BoardRead {
+//
+// `reseeded` says an explanation file was rewritten, which a board git tracks has to sync.
+export function openBoard(projectPath: string, salvage = true): BoardRead & { reseeded: boolean } {
+  let reseeded = false;
   try {
     if (isManagerPath(projectPath)) mkdirSync(dirname(boardPath(projectPath)), { recursive: true });
-    else seedBoardDirectory(projectPath);
+    else reseeded = seedBoardDirectory(projectPath);
   } catch {
     // No explanation files this time.
   }
-  return readBoard(projectPath, salvage);
+  return { ...readBoard(projectPath, salvage), reseeded };
 }
 
-// Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md
-// stays edited, and so does one seeded with the older text that spelled out the card format: it still
-// names the board command, and the hand edit it describes is refused by the guard, which names the
-// command too. The folder existing is not enough to skip the walk: writeBoard makes it too, and a
-// repo that keeps board.json in git often does not keep the docs beside it — clone one of those and
-// the folder arrives with no CLAUDE.md in it, leaving an agent working in there nothing that names
-// the command.
-export function seedBoardDirectory(projectPath: string): void {
-  const directory = join(projectPath, BOARD_DIRECTORY);
-  mkdirSync(directory, { recursive: true });
-  for (const [name, contents] of [
-    ['CLAUDE.md', EXPLANATION_FOR_AGENTS],
-    ['README.md', EXPLANATION_FOR_PEOPLE],
-  ] as const) {
-    const file = join(directory, name);
-    if (!existsSync(file)) writeFileSync(file, contents);
+// Each file is the app's, and is written whenever it is missing or older than SEEDED_DOCS_VERSION.
+// Written once and never again, as it used to be, left 23 projects telling an agent to edit board.json
+// by hand, an edit the board guard now refuses, so the agent lost a turn to the guard on every board.
+// A file with no version line is rewritten, edited or not: the texts seeded before there was one carry
+// none, so an edit of one cannot be told from one of them. What an agent should know about a project
+// goes in that project's own CLAUDE.md. The folder existing is not enough
+// to skip the walk: writeBoard makes it too, and a repo that keeps board.json in git often does not
+// keep the docs beside it — clone one of those and the folder arrives with no CLAUDE.md in it, leaving
+// an agent working in there nothing that names the command.
+//
+// Answers whether it wrote one. In a project that commits them the rewrite is a change on disk, and
+// the board's sync commits it to origin's default branch beside the cards (board-sync-git.ts), so the
+// caller that seeded asks for a sync even when no card changed.
+//
+// A doc that is there and stale is rewritten only when the folder is on origin's default branch
+// (seeded-docs-checkout.ts says why), or when `force` says the caller knows it is; a missing one always is.
+export function seedBoardDirectory(projectPath: string, force = false): boolean {
+  mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
+  const stale = staleSeededFiles(projectPath, Object.keys(SEEDED_FILES));
+  const missing = stale.filter((file) => !existsSync(join(projectPath, file)));
+  const rewrites = missing.length < stale.length && (force || rewritesStaleSeededDocsAt(projectPath));
+  const written = rewrites ? stale : missing;
+  for (const file of written) writeFileSync(join(projectPath, file), SEEDED_FILES[file]);
+  return written.length > 0;
+}
+
+// Which of `files` (keys of SEEDED_FILES) in `projectPath` are missing or older than this build's text.
+// Never through a symbolic link, the file or the .dashboard folder: a repository that commits one there
+// would have the write follow it and overwrite the file it points at, anywhere on the machine.
+export function staleSeededFiles(projectPath: string, files: readonly string[]): string[] {
+  const isLink = (path: string) => lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink() === true;
+  if (isLink(join(projectPath, BOARD_DIRECTORY))) return [];
+  return files.filter((file) => {
+    const path = join(projectPath, file);
+    if (isLink(path)) return false;
+    const text = readText(path);
+    return text === null || seededDocsVersion(text) < SEEDED_DOCS_VERSION;
+  });
+}
+
+// The seeded docs as they stand, by path, null for one that is not there: taken before a read that may
+// seed, so a write refused afterwards can put back what that read wrote (putBackSeededDocs).
+export function seededDocsNow(projectPath: string): Record<string, string | null> {
+  return Object.fromEntries(Object.keys(SEEDED_FILES).map((file) => [file, readText(join(projectPath, file))]));
+}
+
+// Each doc the read wrote back to what `before` held: removed when it was not there, its old text when
+// it was. Only a file holding exactly the app's text that it did not hold before, so nothing a person
+// wrote since, and no link the seeding skipped, is touched.
+export function putBackSeededDocs(projectPath: string, before: Record<string, string | null>): void {
+  for (const [file, text] of Object.entries(before)) {
+    const path = join(projectPath, file);
+    if (text === SEEDED_FILES[file] || readText(path) !== SEEDED_FILES[file]) continue;
+    if (text === null) rmSync(path, { force: true });
+    else writeFileSync(path, text);
   }
 }

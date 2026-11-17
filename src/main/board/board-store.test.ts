@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,6 +32,7 @@ import {
   BOARD_FOLDER_PATH,
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
+  SEEDED_DOCS_VERSION,
   boardPath,
   isManagerHomeDirectory,
   openBoard,
@@ -486,12 +488,52 @@ describe('seedBoardDirectory', () => {
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('board.json');
   });
 
-  it('never overwrites files that are already there', () => {
+  it('never writes through a symbolic link in place of a seeded file', () => {
+    const path = project();
+    mkdirSync(join(path, BOARD_DIRECTORY), { recursive: true });
+    const elsewhere = join(path, 'elsewhere.txt');
+    writeFileSync(elsewhere, 'keep me');
+    symlinkSync(elsewhere, join(path, BOARD_DIRECTORY, 'CLAUDE.md'));
+    seedBoardDirectory(path);
+    expect(readFileSync(elsewhere, 'utf8')).toBe('keep me');
+  });
+
+  it('never writes through a symbolic link in place of the .dashboard folder', () => {
+    const path = project();
+    const elsewhere = join(path, 'elsewhere');
+    mkdirSync(elsewhere);
+    writeFileSync(join(elsewhere, 'CLAUDE.md'), 'keep me');
+    symlinkSync(elsewhere, join(path, BOARD_DIRECTORY));
+    expect(seedBoardDirectory(path)).toBe(false);
+    expect(readFileSync(join(elsewhere, 'CLAUDE.md'), 'utf8')).toBe('keep me');
+  });
+
+  it('rewrites a text with no version, once', () => {
     const path = project();
     seedBoardDirectory(path);
-    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'mine');
+    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'Edit board.json directly.');
+    expect(seedBoardDirectory(path)).toBe(true);
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
+    expect(seedBoardDirectory(path)).toBe(false);
+  });
+
+  it('leaves a text of this version or a later one alone', () => {
+    const path = project();
     seedBoardDirectory(path);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe('mine');
+    const edited = `${EXPLANATION_FOR_AGENTS}An edit.\n`;
+    const newer = EXPLANATION_FOR_PEOPLE.replace(`version ${SEEDED_DOCS_VERSION}`, `version ${SEEDED_DOCS_VERSION + 1}`);
+    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), edited);
+    writeFileSync(join(path, BOARD_DIRECTORY, 'README.md'), newer);
+    expect(seedBoardDirectory(path)).toBe(false);
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(edited);
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'README.md'), 'utf8')).toBe(newer);
+  });
+
+  // A change to either text without a higher version reaches no project that has the old one. Raise
+  // SEEDED_DOCS_VERSION, then put the new hash here.
+  it('has a new version for every new text', () => {
+    const hash = createHash('sha256').update(EXPLANATION_FOR_AGENTS).update(EXPLANATION_FOR_PEOPLE).digest('hex');
+    expect([SEEDED_DOCS_VERSION, hash]).toEqual([1, '3186c10a7c9bda0ccbd5d80d2f8abd715707d6c0371961d660ef555597589860']);
   });
 });
 
@@ -534,10 +576,9 @@ describe('the manager\'s own board', () => {
   });
 });
 
-// This repository has its own board, so its `.dashboard` docs are checked in — and seeding only writes
-// a file that is not there, so the app will never refresh them. Add a field to a card above and every
-// other project gets the new docs on first open while this one keeps the old text forever, which is the
-// text an agent working on this codebase reads. This fails the moment the two drift apart.
+// This repository has its own board, so its `.dashboard` docs are checked in. Change the text above and
+// the app rewrites them at the next board read, an uncommitted change nobody asked for; this fails the
+// moment the two drift apart, so the new text is committed with the change that made it.
 describe('the .dashboard docs checked into this repository', () => {
   it('still say what a freshly seeded project would be told', () => {
     expect(readFileSync(join(BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);

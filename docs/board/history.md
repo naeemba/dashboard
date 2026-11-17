@@ -24,3 +24,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-16 #290 — The review pane merges and moves nothing; the app's follow moves the card into Done (board-decision-7)
 - 2026-11-16 #305 — A board.json that breaks twice keeps both damaged copies
 - 2026-11-17 #322 — A board change that cannot reach origin is refused in a worktree, and a dropped connection is retried (board-decision-5)
+- 2026-11-17 #317 — The seeded .dashboard docs are rewritten whenever they are not the current text, and committed to origin by the board's sync where git tracks them; a feature branch's copy is left for its merge of main (board-decision-8)

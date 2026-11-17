@@ -1,4 +1,5 @@
 import type { Board } from '../../shared/board/board';
+import { sameBoard } from '../../shared/board/board-merge';
 import { blockingChanges } from '../ship/ship';
 import { cardMoves } from './card-moves';
 
@@ -91,8 +92,10 @@ export function damagedBoardRefusal(files: readonly string[]): string | null {
 }
 
 // The commit's message: the moves when there are any, as the log says them, otherwise the cards whose
-// files changed. Plain, so `git log .dashboard` reads as the board's history.
-export function syncCommitMessage(before: Board, after: Board): string {
+// files changed, otherwise the explanation files the commit rewrote (`reseeded`). Plain, so
+// `git log .dashboard` reads as the board's history.
+export function syncCommitMessage(before: Board, after: Board, reseeded = false): string {
+  if (reseeded && sameBoard(before, after)) return 'board: rewrite the .dashboard docs to the current text';
   const moves = cardMoves(before, after);
   if (moves.length > 0) return `board: ${moves.join('; ')}`;
   const was = new Map(before.columns.flatMap((column) => column.cards.map((card) => [card.id, card] as const)));

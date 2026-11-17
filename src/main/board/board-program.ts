@@ -1,4 +1,4 @@
-import { isManagerHomeDirectory, openBoard, projectRoot, readBoard, writeBoard } from './board-store';
+import { isManagerHomeDirectory, openBoard, projectRoot, putBackSeededDocs, readBoard, seededDocsNow, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
 import { asksApp, BOARD_REQUEST, brokenFilesRefusal, readsBoard, runBoardCommand, runBoardCommandOnLatest, type CommandResult } from './board-cli';
@@ -43,6 +43,7 @@ async function run(words: readonly string[]): Promise<number> {
   }
   // Without salvage: a file that does not parse stays where it is under its own name, so every run
   // refuses until it is fixed. readBoard says why a rename here would commit the card as deleted.
+  const docsBefore = seededDocsNow(project);
   const read = openBoard(project, false);
   if (read.brokenFiles.length > 0) {
     process.stderr.write(`${brokenFilesRefusal(read.brokenFiles)}\n`);
@@ -76,20 +77,31 @@ async function run(words: readonly string[]): Promise<number> {
       return answer(result);
     }
     if (!sync.synced) notSynced = sync.reason;
+  } else if (read.reseeded) {
+    // The usage alone changes no card, but the read above rewrote the explanation files, and only a
+    // sync commits that rewrite and leaves the checkout clean (board-decision-8). One that fails is
+    // handled in writeHere as a card change's is.
+    const sync = await syncBoard(project).catch((error: unknown): BoardSync => ({ synced: false, reason: failureText(error) }));
+    if (!sync.synced) notSynced = sync.reason;
   }
-  return answer(writeHere(project, read.board, commandArguments, makeId, notSynced));
+  return answer(writeHere(project, read.board, commandArguments, makeId, notSynced, read.reseeded ? docsBefore : null));
 }
 
 // The command run on this folder's board and written here. Against the board as it stands a moment
 // before the write, not the one opened: runBoardCommandOnLatest says why. Written before the line is
 // printed, so a failed write is what you see rather than a success message about a change that is not
-// on disk. `notSynced` is why origin could not take it, when that was tried and failed.
-function writeHere(project: string, opened: Board, commandArguments: readonly string[], makeId: () => string, notSynced: string | null): CommandResult {
+// on disk. `notSynced` is why origin could not take it, when that was tried and failed. `docsBefore`
+// is the seeded docs before the read rewrote them, when it did.
+function writeHere(project: string, opened: Board, commandArguments: readonly string[], makeId: () => string, notSynced: string | null, docsBefore: Record<string, string | null> | null): CommandResult {
   const result = runBoardCommandOnLatest(opened, commandArguments, () => readBoard(project, false).board, makeId);
   const changes = result.ok && result.board !== null;
   if (notSynced !== null) {
     // Any linked worktree, not only the app's (isLinkedWorktree): every one holds its branch's board.
-    const refusal = notSyncedRefusal(holdsWorktree(project), changes, notSynced);
+    const inWorktree = holdsWorktree(project);
+    // A doc the read rewrote rides the branch as a card file would (notSyncedRefusal), so a worktree
+    // gets it back as it was. The read or usage is still answered: only the rewrite is not kept.
+    if (docsBefore !== null && notSyncedRefusal(inWorktree, true, notSynced) !== null) putBackSeededDocs(project, docsBefore);
+    const refusal = notSyncedRefusal(inWorktree, changes, notSynced);
     if (refusal !== null) return { ok: false, message: refusal };
     process.stderr.write(`${notSyncedWarning(notSynced)}\n`);
   }

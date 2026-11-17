@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:20:25.662Z",
-  "updatedAt": "2026-11-17T13:12:20.509Z",
+  "updatedAt": "2026-11-17T13:28:28.014Z",
   "branch": "refresh-every-project-s-stale-dashboard-cla",
   "pullRequest": 317,
   "comments": [
@@ -20,8 +20,20 @@
     {
       "at": "2026-11-17T13:12:20.509Z",
       "body": "A board read now rewrites a stale seeded doc only in a checkout on origin's default branch (or outside git); a feature-branch worktree keeps its copy until it merges main, so the worker's merge is not blocked. A missing doc is still written anywhere. The answer is kept a minute per folder so a stale branch does not spawn git on every read. board-decision-8 updated. Tests added (decision module, cache, git-level worktree case). Head 3c098883, CI 3/3 green. Ready to merge."
+    },
+    {
+      "at": "2026-11-17T13:18:08.858Z",
+      "body": "Re-review of the commits since 5b9fcb4c. New findings: 1 medium, 2 low. Both lows are fixed in c6d2a8cb: baseBranch has its comment back, and a shared gitNowOrNull replaces the duplicated wrapper. The step-4 thread was verified fixed and resolved. Open, for the owner: the medium. Where there is no origin default branch (no origin remote, or a default other than main or master), a stale doc is never rewritten and the sync cannot push it either. Head c6d2a8cb, CI green."
+    },
+    {
+      "at": "2026-11-17T13:20:59.162Z",
+      "body": "A repository with no origin default branch is now treated like outside git, so a stale seeded doc there is rewritten on any branch. Tests and board-decision-8 updated, and the last review thread is resolved. Head aab5cd73, CI green. No threads open. Ready to merge."
+    },
+    {
+      "at": "2026-11-17T13:28:27.986Z",
+      "body": "Pull request #317 merged: Rewrite the seeded .dashboard docs whenever they are not the current text https://github.com/naeemba/dashboard/pull/317"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 261
 }
