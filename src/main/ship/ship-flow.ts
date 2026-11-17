@@ -6,7 +6,7 @@ import { blockingChanges, uncommittedCount, workPrompt } from './ship';
 import { entryForCard } from './worktree-store';
 import type { ShipWorktree, ShipWorktreeRequest } from '../actions/worktree/make';
 
-// A card moved into Ship: the worktree, the branch, the board move and the pane. Out of main.ts because
+// A card moved into Ship: the worktree, the branch and the pane. Out of main.ts because
 // main had reached its 600-line ceiling; what it needs from there is the records and the panes, handed
 // over as ports. The decisions inside are ship.ts's and are tested there.
 
