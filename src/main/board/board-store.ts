@@ -8,7 +8,7 @@ import { dashboardFolder } from '../app/dashboard-folder';
 import { readText } from '../app/missing-file';
 import { BROKEN_SUFFIX, setAsidePath } from '../app/set-aside';
 import { TEMPORARY_SUFFIX } from '../app/replace-file';
-import { rewritesStaleSeededDocs, seededDocsCheckout } from './seeded-docs-checkout';
+import { rewritesStaleSeededDocsAt } from './seeded-docs-checkout';
 import { isRecord } from '../../shared/app/is-record';
 import {
   BACKLOG_COLUMN,
@@ -454,16 +454,14 @@ export function openBoard(projectPath: string, salvage = true): BoardRead & { re
 // the board's sync commits it to origin's default branch beside the cards (board-sync-git.ts), so the
 // caller that seeded asks for a sync even when no card changed.
 //
-// A doc that is there and stale is rewritten only where rewritesStale says so, by default when the
-// folder is on origin's default branch (seeded-docs-checkout.ts says why); a missing one always is.
-export function seedBoardDirectory(
-  projectPath: string,
-  rewritesStale: () => boolean = () => rewritesStaleSeededDocs(seededDocsCheckout(projectPath)),
-): boolean {
+// A doc that is there and stale is rewritten only when the folder is on origin's default branch
+// (seeded-docs-checkout.ts says why), or when `force` says the caller knows it is; a missing one always is.
+export function seedBoardDirectory(projectPath: string, force = false): boolean {
   mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
   const stale = staleSeededFiles(projectPath, Object.keys(SEEDED_FILES));
   const missing = stale.filter((file) => !existsSync(join(projectPath, file)));
-  const written = missing.length < stale.length && rewritesStale() ? stale : missing;
+  const rewrites = missing.length < stale.length && (force || rewritesStaleSeededDocsAt(projectPath));
+  const written = rewrites ? stale : missing;
   for (const file of written) writeFileSync(join(projectPath, file), SEEDED_FILES[file]);
   return written.length > 0;
 }

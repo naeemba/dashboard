@@ -56,6 +56,23 @@ export async function projectFiles(projectPath: string): Promise<string[]> {
 }
 
 // origin's default branch, by defaultBranch's rule: origin/HEAD is not set in every clone.
+// The same rule, blocking, and null where baseBranch throws: for a caller that is synchronous itself
+// (seeding a board's docs) and asks only of local refs.
+export function baseBranchNow(projectPath: string): string | null {
+  const answer = (gitArguments: string[]): string | null => {
+    try {
+      return gitNow(gitArguments, projectPath);
+    } catch {
+      return null;
+    }
+  };
+  return defaultBranch(
+    'origin',
+    answer(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']),
+    (name) => answer(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`]) !== null,
+  );
+}
+
 export async function baseBranch(projectPath: string): Promise<string> {
   const answer = (gitArguments: string[]) => git(gitArguments, projectPath).then((out) => out, () => null);
   const [head, main, master] = await Promise.all([

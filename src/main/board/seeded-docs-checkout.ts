@@ -1,5 +1,5 @@
-import { defaultBranch } from '../app/default-branch';
-import { gitNow } from '../app/git';
+import { baseBranchNow, gitNow } from '../app/git';
+import { publishesCheckout } from './board-sync';
 
 // Whether a board read may rewrite a seeded doc that is there but older than this build's text
 // (board-decision-8). Only in a checkout standing on origin's default branch, or in a folder git does
@@ -9,20 +9,34 @@ import { gitNow } from '../app/git';
 // and the board guard already refuses the hand edit the old text describes. A missing doc is written
 // anywhere, as it always was: there is nothing on disk for a merge to trip on.
 //
-// `branch` is what `git symbolic-ref --short -q HEAD` printed (null when detached); `head` and
-// `hasBranch` are what defaultBranch reads.
+// `branch` is what `git symbolic-ref --short -q HEAD` printed (null when detached), `defaultBranch`
+// what baseBranchNow answered (null when there is none).
 export type SeededDocsCheckout =
   | { insideWorkTree: false }
-  | { insideWorkTree: true; branch: string | null; head: string | null; hasBranch: (name: string) => boolean };
+  | { insideWorkTree: true; branch: string | null; defaultBranch: string | null };
 
 export function rewritesStaleSeededDocs(checkout: SeededDocsCheckout): boolean {
   if (!checkout.insideWorkTree) return true;
-  return checkout.branch !== null && checkout.branch === defaultBranch('origin', checkout.head, checkout.hasBranch);
+  return checkout.defaultBranch !== null && publishesCheckout(checkout.branch, checkout.defaultBranch);
 }
 
-// What git says of the folder, asked synchronously since seeding is. Only called when a doc is there
-// and stale, which after the first rewrite on the default branch is never, so the read is not slowed.
-export function seededDocsCheckout(projectPath: string): SeededDocsCheckout {
+// The answer for a folder, kept a minute. Asked only when a doc is there and stale, and off the default
+// branch it stays stale, so without this every read of that board (the manager's every five seconds)
+// would block main on three to five git processes. A branch switched in the meantime is seen a minute
+// late, which costs the rewrite that long and nothing else.
+const ANSWER_LIFETIME = 60_000;
+const answers = new Map<string, { rewrites: boolean; at: number }>();
+
+export function rewritesStaleSeededDocsAt(projectPath: string, now = Date.now()): boolean {
+  const kept = answers.get(projectPath);
+  if (kept !== undefined && now - kept.at < ANSWER_LIFETIME) return kept.rewrites;
+  const rewrites = rewritesStaleSeededDocs(seededDocsCheckout(projectPath));
+  answers.set(projectPath, { rewrites, at: now });
+  return rewrites;
+}
+
+// What git says of the folder, asked synchronously since seeding is.
+function seededDocsCheckout(projectPath: string): SeededDocsCheckout {
   const answer = (gitArguments: string[]): string | null => {
     try {
       return gitNow(gitArguments, projectPath);
@@ -31,10 +45,5 @@ export function seededDocsCheckout(projectPath: string): SeededDocsCheckout {
     }
   };
   if (answer(['rev-parse', '--is-inside-work-tree']) !== 'true') return { insideWorkTree: false };
-  return {
-    insideWorkTree: true,
-    branch: answer(['symbolic-ref', '--short', '-q', 'HEAD']),
-    head: answer(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']),
-    hasBranch: (name) => answer(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`]) !== null,
-  };
+  return { insideWorkTree: true, branch: answer(['symbolic-ref', '--short', '-q', 'HEAD']), defaultBranch: baseBranchNow(projectPath) };
 }
