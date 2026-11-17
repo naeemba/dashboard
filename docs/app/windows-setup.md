@@ -90,7 +90,8 @@ checkout:
 Or, from Git Bash, `./scripts/rebuild.sh` (the `/rebuild` command) packages the
 checkout into `%LOCALAPPDATA%\Programs\Dashboard`, apart from a Squirrel
 install, and writes the `dashboard` launcher to `~/.local/bin` as `dashboard`
-(Git Bash) and `dashboard.cmd` (cmd, PowerShell). It never quits the running
+(Git Bash) and `dashboard.cmd` (cmd, PowerShell), and a "Dashboard (rebuild)"
+Start menu entry that Windows search finds. It never quits the running
 app; while a Dashboard runs from that folder Windows will not rename it, and
 the script stops with the old build in place.
 

@@ -97,6 +97,8 @@ case "$os" in
   MINGW*|MSYS*|CYGWIN*)
     printf '@echo off\r\nrem Written by the Dashboard'"'"'s scripts/rebuild.sh; rebuilding writes it again.\r\nset "DASHBOARD_APP=%s"\r\nnode "%s" %%*\r\n' "$target_app" "$target_entry" > "$launcher.cmd.new"
     mv -f "$launcher.cmd.new" "$launcher.cmd"
+    # A Start menu entry, so Windows search finds this build; "(rebuild)" keeps it apart from a Squirrel install's.
+    DASHBOARD_EXE=$(cygpath -w "$installed/$executable") powershell.exe -NoProfile -Command '$l = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Dashboard (rebuild).lnk"; $s = (New-Object -ComObject WScript.Shell).CreateShortcut($l); $s.TargetPath = $env:DASHBOARD_EXE; $s.WorkingDirectory = Split-Path $env:DASHBOARD_EXE; $s.Save()'
     ;;
 esac
 
