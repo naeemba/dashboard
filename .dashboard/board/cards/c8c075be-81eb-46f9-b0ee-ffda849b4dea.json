@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:20:46.956Z",
-  "updatedAt": "2026-11-17T12:31:29.612Z",
+  "updatedAt": "2026-11-17T12:55:01.363Z",
   "branch": "board-guard-refuses-npm-yarn-in-a-pnpm-proj",
   "pullRequest": 319,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-17T12:31:29.571Z",
       "body": "Pull request #319 opened: board guard refuses another package manager than the lockfile names https://github.com/naeemba/dashboard/pull/319"
+    },
+    {
+      "at": "2026-11-17T12:55:01.363Z",
+      "body": "PR #319 not ready to merge: it now conflicts with main in src/main/workflow/running-app-guard.ts (main's pane-send changes, 800e0a7d/b2ff2328, landed during the loop), so GitHub runs no CI on the head (3bd9ab74). Done: the card file now matches main's copy (467a0e5a). Global installs (-g/--global/--location=global) now go through, with tests for globals, dlx/exec one-off runs, a folder with no lockfile and the nearest lockfile in a monorepo (a1f824a5). The review loop ran 2 rounds and ended floor-addressed with 4 findings, all fixed (7b85cf8a: only installs are refused, not script runs, and only inside a git repo; 72a4047d: npm's install aliases), nothing left open. Windows CI failed on the test fakes' path separator; fixed in 5d46cd3d, unverified by CI so far. Next: resolve the conflict (/pr-conflicts 319), then CI."
     }
   ],
   "column": "Review",
