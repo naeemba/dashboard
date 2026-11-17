@@ -75,13 +75,14 @@ const LINKED: [string, string][] = [['commands', '.md'], ['review', '.md'], ['sc
 export type ReviewLoopGit = (programArguments: string[], cwd: string) => Promise<string>;
 
 // The checkout `pr-loop.md` links into, asked how far it is from what was shipped. Null when there is
-// no link to follow: a missing command is the refusal's, and a copied one has no checkout to ask.
+// no checkout to ask: a missing command or a gone checkout is the refusal's, and a copied one has none.
 // Fetches at most once a day, read off FETCH_HEAD, so a relaunch does not reach GitHub again; a fetch
 // or count that fails (offline, no origin/HEAD) counts as not behind.
 export async function reviewLoopStaleness(claudeFolder: string, git: ReviewLoopGit, now: number): Promise<ReviewLoopStaleness | null> {
   const target = linkTarget(loopCommand(claudeFolder));
-  if (target === null || !existsSync(target)) return null;
+  if (target === null) return null;
   const checkout = path.dirname(path.dirname(target));
+  if (!existsSync(checkout)) return null;
   let fetched = 0;
   try {
     // ponytail: assumes .git is a folder; a checkout that is itself a worktree fetches on every check.
@@ -93,7 +94,7 @@ export async function reviewLoopStaleness(claudeFolder: string, git: ReviewLoopG
   const count = await git(['rev-list', '--count', 'HEAD..refs/remotes/origin/HEAD'], checkout).catch(() => '');
   const workflows = filesIn(path.join(checkout, 'workflows'))
     .filter((name) => name.endsWith('.js'))
-    .filter((name) => !sameFile(path.join(checkout, 'workflows', name), path.join(claudeFolder, 'workflows', name)));
+    .filter((name) => !sameFile(path.join(claudeFolder, 'workflows', name), path.join(checkout, 'workflows', name)));
   const unlinked: string[] = [];
   const dangling: string[] = [];
   for (const [folder, extension] of LINKED) {

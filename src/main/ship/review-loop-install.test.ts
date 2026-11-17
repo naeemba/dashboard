@@ -85,6 +85,14 @@ describe('reviewLoopStaleness', () => {
     expect(await reviewLoopStaleness(claude, fakeGit('0').git, NOW)).toBeNull();
   });
 
+  it('still names the checkout when only pr-loop.md has gone from it', async () => {
+    const { claude, checkout } = installed();
+    rmSync(path.join(checkout, 'commands', 'pr-loop.md'));
+    const staleness = await reviewLoopStaleness(claude, fakeGit('0').git, NOW);
+    expect(staleness?.dangling).toEqual(['commands/pr-loop.md']);
+    expect(reviewLoopNotice(staleness)).toContain(`cd '${checkout}'`);
+  });
+
   it('counts a git that fails as not behind', async () => {
     const { claude } = installed();
     const failing: ReviewLoopGit = () => Promise.reject(new Error('offline'));
