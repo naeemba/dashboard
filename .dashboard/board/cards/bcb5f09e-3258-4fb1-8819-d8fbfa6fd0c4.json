@@ -5,14 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:28:13.923Z",
-  "updatedAt": "2026-11-17T12:58:11.997Z",
+  "updatedAt": "2026-11-17T12:58:27.175Z",
   "branch": "board-ship-commits-the-card-column-ship-ont",
+  "pullRequest": 321,
   "comments": [
     {
       "at": "2026-11-17T12:58:11.997Z",
       "body": "PR #321: the ship no longer commits the card onto its branch; tests hold it. Left out, older and separate: board-program.ts writeHere fallback writes a worktree's card file in place when the sync to origin fails (offline, or losing the push race three times), and that copy can then be committed on the branch and ride its merge. Worth its own card."
+    },
+    {
+      "at": "2026-11-17T12:58:27.130Z",
+      "body": "Pull request #321 opened: A ship commits no board move onto the card's branch https://github.com/naeemba/dashboard/pull/321"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 4
 }
