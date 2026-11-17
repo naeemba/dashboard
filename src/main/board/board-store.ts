@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { BOARD_FOLDER, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
@@ -438,12 +438,17 @@ export function openBoard(projectPath: string, salvage = true): BoardRead & { re
 // caller that seeded asks for a sync even when no card changed.
 export function seedBoardDirectory(projectPath: string): boolean {
   mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
-  let wrote = false;
-  for (const [file, contents] of Object.entries(SEEDED_FILES)) {
+  const stale = staleSeededFiles(projectPath, Object.keys(SEEDED_FILES));
+  for (const file of stale) writeFileSync(join(projectPath, file), SEEDED_FILES[file]);
+  return stale.length > 0;
+}
+
+// Which of `files` (keys of SEEDED_FILES) in `projectPath` are not the app's current text. Never a
+// symbolic link: a repository that commits one there would have the write follow it and overwrite the
+// file it points at, anywhere on the machine.
+export function staleSeededFiles(projectPath: string, files: readonly string[]): string[] {
+  return files.filter((file) => {
     const path = join(projectPath, file);
-    if (readText(path) === contents) continue;
-    writeFileSync(path, contents);
-    wrote = true;
-  }
-  return wrote;
+    return !lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink() && readText(path) !== SEEDED_FILES[file];
+  });
 }

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -484,6 +484,16 @@ describe('seedBoardDirectory', () => {
     mkdirSync(join(path, BOARD_DIRECTORY), { recursive: true });
     seedBoardDirectory(path);
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('board.json');
+  });
+
+  it('never writes through a symbolic link in place of a seeded file', () => {
+    const path = project();
+    mkdirSync(join(path, BOARD_DIRECTORY), { recursive: true });
+    const elsewhere = join(path, 'elsewhere.txt');
+    writeFileSync(elsewhere, 'keep me');
+    symlinkSync(elsewhere, join(path, BOARD_DIRECTORY, 'CLAUDE.md'));
+    seedBoardDirectory(path);
+    expect(readFileSync(elsewhere, 'utf8')).toBe('keep me');
   });
 
   it('rewrites a file that is not the current text', () => {

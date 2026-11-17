@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import type { Board } from '../../shared/board/board';
@@ -8,8 +8,7 @@ import { isManagerPath } from '../../shared/manager/manager';
 import { baseBranch, git, gitNow, NO_HOOKS } from '../app/git';
 import { realPath } from '../app/real-path';
 import { BROKEN_SUFFIX } from '../app/set-aside';
-import { BOARD_PATHSPECS, SEEDED_FILES, peekBoard, readBoard, writeBoard } from './board-store';
-import { readText } from '../app/missing-file';
+import { BOARD_PATHSPECS, SEEDED_FILES, peekBoard, seedBoardDirectory, staleSeededFiles, readBoard, writeBoard } from './board-store';
 import {
   FETCH_TIMEOUT,
   PUSH_ATTEMPTS,
@@ -79,8 +78,9 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
       if (pending !== null && 'refusal' in pending) return notSynced(pending.refusal);
       const next = edit(pending === null ? origin.board : rebaseBoardChange(pending.base, pending.local, origin.board));
       let target = tip;
-      if (!sameBoard(origin.board, next) || origin.staleSeeds.length > 0) {
-        const message = syncCommitMessage(origin.board, next, origin.staleSeeds.length > 0);
+      const reseeded = origin.staleSeeds.length > 0;
+      if (!sameBoard(origin.board, next) || reseeded) {
+        const message = syncCommitMessage(origin.board, next, reseeded);
         const commit = await commitBoard(origin.scratch, next, origin.staleSeeds, tip, message);
         try {
           await git([...NO_HOOKS, 'push', '--quiet', REMOTE, `${commit}:refs/heads/${branch}`], top, { timeout: PUSH_TIMEOUT });
@@ -137,13 +137,13 @@ async function boardAt(gitDirectory: string, ref: string, folder: string): Promi
   const environment = { GIT_DIR: gitDirectory, GIT_WORK_TREE: work, GIT_INDEX_FILE: join(folder, 'index') };
   const scratch: Scratch = { work, git: (gitArguments) => git(gitArguments, work, { environment }) };
   await scratch.git(['read-tree', ref]);
-  if ((await scratch.git(['ls-files', '--', ...BOARD_PATHSPECS])) === '') return { refusal: `${ref.slice(0, 8)} has no board` };
-  await scratch.git([...NO_HOOKS, 'checkout', '--quiet', '--', ...BOARD_PATHSPECS]);
+  const tracked = (await scratch.git(['ls-files', '--', ...BOARD_PATHSPECS, ...Object.keys(SEEDED_FILES)])).split('\n').filter((file) => file !== '');
+  const trackedSeeds = tracked.filter((file) => file in SEEDED_FILES);
+  if (tracked.length === trackedSeeds.length) return { refusal: `${ref.slice(0, 8)} has no board` };
+  await scratch.git([...NO_HOOKS, 'checkout', '--quiet', '--', ...BOARD_PATHSPECS, ...trackedSeeds]);
   const read = readBoard(work, false);
   if (read.brokenFiles.length > 0) return { refusal: `board files at ${ref.slice(0, 8)} do not parse` };
-  const trackedSeeds = (await scratch.git(['ls-files', '--', ...Object.keys(SEEDED_FILES)])).split('\n').filter((file) => file !== '');
-  if (trackedSeeds.length > 0) await scratch.git([...NO_HOOKS, 'checkout', '--quiet', '--', ...trackedSeeds]);
-  const staleSeeds = trackedSeeds.filter((file) => readText(join(work, file)) !== SEEDED_FILES[file]);
+  const staleSeeds = staleSeededFiles(work, trackedSeeds);
   return { board: read.board, scratch, trackedSeeds, staleSeeds };
 }
 
@@ -152,7 +152,8 @@ async function boardAt(gitDirectory: string, ref: string, folder: string): Promi
 // board.json is a removal in the commit.
 async function commitBoard(scratch: Scratch, board: Board, staleSeeds: readonly string[], parent: string, message: string): Promise<string> {
   writeBoard(scratch.work, board);
-  for (const file of staleSeeds) writeFileSync(join(scratch.work, file), SEEDED_FILES[file]);
+  // Every seeded file is written, but only the stale tracked ones are staged: one git leaves out stays out.
+  seedBoardDirectory(scratch.work);
   await scratch.git(['add', '-A', '--', ...BOARD_PATHSPECS, ...staleSeeds]);
   const tree = await scratch.git(['write-tree']);
   return scratch.git(['commit-tree', tree, '-p', parent, '-m', message]);
