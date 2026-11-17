@@ -12,6 +12,9 @@ import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
 import { boardGuard } from './board-guard';
 import { runningAppGuard, runningProcess, type ProcessList, type RunningProcess } from '../workflow/running-app-guard';
+import { worktreeGuard, type WorktreeList } from '../workflow/worktree-guard';
+import { gitNow } from '../app/git';
+import { parseEveryWorktree } from '../../shared/ship/git-worktrees';
 import { readdirSync, readFileSync } from 'node:fs';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
@@ -93,14 +96,17 @@ function answer(result: CommandResult): number {
 }
 
 // `board guard`, a PreToolUse hook: the board guard (board-guard.ts), then the running-app guard
-// (running-app-guard.ts). The hook's input in, the refusal to print or ''. The board's refusal names
+// (running-app-guard.ts), then the worktree guard (worktree-guard.ts). The hook's input in, the refusal to print or ''. The board's refusal names
 // the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
 // (`boardVariable` set) and this program's own path outside one.
-export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList): string {
-  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown };
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList, listWorktrees: WorktreeList): string {
+  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };
   const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
-  const refused = boardGuard(toolName, input.tool_input, command) ?? runningAppGuard(toolName, input.tool_input, listProcesses);
+  const cwd = typeof input.cwd === 'string' ? input.cwd : '';
+  const refused = boardGuard(toolName, input.tool_input, command)
+    ?? runningAppGuard(toolName, input.tool_input, listProcesses)
+    ?? worktreeGuard(toolName, input.tool_input, cwd, listWorktrees);
   return refused === undefined ? '' : JSON.stringify(refused);
 }
 
@@ -124,8 +130,17 @@ function procProcesses(): RunningProcess[] | null {
   });
 }
 
+// Every worktree of the repository `folder` is in, as git lists them, or null outside one.
+function gitWorktrees(folder: string): string[] | null {
+  try {
+    return parseEveryWorktree(gitNow(['worktree', 'list', '--porcelain'], folder), folder).map((worktree) => worktree.worktreePath);
+  } catch {
+    return null;
+  }
+}
+
 function guard(): number {
-  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procProcesses));
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procProcesses, gitWorktrees));
   return 0;
 }
 
