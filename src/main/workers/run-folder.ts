@@ -46,8 +46,8 @@ export async function checkRunFolder(projectPath: string, folder: string): Promi
 }
 
 // The linked worktree a folder inside `root` is in below `root`, or undefined when it is root's own:
-// the first folder up from it that holdsWorktree. Read from disk rather than remembered from `run --in`, so a worker resumed at
-// launch is in the same worktree as before the restart.
+// the first folder up from it that holdsWorktree. Read from disk rather than remembered from
+// `run --in`, so a worker resumed at launch is in the same worktree as before the restart.
 export function worktreeWithin(directory: string, root: string, holdsWorktree: (folder: string) => boolean): string | undefined {
   for (let folder = directory; !isInside(root, folder); folder = path.dirname(folder)) {
     if (holdsWorktree(folder)) return folder;
