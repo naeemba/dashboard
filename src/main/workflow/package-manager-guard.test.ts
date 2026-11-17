@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { managersUsed, nearestLockfile, packageManagerGuard } from './package-manager-guard';
 
-const files = (...paths: string[]) => (path: string) => paths.includes(path);
+// The guard joins with the platform's separator, so on Windows it asks for `\work\app\.git`.
+const files = (...paths: string[]) => (path: string) => paths.includes(path.replaceAll('\\', '/'));
 
 describe('nearestLockfile', () => {
   it('finds the root lockfile from a package inside the repository', () => {

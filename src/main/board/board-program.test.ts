@@ -127,7 +127,7 @@ describe('board guard', () => {
 
   it("refuses npm in the session folder's pnpm project, with its own reason", () => {
     const install = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'npm install' }, cwd: '/p' });
-    const pnpmProject = (path: string) => path === '/p/.git' || path === '/p/pnpm-lock.yaml';
+    const pnpmProject = (path: string) => ['/p/.git', '/p/pnpm-lock.yaml'].includes(path.replaceAll('\\', '/'));
     expect(JSON.parse(guardAnswer(install, undefined, 'board.js', { ...nothing, exists: pnpmProject })).hookSpecificOutput.permissionDecisionReason).toContain('with pnpm');
     expect(guardAnswer(install, undefined, 'board.js', nothing)).toBe('');
   });
