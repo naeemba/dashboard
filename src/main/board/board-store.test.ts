@@ -486,12 +486,12 @@ describe('seedBoardDirectory', () => {
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('board.json');
   });
 
-  it('never overwrites files that are already there', () => {
+  it('rewrites a file that is not the current text', () => {
     const path = project();
     seedBoardDirectory(path);
-    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'mine');
+    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'Edit board.json directly.');
     seedBoardDirectory(path);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe('mine');
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
   });
 });
 
@@ -534,10 +534,9 @@ describe('the manager\'s own board', () => {
   });
 });
 
-// This repository has its own board, so its `.dashboard` docs are checked in — and seeding only writes
-// a file that is not there, so the app will never refresh them. Add a field to a card above and every
-// other project gets the new docs on first open while this one keeps the old text forever, which is the
-// text an agent working on this codebase reads. This fails the moment the two drift apart.
+// This repository has its own board, so its `.dashboard` docs are checked in. Change the text above and
+// the app rewrites them at the next board read, an uncommitted change nobody asked for; this fails the
+// moment the two drift apart, so the new text is committed with the change that made it.
 describe('the .dashboard docs checked into this repository', () => {
   it('still say what a freshly seeded project would be told', () => {
     expect(readFileSync(join(BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);

@@ -53,8 +53,8 @@ export const BOARD_PATHSPECS = [
   `:(exclude)${BOARD_DIRECTORY}/board*${TEMPORARY_SUFFIX}`,
 ] as const;
 
-// Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: seeding only
-// writes a file that is not there, so those copies would otherwise drift the moment this text changes.
+// Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: a change to this
+// text rewrites them at the next board read, and the pin makes that rewrite part of the same commit.
 export const EXPLANATION_FOR_AGENTS = `# .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B: \`board/\`, one
@@ -414,13 +414,14 @@ export function openBoard(projectPath: string, salvage = true): BoardRead {
   return readBoard(projectPath, salvage);
 }
 
-// Each file is written once, when it is not there. Neither is regenerated, so an edited CLAUDE.md
-// stays edited, and so does one seeded with the older text that spelled out the card format: it still
-// names the board command, and the hand edit it describes is refused by the guard, which names the
-// command too. The folder existing is not enough to skip the walk: writeBoard makes it too, and a
-// repo that keeps board.json in git often does not keep the docs beside it — clone one of those and
-// the folder arrives with no CLAUDE.md in it, leaving an agent working in there nothing that names
-// the command.
+// Each file is the app's, and is written whenever it is not the current text: missing, seeded by an
+// older version, or edited. Written once and never again, as it used to be, left 23 projects telling
+// an agent to edit board.json by hand, an edit the board guard now refuses, so the agent lost a turn
+// to the guard on every board. An edit to either file is undone at the next board read; what an agent
+// should know about a project goes in that project's own CLAUDE.md. The folder existing is not enough
+// to skip the walk: writeBoard makes it too, and a repo that keeps board.json in git often does not
+// keep the docs beside it — clone one of those and the folder arrives with no CLAUDE.md in it, leaving
+// an agent working in there nothing that names the command.
 export function seedBoardDirectory(projectPath: string): void {
   const directory = join(projectPath, BOARD_DIRECTORY);
   mkdirSync(directory, { recursive: true });
@@ -429,6 +430,6 @@ export function seedBoardDirectory(projectPath: string): void {
     ['README.md', EXPLANATION_FOR_PEOPLE],
   ] as const) {
     const file = join(directory, name);
-    if (!existsSync(file)) writeFileSync(file, contents);
+    if (readText(file) !== contents) writeFileSync(file, contents);
   }
 }

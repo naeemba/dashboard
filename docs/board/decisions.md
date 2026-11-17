@@ -302,10 +302,20 @@ spell out the card file field by field and quote the command's usage, which was
 for an agent editing cards by hand; the guard now refuses that edit, so an agent
 that read the format, edited a card and was refused lost a turn. It says what
 the folder holds and to run `node "$DASHBOARD_BOARD"`, whose usage is the one
-copy of the rest (`board-usage.ts`). Seeding never rewrites a file that is
-there, so a project with the old text keeps it: it still names the command,
-and the guard catches the edit it describes. What it costs: a person reading a
-card file finds its fields described nowhere but the code (`board.ts`).
+copy of the rest (`board-usage.ts`). What it costs: a person reading a card
+file finds its fields described nowhere but the code (`board.ts`).
+
+**The app rewrites both seeded files whenever they are not its current text.**
+They were written once, when missing, so an edited copy stayed edited; that also
+kept every older text, and 23 projects went on telling an agent to edit
+board.json directly, an edit the guard refuses, so the agent lost a turn on
+every board. Each board read now writes `.dashboard/CLAUDE.md` and
+`.dashboard/README.md` again when either differs from the text in
+`board-store.ts`, and a project with the old text gets the new one the next
+time its board is read. What it costs: an edit to either file is undone at the
+next board read, and in a project that commits `.dashboard/` the rewrite shows
+in `git status` until someone commits it. What an agent should know about a
+project goes in the project's own `CLAUDE.md`.
 
 **An agent records no pull request: the review starts from the one the app
 found.** The sweep that hands a finished card to a reviewer used to learn the

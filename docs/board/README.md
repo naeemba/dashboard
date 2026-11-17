@@ -212,9 +212,10 @@ board` in a project to see what it takes, or DASHBOARD_BOARD, the older path to
 the same program, with no word in front. It is how an agent working a card moves
 its own. The .dashboard/CLAUDE.md the app seeds into each project says only
 that: what the folder holds, that the board is changed through the command, and
-`node "$DASHBOARD_BOARD"` to print what it takes. It is written once, when it is
-missing, so a project seeded with the older text that spelled out the card
-format keeps it, and an edited copy stays edited.
+`node "$DASHBOARD_BOARD"` to print what it takes. It is written whenever the
+board is read and it is not that text, so a project seeded with an older text
+that spelled out the card format gets the new one, and an edited copy is put
+back (board-decision-8).
 
 ## Kept in step with git
 
