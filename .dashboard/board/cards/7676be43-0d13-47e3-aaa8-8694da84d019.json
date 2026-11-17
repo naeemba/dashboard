@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:58:51.697Z",
-  "updatedAt": "2026-11-17T13:12:27.460Z",
+  "updatedAt": "2026-11-17T13:31:27.749Z",
   "branch": "a-board-write-that-cannot-reach-origin-writ",
   "pullRequest": 322,
   "comments": [
     {
       "at": "2026-11-17T13:12:27.437Z",
       "body": "Pull request #322 opened: Board: a write that cannot reach origin is refused in a worktree, and a dropped connection is retried https://github.com/naeemba/dashboard/pull/322"
+    },
+    {
+      "at": "2026-11-17T13:31:27.749Z",
+      "body": "Review loop: floor-addressed after 2 rounds (commits c080217c merge of main, 5a1620ce, 0140b1d0); the card file is now main's copy and out of the diff. NOT ready to merge: main took #317 during the loop and the PR conflicts again in docs/board/README.md, src/main/board/board-program.ts, board-program.test.ts, board-sync-git.ts. CI not waited on because of the conflict. The last fix round (dropped-push refusal wording, 'rejected 3 times' wording) has no re-review behind it."
     }
   ],
   "column": "Review",
