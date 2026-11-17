@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:20:25.662Z",
-  "updatedAt": "2026-11-17T13:20:59.162Z",
+  "updatedAt": "2026-11-17T13:28:28.014Z",
   "branch": "refresh-every-project-s-stale-dashboard-cla",
   "pullRequest": 317,
   "comments": [
@@ -28,8 +28,12 @@
     {
       "at": "2026-11-17T13:20:59.162Z",
       "body": "A repository with no origin default branch is now treated like outside git, so a stale seeded doc there is rewritten on any branch. Tests and board-decision-8 updated, and the last review thread is resolved. Head aab5cd73, CI green. No threads open. Ready to merge."
+    },
+    {
+      "at": "2026-11-17T13:28:27.986Z",
+      "body": "Pull request #317 merged: Rewrite the seeded .dashboard docs whenever they are not the current text https://github.com/naeemba/dashboard/pull/317"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 261
 }
