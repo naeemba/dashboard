@@ -64,12 +64,14 @@ empty in the next, and a \`cd\` carries over only when it ends inside the
 working directory. So the worktree gets a fixed path, written out in full every
 time. Run:
 
-    pwd && git rev-parse --show-toplevel
+    pwd && pwd -P && git rev-parse --show-toplevel
 
-If the two lines differ, print "start the session at the repository's top
+If the last two lines differ, print "start the session at the repository's top
 level" and stop: from a subfolder the worktree is outside the working
-directory, and the move into it below would not carry over. Otherwise call the
-second path followed by \`/.adopt-docs\` \`<worktree>\`
+directory, and the move into it below would not carry over. (\`pwd -P\` and git
+both read links, so a checkout reached through one is not a subfolder.)
+Otherwise call the first path, the one the session's working directory is
+named by, \`<checkout>\`, and \`<checkout>/.adopt-docs\` \`<worktree>\`
 (\`/home/me/app/.adopt-docs\`, say). It sits inside the working directory, so
 writing there asks no permission, and outside \`.git\`, which is guarded more
 strictly than any other path. Print it once, then write the literal path
@@ -260,8 +262,7 @@ the docs hold the why.
   file left unclaimed, and every code comment or card still naming a moved doc.
   Do not merge.
 - Remove your worktree with \`cd <checkout> && git worktree remove <worktree>\`,
-  \`<checkout>\` being the path \`git rev-parse --show-toplevel\` printed in
-  step 2; the branch stays, and so does the \`/.adopt-docs/\` exclude line.
+  \`<checkout>\` being the path \`pwd\` printed in step 2; the branch stays, and so does the \`/.adopt-docs/\` exclude line.
 
 Print the pull request's URL and stop.
 `;

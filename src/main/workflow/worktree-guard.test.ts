@@ -46,6 +46,13 @@ describe('removesOwnWorktree', () => {
 
   it('refuses a removal whose cd sits in a subshell, which leaves the shell in the worktree', () => {
     expect(removesOwnWorktree('(cd /p && git worktree remove /p/.adopt-docs)', '/p/.adopt-docs', '/p')).toBe(true);
+    expect(removesOwnWorktree('(cd /p && cd /p && git worktree remove /p/.adopt-docs)', '/p/.adopt-docs', '/p')).toBe(true);
+    expect(removesOwnWorktree('(cd ..; cd ..; git worktree remove /p/.adopt-docs)', '/p/.adopt-docs/src', '/p')).toBe(true);
+  });
+
+  it('runs a removal after a closed subshell in the shell\'s folder', () => {
+    expect(removesOwnWorktree('(cd /x) && git worktree remove .', own)).toBe(true);
+    expect(removesOwnWorktree('(cd /p/.adopt-docs) && git worktree remove /p/.adopt-docs', '/p')).toBe(false);
   });
 });
 

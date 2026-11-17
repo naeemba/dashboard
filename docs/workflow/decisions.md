@@ -204,8 +204,12 @@ guard` refuses, after the board's and the running app's questions, cutting the c
 commands as the running-app guard does (`src/main/workflow/worktree-guard.ts`):
 
 - a `git worktree remove` of a folder holding where that command runs (the hook's `cwd`, then the last
-  `cd` before it in the same command) or the session's start folder (`CLAUDE_PROJECT_DIR`), where its
-  shell goes back to. Removing it kills the session's shell and leaves its pane in a folder that is
+  `cd` before it in the same command), where the session's shell is left by that command (a `cd`
+  inside a `( … )` subshell does not move it, and closing the subshell puts where the command runs
+  back there), or the session's start folder (`CLAUDE_PROJECT_DIR`), where its shell goes back to. So
+  from the worktree, in a session started in `/p`, `cd /p && git worktree remove /p/.adopt-docs` goes through while
+  `(cd /p && git worktree remove /p/.adopt-docs)` is refused: the second leaves the shell in the
+  folder it removes. Removing it kills the session's shell and leaves its pane in a folder that is
   gone. The path is read from where it runs and its `git -C`; removing any other worktree goes through,
   so `/adopt-docs`, which moves into the worktree it made inside the checkout, still removes it with
   `cd <checkout> && git worktree remove <worktree>`;

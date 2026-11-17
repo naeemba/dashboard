@@ -31,30 +31,43 @@ function resolveWord(word: string, base: string): string {
 }
 
 // Whether a `git … worktree remove` in `command` names a folder holding where it runs (`cwd`, then the
-// `cd` before it), where the session's shell is left (`shell`: a `cd` opening a `( … )` subshell does
-// not move it), or `startFolder`, the folder the session started in, where its shell goes back to.
-// The target is read from where it runs and its `git -C`.
+// `cd` before it), where the session's shell is left (`shell`: a `cd` inside a `( … )` subshell does
+// not move it, and closing the subshell puts where it runs back there), or `startFolder`, the folder
+// the session started in, where its shell goes back to. The target is read from where it runs and
+// its `git -C`.
 export function removesOwnWorktree(command: string, cwd: string, startFolder = cwd): boolean {
   let base = cwd;
   let shell = cwd;
-  return simpleCommands(command).some((part) => {
+  let depth = 0;
+  const count = (text: string, character: string) => text.split(character).length - 1;
+  for (const part of simpleCommands(command)) {
+    const opening = /^[(\s]*/.exec(part)?.[0] ?? '';
+    depth += count(opening, '(');
+    if (removes(part, base, shell, startFolder)) return true;
     const changed = invocation(part, 'cd');
     if (changed) base = resolveWord(changed.words[0] ?? '~', base);
-    if (changed && !part.startsWith('(')) shell = base;
-    const words = invocation(part, 'git')?.words ?? [];
-    // git's own flags, then its subcommand; `-C` and `-c` take a value.
-    let from = base;
-    let index = 0;
-    for (; words[index]?.startsWith('-'); index += 1) {
-      if (words[index] === '-C') from = resolveWord(words[index + 1] ?? '', from);
-      if (words[index] === '-C' || words[index] === '-c') index += 1;
-    }
-    if (words[index] !== 'worktree' || words[index + 1] !== 'remove') return false;
-    const target = words.slice(index + 2).find((word) => !word.startsWith('-'));
-    if (target === undefined) return false;
-    const removed = resolveWord(target, from);
-    return [base, shell, startFolder].some((folder) => isInside(folder, removed));
-  });
+    if (changed && depth === 0) shell = base;
+    // ponytail: parentheses are counted without reading quotes; `$( … )` balances itself.
+    depth += count(part.slice(opening.length), '(') - count(part, ')');
+    if (depth <= 0) [depth, base] = [0, shell];
+  }
+  return false;
+}
+
+function removes(part: string, base: string, shell: string, startFolder: string): boolean {
+  const words = invocation(part, 'git')?.words ?? [];
+  // git's own flags, then its subcommand; `-C` and `-c` take a value.
+  let from = base;
+  let index = 0;
+  for (; words[index]?.startsWith('-'); index += 1) {
+    if (words[index] === '-C') from = resolveWord(words[index + 1] ?? '', from);
+    if (words[index] === '-C' || words[index] === '-c') index += 1;
+  }
+  if (words[index] !== 'worktree' || words[index + 1] !== 'remove') return false;
+  const target = words.slice(index + 2).find((word) => !word.startsWith('-'));
+  if (target === undefined) return false;
+  const removed = resolveWord(target, from);
+  return [base, shell, startFolder].some((folder) => isInside(folder, removed));
 }
 
 // The worktree `file` is in: the deepest one holding it, so a worktree nested in the checkout
