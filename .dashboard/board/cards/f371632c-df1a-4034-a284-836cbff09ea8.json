@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T13:49:35.346Z",
-  "updatedAt": "2026-11-17T14:07:28.766Z",
+  "updatedAt": "2026-11-17T14:10:27.320Z",
   "branch": "review-loop-merges-through-pr-land",
   "pullRequest": 323,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-17T14:07:28.766Z",
       "body": "Review loop on #323: converged, ready to merge. 1 round; one low finding fixed in 1fa8e447 (merge-on prompt reruns a land that prints 'nothing is merged, run it again', with a test). Card file dropped from the diff and main merged in. CI: 5/5 checks passed on head 1fa8e447. Nothing open."
+    },
+    {
+      "at": "2026-11-17T14:10:27.301Z",
+      "body": "Pull request #323 merged: Review with merging on lands through pr land https://github.com/naeemba/dashboard/pull/323"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 263
 }
