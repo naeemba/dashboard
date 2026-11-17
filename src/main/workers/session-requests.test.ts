@@ -144,6 +144,28 @@ describe('sessionRequests', () => {
     expect(await answer({ directory: '/work/api', args: ['finish', '2:1'] })).toMatchObject({ ok: false });
   });
 
+  // Where the --worktree flag of Claude Code puts its worktrees: inside the checkout, on a branch of its own.
+  it('finishes a worker run --in a worktree nested in the checkout once its branch merged', async () => {
+    const { ports } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api/.claude/worktrees/x' : '/work/api'), merged: async () => true });
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '.claude/worktrees/x', 'go'] });
+    expect(await answer({ directory: '/work/api', args: ['finish', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
+  });
+
+  // Two agents in one worktree write over each other's work; main's own checkout is not one.
+  it('refuses --in a worktree another agent is at work in', async () => {
+    const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api-mr174/src' : '/work/api') });
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '../api-mr174', 'one'] });
+    expect(await answer({ directory: '/work/api', args: ['run', '2:2', '--in', '../api-mr174', 'two'] }))
+      .toEqual({ ok: false, output: '2:1 already has an agent at work in /work/api-mr174' });
+    expect(await answer({ directory: '/work/api', args: ['run', '2:2', '--in', 'packages/web', 'two'] })).toMatchObject({ ok: true });
+    expect(started.map((each) => each.id)).toEqual(['2:1', '2:2']);
+  });
+
   it('refuses --in for a folder the check refuses, and starts nothing', async () => {
     const { ports, started } = project();
     const answer = sessionRequests(ports);

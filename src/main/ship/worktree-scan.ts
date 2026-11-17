@@ -38,11 +38,13 @@ const sizes = createWorktreeSizes({
 
 export const forgetSize = sizes.forget;
 
-// Every worktree git lists for a project, its own checkout left out. A project git cannot list answers
-// with nothing rather than failing: the scan below and `pane run --in` (run-folder.ts) both ask.
-export async function listWorktrees(projectPath: string): Promise<GitWorktree[]> {
+// Every worktree git lists for a project, the repository's main checkout (git's first block) left out
+// unless `parse` keeps it: that is the project's own checkout only when the project was opened there.
+// A project git cannot list answers with nothing rather than failing: the scan below and
+// `pane run --in` (run-folder.ts) both ask.
+export async function listWorktrees(projectPath: string, parse = parseWorktreeList): Promise<GitWorktree[]> {
   try {
-    return parseWorktreeList(await git(['worktree', 'list', '--porcelain'], projectPath), projectPath);
+    return parse(await git(['worktree', 'list', '--porcelain'], projectPath), projectPath);
   } catch {
     return [];
   }
@@ -53,7 +55,7 @@ export async function listWorktrees(projectPath: string): Promise<GitWorktree[]>
 export async function scanWorktrees(
   projectPaths: readonly string[], records: readonly WorktreeRecord[],
 ): Promise<ScannedWorktree[]> {
-  const listed = await Promise.all(projectPaths.map(listWorktrees));
+  const listed = await Promise.all(projectPaths.map((projectPath) => listWorktrees(projectPath)));
   const byRealPath = new Map(records.map((record) => [realPath(record.worktreePath), record]));
   const openFolders = new Set(projectPaths.map(realPath));
   return Promise.all(distinctWorktrees(listed.flat(), byRealPath, openFolders).map(async (worktree) => (

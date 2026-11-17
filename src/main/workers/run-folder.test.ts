@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runFolderRefusal } from './run-folder';
+import { runFolderRefusal, worktreeHolding } from './run-folder';
 
 const worktrees = ['/work/api-mr174', '/work/api.worktrees/card-one'];
 
@@ -21,5 +21,18 @@ describe('runFolderRefusal', () => {
     expect(runFolderRefusal('/work/api-other', true, '/work/api', worktrees)).toMatch(/neither inside \/work\/api nor a worktree/);
     expect(runFolderRefusal('/work', true, '/work/api', worktrees)).not.toBe(null);
     expect(runFolderRefusal('/work/crm', true, '/work/api', [])).not.toBe(null);
+  });
+});
+
+describe('worktreeHolding', () => {
+  it('names the worktree a folder is in, and nothing for a folder of the checkout', () => {
+    expect(worktreeHolding('/work/api-mr174/src', '/work/api', worktrees)).toBe('/work/api-mr174');
+    expect(worktreeHolding('/work/api/packages/web', '/work/api', worktrees)).toBeUndefined();
+  });
+
+  // Where the --worktree flag of Claude Code puts its worktrees: inside the checkout, and still not it.
+  it('names a worktree nested in the checkout, not the checkout', () => {
+    const nested = ['/work/api', '/work/api/.claude/worktrees/x'];
+    expect(worktreeHolding('/work/api/.claude/worktrees/x/src', '/work/api', nested)).toBe('/work/api/.claude/worktrees/x');
   });
 });
