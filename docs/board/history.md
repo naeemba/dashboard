@@ -23,4 +23,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #282 — The seeded .dashboard/CLAUDE.md names the board command and stops (board-decision-8)
 - 2026-11-16 #290 — The review pane merges and moves nothing; the app's follow moves the card into Done (board-decision-7)
 - 2026-11-16 #305 — A board.json that breaks twice keeps both damaged copies
-- 2026-11-17 #317 — The seeded .dashboard docs are rewritten whenever they are not the current text (board-decision-8)
+- 2026-11-17 #317 — The seeded .dashboard docs are rewritten whenever they are not the current text, and committed to origin by the board's sync where git tracks them (board-decision-8)

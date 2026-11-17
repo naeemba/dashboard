@@ -28,9 +28,12 @@ export function registerProjectFiles(
   table.handle('board:peek', (_screen, projectPath: string) => peekBoard(projectPath));
   table.handle('board:read', (_screen, projectPath: string) => {
     try {
-      const read = openBoard(projectPath);
+      const { reseeded, ...read } = openBoard(projectPath);
       changes.seen(projectPath, read.board);
       shown(projectPath);
+      // A rewritten explanation file in a project that commits .dashboard/ goes to origin the way a
+      // card write does, so the checkout is not left with a change nobody made (board-decision-8).
+      if (reseeded) void boardSync.sync(projectPath);
       return { ...read, pullRequestStatuses: pullRequestStatuses(projectPath, read.board) };
     } finally {
       // After the read, which is what creates .dashboard on a project that has never had a board — and

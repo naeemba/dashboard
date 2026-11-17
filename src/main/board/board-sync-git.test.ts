@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
 import { runBoardCommand } from './board-cli';
-import { BOARD_FOLDER_PATH, openBoard, peekBoard, writeBoard } from './board-store';
+import { BOARD_FOLDER_PATH, EXPLANATION_FOR_AGENTS, openBoard, peekBoard, writeBoard } from './board-store';
 import { syncBoard, type BoardEdit } from './board-sync-git';
 import { boardOn, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
 import { temporaryFolder } from '../testing/temporary-folder';
@@ -81,6 +81,26 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(git(checkout, 'rev-parse', 'HEAD')).toBe(git(bare, 'rev-parse', 'main'));
     expect(clean(checkout)).toBe(true);
     expect(git(bare, 'log', '-1', '--format=%s', 'main')).toBe('board: "card a" Todo → Doing');
+  });
+
+  // A project that commits its .dashboard docs, seeded by an older app: the read rewrites them, and
+  // the sync puts the rewrite on origin's main so the checkout is clean again.
+  it('commits the rewritten .dashboard docs to origin and leaves the checkout clean', async () => {
+    const { bare, checkout } = project();
+    writeFileSync(join(checkout, '.dashboard', 'CLAUDE.md'), 'Edit board.json directly.\n');
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'old docs');
+    git(checkout, 'push', '--quiet', 'origin', 'HEAD:main');
+    expect(openBoard(checkout).reseeded).toBe(true);
+    expect(clean(checkout)).toBe(false);
+    const outcome = await syncBoard(checkout);
+    expect(outcome).toMatchObject({ synced: true, checkout: 'current' });
+    expect(git(bare, 'show', 'main:.dashboard/CLAUDE.md')).toBe(EXPLANATION_FOR_AGENTS.trimEnd());
+    // README.md was never committed here, so the sync leaves it out.
+    expect(git(bare, 'ls-tree', '--name-only', 'main', '.dashboard/')).not.toContain('README.md');
+    expect(git(bare, 'log', '-1', '--format=%s', 'main')).toBe('board: rewrite the .dashboard docs to the current text');
+    expect(git(checkout, 'rev-parse', 'HEAD')).toBe(git(bare, 'rev-parse', 'main'));
+    expect(git(checkout, 'status', '--porcelain')).toBe('?? .dashboard/README.md');
   });
 
   // The kamandsystem loss: a checkout many commits behind, a `board move` there, and every card the

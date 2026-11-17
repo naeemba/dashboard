@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import type { Board } from '../../shared/board/board';
@@ -8,7 +8,8 @@ import { isManagerPath } from '../../shared/manager/manager';
 import { baseBranch, git, gitNow, NO_HOOKS } from '../app/git';
 import { realPath } from '../app/real-path';
 import { BROKEN_SUFFIX } from '../app/set-aside';
-import { BOARD_PATHSPECS, peekBoard, readBoard, writeBoard } from './board-store';
+import { BOARD_PATHSPECS, SEEDED_FILES, peekBoard, readBoard, writeBoard } from './board-store';
+import { readText } from '../app/missing-file';
 import {
   FETCH_TIMEOUT,
   PUSH_ATTEMPTS,
@@ -78,8 +79,9 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
       if (pending !== null && 'refusal' in pending) return notSynced(pending.refusal);
       const next = edit(pending === null ? origin.board : rebaseBoardChange(pending.base, pending.local, origin.board));
       let target = tip;
-      if (!sameBoard(origin.board, next)) {
-        const commit = await commitBoard(origin.scratch, next, tip, syncCommitMessage(origin.board, next));
+      if (!sameBoard(origin.board, next) || origin.staleSeeds.length > 0) {
+        const message = syncCommitMessage(origin.board, next, origin.staleSeeds.length > 0);
+        const commit = await commitBoard(origin.scratch, next, origin.staleSeeds, tip, message);
         try {
           await git([...NO_HOOKS, 'push', '--quiet', REMOTE, `${commit}:refs/heads/${branch}`], top, { timeout: PUSH_TIMEOUT });
         } catch (error: unknown) {
@@ -88,7 +90,7 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         }
         target = commit;
       }
-      const step = await updateCheckout(checkout, branch, target);
+      const step = await updateCheckout(checkout, branch, target, origin.trackedSeeds);
       return { synced: true, checkout: checkout !== top ? 'elsewhere' : typeof step === 'string' ? 'current' : 'stale' };
     } finally {
       rmSync(scratch, { recursive: true, force: true });
@@ -124,8 +126,12 @@ async function checkoutOf(top: string): Promise<string> {
 // A scratch work tree and index of its own, against the repository's objects and refs, and git run there.
 type Scratch = { work: string; git(gitArguments: string[]): Promise<string> };
 
-// The board at `ref`, read the way the app reads any board, from its files written into `folder`.
-async function boardAt(gitDirectory: string, ref: string, folder: string): Promise<{ board: Board; scratch: Scratch } | { refusal: string }> {
+// The board at `ref`, read the way the app reads any board, from its files written into `folder`;
+// with it, the explanation files the app seeds that git tracks at `ref`, and those of them that are not
+// the app's current text, which the commit rewrites (board-decision-8).
+type BoardAt = { board: Board; scratch: Scratch; trackedSeeds: string[]; staleSeeds: string[] };
+
+async function boardAt(gitDirectory: string, ref: string, folder: string): Promise<BoardAt | { refusal: string }> {
   const work = join(folder, 'work');
   mkdirSync(work, { recursive: true });
   const environment = { GIT_DIR: gitDirectory, GIT_WORK_TREE: work, GIT_INDEX_FILE: join(folder, 'index') };
@@ -135,14 +141,19 @@ async function boardAt(gitDirectory: string, ref: string, folder: string): Promi
   await scratch.git([...NO_HOOKS, 'checkout', '--quiet', '--', ...BOARD_PATHSPECS]);
   const read = readBoard(work, false);
   if (read.brokenFiles.length > 0) return { refusal: `board files at ${ref.slice(0, 8)} do not parse` };
-  return { board: read.board, scratch };
+  const trackedSeeds = (await scratch.git(['ls-files', '--', ...Object.keys(SEEDED_FILES)])).split('\n').filter((file) => file !== '');
+  if (trackedSeeds.length > 0) await scratch.git([...NO_HOOKS, 'checkout', '--quiet', '--', ...trackedSeeds]);
+  const staleSeeds = trackedSeeds.filter((file) => readText(join(work, file)) !== SEEDED_FILES[file]);
+  return { board: read.board, scratch, trackedSeeds, staleSeeds };
 }
 
 // The commit of `board` on top of `parent`, made in the scratch folder its parent's board was read
-// into. -A, so a card removed or a board leaving board.json is a removal in the commit.
-async function commitBoard(scratch: Scratch, board: Board, parent: string, message: string): Promise<string> {
+// into, with each of `staleSeeds` rewritten to the app's text. -A, so a card removed or a board leaving
+// board.json is a removal in the commit.
+async function commitBoard(scratch: Scratch, board: Board, staleSeeds: readonly string[], parent: string, message: string): Promise<string> {
   writeBoard(scratch.work, board);
-  await scratch.git(['add', '-A', '--', ...BOARD_PATHSPECS]);
+  for (const file of staleSeeds) writeFileSync(join(scratch.work, file), SEEDED_FILES[file]);
+  await scratch.git(['add', '-A', '--', ...BOARD_PATHSPECS, ...staleSeeds]);
   const tree = await scratch.git(['write-tree']);
   return scratch.git(['commit-tree', tree, '-p', parent, '-m', message]);
 }
@@ -180,8 +191,10 @@ async function checkoutPending(
 // No stash: the board's files are the only ones touched. They are put back as HEAD has them (restore,
 // and clean for a card file git does not know yet), the fast-forward then has nothing in its way, and
 // the edits the checkout had are replayed onto what it lands on. A fast-forward that fails anyway puts
-// the checkout's board back as it was.
-async function updateCheckout(checkout: string, branch: string, target: string): Promise<CheckoutStep> {
+// the checkout's board back as it was. The tracked explanation files are put back too: the app's read
+// has rewritten them here, and git refuses a fast-forward over a file changed on both sides even when
+// the two changes are the same. The target holds the app's text, so the fast-forward brings it back.
+async function updateCheckout(checkout: string, branch: string, target: string, trackedSeeds: readonly string[]): Promise<CheckoutStep> {
   const [head, onBranch, porcelain, behind] = await Promise.all([
     answer(['rev-parse', 'HEAD'], checkout),
     answer(['symbolic-ref', '--short', '-q', 'HEAD'], checkout),
@@ -200,7 +213,7 @@ async function updateCheckout(checkout: string, branch: string, target: string):
   const local = peekBoard(checkout);
   if (local === null) return { stay: 'its board files do not parse' };
   try {
-    gitNow(['restore', '--source=HEAD', '--staged', '--worktree', '--', ...BOARD_PATHSPECS], checkout);
+    gitNow(['restore', '--source=HEAD', '--staged', '--worktree', '--', ...BOARD_PATHSPECS, ...trackedSeeds], checkout);
     gitNow(['clean', '-f', '-q', '--', ...BOARD_PATHSPECS], checkout);
     const base = peekBoard(checkout);
     gitNow([...NO_HOOKS, 'merge', '--ff-only', '--quiet', target], checkout);

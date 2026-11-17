@@ -78,6 +78,13 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 \`CLAUDE.md\` beside this file tells an agent how to change the board.
 `;
 
+// Each explanation file the app seeds, by its path in the project, with the text it is to hold. The
+// paths are git's, relative and with `/`, so the sync can hand them to git as they are.
+export const SEEDED_FILES: Readonly<Record<string, string>> = {
+  [`${BOARD_DIRECTORY}/CLAUDE.md`]: EXPLANATION_FOR_AGENTS,
+  [`${BOARD_DIRECTORY}/README.md`]: EXPLANATION_FOR_PEOPLE,
+};
+
 // Which project a directory belongs to. The command line is pointed at a project by the directory you
 // run it from, and an agent that has `cd src` first is still working the same project: without this,
 // `board add` there seeds a second `.dashboard` under src/ and writes the card into it — a real id
@@ -404,14 +411,17 @@ export function writeBoard(projectPath: string, board: Board): string {
 // `board` command that moves its cards, and that command refuses to run in the home directory — an
 // agent reading them there would be told how to do something it cannot. The folder is still made, so
 // the watch main starts after this read has something to watch.
-export function openBoard(projectPath: string, salvage = true): BoardRead {
+//
+// `reseeded` says an explanation file was rewritten, which a board git tracks has to sync.
+export function openBoard(projectPath: string, salvage = true): BoardRead & { reseeded: boolean } {
+  let reseeded = false;
   try {
     if (isManagerPath(projectPath)) mkdirSync(dirname(boardPath(projectPath)), { recursive: true });
-    else seedBoardDirectory(projectPath);
+    else reseeded = seedBoardDirectory(projectPath);
   } catch {
     // No explanation files this time.
   }
-  return readBoard(projectPath, salvage);
+  return { ...readBoard(projectPath, salvage), reseeded };
 }
 
 // Each file is the app's, and is written whenever it is not the current text: missing, seeded by an
@@ -422,14 +432,18 @@ export function openBoard(projectPath: string, salvage = true): BoardRead {
 // to skip the walk: writeBoard makes it too, and a repo that keeps board.json in git often does not
 // keep the docs beside it — clone one of those and the folder arrives with no CLAUDE.md in it, leaving
 // an agent working in there nothing that names the command.
-export function seedBoardDirectory(projectPath: string): void {
-  const directory = join(projectPath, BOARD_DIRECTORY);
-  mkdirSync(directory, { recursive: true });
-  for (const [name, contents] of [
-    ['CLAUDE.md', EXPLANATION_FOR_AGENTS],
-    ['README.md', EXPLANATION_FOR_PEOPLE],
-  ] as const) {
-    const file = join(directory, name);
-    if (readText(file) !== contents) writeFileSync(file, contents);
+//
+// Answers whether it wrote one. In a project that commits them the rewrite is a change on disk, and
+// the board's sync commits it to origin's default branch beside the cards (board-sync-git.ts), so the
+// caller that seeded asks for a sync even when no card changed.
+export function seedBoardDirectory(projectPath: string): boolean {
+  mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
+  let wrote = false;
+  for (const [file, contents] of Object.entries(SEEDED_FILES)) {
+    const path = join(projectPath, file);
+    if (readText(path) === contents) continue;
+    writeFileSync(path, contents);
+    wrote = true;
   }
+  return wrote;
 }

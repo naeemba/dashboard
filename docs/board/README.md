@@ -215,7 +215,8 @@ that: what the folder holds, that the board is changed through the command, and
 `node "$DASHBOARD_BOARD"` to print what it takes. It is written whenever the
 board is read and it is not that text, so a project seeded with an older text
 that spelled out the card format gets the new one, and an edited copy is put
-back (board-decision-8).
+back. Where git tracks the file, the rewrite is committed to origin's default
+branch by the sync below, as a card write is (board-decision-8).
 
 ## Kept in step with git
 
@@ -228,10 +229,13 @@ or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
    replayed onto it (`rebaseBoardChange`), then the command's edit on top;
 3. commit that, and only the board's files, onto origin's tip with a plain
    message (`board: "Fix login" Doing → Review`), and push it; a push that lost
-   a race fetches and tries again, three tries in all;
+   a race fetches and tries again, three tries in all. A seeded explanation file
+   git tracks there and that is not the app's current text is rewritten in the
+   same commit, and is reason enough for a commit when no card changed; the
+   app's board read asks for a sync when it rewrote one;
 4. bring the project's checkout up to it: on the default branch, only behind,
    and nothing changed outside `.dashboard/`, the board's files are put back to
-   HEAD, the checkout fast-forwarded (no stash, hooks off), and its own board
+   HEAD (the tracked explanation files too), the checkout fast-forwarded (no stash, hooks off), and its own board
    edits laid back on top. Otherwise it is left where it is, and the `board`
    command writes the same edit there as well, timestamps and all, so the next
    sync does not publish it a second time.

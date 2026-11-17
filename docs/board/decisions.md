@@ -312,10 +312,17 @@ board.json directly, an edit the guard refuses, so the agent lost a turn on
 every board. Each board read now writes `.dashboard/CLAUDE.md` and
 `.dashboard/README.md` again when either differs from the text in
 `board-store.ts`, and a project with the old text gets the new one the next
-time its board is read. What it costs: an edit to either file is undone at the
-next board read, and in a project that commits `.dashboard/` the rewrite shows
-in `git status` until someone commits it. What an agent should know about a
-project goes in the project's own `CLAUDE.md`.
+time its board is read. In a project that commits `.dashboard/`, the rewrite
+goes to origin's default branch through the board's own sync, in the commit
+with the cards or in one of its own when no card changed, and the checkout is
+fast-forwarded onto it, so no project is left with a modified file nobody made.
+Only a file git already tracks there is committed: a project that never
+committed `README.md` does not get it pushed. What it costs: an edit to either
+file is undone at the next board read; and a checkout on another branch, such as
+a card's worktree made before the new text reached main, shows the rewrite as
+modified until that branch takes main's copy, and a `git merge` of main there
+refuses until the file is restored. What an agent should know about a project
+goes in the project's own `CLAUDE.md`.
 
 **An agent records no pull request: the review starts from the one the app
 found.** The sweep that hands a finished card to a reviewer used to learn the
