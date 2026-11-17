@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:20:59.850Z",
-  "updatedAt": "2026-11-17T12:21:56.135Z",
+  "updatedAt": "2026-11-17T12:27:18.313Z",
   "branch": "pane-send-refuses-text-that-starts-claude",
-  "column": "Doing",
-  "order": 3
+  "pullRequest": 318,
+  "comments": [
+    {
+      "at": "2026-11-17T12:27:18.278Z",
+      "body": "Pull request #318 opened: pane send refuses text that starts claude https://github.com/naeemba/dashboard/pull/318"
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }
