@@ -1,0 +1,11 @@
+{
+  "id": "4eef2dcc-5629-4c1e-ba2b-88c26674ee41",
+  "title": "Board guard refuses removing its own worktree and editing another worktree",
+  "notes": "The guard can refuse git worktree remove of the folder the session runs in, and Edit/Write into another worktree of the same repository. Then delete the matching md rules. Found by the md audit, 2026-11-17.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-17T12:20:57.058Z",
+  "updatedAt": "2026-11-17T12:20:57.058Z",
+  "column": "Backlog",
+  "order": 48
+}

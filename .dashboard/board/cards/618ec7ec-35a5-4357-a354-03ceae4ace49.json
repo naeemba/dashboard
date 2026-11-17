@@ -1,0 +1,11 @@
+{
+  "id": "618ec7ec-35a5-4357-a354-03ceae4ace49",
+  "title": "pane send refuses text that starts claude",
+  "notes": "Starting Claude by typing claude through pane send gives a worker none of the app settings and it never reports. Refuse it in pane send (refusal predicate exported where decided), pointing at pane run / --in, then drop the prompt line that says not to. Found by the md audit, 2026-11-17.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-17T12:20:59.850Z",
+  "updatedAt": "2026-11-17T12:20:59.850Z",
+  "column": "Backlog",
+  "order": 49
+}
