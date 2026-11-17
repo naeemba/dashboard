@@ -18,6 +18,7 @@ import { bind, isRefused, sessionReply } from '../actions/action';
 import { paneClaim } from '../actions/pane/claim';
 import { paneRelease } from '../actions/pane/release';
 import { releaseVerdict, type WorkerLook } from './auto-release';
+import { worktreeWithin } from './run-folder';
 
 // What main does with a `session` command: who is asking and what they may touch, against what main.ts
 // hands over. Every change to a pane is a pane action (actions/pane/): claim and release are bound here,
@@ -71,6 +72,8 @@ export type SessionPorts = {
   // Why `run --in` may not start a worker in the folder, or the worktree of the repository it is in,
   // undefined for a folder of the project's own checkout (run-folder.ts).
   checkRunFolder(projectPath: string, folder: string): Promise<{ worktree: string | undefined } | Refused>;
+  // Whether the folder is a linked worktree's top, holding a `.git` file (run-folder.ts).
+  isLinkedWorktree(folder: string): boolean;
   // Whether a throwaway's folder is still there (pane.release).
   exists(worktreePath: string): boolean;
   prune(projectPath: string): Promise<void>;
@@ -140,9 +143,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   const states = new Map<string, { state: WorkerState; waiting?: StopWaiting }>();
   // The throwaway worktree each worker was given, which release removes once its work is out.
   const throwaways = new Map<string, { worktreePath: string; projectPath: string }>();
-  // The worktree each `run --in` worker was started in, when that is not the project's checkout: one
-  // nested inside the checkout reads as the checkout by its folder alone. Gone with the pane's worker.
-  const folderWorktrees = new Map<string, string>();
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
   // running there is somebody else's — a dev server, a card a ship gave an agent — and release would
   // kill it. Main's worker always runs as the pane's agent, so a pane that is not running one is not it.
@@ -248,12 +248,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const held = throwaways.get(id);
     if (worktree && held !== undefined) return refused(`${id} still holds ${held.worktreePath} — release it first`);
     let directory = projectPath;
-    folderWorktrees.delete(id);
     if (card !== null) {
       const found = ports.cardWorktree(projectPath, card);
       if (found === undefined) return refused(`card ${card} has no worktree — moving it to Ship makes one`);
       // Two agents in one checkout write over each other's work.
       if (found.working) return refused(`card ${card} already has an agent at work in ${found.worktreePath}`);
+      const working = agentAtWorkIn(found.worktreePath, id);
+      if (working !== undefined) return refused(`${working} already has an agent at work in ${found.worktreePath}`);
       directory = found.worktreePath;
     } else if (worktree) {
       directory = await ports.makeWorktree(projectPath, prompt);
@@ -266,12 +267,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (folderWorktree !== undefined) {
         // Two agents in one checkout write over each other's work, as with --card. The project's own
         // checkout is left out: main's agent stands there, and a plain run starts one beside it.
-        const working = openPaneIds().find((each) => {
-          const there = ports.directoryOf(each);
-          return each !== id && ports.agentIn(each) && there !== undefined && isInside(there, folderWorktree);
-        });
+        const working = agentAtWorkIn(folderWorktree, id);
         if (working !== undefined) return refused(`${working} already has an agent at work in ${folderWorktree}`);
-        folderWorktrees.set(id, folderWorktree);
       }
       directory = folder;
     }
@@ -296,7 +293,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       dispatchers.delete(id);
       dispatched.delete(id);
       quiet.delete(id);
-      folderWorktrees.delete(id);
       const throwaway = throwaways.get(id);
       throwaways.delete(id);
       return throwaway;
@@ -305,15 +301,22 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // The worktree the pane works in, when it is not the project's own checkout: that one has no branch
   // of its own, and the merged pull requests of the branch it is on are anybody's.
-  // A folder inside the checkout (`run --in packages/web`) is the checkout too, unless `run --in` found
-  // it in a worktree nested there.
+  // A folder inside the checkout (`run --in packages/web`) is the checkout too, unless it is in a
+  // worktree nested there (`.claude/worktrees/x`).
   function ownWorktree(id: string): string | undefined {
-    const held = folderWorktrees.get(id);
-    if (held !== undefined) return held;
     const directory = ports.directoryOf(id);
     const project = paneProject(id);
-    return directory === undefined || (project !== undefined && isInside(directory, project)) ? undefined : directory;
+    if (directory === undefined || project === undefined || !isInside(directory, project)) return directory;
+    return worktreeWithin(directory, project, ports.isLinkedWorktree);
   }
+
+  // Another pane whose agent is at work in the worktree, which two agents write over each other's work
+  // in: standing in it, and not in a worktree nested below it.
+  const agentAtWorkIn = (worktree: string, exceptId: string): string | undefined => openPaneIds().find((each) => {
+    const there = ports.directoryOf(each);
+    return each !== exceptId && ports.agentIn(each) && there !== undefined && isInside(there, worktree)
+      && worktreeWithin(there, worktree, ports.isLinkedWorktree) === undefined;
+  });
 
   // Whether the branch of the pane's own worktree merged, which is the card's too before the follow
   // moves it: what `pane finish` and the sweep release on beside the card. A worktree already gone was
@@ -509,7 +512,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     workers,
     notify,
     closeFinished,
-    forget: (id: string) => { dispatched.delete(id); quiet.delete(id); folderWorktrees.delete(id); forgetWorker(id); },
+    forget: (id: string) => { dispatched.delete(id); quiet.delete(id); forgetWorker(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two
     // projects in folders of one name give their workers one name.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { runFolderRefusal, worktreeHolding } from './run-folder';
+import { runFolderRefusal, worktreeHolding, worktreeWithin } from './run-folder';
 
 const worktrees = ['/work/api-mr174', '/work/api.worktrees/card-one'];
 
@@ -34,5 +34,21 @@ describe('worktreeHolding', () => {
   it('names a worktree nested in the checkout, not the checkout', () => {
     const nested = ['/work/api', '/work/api/.claude/worktrees/x'];
     expect(worktreeHolding('/work/api/.claude/worktrees/x/src', '/work/api', nested)).toBe('/work/api/.claude/worktrees/x');
+  });
+
+  // The checkout is told apart by the folder, not its spelling.
+  it('never names the checkout, however git spells it', () => {
+    expect(worktreeHolding('/work/api/src', '/work/api', ['/work/api/'])).toBeUndefined();
+  });
+});
+
+describe('worktreeWithin', () => {
+  const linked = (folder: string) => folder === '/work/api/.claude/worktrees/x';
+
+  it('names the linked worktree between a folder and the root, and nothing for the root\'s own folder', () => {
+    expect(worktreeWithin('/work/api/.claude/worktrees/x/src', '/work/api', linked)).toBe('/work/api/.claude/worktrees/x');
+    expect(worktreeWithin('/work/api/.claude/worktrees/x', '/work/api', linked)).toBe('/work/api/.claude/worktrees/x');
+    expect(worktreeWithin('/work/api/packages/web', '/work/api', linked)).toBeUndefined();
+    expect(worktreeWithin('/work/api', '/work/api', linked)).toBeUndefined();
   });
 });

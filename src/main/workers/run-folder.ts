@@ -1,3 +1,5 @@
+import { statSync } from 'node:fs';
+import path from 'node:path';
 import { isDirectory } from '../app/projects';
 import { realPath } from '../app/real-path';
 import { isInside } from '../panes/shell-directory';
@@ -24,10 +26,11 @@ export function runFolderRefusal(
 
 // The worktree the folder is in, other than the project's checkout, or undefined for a folder of the
 // checkout itself. The deepest one listed, so a worktree nested in the checkout
-// (`<project>/.claude/worktrees/x`) is its own worktree and not the checkout.
+// (`<project>/.claude/worktrees/x`) is its own worktree and not the checkout. The checkout is told
+// apart by isInside both ways, not by spelling, for the reason runFolderRefusal gives.
 export function worktreeHolding(folder: string, projectPath: string, worktreePaths: readonly string[]): string | undefined {
   return worktreePaths
-    .filter((root) => root !== projectPath && isInside(folder, root))
+    .filter((root) => !(isInside(root, projectPath) && isInside(projectPath, root)) && isInside(folder, root))
     .sort((one, other) => other.length - one.length)[0];
 }
 
@@ -40,4 +43,20 @@ export async function checkRunFolder(projectPath: string, folder: string): Promi
   const worktrees = (await listWorktrees(projectPath, parseEveryWorktree)).map((worktree) => realPath(worktree.worktreePath));
   const refusal = runFolderRefusal(real, isDirectory(real), project, worktrees);
   return refusal === null ? { worktree: worktreeHolding(real, project, worktrees) } : { refused: refusal };
+}
+
+// The linked worktree a folder inside `root` is in below `root`, or undefined when it is root's own:
+// the first folder up from it holding a `.git` file, which a linked worktree has and a checkout does not
+// (a `.git` folder). Read from disk rather than remembered from `run --in`, so a worker resumed at
+// launch is in the same worktree as before the restart.
+// ponytail: a submodule has a `.git` file too and reads as a worktree; its own branch is what it merges.
+export function worktreeWithin(directory: string, root: string, isLinkedWorktree: (folder: string) => boolean): string | undefined {
+  for (let folder = directory; !isInside(root, folder); folder = path.dirname(folder)) {
+    if (isLinkedWorktree(folder)) return folder;
+  }
+  return undefined;
+}
+
+export function isLinkedWorktree(folder: string): boolean {
+  return statSync(path.join(folder, '.git'), { throwIfNoEntry: false })?.isFile() ?? false;
 }

@@ -66,9 +66,10 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     makeWorktree: async () => '/work/api.worktrees/fix-the-tests',
     // api-mr174 is a sibling worktree, x one nested in the checkout, packages/web a folder of it.
     checkRunFolder: async (_projectPath, folder) => (
-      { '/work/api-mr174': { worktree: '/work/api-mr174' }, '/work/api/.claude/worktrees/x': { worktree: '/work/api/.claude/worktrees/x' } }[folder]
+      { '/work/api-mr174': { worktree: '/work/api-mr174' }, '/work/api.worktrees/card-one': { worktree: '/work/api.worktrees/card-one' }, '/work/api/.claude/worktrees/x': { worktree: '/work/api/.claude/worktrees/x' } }[folder]
       ?? (folder === '/work/api/packages/web' ? { worktree: undefined } : { refused: `${folder} is not a folder` })
     ),
+    isLinkedWorktree: (folder) => /\/(api-mr174|api\.worktrees\/[^/]+|\.claude\/worktrees\/[^/]+)$/.test(folder),
     exists: () => true,
     prune: async () => undefined,
     unfinished: async () => null,
