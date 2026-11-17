@@ -5,8 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:28:13.923Z",
-  "updatedAt": "2026-11-17T12:49:18.553Z",
+  "updatedAt": "2026-11-17T12:58:11.997Z",
   "branch": "board-ship-commits-the-card-column-ship-ont",
+  "comments": [
+    {
+      "at": "2026-11-17T12:58:11.997Z",
+      "body": "PR #321: the ship no longer commits the card onto its branch; tests hold it. Left out, older and separate: board-program.ts writeHere fallback writes a worktree's card file in place when the sync to origin fails (offline, or losing the push race three times), and that copy can then be committed on the branch and ride its merge. Worth its own card."
+    }
+  ],
   "column": "Doing",
   "order": 0
 }
