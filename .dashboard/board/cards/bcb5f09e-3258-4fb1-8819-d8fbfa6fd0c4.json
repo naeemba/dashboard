@@ -5,13 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:28:13.923Z",
-  "updatedAt": "2026-11-17T12:28:34.305Z",
-  "comments": [
-    {
-      "at": "2026-11-17T12:28:34.305Z",
-      "body": "Carded from the main session while four workers run; ship when a pane frees."
-    }
-  ],
+  "updatedAt": "2026-11-17T12:28:13.923Z",
   "column": "Backlog",
   "order": 46
 }
