@@ -1,3 +1,4 @@
+import { invocation, simpleCommands } from '../../workflow/running-app-guard';
 import { workerPrompt } from '../../workers/dispatch';
 import { action } from '../action';
 import { isFilledText } from './pane-input';
@@ -41,12 +42,23 @@ export function reportsTurns(ports: Pick<PaneSendPorts, 'agentIn' | 'screenIn' |
   return ports.screenIn(id) || (ports.agentIn(id) && ports.mainsWorkerIn(id));
 }
 
+// Whether text typed into a shell starts Claude Code: `claude` as the first word of any of its commands,
+// by name or by path, read the way the running-app guard reads a command line. Only asked of a shell,
+// since an agent takes the same text as a prompt.
+export function startsClaude(text: string): boolean {
+  return simpleCommands(text).some((part) => invocation(part, 'claude') !== null);
+}
+
+export const STARTS_CLAUDE_REFUSAL = 'typing claude starts a worker with none of the app\'s settings that never'
+  + ' reports to you: start it with pane run <id> (--card, --worktree or --in <folder>)';
+
 // `handed`: the pane's agent is the sending main's worker now.
 export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; handed: boolean }>('pane.send', {
   words: [],
   input: ({ id, text, dispatcherPath }) => (isFilledText(id) && typeof text === 'string' && isFilledText(dispatcherPath)
     ? { id, text, dispatcherPath } : { refused: 'no pane, text or sending main was given' }),
   async run(ports, { id, text, dispatcherPath }) {
+    if (!ports.agentIn(id) && startsClaude(text)) return { refused: STARTS_CLAUDE_REFUSAL };
     const handed = reportsTurns(ports, id);
     if (handed) ports.handTo(id, dispatcherPath);
     const typed = handed ? workerPrompt(text, dispatcherPath) : text;

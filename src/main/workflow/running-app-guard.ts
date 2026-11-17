@@ -96,7 +96,7 @@ function split(command: string, atPipes: boolean): string[] {
   return [...parts, current.trim()];
 }
 const pipelines = (command: string) => split(command, false);
-const simpleCommands = (command: string) => split(command, true);
+export const simpleCommands = (command: string) => split(command, true);
 
 // A command's words, without their quotes or the `)` or `}` closing a subshell or group.
 const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
@@ -108,7 +108,7 @@ const FLAGS = String.raw`(?:\s+-\S+(?:\s+[^-\s]\S*)?)*`;
 const PREFIX = String.raw`(?:[({]\s*)?(?:(?:sudo${FLAGS}|command|exec|nohup|nice${FLAGS}|timeout${FLAGS}\s+\S+|env(?:\s+\w+=\S*)*)\s+)*`;
 
 // The verb and its words when `part` runs one of `verbs` (behind PREFIX or a path).
-function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
+export function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
   const match = new RegExp(String.raw`^${PREFIX}(?:\S*/)?(${verbs})(?:\s+(.*))?$`).exec(part);
   return match ? { verb: match[1], words: wordsOf(match[2] ?? '') } : null;
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bind } from '../action';
-import { paneSend, type PaneSendPorts } from './send';
+import { paneSend, startsClaude, STARTS_CLAUDE_REFUSAL, type PaneSendPorts } from './send';
 
 // Pane 2:1 is a screen, 2:2 a shell, 2:3 Claude Code started as a worker, 2:4 Claude Code with no
 // worker hooks (resumed from the drawer).
@@ -43,5 +43,27 @@ describe('pane.send', () => {
   it('refuses text from no main', async () => {
     const { send } = panes();
     expect(await send.call({ id: '2:1', text: 'fix it' })).toEqual({ refused: 'no pane, text or sending main was given' });
+  });
+
+  it('refuses to type claude into a shell, and types the same text to an agent as a prompt', async () => {
+    const { send, typed } = panes();
+    expect(await send.call({ id: '2:2', text: 'claude "fix it"', dispatcherPath: '/work/api' })).toEqual({ refused: STARTS_CLAUDE_REFUSAL });
+    expect(typed).toEqual([]);
+    await send.call({ id: '2:4', text: 'claude hooks are broken', dispatcherPath: '/work/api' });
+    expect(typed).toEqual(['2:4 claude hooks are broken']);
+  });
+});
+
+describe('startsClaude', () => {
+  it('finds claude as the first word of any command, by name or path', () => {
+    for (const text of ['claude', '  claude --resume', 'cd ../web && claude "go"', '/opt/claude-code/bin/claude -p x', 'true; claude', 'env FOO=1 claude', 'exec claude']) {
+      expect(startsClaude(text), text).toBe(true);
+    }
+  });
+
+  it('leaves other text alone', () => {
+    for (const text of ['npm test', 'claudette', 'echo claude', 'ls ~/.claude', 'git commit -m "claude"', 'echo "x; claude"']) {
+      expect(startsClaude(text), text).toBe(false);
+    }
   });
 });
