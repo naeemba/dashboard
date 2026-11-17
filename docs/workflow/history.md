@@ -16,3 +16,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-09 #281 — A hook refuses quitting, killing or replacing the running app (workflow-decision-7)
 - 2026-11-09 #285 — CLAUDE.md drops the rules a test, lint or CI step holds; eslint's keep one line each (workflow-decision-8)
 - 2026-11-16 #293 — A pre-commit hook runs eslint on staged code and the typecheck; tests that touch paths pass on Windows (workflow-rule-5, workflow-rule-6)
+- 2026-11-17 — A hook refuses npm, yarn or bun in a pnpm project, and the other ways round (workflow-decision-9)

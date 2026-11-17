@@ -1,4 +1,4 @@
-import { invocation, shellBody, simpleCommands } from '../../workflow/running-app-guard';
+import { invocation, shellBody, simpleCommands } from '../../board/hook-answer';
 import { workerPrompt } from '../../workers/dispatch';
 import { action } from '../action';
 import { isFilledText } from './pane-input';
