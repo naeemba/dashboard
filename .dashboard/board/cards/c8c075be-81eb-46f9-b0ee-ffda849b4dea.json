@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:20:46.956Z",
-  "updatedAt": "2026-11-17T12:20:46.957Z",
-  "column": "Backlog",
-  "order": 47
+  "updatedAt": "2026-11-17T12:21:44.430Z",
+  "column": "Ship",
+  "order": 0
 }
