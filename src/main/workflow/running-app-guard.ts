@@ -96,10 +96,15 @@ function split(command: string, atPipes: boolean): string[] {
   return [...parts, current.trim()];
 }
 const pipelines = (command: string) => split(command, false);
-const simpleCommands = (command: string) => split(command, true);
+export const simpleCommands = (command: string) => split(command, true);
 
 // A command's words, without their quotes or the `)` or `}` closing a subshell or group.
 const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
+
+// The quoted body of `sh -c '…'` (bash, zsh, dash too), which runs as a command line of its own.
+export function shellBody(part: string): string | null {
+  return invocation(part, 'sh|bash|zsh|dash') ? /\s-\w*c\s+(["'])(.*)\1/.exec(part)?.[2] ?? null : null;
+}
 
 // What may stand before a verb: a subshell or group opening, then sudo (with its flags), command,
 // exec, nohup, nice (with its flags), `timeout <duration>` (with its flags) or env (with its
@@ -108,7 +113,7 @@ const FLAGS = String.raw`(?:\s+-\S+(?:\s+[^-\s]\S*)?)*`;
 const PREFIX = String.raw`(?:[({]\s*)?(?:(?:sudo${FLAGS}|command|exec|nohup|nice${FLAGS}|timeout${FLAGS}\s+\S+|env(?:\s+\w+=\S*)*)\s+)*`;
 
 // The verb and its words when `part` runs one of `verbs` (behind PREFIX or a path).
-function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
+export function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
   const match = new RegExp(String.raw`^${PREFIX}(?:\S*/)?(${verbs})(?:\s+(.*))?$`).exec(part);
   return match ? { verb: match[1], words: wordsOf(match[2] ?? '') } : null;
 }
@@ -179,9 +184,8 @@ export function stopsRunningApp(command: string, listProcesses: ProcessList): bo
 
   if (pipelines(command).some((pipeline) => foundAndKilled(pipeline).some(hitsApp))) return true;
   return simpleCommands(command).some((part) => {
-    // `sh -c '…'` runs its quoted body as a command line of its own.
-    const body = invocation(part, 'sh|bash|zsh|dash') && /\s-\w*c\s+(["'])(.*)\1/.exec(part);
-    if (body && stopsRunningApp(body[2], listProcesses)) return true;
+    const body = shellBody(part);
+    if (body !== null && stopsRunningApp(body, listProcesses)) return true;
     const finder = invocation(part, 'pkill|killall');
     if (finder) return selectors(finder.verb, finder.words).some(hitsApp);
     const kill = invocation(part, 'kill');
