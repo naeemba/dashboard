@@ -109,9 +109,9 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // turn it on: #290 was merged by this prompt with nobody's go-ahead, and two commits reached main with
 // no review after them. Off, the pane stops once the loop and CI are done and reports to the project's
 // main and on the card, so the board says "ready to merge" or what is open after main's session is gone;
-// the card waits in Review until the user merges it. On, it notes the head commit before the CI wait,
-// merges only once CI has passed on it, so a fix pushed after the last review round is checked too, and
-// names that commit to `gh pr merge` so a push landing after the wait is refused, not merged unchecked.
+// the card waits in Review until the user merges it. On, it runs `pr land` (pull-request-cli.ts), not
+// steps copied out of this prompt, so it gets the command's second try on a network error and its
+// reading back of a merge call that failed: #301 was reported failed by a review that had merged it.
 //
 // The card is not moved: the app's follow (card.follow) moves it into Done once gh says merged, and
 // writes it on origin's main through the same sync the `board` command uses (board-sync-git.ts). A move
@@ -125,21 +125,17 @@ export const LONGEST_BACKGROUND_RUN = 'run_in_background, timeout 7200000, the l
 
 export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
-  const watch = `gh pr checks ${pullRequest} --watch`;
-  const waitForChecks = [
-    `   wait for CI on the pull request's head commit: \`${watch}\`, run in the`,
+  const sayOnCard = `\`${board} comment ${cardId} "<what happened>"\``;
+  const report = [
+    '2. Then, unless the loop stopped short or the pull request conflicts with the base branch,',
+    `   wait for CI on the pull request's head commit: \`gh pr checks ${pullRequest} --watch\`, run in the`,
     `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it`,
     '   exits. A watch stopped at that time limit has not failed: run it once more. That is the whole wait: no',
     '   `gh pr view` or `gh pr checks` in between, and no foreground `sleep`, which is refused. Every check',
     '   must pass on the commit the pull request ends on, a commit pushed after the last review round',
     '   included. "No checks reported" right after a push means CI has not started: run',
-    `   \`sleep 60 && ${watch}\` in the background once more, and only if there`,
+    `   \`sleep 60 && gh pr checks ${pullRequest} --watch\` in the background once more, and only if there`,
     '   are still none does the repository run no CI.',
-  ];
-  const sayOnCard = `\`${board} comment ${cardId} "<what happened>"\``;
-  const report = [
-    '2. Then, unless the loop stopped short or the pull request conflicts with the base branch,',
-    ...waitForChecks,
     '3. Do not merge it, and do not move the card: it stays in Review until the user merges.',
     '4. Whatever the ending, say it on the card, "converged, ready to merge" or what is still open:',
     `   ${sayOnCard}. Your report to main (the SendMessage asked for below) says how many rounds`,
@@ -147,17 +143,20 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
   ];
   const land = [
     '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
-    `   conflict with the base branch, first note the head commit: \`gh pr view ${pullRequest} --json headRefOid`,
-    '   -q .headRefOid`. That sha is the one you merge, whatever the head is later. Then',
-    ...waitForChecks,
-    `3. Once every check is green, land that commit: \`gh pr merge ${pullRequest} --merge --match-head-commit <sha>\`,`,
-    '   the sha you noted before the wait. A push after it makes GitHub refuse the merge, which is step 4.',
-    '   Do not approve it: you are the author, and GitHub refuses an approval from the author. The pull',
-    '   request does not need one to merge. Do not move the card: the app moves it to Done once the',
-    '   merge is in.',
+    `   conflict with the base branch, land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, run in the`,
+    `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it exits.`,
+    '   It notes the head commit, waits for every check on it and merges that commit only, so a push',
+    '   during the wait is refused rather than merged. A land stopped at that time limit has not failed:',
+    '   run it once more, and so is a land that prints `nothing is merged, run it again`. That is the whole',
+    '   wait and the whole merge: no `gh pr view`, `gh pr checks` or',
+    '   `gh pr merge` by hand, and no foreground `sleep`, which is refused.',
+    `3. A land that exits 0, printing \`merged ${pullRequest} at <sha>\`, is merged. Do not approve it: you are the`,
+    '   author, and GitHub refuses an approval from the author. The pull request does not need one to',
+    '   merge. Do not move the card: the app moves it to Done once the merge is in.',
     '',
-    '4. Any other ending — the loop stopped short, a check failed, the merge was refused, the pull',
-    "   request conflicts — is where you stop, and the card stays in Review. Say what happened on the card:",
+    '4. Any other ending — the loop stopped short, the land exited non-zero, the pull request conflicts —',
+    '   is where you stop, and the card stays in Review. Say what happened on the card, with what the land',
+    '   printed:',
     `   ${sayOnCard}.`,
   ];
   return [

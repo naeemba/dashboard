@@ -11,9 +11,9 @@ follows the setting, since no entry can be saying false; an unreadable one is
 off whatever the setting says. Off, the worker stops once `/pr-loop` and CI are
 done, merges nothing, moves nothing, says the ending on the card, and reports
 the rounds, the fixes, what is open and the CI state to the project's main. On,
-it notes the head commit before the CI wait, waits for CI to pass on it, and
-merges that commit only (`--match-head-commit`), so a push during the wait is
-refused rather than merged.** The review used to merge whenever the loop
+it runs `dashboard pr land`, which notes the head commit before the CI wait,
+waits for CI to pass on it, and merges that commit only (`--match-head-commit`),
+so a push during the wait is refused rather than merged.** The review used to merge whenever the loop
 converged: #290 was landed that way on 2026-11-16 with nobody's go-ahead, and
 two commits reached main with no review after them. A merge cannot be taken
 back, so the default is the one where a person decides; the CI wait is there
@@ -21,9 +21,16 @@ because a fix pushed after the last review round had never been checked when
 the old prompt merged it. The decision is `landsPullRequest` in
 `projects-file.ts`, the prompt `reviewPrompt` in `review.ts`. (2026-11-16)
 
+The merge went through `pr land` from 2026-11-17. The prompt had spelled the
+steps out for the agent to run by hand, so a network error on `gh pr merge`
+was a failure: #301 was reported failed though it had merged. The command
+tries a network error once more and reads a failed merge call back from the
+pull request (#304), and every review with merging on now gets that.
+
 ## ship-decision-2: The review waits on CI with one background watch
 
-**`reviewPrompt` asks for `gh pr checks <n> --watch` run in the background,
+**`reviewPrompt` asks for `gh pr checks <n> --watch` run in the background, or
+`pr land <n>` when merging is on, whose wait is that watch,
 which wakes the agent when it exits, and for nothing else during the wait: no
 `gh pr view` or `gh pr checks` by hand and no foreground `sleep`. A "no checks
 reported" right after a push gets one more background `sleep 60 && gh pr

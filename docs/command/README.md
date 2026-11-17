@@ -15,8 +15,8 @@ its own verbs; this feature only picks the program.
 | `pr` | the `pr` program, here | land [--project] |
 | `budget` | the `budget` program, here | none, or --cap |
 
-`pr land <number|url|branch>` lands a pull request as a review worker with
-merging on does: it notes the head commit, waits on `gh pr checks --watch`,
+`pr land <number|url|branch>` lands a pull request; a review worker with
+merging on runs it to land its own (ship-decision-1). It notes the head commit, waits on `gh pr checks --watch`,
 then runs `gh pr merge --merge --match-head-commit <sha>`. No checks reported is
 asked once more a minute later, and a repository that still has none is merged.
 A merge call that fails is read back from the pull request: merged at the

@@ -5,8 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T13:51:06.759Z",
-  "updatedAt": "2026-11-17T13:51:32.009Z",
+  "updatedAt": "2026-11-17T14:20:32.680Z",
   "branch": "warn-when-pr-loop-is-missing-or-out-of-date",
-  "column": "Doing",
+  "pullRequest": 324,
+  "comments": [
+    {
+      "at": "2026-11-17T14:02:27.005Z",
+      "body": "Pull request #324 opened: Refuse a review without /pr-loop, and warn when it is out of date https://github.com/naeemba/dashboard/pull/324"
+    },
+    {
+      "at": "2026-11-17T14:20:32.680Z",
+      "body": "PR #324 converged, ready to merge. /pr-loop ran 2 rounds and ended floor-addressed: round 1 fixed 6 findings (41043abd), round 2's final fix took a low and a nit in review-loop-install.ts (fc84ae50), with no re-review after it. Nothing blocked on a person, no conflict with main. CI: 3/3 checks passed on fc84ae50."
+    }
+  ],
+  "column": "Review",
   "order": 1
 }
