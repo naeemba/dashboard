@@ -243,9 +243,9 @@ or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
    and nothing changed outside `.dashboard/`, the board's files are put back to
    HEAD (and a tracked explanation file holding the app's text; an edit to one
    is carried through), the checkout fast-forwarded (no stash, hooks off), and
-   its own board edits laid back on top. Otherwise it is left where it is, and the `board`
-   command writes the same edit there as well, timestamps and all, so the next
-   sync does not publish it a second time.
+   its own board edits laid back on top. Otherwise it is left where it is, and
+   the `board` command writes the same edit there as well, timestamps and all,
+   so the next sync does not publish it a second time.
 
 No git call the sync makes runs the project's hooks. A checkout on the default
 branch with a board file that does not parse, in place or set aside as

@@ -1,4 +1,4 @@
-import { baseBranchNow, gitNow } from '../app/git';
+import { baseBranchNow, gitNowOrNull } from '../app/git';
 import { publishesCheckout } from './board-sync';
 
 // Whether a board read may rewrite a seeded doc that is there but older than this build's text
@@ -37,13 +37,7 @@ export function rewritesStaleSeededDocsAt(projectPath: string, now = Date.now())
 
 // What git says of the folder, asked synchronously since seeding is.
 function seededDocsCheckout(projectPath: string): SeededDocsCheckout {
-  const answer = (gitArguments: string[]): string | null => {
-    try {
-      return gitNow(gitArguments, projectPath);
-    } catch {
-      return null;
-    }
-  };
+  const answer = (gitArguments: string[]) => gitNowOrNull(gitArguments, projectPath);
   if (answer(['rev-parse', '--is-inside-work-tree']) !== 'true') return { insideWorkTree: false };
   return { insideWorkTree: true, branch: answer(['symbolic-ref', '--short', '-q', 'HEAD']), defaultBranch: baseBranchNow(projectPath) };
 }
