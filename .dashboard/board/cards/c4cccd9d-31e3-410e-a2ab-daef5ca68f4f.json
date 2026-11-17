@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T09:50:58.166Z",
-  "updatedAt": "2026-11-17T09:51:03.856Z",
-  "column": "Ship",
+  "updatedAt": "2026-11-17T10:02:17.031Z",
+  "branch": "pane-run-in-folder-a-claude-screen-in-an-ex",
+  "pullRequest": 316,
+  "comments": [
+    {
+      "at": "2026-11-17T10:02:17.011Z",
+      "body": "Pull request #316 opened: pane run --in <folder>: a worker in an existing worktree https://github.com/naeemba/dashboard/pull/316"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
