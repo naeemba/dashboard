@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:20:57.058Z",
-  "updatedAt": "2026-11-17T12:21:50.603Z",
+  "updatedAt": "2026-11-17T12:33:00.783Z",
   "branch": "board-guard-refuses-removing-its-own-worktr",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 320,
+  "comments": [
+    {
+      "at": "2026-11-17T12:33:00.745Z",
+      "body": "Pull request #320 opened: Board guard refuses removing its own worktree and editing another worktree https://github.com/naeemba/dashboard/pull/320"
+    }
+  ],
+  "column": "Review",
+  "order": 3
 }
