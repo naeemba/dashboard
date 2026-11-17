@@ -212,9 +212,16 @@ board` in a project to see what it takes, or DASHBOARD_BOARD, the older path to
 the same program, with no word in front. It is how an agent working a card moves
 its own. The .dashboard/CLAUDE.md the app seeds into each project says only
 that: what the folder holds, that the board is changed through the command, and
-`node "$DASHBOARD_BOARD"` to print what it takes. It is written once, when it is
-missing, so a project seeded with the older text that spelled out the card
-format keeps it, and an edited copy stays edited.
+`node "$DASHBOARD_BOARD"` to print what it takes. Its first line carries a
+version, and it is written whenever the board is read and the file is missing
+or older than the app's (no version line counts as older), so a project seeded
+with an older text that spelled out the card format gets the new one. A file of
+the app's version or a later one is left alone, edited or not, and a checkout
+the sync brings up keeps an edit to it. Where git tracks the file, the rewrite
+is committed to origin's default branch by the sync below, as a card write is.
+Only a checkout on origin's default branch, a folder outside git, or a
+repository with no origin default branch has an older file rewritten; a feature branch's worktree keeps its copy until it
+merges main, so that merge has nothing in its way (board-decision-8).
 
 ## Kept in step with git
 
@@ -227,13 +234,18 @@ or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
    replayed onto it (`rebaseBoardChange`), then the command's edit on top;
 3. commit that, and only the board's files, onto origin's tip with a plain
    message (`board: "Fix login" Doing → Review`), and push it; a push that lost
-   a race fetches and tries again, three tries in all;
+   a race fetches and tries again, three tries in all. A seeded explanation file
+   git tracks there and that is older than the app's is rewritten in the
+   same commit, and is reason enough for a commit when no card changed; the
+   app's board read, and the `board` command printing its usage, ask for a
+   sync when they rewrote one;
 4. bring the project's checkout up to it: on the default branch, only behind,
    and nothing changed outside `.dashboard/`, the board's files are put back to
-   HEAD, the checkout fast-forwarded (no stash, hooks off), and its own board
-   edits laid back on top. Otherwise it is left where it is, and the `board`
-   command writes the same edit there as well, timestamps and all, so the next
-   sync does not publish it a second time.
+   HEAD (and a tracked explanation file holding the app's text; an edit to one
+   is carried through), the checkout fast-forwarded (no stash, hooks off), and
+   its own board edits laid back on top. Otherwise it is left where it is, and
+   the `board` command writes the same edit there as well, timestamps and all,
+   so the next sync does not publish it a second time.
 
 No git call the sync makes runs the project's hooks. A checkout on the default
 branch with a board file that does not parse, in place or set aside as

@@ -1,3 +1,4 @@
+<!-- .dashboard docs version 1, written by the Dashboard app -->
 # .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B: `board/`, one

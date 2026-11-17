@@ -1,3 +1,4 @@
+<!-- .dashboard docs version 1, written by the Dashboard app -->
 # .dashboard
 
 Project state for the Dashboard app. `board/` holds this project's kanban board, one file per card

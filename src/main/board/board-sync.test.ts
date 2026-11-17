@@ -48,6 +48,12 @@ describe('syncCommitMessage', () => {
     expect(syncCommitMessage(before, after)).toBe(`board: "Fix login" ${before.columns[1].name} → ${before.columns[2].name}`);
   });
 
+  it('says the docs were rewritten when no card changed, and names the cards when one did', () => {
+    expect(syncCommitMessage(before, before, true)).toBe('board: rewrite the .dashboard docs to the current text');
+    const renamed = renameCard(before, selectionOf(before, 'a')!, 'Fix the login').board;
+    expect(syncCommitMessage(before, renamed, true)).toBe('board: update "Fix the login"');
+  });
+
   it('names the one card changed or removed, and counts more', () => {
     const renamed = renameCard(before, selectionOf(before, 'a')!, 'Fix the login').board;
     expect(syncCommitMessage(before, renamed)).toBe('board: update "Fix the login"');

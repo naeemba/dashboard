@@ -33,6 +33,15 @@ export function gitNow(gitArguments: string[], cwd: string): string {
   return execFileSync('git', gitArguments, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 }).trimEnd();
 }
 
+// The same, null when git fails: for a question whose "no" is git exiting non-zero.
+export function gitNowOrNull(gitArguments: string[], cwd: string): string | null {
+  try {
+    return gitNow(gitArguments, cwd);
+  } catch {
+    return null;
+  }
+}
+
 export async function runProgram(program: string, programArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {
   const { stdout } = await runCommand(program, programArguments, {
     cwd,
@@ -66,4 +75,15 @@ export async function baseBranch(projectPath: string): Promise<string> {
   const branch = defaultBranch('origin', head, (name) => (name === 'main' ? main : master) !== null);
   if (branch === null) throw new Error(noDefaultBranchMessage('origin'));
   return branch;
+}
+
+// The same rule, blocking, and null where baseBranch throws: for a caller that is synchronous itself
+// (seeding a board's docs) and asks only of local refs.
+export function baseBranchNow(projectPath: string): string | null {
+  const answer = (gitArguments: string[]) => gitNowOrNull(gitArguments, projectPath);
+  return defaultBranch(
+    'origin',
+    answer(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']),
+    (name) => answer(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`]) !== null,
+  );
 }

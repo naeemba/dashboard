@@ -73,6 +73,11 @@ async function run(words: readonly string[]): Promise<number> {
       return answer(result);
     }
     if (!sync.synced && sync.warning !== null) process.stderr.write(`${sync.warning}\n`);
+  } else if (read.reseeded) {
+    // The usage alone changes no card, but the read above rewrote the explanation files, and only a
+    // sync commits that rewrite and leaves the checkout clean (board-decision-8). A sync that fails
+    // leaves the file modified, as a failed one in the app does.
+    await syncBoard(project).catch(() => undefined);
   }
   return answer(writeHere(project, read.board, commandArguments, makeId));
 }
