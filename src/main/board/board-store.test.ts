@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,6 +32,7 @@ import {
   BOARD_FOLDER_PATH,
   EXPLANATION_FOR_AGENTS,
   EXPLANATION_FOR_PEOPLE,
+  SEEDED_DOCS_VERSION,
   boardPath,
   isManagerHomeDirectory,
   openBoard,
@@ -496,12 +498,42 @@ describe('seedBoardDirectory', () => {
     expect(readFileSync(elsewhere, 'utf8')).toBe('keep me');
   });
 
-  it('rewrites a file that is not the current text', () => {
+  it('never writes through a symbolic link in place of the .dashboard folder', () => {
+    const path = project();
+    const elsewhere = join(path, 'elsewhere');
+    mkdirSync(elsewhere);
+    writeFileSync(join(elsewhere, 'CLAUDE.md'), 'keep me');
+    symlinkSync(elsewhere, join(path, BOARD_DIRECTORY));
+    expect(seedBoardDirectory(path)).toBe(false);
+    expect(readFileSync(join(elsewhere, 'CLAUDE.md'), 'utf8')).toBe('keep me');
+  });
+
+  it('rewrites a text with no version, once', () => {
     const path = project();
     seedBoardDirectory(path);
     writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'Edit board.json directly.');
-    seedBoardDirectory(path);
+    expect(seedBoardDirectory(path)).toBe(true);
     expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
+    expect(seedBoardDirectory(path)).toBe(false);
+  });
+
+  it('leaves a text of this version or a later one alone', () => {
+    const path = project();
+    seedBoardDirectory(path);
+    const edited = `${EXPLANATION_FOR_AGENTS}An edit.\n`;
+    const newer = EXPLANATION_FOR_PEOPLE.replace(`version ${SEEDED_DOCS_VERSION}`, `version ${SEEDED_DOCS_VERSION + 1}`);
+    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), edited);
+    writeFileSync(join(path, BOARD_DIRECTORY, 'README.md'), newer);
+    expect(seedBoardDirectory(path)).toBe(false);
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(edited);
+    expect(readFileSync(join(path, BOARD_DIRECTORY, 'README.md'), 'utf8')).toBe(newer);
+  });
+
+  // A change to either text without a higher version reaches no project that has the old one. Raise
+  // SEEDED_DOCS_VERSION, then put the new hash here.
+  it('has a new version for every new text', () => {
+    const hash = createHash('sha256').update(EXPLANATION_FOR_AGENTS).update(EXPLANATION_FOR_PEOPLE).digest('hex');
+    expect([SEEDED_DOCS_VERSION, hash]).toEqual([1, '3186c10a7c9bda0ccbd5d80d2f8abd715707d6c0371961d660ef555597589860']);
   });
 });
 

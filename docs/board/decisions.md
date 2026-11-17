@@ -305,20 +305,29 @@ the folder holds and to run `node "$DASHBOARD_BOARD"`, whose usage is the one
 copy of the rest (`board-usage.ts`). What it costs: a person reading a card
 file finds its fields described nowhere but the code (`board.ts`).
 
-**The app rewrites both seeded files whenever they are not its current text.**
+**The app rewrites both seeded files whenever they are older than its text.**
 They were written once, when missing, so an edited copy stayed edited; that also
 kept every older text, and 23 projects went on telling an agent to edit
 board.json directly, an edit the guard refuses, so the agent lost a turn on
-every board. Each board read now writes `.dashboard/CLAUDE.md` and
-`.dashboard/README.md` again when either differs from the text in
-`board-store.ts`, and a project with the old text gets the new one the next
-time its board is read. In a project that commits `.dashboard/`, the rewrite
+every board. Each file's first line now carries `SEEDED_DOCS_VERSION`, and each
+board read writes `.dashboard/CLAUDE.md` and `.dashboard/README.md` again when
+either is missing or carries a lower version or none, so a project with the old
+text gets the new one the next time its board is read. Rewriting any text that
+was not this build's own, as this first did, had two builds with different
+texts push their own over each other on origin at every board write: merge a
+new text while the installed app is still the old build, and its next card move
+put the old text back on main. A version only ever goes up, so a build older
+than the file leaves it alone, and so does every build for an edit to a file of
+its own version. In a project that commits `.dashboard/`, the rewrite
 goes to origin's default branch through the board's own sync, in the commit
 with the cards or in one of its own when no card changed, and the checkout is
 fast-forwarded onto it, so no project is left with a modified file nobody made.
 Only a file git already tracks there is committed: a project that never
-committed `README.md` does not get it pushed. What it costs: an edit to either
-file is undone at the next board read; and a checkout on another branch, such as
+committed `README.md` does not get it pushed. Neither file is written through a
+symbolic link, the file's or the `.dashboard` folder's. What it costs: a text
+change has to raise the version (a test pins the two); an edit to a file with
+no version line, which every text seeded before there was one is, is undone at
+the next board read; and a checkout on another branch, such as
 a card's worktree made before the new text reached main, shows the rewrite as
 modified until that branch takes main's copy, and a `git merge` of main there
 refuses until the file is restored. What an agent should know about a project

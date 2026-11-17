@@ -53,9 +53,23 @@ export const BOARD_PATHSPECS = [
   `:(exclude)${BOARD_DIRECTORY}/board*${TEMPORARY_SUFFIX}`,
 ] as const;
 
+// The first line of both seeded files. A file is rewritten only when its version is lower than this one
+// or it has none, so a build older than the text on origin never pushes its own text back over it, and
+// an edit to a file the app wrote is kept until a later version. Raise it with any change to either
+// text, or the change never reaches a project that has the old one; a test pins the two together.
+export const SEEDED_DOCS_VERSION = 1;
+const VERSION_LINE = `<!-- .dashboard docs version ${SEEDED_DOCS_VERSION}, written by the Dashboard app -->`;
+
+// The version a seeded file's text carries, 0 for none: every text seeded before there was a version.
+function seededDocsVersion(text: string): number {
+  const match = /^<!-- \.dashboard docs version (\d+),/.exec(text);
+  return match === null ? 0 : Number(match[1]);
+}
+
 // Exported so a test can pin this repo's own checked-in `.dashboard` copies against it: a change to this
 // text rewrites them at the next board read, and the pin makes that rewrite part of the same commit.
-export const EXPLANATION_FOR_AGENTS = `# .dashboard
+export const EXPLANATION_FOR_AGENTS = `${VERSION_LINE}
+# .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B: \`board/\`, one
 file per card, or \`board.json\` in a project the app has not written to since.
@@ -67,7 +81,8 @@ the \`board guard\` hook the app installs. Every pane the app opens carries \`DA
     node "$DASHBOARD_BOARD" list     every card, with the id the other commands want
 `;
 
-export const EXPLANATION_FOR_PEOPLE = `# .dashboard
+export const EXPLANATION_FOR_PEOPLE = `${VERSION_LINE}
+# .dashboard
 
 Project state for the Dashboard app. \`board/\` holds this project's kanban board, one file per card
 (\`board.json\` in a project the app has not written to since), and
@@ -424,11 +439,12 @@ export function openBoard(projectPath: string, salvage = true): BoardRead & { re
   return { ...readBoard(projectPath, salvage), reseeded };
 }
 
-// Each file is the app's, and is written whenever it is not the current text: missing, seeded by an
-// older version, or edited. Written once and never again, as it used to be, left 23 projects telling
-// an agent to edit board.json by hand, an edit the board guard now refuses, so the agent lost a turn
-// to the guard on every board. An edit to either file is undone at the next board read; what an agent
-// should know about a project goes in that project's own CLAUDE.md. The folder existing is not enough
+// Each file is the app's, and is written whenever it is missing or older than SEEDED_DOCS_VERSION.
+// Written once and never again, as it used to be, left 23 projects telling an agent to edit board.json
+// by hand, an edit the board guard now refuses, so the agent lost a turn to the guard on every board.
+// A file with no version line is rewritten, edited or not: the texts seeded before there was one carry
+// none, so an edit of one cannot be told from one of them. What an agent should know about a project
+// goes in that project's own CLAUDE.md. The folder existing is not enough
 // to skip the walk: writeBoard makes it too, and a repo that keeps board.json in git often does not
 // keep the docs beside it — clone one of those and the folder arrives with no CLAUDE.md in it, leaving
 // an agent working in there nothing that names the command.
@@ -443,12 +459,16 @@ export function seedBoardDirectory(projectPath: string): boolean {
   return stale.length > 0;
 }
 
-// Which of `files` (keys of SEEDED_FILES) in `projectPath` are not the app's current text. Never a
-// symbolic link: a repository that commits one there would have the write follow it and overwrite the
-// file it points at, anywhere on the machine.
+// Which of `files` (keys of SEEDED_FILES) in `projectPath` are missing or older than this build's text.
+// Never through a symbolic link, the file or the .dashboard folder: a repository that commits one there
+// would have the write follow it and overwrite the file it points at, anywhere on the machine.
 export function staleSeededFiles(projectPath: string, files: readonly string[]): string[] {
+  const isLink = (path: string) => lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink() === true;
+  if (isLink(join(projectPath, BOARD_DIRECTORY))) return [];
   return files.filter((file) => {
     const path = join(projectPath, file);
-    return !lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink() && readText(path) !== SEEDED_FILES[file];
+    if (isLink(path)) return false;
+    const text = readText(path);
+    return text === null || seededDocsVersion(text) < SEEDED_DOCS_VERSION;
   });
 }
