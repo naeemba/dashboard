@@ -20,9 +20,14 @@ describe('nearestLockfile', () => {
     expect(nearestLockfile('/home/someone/scratch', files())).toBeNull();
   });
 
+  it('reads none outside a repository, so a stray lockfile in a parent folder is not the project\'s', () => {
+    expect(nearestLockfile('/home/someone/new-app', files('/home/someone/package-lock.json'))).toBeNull();
+    expect(nearestLockfile('/home/someone/new-app', files('/home/someone/new-app/pnpm-lock.yaml'))).toBeNull();
+  });
+
   it('reads none where one folder holds lockfiles of two managers', () => {
-    expect(nearestLockfile('/work/app', files('/work/app/yarn.lock', '/work/app/package-lock.json'))).toBeNull();
-    expect(nearestLockfile('/work/app', files('/work/app/bun.lock', '/work/app/bun.lockb'))).toEqual({ lockfile: 'bun.lock', manager: 'bun' });
+    expect(nearestLockfile('/work/app', files('/work/app/.git', '/work/app/yarn.lock', '/work/app/package-lock.json'))).toBeNull();
+    expect(nearestLockfile('/work/app', files('/work/app/.git', '/work/app/bun.lock', '/work/app/bun.lockb'))).toEqual({ lockfile: 'bun.lock', manager: 'bun' });
   });
 });
 
@@ -31,20 +36,24 @@ describe('managersUsed', () => {
     ['npm install', 'npm'],
     ['npm i -D vitest', 'npm'],
     ['npm ci', 'npm'],
-    ['npm --silent run lint', 'npm'],
-    ['npm test', 'npm'],
+    ['npm --silent uninstall lodash', 'npm'],
     ['yarn', 'yarn'],
     ['yarn add react', 'yarn'],
     ['bun install', 'bun'],
-    ['git pull && npm install && pnpm test', 'npm'],
+    ['git pull && npm install && pnpm add x', 'npm'],
     ['pnpm install', 'pnpm'],
     ['sudo /usr/bin/npm install --save-dev x', 'npm'],
-  ])('reads %s as installing or running through %s', (command, used) => {
+  ])('reads %s as installing through %s', (command, used) => {
     expect(managersUsed(command)).toContain(used);
   });
 
   it.each([
     'npm version minor --no-git-tag-version',
+    'npm test',
+    'npm run lint',
+    'yarn lint',
+    'bun test',
+    'bun run scripts/seed.ts',
     'npm view vitest version',
     'npx tsc --noEmit',
     'npm i -g x',
@@ -74,7 +83,7 @@ describe('packageManagerGuard', () => {
   });
 
   it("refuses pnpm in an npm project, and lets the project's own manager through", () => {
-    const npmProject = files('/work/app/package-lock.json');
+    const npmProject = files('/work/app/.git', '/work/app/package-lock.json');
     expect(packageManagerGuard('Bash', { command: 'pnpm install' }, '/work/app', npmProject)).toBeDefined();
     expect(packageManagerGuard('Bash', { command: 'npm install' }, '/work/app', npmProject)).toBeUndefined();
     expect(packageManagerGuard('Bash', { command: 'pnpm install && pnpm run lint' }, '/work/app', pnpmProject)).toBeUndefined();
@@ -82,7 +91,7 @@ describe('packageManagerGuard', () => {
 
   it('lets a global install and a one-off run through in any project', () => {
     for (const command of ['npm i -g x', 'pnpm add -g x', 'yarn global add x', 'pnpm dlx x', 'npm exec x', 'yarn dlx x']) {
-      expect(packageManagerGuard('Bash', { command }, '/work/app', files('/work/app/bun.lock'))).toBeUndefined();
+      expect(packageManagerGuard('Bash', { command }, '/work/app', files('/work/app/.git', '/work/app/bun.lock'))).toBeUndefined();
     }
   });
 

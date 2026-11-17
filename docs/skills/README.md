@@ -56,7 +56,7 @@ worktree was cut from), with `npm version --no-git-tag-version`.
 It does not repeat what every worker is already told or held to: the board's rules are
 `BOARD_INSTRUCTIONS`, appended to every worker's system prompt, and the board guard's hook refuses
 the board edits. Nor does it name the package manager: the package-manager guard refuses an
-install or a script run through one the lockfile does not name (workflow-decision-9). It does say not to quit, kill, restart or rebuild any running app: the running-app
+install through one the lockfile does not name (workflow-decision-9). It does say not to quit, kill, restart or rebuild any running app: the running-app
 guard refuses only commands aimed at the Dashboard app, and another project's app is not covered. A skill in `~/.claude/skills/` wins over a `~/.claude/commands/` file of the same
 name ([Claude Code skills](https://code.claude.com/docs/en/skills), "Resolve skills that share a
 name"), so an older `~/.claude/commands/work-card.md` is shadowed by the app's copy, not run.

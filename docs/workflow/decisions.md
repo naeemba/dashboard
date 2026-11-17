@@ -206,11 +206,17 @@ every project the user's `~/.claude/settings.json` reaches, and the line is gone
 - **The nearest lockfile names the manager**: `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`/`bun.lockb`,
   `package-lock.json`, looked for from the session's folder up to the repository's top (the folder
   holding `.git`), so a monorepo package finds its root's and a stray lockfile above the repository is
-  never read. No lockfile, or two naming different managers in one folder, and nothing is refused.
-- **Only installs and script runs are refused**: `install`, `ci`, `add`, `remove`, `update`, `run`,
-  `test`, `start` and their short forms, and a bare `yarn`. `npm version --no-git-tag-version` is how
-  `/work-card` bumps in any project, and `npx` or `npm view` touch neither the tree nor the lockfile.
+  never read. Outside a repository nothing is refused: `~/package-lock.json` from an old `npm i` would
+  otherwise decide every un-initialised folder under `~`. No lockfile, or two naming different managers
+  in one folder, and nothing is refused.
+- **Only installs are refused**: `install`, `ci`, `add`, `remove`, `update` and their short forms, and
+  a bare `yarn`. Script runs go through: the words differ per manager (`yarn test` runs a script, `bun
+  test` is bun's runner, `bun run x.ts` runs a file), and a run writes neither the tree nor the
+  lockfile. `npm version --no-git-tag-version` is how `/work-card` bumps in any project, and `npx` or
+  `npm view` touch neither.
   Nor do a global install (`-g`, `--global`, `--location=global`, `yarn global`) or a one-off run
   (`pnpm dlx`, `npm exec`, `yarn dlx`), so those go through in any project.
 - **It reads the command's text**, as the other two guards do: a `cd` earlier in the command, an
-  `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through.
+  `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through. The
+  refusal names the lockfile and the manager and leaves the translation to the agent: `npm ci` has no
+  `pnpm ci`, and `yarn` has no `i`.
