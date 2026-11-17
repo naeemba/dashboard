@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T13:51:06.759Z",
-  "updatedAt": "2026-11-17T13:51:32.009Z",
+  "updatedAt": "2026-11-17T14:02:27.040Z",
   "branch": "warn-when-pr-loop-is-missing-or-out-of-date",
-  "column": "Doing",
+  "pullRequest": 324,
+  "comments": [
+    {
+      "at": "2026-11-17T14:02:27.005Z",
+      "body": "Pull request #324 opened: Refuse a review without /pr-loop, and warn when it is out of date https://github.com/naeemba/dashboard/pull/324"
+    }
+  ],
+  "column": "Review",
   "order": 1
 }
