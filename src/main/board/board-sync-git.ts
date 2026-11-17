@@ -154,7 +154,8 @@ async function boardAt(gitDirectory: string, ref: string, folder: string): Promi
 async function commitBoard(scratch: Scratch, board: Board, staleSeeds: readonly string[], parent: string, message: string): Promise<string> {
   writeBoard(scratch.work, board);
   // Every seeded file is written, but only the stale tracked ones are staged: one git leaves out stays out.
-  seedBoardDirectory(scratch.work);
+  // The scratch folder is origin's default branch, so a stale doc there is rewritten.
+  seedBoardDirectory(scratch.work, () => true);
   await scratch.git(['add', '-A', '--', ...BOARD_PATHSPECS, ...staleSeeds]);
   const tree = await scratch.git(['write-tree']);
   return scratch.git(['commit-tree', tree, '-p', parent, '-m', message]);

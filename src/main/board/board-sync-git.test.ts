@@ -121,6 +121,23 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(readFileSync(agents, 'utf8')).toBe(edited);
   });
 
+  // insta-experiences-mr174: a read in a card's worktree rewrote the doc, and the worker's merge of
+  // main refused over it. Off the default branch a stale doc is left as its branch has it.
+  it('leaves a stale .dashboard doc alone in a worktree on a feature branch', () => {
+    const { checkout } = project();
+    writeFileSync(join(checkout, '.dashboard', 'CLAUDE.md'), 'Edit board.json directly.\n');
+    writeFileSync(join(checkout, '.dashboard', 'README.md'), 'The board.\n');
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'old docs');
+    git(checkout, 'push', '--quiet', 'origin', 'HEAD:main');
+    git(checkout, 'remote', 'set-head', 'origin', 'main');
+    const worktree = join(temporaryFolder('board-sync-worktrees-'), 'card');
+    git(checkout, 'worktree', 'add', '--quiet', '-b', 'feature', worktree);
+    expect(openBoard(worktree).reseeded).toBe(false);
+    expect(clean(worktree)).toBe(true);
+    expect(openBoard(checkout).reseeded).toBe(true);
+  });
+
   // The kamandsystem loss: a checkout many commits behind, a `board move` there, and every card the
   // stale copy held written back over origin's.
   it('puts only the edit onto origin from a checkout that is behind, and brings the checkout up', async () => {

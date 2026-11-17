@@ -327,11 +327,15 @@ committed `README.md` does not get it pushed. Neither file is written through a
 symbolic link, the file's or the `.dashboard` folder's. What it costs: a text
 change has to raise the version (a test pins the two); an edit to a file with
 no version line, which every text seeded before there was one is, is undone at
-the next board read; and a checkout on another branch, such as
-a card's worktree made before the new text reached main, shows the rewrite as
-modified until that branch takes main's copy, and a `git merge` of main there
-refuses until the file is restored. What an agent should know about a project
-goes in the project's own `CLAUDE.md`.
+the next board read; and a checkout on another branch, such as a card's
+worktree made before the new text reached main, keeps its old text until that
+branch merges main. A read there writes a missing doc but never rewrites one
+that is there: rewritten in place it was a change nobody committed, and in
+insta-experiences' card worktrees the worker's `git merge` of the target branch
+refused over it and stalled mid-task. The board guard refuses the hand edit the
+old text describes, so the branch's copy costs a turn at most
+(`seeded-docs-checkout.ts`). What an agent should know about a project goes in
+the project's own `CLAUDE.md`.
 
 **An agent records no pull request: the review starts from the one the app
 found.** The sweep that hands a finished card to a reviewer used to learn the
