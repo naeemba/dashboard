@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addCard, deleteCard, emptyBoard, moveCardToColumn, renameCard, selectionOf } from '../../shared/board/board';
-import { checkoutStep, damagedBoardRefusal, lostRace, publishesCheckout, syncCommitMessage, type CheckoutState } from './board-sync';
+import { checkoutStep, damagedBoardRefusal, droppedConnection, droppedPushReason, lostRace, notSyncedRefusal, publishesCheckout, RETRY_PAUSE, retryAfter, SYNC_ATTEMPTS, syncCommitMessage, type CheckoutState } from './board-sync';
 
 const behind: CheckoutState = { branch: 'main', defaultBranch: 'main', current: false, behind: true, porcelain: '' };
 
@@ -78,5 +78,54 @@ describe('damagedBoardRefusal', () => {
   it('refuses only when a board file does not parse, and names it', () => {
     expect(damagedBoardRefusal([])).toBeNull();
     expect(damagedBoardRefusal(['.dashboard/board/cards/a.json'])).toContain('(.dashboard/board/cards/a.json)');
+  });
+});
+
+describe('retryAfter', () => {
+  const dropped = 'Connection closed by 20.26.156.215 port 22\r\nfatal: Could not read from remote repository.';
+
+  it('tries a dropped connection again a pause later, on the fetch or the push, until the last attempt', () => {
+    expect(droppedConnection(dropped)).toBe(true);
+    expect(retryAfter(1, dropped, false)).toBe(RETRY_PAUSE);
+    expect(retryAfter(SYNC_ATTEMPTS - 1, dropped, true)).toBe(RETRY_PAUSE);
+    expect(retryAfter(SYNC_ATTEMPTS, dropped, false)).toBeNull();
+  });
+
+  it('tries a push that lost a race again at once, and never a fetch on those words', () => {
+    expect(retryAfter(1, ' ! [rejected] main -> main (fetch first)', true)).toBe(0);
+    expect(retryAfter(1, ' ! [rejected] main -> main (fetch first)', false)).toBeNull();
+  });
+
+  it('gives up at once on a failure that would fail the same way again', () => {
+    expect(retryAfter(1, "fatal: '/gone/missing.git' does not appear to be a git repository", false)).toBeNull();
+    expect(retryAfter(1, 'git@github.com: Permission denied (publickey).', false)).toBeNull();
+    expect(retryAfter(1, 'ssh: Could not resolve hostname github.com', false)).toBeNull();
+  });
+});
+
+describe('notSyncedRefusal', () => {
+  it('refuses a change in a worktree, naming why origin did not take it', () => {
+    expect(notSyncedRefusal(true, true, 'cannot fetch origin/main: Connection closed')).toMatch(/^board not changed: cannot fetch origin\/main: Connection closed\./);
+  });
+
+  it('says to run it again only when the connection dropped', () => {
+    expect(notSyncedRefusal(true, true, 'cannot fetch origin/main: Connection closed')).toMatch(/run the command again/);
+    expect(notSyncedRefusal(true, true, 'the push to origin/main was refused: GH006: Protected branch update failed')).not.toMatch(/again/);
+    const dropped = notSyncedRefusal(true, true, droppedPushReason('origin/main', 'Connection closed by 140.82.121.4 port 22'));
+    expect(dropped).toMatch(/may have landed/);
+    expect(dropped).toMatch(/board show <id>/);
+    expect(dropped).not.toMatch(/once origin answers/);
+  });
+
+  it('ends the reason with one full stop', () => {
+    expect(notSyncedRefusal(true, true, 'the repository exists.')).toMatch(/exists\. Nothing/);
+  });
+
+  it('lets a read through in a worktree', () => {
+    expect(notSyncedRefusal(true, false, 'offline')).toBeNull();
+  });
+
+  it('lets the project\'s checkout write the change where it is', () => {
+    expect(notSyncedRefusal(false, true, 'offline')).toBeNull();
   });
 });

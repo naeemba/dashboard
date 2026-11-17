@@ -6,10 +6,10 @@ import { cardMoves } from './card-moves';
 // Every decision the board's git sync makes. board-sync-git.ts runs the git and touches the files and
 // has no decision in it; docs/board/README.md says what the sync is for (board-decision-5).
 
-// A push refused because origin moved between the fetch and the push is fetched and tried again, up
-// to this many tries in all. Two writers landing in the same second is the case; a third try losing
-// as well is something else, and the board is left written here with a warning.
-export const PUSH_ATTEMPTS = 3;
+// A sync that lost a race or its connection is fetched and tried again, up to this many tries in all
+// (retryAfter). Two writers landing in the same second is the race; a third try failing as well is
+// something else, and the sync gives up with the reason.
+export const SYNC_ATTEMPTS = 3;
 
 // Whether a refused push lost a race to another writer, which a fresh fetch fixes: git's own words
 // for the remote moving under it, before the push (fetch first, non-fast-forward) or during it
@@ -23,6 +23,34 @@ export function lostRace(gitMessage: string): boolean {
 // Long enough for a slow network, short enough that a `board move` on a train answers in seconds.
 export const FETCH_TIMEOUT = 10_000;
 export const PUSH_TIMEOUT = 30_000;
+
+// Whether git lost its connection to origin part way, in ssh's words or curl's: on 2026-11-17, 2 of
+// about 8 board writes from one checkout failed with `Connection closed by <host> port 22` and went
+// through when run again by hand. Not a missing repository, a refused key or an unknown host, which
+// fail the same way every time, nor a fetch that ran out of time: offline on a train, three of those
+// is half a minute before the command answers.
+export function droppedConnection(gitMessage: string): boolean {
+  return /Connection (closed|reset)|early EOF|unexpected disconnect|kex_exchange_identification/i.test(gitMessage);
+}
+
+export const RETRY_PAUSE = 1_000;
+
+// Why a sync gave up when the connection dropped under its last push. The push may have landed, so
+// the change is checked for on origin before it is made again: a `comment` or an `add` run twice is two.
+const MAY_HAVE_LANDED = 'may have landed before the connection dropped';
+export function droppedPushReason(target: string, gitMessage: string): string {
+  return `the push to ${target} ${MAY_HAVE_LANDED} (${gitMessage})`;
+}
+
+// How long to wait before the sync is fetched and tried again after git failed with `gitMessage`, or
+// null when it is not: a lost race at once, since origin has already moved; a dropped connection a
+// pause later, on the fetch or the push. A push the connection dropped under may have landed: when the
+// fresh fetch holds the commit pushed, the sync is done and the edit is not run a second time.
+export function retryAfter(attempt: number, gitMessage: string, pushing: boolean): number | null {
+  if (attempt >= SYNC_ATTEMPTS) return null;
+  if (pushing && lostRace(gitMessage)) return 0;
+  return droppedConnection(gitMessage) ? RETRY_PAUSE : null;
+}
 
 // What a project's checkout is, as git says it, when the sync is done: the branch it stands on (null
 // when detached), whether HEAD is the commit the sync left origin's default branch at, whether HEAD is
@@ -84,4 +112,17 @@ export function syncCommitMessage(before: Board, after: Board, reseeded = false)
 // always was.
 export function notSyncedWarning(reason: string): string {
   return `board written here only, not on origin: ${reason}`;
+}
+
+// Why the `board` command refuses a change it could not get onto origin, or null where it writes the
+// change here with notSyncedWarning. Refused in a linked worktree: its board is its branch's, so a card
+// file written there is committed with the work and merged onto main with the column it had that day.
+// The project's checkout keeps the fallback, since its next sync replays the uncommitted edit onto
+// origin. A read changes nothing and is never refused. Only a dropped connection is worth running
+// again, and a dropped push only once the card shows it did not land: a protected main or a damaged
+// checkout refuses the same way every time.
+export function notSyncedRefusal(inWorktree: boolean, changes: boolean, reason: string): string | null {
+  if (!inWorktree || !changes) return null;
+  const again = !droppedConnection(reason) ? '' : reason.includes(MAY_HAVE_LANDED) ? '; check the card (`board show <id>`) before running the command again' : '; run the command again once origin answers';
+  return `board not changed: ${reason.replace(/\.$/, '')}. Nothing was written here, since a card written in a worktree rides its branch onto main${again}.`;
 }

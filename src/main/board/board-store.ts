@@ -479,3 +479,21 @@ export function staleSeededFiles(projectPath: string, files: readonly string[]):
     return text === null || seededDocsVersion(text) < SEEDED_DOCS_VERSION;
   });
 }
+
+// The seeded docs as they stand, by path, null for one that is not there: taken before a read that may
+// seed, so a write refused afterwards can put back what that read wrote (putBackSeededDocs).
+export function seededDocsNow(projectPath: string): Record<string, string | null> {
+  return Object.fromEntries(Object.keys(SEEDED_FILES).map((file) => [file, readText(join(projectPath, file))]));
+}
+
+// Each doc the read wrote back to what `before` held: removed when it was not there, its old text when
+// it was. Only a file holding exactly the app's text that it did not hold before, so nothing a person
+// wrote since, and no link the seeding skipped, is touched.
+export function putBackSeededDocs(projectPath: string, before: Record<string, string | null>): void {
+  for (const [file, text] of Object.entries(before)) {
+    const path = join(projectPath, file);
+    if (text === SEEDED_FILES[file] || readText(path) !== SEEDED_FILES[file]) continue;
+    if (text === null) rmSync(path, { force: true });
+    else writeFileSync(path, text);
+  }
+}

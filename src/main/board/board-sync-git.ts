@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 import { join, relative, sep } from 'node:path';
 import type { Board } from '../../shared/board/board';
 import { rebaseBoardChange, sameBoard } from '../../shared/board/board-merge';
@@ -12,13 +13,13 @@ import { readText } from '../app/missing-file';
 import { BOARD_PATHSPECS, SEEDED_FILES, peekBoard, seedBoardDirectory, staleSeededFiles, readBoard, writeBoard } from './board-store';
 import {
   FETCH_TIMEOUT,
-  PUSH_ATTEMPTS,
   PUSH_TIMEOUT,
   checkoutStep,
   damagedBoardRefusal,
-  lostRace,
-  notSyncedWarning,
+  droppedConnection,
+  droppedPushReason,
   publishesCheckout,
+  retryAfter,
   syncCommitMessage,
   type CheckoutStep,
 } from './board-sync';
@@ -46,31 +47,41 @@ export type BoardEdit = (board: Board) => Board;
 // folder asked about: `current`, it holds that board on disk too (it was up to date or was
 // fast-forwarded); `stale`, it is the project's checkout but could not be moved (checkoutStep says
 // why), so a caller with an edit writes it there as well; `elsewhere`, it is a worktree, whose board is
-// its branch's and is left alone. Not synced: the caller
-// writes the board where it is, as before there was a sync, and says the warning when there is one.
-// A board git does not track has no warning: there is nothing for it to be in step with.
-export type BoardSync = { synced: true; checkout: 'current' | 'stale' | 'elsewhere' } | { synced: false; warning: string | null };
+// its branch's and is left alone. Not synced: the caller writes the board where it is, as before there
+// was a sync, or refuses (notSyncedRefusal), and says why when there is a reason: notSyncedWarning
+// words it. A board git does not track has no reason: there is nothing for it to be in step with.
+export type BoardSync = { synced: true; checkout: 'current' | 'stale' | 'elsewhere' } | { synced: false; reason: string | null };
 
 export async function syncBoard(folder: string, edit: BoardEdit = (board) => board): Promise<BoardSync> {
-  if (isManagerPath(folder)) return { synced: false, warning: null };
+  if (isManagerPath(folder)) return { synced: false, reason: null };
   const top = await answer(['rev-parse', '--show-toplevel'], folder);
-  if (top === null) return { synced: false, warning: null };
+  if (top === null) return { synced: false, reason: null };
   const [tracked, branch, checkout, gitDirectory] = await Promise.all([
     answer(['ls-files', '--', ...BOARD_PATHSPECS], top),
     baseBranch(top).catch((error: unknown) => new Error(failureText(error))),
     checkoutOf(top),
     git(['rev-parse', '--absolute-git-dir'], top),
   ]);
-  if ((tracked ?? '') === '') return { synced: false, warning: null };
+  if ((tracked ?? '') === '') return { synced: false, reason: null };
   if (branch instanceof Error) return notSynced(branch.message);
 
+  // The commit a try pushed whose answer never came back: the push may have landed all the same.
+  let pushed: string | null = null;
   for (let attempt = 1; ; attempt += 1) {
     try {
       await git(['fetch', '--quiet', REMOTE, branch], top, { timeout: FETCH_TIMEOUT });
     } catch (error: unknown) {
-      return notSynced(`cannot fetch ${REMOTE}/${branch}: ${gitMessage(error)}`);
+      const pause = retryAfter(attempt, gitMessage(error), false);
+      if (pause === null) return notSynced(`cannot fetch ${REMOTE}/${branch}: ${gitMessage(error)}`);
+      await delay(pause);
+      continue;
     }
     const tip = await git(['rev-parse', '--verify', `refs/remotes/${REMOTE}/${branch}^{commit}`], top);
+    // Already on origin: the edit is not run again, since a `comment` or an `add` run twice is two.
+    if (pushed !== null && (await answer(['merge-base', '--is-ancestor', pushed, tip], top)) !== null) {
+      const trackedSeeds = ((await answer(['ls-tree', '-r', '--name-only', tip, '--', ...Object.keys(SEEDED_FILES)], top)) ?? '').split('\n').filter((file) => file !== '');
+      return synced(checkout, top, await updateCheckout(checkout, branch, tip, trackedSeeds));
+    }
     const scratch = mkdtempSync(join(tmpdir(), 'board-sync-'));
     try {
       const origin = await boardAt(gitDirectory, tip, join(scratch, 'origin'));
@@ -86,21 +97,27 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         try {
           await git([...NO_HOOKS, 'push', '--quiet', REMOTE, `${commit}:refs/heads/${branch}`], top, { timeout: PUSH_TIMEOUT });
         } catch (error: unknown) {
-          if (lostRace(gitMessage(error)) && attempt < PUSH_ATTEMPTS) continue;
-          return notSynced(`the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
+          pushed = commit;
+          const pause = retryAfter(attempt, gitMessage(error), true);
+          if (pause === null) return notSynced(droppedConnection(gitMessage(error)) ? droppedPushReason(`${REMOTE}/${branch}`, gitMessage(error)) : `the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
+          await delay(pause);
+          continue;
         }
         target = commit;
       }
-      const step = await updateCheckout(checkout, branch, target, origin.trackedSeeds);
-      return { synced: true, checkout: checkout !== top ? 'elsewhere' : typeof step === 'string' ? 'current' : 'stale' };
+      return synced(checkout, top, await updateCheckout(checkout, branch, target, origin.trackedSeeds));
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
   }
 }
 
+function synced(checkout: string, top: string, step: CheckoutStep): BoardSync {
+  return { synced: true, checkout: checkout !== top ? 'elsewhere' : typeof step === 'string' ? 'current' : 'stale' };
+}
+
 function notSynced(reason: string): BoardSync {
-  return { synced: false, warning: notSyncedWarning(reason) };
+  return { synced: false, reason };
 }
 
 async function answer(gitArguments: string[], cwd: string): Promise<string | null> {

@@ -234,11 +234,14 @@ or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
    replayed onto it (`rebaseBoardChange`), then the command's edit on top;
 3. commit that, and only the board's files, onto origin's tip with a plain
    message (`board: "Fix login" Doing → Review`), and push it; a push that lost
-   a race fetches and tries again, three tries in all. A seeded explanation file
-   git tracks there and that is older than the app's is rewritten in the
-   same commit, and is reason enough for a commit when no card changed; the
-   app's board read, and the `board` command printing its usage, ask for a
-   sync when they rewrote one;
+   a race fetches and tries again at once, and a fetch or push whose connection
+   dropped (`Connection closed`, `early EOF`) a second later, three tries in
+   all (`retryAfter`); a try that finds the commit it pushed already on origin
+   stops there, so an edit whose push landed unanswered is not made twice. A
+   seeded explanation file git tracks there and that is older than the app's is
+   rewritten in the same commit, and is reason enough for a commit when no card
+   changed; the app's board read, and the `board` command printing its usage,
+   ask for a sync when they rewrote one;
 4. bring the project's checkout up to it: on the default branch, only behind,
    and nothing changed outside `.dashboard/`, the board's files are put back to
    HEAD (and a tracked explanation file holding the app's text; an edit to one
@@ -271,7 +274,16 @@ ship cuts a branch. Offline, with no `origin`, or with a push refused for any
 other reason, or with a sync that fails any other way, the board is written
 where it is as before, and the app logs one
 warning per project (`board` kind) until a sync goes through; the command prints
-it on each run. A board git does not track, and the manager's, are untouched.
+it on each run. Not in a worktree: there the `board` command refuses the change
+with the same reason and writes nothing, since a card file written in a worktree
+is its branch's and would be merged onto main with the column it had that day
+(`notSyncedRefusal`). A repository whose main refuses pushes therefore refuses
+every board change from its worktrees; only a dropped connection is worth
+running again, and a dropped last push only once `board show <id>` says it did
+not land. A read there still answers from the worktree's board, and an
+explanation file that read wrote (a missing one) is put back as it was, since it
+too would ride the branch; the usage alone is handled the same way. A
+board git does not track, and the manager's, are untouched.
 
 ## Agents and the board
 
@@ -353,8 +365,12 @@ fields as one added on the board. The commit is `board: add "<title>"`, and take
 file with `git add -A`: on a default branch still on `board.json`, that one commit is the move into
 the folder, the old file's removal included. The worktree add, commit and
 push run with `core.hooksPath=/dev/null`, since the project's hooks are for its code. A push that
-loses a race (fetch first, non-fast-forward, or the remote moving mid-push) fetches and tries once
-more; any other refused push prints git's own sentence and is not retried.
+loses a race (fetch first, non-fast-forward, or the remote moving mid-push), and a fetch or push
+whose connection dropped, is tried again on a fresh fetch, three tries in all, by the same
+`retryAfter` the `board` command uses; a card whose push landed unanswered is not filed twice. A
+last try lost to a race says so; a last push whose connection dropped says it may have landed, to
+look for the card before filing it again. Any other failure prints git's own sentence and is not
+retried.
 It refuses, and pushes nothing, when the default branch has no board (it names `--seed`), when the
 board there does not parse, and when it cannot tell which branch on the remote is the default.
 

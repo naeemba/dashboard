@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
@@ -70,4 +70,22 @@ export function clone(bare: string, withBoard: boolean): string {
   git(checkout, 'remote', 'set-head', 'origin', 'main');
   git(checkout, 'checkout', '--quiet', '-b', 'feature');
   return checkout;
+}
+
+// origin's end of the connection, `upload-pack` for a fetch or `receive-pack` for a push, dropping
+// the connection the first time it runs: before it serves anything, or once the push has landed.
+export function dropsFirstConnection(checkout: string, side: 'upload-pack' | 'receive-pack'): void {
+  const folder = temporaryFolder('board-sync-flaky-');
+  const script = join(folder, side);
+  writeFileSync(script, [
+    '#!/bin/sh',
+    `if [ -e "${folder}/dropped" ]; then exec git-${side} "$@"; fi`,
+    `touch "${folder}/dropped"`,
+    ...(side === 'receive-pack' ? ['git-receive-pack "$@"'] : []),
+    'echo "Connection closed by 127.0.0.1 port 22" >&2',
+    'exit 255',
+    '',
+  ].join('\n'));
+  chmodSync(script, 0o755);
+  git(checkout, 'config', `remote.origin.${side.replace('-', '')}`, script);
 }

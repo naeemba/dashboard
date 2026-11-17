@@ -81,6 +81,53 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
     expect(card?.comments?.map((comment) => comment.body)).toEqual(['hello']);
   });
 
+  // A worktree's board is its branch's: a card file written there would be committed with the work and
+  // merged onto main with a stale column, so a change origin could not take is refused, not written.
+  it('refuses a change in a worktree when origin cannot be reached, and leaves its board alone', async () => {
+    const bare = remote();
+    const checkout = clone(bare, false);
+    git(checkout, 'checkout', '--quiet', 'main');
+    seedBoardDirectory(checkout);
+    writeBoard(checkout, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'board');
+    git(checkout, 'push', '--quiet', 'origin', 'main');
+    const worktree = join(temporaryFolder('board-program-worktrees-'), 'card');
+    git(checkout, 'worktree', 'add', '--quiet', '-b', 'card', worktree);
+    git(checkout, 'remote', 'set-url', 'origin', join(temporaryFolder('board-program-gone-'), 'missing.git'));
+    vi.spyOn(process, 'cwd').mockReturnValue(worktree);
+    const stdout = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    const stderr = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+    expect(await runBoardProgram(['comment', 'card', 'hello'])).toBe(1);
+    expect(String(stderr.mock.calls.at(-1)?.[0])).toMatch(/^board not changed: cannot fetch origin\/main/);
+    expect(git(worktree, 'status', '--porcelain')).toBe('');
+    expect(await runBoardProgram(['show', 'card'])).toBe(0);
+    expect(String(stdout.mock.calls.at(-1)?.[0])).toContain('the card');
+  });
+
+  // The docs a read writes ride the branch as a card file does, so a worktree whose rewrite origin
+  // cannot take gets them put back, and the read and the usage are still answered.
+  it('puts back the docs a read wrote in a worktree when origin cannot be reached', async () => {
+    const bare = remote();
+    const checkout = clone(bare, false);
+    git(checkout, 'checkout', '--quiet', 'main');
+    writeBoard(checkout, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'board');
+    git(checkout, 'push', '--quiet', 'origin', 'main');
+    const worktree = join(temporaryFolder('board-program-worktrees-'), 'card');
+    git(checkout, 'worktree', 'add', '--quiet', '-b', 'card', worktree);
+    git(checkout, 'remote', 'set-url', 'origin', join(temporaryFolder('board-program-gone-'), 'missing.git'));
+    vi.spyOn(process, 'cwd').mockReturnValue(worktree);
+    const stdout = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
+    vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+    expect(await runBoardProgram(['show', 'card'])).toBe(0);
+    expect(String(stdout.mock.calls.at(-1)?.[0])).toContain('the card');
+    expect(git(worktree, 'status', '--porcelain')).toBe('');
+    await runBoardProgram([]);
+    expect(git(worktree, 'status', '--porcelain')).toBe('');
+  });
+
   // The usage changes no card, but the read rewrote a stale doc: the sync commits it, so the checkout
   // is clean rather than holding a modified file nothing will ever commit.
   it('commits the doc the usage read rewrote, and leaves the checkout clean', async () => {

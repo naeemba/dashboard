@@ -5,7 +5,7 @@ import { emptyBoard, type Board } from '../../shared/board/board';
 import { runBoardCommand } from './board-cli';
 import { BOARD_FOLDER_PATH, EXPLANATION_FOR_AGENTS, openBoard, peekBoard, writeBoard } from './board-store';
 import { syncBoard, type BoardEdit } from './board-sync-git';
-import { boardOn, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
+import { boardOn, dropsFirstConnection, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 // Real git, against a bare repository in a temporary folder standing in for origin: what the sync
@@ -196,6 +196,23 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Done' });
   });
 
+  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
+  it.skipIf(process.platform === 'win32')('fetches again when the connection dropped on the fetch', async () => {
+    const { bare, checkout } = project();
+    dropsFirstConnection(checkout, 'upload-pack');
+    expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toMatchObject({ synced: true });
+    expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Todo' });
+  });
+
+  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
+  it.skipIf(process.platform === 'win32')('does not make the edit twice when the connection dropped after the push landed', async () => {
+    const { bare, checkout } = project();
+    dropsFirstConnection(checkout, 'receive-pack');
+    expect(await syncBoard(checkout, command('comment', 'a', 'tests pass'))).toMatchObject({ synced: true });
+    const card = boardOn(bare)?.columns.flatMap((column) => column.cards).find((each) => each.id === 'a');
+    expect(card?.comments?.map((comment) => comment.body)).toEqual(['tests pass']);
+  });
+
   it('leaves a checkout with work outside .dashboard where it is, and still writes origin', async () => {
     const { bare, checkout } = project();
     pushFromElsewhere(bare, command('move', 'b', 'Done'));
@@ -213,10 +230,10 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     const { bare, checkout } = project();
     writeFileSync(join(checkout, BOARD_FOLDER_PATH, 'cards', 'a.json'), '<<<<<<< HEAD\n{');
     const inPlace = await syncBoard(checkout);
-    expect(!inPlace.synced && inPlace.warning).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
+    expect(!inPlace.synced && inPlace.reason).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
     openBoard(checkout);
     const setAside = await syncBoard(checkout);
-    expect(!setAside.synced && setAside.warning).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
+    expect(!setAside.synced && setAside.reason).toMatch(/do not parse \(\.dashboard\/board\/cards\/a\.json\)/);
     expect(columns(boardOn(bare))).toEqual({ a: 'Todo', b: 'Todo' });
   });
 
@@ -235,13 +252,13 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     git(checkout, 'remote', 'set-url', 'origin', join(temporaryFolder('board-sync-gone-'), 'missing.git'));
     const outcome = await syncBoard(checkout, command('move', 'a', 'Doing'));
     expect(outcome.synced).toBe(false);
-    expect(!outcome.synced && outcome.warning).toMatch(/^board written here only, not on origin: cannot fetch origin\/main/);
+    expect(!outcome.synced && outcome.reason).toMatch(/^cannot fetch origin\/main/);
   });
 
   it('stays quiet about a board git does not track', async () => {
     const checkout = temporaryFolder('board-sync-untracked-');
     git(checkout, 'init', '--quiet', '-b', 'main');
     writeBoard(checkout, seeded());
-    expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toEqual({ synced: false, warning: null });
+    expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toEqual({ synced: false, reason: null });
   });
 });

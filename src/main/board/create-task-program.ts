@@ -8,7 +8,7 @@ import { BROKEN_SUFFIX } from '../app/set-aside';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
 import { NO_HOOKS } from '../app/git';
-import { lostRace } from './board-sync';
+import { droppedConnection, droppedPushReason, lostRace, retryAfter, SYNC_ATTEMPTS } from './board-sync';
 import { boardAddArguments, commitMessage, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
 
 // The whole of the create-task program outside create-task.ts: git, the throwaway worktree, the
@@ -19,9 +19,11 @@ import { boardAddArguments, commitMessage, noBoardMessage, parseCreateTaskArgume
 // No DASHBOARD_BOARD needed: the board is written in-process by the `board` command's own `add`, so
 // this runs the same from a plain terminal, another project or a headless agent.
 
-// What one try ends in: a line to print, a refusal to print, or a push that lost a race to another
-// writer and is worth one more try on a fresh fetch.
-type Outcome = { line: string } | { refusal: string } | 'retry';
+// What one try ends in: a line to print, a refusal to print, or a push worth another try on a fresh
+// fetch after `pause` (retryAfter, the same failures the `board` command tries again). `landed` is
+// the commit pushed and the line it would print: a push whose connection dropped may have landed.
+type Landed = { commit: string; line: string };
+type Outcome = { line: string } | { refusal: string } | { pause: number; landed: Landed };
 
 // Sync, unlike app/git.ts: this is a short-lived program with nothing else to keep running. The
 // output read here is always one line, so trim is safe. A failure is git's own sentence.
@@ -62,7 +64,7 @@ function seedBoard(repositoryRoot: string, worktree: string, branch: string): st
 //
 // ponytail: a full checkout of the default branch per card. Fine for this repo's size; a sparse
 // checkout of .dashboard/ is the next rung if a big repo makes it slow.
-function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOptions): Outcome {
+function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOptions, attempt: number): Outcome {
   const worktree = mkdtempSync(join(tmpdir(), 'create-task-'));
   try {
     git(repositoryRoot, [...NO_HOOKS, 'worktree', 'add', '--quiet', '--detach', worktree, `${options.remote}/${branch}`]);
@@ -91,15 +93,19 @@ function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOpt
     // folder that replaces it: the default branch never holds both, and never neither.
     git(worktree, [...NO_HOOKS, 'add', '-A', '--', ...BOARD_PATHSPECS]);
     git(worktree, [...NO_HOOKS, 'commit', '--quiet', '-m', commitMessage(options.title)]);
+    const commit = git(worktree, ['rev-parse', 'HEAD']);
+    const line = `${result.output}  on ${branch} (${commit.slice(0, 8)})${seedNote}`;
     try {
       git(worktree, [...NO_HOOKS, 'push', '--quiet', options.remote, `HEAD:refs/heads/${branch}`]);
     } catch (error: unknown) {
-      // Only a lost race is worth a fresh fetch; anything else is git's own sentence.
-      if (error instanceof ExpectedFailure && lostRace(error.message)) return 'retry';
+      if (!(error instanceof ExpectedFailure)) throw error;
+      const pause = retryAfter(attempt, error.message, true);
+      if (pause !== null) return { pause, landed: { commit, line } };
+      if (lostRace(error.message)) return { refusal: `the push to ${options.remote}/${branch} lost a race to another writer on the last of ${SYNC_ATTEMPTS} tries` };
+      if (droppedConnection(error.message)) return { refusal: `${droppedPushReason(`${options.remote}/${branch}`, error.message)}; check ${options.remote}/${branch} for the card before running create-task again` };
       throw error;
     }
-    const commit = git(worktree, ['rev-parse', '--short=8', 'HEAD']);
-    return { line: `${result.output}  on ${branch} (${commit})${seedNote}` };
+    return { line };
   } finally {
     // remove takes the folder and git's record of it; when it fails (the add never ran), both go by hand.
     if (gitOrNull(repositoryRoot, ['worktree', 'remove', '--force', worktree]) === null) {
@@ -127,17 +133,38 @@ function run(commandArguments: readonly string[], directory: string): number {
   );
   if (branch === null) return refuse(noDefaultBranchMessage(remote));
 
-  // Two tries: somebody else pushing to the default branch between the fetch and the push is the
-  // one failure worth retrying, and fetching again fixes it.
-  for (let tries = 0; tries < 2; tries += 1) {
-    git(repositoryRoot, ['fetch', '--quiet', remote, branch]);
-    const outcome = fileOnce(repositoryRoot, branch, options);
-    if (outcome === 'retry') continue;
+  // Another writer pushing between the fetch and the push, or a dropped connection, is tried again on
+  // a fresh fetch, as the `board` command does. A push that landed with its answer lost is not made
+  // again: the fresh fetch holds its commit.
+  let landed: Landed | null = null;
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      git(repositoryRoot, ['fetch', '--quiet', remote, branch]);
+    } catch (error: unknown) {
+      const pause = error instanceof ExpectedFailure ? retryAfter(attempt, error.message, false) : null;
+      if (pause === null) throw error;
+      sleep(pause);
+      continue;
+    }
+    if (landed !== null && gitOrNull(repositoryRoot, ['merge-base', '--is-ancestor', landed.commit, `${remote}/${branch}`]) !== null) {
+      process.stdout.write(`${landed.line}\n`);
+      return 0;
+    }
+    const outcome = fileOnce(repositoryRoot, branch, options, attempt);
+    if ('pause' in outcome) {
+      landed = outcome.landed;
+      sleep(outcome.pause);
+      continue;
+    }
     if ('refusal' in outcome) return refuse(outcome.refusal);
     process.stdout.write(`${outcome.line}\n`);
     return 0;
   }
-  return refuse(`the push to ${remote}/${branch} was rejected twice`);
+}
+
+// Synchronous, like the rest of this program.
+function sleep(milliseconds: number): void {
+  if (milliseconds > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 
 export function runCreateTask(commandArguments: readonly string[], directory: string): number {

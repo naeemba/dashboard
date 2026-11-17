@@ -202,9 +202,31 @@ putting the board's files back to HEAD and laying the checkout's edits over the
 new tip. A `board` command in another process can still land there; the same
 read-then-write ceiling `runBoardCommandOnLatest` names.
 
+**A change the command cannot get onto origin is refused in a worktree, not
+written there.** The fallback that writes the board in place is safe in the
+project's checkout, whose next sync replays the uncommitted edit. In a worktree
+the card file is the branch's: it is committed with the work and merged onto
+main with whatever column it had that day. On 2026-11-17, 2 of about 8 board
+writes from one checkout failed with `cannot fetch origin/main` (`Connection
+closed by <host> port 22`) and went through when run again, so the fallback is
+hit, not hypothetical. A fetch or push whose connection dropped is now tried
+again a second later, three tries in all, before anything falls back. A failure
+that would fail the same way again (no such repository, a refused key, an
+unknown host, a fetch that ran out of time) is not, or a `board` command offline
+would take seconds more for nothing. Keeping a fallback write out of the branch's
+commits instead (`skip-worktree`, a path the commit leaves out) was not taken:
+the agent would read back a move origin never got, and the refusal says to run
+it again when the connection dropped, which the retries above say usually works.
+A push whose connection dropped after origin took it is not pushed twice: the
+next try finds the commit on origin and stops, so a `comment` or an `add` is not
+made a second time. When the last try's push drops, nothing is left to look, so
+the refusal says the push may have landed and to check the card before running
+it again, not to run it again.
+
 **What it costs.** A commit on main per save. A fetch per `board` command, reads
 included, about a second. A repository whose main refuses pushes keeps its
-board in the checkout, uncommitted, with a warning; before this the review
+board in the checkout, uncommitted, with a warning, and refuses every board
+change made from one of its worktrees; before this the review
 landed Done through the branch, and now the app's move into Done lands in the checkout only. A ship
 used to commit its Ship move on the new branch as well; it no longer writes the
 branch's board at all (ship-decision-3).
