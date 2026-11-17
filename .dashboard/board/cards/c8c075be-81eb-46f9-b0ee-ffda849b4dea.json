@@ -5,7 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:20:46.956Z",
-  "updatedAt": "2026-11-17T12:21:44.430Z",
-  "column": "Ship",
-  "order": 0
+  "updatedAt": "2026-11-17T12:31:29.612Z",
+  "branch": "board-guard-refuses-npm-yarn-in-a-pnpm-proj",
+  "pullRequest": 319,
+  "comments": [
+    {
+      "at": "2026-11-17T12:31:26.212Z",
+      "body": "PR #319: package-manager guard in board guard; rule deleted from /work-card (work-card-skill.ts). Only that one md file in this repo stated the rule. The dotfiles agents dependency-updater.md and dependency-update-fleet.md detect the manager by lockfile as a procedure step, not a rule, and live outside this worktree, so they were left as they are."
+    },
+    {
+      "at": "2026-11-17T12:31:29.571Z",
+      "body": "Pull request #319 opened: board guard refuses another package manager than the lockfile names https://github.com/naeemba/dashboard/pull/319"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }
