@@ -16,7 +16,10 @@ const LOCKFILES: Record<string, string> = {
 
 // Script runs are left out: the same word means different things per manager (`yarn test` runs a script,
 // `bun test` is bun's runner), and a run writes neither the tree nor the lockfile.
-const INSTALLS = new Set(['install', 'i', 'ci', 'add', 'remove', 'rm', 'uninstall', 'un', 'update', 'up', 'upgrade']);
+const INSTALLS = new Set([
+  'install', 'i', 'ci', 'clean-install', 'ic', 'install-clean', 'it', 'install-test', 'cit', 'install-ci-test',
+  'add', 'remove', 'rm', 'r', 'uninstall', 'un', 'unlink', 'update', 'up', 'upgrade',
+]);
 
 // The nearest lockfile at or above `folder`, up to the folder holding `.git`; null where there is none,
 // where no folder up to the root holds `.git` (a stray lockfile in a parent of an un-initialised folder

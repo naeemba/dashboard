@@ -36,6 +36,8 @@ describe('managersUsed', () => {
     ['npm install', 'npm'],
     ['npm i -D vitest', 'npm'],
     ['npm ci', 'npm'],
+    ['npm cit', 'npm'],
+    ['npm r lodash', 'npm'],
     ['npm --silent uninstall lodash', 'npm'],
     ['yarn', 'yarn'],
     ['yarn add react', 'yarn'],
