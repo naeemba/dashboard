@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.49.0 (2026-11-17)
+
+### What's new
+
+- pane run --in <folder>: a Claude screen in an existing worktree
+
+### What's Changed
+* pane run --in <folder>: a worker in an existing worktree by @naeemba in https://github.com/naeemba/dashboard/pull/316
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.48.0...v2.49.0
+
 ## v2.48.0 (2026-11-16)
 
 ### What's new
