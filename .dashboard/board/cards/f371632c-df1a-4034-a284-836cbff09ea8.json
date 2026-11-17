@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T13:49:35.346Z",
-  "updatedAt": "2026-11-17T13:49:43.056Z",
-  "column": "Ship",
+  "updatedAt": "2026-11-17T13:55:06.858Z",
+  "branch": "review-loop-merges-through-pr-land",
+  "pullRequest": 323,
+  "comments": [
+    {
+      "at": "2026-11-17T13:55:06.832Z",
+      "body": "Pull request #323 opened: Review with merging on lands through pr land https://github.com/naeemba/dashboard/pull/323"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
