@@ -58,8 +58,9 @@ tests in `ship-flow.test.ts` hold that the branch is left at origin's tip.
 **`/pr-loop` stays in naeemba/claude-pr-loop, installed by its own `install.sh`;
 the app only checks it. A review start with no `pr-loop.md` in
 `~/.claude/commands` is refused with the install line, and a checkout that is
-behind origin, a workflow copy that differs from the checkout's, or a dangling
-command link is a status-bar notice saying what to run. Only `/pr-loop` is
+behind origin, a workflow copy that differs from the checkout's, a checkout file
+`install.sh` links but `~/.claude` lacks, or a dangling link is a status-bar
+notice saying what to run. Only `/pr-loop` is
 checked, since no review runs `/mr-loop`.** Before 2026-11-17 nothing checked
 it: a missing install sent a review worker into a command that did not exist,
 and an out-of-date one ran old behaviour silently, most often after a `git

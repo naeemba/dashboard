@@ -449,7 +449,6 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Backlog');
   });
 
-  // Nothing on screen is waiting on a review, so the card is the only place this can be said.
   it('refuses a review whose /pr-loop is missing, says so on the card, and checks nothing', async () => {
     const { entry, projectPath } = flight(12);
     let checked = 0;
@@ -468,6 +467,7 @@ describe('reviewSweep', () => {
     expect(checked).toBe(1);
   });
 
+  // Nothing on screen is waiting on a review, so the card is the only place this can be said.
   it('lands the card in Review and says on it when the worktree is dirty', async () => {
     const { entry, projectPath } = flight(12);
     const { ports: made, log } = ports(entry, {

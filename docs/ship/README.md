@@ -46,10 +46,12 @@ naeemba/claude-pr-loop, whose `install.sh` links its commands into
 (ship-decision-4). A review start with no `~/.claude/commands/pr-loop.md` (or one
 linking to a checkout that has gone) is refused, on the card too, with the install
 line. At launch and at each review start the app asks the checkout whether it is
-current, and says on the status bar, until dismissed, what to run when it is
-behind origin's default branch (fetched at most once a day), when an installed
-workflow differs from the checkout's, or when a command link points at a file the
-checkout no longer has (`review-loop-install.ts`).
+current, and says on the status bar, until dismissed or a later check finds it
+fixed, what to run when it is behind origin's default branch (fetched at most once
+a day), when an installed workflow differs from the checkout's, when a file
+`install.sh` links (`commands/`, `review/`, `scripts/`) has nothing in
+`~/.claude`, or when a link there points at a file the checkout no longer has
+(`review-loop-install.ts`).
 
 The CI wait is one `gh pr checks <n> --watch` the agent runs in the background,
 woken when it exits, never a poll by hand or a foreground `sleep` (ship-decision-2).

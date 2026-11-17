@@ -48,9 +48,9 @@ function filesIn(folder: string): string[] {
   }
 }
 
-function sameFile(a: string, b: string): boolean {
+function sameFile(installed: string, shipped: string): boolean {
   try {
-    return readFileSync(a).equals(readFileSync(b));
+    return readFileSync(installed).equals(readFileSync(shipped));
   } catch {
     return false;
   }
@@ -63,9 +63,14 @@ export type ReviewLoopStaleness = {
   behind: number;
   // The checkout's workflows whose copy in ~/.claude/workflows is missing or different.
   workflows: string[];
-  // Command links into the checkout whose file has gone.
+  // Checkout files install.sh links (as `commands/x.md`) with nothing of that name in ~/.claude.
+  unlinked: string[];
+  // Links in ~/.claude (as `commands/x.md`) into the checkout whose file has gone.
   dangling: string[];
 };
+
+// The folders install.sh links file by file, and the files it links in each.
+const LINKED: [string, string][] = [['commands', '.md'], ['review', '.md'], ['scripts', '.sh']];
 
 export type ReviewLoopGit = (programArguments: string[], cwd: string) => Promise<string>;
 
@@ -75,7 +80,7 @@ export type ReviewLoopGit = (programArguments: string[], cwd: string) => Promise
 // or count that fails (offline, no origin/HEAD) counts as not behind.
 export async function reviewLoopStaleness(claudeFolder: string, git: ReviewLoopGit, now: number): Promise<ReviewLoopStaleness | null> {
   const target = linkTarget(loopCommand(claudeFolder));
-  if (target === null) return null;
+  if (target === null || !existsSync(target)) return null;
   const checkout = path.dirname(path.dirname(target));
   let fetched = 0;
   try {
@@ -89,37 +94,49 @@ export async function reviewLoopStaleness(claudeFolder: string, git: ReviewLoopG
   const workflows = filesIn(path.join(checkout, 'workflows'))
     .filter((name) => name.endsWith('.js'))
     .filter((name) => !sameFile(path.join(checkout, 'workflows', name), path.join(claudeFolder, 'workflows', name)));
-  const commands = commandsFolder(claudeFolder);
-  const dangling = filesIn(commands).filter((name) => {
-    const linked = linkTarget(path.join(commands, name));
-    return linked !== null && linked.startsWith(checkout + path.sep) && !existsSync(linked);
-  });
-  return { checkout, behind: Number(count) || 0, workflows, dangling };
+  const unlinked: string[] = [];
+  const dangling: string[] = [];
+  for (const [folder, extension] of LINKED) {
+    for (const name of filesIn(path.join(checkout, folder)).filter((file) => file.endsWith(extension))) {
+      const entry = path.join(claudeFolder, folder, name);
+      if (linkTarget(entry) === null && !existsSync(entry)) unlinked.push(`${folder}/${name}`);
+    }
+    for (const name of filesIn(path.join(claudeFolder, folder))) {
+      const linked = linkTarget(path.join(claudeFolder, folder, name));
+      if (linked !== null && linked.startsWith(checkout + path.sep) && !existsSync(linked)) dangling.push(`${folder}/${name}`);
+    }
+  }
+  return { checkout, behind: Number(count) || 0, workflows, unlinked, dangling };
 }
 
 // The status bar's line for a stale install, or null when it is current. Says what to run: install.sh
 // copies the workflow and drops a link to a file the checkout no longer has, so a pull alone is not it.
 export function reviewLoopNotice(staleness: ReviewLoopStaleness | null): string | null {
   if (staleness === null) return null;
-  const { checkout, behind, workflows, dangling } = staleness;
+  const { checkout, behind, workflows, unlinked, dangling } = staleness;
   const problems = [
     behind > 0 ? `the checkout is ${behind} commit${behind === 1 ? '' : 's'} behind origin` : '',
     workflows.length > 0 ? `the installed ${workflows.join(', ')} differs from the checkout's` : '',
-    dangling.length > 0 ? `${dangling.join(', ')} in ~/.claude/commands links to nothing` : '',
+    unlinked.length > 0 ? `${unlinked.join(', ')} is not in ~/.claude` : '',
+    dangling.length > 0 ? `${dangling.map((name) => `~/.claude/${name}`).join(', ')} links to nothing` : '',
   ].filter((problem) => problem !== '');
   if (problems.length === 0) return null;
   const run = `cd ${posixQuoted(checkout)} && ${behind > 0 ? 'git pull && ' : ''}./install.sh`;
   return `/pr-loop is out of date: ${problems.join('; ')}. Run \`${run}\``;
 }
 
-// The check main runs at launch and at each review start, its line handed to `say` when there is one.
-// Not awaited by either: nothing waits on a warning. Reviews started on one tick share the check under
-// way, so they do not fetch the one checkout side by side or say the same line once each.
+// The check main runs at launch and at each review start, its line handed to `say`, or '' to take a
+// line down once the install is fixed. Not awaited by either: nothing waits on a warning. Reviews
+// started on one tick share the check under way, so they do not fetch the one checkout side by side or
+// say the same line once each. Returned so a test can wait on it.
 let checking: Promise<void> | null = null;
 
-export function checkReviewLoop(say: (notice: string) => void): void {
-  checking ??= reviewLoopStaleness(CLAUDE_FOLDER, (programArguments, cwd) => runGit(programArguments, cwd, { timeout: 60_000 }), Date.now())
+const mainGit: ReviewLoopGit = (programArguments, cwd) => runGit(programArguments, cwd, { timeout: 60_000 });
+
+export function checkReviewLoop(say: (notice: string) => void, claudeFolder = CLAUDE_FOLDER, git = mainGit, now = Date.now): Promise<void> {
+  checking ??= reviewLoopStaleness(claudeFolder, git, now())
     .then(reviewLoopNotice)
-    .then((notice) => { if (notice !== null) say(notice); })
+    .then((notice) => say(notice ?? ''))
     .finally(() => { checking = null; });
+  return checking;
 }

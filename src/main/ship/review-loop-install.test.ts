@@ -2,7 +2,7 @@ import { mkdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { reviewLoopMissing, reviewLoopNotice, reviewLoopStaleness, type ReviewLoopGit } from './review-loop-install';
+import { checkReviewLoop, reviewLoopMissing, reviewLoopNotice, reviewLoopStaleness, type ReviewLoopGit } from './review-loop-install';
 
 const NOW = Date.UTC(2026, 10, 17);
 
@@ -11,11 +11,11 @@ function installed(): { claude: string; checkout: string } {
   const root = temporaryFolder('review-loop-');
   const checkout = path.join(root, 'claude-pr-loop');
   const claude = path.join(root, '.claude');
-  for (const folder of ['commands', 'workflows', '.git']) mkdirSync(path.join(checkout, folder), { recursive: true });
-  for (const folder of ['commands', 'workflows']) mkdirSync(path.join(claude, folder), { recursive: true });
-  for (const name of ['pr-loop.md', 'pr-review.md']) {
-    writeFileSync(path.join(checkout, 'commands', name), name);
-    symlinkSync(path.join(checkout, 'commands', name), path.join(claude, 'commands', name));
+  for (const folder of ['commands', 'scripts', 'workflows', '.git']) mkdirSync(path.join(checkout, folder), { recursive: true });
+  for (const folder of ['commands', 'scripts', 'workflows']) mkdirSync(path.join(claude, folder), { recursive: true });
+  for (const name of ['commands/pr-loop.md', 'commands/pr-review.md', 'scripts/x.sh']) {
+    writeFileSync(path.join(checkout, name), name);
+    symlinkSync(path.join(checkout, name), path.join(claude, name));
   }
   writeFileSync(path.join(checkout, 'workflows', 'pr-loop.js'), 'v1');
   writeFileSync(path.join(claude, 'workflows', 'pr-loop.js'), 'v1');
@@ -52,7 +52,7 @@ describe('reviewLoopStaleness', () => {
     const { claude, checkout } = installed();
     const git = fakeGit('0');
     const staleness = await reviewLoopStaleness(claude, git.git, NOW);
-    expect(staleness).toEqual({ checkout, behind: 0, workflows: [], dangling: [] });
+    expect(staleness).toEqual({ checkout, behind: 0, workflows: [], unlinked: [], dangling: [] });
     expect(git.asked).not.toContain('fetch');
     expect(reviewLoopNotice(staleness)).toBeNull();
   });
@@ -65,14 +65,24 @@ describe('reviewLoopStaleness', () => {
     expect(staleness?.behind).toBe(3);
   });
 
-  it('names a workflow copy that differs or is missing, and a command link to nothing', async () => {
+  it('names a workflow copy that differs or is missing, a file not linked, and a link to nothing', async () => {
     const { claude, checkout } = installed();
     writeFileSync(path.join(checkout, 'workflows', 'pr-loop.js'), 'v2');
     writeFileSync(path.join(checkout, 'workflows', 'mr-loop.js'), 'v1');
     rmSync(path.join(checkout, 'commands', 'pr-review.md'));
+    rmSync(path.join(claude, 'scripts', 'x.sh'));
+    mkdirSync(path.join(checkout, 'review'));
+    writeFileSync(path.join(checkout, 'review', 'standard.md'), '');
     const staleness = await reviewLoopStaleness(claude, fakeGit('0').git, NOW);
     expect(staleness?.workflows.sort()).toEqual(['mr-loop.js', 'pr-loop.js']);
-    expect(staleness?.dangling).toEqual(['pr-review.md']);
+    expect(staleness?.unlinked.sort()).toEqual(['review/standard.md', 'scripts/x.sh']);
+    expect(staleness?.dangling).toEqual(['commands/pr-review.md']);
+  });
+
+  it('leaves a link into a checkout that has gone to the refusal', async () => {
+    const { claude, checkout } = installed();
+    rmSync(checkout, { recursive: true });
+    expect(await reviewLoopStaleness(claude, fakeGit('0').git, NOW)).toBeNull();
   });
 
   it('counts a git that fails as not behind', async () => {
@@ -91,10 +101,31 @@ describe('reviewLoopStaleness', () => {
 
 describe('reviewLoopNotice', () => {
   it('says pull and install when behind, install alone when only the copies are off', () => {
-    const base = { checkout: '/c', behind: 0, workflows: [], dangling: [] };
+    const base = { checkout: '/c', behind: 0, workflows: [], unlinked: [], dangling: [] };
     expect(reviewLoopNotice({ ...base, behind: 1 })).toBe("/pr-loop is out of date: the checkout is 1 commit behind origin. Run `cd '/c' && git pull && ./install.sh`");
-    expect(reviewLoopNotice({ ...base, workflows: ['pr-loop.js'], dangling: ['old.md'] })).toBe(
-      "/pr-loop is out of date: the installed pr-loop.js differs from the checkout's; old.md in ~/.claude/commands links to nothing. Run `cd '/c' && ./install.sh`",
+    expect(reviewLoopNotice({ ...base, workflows: ['pr-loop.js'], unlinked: ['scripts/new.sh'], dangling: ['commands/old.md'] })).toBe(
+      "/pr-loop is out of date: the installed pr-loop.js differs from the checkout's; scripts/new.sh is not in ~/.claude; ~/.claude/commands/old.md links to nothing. Run `cd '/c' && ./install.sh`",
     );
+  });
+});
+
+describe('checkReviewLoop', () => {
+  it('shares a check under way, checks again once it is done, and takes the line down when fixed', async () => {
+    const { claude, checkout } = installed();
+    const git = fakeGit('0');
+    const said: string[] = [];
+    const say = (notice: string): void => { said.push(notice); };
+    writeFileSync(path.join(checkout, 'workflows', 'pr-loop.js'), 'v2');
+    const first = checkReviewLoop(say, claude, git.git, () => NOW);
+    const second = checkReviewLoop(say, claude, git.git, () => NOW);
+    expect(second).toBe(first);
+    await first;
+    expect(git.asked).toEqual(['rev-list']);
+    expect(said).toHaveLength(1);
+    expect(said[0]).toContain('pr-loop.js differs');
+    writeFileSync(path.join(claude, 'workflows', 'pr-loop.js'), 'v2');
+    await checkReviewLoop(say, claude, git.git, () => NOW);
+    expect(git.asked).toEqual(['rev-list', 'rev-list']);
+    expect(said[1]).toBe('');
   });
 });
