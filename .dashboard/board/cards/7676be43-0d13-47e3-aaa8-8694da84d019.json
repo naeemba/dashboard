@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-17T12:58:51.697Z",
-  "updatedAt": "2026-11-17T12:58:51.697Z",
-  "column": "Backlog",
-  "order": 46
+  "updatedAt": "2026-11-17T13:03:44.820Z",
+  "branch": "a-board-write-that-cannot-reach-origin-writ",
+  "column": "Doing",
+  "order": 0
 }

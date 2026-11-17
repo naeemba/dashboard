@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:20:25.662Z",
-  "updatedAt": "2026-11-17T12:26:27.768Z",
+  "updatedAt": "2026-11-17T13:03:24.057Z",
   "branch": "refresh-every-project-s-stale-dashboard-cla",
   "pullRequest": 317,
   "comments": [
     {
       "at": "2026-11-17T12:26:27.741Z",
       "body": "Pull request #317 opened: Rewrite the seeded .dashboard docs whenever they are not the current text https://github.com/naeemba/dashboard/pull/317"
+    },
+    {
+      "at": "2026-11-17T13:03:24.057Z",
+      "body": "Converged, ready to merge. Before the loop: the card file was reverted to main's copy, and the rewritten seeded .dashboard docs are now committed and pushed to origin's default branch by the board sync where git tracks them (board-decision-8 updated). A seeded file that is a symlink is never written. Review loop: 3 rounds, floor-addressed, 8 findings fixed, 0 rejected, no conflict with main. Its last fix (README wording, low) had no re-review after it. CI 5/5 green on 5b9fcb4c. Caveat: a checkout on another branch made before the new text reached main shows the doc as modified until that branch takes main's copy."
     }
   ],
   "column": "Review",
