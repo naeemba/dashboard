@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T13:51:06.759Z",
-  "updatedAt": "2026-11-17T14:27:11.455Z",
+  "updatedAt": "2026-11-17T14:28:26.685Z",
   "branch": "warn-when-pr-loop-is-missing-or-out-of-date",
   "pullRequest": 324,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-17T14:27:11.455Z",
       "body": "Merged main (#323) into PR #324: one conflict in docs/ship/README.md, both paragraphs kept with main's CI-wait wording; no decision id clash (#323 added none, ship-decision-4 stays). Checks pass, CI 5/5 green on 76d61fdd. Ready to merge."
+    },
+    {
+      "at": "2026-11-17T14:28:26.658Z",
+      "body": "Pull request #324 merged: Refuse a review without /pr-loop, and warn when it is out of date https://github.com/naeemba/dashboard/pull/324"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 264
 }
