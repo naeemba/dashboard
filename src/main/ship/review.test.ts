@@ -152,6 +152,7 @@ describe('reviewPrompt', () => {
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land 12`');
     expect(prompt).toContain('run_in_background, timeout 7200000');
     expect(prompt).toContain('stopped at that time limit has not failed');
+    expect(prompt).toContain('a land that prints `nothing is merged, run it again`');
     expect(prompt).not.toMatch(/gh pr merge 12|--match-head-commit|gh pr checks 12 --watch/);
   });
 
