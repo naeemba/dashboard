@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.50.0 (2026-11-17)
+
+### What's new
+
+- pane send refuses text that starts claude
+- Board guard refuses npm/yarn in a pnpm project
+- Board guard refuses removing its own worktree and editing another worktree
+- board ship commits the card, column Ship, onto the work branch
+- Refresh every project's stale .dashboard/CLAUDE.md (still says edit board.json)
+- A board write that cannot reach origin writes a worktree's card file in place, and it can ride a merge
+- Review loop merges through pr land
+- Warn when /pr-loop is missing or out of date, and refuse a review without it
+
+### What's Changed
+* pane send refuses text that starts claude by @naeemba in https://github.com/naeemba/dashboard/pull/318
+* board guard refuses another package manager than the lockfile names by @naeemba in https://github.com/naeemba/dashboard/pull/319
+* Board guard refuses removing its own worktree and editing another worktree by @naeemba in https://github.com/naeemba/dashboard/pull/320
+* A ship commits no board move onto the card's branch by @naeemba in https://github.com/naeemba/dashboard/pull/321
+* Rewrite the seeded .dashboard docs whenever they are not the current text by @naeemba in https://github.com/naeemba/dashboard/pull/317
+* Board: a write that cannot reach origin is refused in a worktree, and a dropped connection is retried by @naeemba in https://github.com/naeemba/dashboard/pull/322
+* Review with merging on lands through pr land by @naeemba in https://github.com/naeemba/dashboard/pull/323
+* Refuse a review without /pr-loop, and warn when it is out of date by @naeemba in https://github.com/naeemba/dashboard/pull/324
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.49.0...v2.50.0
+
 ## v2.49.0 (2026-11-17)
 
 ### What's new
