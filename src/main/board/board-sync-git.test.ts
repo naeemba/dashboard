@@ -196,14 +196,16 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Done' });
   });
 
-  it('fetches again when the connection dropped on the fetch', async () => {
+  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
+  it.skipIf(process.platform === 'win32')('fetches again when the connection dropped on the fetch', async () => {
     const { bare, checkout } = project();
     dropsFirstConnection(checkout, 'upload-pack');
     expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toMatchObject({ synced: true });
     expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Todo' });
   });
 
-  it('does not make the edit twice when the connection dropped after the push landed', async () => {
+  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
+  it.skipIf(process.platform === 'win32')('does not make the edit twice when the connection dropped after the push landed', async () => {
     const { bare, checkout } = project();
     dropsFirstConnection(checkout, 'receive-pack');
     expect(await syncBoard(checkout, command('comment', 'a', 'tests pass'))).toMatchObject({ synced: true });

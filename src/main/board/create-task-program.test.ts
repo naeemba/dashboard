@@ -198,7 +198,8 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(pushesTo(bare)).toBe(SYNC_ATTEMPTS);
   });
 
-  it('fetches again when the connection dropped on the fetch', () => {
+  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
+  it.skipIf(process.platform === 'win32')('fetches again when the connection dropped on the fetch', () => {
     const bare = remote();
     const checkout = clone(bare, true);
     dropsFirstConnection(checkout, 'upload-pack');
@@ -207,7 +208,8 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(boardOn(bare).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['Flaky']);
   });
 
-  it('files the card once when the connection dropped after the push landed', () => {
+  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
+  it.skipIf(process.platform === 'win32')('files the card once when the connection dropped after the push landed', () => {
     const bare = remote();
     const checkout = clone(bare, true);
     dropsFirstConnection(checkout, 'receive-pack');
