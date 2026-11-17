@@ -106,22 +106,29 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
 });
 
 describe('board guard', () => {
-  const noProcess = () => null;
+  const nothing = { listProcesses: () => null, exists: () => false };
   const write = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/p/.dashboard/board/cards/a.json' } });
 
   it('names $DASHBOARD_BOARD in a pane the app opened, and its own path outside one', () => {
-    expect(guardAnswer(write, '/app/board.js', '/home/me/.claude/dashboard/board.js', noProcess)).toContain('node \\"$DASHBOARD_BOARD\\"');
-    expect(guardAnswer(write, undefined, '/home/me/.claude/dashboard/board.js', noProcess)).toContain('node \\"/home/me/.claude/dashboard/board.js\\"');
+    expect(guardAnswer(write, '/app/board.js', '/home/me/.claude/dashboard/board.js', nothing)).toContain('node \\"$DASHBOARD_BOARD\\"');
+    expect(guardAnswer(write, undefined, '/home/me/.claude/dashboard/board.js', nothing)).toContain('node \\"/home/me/.claude/dashboard/board.js\\"');
   });
 
   it('prints nothing for a call it lets through', () => {
-    expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js', noProcess)).toBe('');
+    expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js', nothing)).toBe('');
   });
 
   it('refuses killing the running app, with its own reason', () => {
     const kill = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'kill 4242' } });
     const app = () => [{ pid: 4242, names: ['Dashboard'], commandLine: '/home/me/.local/opt/dashboard/Dashboard --type=renderer' }];
-    expect(JSON.parse(guardAnswer(kill, undefined, 'board.js', app)).hookSpecificOutput.permissionDecisionReason).toContain('rebuild');
-    expect(guardAnswer(kill, undefined, 'board.js', noProcess)).toBe('');
+    expect(JSON.parse(guardAnswer(kill, undefined, 'board.js', { ...nothing, listProcesses: app })).hookSpecificOutput.permissionDecisionReason).toContain('rebuild');
+    expect(guardAnswer(kill, undefined, 'board.js', nothing)).toBe('');
+  });
+
+  it("refuses npm in the session folder's pnpm project, with its own reason", () => {
+    const install = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'npm install' }, cwd: '/p' });
+    const pnpmProject = (path: string) => path === '/p/pnpm-lock.yaml';
+    expect(JSON.parse(guardAnswer(install, undefined, 'board.js', { ...nothing, exists: pnpmProject })).hookSpecificOutput.permissionDecisionReason).toContain('with pnpm');
+    expect(guardAnswer(install, undefined, 'board.js', nothing)).toBe('');
   });
 });

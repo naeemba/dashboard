@@ -12,7 +12,8 @@ import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
 import { boardGuard } from './board-guard';
 import { runningAppGuard, runningProcess, type ProcessList, type RunningProcess } from '../workflow/running-app-guard';
-import { readdirSync, readFileSync } from 'node:fs';
+import { packageManagerGuard } from '../workflow/package-manager-guard';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
 // file and a line of output out, and the exit code back. Every decision it could make is made there
@@ -92,15 +93,22 @@ function answer(result: CommandResult): number {
   return 0;
 }
 
-// `board guard`, a PreToolUse hook: the board guard (board-guard.ts), then the running-app guard
-// (running-app-guard.ts). The hook's input in, the refusal to print or ''. The board's refusal names
+// `board guard`, a PreToolUse hook: the board guard (board-guard.ts), the running-app guard
+// (running-app-guard.ts), then the package-manager guard (package-manager-guard.ts), which reads the
+// lockfiles of the session's folder, the hook input's `cwd`. The hook's input in, the refusal to print or ''. The board's refusal names
 // the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
 // (`boardVariable` set) and this program's own path outside one.
-export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList): string {
-  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown };
+// What the guards read of the machine, passed in so a test can stand in for it.
+export type GuardMachine = { listProcesses: ProcessList; exists: (path: string) => boolean };
+
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, machine: GuardMachine): string {
+  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };
   const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
-  const refused = boardGuard(toolName, input.tool_input, command) ?? runningAppGuard(toolName, input.tool_input, listProcesses);
+  const folder = typeof input.cwd === 'string' ? input.cwd : undefined;
+  const refused = boardGuard(toolName, input.tool_input, command)
+    ?? runningAppGuard(toolName, input.tool_input, machine.listProcesses)
+    ?? packageManagerGuard(toolName, input.tool_input, folder, machine.exists);
   return refused === undefined ? '' : JSON.stringify(refused);
 }
 
@@ -125,7 +133,7 @@ function procProcesses(): RunningProcess[] | null {
 }
 
 function guard(): number {
-  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], procProcesses));
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], { listProcesses: procProcesses, exists: existsSync }));
   return 0;
 }
 
