@@ -1,0 +1,12 @@
+{
+  "id": "f03b3a9f-2082-4dda-a4a4-0680fe2e491a",
+  "title": "Warn when /pr-loop is missing or out of date, and refuse a review without it",
+  "notes": "The review loop runs /pr-loop (GitHub) or /mr-loop (GitLab) (src/main/ship/review.ts:167), which come from a separate checkout, naeemba/claude-pr-loop, linked into ~/.claude/commands by its install.sh. Nothing checks it: a missing install sends a review worker into a command that does not exist, and an out-of-date one runs old behaviour silently.\nDo:\n1. Missing: when a review would start, refuse it with the reason and the install line (git clone naeemba/claude-pr-loop && ./install.sh) if ~/.claude/commands/<pr|mr>-loop.md is not there. Export the predicate from where the refusal is decided (errors-rule-1).\n2. Out of date: on app start and on each review start, show the app's notice when (a) the linked checkout is behind its origin default branch (fetch at most once a day), or (b) the copied workflow file ~/.claude/workflows/*.js differs from the checkout's (install.sh copies it, so a git pull alone leaves it stale), or (c) a command link is dangling. The notice says what to run.\n3. Test the decision module. Docs in docs/ship.\nDo not bundle the commands into the app: the repo is used on its own too. Requested by the user 2026-11-17.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-17T13:51:06.759Z",
+  "updatedAt": "2026-11-17T13:51:32.009Z",
+  "branch": "warn-when-pr-loop-is-missing-or-out-of-date",
+  "column": "Doing",
+  "order": 1
+}
