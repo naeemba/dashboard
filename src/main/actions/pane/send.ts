@@ -1,4 +1,4 @@
-import { invocation, simpleCommands } from '../../workflow/running-app-guard';
+import { invocation, shellBody, simpleCommands } from '../../workflow/running-app-guard';
 import { workerPrompt } from '../../workers/dispatch';
 import { action } from '../action';
 import { isFilledText } from './pane-input';
@@ -22,6 +22,9 @@ export type PaneSendInput = {
 export type PaneSendPorts = {
   // Whether an agent runs in the pane: Claude Code in its terminal, or a Claude screen over it.
   agentIn(id: string): boolean;
+  // Whether the pane's shell has a program in the foreground (runsAProgram): a Claude opened by hand, an
+  // editor, a REPL. Always false on Windows, where the foreground cannot be read.
+  programRunsIn(id: string): boolean;
   // Whether a Claude screen runs in the pane.
   screenIn(id: string): boolean;
   // Whether the pane is a main's worker now, which a terminal agent is only when it was started with
@@ -43,10 +46,15 @@ export function reportsTurns(ports: Pick<PaneSendPorts, 'agentIn' | 'screenIn' |
 }
 
 // Whether text typed into a shell starts Claude Code: `claude` as the first word of any of its commands,
-// by name or by path, read the way the running-app guard reads a command line. Only asked of a shell,
-// since an agent takes the same text as a prompt.
+// by name or by path, read the way the running-app guard reads a command line, `sh -c '…'` bodies too.
+// Only asked of a shell at its prompt, since an agent or a program takes the same text as input.
+// ponytail: it reads the text. `npx @anthropic-ai/claude-code`, a `$(…)` or a script of your own that
+// runs claude still gets through; matching those means running the shell.
 export function startsClaude(text: string): boolean {
-  return simpleCommands(text).some((part) => invocation(part, 'claude') !== null);
+  return simpleCommands(text).some((part) => {
+    const body = shellBody(part);
+    return invocation(part, 'claude') !== null || (body !== null && startsClaude(body));
+  });
 }
 
 export const STARTS_CLAUDE_REFUSAL = 'typing claude starts a worker with none of the app\'s settings that never'
@@ -58,7 +66,7 @@ export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; h
   input: ({ id, text, dispatcherPath }) => (isFilledText(id) && typeof text === 'string' && isFilledText(dispatcherPath)
     ? { id, text, dispatcherPath } : { refused: 'no pane, text or sending main was given' }),
   async run(ports, { id, text, dispatcherPath }) {
-    if (!ports.agentIn(id) && startsClaude(text)) return { refused: STARTS_CLAUDE_REFUSAL };
+    if (!ports.agentIn(id) && !ports.programRunsIn(id) && startsClaude(text)) return { refused: STARTS_CLAUDE_REFUSAL };
     const handed = reportsTurns(ports, id);
     if (handed) ports.handTo(id, dispatcherPath);
     const typed = handed ? workerPrompt(text, dispatcherPath) : text;

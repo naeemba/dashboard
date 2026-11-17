@@ -3,13 +3,14 @@ import { bind } from '../action';
 import { paneSend, startsClaude, STARTS_CLAUDE_REFUSAL, type PaneSendPorts } from './send';
 
 // Pane 2:1 is a screen, 2:2 a shell, 2:3 Claude Code started as a worker, 2:4 Claude Code with no
-// worker hooks (resumed from the drawer).
+// worker hooks (resumed from the drawer), 2:5 a shell running a program (a Claude opened by hand, nvim).
 function panes(overrides: Partial<PaneSendPorts> = {}) {
   const typed: string[] = [];
   const prompted: string[] = [];
   const handed: string[] = [];
   const send = bind(paneSend, {
-    agentIn: (id) => id !== '2:2',
+    agentIn: (id) => id !== '2:2' && id !== '2:5',
+    programRunsIn: (id) => id === '2:5',
     screenIn: (id) => id === '2:1',
     mainsWorkerIn: (id) => id === '2:3',
     handTo: (id, dispatcherPath) => { handed.push(`${id} ${dispatcherPath}`); },
@@ -50,13 +51,14 @@ describe('pane.send', () => {
     expect(await send.call({ id: '2:2', text: 'claude "fix it"', dispatcherPath: '/work/api' })).toEqual({ refused: STARTS_CLAUDE_REFUSAL });
     expect(typed).toEqual([]);
     await send.call({ id: '2:4', text: 'claude hooks are broken', dispatcherPath: '/work/api' });
-    expect(typed).toEqual(['2:4 claude hooks are broken']);
+    await send.call({ id: '2:5', text: 'claude hooks are broken', dispatcherPath: '/work/api' });
+    expect(typed).toEqual(['2:4 claude hooks are broken', '2:5 claude hooks are broken']);
   });
 });
 
 describe('startsClaude', () => {
   it('finds claude as the first word of any command, by name or path', () => {
-    for (const text of ['claude', '  claude --resume', 'cd ../web && claude "go"', '/opt/claude-code/bin/claude -p x', 'true; claude', 'env FOO=1 claude', 'exec claude']) {
+    for (const text of ['claude', '  claude --resume', 'cd ../web && claude "go"', '/opt/claude-code/bin/claude -p x', 'true; claude', 'env FOO=1 claude', 'exec claude', `bash -lc 'claude -p "fix it"'`, 'sh -c "claude"']) {
       expect(startsClaude(text), text).toBe(true);
     }
   });
