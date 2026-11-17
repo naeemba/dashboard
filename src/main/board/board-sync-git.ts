@@ -62,6 +62,8 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
   if ((tracked ?? '') === '') return { synced: false, reason: null };
   if (branch instanceof Error) return notSynced(branch.message);
 
+  // The commit a try pushed whose answer never came back: the push may have landed all the same.
+  let pushed: string | null = null;
   for (let attempt = 1; ; attempt += 1) {
     try {
       await git(['fetch', '--quiet', REMOTE, branch], top, { timeout: FETCH_TIMEOUT });
@@ -72,6 +74,10 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
       continue;
     }
     const tip = await git(['rev-parse', '--verify', `refs/remotes/${REMOTE}/${branch}^{commit}`], top);
+    // Already on origin: the edit is not run again, since a `comment` or an `add` run twice is two.
+    if (pushed !== null && (await answer(['merge-base', '--is-ancestor', pushed, tip], top)) !== null) {
+      return synced(checkout, top, await updateCheckout(checkout, branch, tip));
+    }
     const scratch = mkdtempSync(join(tmpdir(), 'board-sync-'));
     try {
       const origin = await boardAt(gitDirectory, tip, join(scratch, 'origin'));
@@ -85,6 +91,7 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         try {
           await git([...NO_HOOKS, 'push', '--quiet', REMOTE, `${commit}:refs/heads/${branch}`], top, { timeout: PUSH_TIMEOUT });
         } catch (error: unknown) {
+          pushed = commit;
           const pause = retryAfter(attempt, gitMessage(error), true);
           if (pause === null) return notSynced(`the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
           await delay(pause);
@@ -92,12 +99,15 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         }
         target = commit;
       }
-      const step = await updateCheckout(checkout, branch, target);
-      return { synced: true, checkout: checkout !== top ? 'elsewhere' : typeof step === 'string' ? 'current' : 'stale' };
+      return synced(checkout, top, await updateCheckout(checkout, branch, target));
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
   }
+}
+
+function synced(checkout: string, top: string, step: CheckoutStep): BoardSync {
+  return { synced: true, checkout: checkout !== top ? 'elsewhere' : typeof step === 'string' ? 'current' : 'stale' };
 }
 
 function notSynced(reason: string): BoardSync {

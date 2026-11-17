@@ -216,11 +216,15 @@ unknown host, a fetch that ran out of time) is not, or a `board` command offline
 would take seconds more for nothing. Keeping a fallback write out of the branch's
 commits instead (`skip-worktree`, a path the commit leaves out) was not taken:
 the agent would read back a move origin never got, and the refusal says to run
-it again, which the retries above say usually works.
+it again when the connection dropped, which the retries above say usually works.
+A push whose connection dropped after origin took it is not pushed twice: the
+next try finds the commit on origin and stops, so a `comment` or an `add` is not
+made a second time.
 
 **What it costs.** A commit on main per save. A fetch per `board` command, reads
 included, about a second. A repository whose main refuses pushes keeps its
-board in the checkout, uncommitted, with a warning; before this the review
+board in the checkout, uncommitted, with a warning, and refuses every board
+change made from one of its worktrees; before this the review
 landed Done through the branch, and now the app's move into Done lands in the checkout only. A ship
 used to commit its Ship move on the new branch as well; it no longer writes the
 branch's board at all (ship-decision-3).

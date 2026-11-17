@@ -36,8 +36,8 @@ export const RETRY_PAUSE = 1_000;
 
 // How long to wait before the sync is fetched and tried again after git failed with `gitMessage`, or
 // null when it is not: a lost race at once, since origin has already moved; a dropped connection a
-// pause later, on the fetch or the push. A push the connection dropped under may have landed, and the
-// fresh fetch then finds the edit already there and pushes nothing.
+// pause later, on the fetch or the push. A push the connection dropped under may have landed: when the
+// fresh fetch holds the commit pushed, the sync is done and the edit is not run a second time.
 export function retryAfter(attempt: number, gitMessage: string, pushing: boolean): number | null {
   if (attempt >= SYNC_ATTEMPTS) return null;
   if (pushing && lostRace(gitMessage)) return 0;
@@ -108,8 +108,10 @@ export function notSyncedWarning(reason: string): string {
 // change here with notSyncedWarning. Refused in a linked worktree: its board is its branch's, so a card
 // file written there is committed with the work and merged onto main with the column it had that day.
 // The project's checkout keeps the fallback, since its next sync replays the uncommitted edit onto
-// origin. A read changes nothing and is never refused.
+// origin. A read changes nothing and is never refused. Only a dropped connection is worth running
+// again: a protected main or a damaged checkout refuses the same way every time.
 export function notSyncedRefusal(inWorktree: boolean, changes: boolean, reason: string): string | null {
   if (!inWorktree || !changes) return null;
-  return `board not changed: ${reason}. A card written in a worktree rides its branch onto main; run the command again once origin answers.`;
+  const again = droppedConnection(reason) ? '; run the command again once origin answers' : '';
+  return `board not changed: ${reason.replace(/\.$/, '')}. Nothing was written here, since a card written in a worktree rides its branch onto main${again}.`;
 }

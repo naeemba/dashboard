@@ -102,6 +102,15 @@ describe('notSyncedRefusal', () => {
     expect(notSyncedRefusal(true, true, 'cannot fetch origin/main: Connection closed')).toMatch(/^board not changed: cannot fetch origin\/main: Connection closed\./);
   });
 
+  it('says to run it again only when the connection dropped', () => {
+    expect(notSyncedRefusal(true, true, 'cannot fetch origin/main: Connection closed')).toMatch(/run the command again/);
+    expect(notSyncedRefusal(true, true, 'the push to origin/main was refused: GH006: Protected branch update failed')).not.toMatch(/again/);
+  });
+
+  it('ends the reason with one full stop', () => {
+    expect(notSyncedRefusal(true, true, 'the repository exists.')).toMatch(/exists\. Nothing/);
+  });
+
   it('lets a read through in a worktree', () => {
     expect(notSyncedRefusal(true, false, 'offline')).toBeNull();
   });

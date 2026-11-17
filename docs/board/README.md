@@ -229,7 +229,8 @@ or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
    message (`board: "Fix login" Doing → Review`), and push it; a push that lost
    a race fetches and tries again at once, and a fetch or push whose connection
    dropped (`Connection closed`, `early EOF`) a second later, three tries in
-   all (`retryAfter`);
+   all (`retryAfter`); a try that finds the commit it pushed already on origin
+   stops there, so an edit whose push landed unanswered is not made twice;
 4. bring the project's checkout up to it: on the default branch, only behind,
    and nothing changed outside `.dashboard/`, the board's files are put back to
    HEAD, the checkout fast-forwarded (no stash, hooks off), and its own board
@@ -264,7 +265,9 @@ warning per project (`board` kind) until a sync goes through; the command prints
 it on each run. Not in a worktree: there the `board` command refuses the change
 with the same reason and writes nothing, since a card file written in a worktree
 is its branch's and would be merged onto main with the column it had that day
-(`notSyncedRefusal`). A read there still answers from the worktree's board. A
+(`notSyncedRefusal`). A repository whose main refuses pushes therefore refuses
+every board change from its worktrees; only a dropped connection is worth
+running again. A read there still answers from the worktree's board. A
 board git does not track, and the manager's, are untouched.
 
 ## Agents and the board
@@ -347,8 +350,10 @@ fields as one added on the board. The commit is `board: add "<title>"`, and take
 file with `git add -A`: on a default branch still on `board.json`, that one commit is the move into
 the folder, the old file's removal included. The worktree add, commit and
 push run with `core.hooksPath=/dev/null`, since the project's hooks are for its code. A push that
-loses a race (fetch first, non-fast-forward, or the remote moving mid-push) fetches and tries once
-more; any other refused push prints git's own sentence and is not retried.
+loses a race (fetch first, non-fast-forward, or the remote moving mid-push), and a fetch or push
+whose connection dropped, is tried again on a fresh fetch, three tries in all, by the same
+`retryAfter` the `board` command uses; a card whose push landed unanswered is not filed twice. Any
+other failure prints git's own sentence and is not retried.
 It refuses, and pushes nothing, when the default branch has no board (it names `--seed`), when the
 board there does not parse, and when it cannot tell which branch on the remote is the default.
 

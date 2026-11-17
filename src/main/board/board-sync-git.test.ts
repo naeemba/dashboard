@@ -5,7 +5,7 @@ import { emptyBoard, type Board } from '../../shared/board/board';
 import { runBoardCommand } from './board-cli';
 import { BOARD_FOLDER_PATH, openBoard, peekBoard, writeBoard } from './board-store';
 import { syncBoard, type BoardEdit } from './board-sync-git';
-import { boardOn, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
+import { boardOn, dropsFirstConnection, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 // Real git, against a bare repository in a temporary folder standing in for origin: what the sync
@@ -139,6 +139,21 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(outcome).toMatchObject({ synced: true });
     expect(tries).toBe(2);
     expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Done' });
+  });
+
+  it('fetches again when the connection dropped on the fetch', async () => {
+    const { bare, checkout } = project();
+    dropsFirstConnection(checkout, 'upload-pack');
+    expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toMatchObject({ synced: true });
+    expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Todo' });
+  });
+
+  it('does not make the edit twice when the connection dropped after the push landed', async () => {
+    const { bare, checkout } = project();
+    dropsFirstConnection(checkout, 'receive-pack');
+    expect(await syncBoard(checkout, command('comment', 'a', 'tests pass'))).toMatchObject({ synced: true });
+    const card = boardOn(bare)?.columns.flatMap((column) => column.cards).find((each) => each.id === 'a');
+    expect(card?.comments?.map((comment) => comment.body)).toEqual(['tests pass']);
   });
 
   it('leaves a checkout with work outside .dashboard where it is, and still writes origin', async () => {

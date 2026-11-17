@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
 import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, writeBoard } from './board-store';
-import { boardOn as boardOnBranch, clone, git, remote, useGitTestEnvironment, writeLegacyBoard } from './create-task-git-fixture';
+import { boardOn as boardOnBranch, clone, dropsFirstConnection, git, remote, useGitTestEnvironment, writeLegacyBoard } from './create-task-git-fixture';
+import { SYNC_ATTEMPTS } from './board-sync';
 import { runCreateTask } from './create-task-program';
 
 // Real git, against a bare repository standing in for the remote: what the program promises is
@@ -186,15 +187,33 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(boardOn(bare).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['After the race']);
   });
 
-  it('says so when it loses the race twice', () => {
+  it('says so when it loses the race on every try', () => {
     const bare = remote();
     const checkout = clone(bare, true);
-    racingWriter(bare, checkout, 2);
+    racingWriter(bare, checkout, SYNC_ATTEMPTS);
 
     expect(run(checkout, '--title', 'x')).toEqual({
-      code: 1, stdout: '', stderr: 'create-task: the push to origin/main was rejected twice\n',
+      code: 1, stdout: '', stderr: `create-task: the push to origin/main was rejected ${SYNC_ATTEMPTS} times\n`,
     });
-    expect(pushesTo(bare)).toBe(2);
+    expect(pushesTo(bare)).toBe(SYNC_ATTEMPTS);
+  });
+
+  it('fetches again when the connection dropped on the fetch', () => {
+    const bare = remote();
+    const checkout = clone(bare, true);
+    dropsFirstConnection(checkout, 'upload-pack');
+
+    expect(run(checkout, '--title', 'Flaky').code).toBe(0);
+    expect(boardOn(bare).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['Flaky']);
+  });
+
+  it('files the card once when the connection dropped after the push landed', () => {
+    const bare = remote();
+    const checkout = clone(bare, true);
+    dropsFirstConnection(checkout, 'receive-pack');
+
+    expect(run(checkout, '--title', 'Once').code).toBe(0);
+    expect(boardOn(bare).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['Once']);
   });
 
   it("prints git's sentence and pushes once when the remote declines the push", () => {
