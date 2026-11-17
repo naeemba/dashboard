@@ -267,7 +267,8 @@ with the same reason and writes nothing, since a card file written in a worktree
 is its branch's and would be merged onto main with the column it had that day
 (`notSyncedRefusal`). A repository whose main refuses pushes therefore refuses
 every board change from its worktrees; only a dropped connection is worth
-running again. A read there still answers from the worktree's board. A
+running again, and a dropped last push only once `board show <id>` says it did
+not land. A read there still answers from the worktree's board. A
 board git does not track, and the manager's, are untouched.
 
 ## Agents and the board
@@ -352,8 +353,10 @@ the folder, the old file's removal included. The worktree add, commit and
 push run with `core.hooksPath=/dev/null`, since the project's hooks are for its code. A push that
 loses a race (fetch first, non-fast-forward, or the remote moving mid-push), and a fetch or push
 whose connection dropped, is tried again on a fresh fetch, three tries in all, by the same
-`retryAfter` the `board` command uses; a card whose push landed unanswered is not filed twice. Any
-other failure prints git's own sentence and is not retried.
+`retryAfter` the `board` command uses; a card whose push landed unanswered is not filed twice. A
+last try lost to a race says so; a last push whose connection dropped says it may have landed, to
+look for the card before filing it again. Any other failure prints git's own sentence and is not
+retried.
 It refuses, and pushes nothing, when the default branch has no board (it names `--seed`), when the
 board there does not parse, and when it cannot tell which branch on the remote is the default.
 

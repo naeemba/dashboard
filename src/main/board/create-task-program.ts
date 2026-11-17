@@ -8,7 +8,7 @@ import { BROKEN_SUFFIX } from '../app/set-aside';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
 import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
 import { NO_HOOKS } from '../app/git';
-import { lostRace, retryAfter, SYNC_ATTEMPTS } from './board-sync';
+import { droppedConnection, droppedPushReason, lostRace, retryAfter, SYNC_ATTEMPTS } from './board-sync';
 import { boardAddArguments, commitMessage, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
 
 // The whole of the create-task program outside create-task.ts: git, the throwaway worktree, the
@@ -101,7 +101,8 @@ function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOpt
       if (!(error instanceof ExpectedFailure)) throw error;
       const pause = retryAfter(attempt, error.message, true);
       if (pause !== null) return { pause, landed: { commit, line } };
-      if (lostRace(error.message)) return { refusal: `the push to ${options.remote}/${branch} was rejected ${SYNC_ATTEMPTS} times` };
+      if (lostRace(error.message)) return { refusal: `the push to ${options.remote}/${branch} lost a race to another writer on the last of ${SYNC_ATTEMPTS} tries` };
+      if (droppedConnection(error.message)) return { refusal: `${droppedPushReason(`${options.remote}/${branch}`, error.message)}; check ${options.remote}/${branch} for the card before running create-task again` };
       throw error;
     }
     return { line };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addCard, deleteCard, emptyBoard, moveCardToColumn, renameCard, selectionOf } from '../../shared/board/board';
-import { checkoutStep, damagedBoardRefusal, droppedConnection, lostRace, notSyncedRefusal, publishesCheckout, RETRY_PAUSE, retryAfter, SYNC_ATTEMPTS, syncCommitMessage, type CheckoutState } from './board-sync';
+import { checkoutStep, damagedBoardRefusal, droppedConnection, droppedPushReason, lostRace, notSyncedRefusal, publishesCheckout, RETRY_PAUSE, retryAfter, SYNC_ATTEMPTS, syncCommitMessage, type CheckoutState } from './board-sync';
 
 const behind: CheckoutState = { branch: 'main', defaultBranch: 'main', current: false, behind: true, porcelain: '' };
 
@@ -105,6 +105,10 @@ describe('notSyncedRefusal', () => {
   it('says to run it again only when the connection dropped', () => {
     expect(notSyncedRefusal(true, true, 'cannot fetch origin/main: Connection closed')).toMatch(/run the command again/);
     expect(notSyncedRefusal(true, true, 'the push to origin/main was refused: GH006: Protected branch update failed')).not.toMatch(/again/);
+    const dropped = notSyncedRefusal(true, true, droppedPushReason('origin/main', 'Connection closed by 140.82.121.4 port 22'));
+    expect(dropped).toMatch(/may have landed/);
+    expect(dropped).toMatch(/board show <id>/);
+    expect(dropped).not.toMatch(/once origin answers/);
   });
 
   it('ends the reason with one full stop', () => {

@@ -34,6 +34,13 @@ export function droppedConnection(gitMessage: string): boolean {
 
 export const RETRY_PAUSE = 1_000;
 
+// Why a sync gave up when the connection dropped under its last push. The push may have landed, so
+// the change is checked for on origin before it is made again: a `comment` or an `add` run twice is two.
+const MAY_HAVE_LANDED = 'may have landed before the connection dropped';
+export function droppedPushReason(target: string, gitMessage: string): string {
+  return `the push to ${target} ${MAY_HAVE_LANDED} (${gitMessage})`;
+}
+
 // How long to wait before the sync is fetched and tried again after git failed with `gitMessage`, or
 // null when it is not: a lost race at once, since origin has already moved; a dropped connection a
 // pause later, on the fetch or the push. A push the connection dropped under may have landed: when the
@@ -109,9 +116,10 @@ export function notSyncedWarning(reason: string): string {
 // file written there is committed with the work and merged onto main with the column it had that day.
 // The project's checkout keeps the fallback, since its next sync replays the uncommitted edit onto
 // origin. A read changes nothing and is never refused. Only a dropped connection is worth running
-// again: a protected main or a damaged checkout refuses the same way every time.
+// again, and a dropped push only once the card shows it did not land: a protected main or a damaged
+// checkout refuses the same way every time.
 export function notSyncedRefusal(inWorktree: boolean, changes: boolean, reason: string): string | null {
   if (!inWorktree || !changes) return null;
-  const again = droppedConnection(reason) ? '; run the command again once origin answers' : '';
+  const again = !droppedConnection(reason) ? '' : reason.includes(MAY_HAVE_LANDED) ? '; check the card (`board show <id>`) before running the command again' : '; run the command again once origin answers';
   return `board not changed: ${reason.replace(/\.$/, '')}. Nothing was written here, since a card written in a worktree rides its branch onto main${again}.`;
 }

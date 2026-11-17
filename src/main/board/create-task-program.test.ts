@@ -193,7 +193,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     racingWriter(bare, checkout, SYNC_ATTEMPTS);
 
     expect(run(checkout, '--title', 'x')).toEqual({
-      code: 1, stdout: '', stderr: `create-task: the push to origin/main was rejected ${SYNC_ATTEMPTS} times\n`,
+      code: 1, stdout: '', stderr: `create-task: the push to origin/main lost a race to another writer on the last of ${SYNC_ATTEMPTS} tries\n`,
     });
     expect(pushesTo(bare)).toBe(SYNC_ATTEMPTS);
   });

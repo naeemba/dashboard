@@ -15,6 +15,8 @@ import {
   PUSH_TIMEOUT,
   checkoutStep,
   damagedBoardRefusal,
+  droppedConnection,
+  droppedPushReason,
   publishesCheckout,
   retryAfter,
   syncCommitMessage,
@@ -93,7 +95,7 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         } catch (error: unknown) {
           pushed = commit;
           const pause = retryAfter(attempt, gitMessage(error), true);
-          if (pause === null) return notSynced(`the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
+          if (pause === null) return notSynced(droppedConnection(gitMessage(error)) ? droppedPushReason(`${REMOTE}/${branch}`, gitMessage(error)) : `the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
           await delay(pause);
           continue;
         }
