@@ -64,9 +64,12 @@ empty in the next, and a \`cd\` carries over only when it ends inside the
 working directory. So the worktree gets a fixed path, written out in full every
 time. Run:
 
-    git rev-parse --show-toplevel
+    pwd && git rev-parse --show-toplevel
 
-and call that path followed by \`/.adopt-docs\` \`<worktree>\`
+If the two lines differ, print "start the session at the repository's top
+level" and stop: from a subfolder the worktree is outside the working
+directory, and the move into it below would not carry over. Otherwise call the
+second path followed by \`/.adopt-docs\` \`<worktree>\`
 (\`/home/me/app/.adopt-docs\`, say). It sits inside the working directory, so
 writing there asks no permission, and outside \`.git\`, which is guarded more
 strictly than any other path. Print it once, then write the literal path
@@ -75,21 +78,23 @@ wherever \`<worktree>\` appears below, never a shell variable:
     git worktree add --no-track -b docs/adopt-docs <worktree> origin/<default branch>
     mkdir -p "$(git rev-parse --git-path info)" && echo /.adopt-docs/ >> "$(git rev-parse --git-path info/exclude)"
 
-Both run in the checkout you started in. Then move into the worktree with a
-lone \`cd <worktree>\`, which carries over because the worktree is inside the
-working directory; a hook refuses an edit of a file in another worktree than
-the one the session is in. The second line hides the folder from
+Both run in the checkout you started in. The second line hides the folder from
 that checkout: without it, a \`git add .\` there commits the worktree as an
 embedded repository on someone's branch. Write the line with that one shell
 command, never by editing a file under \`.git\`. It is the only mark this run
 leaves in that checkout, and it stays after step 8.
 
+Then move into the worktree with a lone \`cd <worktree>\`, which carries over
+because the worktree is inside the working directory; a hook refuses an edit of
+a file in another worktree than the one the session is in.
+
 \`--no-track\`, so no later push can land on the default branch. Everything
 below happens in that worktree: every git command is \`git -C <worktree> ...\`,
 every other command (\`gh\`, \`glab\`, a check script) is
 \`cd <worktree> && ...\` in the same command, and every file is read, written
-or edited by its absolute path under \`<worktree>\`. A command without one of
-those runs in the checkout you started in, on someone else's branch.
+or edited by its absolute path under \`<worktree>\`. A command with neither
+runs where the session is, which after the \`cd\` is the worktree; the \`-C\`
+and the \`cd <worktree> &&\` keep it there where a \`cd\` does not carry over.
 
 ## 3. Read before writing
 

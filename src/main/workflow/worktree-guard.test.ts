@@ -43,6 +43,10 @@ describe('removesOwnWorktree', () => {
     expect(removesOwnWorktree(command, '/p/.adopt-docs', '/p')).toBe(false);
     expect(removesOwnWorktree(command, '/p/.adopt-docs', '/p/.adopt-docs')).toBe(true);
   });
+
+  it('refuses a removal whose cd sits in a subshell, which leaves the shell in the worktree', () => {
+    expect(removesOwnWorktree('(cd /p && git worktree remove /p/.adopt-docs)', '/p/.adopt-docs', '/p')).toBe(true);
+  });
 });
 
 describe('editsOtherWorktree', () => {
@@ -71,16 +75,16 @@ describe('worktreeGuard', () => {
   const list = () => worktrees;
 
   it('refuses each with its own reason', () => {
-    const removal = worktreeGuard('Bash', { command: 'git worktree remove .' }, own, list);
+    const removal = worktreeGuard('Bash', { command: 'git worktree remove .' }, own, list, undefined);
     expect(removal?.hookSpecificOutput.permissionDecisionReason).toContain('kills this shell');
-    const write = worktreeGuard('Write', { file_path: '/p/a.ts' }, own, list);
+    const write = worktreeGuard('Write', { file_path: '/p/a.ts' }, own, list, undefined);
     expect(write?.hookSpecificOutput.permissionDecisionReason).toContain('another worktree');
   });
 
   it('lists no worktrees for a shell command, nor outside a repository', () => {
     const fails = () => { throw new Error('listed'); };
-    expect(worktreeGuard('Bash', { command: 'ls' }, own, fails)).toBeUndefined();
-    expect(worktreeGuard('Edit', { file_path: '/p/a.ts' }, own, () => null)).toBeUndefined();
-    expect(worktreeGuard('Edit', { file_path: '/p/a.ts' }, '', list)).toBeUndefined();
+    expect(worktreeGuard('Bash', { command: 'ls' }, own, fails, undefined)).toBeUndefined();
+    expect(worktreeGuard('Edit', { file_path: '/p/a.ts' }, own, () => null, undefined)).toBeUndefined();
+    expect(worktreeGuard('Edit', { file_path: '/p/a.ts' }, '', list, undefined)).toBeUndefined();
   });
 });

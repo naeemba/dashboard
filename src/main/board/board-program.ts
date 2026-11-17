@@ -100,7 +100,7 @@ function answer(result: CommandResult): number {
 // the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
 // (`boardVariable` set) and this program's own path outside one. `startFolder` is the session's
 // (`CLAUDE_PROJECT_DIR`), the hook's `cwd` when unset.
-export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList, listWorktrees: WorktreeList, startFolder?: string): string {
+export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, listProcesses: ProcessList, listWorktrees: WorktreeList, startFolder: string | undefined): string {
   const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };
   const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';

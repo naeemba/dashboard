@@ -31,13 +31,16 @@ function resolveWord(word: string, base: string): string {
 }
 
 // Whether a `git … worktree remove` in `command` names a folder holding where it runs (`cwd`, then the
-// `cd` before it) or `startFolder`, the folder the session started in, where its shell goes back to.
+// `cd` before it), where the session's shell is left (`shell`: a `cd` opening a `( … )` subshell does
+// not move it), or `startFolder`, the folder the session started in, where its shell goes back to.
 // The target is read from where it runs and its `git -C`.
 export function removesOwnWorktree(command: string, cwd: string, startFolder = cwd): boolean {
   let base = cwd;
+  let shell = cwd;
   return simpleCommands(command).some((part) => {
     const changed = invocation(part, 'cd');
     if (changed) base = resolveWord(changed.words[0] ?? '~', base);
+    if (changed && !part.startsWith('(')) shell = base;
     const words = invocation(part, 'git')?.words ?? [];
     // git's own flags, then its subcommand; `-C` and `-c` take a value.
     let from = base;
@@ -50,7 +53,7 @@ export function removesOwnWorktree(command: string, cwd: string, startFolder = c
     const target = words.slice(index + 2).find((word) => !word.startsWith('-'));
     if (target === undefined) return false;
     const removed = resolveWord(target, from);
-    return isInside(base, removed) || isInside(startFolder, removed);
+    return [base, shell, startFolder].some((folder) => isInside(folder, removed));
   });
 }
 
@@ -68,10 +71,10 @@ export function editsOtherWorktree(file: string, cwd: string, worktrees: readonl
 
 // The hook's answer, as `board guard` prints it on stdout; undefined lets the call through. The
 // worktrees are listed only for a file tool, so a Bash call runs no git.
-export function worktreeGuard(toolName: string, toolInput: unknown, cwd: string, listWorktrees: WorktreeList, startFolder = cwd) {
+export function worktreeGuard(toolName: string, toolInput: unknown, cwd: string, listWorktrees: WorktreeList, startFolder: string | undefined) {
   if (cwd === '') return undefined;
   if (toolName === 'Bash') {
-    return removesOwnWorktree(textField(toolInput, 'command'), cwd, startFolder) ? hookRefusal(REMOVE_REASON) : undefined;
+    return removesOwnWorktree(textField(toolInput, 'command'), cwd, startFolder ?? cwd) ? hookRefusal(REMOVE_REASON) : undefined;
   }
   if (!Object.hasOwn(FILE_FIELDS, toolName)) return undefined;
   const file = textField(toolInput, FILE_FIELDS[toolName]);
