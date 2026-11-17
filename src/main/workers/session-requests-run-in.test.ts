@@ -7,10 +7,13 @@ import { project } from './session-requests-fixture';
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
 
+// --in goes through path.resolve, which on Windows puts a drive on the fixture's POSIX folders.
+const posixPathsOnly = it.skipIf(process.platform === 'win32');
+
 describe('sessionRequests run --in', () => {
   // The caller's own worktree, typed from main's folder: the worker starts there, and release closes the
   // pane and leaves the folder, which no run made.
-  it('runs a worker in a folder named with --in and leaves the folder on release', async () => {
+  posixPathsOnly('runs a worker in a folder named with --in and leaves the folder on release', async () => {
     const { ports, started, removed } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
@@ -63,7 +66,7 @@ describe('sessionRequests run --in', () => {
   });
 
   // The other order of the --in refusal below: the --in agent is in no card's record.
-  it('refuses --card a worktree an --in agent is at work in', async () => {
+  posixPathsOnly('refuses --card a worktree an --in agent is at work in', async () => {
     const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api.worktrees/card-one' : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
@@ -75,7 +78,7 @@ describe('sessionRequests run --in', () => {
   });
 
   // An agent in a worktree nested below the one asked for is at work in its own.
-  it('takes --in a worktree whose only agent is in a worktree nested below it', async () => {
+  posixPathsOnly('takes --in a worktree whose only agent is in a worktree nested below it', async () => {
     const { ports } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api-mr174/.claude/worktrees/y' : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
@@ -85,7 +88,7 @@ describe('sessionRequests run --in', () => {
   });
 
   // Two agents in one worktree write over each other's work; main's own checkout is not one.
-  it('refuses --in a worktree another agent is at work in', async () => {
+  posixPathsOnly('refuses --in a worktree another agent is at work in', async () => {
     const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api-mr174/src' : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
@@ -97,7 +100,7 @@ describe('sessionRequests run --in', () => {
     expect(started.map((each) => each.id)).toEqual(['2:1', '2:2']);
   });
 
-  it('refuses --in for a folder the check refuses, and starts nothing', async () => {
+  posixPathsOnly('refuses --in for a folder the check refuses, and starts nothing', async () => {
     const { ports, started } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
