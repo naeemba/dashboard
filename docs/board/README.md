@@ -216,8 +216,10 @@ that: what the folder holds, that the board is changed through the command, and
 version, and it is written whenever the board is read and the file is missing
 or older than the app's (no version line counts as older), so a project seeded
 with an older text that spelled out the card format gets the new one. A file of
-the app's version or a later one is left alone, edited or not. Where git tracks the file, the rewrite is committed to origin's default
-branch by the sync below, as a card write is (board-decision-8).
+the app's version or a later one is left alone, edited or not, and a checkout
+the sync brings up keeps an edit to it. Where git tracks the file, the rewrite
+is committed to origin's default branch by the sync below, as a card write is
+(board-decision-8).
 
 ## Kept in step with git
 

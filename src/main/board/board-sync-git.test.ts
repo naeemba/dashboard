@@ -1,4 +1,4 @@
-import { chmodSync, writeFileSync } from 'node:fs';
+import { chmodSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { emptyBoard, type Board } from '../../shared/board/board';
@@ -101,6 +101,24 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(git(bare, 'log', '-1', '--format=%s', 'main')).toBe('board: rewrite the .dashboard docs to the current text');
     expect(git(checkout, 'rev-parse', 'HEAD')).toBe(git(bare, 'rev-parse', 'main'));
     expect(git(checkout, 'status', '--porcelain')).toBe('?? .dashboard/README.md');
+  });
+
+  // An edit to a file at the app's version is someone's, and a fast-forward that brings the checkout
+  // up to origin carries it through rather than putting the file back to HEAD.
+  it('keeps an edit to a current .dashboard doc in a checkout it brings up', async () => {
+    const { bare, checkout } = project();
+    const agents = join(checkout, '.dashboard', 'CLAUDE.md');
+    writeFileSync(agents, EXPLANATION_FOR_AGENTS);
+    git(checkout, 'add', '-A');
+    git(checkout, 'commit', '--quiet', '-m', 'docs');
+    git(checkout, 'push', '--quiet', 'origin', 'HEAD:main');
+    pushFromElsewhere(bare, command('move', 'b', 'Done'));
+    const edited = `${EXPLANATION_FOR_AGENTS}One more line for agents.\n`;
+    writeFileSync(agents, edited);
+    const outcome = await syncBoard(checkout, command('move', 'a', 'Doing'));
+    expect(outcome).toMatchObject({ synced: true, checkout: 'current' });
+    expect(git(checkout, 'rev-parse', 'HEAD')).toBe(git(bare, 'rev-parse', 'main'));
+    expect(readFileSync(agents, 'utf8')).toBe(edited);
   });
 
   // The kamandsystem loss: a checkout many commits behind, a `board move` there, and every card the

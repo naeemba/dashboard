@@ -8,6 +8,7 @@ import { isManagerPath } from '../../shared/manager/manager';
 import { baseBranch, git, gitNow, NO_HOOKS } from '../app/git';
 import { realPath } from '../app/real-path';
 import { BROKEN_SUFFIX } from '../app/set-aside';
+import { readText } from '../app/missing-file';
 import { BOARD_PATHSPECS, SEEDED_FILES, peekBoard, seedBoardDirectory, staleSeededFiles, readBoard, writeBoard } from './board-store';
 import {
   FETCH_TIMEOUT,
@@ -192,9 +193,11 @@ async function checkoutPending(
 // No stash: the board's files are the only ones touched. They are put back as HEAD has them (restore,
 // and clean for a card file git does not know yet), the fast-forward then has nothing in its way, and
 // the edits the checkout had are replayed onto what it lands on. A fast-forward that fails anyway puts
-// the checkout's board back as it was. The tracked explanation files are put back too: the app's read
-// has rewritten them here, and git refuses a fast-forward over a file changed on both sides even when
-// the two changes are the same. The target holds the app's text, so the fast-forward brings it back.
+// the checkout's board back as it was. A tracked explanation file holding the app's text is put back
+// too: the app's read wrote it, and git refuses a fast-forward over a file changed on both sides even
+// when the two changes are the same. The target holds that text, so the fast-forward brings it back.
+// Any other text there is someone's edit, and is left to the fast-forward: carried through when the
+// target did not change the file, a failed fast-forward when it did.
 async function updateCheckout(checkout: string, branch: string, target: string, trackedSeeds: readonly string[]): Promise<CheckoutStep> {
   const [head, onBranch, porcelain, behind] = await Promise.all([
     answer(['rev-parse', 'HEAD'], checkout),
@@ -214,7 +217,8 @@ async function updateCheckout(checkout: string, branch: string, target: string, 
   const local = peekBoard(checkout);
   if (local === null) return { stay: 'its board files do not parse' };
   try {
-    gitNow(['restore', '--source=HEAD', '--staged', '--worktree', '--', ...BOARD_PATHSPECS, ...trackedSeeds], checkout);
+    const written = trackedSeeds.filter((file) => readText(join(checkout, file)) === SEEDED_FILES[file]);
+    gitNow(['restore', '--source=HEAD', '--staged', '--worktree', '--', ...BOARD_PATHSPECS, ...written], checkout);
     gitNow(['clean', '-f', '-q', '--', ...BOARD_PATHSPECS], checkout);
     const base = peekBoard(checkout);
     gitNow([...NO_HOOKS, 'merge', '--ff-only', '--quiet', target], checkout);
