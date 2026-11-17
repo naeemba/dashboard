@@ -1,0 +1,11 @@
+{
+  "id": "d646a183-6be1-4d24-847d-b4c18c3630ed",
+  "title": "Refresh every project's stale .dashboard/CLAUDE.md (still says edit board.json)",
+  "notes": "seedBoardDirectory never overwrites, so 23 project .dashboard/CLAUDE.md files still tell agents to edit board.json by hand; the board guard now refuses that edit. Make the app rewrite the file it owns when its text changes (or stop writing it and rely on the session prompt), and delete the stale copies. Found by the md audit, 2026-11-17.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-17T12:20:25.662Z",
+  "updatedAt": "2026-11-17T12:20:25.662Z",
+  "column": "Backlog",
+  "order": 46
+}
