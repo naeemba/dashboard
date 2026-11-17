@@ -18,7 +18,7 @@
 // with a verb is refused, and a lone `'` in a heredoc body (`Don't`) hides every command after it;
 // matching those means running the shell, and this is a guard rail.
 
-import { hookRefusal, SHELL_REDIRECT, textField } from '../board/hook-answer';
+import { hookRefusal, invocation, pipelines, SHELL_REDIRECT, simpleCommands, textField, wordsOf } from '../board/hook-answer';
 
 // A process as /proc shows it: its names (comm, argv[0] and argv[0]'s basename) and its command line.
 export type RunningProcess = {
@@ -60,58 +60,6 @@ const VALUE_FLAGS: Record<string, readonly string[]> = {
 const RUNNING_APP_REASON = 'This would quit, kill, restart or replace the Dashboard running on this machine, '
   + 'which stops every Claude screen mid-turn. Say the installed app needs a rebuild and restart, and stop; '
   + 'scripts/rebuild.sh installs a new build beside the running one without touching it.';
-
-// A command line's pipelines, split at `;`, `&&`, `||`, `&` and newlines, and a pipeline's simple
-// commands, split at `|` too. A separator inside quotes is part of its word: `pkill -f "vite|node"`.
-// Outside single quotes a `\` escapes the next character (`it\'s`), and outside quotes a `#` starting a
-// word comments out the rest of its line, so an apostrophe in either opens no quote.
-function split(command: string, atPipes: boolean): string[] {
-  const parts: string[] = [];
-  let current = '';
-  let quote = '';
-  for (let index = 0; index < command.length; index += 1) {
-    const character = command[index];
-    if (character === '\\' && quote !== "'") {
-      current += command.slice(index, index + 2);
-      index += 1;
-      continue;
-    }
-    if (character === '#' && !quote && /(?:^|\s)$/.test(current)) {
-      const end = command.indexOf('\n', index);
-      index = (end === -1 ? command.length : end) - 1;
-      continue;
-    }
-    const doubled = (character === '|' || character === '&') && command[index + 1] === character;
-    const cuts = character === ';' || character === '\n' || character === '&' || (character === '|' && (atPipes || doubled));
-    if (quote || !cuts) {
-      if (quote === character) quote = '';
-      else if (!quote && (character === '"' || character === "'")) quote = character;
-      current += character;
-      continue;
-    }
-    parts.push(current.trim());
-    current = '';
-    if (doubled) index += 1;
-  }
-  return [...parts, current.trim()];
-}
-const pipelines = (command: string) => split(command, false);
-const simpleCommands = (command: string) => split(command, true);
-
-// A command's words, without their quotes or the `)` or `}` closing a subshell or group.
-const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
-
-// What may stand before a verb: a subshell or group opening, then sudo (with its flags), command,
-// exec, nohup, nice (with its flags), `timeout <duration>` (with its flags) or env (with its
-// assignments), in any order.
-const FLAGS = String.raw`(?:\s+-\S+(?:\s+[^-\s]\S*)?)*`;
-const PREFIX = String.raw`(?:[({]\s*)?(?:(?:sudo${FLAGS}|command|exec|nohup|nice${FLAGS}|timeout${FLAGS}\s+\S+|env(?:\s+\w+=\S*)*)\s+)*`;
-
-// The verb and its words when `part` runs one of `verbs` (behind PREFIX or a path).
-function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
-  const match = new RegExp(String.raw`^${PREFIX}(?:\S*/)?(${verbs})(?:\s+(.*))?$`).exec(part);
-  return match ? { verb: match[1], words: wordsOf(match[2] ?? '') } : null;
-}
 
 type Selector = { pattern: string; full: boolean; regex: boolean }
 
