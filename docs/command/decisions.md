@@ -41,9 +41,10 @@ file only names one, and reaching it still takes the 0700 folder.
 ## command-decision-5: `pr land` is a command, and not allowed unasked
 
 Managers kept the land steps in a `/tmp` script (land.sh ran 130 times in one
-retro, and was lost when `/tmp` filled). The steps are the review worker's
+retro, and was lost when `/tmp` filled). The steps were the review worker's
 (`reviewPrompt`, ship/review.ts): note the head, wait on the checks, merge that
-commit with `--match-head-commit`. As a verb they cannot be copied out wrong.
+commit with `--match-head-commit`. As a verb they cannot be copied out wrong,
+and since 2026-11-17 the review worker runs the verb too (ship-decision-1).
 
 It is not added to the `permissions.allow` rules every session starts with
 (workers-decision-9), unlike `pane` and `board`: a merge is outward-facing, and

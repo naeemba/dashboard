@@ -38,10 +38,12 @@ The review agent is started on `reviewPrompt`. Whether it may merge is
 settings screen's Merge row under Review, off by default) otherwise or when
 there is no file, and off when the file does not read. Off, it runs the loop,
 waits for CI, says the ending on the card and reports to the project's main; on,
-it merges the head commit it noted before the CI wait (ship-decision-1).
+it lands the pull request with `dashboard pr land` ([command](../command/README.md)),
+which merges the head commit it noted before the CI wait (ship-decision-1).
 
-The CI wait is one `gh pr checks <n> --watch` the agent runs in the background,
-woken when it exits, never a poll by hand or a foreground `sleep` (ship-decision-2).
+The CI wait is one command the agent runs in the background, woken when it exits,
+never a poll by hand or a foreground `sleep` (ship-decision-2): `gh pr checks <n> --watch`
+with merging off, `pr land` with it on.
 
 ## Scenarios
 
@@ -54,7 +56,9 @@ woken when it exits, never a poll by hand or a foreground `sleep` (ship-decision
 - Given merging is off and a card waits in Review after its loop posted `Review loop finished:` on the pull request, when the app restarts, then no second review starts unless the pull request carries a commit dated after that comment (its committer date, not when it was pushed) (`review-finished.ts`, `review-flow.test.ts`).
 - Given merging is off (the default), when the review loop and CI finish, then the review merges nothing, the card stays in Review with the ending in a comment on it, and the project's main hears the rounds, the fixes, what is open and the CI state.
 - Given settings `review.autoMerge` is on but the project's entry says `autoMerge: false`, when its card is reviewed, then nothing is merged; the entry wins either way, and a folder the file does not list follows the setting.
-- Given merging is on and a fix was pushed after the last review round, when the loop ends, then the review waits for CI on that commit and merges it with `--match-head-commit`; a failed check stops it with a comment on the card.
+- Given merging is on and a fix was pushed after the last review round, when the loop ends, then the review runs `pr land`, which waits for CI on that commit and merges it with `--match-head-commit`; a failed check stops it with a comment on the card.
+- Given merging is on and `gh pr merge` loses its answer to a network error after the merge went through, when `pr land` reads the pull request back, then the review reports it merged, not failed (#301).
+- Given merging is on and the network drops while `pr land` waits on the checks, when it exits printing `nothing is merged, run it again`, then the review runs it once more instead of stopping.
 - Given the review merged the pull request, when the app next asks gh about the card, then the app moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
 - Given a `worktrees.json` that does not parse, when the app reads it, then it is moved aside as `worktrees.json.broken` (`worktrees.json.2.broken` and on if that name is taken) and the list opens empty (`worktree-store.test.ts`).
 - Given a worktree with modified files, when you remove it from the list, then the app says so instead of git's raw `fatal:`.

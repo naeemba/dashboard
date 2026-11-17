@@ -144,22 +144,22 @@ describe('reviewPrompt', () => {
 
   it('names the pull request to run the loop against', () => {
     expect(prompt).toContain('/pr-loop 12');
-    expect(prompt).toContain('gh pr merge 12 --merge');
   });
 
-  // A fix pushed after the last review round is merged only once CI has passed on it, and the merge
-  // names that commit, so a push landing between the check and the merge is refused rather than merged.
-  it('merges only once CI is green on the head commit, and only that commit', () => {
-    expect(prompt).toContain('gh pr checks 12 --watch');
-    expect(prompt).toContain('--match-head-commit');
-    expect(prompt.indexOf('gh pr view 12 --json headRefOid')).toBeLessThan(prompt.indexOf('gh pr checks 12'));
-    expect(prompt.indexOf('gh pr checks 12')).toBeLessThan(prompt.indexOf('gh pr merge 12'));
+  // The land steps copied out of a prompt had no second try on a network error and no reading back of
+  // a merge call that failed: #301 was reported failed by a review that had merged it.
+  it('lands through pr land, in the background, and never merges by hand', () => {
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land 12`');
+    expect(prompt).toContain('run_in_background, timeout 7200000');
+    expect(prompt).toContain('stopped at that time limit has not failed');
+    expect(prompt).toContain('a land that prints `nothing is merged, run it again`');
+    expect(prompt).not.toMatch(/gh pr merge 12|--match-head-commit|gh pr checks 12 --watch/);
   });
 
   // One session polled `gh pr checks` 166 times by hand, and `sleep N; gh pr checks` in the foreground
   // is refused: the wait is one background watch that wakes the agent when it exits.
-  it.each([true, false])('waits on CI with a background watch, not a poll (merge %s)', (merge) => {
-    const waiting = reviewPrompt(CARD, 12, '/work/api', merge);
+  it('waits on CI with a background watch, not a poll, when merging is off', () => {
+    const waiting = reviewPrompt(CARD, 12, '/work/api', false);
     expect(waiting).toContain('run_in_background, timeout 7200000');
     expect(waiting).toContain('stopped at that time limit has not failed');
     expect(waiting).toContain('sleep 60 && gh pr checks 12 --watch');
@@ -173,6 +173,7 @@ describe('reviewPrompt', () => {
       expect(reporting).toContain('/pr-loop 12');
       expect(reporting).toContain('gh pr checks 12 --watch');
       expect(reporting).not.toContain('gh pr merge');
+      expect(reporting).not.toContain('pr land');
     });
 
     it('reports to the project\'s main and leaves the card where it is', () => {
