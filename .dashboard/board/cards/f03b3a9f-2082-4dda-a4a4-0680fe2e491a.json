@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T13:51:06.759Z",
-  "updatedAt": "2026-11-17T14:20:32.680Z",
+  "updatedAt": "2026-11-17T14:27:11.455Z",
   "branch": "warn-when-pr-loop-is-missing-or-out-of-date",
   "pullRequest": 324,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-17T14:20:32.680Z",
       "body": "PR #324 converged, ready to merge. /pr-loop ran 2 rounds and ended floor-addressed: round 1 fixed 6 findings (41043abd), round 2's final fix took a low and a nit in review-loop-install.ts (fc84ae50), with no re-review after it. Nothing blocked on a person, no conflict with main. CI: 3/3 checks passed on fc84ae50."
+    },
+    {
+      "at": "2026-11-17T14:27:11.455Z",
+      "body": "Merged main (#323) into PR #324: one conflict in docs/ship/README.md, both paragraphs kept with main's CI-wait wording; no decision id clash (#323 added none, ship-decision-4 stays). Checks pass, CI 5/5 green on 76d61fdd. Ready to merge."
     }
   ],
   "column": "Review",
