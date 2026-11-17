@@ -1,0 +1,11 @@
+{
+  "id": "f371632c-df1a-4034-a284-836cbff09ea8",
+  "title": "Review loop merges through pr land",
+  "notes": "When review.autoMerge is on, reviewPrompt in src/main/ship/review.ts tells the review worker to wait on CI by hand and run gh pr merge --match-head-commit itself (line ~153). It should run the app's pr land instead, so reviews get its retries on network errors and its check of the PR state after a failed merge call (#304; #301 reported failure though it had merged). Keep autoMerge off behaviour unchanged (stop at green, report). The review loop serves every project: change only the merge step. Update the ship docs. Approved by the user 2026-11-17.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-17T13:49:35.346Z",
+  "updatedAt": "2026-11-17T13:49:35.347Z",
+  "column": "Backlog",
+  "order": 46
+}
