@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T09:50:58.166Z",
-  "updatedAt": "2026-11-17T09:50:58.166Z",
-  "column": "Backlog",
-  "order": 46
+  "updatedAt": "2026-11-17T09:51:04.068Z",
+  "branch": "pane-run-in-folder-a-claude-screen-in-an-ex",
+  "column": "Doing",
+  "order": 0
 }
