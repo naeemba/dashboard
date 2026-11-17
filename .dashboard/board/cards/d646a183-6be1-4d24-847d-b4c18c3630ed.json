@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:20:25.662Z",
-  "updatedAt": "2026-11-17T12:21:41.144Z",
-  "column": "Ship",
+  "updatedAt": "2026-11-17T12:26:27.768Z",
+  "branch": "refresh-every-project-s-stale-dashboard-cla",
+  "pullRequest": 317,
+  "comments": [
+    {
+      "at": "2026-11-17T12:26:27.741Z",
+      "body": "Pull request #317 opened: Rewrite the seeded .dashboard docs whenever they are not the current text https://github.com/naeemba/dashboard/pull/317"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
