@@ -11,6 +11,7 @@ import { latestPullRequest, pullRequestListArguments } from './board/pull-reques
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
 import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
 import { realPath } from './app/real-path';
+import { checkReviewLoop } from './ship/review-loop-install';
 import { registerWorktreeChannels } from './ship/worktree-channels';
 import { shellDirectories, shellLiveness } from './panes/shell-directory-lookup';
 import { processTree } from './panes/process-tree';
@@ -668,6 +669,9 @@ const shipInProject = oneAtATime();
 // release` and the worktree dialog.
 const worktree = worktreeActions({ remove: worktrees.remove, queue: shipInProject, log: (draft) => logStore.log(draft) });
 
+// A stale /pr-loop install, said on the bar at launch (on load, so the page is listening) and at each review start.
+const sayReviewLoop = (notice: string): void => sendToRenderer('review-loop:notice', notice);
+
 // A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
 // card actions in actions/card/, bound here to their channels and, below, to the session socket.
 // What is handed over is only what this file knows — the records, the pages, the panes, the setting.
@@ -685,6 +689,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList } = car
   removeWorktree: worktree.removeForReview,
   addWorktree: worktree.makeAgain,
   startReview: (entry, slot, prompt) => attachPane(worktrees.record(entry), slot, prompt),
+  loopChecked: () => checkReviewLoop(sayReviewLoop),
   queue: shipInProject,
   boardLog,
   boardSync,
@@ -829,7 +834,7 @@ function createWindow(): void {
       if (placement !== null) claudeSessions.placed(placement);
       await updates.beforeQuit();
     },
-    loaded: () => failures.drain(), shellsDieAtQuit: panes.workDiesAtQuit, editorDiesAtQuit: panes.editorDiesAtQuit, quitCancelled: updates.quitCancelled,
+    loaded: () => { failures.drain(); checkReviewLoop(sayReviewLoop); }, shellsDieAtQuit: panes.workDiesAtQuit, editorDiesAtQuit: panes.editorDiesAtQuit, quitCancelled: updates.quitCancelled,
   });
   // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
   // that was never finished.

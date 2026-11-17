@@ -59,3 +59,21 @@ app starts an agent for: #310 got a second agent for work already done, and
 #317 and #318 carried the same commit that day. The first-ship and resumed-ship
 tests in `ship-flow.test.ts` hold that the branch is left at origin's tip.
 (2026-11-17)
+
+## ship-decision-4: The app checks /pr-loop and does not bundle it
+
+**`/pr-loop` stays in naeemba/claude-pr-loop, installed by its own `install.sh`;
+the app only checks it. A review start with no `pr-loop.md` in
+`~/.claude/commands` is refused with the install line, and a checkout that is
+behind origin, a workflow copy that differs from the checkout's, a checkout file
+`install.sh` links but `~/.claude` lacks, or a dangling link is a status-bar
+notice saying what to run. Only `/pr-loop` is
+checked, since no review runs `/mr-loop`.** Before 2026-11-17 nothing checked
+it: a missing install sent a review worker into a command that did not exist,
+and an out-of-date one ran old behaviour silently, most often after a `git
+pull` in the checkout, which refreshes the linked commands but not the copied
+workflow. Bundling the commands into the app was the other option and was not
+taken: the repository is used on its own too, and a second copy would drift
+from it. The fetch runs at most once a day, read off the checkout's
+`FETCH_HEAD`, so relaunching does not reach GitHub each time.
+`review-loop-install.ts`. (2026-11-17)

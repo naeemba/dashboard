@@ -13,7 +13,7 @@ then its pull request moves it (board-decision-6).
 Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 
 - Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`
-- Review: `review.ts`, `review-flow.ts`, `review-finished.ts`
+- Review: `review.ts`, `review-flow.ts`, `review-finished.ts`, `review-loop-install.ts`
 - Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`, `worktree-scan.ts`,
   `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
   `worktree-removal.ts`, `worktrees.css`
@@ -41,6 +41,19 @@ waits for CI, says the ending on the card and reports to the project's main; on,
 it lands the pull request with `dashboard pr land` ([command](../command/README.md)),
 which merges the head commit it noted before the CI wait (ship-decision-1).
 
+`/pr-loop` is not the app's: it comes from a checkout of
+naeemba/claude-pr-loop, whose `install.sh` links its commands into
+`~/.claude/commands` and copies its workflow into `~/.claude/workflows`
+(ship-decision-4). A review start with no `~/.claude/commands/pr-loop.md` (or one
+linking to a checkout that has gone) is refused, on the card too, with the install
+line. At launch and at each review start the app asks the checkout whether it is
+current, and says on the status bar, until dismissed or a later check finds it
+fixed, what to run when it is behind origin's default branch (fetched at most once
+a day), when an installed workflow differs from the checkout's, when a file
+`install.sh` links (`commands/`, `review/`, `scripts/`) has nothing in
+`~/.claude`, or when a link there points at a file the checkout no longer has
+(`review-loop-install.ts`).
+
 The CI wait is one command the agent runs in the background, woken when it exits,
 never a poll by hand or a foreground `sleep` (ship-decision-2): `gh pr checks <n> --watch`
 with merging off, `pr land` with it on.
@@ -60,6 +73,8 @@ with merging off, `pr land` with it on.
 - Given merging is on and `gh pr merge` loses its answer to a network error after the merge went through, when `pr land` reads the pull request back, then the review reports it merged, not failed (#301).
 - Given merging is on and the network drops while `pr land` waits on the checks, when it exits printing `nothing is merged, run it again`, then the review runs it once more instead of stopping.
 - Given the review merged the pull request, when the app next asks gh about the card, then the app moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
+- Given no `~/.claude/commands/pr-loop.md`, when a review would start, then it is refused with `git clone … && ./install.sh`, the line is on the card, and the worktree is left as it was (`review-flow.test.ts`).
+- Given the claude-pr-loop checkout was pulled but `install.sh` not rerun, when the app starts or a review starts, then the status bar says the installed workflow differs and to run `./install.sh` in the checkout (`review-loop-install.test.ts`).
 - Given a `worktrees.json` that does not parse, when the app reads it, then it is moved aside as `worktrees.json.broken` (`worktrees.json.2.broken` and on if that name is taken) and the list opens empty (`worktree-store.test.ts`).
 - Given a worktree with modified files, when you remove it from the list, then the app says so instead of git's raw `fatal:`.
 

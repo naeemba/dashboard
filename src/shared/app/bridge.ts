@@ -217,6 +217,9 @@ export type DashboardBridge = {
   // A finished worker the app closed itself (auto-release.ts), or the kept shells pane.reap ended or
   // kept back: said as a passing notice main has already logged.
   onPaneReleased(listener: (text: string) => void): void;
+  // The installed /pr-loop is behind its checkout's origin, or install.sh has not been rerun since a pull
+  // (review-loop-install.ts): said at launch and at each review start, and kept on the bar.
+  onReviewLoopNotice(listener: (text: string) => void): void;
   onData(listener: (id: string, data: string) => void): void;
   onExit(listener: (id: string, exitCode: number) => void): void;
   getSession(): Promise<Session>;

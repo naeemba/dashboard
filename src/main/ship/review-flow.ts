@@ -57,6 +57,12 @@ export type ReviewPorts = {
   // Whether this pull request's review loop already finished at its head commit, asked of gh before
   // the sweep's own start. False when gh cannot say.
   reviewFinished: (projectPath: string, pullRequest: number) => Promise<boolean>;
+  // Why `/pr-loop` cannot run, or null when it is installed (reviewLoopMissing). Asked at each start, so
+  // installing it lets the next start through without a restart.
+  loopMissing: () => string | null;
+  // A start under way: the installed `/pr-loop` asked whether it is current, and the status bar told
+  // when it is not (review-loop-install.ts). Not awaited; it never refuses.
+  loopChecked: () => void;
 };
 
 // The pull request this card's work opened, or null while there is none yet. That number is the whole
@@ -349,6 +355,14 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (board !== null && isCancelled(board, id)) return early(`"${entry.title}" is cancelled; move it out of Cancelled to review it`);
     if (awaits === false) return { refused: `"${entry.title}" is past Review; its review has run` };
     if (awaits === null) return { refused: `"${entry.title}" is not on the project's board, or the board could not be read` };
+    // On the card too, as a failed swap is: a start the sweep made has nobody waiting on the answer.
+    // Not early: an install does not happen by itself, and the line says to start it again after.
+    const missing = ports.loopMissing();
+    if (missing !== null) {
+      editProjectBoard(ports, entry.projectPath, (board) => reviewRefused(board, id, missing));
+      return { refused: missing };
+    }
+    ports.loopChecked();
     reviewed.add(id);
     starting.add(id);
     try {
