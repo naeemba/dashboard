@@ -1,0 +1,11 @@
+{
+  "id": "c4cccd9d-31e3-410e-a2ab-daef5ca68f4f",
+  "title": "pane run --in <folder>: a Claude screen in an existing worktree",
+  "notes": "`pane run <id> --in <folder> \"<prompt>\"` starts a Claude screen in an existing folder or worktree.\n\nWhy: insta-experiences' main has dispatched every worker since 2026-11-09 by typing a terminal Claude Code into a claimed pane: `pane send \"$id\" \"cd ../insta-experiences-net-prices && claude \\\"$(cat .prompt.txt)\\\"\"` (see its transcript 610a2bd2…, for example 2026-11-17T08:42). So its workers run as terminal Claude Code, not Claude screens: three of them run in panes 1:1–1:3 now. It does this because that project keeps its own worktrees on existing GitLab MR branches (insta-experiences-net-prices, -mr174, -tags), and `pane run` only runs in the project checkout, a --card worktree, or a fresh --worktree.\n\nWant:\n- `--in <folder>`: an existing directory, either inside the project or a worktree of the project's repository (`git worktree list` from the project). Refuse anything else with a reason, from one exported predicate (errors-rule-1). It excludes --card and --worktree. It makes and removes nothing: the folder is the caller's.\n- The worker gets everything a normal run gets: a Claude screen (--terminal still works), the app's session settings, the report-to-main brief, scopes, and auto-close.\n- Main's prompt and the pane usage name `--in` for an existing worktree, and say never to start Claude through `pane send`.\n- Check the related report: insta main guards `case \"$id\" in 1:1|1:2|1:3) echo \"refusing busy pane\"`, which suggests `pane claim` handed out a pane running a terminal Claude Code started by `pane send`. Confirm whether paneIsBusy sees `claude` launched from the shell. Fix it if not, with a test.\n- Decision modules with tests, Windows-safe. Docs (command, workers) and help change with it. Do not bump the version.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-17T09:50:58.166Z",
+  "updatedAt": "2026-11-17T09:50:58.166Z",
+  "column": "Backlog",
+  "order": 46
+}
