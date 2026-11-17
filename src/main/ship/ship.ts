@@ -113,7 +113,7 @@ export function changedFiles(porcelain: string): string[] {
 // The app rewrites the board's files on every keystroke — the Ship move that started this very ship is in it
 // — so counting it would mean the ship always refuses itself. The rest of the folder is the app's own
 // explanation files. Nothing in the flow touches the project's checkout: the worktree is cut from
-// origin and the board it reads and commits is the worktree's own.
+// origin, and the ship writes no board in it.
 export function blockingChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
@@ -128,8 +128,8 @@ export function uncommittedCount(files: readonly string[]): string {
 
 // Runs what is handed to it one at a time per key, in the order the calls arrived.
 //
-// The key a ship uses is the project. git locks the repository's index for the whole of `worktree add`
-// and again for the commit, so two ships of different cards in one project end with the second dying
+// The key a ship uses is the project. git locks the repository's index for the whole of `worktree add`,
+// so two ships of different cards in one project end with the second dying
 // on .git/index.lock in git's own words — with its card already sitting in Ship on the board. Both are
 // wanted, so the second waits instead of being refused: refusing it is the same lost ship with a retry
 // bolted on. Two ships of the *same* card are a different thing and are still refused outright, by the

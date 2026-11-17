@@ -47,6 +47,7 @@ woken when it exits, never a poll by hand or a foreground `sleep` (ship-decision
 
 - Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane, on a Claude screen off Windows.
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
+- Given a card moved into Ship, when its ship makes the branch, then the branch has no commit of its own and its card file is origin's, so the merge never moves the card (ship-decision-3; `ship-flow.test.ts`).
 - Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it stopped for its background agents), then nothing is marked and a later tick starts the review, after its pane closes too (#300, #313; `review-flow.test.ts`).
