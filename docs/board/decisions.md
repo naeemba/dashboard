@@ -209,9 +209,11 @@ the card file is the branch's: it is committed with the work and merged onto
 main with whatever column it had that day. On 2026-11-17, 2 of about 8 board
 writes from one checkout failed with `cannot fetch origin/main` (`Connection
 closed by <host> port 22`) and went through when run again, so the fallback is
-hit, not hypothetical. A failed fetch is now tried three times, a second apart,
-before anything falls back; one that ran out of time is not, or a `board` command
-offline would take half a minute. Keeping a fallback write out of the branch's
+hit, not hypothetical. A fetch or push whose connection dropped is now tried
+again a second later, three tries in all, before anything falls back. A failure
+that would fail the same way again (no such repository, a refused key, an
+unknown host, a fetch that ran out of time) is not, or a `board` command offline
+would take seconds more for nothing. Keeping a fallback write out of the branch's
 commits instead (`skip-worktree`, a path the commit leaves out) was not taken:
 the agent would read back a move origin never got, and the refusal says to run
 it again, which the retries above say usually works.

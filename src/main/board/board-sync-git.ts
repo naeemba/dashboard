@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 import { join, relative, sep } from 'node:path';
 import type { Board } from '../../shared/board/board';
 import { rebaseBoardChange, sameBoard } from '../../shared/board/board-merge';
@@ -10,15 +11,12 @@ import { realPath } from '../app/real-path';
 import { BROKEN_SUFFIX } from '../app/set-aside';
 import { BOARD_PATHSPECS, peekBoard, readBoard, writeBoard } from './board-store';
 import {
-  FETCH_PAUSE,
   FETCH_TIMEOUT,
-  PUSH_ATTEMPTS,
   PUSH_TIMEOUT,
   checkoutStep,
   damagedBoardRefusal,
-  lostRace,
   publishesCheckout,
-  retriesFetch,
+  retryAfter,
   syncCommitMessage,
   type CheckoutStep,
 } from './board-sync';
@@ -65,8 +63,14 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
   if (branch instanceof Error) return notSynced(branch.message);
 
   for (let attempt = 1; ; attempt += 1) {
-    const fetchFailure = await fetchBranch(top, branch);
-    if (fetchFailure !== null) return notSynced(fetchFailure);
+    try {
+      await git(['fetch', '--quiet', REMOTE, branch], top, { timeout: FETCH_TIMEOUT });
+    } catch (error: unknown) {
+      const pause = retryAfter(attempt, gitMessage(error), false);
+      if (pause === null) return notSynced(`cannot fetch ${REMOTE}/${branch}: ${gitMessage(error)}`);
+      await delay(pause);
+      continue;
+    }
     const tip = await git(['rev-parse', '--verify', `refs/remotes/${REMOTE}/${branch}^{commit}`], top);
     const scratch = mkdtempSync(join(tmpdir(), 'board-sync-'));
     try {
@@ -81,8 +85,10 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         try {
           await git([...NO_HOOKS, 'push', '--quiet', REMOTE, `${commit}:refs/heads/${branch}`], top, { timeout: PUSH_TIMEOUT });
         } catch (error: unknown) {
-          if (lostRace(gitMessage(error)) && attempt < PUSH_ATTEMPTS) continue;
-          return notSynced(`the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
+          const pause = retryAfter(attempt, gitMessage(error), true);
+          if (pause === null) return notSynced(`the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
+          await delay(pause);
+          continue;
         }
         target = commit;
       }
@@ -96,21 +102,6 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
 
 function notSynced(reason: string): BoardSync {
   return { synced: false, reason };
-}
-
-// Origin's default branch fetched, tried again as retriesFetch says; null once it is, else why not.
-async function fetchBranch(top: string, branch: string): Promise<string | null> {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      await git(['fetch', '--quiet', REMOTE, branch], top, { timeout: FETCH_TIMEOUT });
-      return null;
-    } catch (error: unknown) {
-      // execFile kills a git that runs past its timeout, and says so on the error.
-      const timedOut = (error as { killed?: unknown } | null)?.killed === true;
-      if (!retriesFetch(attempt, timedOut)) return `cannot fetch ${REMOTE}/${branch}: ${gitMessage(error)}`;
-      await new Promise((resolve) => setTimeout(resolve, FETCH_PAUSE));
-    }
-  }
 }
 
 async function answer(gitArguments: string[], cwd: string): Promise<string | null> {

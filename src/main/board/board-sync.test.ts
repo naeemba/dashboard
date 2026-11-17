@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { addCard, deleteCard, emptyBoard, moveCardToColumn, renameCard, selectionOf } from '../../shared/board/board';
-import { checkoutStep, damagedBoardRefusal, FETCH_ATTEMPTS, lostRace, notSyncedRefusal, publishesCheckout, retriesFetch, syncCommitMessage, type CheckoutState } from './board-sync';
+import { checkoutStep, damagedBoardRefusal, droppedConnection, lostRace, notSyncedRefusal, publishesCheckout, RETRY_PAUSE, retryAfter, SYNC_ATTEMPTS, syncCommitMessage, type CheckoutState } from './board-sync';
 
 const behind: CheckoutState = { branch: 'main', defaultBranch: 'main', current: false, behind: true, porcelain: '' };
 
@@ -75,15 +75,25 @@ describe('damagedBoardRefusal', () => {
   });
 });
 
-describe('retriesFetch', () => {
-  it('tries a failed fetch again until the last attempt', () => {
-    expect(retriesFetch(1, false)).toBe(true);
-    expect(retriesFetch(FETCH_ATTEMPTS - 1, false)).toBe(true);
-    expect(retriesFetch(FETCH_ATTEMPTS, false)).toBe(false);
+describe('retryAfter', () => {
+  const dropped = 'Connection closed by 20.26.156.215 port 22\r\nfatal: Could not read from remote repository.';
+
+  it('tries a dropped connection again a pause later, on the fetch or the push, until the last attempt', () => {
+    expect(droppedConnection(dropped)).toBe(true);
+    expect(retryAfter(1, dropped, false)).toBe(RETRY_PAUSE);
+    expect(retryAfter(SYNC_ATTEMPTS - 1, dropped, true)).toBe(RETRY_PAUSE);
+    expect(retryAfter(SYNC_ATTEMPTS, dropped, false)).toBeNull();
   });
 
-  it('does not wait out a timeout twice', () => {
-    expect(retriesFetch(1, true)).toBe(false);
+  it('tries a push that lost a race again at once, and never a fetch on those words', () => {
+    expect(retryAfter(1, ' ! [rejected] main -> main (fetch first)', true)).toBe(0);
+    expect(retryAfter(1, ' ! [rejected] main -> main (fetch first)', false)).toBeNull();
+  });
+
+  it('gives up at once on a failure that would fail the same way again', () => {
+    expect(retryAfter(1, "fatal: '/gone/missing.git' does not appear to be a git repository", false)).toBeNull();
+    expect(retryAfter(1, 'git@github.com: Permission denied (publickey).', false)).toBeNull();
+    expect(retryAfter(1, 'ssh: Could not resolve hostname github.com', false)).toBeNull();
   });
 });
 

@@ -9,7 +9,8 @@ import { failureText } from '../../shared/errors/failure';
 import type { Board } from '../../shared/board/board';
 import { askRunningApp } from '../workers/session-socket';
 import { boardTarget } from './board-target';
-import { isLinkedWorktree, worktreeCheckoutOf } from './linked-worktree';
+import { isLinkedWorktree } from './linked-worktree';
+import { holdsWorktree } from '../workers/run-folder';
 import { boardGuard } from './board-guard';
 import { runningAppGuard, runningProcess, type ProcessList, type RunningProcess } from '../workflow/running-app-guard';
 import { packageManagerGuard } from '../workflow/package-manager-guard';
@@ -84,7 +85,8 @@ function writeHere(project: string, opened: Board, commandArguments: readonly st
   const result = runBoardCommandOnLatest(opened, commandArguments, () => readBoard(project, false).board, makeId);
   const changes = result.ok && result.board !== null;
   if (notSynced !== null) {
-    const refusal = notSyncedRefusal(worktreeCheckoutOf(project) !== undefined, changes, notSynced);
+    // Any linked worktree, not only the app's (isLinkedWorktree): every one holds its branch's board.
+    const refusal = notSyncedRefusal(holdsWorktree(project), changes, notSynced);
     if (refusal !== null) return { ok: false, message: refusal };
     process.stderr.write(`${notSyncedWarning(notSynced)}\n`);
   }

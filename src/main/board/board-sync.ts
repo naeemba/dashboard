@@ -5,10 +5,10 @@ import { cardMoves } from './card-moves';
 // Every decision the board's git sync makes. board-sync-git.ts runs the git and touches the files and
 // has no decision in it; docs/board/README.md says what the sync is for (board-decision-5).
 
-// A push refused because origin moved between the fetch and the push is fetched and tried again, up
-// to this many tries in all. Two writers landing in the same second is the case; a third try losing
-// as well is something else, and the board is left written here with a warning.
-export const PUSH_ATTEMPTS = 3;
+// A sync that lost a race or its connection is fetched and tried again, up to this many tries in all
+// (retryAfter). Two writers landing in the same second is the race; a third try failing as well is
+// something else, and the sync gives up with the reason.
+export const SYNC_ATTEMPTS = 3;
 
 // Whether a refused push lost a race to another writer, which a fresh fetch fixes: git's own words
 // for the remote moving under it, before the push (fetch first, non-fast-forward) or during it
@@ -23,16 +23,25 @@ export function lostRace(gitMessage: string): boolean {
 export const FETCH_TIMEOUT = 10_000;
 export const PUSH_TIMEOUT = 30_000;
 
-// A fetch that fails is tried again, up to this many tries in all, a pause apart, before the write
-// falls back to this folder: on 2026-11-17, 2 of about 8 board writes from one checkout failed with
-// `Connection closed by <host> port 22` and went through when run again by hand.
-export const FETCH_ATTEMPTS = 3;
-export const FETCH_PAUSE = 1_000;
+// Whether git lost its connection to origin part way, in ssh's words or curl's: on 2026-11-17, 2 of
+// about 8 board writes from one checkout failed with `Connection closed by <host> port 22` and went
+// through when run again by hand. Not a missing repository, a refused key or an unknown host, which
+// fail the same way every time, nor a fetch that ran out of time: offline on a train, three of those
+// is half a minute before the command answers.
+export function droppedConnection(gitMessage: string): boolean {
+  return /Connection (closed|reset)|early EOF|unexpected disconnect|kex_exchange_identification/i.test(gitMessage);
+}
 
-// Whether a failed fetch is tried again. Not one that ran out of time: offline on a train, three of
-// those is half a minute before the command answers.
-export function retriesFetch(attempt: number, timedOut: boolean): boolean {
-  return !timedOut && attempt < FETCH_ATTEMPTS;
+export const RETRY_PAUSE = 1_000;
+
+// How long to wait before the sync is fetched and tried again after git failed with `gitMessage`, or
+// null when it is not: a lost race at once, since origin has already moved; a dropped connection a
+// pause later, on the fetch or the push. A push the connection dropped under may have landed, and the
+// fresh fetch then finds the edit already there and pushes nothing.
+export function retryAfter(attempt: number, gitMessage: string, pushing: boolean): number | null {
+  if (attempt >= SYNC_ATTEMPTS) return null;
+  if (pushing && lostRace(gitMessage)) return 0;
+  return droppedConnection(gitMessage) ? RETRY_PAUSE : null;
 }
 
 // What a project's checkout is, as git says it, when the sync is done: the branch it stands on (null

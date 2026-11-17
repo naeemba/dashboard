@@ -222,13 +222,14 @@ A board git tracks is the default branch's, wherever it is written from
 (board-decision-5). Every write, from the screen, card.move, the review sweep
 or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
 
-1. fetch origin's default branch (10 seconds at most), a fetch that failed
-   tried again a second apart, three tries in all, unless it ran out of time;
+1. fetch origin's default branch (10 seconds at most);
 2. read origin's board there, with the checkout's own uncommitted board edits
    replayed onto it (`rebaseBoardChange`), then the command's edit on top;
 3. commit that, and only the board's files, onto origin's tip with a plain
    message (`board: "Fix login" Doing → Review`), and push it; a push that lost
-   a race fetches and tries again, three tries in all;
+   a race fetches and tries again at once, and a fetch or push whose connection
+   dropped (`Connection closed`, `early EOF`) a second later, three tries in
+   all (`retryAfter`);
 4. bring the project's checkout up to it: on the default branch, only behind,
    and nothing changed outside `.dashboard/`, the board's files are put back to
    HEAD, the checkout fast-forwarded (no stash, hooks off), and its own board
