@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-17T12:20:25.662Z",
-  "updatedAt": "2026-11-17T13:18:08.858Z",
+  "updatedAt": "2026-11-17T13:20:59.162Z",
   "branch": "refresh-every-project-s-stale-dashboard-cla",
   "pullRequest": 317,
   "comments": [
@@ -24,6 +24,10 @@
     {
       "at": "2026-11-17T13:18:08.858Z",
       "body": "Re-review of the commits since 5b9fcb4c. New findings: 1 medium, 2 low. Both lows are fixed in c6d2a8cb: baseBranch has its comment back, and a shared gitNowOrNull replaces the duplicated wrapper. The step-4 thread was verified fixed and resolved. Open, for the owner: the medium. Where there is no origin default branch (no origin remote, or a default other than main or master), a stale doc is never rewritten and the sync cannot push it either. Head c6d2a8cb, CI green."
+    },
+    {
+      "at": "2026-11-17T13:20:59.162Z",
+      "body": "A repository with no origin default branch is now treated like outside git, so a stale seeded doc there is rewritten on any branch. Tests and board-decision-8 updated, and the last review thread is resolved. Head aab5cd73, CI green. No threads open. Ready to merge."
     }
   ],
   "column": "Review",
