@@ -55,8 +55,7 @@ in it with the prompt as its argument: --card runs it in the worktree the card w
 --worktree in a throwaway one that release removes once its work is pushed with a pull request open,
 --in in a folder that is already there, inside the project or a worktree of its repository (one on
 a branch you keep yourself), which nothing makes or removes, and none of them in the project itself.
-Never start Claude by typing \`claude\` with send: that worker gets none of the app's settings,
-hooks or report to main. The worker is a Claude screen; --terminal runs Claude Code in the
+The worker is a Claude screen; --terminal runs Claude Code in the
 pane's terminal. On Windows the terminal is the default, since a screen's turn there ends with the
 app, and --screen asks for a screen. send types the text into the pane and presses Enter, or hands
 it to a Claude screen as its next prompt. finish releases a worker whose work is in: its card is

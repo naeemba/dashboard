@@ -97,9 +97,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
       + ' committed, pushed and opened its pull request, and kept otherwise. A worktree that is already'
       + ' there, one of this repository\'s on a branch you keep, takes --in <folder>: nothing makes or'
-      + ' removes it. Research takes none of them and reads this checkout. Never start Claude in a pane'
-      + ' by typing `claude` with `pane send`: that worker gets none of the app\'s settings and never'
-      + ' reports to you.',
+      + ' removes it. Research takes none of them and reads this checkout.',
     '',
     `Land a pull request you are asked to merge with \`node "$DASHBOARD_COMMAND" pr land <n>${projectFlag}\`, run in the`
       + ` background (${LONGEST_BACKGROUND_RUN}): it waits for its checks and`
