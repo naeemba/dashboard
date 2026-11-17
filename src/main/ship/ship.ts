@@ -113,7 +113,7 @@ export function changedFiles(porcelain: string): string[] {
 // The app rewrites the board's files on every keystroke — the Ship move that started this very ship is in it
 // — so counting it would mean the ship always refuses itself. The rest of the folder is the app's own
 // explanation files. Nothing in the flow touches the project's checkout: the worktree is cut from
-// origin and the board it reads and commits is the worktree's own.
+// origin, and the ship writes no board in it.
 export function blockingChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !path.startsWith(`${BOARD_DIRECTORY}/`));
 }
