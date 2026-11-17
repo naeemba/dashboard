@@ -1,7 +1,8 @@
 #!/bin/sh
 # Rebuild Dashboard and swap the new build into place, without touching the running app. It is not
 # launched and not quit; the next restart picks the change up. On a mac that place is
-# /Applications/Dashboard.app; on Linux it is ~/.local/opt/dashboard, whose Dashboard executable a desktop entry of your own can run.
+# /Applications/Dashboard.app; on Linux it is ~/.local/opt/dashboard, whose Dashboard executable a desktop entry of your own can run;
+# on Windows (Git Bash) it is %LOCALAPPDATA%\Programs\Dashboard, beside and apart from a Squirrel install.
 # The prepackage hook stops the build if an app is running out of this checkout.
 set -eu
 
@@ -24,6 +25,14 @@ case "$os" in
     pattern='out/Dashboard-linux-*'
     copy='cp -a'
     executable=Dashboard
+    resources=resources
+    ;;
+  MINGW*|MSYS*|CYGWIN*)
+    parent="$(cygpath -u "$LOCALAPPDATA")/Programs"
+    name=Dashboard
+    pattern='out/Dashboard-win32-*'
+    copy='cp -a'
+    executable=Dashboard.exe
     resources=resources
     ;;
   *)
@@ -53,7 +62,10 @@ $copy "$built" "$staged"
 # replaces the installed one.
 stamp="$(node -p 'require("./package.json").version')+$(git rev-parse --short=12 HEAD)"
 grep -a -q -F "$stamp" "$staged/$resources/app.asar" || { rm -rf "$staged"; echo "Stopped: the build does not carry $stamp; $installed is unchanged."; exit 1; }
-if [ -d "$installed" ]; then mv "$installed" "$previous"; fi
+# Windows refuses to rename a folder whose Dashboard.exe is running; stop then, with the installed build in place.
+if [ -d "$installed" ]; then
+  mv "$installed" "$previous" 2>/dev/null || { rm -rf "$staged"; echo "Stopped: $installed is in use (a Dashboard runs from it?); it is unchanged. Quit it yourself and run this again."; exit 1; }
+fi
 mv "$staged" "$installed"
 rm -rf "$previous"
 
@@ -62,14 +74,30 @@ rm -rf "$previous"
 # launcher was a symlink to the app's executable, and writing through it would overwrite the app.
 # node, not the app's own binary as node: the RunAsNode fuse is off (forge.config.ts, command-decision-3).
 launcher="$HOME/.local/bin/dashboard"
+# The paths the launcher hands to node: a Windows node reads C:/..., not the shell's /c/...
+target_app="$installed/$executable"
+target_entry="$installed/$resources/app.asar.unpacked/.vite/build/dashboard-cli-entry.js"
+case "$os" in
+  MINGW*|MSYS*|CYGWIN*)
+    target_app=$(cygpath -m "$target_app")
+    target_entry=$(cygpath -m "$target_entry")
+    ;;
+esac
 mkdir -p "$(dirname "$launcher")"
 cat > "$launcher.new" <<LAUNCHER
 #!/bin/sh
 # Written by the Dashboard's scripts/rebuild.sh; rebuilding writes it again.
 command -v node >/dev/null 2>&1 || { echo "dashboard: node is not on PATH, and the command runs under it" >&2; exit 1; }
-DASHBOARD_APP='$installed/$executable' exec node '$installed/$resources/app.asar.unpacked/.vite/build/dashboard-cli-entry.js' "\$@"
+DASHBOARD_APP='$target_app' exec node '$target_entry' "\$@"
 LAUNCHER
 chmod 755 "$launcher.new"
 mv -f "$launcher.new" "$launcher"
+# cmd and PowerShell do not run a sh script: the same launcher as a .cmd beside it.
+case "$os" in
+  MINGW*|MSYS*|CYGWIN*)
+    printf '@echo off\r\nrem Written by the Dashboard'"'"'s scripts/rebuild.sh; rebuilding writes it again.\r\nset "DASHBOARD_APP=%s"\r\nnode "%s" %%*\r\n' "$target_app" "$target_entry" > "$launcher.cmd.new"
+    mv -f "$launcher.cmd.new" "$launcher.cmd"
+    ;;
+esac
 
 echo "Installed $stamp in $installed, and $launcher. The running app is untouched — restart it when you are ready."

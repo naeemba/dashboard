@@ -1,5 +1,5 @@
 ---
-description: Rebuild Dashboard and install it (/Applications on a mac, ~/.local/opt/dashboard on Linux) without launching or quitting anything
+description: Rebuild Dashboard and install it (/Applications on a mac, ~/.local/opt/dashboard on Linux, %LOCALAPPDATA%\Programs\Dashboard on Windows) without launching or quitting anything
 allowed-tools: Bash(./scripts/rebuild.sh)
 model: sonnet
 effort: low
