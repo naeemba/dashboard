@@ -19,7 +19,7 @@ function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
 }
 
 const open = { ok: true, output: 'OPEN abc123 main https://github.com/acme/api/pull/12' };
-const RUNS = 'api repos/acme/api/actions/runs?event=pull_request&per_page=1';
+const RECENT_CHECKS = 'pr list --repo github.com/acme/api --state merged --limit 5 --json statusCheckRollup -q [.[].statusCheckRollup | length] | add // 0';
 const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
 const lostAnswer = 'Post https://api.github.com/graphql: unexpected EOF';
 const MERGE = 'pr merge 12 --merge --match-head-commit abc123';
@@ -53,15 +53,17 @@ describe('landPullRequest', () => {
     expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
   });
 
-  it('asks again a minute on when no checks are reported, and merges a repository whose pull requests never ran CI', async () => {
-    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], [RUNS]: [{ ok: true, output: '0' }], 'pr merge': [{ ok: true, output: '' }] });
+  it('asks again a minute on when no checks are reported, and merges a repository whose pull requests never reported a check', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '0' }], 'pr merge': [{ ok: true, output: '' }] });
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123, a repository with no CI', base: 'main' });
     expect(github.waited).toEqual([NO_CHECKS_WAIT_MS]);
+    expect(github.asked).toContain(RECENT_CHECKS);
   });
 
-  // Seen: CI that never started on the head commit, and the land merged it unchecked.
-  it('merges nothing when no checks start in a repository whose pull requests run CI', async () => {
-    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], [RUNS]: [{ ok: true, output: '2' }] });
+  // Seen: CI that never started on the head commit, and the land merged it unchecked. CI on a push
+  // trigger runs no pull_request event, and still reports its checks on the merged pull requests.
+  it('merges nothing when no checks start in a repository whose pull requests run CI, whatever triggers it', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '2' }] });
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'no checks reported on abc123 a minute on, in a repository whose pull requests run CI; 12 is not merged' });
     expect(merges(github)).toBe(0);
   });
@@ -69,16 +71,23 @@ describe('landPullRequest', () => {
   // A url target may name another repository than the folder's: its CI is the one asked about.
   it('asks the pull request\'s own repository, on its own host, whether it runs CI', async () => {
     const url = 'https://git.example.com/other/web/pull/5';
-    const github = fakeGitHub({ 'pr view': [{ ok: true, output: `OPEN abc123 main ${url}` }], 'pr checks': [none, none], 'api repos/other/web/actions/runs?event=pull_request&per_page=1': [{ ok: true, output: '7' }] });
+    const github = fakeGitHub({ 'pr view': [{ ok: true, output: `OPEN abc123 main ${url}` }], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '7' }] });
     expect(await landPullRequest(github.ports, url)).toMatchObject({ ok: false });
-    expect(github.asked).toContain('api repos/other/web/actions/runs?event=pull_request&per_page=1 --hostname git.example.com -q .total_count');
+    expect(github.asked).toContain(RECENT_CHECKS.replace('github.com/acme/api', 'git.example.com/other/web'));
     expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
   });
 
-  it('merges nothing when gh cannot say whether the repository has workflows', async () => {
-    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], [RUNS]: [{ ok: false, output: 'HTTP 403' }] });
+  it('merges nothing when gh cannot say whether the repository\'s pull requests report checks', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], 'pr list': [{ ok: false, output: 'HTTP 403' }] });
     expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('12 is not merged: HTTP 403') });
     expect(merges(github)).toBe(0);
+  });
+
+  // Never the folder's repository in its place: a url target may name another.
+  it('merges nothing when gh gives no url for the pull request', async () => {
+    const github = fakeGitHub({ 'pr view': [{ ok: true, output: 'OPEN abc123 main' }], 'pr checks': [none, none] });
+    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('gh gave no repository for 12') });
+    expect(github.asked.some((each) => each.startsWith('pr list') || each.startsWith('pr merge'))).toBe(false);
   });
 
   it('waits on checks that started by the second ask', async () => {

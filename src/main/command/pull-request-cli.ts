@@ -10,8 +10,8 @@ export const PULL_REQUEST_USAGE = `pr — land a pull request of the project you
 land notes the pull request's head commit, waits for every check on it (gh pr checks --watch), then
 merges that commit: gh pr merge --merge --match-head-commit <sha>, so a push during the wait is
 refused rather than merged unchecked. No checks reported a minute after asking is merged only in a
-repository where no pull request ever ran a workflow; anywhere else it is refused, since its CI did not
-start on that commit (a push, or gh pr merge by hand, if it never will). A merge call that fails is checked against the pull request: merged at
+repository whose recently merged pull requests reported no check; anywhere else it is refused, since its
+CI did not start on that commit (a push, or gh pr merge by hand, if it never will). A merge call that fails is checked against the pull request: merged at
 that commit is merged. A network error on the merge or the wait is tried once more, five seconds
 on. A failed check or a refused merge is printed and the pull request stays open. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; a land stopped at that
@@ -54,14 +54,14 @@ export const RETRY_WAIT_MS = 5_000;
 // The pull request's state, head commit, base branch and url, as `OPEN <sha> main https://...`.
 const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName,url', '-q', '.state + " " + .headRefOid + " " + .baseRefName + " " + .url'];
 
-// How many workflow runs a pull request ever started in the pull request's own repository (read from
-// its url, since a url target may name another repository than the folder's): none is a repository
-// without CI on pull requests. Counting workflow files instead counted Dependabot, Pages and
-// push-only workflows, none of which ever reports a check on a pull request.
-function pullRequestRunCount(url: string): string[] | undefined {
-  const [, host, repository] = /^https?:\/\/([^/]+)\/([^/]+\/[^/]+)\/pull\//.exec(url) ?? [];
-  if (host === undefined) return undefined;
-  return ['api', `repos/${repository}/actions/runs?event=pull_request&per_page=1`, '--hostname', host, '-q', '.total_count'];
+// How many checks the last few merged pull requests of the pull request's own repository reported (read
+// from its url, since a url target may name another repository than the folder's): none is a repository
+// without CI on pull requests. It asks the pull requests, not Actions, so CI on a push trigger or from an
+// outside service counts, and Dependabot or Pages workflows that never report on a pull request do not.
+function recentCheckCount(url: string): string[] | undefined {
+  const [, repository] = /^https?:\/\/([^/]+\/[^/]+\/[^/]+)\/pull\//.exec(url) ?? [];
+  if (repository === undefined) return undefined;
+  return ['pr', 'list', '--repo', repository, '--state', 'merged', '--limit', '5', '--json', 'statusCheckRollup', '-q', '[.[].statusCheckRollup | length] | add // 0'];
 }
 
 export async function landPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {
@@ -88,11 +88,11 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
   if (!checks.ok && !noChecks) return { ok: false, output: `a check failed on ${sha}; ${target} is not merged\n\n${checks.output}` };
   // Still none a minute on is a repository without CI on pull requests, or CI that never started on this commit.
   if (noChecks) {
-    const runCount = pullRequestRunCount(url);
-    if (runCount === undefined) return { ok: false, output: `no checks reported on ${sha}, and gh gave no repository for ${target} to ask whether it has CI; ${target} is not merged` };
-    const runs = await ports.gh(runCount);
-    if (!runs.ok) return { ok: false, output: `no checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged: ${runs.output}` };
-    if (runs.output.trim() !== '0') return { ok: false, output: `no checks reported on ${sha} a minute on, in a repository whose pull requests run CI; ${target} is not merged` };
+    const checkCount = recentCheckCount(url);
+    if (checkCount === undefined) return { ok: false, output: `no checks reported on ${sha}, and gh gave no repository for ${target} to ask whether it has CI; ${target} is not merged` };
+    const checksBefore = await ports.gh(checkCount);
+    if (!checksBefore.ok) return { ok: false, output: `no checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged: ${checksBefore.output}` };
+    if (checksBefore.output.trim() !== '0') return { ok: false, output: `no checks reported on ${sha} a minute on, in a repository whose pull requests run CI; ${target} is not merged` };
   }
   const merged = await mergeAt(ports, target, sha);
   if (isNetworkError(merged)) return { ok: false, output: `lost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again: ${merged.output}` };
