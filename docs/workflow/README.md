@@ -31,8 +31,8 @@ folders in `/tmp`, and on 2026-11-08 they filled its 16G and stopped every worke
     scripts/release.sh minor        # or major, or patch; /release minor in Claude Code runs the same
 
 Run it on main, clean and equal to `origin/main`; it refuses otherwise and says which. It waits while CI
-is still running on that commit, and stops as soon as a run has failed. It dispatches Release with the bump, watches the run, and once the release is published pulls
-main, runs `pnpm install --frozen-lockfile`, the three checks and `scripts/rebuild.sh`, which stops unless the
+is still running on that commit, and stops as soon as a run has failed. It dispatches Release with the bump, watches the run, and once the release is published stops if an app is running out of this checkout
+(`scripts/no-running-app.mjs`, before anything there is rewritten), then pulls main, runs `pnpm install --frozen-lockfile`, the three checks and `scripts/rebuild.sh`, which stops unless the
 installed `app.asar` carries the new `<version>+<commit>` stamp, and prints the version, the release URL
 and "restart the app when ready". It never quits or restarts the running app. A failed leg stops it with
 the leg's name and leaves the release a draft; re-run the failed jobs in the Actions tab, then
@@ -60,6 +60,7 @@ follows. The workflow writes them, so they are the same whichever way the run wa
 - Given `scripts/release.sh <bump>` on a branch other than main, with uncommitted changes, behind or ahead of `origin/main`, or with no CI run on that commit or one that failed, when it runs, then it stops before dispatching and says which.
 - Given `scripts/release.sh <bump>` while CI is still running on that commit, when it runs, then it says it is waiting, polls every 15 seconds until every run has finished, and dispatches only if all are green.
 - Given `scripts/release.sh <bump>` whose run publishes, when it finishes, then main is fast-forwarded, the checks have passed, the installed `app.asar` carries `<version>+<commit>`, and the running app is still running.
+- Given `scripts/release.sh <bump>` whose run publishes while an app runs out of this checkout, when it reaches the install, then it stops before fast-forwarding main or running `pnpm install`, the checkout is unchanged, and the last line names `--resume <run id>`.
 - Given `scripts/release.sh --resume <run id>` on a run with a failed job, when it runs, then it names the failed jobs, installs nothing, and the release stays a draft.
 - Given `scripts/release.sh --resume <run id>` on a clean main that `origin/main` is ahead of by the run's release commit, when it runs, then it watches the run and fast-forwards main to install it. With a commit `origin/main` lacks, or uncommitted changes, it stops and says which.
 - Given a GitHub read fails with `failed to get run: ... EOF` while the run is still going, when `scripts/release.sh` is waiting on it, then it tries the read again and keeps waiting; a run that finishes green is installed.
