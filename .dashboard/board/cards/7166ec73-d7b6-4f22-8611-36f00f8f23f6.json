@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-18T11:19:20.137Z",
-  "updatedAt": "2026-11-18T11:46:29.704Z",
+  "updatedAt": "2026-11-18T12:01:56.267Z",
   "branch": "rebuild-sh-installs-dependencies-before-pac",
   "pullRequest": 331,
   "comments": [
     {
       "at": "2026-11-18T11:46:29.685Z",
       "body": "Pull request #331 opened: rebuild.sh installs dependencies before packaging https://github.com/naeemba/dashboard/pull/331"
+    },
+    {
+      "at": "2026-11-18T12:01:56.267Z",
+      "body": "Review loop on #331: converged, ready to merge. 2 rounds, floor-addressed; fixed doc line wrapping in the Windows setup and /rebuild (27a4afa9, 20103165). Rejected as out of scope: scripts/rebuild.sh:53, whose fix belongs in scripts/release.sh (follow-up). CI 5/5 passing on head 20103165. The last nit fix was not re-reviewed."
     }
   ],
   "column": "Review",
