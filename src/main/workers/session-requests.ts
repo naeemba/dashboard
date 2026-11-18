@@ -428,8 +428,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   function paneLines(slot: number, prefix: string, reports: boolean): string[] {
     return ports.openPanes(slot).map((index) => {
       const id = terminalId(slot, index);
-      const said = lastMessages.get(id);
-      return reports ? `${paneLine(id, prefix)}\t${said === undefined ? '' : oneLineTail(said)}` : paneLine(id, prefix);
+      return reports ? `${paneLine(id, prefix)}\t${oneLineTail(lastMessages.get(id) ?? '')}` : paneLine(id, prefix);
     });
   }
 

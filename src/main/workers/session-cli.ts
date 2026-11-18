@@ -81,7 +81,7 @@ function refuse(message: string): Parsed {
 }
 
 function paneId(word: string | undefined, command: string): string | Parsed {
-  if (word === undefined) return refuse(`session ${command} needs a pane id, the one claim printed`);
+  if (word === undefined) return refuse(`pane ${command} needs a pane id, the one claim printed`);
   return PANE_ID.test(word) ? word : refuse(`${word} is not a pane id — claim prints one, like 2:3`);
 }
 
@@ -111,7 +111,7 @@ function parseRun(words: readonly string[]): Parsed {
   if ([card !== null, worktree, folder !== null].filter(Boolean).length > 1) {
     return refuse('a task runs in its card\'s worktree, a throwaway one or a folder you name with --in, only one of them');
   }
-  if (prompt.join(' ').trim() === '') return refuse('session run needs a prompt for the worker');
+  if (prompt.join(' ').trim() === '') return refuse('pane run needs a prompt for the worker');
   return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, folder, as } };
 }
 
@@ -247,7 +247,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     case 'claim': {
       if (rest.length === 0) return { ok: true, command: { kind: 'claim', project: null } };
       const project = rest.slice(1).join(' ').trim();
-      if (rest[0] !== '--project' || project === '') return refuse('session claim takes nothing, or --project and a project\'s name or aka');
+      if (rest[0] !== '--project' || project === '') return refuse('pane claim takes nothing, or --project and a project\'s name or aka');
       return { ok: true, command: { kind: 'claim', project } };
     }
     case 'list': {
@@ -260,7 +260,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       const id = paneId(rest[0], 'send');
       if (typeof id !== 'string') return id;
       const text = rest.slice(1).join(' ');
-      if (text.trim() === '') return refuse('session send needs the text to type');
+      if (text.trim() === '') return refuse('pane send needs the text to type');
       return { ok: true, command: { kind: 'send', id, text } };
     }
     case 'release':

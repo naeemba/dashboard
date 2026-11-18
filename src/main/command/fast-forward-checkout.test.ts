@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkoutOn, fastForwardCheckout } from './fast-forward-checkout';
+import { fastForwardCheckout } from './fast-forward-checkout';
 import type { GitHubAnswer } from './pull-request-cli';
 
 const WORKTREES = [
@@ -22,19 +22,12 @@ function fakeGit(answers: Record<string, GitHubAnswer>) {
 
 const listed = { ok: true, output: WORKTREES };
 
-describe('checkoutOn', () => {
-  it('finds the worktree on the branch, the project folder or another', () => {
-    expect(checkoutOn(WORKTREES, 'main')).toBe('/work/api');
-    expect(checkoutOn(WORKTREES, 'fix')).toBe('/work/api.worktrees/fix');
-    expect(checkoutOn(WORKTREES, 'release')).toBeNull();
-  });
-});
-
 describe('fastForwardCheckout', () => {
-  it('pulls --ff-only in the checkout on the base branch when it is clean', async () => {
+  it('pulls --ff-only in the checkout on the base branch when it is clean, the project\'s own or a worktree', async () => {
     const git = fakeGit({ worktree: listed, status: { ok: true, output: '' }, pull: { ok: true, output: 'Fast-forward' } });
     expect(await fastForwardCheckout(git.git, '/work/api.worktrees/fix', 'main')).toBe('fast-forwarded main in /work/api');
     expect(git.asked.at(-1)).toBe('/work/api: pull --ff-only');
+    expect(await fastForwardCheckout(git.git, '/work/api', 'fix')).toBe('fast-forwarded fix in /work/api.worktrees/fix');
   });
 
   // The board's own files change under the app all the time, and a pull never overwrites them unasked.

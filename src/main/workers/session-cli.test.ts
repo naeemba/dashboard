@@ -107,7 +107,7 @@ describe('parseSessionCommand', () => {
 
   it('reads send as the pane and everything after it as the text, and refuses no text', () => {
     expect(parseSessionCommand(['send', '2:3', 'run', 'the', 'tests'])).toEqual({ ok: true, command: { kind: 'send', id: '2:3', text: 'run the tests' } });
-    expect(parseSessionCommand(['send', '2:3'])).toEqual({ ok: false, message: 'session send needs the text to type' });
+    expect(parseSessionCommand(['send', '2:3'])).toEqual({ ok: false, message: 'pane send needs the text to type' });
     expect(parseSessionCommand(['send', 'crm', 'hi']).ok).toBe(false);
   });
 });
