@@ -60,14 +60,22 @@ describe('assetFor', () => {
 
 describe('installFolder', () => {
   it('is the executable\'s folder on Linux and the bundle on a mac', () => {
-    expect(installFolder('linux', '/home/me/.local/opt/dashboard/Dashboard', true)).toBe('/home/me/.local/opt/dashboard');
-    expect(installFolder('darwin', '/Applications/Dashboard.app/Contents/MacOS/Dashboard', true)).toBe('/Applications/Dashboard.app');
+    expect(installFolder('linux', '/home/me/.local/opt/dashboard/Dashboard', true, () => false)).toBe('/home/me/.local/opt/dashboard');
+    expect(installFolder('darwin', '/Applications/Dashboard.app/Contents/MacOS/Dashboard', true, () => false)).toBe('/Applications/Dashboard.app');
     // The platform's own separator: Windows joins with a backslash.
     expect(stagingFolder('/home/me/.local/opt/dashboard')).toBe(path.join('/home/me/.local/opt', '.dashboard.update'));
   });
 
   it('refuses a development run', () => {
-    expect(installFolder('linux', '/repo/node_modules/electron/dist/electron', false)).toHaveProperty('refused');
+    expect(installFolder('linux', '/repo/node_modules/electron/dist/electron', false, () => false)).toHaveProperty('refused');
+  });
+
+  it('is a Squirrel install on Windows only with Update.exe above it, and refuses a rebuild.sh install', () => {
+    const squirrel = (file: string) => file === 'C:\\Users\\me\\AppData\\Local\\Dashboard\\Update.exe';
+    expect(installFolder('win32', 'C:\\Users\\me\\AppData\\Local\\Dashboard\\app-2.50.0\\Dashboard.exe', true, squirrel))
+      .toBe('C:\\Users\\me\\AppData\\Local\\Dashboard\\app-2.50.0');
+    expect(installFolder('win32', 'C:\\Users\\me\\AppData\\Local\\Programs\\Dashboard\\Dashboard.exe', true, squirrel))
+      .toEqual({ refused: 'this build came from scripts/rebuild.sh; it updates by rebuilding' });
   });
 });
 

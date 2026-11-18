@@ -148,7 +148,7 @@ agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
 - a `pkill`, `killall`, or `kill` fed by `pgrep` or `pidof`, that would hit one of the app's processes:
   each pattern is matched against `/proc` the way the command would match it (`-f` against the command
   line, otherwise the process's name), and a process is the app's when its command line is out of the
-  installed build (`~/.local/opt/dashboard/`, `Dashboard.app/`, which covers its pane host, screen host
+  installed build (`~/.local/opt/dashboard/`, `Dashboard.app/`, `AppData\Local\Programs\Dashboard\`, which covers its pane host, screen host
   and Claude), is a pane or screen host anywhere, or is electron out of a checkout named `dashboard*`.
   So `killall node` is refused while the pane host runs and `pkill -f vitest` goes through. On a mac,
   with no `/proc`, the pattern is refused when it names Dashboard, electron, node or claude;
@@ -157,7 +157,9 @@ agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
 - `systemctl stop`, `kill` or `restart` of `agents.slice` or `panes.slice`;
 - `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
 - a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, or `find` with
-  `-delete` or `-exec`, naming the installed build, or a `>` or `tee` into it.
+  `-delete` or `-exec`, naming the installed build (on Windows `%LOCALAPPDATA%\Programs\Dashboard`, matched
+  by its `Programs/Dashboard` tail in any case so any spelling of `%LOCALAPPDATA%`, quoted or through
+  `cygpath`, and either slash, but not the Start menu's `Programs` folder), or a `>` or `tee` into it.
 
 Each verb counts only at the start of a simple command (behind a `(` or `{`, `sudo` with its flags,
 `command`, `exec`, `nohup`, `nice` or `timeout <duration>` with their flags, `env` with its assignments, or a path), so a
