@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-18T11:19:20.137Z",
-  "updatedAt": "2026-11-18T11:42:29.281Z",
+  "updatedAt": "2026-11-18T11:46:29.704Z",
   "branch": "rebuild-sh-installs-dependencies-before-pac",
-  "column": "Doing",
+  "pullRequest": 331,
+  "comments": [
+    {
+      "at": "2026-11-18T11:46:29.685Z",
+      "body": "Pull request #331 opened: rebuild.sh installs dependencies before packaging https://github.com/naeemba/dashboard/pull/331"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
