@@ -93,6 +93,8 @@ describe('list', () => {
     it('refuses a column that is not there, and a word it does not take', () => {
       expect(output('--column', 'Later')).toContain('no column called Later');
       expect(run(done, 'list', 'everything')).toMatchObject({ ok: false });
+      expect(output('--bogus')).toBe('no --bogus here; this command takes --all, --column');
+      expect(output('--all=yes')).toBe('--all takes no value');
     });
   });
 });

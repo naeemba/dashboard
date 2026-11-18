@@ -217,9 +217,10 @@ card's id begins with stands for it, such as its first eight characters; a start
 two cards share is refused, naming both, and a ship, a review or a move the app
 answers is sent the whole id. The usage and the seeded file both say no git
 pull, commit or push is needed around a board command: it syncs the board
-itself, below. The .dashboard/CLAUDE.md the app seeds into each project says only
-that: what the folder holds, that the board is changed through the command, and
-`node "$DASHBOARD_BOARD"` to print what it takes. Its first line carries a
+itself, below. The .dashboard/CLAUDE.md the app seeds into each project says
+what the folder holds, that the board is changed through the command, `node
+"$DASHBOARD_BOARD"` to print what it takes, that `list` leaves out Done and
+Cancelled, and that no git pull, commit or push is needed. Its first line carries a
 version, and it is written whenever the board is read and the file is missing
 or older than the app's (no version line counts as older), so a project seeded
 with an older text that spelled out the card format gets the new one. A file of

@@ -3,6 +3,7 @@ import {
   addCard,
   addComment,
   branchFrom,
+  cardAt,
   backlogColumnIndex,
   columnNamed,
   flightParts,
@@ -65,8 +66,12 @@ export function brokenFilesRefusal(brokenFiles: readonly string[]): string {
 }
 
 // A flag repeated takes its last value.
-function readFlags(flagArguments: readonly string[], allowed: readonly string[]): { flags: Map<string, string> } | { message: string } {
-  const read = readFlagList(flagArguments, allowed);
+function readFlags(
+  flagArguments: readonly string[],
+  allowed: readonly string[],
+  switches: readonly string[] = [],
+): { flags: Map<string, string> } | { message: string } {
+  const read = readFlagList(flagArguments, allowed, switches);
   return 'message' in read ? read : { flags: new Map(read.flags) };
 }
 
@@ -115,7 +120,7 @@ function cardsNamed(board: Board, id: string): Selection[] {
 // A prefix more than one card's id starts with is refused, naming them: picking one would move or
 // comment on a card nobody chose.
 function ambiguousId(board: Board, id: string, matches: readonly Selection[]): string {
-  const named = matches.map((at) => board.columns[at.column].cards[at.card]).map((card) => `${card.id}  ${card.title}`);
+  const named = matches.map((at) => cardAt(board, at)!).map((card) => `${card.id}  ${card.title}`);
   return `${id} starts more than one card's id:\n${named.join('\n')}`;
 }
 
@@ -136,7 +141,7 @@ export function withWholeId(board: Board | null, commandArguments: readonly stri
   if (matches.length > 1) return { message: ambiguousId(board, id, matches) };
   if (matches.length === 0) return { commandArguments };
   const [at] = matches;
-  return { commandArguments: [verb, board.columns[at.column].cards[at.card].id, ...rest] };
+  return { commandArguments: [verb, cardAt(board, at)!.id, ...rest] };
 }
 
 // How much a card has to read, or nothing when it has no trail. `list` carries it beside the branch
@@ -152,7 +157,7 @@ function commentCount(card: Card): string {
 // and are the cards nobody listing the board is looking for.
 // `hidden` is how many cards that left out, counted only when it was the default that did.
 function listedColumns(board: Board, words: readonly string[]): { columns: number[]; hidden: number } | { message: string } {
-  const read = readFlags(words.filter((word) => word !== '--all'), ['column']);
+  const read = readFlags(words, ['column'], ['all']);
   if ('message' in read) return read;
   const name = read.flags.get('column');
   if (name !== undefined) {
@@ -160,7 +165,7 @@ function listedColumns(board: Board, words: readonly string[]): { columns: numbe
     return column === -1 ? { message: noSuchColumn(board, name) } : { columns: [column], hidden: 0 };
   }
   const every = board.columns.map((_, index) => index);
-  if (words.includes('--all')) return { columns: every, hidden: 0 };
+  if (read.flags.has('all')) return { columns: every, hidden: 0 };
   const columns = every.filter((index) => !isFinishedColumn(board, index));
   const shown = columns.reduce((sum, index) => sum + board.columns[index].cards.length, 0);
   return { columns, hidden: board.columns.reduce((sum, column) => sum + column.cards.length, 0) - shown };
