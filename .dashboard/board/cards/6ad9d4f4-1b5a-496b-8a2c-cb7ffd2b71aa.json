@@ -1,0 +1,11 @@
+{
+  "id": "6ad9d4f4-1b5a-496b-8a2c-cb7ffd2b71aa",
+  "title": "dashboard command: pr land fast-forwards the checkout, --version, pane list --reports, usage fixes",
+  "notes": "From the retro over 30 sessions (main d8819041).\n1. pr land: after the merge, fast-forward the local checkout of the base branch when it is clean and on that branch (19 git pull + 7 gh pr view after lands). Also: refuse to merge when no checks registered on the head commit within its wait, instead of merging; a repo with no CI configured at all is the exception to keep working.\n2. dashboard --version prints the installed build's stamp (version+commit) without starting or raising the app (agents unpacked app.asar 22 times).\n3. pane list --reports: every pane's line plus the last message its worker ended a turn with, in one call, kept short (truncate each message).\n4. Usage: the dashboard command with nothing after it brings the running app to the front; it should print usage. 'pane --help' prints its verbs under the name 'session'; it should say pane.\nUpdate docs/command and the usage text; these must never raise or restart the running app.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-18T10:59:21.246Z",
+  "updatedAt": "2026-11-18T10:59:21.246Z",
+  "column": "Backlog",
+  "order": 48
+}
