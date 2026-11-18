@@ -87,8 +87,8 @@ checkout:
 3. Run the `Setup.exe` in `out\make\squirrel.windows\x64\`. SmartScreen says
    "Windows protected your PC": click **More info**, then **Run anyway**.
 
-Or, from Git Bash, `./scripts/rebuild.sh` (the `/rebuild` command) packages the
-checkout into `%LOCALAPPDATA%\Programs\Dashboard`, apart from a Squirrel
+Or, from Git Bash, `./scripts/rebuild.sh` (the `/rebuild` command) runs
+`pnpm install --frozen-lockfile`, then packages the checkout into `%LOCALAPPDATA%\Programs\Dashboard`, apart from a Squirrel
 install, and writes the `dashboard` launcher to `~/.local/bin` as `dashboard`
 (Git Bash) and `dashboard.cmd` (cmd, PowerShell), and a "Dashboard (rebuild)"
 Start menu entry that Windows search finds. It never quits the running
