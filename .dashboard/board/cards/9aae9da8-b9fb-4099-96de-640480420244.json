@@ -1,0 +1,11 @@
+{
+  "id": "9aae9da8-b9fb-4099-96de-640480420244",
+  "title": "Running-app guard: match the mac install path case-insensitively",
+  "notes": "APFS is case-insensitive by default, so rm -rf /applications/dashboard.app deletes the installed build, and stopsRunningApp lets it through. INSTALLED in src/main/workflow/running-app-guard.ts has no /i flag (RUNNING_APP does). Fix: match the /Applications/Dashboard.app alternative case-insensitively and add the lowercase command to the refused list in running-app-guard.test.ts. Issue: https://github.com/naeemba/dashboard/issues/326 Review: https://github.com/naeemba/dashboard/pull/325#discussion_r4612938925",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-18T11:10:00.874Z",
+  "updatedAt": "2026-11-18T11:10:00.874Z",
+  "column": "Backlog",
+  "order": 47
+}
