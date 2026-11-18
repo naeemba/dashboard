@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-18T10:59:21.246Z",
-  "updatedAt": "2026-11-18T10:59:21.246Z",
-  "column": "Backlog",
-  "order": 48
+  "updatedAt": "2026-11-18T10:59:51.386Z",
+  "branch": "dashboard-command-pr-land-fast-forwards-the",
+  "column": "Doing",
+  "order": 1
 }

@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-18T10:59:27.088Z",
-  "updatedAt": "2026-11-18T10:59:27.088Z",
-  "column": "Backlog",
-  "order": 49
+  "updatedAt": "2026-11-18T10:59:54.292Z",
+  "branch": "guardrails-ci-refuses-card-files-in-pr-diff",
+  "column": "Doing",
+  "order": 2
 }
