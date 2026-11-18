@@ -1,0 +1,11 @@
+{
+  "id": "6e2baa89-09b6-4099-ae62-9ad3b9bb12eb",
+  "title": "release.sh installs before the running-app check",
+  "notes": "scripts/release.sh:109 runs pnpm install --frozen-lockfile before it calls scripts/rebuild.sh, which now checks for an app running out of the checkout before its own install. With pnpm start running out of the main checkout and a dependency change on main (an Electron bump, say), release.sh rewrites node_modules/electron under the running dev app, and only then does rebuild.sh stop. Fix: run node scripts/no-running-app.mjs before release.sh's install.\n\nIssue: https://github.com/naeemba/dashboard/issues/332\nReview: https://github.com/naeemba/dashboard/pull/331#discussion_r4613442189",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-18T11:51:35.287Z",
+  "updatedAt": "2026-11-18T11:51:35.287Z",
+  "column": "Backlog",
+  "order": 50
+}
