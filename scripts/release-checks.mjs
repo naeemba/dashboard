@@ -25,3 +25,15 @@ export function runOutcome({ status, conclusion }) {
   if (status !== 'completed') return 'pending';
   return conclusion === 'success' ? 'green' : `failed ${conclusion}`;
 }
+
+// Where CI stands on a commit, from `gh run list ... --json status,conclusion`, every run on it: 'none' when
+// there is none yet, the first failed one's outcome as soon as one has failed (nothing later turns it
+// green), 'pending' while any is still going, so a release waits rather than stopping on a run not done,
+// else 'green'.
+export function ciOutcome(runs) {
+  if (runs.length === 0) return 'none';
+  const outcomes = runs.map(runOutcome);
+  const failed = outcomes.find((outcome) => outcome.startsWith('failed'));
+  if (failed) return failed;
+  return outcomes.includes('pending') ? 'pending' : 'green';
+}

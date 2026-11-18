@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mainRefusal, runOutcome } from './release-checks.mjs';
+import { ciOutcome, mainRefusal, runOutcome } from './release-checks.mjs';
 
 describe('mainRefusal', () => {
   it('lets a bump and a resume through on a clean main equal to origin/main', () => {
@@ -45,5 +45,28 @@ describe('runOutcome', () => {
   it('names the conclusion of a completed run that is not green', () => {
     expect(runOutcome({ status: 'completed', conclusion: 'failure' })).toBe('failed failure');
     expect(runOutcome({ status: 'completed', conclusion: 'cancelled' })).toBe('failed cancelled');
+  });
+});
+
+describe('ciOutcome', () => {
+  const green = { status: 'completed', conclusion: 'success' };
+  const failed = { status: 'completed', conclusion: 'failure' };
+  const running = { status: 'in_progress', conclusion: '' };
+
+  it('is none before CI has run on the commit', () => {
+    expect(ciOutcome([])).toBe('none');
+  });
+
+  it('waits while any run is still going', () => {
+    expect(ciOutcome([green, running])).toBe('pending');
+  });
+
+  it('stops on a failed run without waiting for the others', () => {
+    expect(ciOutcome([running, failed])).toBe('failed failure');
+  });
+
+  it('is green only when every run succeeded, and names a failed one otherwise', () => {
+    expect(ciOutcome([green, green])).toBe('green');
+    expect(ciOutcome([green, failed])).toBe('failed failure');
   });
 });
