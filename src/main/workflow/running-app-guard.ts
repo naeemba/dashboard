@@ -37,16 +37,16 @@ export function runningProcess(pid: number, comm: string, argv: readonly string[
 export type ProcessList = () => readonly RunningProcess[] | null;
 
 // The command line of a process that is the running Dashboard: anything out of the installed build on
-// Linux or a mac (the app, its pane and screen hosts, its Claude), a pane or screen host anywhere, or
+// Linux, a mac or Windows (the app, its pane and screen hosts, its Claude), a pane or screen host anywhere, or
 // electron run out of a checkout whose folder is named dashboard (the shape running-app.mjs looks for).
 // ponytail: a checkout cloned under another name is not recognised; the installed build always is.
-const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|\b(?:pane|screen)-host-entry\.|\/dashboard[^/\s]*\/(?:[^/\s]+\/)?node_modules\/electron\//i;
+const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|[\\/]AppData[\\/]Local[\\/]Programs[\\/]Dashboard[\\/]|\b(?:pane|screen)-host-entry\.|\/dashboard[^/\s]*\/(?:[^/\s]+\/)?node_modules\/electron\//i;
 
 // Where the process list cannot be read: the names a pattern must carry to be taken for the app's.
 const NAMES_APP = /dashboard|electron|claude|\bnode\b|(?:pane|screen)-host/i;
 
-// The installed build named in a command, by any spelling of home.
-const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app)(?![\w.-])`);
+// The installed build named in a command, by any spelling of home (on Windows, of %LOCALAPPDATA%).
+const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|(?:AppData[\\/]+Local|LOCALAPPDATA%?\}?)[\\/]+Programs[\\/]+Dashboard)(?![\w.-])`);
 const WRITES_INTO = new RegExp(String.raw`${SHELL_REDIRECT}\s*["']?[^\s"']*${INSTALLED.source}`);
 
 // The flags of each process finder that take a value, so the value is not read as a name.
