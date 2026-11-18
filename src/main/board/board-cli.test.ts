@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { asksApp, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList } from './board-cli';
+import { asksApp, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList, withWholeId } from './board-cli';
 import { USAGE } from './board-usage';
 import { emptyBoard, cardById, type Board } from '../../shared/board/board';
 
@@ -58,6 +58,78 @@ describe('list', () => {
     const { board } = withCard();
     const result = run(board, 'list');
     expect(result.ok && result.board).toBe(null);
+  });
+
+  // Done and Cancelled are most of an old board, and nobody listing it is looking for them.
+  describe('Done and Cancelled', () => {
+    const footer = (count: string) => `${count} in Done and Cancelled not shown; board list --all shows them, --column <name> one column`;
+    const { board: open, id } = withCard('open');
+    const done = boardAfter(boardAfter(open, 'add', 'finished', '--column', 'Done'), 'add', 'dropped', '--column', 'Cancelled');
+    const output = (...words: string[]) => {
+      const result = run(done, 'list', ...words);
+      return result.ok ? result.output : result.message;
+    };
+
+    it('are left out, and a last line says how many and how to see them', () => {
+      expect(output().split('\n')).toEqual([
+        expect.stringContaining(id),
+        footer('2 cards'),
+      ]);
+    });
+
+    it('are shown with --all, with no last line', () => {
+      expect(output('--all')).toBe(formatList(done));
+    });
+
+    it('can be asked for one column at a time, in any case', () => {
+      expect(output('--column', 'done').split('\n')).toEqual([expect.stringMatching(/^Done .*finished$/)]);
+    });
+
+    it('says No cards. above the last line when nothing else is on the board', () => {
+      const onlyDone = boardAfter(emptyBoard(), 'add', 'finished', '--column', 'Done');
+      expect(run(onlyDone, 'list')).toMatchObject({ output: `No cards.\n${footer('1 card')}` });
+    });
+
+    it('refuses a column that is not there, and a word it does not take', () => {
+      expect(output('--column', 'Later')).toContain('no column called Later');
+      expect(run(done, 'list', 'everything')).toMatchObject({ ok: false });
+    });
+  });
+});
+
+// The first few characters of an id stand for it wherever an id is taken.
+describe('an id prefix', () => {
+  const added = (on: Board, title: string, id: string): Board => {
+    const result = runBoardCommand(on, ['add', title], () => id);
+    if (!result.ok || result.board === null) throw new Error('add failed');
+    return result.board;
+  };
+  const board = added(added(emptyBoard(), 'first', 'ab12-first'), 'second', 'ab34-second');
+
+  it('names the one card whose id starts with it', () => {
+    const shown = run(board, 'show', 'ab12');
+    expect(shown.ok && shown.output).toContain('first');
+    expect(cardById(boardAfter(board, 'comment', 'ab34', 'seen'), 'ab34-second')?.comments).toHaveLength(1);
+  });
+
+  it('prefers a whole id to a prefix of a longer one', () => {
+    const nested = added(added(emptyBoard(), 'short', 'ab'), 'long', 'ab56');
+    const shown = run(nested, 'show', 'ab');
+    expect(shown.ok && shown.output).toContain('short');
+  });
+
+  it('is refused when more than one card starts with it, naming them', () => {
+    expect(run(board, 'move', 'ab', 'Done')).toEqual({
+      ok: false,
+      message: 'ab starts more than one card\'s id:\nab12-first  first\nab34-second  second',
+    });
+  });
+
+  it('is made whole before a ship asks the app, or left as typed when this board has no such card', () => {
+    expect(withWholeId(board, ['ship', 'ab12'])).toEqual({ commandArguments: ['ship', 'ab12-first'] });
+    expect(withWholeId(board, ['move', 'elsewhere', 'Ship'])).toEqual({ commandArguments: ['move', 'elsewhere', 'Ship'] });
+    expect(withWholeId(null, ['ship', 'id'])).toEqual({ commandArguments: ['ship', 'id'] });
+    expect(withWholeId(board, ['review', 'ab'])).toMatchObject({ message: expect.stringContaining('more than one') });
   });
 });
 
