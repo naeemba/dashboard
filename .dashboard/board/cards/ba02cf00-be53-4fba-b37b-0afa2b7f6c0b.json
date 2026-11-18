@@ -1,0 +1,11 @@
+{
+  "id": "ba02cf00-be53-4fba-b37b-0afa2b7f6c0b",
+  "title": "board command: list hides Done and Cancelled, short card ids, and usage says no git pull",
+  "notes": "From the retro over 30 sessions (main d8819041).\n1. board list prints 313 lines / 52.7 KB (~13k tokens), 283 of them Done cards; called 45 times, 31 piped through grep. Hide Done and Cancelled by default; add --all and --column <name>. Keep a one-line footer saying how many were hidden and how to see them.\n2. Accept a unique id prefix wherever an id is taken (selectionOf, src/shared/board/board.ts:70, matches exactly; 8-char prefixes failed with 'no card with id'). An ambiguous prefix is refused, naming the matches; refusal predicate exported from where it is decided (errors-rule-1).\n3. Agents ran git pull before board writes 210 times, unneeded since the board syncs itself. Say plainly in the usage and in the seeded .dashboard/CLAUDE.md (bump its doc version so #317 rewrites the stale copies) that no git pull or push is needed around a board command.\nUpdate docs/board.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-18T10:59:14.942Z",
+  "updatedAt": "2026-11-18T10:59:14.943Z",
+  "column": "Backlog",
+  "order": 47
+}
