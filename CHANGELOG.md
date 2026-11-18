@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.51.0 (2026-11-18)
+
+### What's new
+
+- board command: list hides Done and Cancelled, short card ids, and usage says no git pull
+- Guardrails: CI refuses card files in PR diffs, pre-commit stops without node_modules, release.sh waits for CI
+- dashboard command: pr land fast-forwards the checkout, --version, pane list --reports, usage fixes
+- rebuild.sh installs dependencies before packaging
+- release.sh checks for a running app before it updates the checkout
+
+### What's Changed
+* rebuild.sh: install on Windows (Git Bash) by @sanabandi in https://github.com/naeemba/dashboard/pull/325
+* board: list hides Done and Cancelled, short card ids, and usage says no git pull by @naeemba in https://github.com/naeemba/dashboard/pull/327
+* Guardrails: CI refuses card files in PR diffs, pre-commit stops without node_modules, release.sh waits for CI by @naeemba in https://github.com/naeemba/dashboard/pull/328
+* dashboard command: pr land fast-forwards the checkout, --version, pane list --reports, usage fixes by @naeemba in https://github.com/naeemba/dashboard/pull/329
+* rebuild.sh installs dependencies before packaging by @naeemba in https://github.com/naeemba/dashboard/pull/331
+* release.sh checks for a running app before it updates the checkout by @naeemba in https://github.com/naeemba/dashboard/pull/333
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.50.0...v2.51.0
+
 ## v2.50.0 (2026-11-17)
 
 ### What's new
