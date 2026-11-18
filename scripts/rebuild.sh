@@ -72,7 +72,7 @@ fi
 mv "$staged" "$installed" || { [ -d "$previous" ] && mv "$previous" "$installed"; rm -rf "$staged"; echo "Stopped: could not move the new build into $installed; it is as it was before this run."; exit 1; }
 rm -rf "$previous"
 
-# The `dashboard` command for any terminal: no words open the app, `dashboard <noun> ...` runs the
+# The `dashboard` command for any terminal: no words print its usage, `dashboard <noun> ...` runs the
 # command entry under node (docs/command). Written beside and renamed over, never through: the old
 # launcher was a symlink to the app's executable, and writing through it would overwrite the app.
 # node, not the app's own binary as node: the RunAsNode fuse is off (forge.config.ts, command-decision-3).

@@ -13,7 +13,8 @@ export type SessionCommand =
   // `as` is --screen or --terminal, or null for neither: pane.dispatch picks then (workers-decision-5).
   // `folder` is --in's, as typed: the app resolves it from the folder the command ran in.
   | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; folder: string | null; as: PaneKind | null }
-  | { kind: 'list'; all: boolean }
+  // `reports` adds the end of each worker's last message to its line, so main reads them all in one call.
+  | { kind: 'list'; all: boolean; reports: boolean }
   | { kind: 'send'; id: string; text: string }
   | { kind: 'release'; id: string }
   // release, refused until the worker's card is Done or Cancelled or its branch's pull request merged.
@@ -38,16 +39,16 @@ export type SessionReply = { ok: boolean; output: string };
 export const answered = (output: string): SessionReply => ({ ok: true, output });
 export const refused = (output: string): SessionReply => ({ ok: false, output });
 
-export const SESSION_USAGE = `session — the Dashboard panes of the project you are in
+export const SESSION_USAGE = `pane — the Dashboard panes of the project you are in
 
-  session claim [--project <name|aka>]
-  session run <id> [--card <card id> | --worktree | --in <folder>] [--terminal] "<prompt>"
-  session list [--all]
-  session send <id> "<text>"
-  session release <id>
-  session finish <id>
-  session report <id>
-  session notify <id> running|blocked|done [--prompt-input | --stop-input]
+  pane claim [--project <name|aka>]
+  pane run <id> [--card <card id> | --worktree | --in <folder>] [--terminal] "<prompt>"
+  pane list [--all] [--reports]
+  pane send <id> "<text>"
+  pane release <id>
+  pane finish <id>
+  pane report <id>
+  pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
@@ -64,7 +65,8 @@ otherwise. report prints the pane's line from list and the last
 message its worker ended a turn with. notify is what a worker's hooks call: --stop-input reads Claude
 Code's Stop hook input for how many background tasks and wakeups the session still waits on and its
 last message, --prompt-input the prompt hook's for who put the prompt in. list --all lists the panes
-of every open project and the manager. A card is dispatched with \`board ship <id>\`, not here: it
+of every open project and the manager; --reports ends each line with the end of the last message
+its worker ended a turn with, cut short (report prints it whole). A card is dispatched with \`board ship <id>\`, not here: it
 makes the card's worktree, a worker pane and its agent.`;
 
 type Parsed = { ok: true; command: SessionCommand } | { ok: false; message: string };
@@ -79,7 +81,7 @@ function refuse(message: string): Parsed {
 }
 
 function paneId(word: string | undefined, command: string): string | Parsed {
-  if (word === undefined) return refuse(`session ${command} needs a pane id, the one claim printed`);
+  if (word === undefined) return refuse(`pane ${command} needs a pane id, the one claim printed`);
   return PANE_ID.test(word) ? word : refuse(`${word} is not a pane id — claim prints one, like 2:3`);
 }
 
@@ -109,7 +111,7 @@ function parseRun(words: readonly string[]): Parsed {
   if ([card !== null, worktree, folder !== null].filter(Boolean).length > 1) {
     return refuse('a task runs in its card\'s worktree, a throwaway one or a folder you name with --in, only one of them');
   }
-  if (prompt.join(' ').trim() === '') return refuse('session run needs a prompt for the worker');
+  if (prompt.join(' ').trim() === '') return refuse('pane run needs a prompt for the worker');
   return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, folder, as } };
 }
 
@@ -245,20 +247,20 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     case 'claim': {
       if (rest.length === 0) return { ok: true, command: { kind: 'claim', project: null } };
       const project = rest.slice(1).join(' ').trim();
-      if (rest[0] !== '--project' || project === '') return refuse('session claim takes nothing, or --project and a project\'s name or aka');
+      if (rest[0] !== '--project' || project === '') return refuse('pane claim takes nothing, or --project and a project\'s name or aka');
       return { ok: true, command: { kind: 'claim', project } };
     }
     case 'list': {
-      if (rest.length === 0) return { ok: true, command: { kind: 'list', all: false } };
-      if (rest.length === 1 && rest[0] === '--all') return { ok: true, command: { kind: 'list', all: true } };
-      return refuse('session list takes nothing, or --all');
+      const flags = new Set(rest);
+      if (flags.size !== rest.length || rest.some((flag) => flag !== '--all' && flag !== '--reports')) return refuse('pane list takes nothing, --all, --reports or both');
+      return { ok: true, command: { kind: 'list', all: flags.has('--all'), reports: flags.has('--reports') } };
     }
     case 'run': return parseRun(rest);
     case 'send': {
       const id = paneId(rest[0], 'send');
       if (typeof id !== 'string') return id;
       const text = rest.slice(1).join(' ');
-      if (text.trim() === '') return refuse('session send needs the text to type');
+      if (text.trim() === '') return refuse('pane send needs the text to type');
       return { ok: true, command: { kind: 'send', id, text } };
     }
     case 'release':
@@ -272,7 +274,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       if (typeof id !== 'string') return id;
       const state = rest[1];
       if (state !== 'running' && state !== 'blocked' && state !== 'done') {
-        return refuse('session notify takes running, blocked or done');
+        return refuse('pane notify takes running, blocked or done');
       }
       return parseNotify(id, state, rest.slice(2));
     }

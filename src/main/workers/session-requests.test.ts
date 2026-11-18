@@ -596,6 +596,18 @@ describe('sessionRequests across projects', () => {
     ].join('\n'));
     expect((await ask(['list'])).output).toBe('-2:0\tmain\tmain\t/work/desk');
   });
+
+  // Main read each worker's report one call at a time.
+  it('ends each line with the end of its worker\'s last message on one line with --reports', async () => {
+    const { ports } = project();
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:1', 'go'] });
+    answer.notify('2:1', 'done', undefined, { lastMessage: `${'x'.repeat(300)}\n\tOpened #12.` });
+    const lines = (await answer({ directory: '/work/api', args: ['list', '--reports'] })).output.split('\n');
+    expect(lines[0]).toBe('2:0\tmain\tmain\t/work/api\t');
+    expect(lines[1].split('\t')[4]).toBe(`…${'x'.repeat(188)} Opened #12.`);
+  });
 });
 
 describe('projectOfFolder', () => {

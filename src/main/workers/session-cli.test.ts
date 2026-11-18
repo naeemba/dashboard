@@ -4,12 +4,14 @@ import { hookArguments, olderNotifyArguments, outsidePaneRefusal, parseSessionCo
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
     expect(parseSessionCommand(['claim'])).toEqual({ ok: true, command: { kind: 'claim', project: null } });
-    expect(parseSessionCommand(['list'])).toEqual({ ok: true, command: { kind: 'list', all: false } });
+    expect(parseSessionCommand(['list'])).toEqual({ ok: true, command: { kind: 'list', all: false, reports: false } });
   });
 
   it('reads claim --project and list --all, and refuses anything else after them', () => {
     expect(parseSessionCommand(['claim', '--project', 'new', 'crm'])).toEqual({ ok: true, command: { kind: 'claim', project: 'new crm' } });
-    expect(parseSessionCommand(['list', '--all'])).toEqual({ ok: true, command: { kind: 'list', all: true } });
+    expect(parseSessionCommand(['list', '--all'])).toEqual({ ok: true, command: { kind: 'list', all: true, reports: false } });
+    expect(parseSessionCommand(['list', '--reports', '--all'])).toEqual({ ok: true, command: { kind: 'list', all: true, reports: true } });
+    expect(parseSessionCommand(['list', '--reports', '--reports'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['claim', '--project'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['claim', 'crm'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['list', '--all', 'x'])).toMatchObject({ ok: false });
@@ -99,13 +101,13 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['report'])).toMatchObject({ ok: false });
   });
   it('answers nothing, or a word it does not know, with what it takes', () => {
-    expect(parseSessionCommand([])).toMatchObject({ ok: false, message: expect.stringContaining('session claim') });
+    expect(parseSessionCommand([])).toMatchObject({ ok: false, message: expect.stringContaining('pane claim') });
     expect(parseSessionCommand(['spawn'])).toMatchObject({ ok: false, message: expect.stringMatching(/^no such command: spawn/) });
   });
 
   it('reads send as the pane and everything after it as the text, and refuses no text', () => {
     expect(parseSessionCommand(['send', '2:3', 'run', 'the', 'tests'])).toEqual({ ok: true, command: { kind: 'send', id: '2:3', text: 'run the tests' } });
-    expect(parseSessionCommand(['send', '2:3'])).toEqual({ ok: false, message: 'session send needs the text to type' });
+    expect(parseSessionCommand(['send', '2:3'])).toEqual({ ok: false, message: 'pane send needs the text to type' });
     expect(parseSessionCommand(['send', 'crm', 'hi']).ok).toBe(false);
   });
 });
@@ -179,6 +181,6 @@ describe('outsidePaneRefusal', () => {
     expect(outsidePaneRefusal({ kind: 'claim', project: null })).toContain('--project');
     expect(outsidePaneRefusal({ kind: 'claim', project: 'crm' })).toBeNull();
     expect(outsidePaneRefusal({ kind: 'send', id: '2:3', text: 'hi' })).toBeNull();
-    expect(outsidePaneRefusal({ kind: 'list', all: true })).toBeNull();
+    expect(outsidePaneRefusal({ kind: 'list', all: true, reports: false })).toBeNull();
   });
 });

@@ -71,6 +71,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a worker the app would close, when a page of any screen has the keyboard on it (zoomed or not), it is on the manager page, it is blocked on a question, it is paused on its own background work, or no main ever handed it work, then the app leaves it open.
 - Given a plain terminal outside every project, when `dashboard pane claim --project crm` runs, then a worker opens on crm's page and reports to crm's main; `pane run`, `send` and `release` there act on the project their pane id names.
 - Given several open projects, when `pane list --all` runs, then every open page's panes are listed, the manager's first, each line led by its project's name.
+- Given three workers that ended turns, when `pane list --reports` runs, then each pane's line ends with a fifth column, the last 200 characters of its worker's last message on one line, empty for a pane that has said nothing; `pane report <id>` still prints the whole kept message.
 - Given main dispatches a worker or a card is shipped, when its Claude starts, then it starts with `--session-id` the app chose and the app's session index has its row first (drawer-decision-1).
 - Given a worker's session has used the prompt cache, when the workers popup (Alt+W) is drawn, then the worker's row says `warm 42m` or `cold` for its own session, from the usage sweep (chat-decision-12).
 - Given a throwaway worktree with uncommitted work, when the worker is released, then the worktree is kept and the reply says why.

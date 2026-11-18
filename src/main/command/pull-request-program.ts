@@ -4,16 +4,17 @@ import { isRecord } from '../../shared/app/is-record';
 import { isManagerHomeDirectory, projectRoot } from '../board/board-store';
 import { boardTarget } from '../board/board-target';
 import { projectNamedInFile } from '../projects/project-named';
+import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
-import { type GitHubAnswer, landPullRequest, parsePullRequestCommand } from './pull-request-cli';
+import { type ProgramAnswer, landPullRequest, parsePullRequestCommand } from './pull-request-cli';
 
-// gh in the folder, its exit read rather than thrown: a failed check is an answer, not a failure. A
-// gh that could not start (none installed) has no exit code, and still throws. It runs as long as CI
-// does, inside the scope of the pane or terminal that ran the command.
-function gh(folder: string) {
-  return async (words: string[]): Promise<GitHubAnswer> => {
+// gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
+// failure. One that could not start (none installed) has no exit code, and still throws. gh runs as
+// long as CI does, inside the scope of the pane or terminal that ran the command.
+function answering(program: 'gh' | 'git') {
+  return async (folder: string, words: string[]): Promise<ProgramAnswer> => {
     try {
-      return { ok: true, output: await runProgram('gh', words, folder) };
+      return { ok: true, output: await runProgram(program, words, folder) };
     } catch (error: unknown) {
       if (!isRecord(error) || typeof error.code !== 'number') throw error;
       return { ok: false, output: `${String(error.stdout ?? '')}${String(error.stderr ?? '')}`.trim() };
@@ -31,8 +32,14 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
     return 1;
   }
   try {
-    const answer = await landPullRequest({ gh: gh(project.project), wait: delay }, parsed.target);
+    const answer = await landPullRequest({ gh: (words) => answering('gh')(project.project, words), wait: delay }, parsed.target);
     (answer.ok ? process.stdout : process.stderr).write(`${answer.output}\n`);
+    if (answer.ok && answer.base !== undefined) {
+      // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
+      const forwarded = await fastForwardCheckout(answering('git'), project.project, answer.base)
+        .catch((error: unknown) => `${answer.base} is not fast-forwarded: ${failureLine(error)}`);
+      process.stdout.write(`${forwarded}\n`);
+    }
     return answer.ok ? 0 : 1;
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);

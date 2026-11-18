@@ -87,3 +87,30 @@ at most once a minute (`src/main/usage/weekly-usage-file.ts`). The SDK's
 If the experimental call changes, the file goes stale and budget exits 2; it
 never says under.
 
+
+## command-decision-7: Bare `dashboard` prints the usage, and `pr land` needs checks where CI exists
+
+Bare `dashboard` opened the app as the old launcher did (command-decision-2). An
+agent learning the command runs it with no words, and each time the app came to
+the front over the user's work. It prints the usage now; the app is opened from
+its desktop entry, by any command that needs it, or with one of its flags.
+`--version` is answered from the stamp built into the command file, the same one
+the app checks the command against (app-handshake.ts): agents unpacked app.asar
+22 times in one retro to read it, and asking the running app would say what is
+running rather than what is installed.
+
+`pr land` merged any pull request whose checks had not registered a minute on,
+taking it for a repository with no CI. CI that never started on a commit (a
+workflow whose trigger missed, a GitHub outage) merged unchecked. Only a
+repository whose last twenty merged pull requests reported no check is merged so
+now; one whose pull requests report checks is refused, and a workflow filtered
+by `paths` that skips the change is landed by hand. Twenty, not five: a run of
+docs-only or `[skip ci]` merges as long as the sample reads as no CI, and five
+such in a row is common where twenty is not; the larger sample is still one
+call. It asks the merged pull
+requests, not workflow files or Actions runs: the file count took Dependabot,
+Pages and CodeQL default setup for CI and refused every land in a repository
+with no CI on pull requests, and counting `pull_request` runs missed CI on a
+`push` trigger or from an outside service, merging unchecked there again. The fast-forward after a merge is `--ff-only` in a checkout with nothing
+uncommitted, so it never merges or overwrites anything of the user's: 19 git
+pulls and 7 `gh pr view`s followed lands in the retro.
