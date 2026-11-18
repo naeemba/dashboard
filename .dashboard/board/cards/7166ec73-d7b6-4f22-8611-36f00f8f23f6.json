@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-18T11:19:20.137Z",
-  "updatedAt": "2026-11-18T11:19:20.137Z",
-  "column": "Backlog",
-  "order": 48
+  "updatedAt": "2026-11-18T11:42:29.281Z",
+  "branch": "rebuild-sh-installs-dependencies-before-pac",
+  "column": "Doing",
+  "order": 0
 }
