@@ -45,9 +45,13 @@ const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|[\\/]AppData
 // Where the process list cannot be read: the names a pattern must carry to be taken for the app's.
 const NAMES_APP = /dashboard|electron|claude|\bnode\b|(?:pane|screen)-host/i;
 
+// A word matched in any case, for the Windows path: its filesystem ignores case, Linux's does not.
+const anyCase = (word: string) => [...word].map((letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`).join('');
+
 // The installed build named in a command, by its tail, so any spelling of home (on Windows, of
-// %LOCALAPPDATA%, quoted or through cygpath) is caught.
-const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|[\\/]Programs[\\/]+Dashboard)(?![\w.-])`);
+// %LOCALAPPDATA%, quoted or through cygpath) is caught. The Start menu's own Programs folder, where
+// rebuild.sh puts its "Dashboard (rebuild)" shortcut, is not the build.
+const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|(?<!${anyCase('Start Menu')})[\\/]${anyCase('Programs')}[\\/]+${anyCase('Dashboard')})(?![\w.-])`);
 const WRITES_INTO = new RegExp(String.raw`${SHELL_REDIRECT}\s*["']?[^\s"']*${INSTALLED.source}`);
 
 // The flags of each process finder that take a value, so the value is not read as a name.

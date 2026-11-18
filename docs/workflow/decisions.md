@@ -158,8 +158,8 @@ agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
 - `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
 - a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, or `find` with
   `-delete` or `-exec`, naming the installed build (on Windows `%LOCALAPPDATA%\Programs\Dashboard`, matched
-  by its `Programs/Dashboard` tail so any spelling of `%LOCALAPPDATA%`, quoted or through `cygpath`, and
-  either slash), or a `>` or `tee` into it.
+  by its `Programs/Dashboard` tail in any case so any spelling of `%LOCALAPPDATA%`, quoted or through
+  `cygpath`, and either slash, but not the Start menu's `Programs` folder), or a `>` or `tee` into it.
 
 Each verb counts only at the start of a simple command (behind a `(` or `{`, `sudo` with its flags,
 `command`, `exec`, `nohup`, `nice` or `timeout <duration>` with their flags, `env` with its assignments, or a path), so a
