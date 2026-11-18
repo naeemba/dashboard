@@ -1,0 +1,11 @@
+{
+  "id": "11097e67-21ee-4dea-a586-8d09b48614ed",
+  "title": "release.sh checks for a running app before it updates the checkout",
+  "notes": "scripts/release.sh, after the release is out (around line 107): git merge --ff-only origin/main, then pnpm install --frozen-lockfile, tsc, eslint, test, and only then scripts/rebuild.sh, whose first step is node scripts/no-running-app.mjs. So someone running a dev Dashboard out of this checkout (a contributor, or any version other than the installed build) has its source and node_modules rewritten under it before the check stops the script. Run node scripts/no-running-app.mjs before the merge, stopping with the same --resume hint as the rest of this stage. Keep the install: tsc, eslint and test after it need node_modules, so do not delete it. Keep rebuild.sh's own check (it runs alone too). Docs: docs/workflow (or wherever release.sh is described) and its history line.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-18T12:31:34.175Z",
+  "updatedAt": "2026-11-18T12:31:34.175Z",
+  "column": "Backlog",
+  "order": 51
+}
