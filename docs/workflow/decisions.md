@@ -131,6 +131,9 @@ is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` t
   `git merge --ff-only` already pulls to `origin/main`, so no separate fast-forward.
 - `runOutcome`: pending until completed, then green only for `success`. The CI gate and the wait for the
   Release run both ask it, so they agree on green.
+- `ciOutcome` (2026-11-18): the CI gate waits on every CI run on the commit, asking `runOutcome` of each,
+  and stops only on a failed one, as soon as one has failed. It used to stop when the newest was still running, and agents waited by
+  hand instead: 13 `gh run watch` and 41 `gh run list` calls across 30 sessions.
 - The run is polled with `gh run view` every 15 seconds, not watched: `gh run watch`'s exit status is the
   same for a failed run and a dropped connection, which is how v2.43.0 looked failed while it built.
 - Every GitHub read goes through `retry`, four tries over about twenty seconds. `gh workflow run` is never

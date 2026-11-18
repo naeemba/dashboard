@@ -47,13 +47,18 @@ refusal=$(node scripts/release-checks-step.mjs main "$mode" "$branch" "$tree" "$
 [ -z "$refusal" ] || stop "$refusal"
 
 if [ "$mode" = bump ]; then
-  # The newest CI run on this commit, which a re-run updates in place.
-  ci=$(retry gh run list --workflow ci.yml --commit "$head" --limit 1 --json status,conclusion --jq '.[0] // empty')
-  [ -n "$ci" ] || stop "CI has not run on $head yet."
-  outcome=$(node scripts/release-checks-step.mjs run "$ci")
+  # Every CI run on this commit (a re-run updates its run in place), waited on until all have finished.
+  while :; do
+    runs=$(retry gh run list --workflow ci.yml --commit "$head" --json status,conclusion)
+    outcome=$(node scripts/release-checks-step.mjs ci "$runs")
+    [ "$outcome" = pending ] || break
+    [ -n "${waiting:-}" ] || echo "Waiting for CI to finish on $head"
+    waiting=1
+    sleep 15
+  done
   case "$outcome" in
     green) ;;
-    pending) stop "CI is still running on $head. Try again when it is green." ;;
+    none) stop "CI has not run on $head yet." ;;
     *) stop "CI failed on $head (${outcome#failed }). Fix main first." ;;
   esac
 
