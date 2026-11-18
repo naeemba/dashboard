@@ -1,0 +1,11 @@
+{
+  "id": "c335c842-3d51-48f2-8a2e-ee23e99e24bd",
+  "title": "Guardrails: CI refuses card files in PR diffs, pre-commit stops without node_modules, release.sh waits for CI",
+  "notes": "From the retro over 30 sessions (main d8819041).\n1. CI: a PR whose diff (against its merge base) touches .dashboard/board/ fails with a message saying to take main's copy. Card files leaked into 12+ PR diffs. Check git log first for any legitimate reason a PR carries a card file and exempt it.\n2. scripts/pre-commit.mjs filesToCheck/runsTypecheck return nothing when toolsInstalled is false, so a fresh worktree commits unchecked (that is how a broken merge reached #196). Stop the commit and say to run pnpm install instead. Keep the existing tests passing and add one.\n3. scripts/release.sh stops when CI is still running on the commit (around line 55); wait for every run on the commit to finish instead (agents made 13 gh run watch and 41 gh run list calls), then stop only if one failed.\nDo not touch scripts/rebuild.sh: PR #325 is changing it.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-18T10:59:27.088Z",
+  "updatedAt": "2026-11-18T10:59:27.088Z",
+  "column": "Backlog",
+  "order": 49
+}
