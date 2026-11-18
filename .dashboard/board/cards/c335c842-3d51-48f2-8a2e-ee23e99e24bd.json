@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-18T10:59:27.088Z",
-  "updatedAt": "2026-11-18T10:59:54.292Z",
+  "updatedAt": "2026-11-18T11:11:18.959Z",
   "branch": "guardrails-ci-refuses-card-files-in-pr-diff",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 328,
+  "comments": [
+    {
+      "at": "2026-11-18T11:11:18.933Z",
+      "body": "Pull request #328 opened: Guardrails: CI refuses card files in PR diffs, pre-commit stops without node_modules, release.sh waits for CI https://github.com/naeemba/dashboard/pull/328"
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }
