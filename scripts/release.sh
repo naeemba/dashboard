@@ -104,6 +104,9 @@ tag=$(git tag --merged origin/main --contains "$sha" --sort=v:refname 'v*' | sed
 
 # The release is out from here on; only the install here is left.
 next="$tag is released, but installing it here failed above. Fix that, then scripts/release.sh --resume $run."
+# Before the merge and the install: both rewrite files under an app running out of this checkout.
+# rebuild.sh checks again, since it also runs alone.
+node scripts/no-running-app.mjs
 # A resume's main is behind by the release commit the run pushed; a bump's is too by now.
 git merge --quiet --ff-only origin/main
 pnpm install --frozen-lockfile
