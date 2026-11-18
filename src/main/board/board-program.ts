@@ -1,7 +1,7 @@
-import { isManagerHomeDirectory, openBoard, projectRoot, putBackSeededDocs, readBoard, seededDocsNow, writeBoard } from './board-store';
+import { isManagerHomeDirectory, openBoard, peekBoard, projectRoot, putBackSeededDocs, readBoard, seededDocsNow, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
-import { asksApp, BOARD_REQUEST, brokenFilesRefusal, readsBoard, runBoardCommand, runBoardCommandOnLatest, type CommandResult } from './board-cli';
+import { asksApp, BOARD_REQUEST, brokenFilesRefusal, readsBoard, runBoardCommand, runBoardCommandOnLatest, withWholeId, type CommandResult } from './board-cli';
 import { syncBoard, type BoardSync } from './board-sync-git';
 import { notSyncedRefusal, notSyncedWarning } from './board-sync';
 import { rebaseBoardChange } from '../../shared/board/board-merge';
@@ -37,8 +37,12 @@ async function run(words: readonly string[]): Promise<number> {
   // A ship, a review and a move into Ship or Review are the app's to do, so the screen, the command
   // and the sweep all mean the same thing by one; docs/actions/README.md says why. The app is started
   // when none answers. asksApp says which; on a worktree's board a move is only a move.
+  // A prefix of a card's id is made whole first, against this folder's board, since the app takes a
+  // whole id only.
   if (asksApp(commandArguments, !isLinkedWorktree(project))) {
-    const [verb, ...rest] = commandArguments;
+    const whole = withWholeId(peekBoard(project), commandArguments);
+    if ('message' in whole) return answer({ ok: false, message: whole.message });
+    const [verb, ...rest] = whole.commandArguments;
     return askRunningApp([BOARD_REQUEST, verb, project, ...rest]);
   }
   // Without salvage: a file that does not parse stays where it is under its own name, so every run

@@ -533,7 +533,7 @@ describe('seedBoardDirectory', () => {
   // SEEDED_DOCS_VERSION, then put the new hash here.
   it('has a new version for every new text', () => {
     const hash = createHash('sha256').update(EXPLANATION_FOR_AGENTS).update(EXPLANATION_FOR_PEOPLE).digest('hex');
-    expect([SEEDED_DOCS_VERSION, hash]).toEqual([1, '3186c10a7c9bda0ccbd5d80d2f8abd715707d6c0371961d660ef555597589860']);
+    expect([SEEDED_DOCS_VERSION, hash]).toEqual([2, 'b525399d97d835e788cb760836d1d028d5794ae72544ef2f31fa85db604a52d9']);
   });
 });
 

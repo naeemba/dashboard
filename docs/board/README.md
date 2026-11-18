@@ -210,9 +210,17 @@ Every pane also carries DASHBOARD_COMMAND, the path to a command whose board
 words list cards and move them from a shell: run `node "$DASHBOARD_COMMAND"
 board` in a project to see what it takes, or DASHBOARD_BOARD, the older path to
 the same program, with no word in front. It is how an agent working a card moves
-its own. The .dashboard/CLAUDE.md the app seeds into each project says only
-that: what the folder holds, that the board is changed through the command, and
-`node "$DASHBOARD_BOARD"` to print what it takes. Its first line carries a
+its own. `board list` leaves out Done and Cancelled, most of an old board, and
+says in a last line how many cards that hid; `--all` lists them, `--column
+<name>` one column. Wherever a verb takes an id, any start of one that a single
+card's id begins with stands for it, such as its first eight characters; a start
+two cards share is refused, naming both, and a ship, a review or a move the app
+answers is sent the whole id. The usage and the seeded file both say no git
+pull, commit or push is needed around a board command: it syncs the board
+itself, below. The .dashboard/CLAUDE.md the app seeds into each project says
+what the folder holds, that the board is changed through the command, `node
+"$DASHBOARD_BOARD"` to print what it takes, that `list` leaves out Done and
+Cancelled, and that no git pull, commit or push is needed. Its first line carries a
 version, and it is written whenever the board is read and the file is missing
 or older than the app's (no version line counts as older), so a project seeded
 with an older text that spelled out the card format gets the new one. A file of
@@ -377,6 +385,7 @@ board there does not parse, and when it cannot tell which branch on the remote i
 ## Scenarios
 
 - Given a plain terminal in a folder with no `.dashboard` and no git repository above it, when `dashboard board list` runs, then it is refused naming `--project` and no board is seeded there.
+- Given a board with cards in Done, when `board list` runs, then they are left out and a last line says how many, naming `--all`; `board show ba02cf00` shows the one card whose id starts with it, and a start two cards share is refused naming both (`board-cli.test.ts`).
 - Given `crm` in `~/.dashboard/projects.yaml`, when `dashboard board move <id> Done --project crm` runs from any folder, then the card moves on crm's board.
 - Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
 - Given the power goes out just after a board, notes or session write, when the app next launches, then it reads the old file or the new one, never an empty one (`replaceFile` flushes before it renames).

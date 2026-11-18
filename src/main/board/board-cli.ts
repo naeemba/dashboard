@@ -3,10 +3,12 @@ import {
   addCard,
   addComment,
   branchFrom,
+  cardAt,
   backlogColumnIndex,
   columnNamed,
   flightParts,
   isCommentBody,
+  isFinishedColumn,
   isPriority,
   isTitle,
   moveCardToColumn,
@@ -64,8 +66,12 @@ export function brokenFilesRefusal(brokenFiles: readonly string[]): string {
 }
 
 // A flag repeated takes its last value.
-function readFlags(flagArguments: readonly string[], allowed: readonly string[]): { flags: Map<string, string> } | { message: string } {
-  const read = readFlagList(flagArguments, allowed);
+function readFlags(
+  flagArguments: readonly string[],
+  allowed: readonly string[],
+  switches: readonly string[] = [],
+): { flags: Map<string, string> } | { message: string } {
+  const read = readFlagList(flagArguments, allowed, switches);
   return 'message' in read ? read : { flags: new Map(read.flags) };
 }
 
@@ -101,6 +107,43 @@ function withFields(board: Board, selection: Selection, flags: Map<string, strin
   return { board: next };
 }
 
+// Where every card an id names is: the card whose id it is, or else each card whose id starts with it,
+// so the first eight characters of an id are enough to type.
+function cardsNamed(board: Board, id: string): Selection[] {
+  const exact = selectionOf(board, id);
+  if (exact !== null) return [exact];
+  if (id === '') return [];
+  return board.columns.flatMap((column, columnIndex) =>
+    column.cards.flatMap((card, cardIndex) => (card.id.startsWith(id) ? [{ column: columnIndex, card: cardIndex }] : [])));
+}
+
+// A prefix more than one card's id starts with is refused, naming them: picking one would move or
+// comment on a card nobody chose.
+function ambiguousId(board: Board, id: string, matches: readonly Selection[]): string {
+  const named = matches.map((at) => cardAt(board, at)!).map((card) => `${card.id}  ${card.title}`);
+  return `${id} starts more than one card's id:\n${named.join('\n')}`;
+}
+
+function findCard(board: Board, id: string): Selection | { message: string } {
+  const matches = cardsNamed(board, id);
+  if (matches.length === 1) return matches[0];
+  return { message: matches.length === 0 ? `no card with id ${id}` : ambiguousId(board, id, matches) };
+}
+
+// A ship, a review and a move asked of the app carry the card's whole id, which is all the app
+// matches: a prefix is made whole here, against the board this folder holds. One that names no card
+// here goes as it was typed, for the app to answer, since its board can hold a card this one has not
+// seen yet.
+export function withWholeId(board: Board | null, commandArguments: readonly string[]): { commandArguments: readonly string[] } | { message: string } {
+  const [verb, id, ...rest] = commandArguments;
+  if (board === null || id === undefined) return { commandArguments };
+  const matches = cardsNamed(board, id);
+  if (matches.length > 1) return { message: ambiguousId(board, id, matches) };
+  if (matches.length === 0) return { commandArguments };
+  const [at] = matches;
+  return { commandArguments: [verb, cardAt(board, at)!.id, ...rest] };
+}
+
 // How much a card has to read, or nothing when it has no trail. `list` carries it beside the branch
 // and the pull request for the same reason the card front in the app does: without it, finding which
 // cards have anything to read means running `show` on every one of them.
@@ -109,15 +152,36 @@ function commentCount(card: Card): string {
   return trail === 0 ? '' : `${trail} ${trail === 1 ? 'comment' : 'comments'}`;
 }
 
-// One line per card, every column, left to right and top to bottom — the order the board draws them
-// in, so reading this and reading the screen give the same answer about what is where.
-export function formatList(board: Board): string {
-  const cards = board.columns.flatMap((column) => column.cards.map((card) => ({ column: column.name, card })));
-  if (cards.length === 0) return 'No cards.';
+// Which columns `list` prints: one named with --column, every one with --all, and otherwise every one
+// but Done and Cancelled. Those two hold most of an old board — 283 of 313 lines on this project's —
+// and are the cards nobody listing the board is looking for.
+// `hidden` is how many cards that left out, counted only when it was the default that did.
+function listedColumns(board: Board, words: readonly string[]): { columns: number[]; hidden: number } | { message: string } {
+  const read = readFlags(words, ['column'], ['all']);
+  if ('message' in read) return read;
+  const name = read.flags.get('column');
+  if (name !== undefined) {
+    const column = columnNamed(board, name);
+    return column === -1 ? { message: noSuchColumn(board, name) } : { columns: [column], hidden: 0 };
+  }
+  const every = board.columns.map((_, index) => index);
+  if (read.flags.has('all')) return { columns: every, hidden: 0 };
+  const columns = every.filter((index) => !isFinishedColumn(board, index));
+  const shown = columns.reduce((sum, index) => sum + board.columns[index].cards.length, 0);
+  return { columns, hidden: board.columns.reduce((sum, column) => sum + column.cards.length, 0) - shown };
+}
+
+// One line per card in the columns asked for, left to right and top to bottom — the order the board
+// draws them in, so reading this and reading the screen give the same answer about what is where.
+// With Done and Cancelled left out, a last line says how many cards that hid and how to see them.
+export function formatList(board: Board, columns: readonly number[] = board.columns.map((_, index) => index), hidden = 0): string {
+  const cards = columns.flatMap((index) => board.columns[index].cards.map((card) => ({ column: board.columns[index].name, card })));
+  const footer = hidden === 0 ? [] : [`${hidden} ${hidden === 1 ? 'card' : 'cards'} in Done and Cancelled not shown; board list --all shows them, --column <name> one column`];
+  if (cards.length === 0) return ['No cards.', ...footer].join('\n');
   const columnWidth = Math.max(...cards.map((row) => row.column.length));
   const priorityWidth = Math.max(...PRIORITIES.map((priority) => priority.length));
-  return cards
-    .map(({ column, card }) => {
+  return [
+    ...cards.map(({ column, card }) => {
       const count = commentCount(card);
       const parts = [...flightParts(card), ...(count === '' ? [] : [count])];
       return [
@@ -126,8 +190,9 @@ export function formatList(board: Board): string {
         card.id,
         card.title + (parts.length === 0 ? '' : `  (${parts.join(' · ')})`),
       ].join('  ');
-    })
-    .join('\n');
+    }),
+    ...footer,
+  ].join('\n');
 }
 
 // One card in full: the line `list` prints for it, then its description, then its trail oldest
@@ -162,8 +227,9 @@ export function runBoardCommand(
   }
 
   if (command === 'list') {
-    if (rest.length > 0) return { ok: false, message: 'list takes nothing after it' };
-    return { ok: true, output: formatList(board), board: null };
+    const listed = listedColumns(board, rest);
+    if ('message' in listed) return { ok: false, message: listed.message };
+    return { ok: true, output: formatList(board, listed.columns, listed.hidden), board: null };
   }
 
   if (command === 'add') {
@@ -195,11 +261,11 @@ export function runBoardCommand(
     const [id, columnName, ...extra] = rest;
     if (id === undefined || columnName === undefined) return { ok: false, message: 'move needs a card id and a column' };
     if (extra.length > 0) return { ok: false, message: 'move takes nothing after the column' };
-    const selection = selectionOf(board, id);
-    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const selection = findCard(board, id);
+    if ('message' in selection) return { ok: false, message: selection.message };
     const column = columnNamed(board, columnName);
     if (column === -1) return { ok: false, message: noSuchColumn(board, columnName) };
-    // selectionOf just found it, so it is there.
+    // findCard just found it, so it is there.
     const title = board.columns[selection.column].cards[selection.card].title;
     const moved = moveCardToColumn(board, selection, column);
     // moveCardToColumn hands back the board it was given when the card is already there. Saying so
@@ -211,14 +277,14 @@ export function runBoardCommand(
   if (command === 'set') {
     const [id, ...flagArgs] = rest;
     if (id === undefined) return { ok: false, message: 'set needs a card id' };
-    const selection = selectionOf(board, id);
-    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const selection = findCard(board, id);
+    if ('message' in selection) return { ok: false, message: selection.message };
     const read = readFlags(flagArgs, ['branch', 'pull-request', 'priority', 'notes']);
     if ('message' in read) return { ok: false, message: read.message };
     if (read.flags.size === 0) return { ok: false, message: 'set needs something to set' };
     const fields = withFields(board, selection, read.flags);
     if ('message' in fields) return { ok: false, message: fields.message };
-    // Still where selectionOf found it: every field change edits the card in place.
+    // Still where findCard found it: every field change edits the card in place.
     const card = fields.board.columns[selection.column].cards[selection.card];
     return {
       ok: true,
@@ -231,8 +297,8 @@ export function runBoardCommand(
     const [id, ...extra] = rest;
     if (id === undefined) return { ok: false, message: 'show needs a card id' };
     if (extra.length > 0) return { ok: false, message: 'show takes nothing after the id' };
-    const selection = selectionOf(board, id);
-    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const selection = findCard(board, id);
+    if ('message' in selection) return { ok: false, message: selection.message };
     const column = board.columns[selection.column];
     return { ok: true, output: formatCard(column.name, column.cards[selection.card]), board: null };
   }
@@ -241,8 +307,8 @@ export function runBoardCommand(
     const [id, body, ...extra] = rest;
     if (id === undefined || body === undefined) return { ok: false, message: 'comment needs a card id and something to say' };
     if (extra.length > 0) return { ok: false, message: 'comment takes one piece of text; quote it' };
-    const selection = selectionOf(board, id);
-    if (selection === null) return { ok: false, message: `no card with id ${id}` };
+    const selection = findCard(board, id);
+    if ('message' in selection) return { ok: false, message: selection.message };
     // The same rule the board's own box and parseCard hold a comment to. Without a word here `board
     // comment <id> ""` would answer as a success and append nothing.
     if (!isCommentBody(body)) return { ok: false, message: 'comment needs something to say' };

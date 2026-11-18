@@ -4,7 +4,7 @@ import { PRIORITIES } from '../../shared/board/board';
 // The seeded .dashboard/CLAUDE.md does not quote it: it tells an agent to run the command bare.
 export const USAGE = `board — the Dashboard board of the project you are in
 
-  board list
+  board list [--all] [--column <name>]
   board show <id>
   board add "<title>" [--column <name>] [--priority <level>] [--notes "<text>"]
   board move <id> <column>
@@ -13,6 +13,9 @@ export const USAGE = `board — the Dashboard board of the project you are in
   board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
   board comment <id> "<text>"
   board guard            a PreToolUse hook: reads its input on stdin, refuses a hand edit of the board
+
+list leaves out Done and Cancelled unless --all or --column names them. An <id> can be any start of
+one that only one card's id begins with, such as its first eight characters.
 
 Levels: ${PRIORITIES.join(', ')}. An empty --branch or --pull-request clears the field. Any of them
 takes --project <name|aka> to work on that project's board, from ~/.dashboard/projects.yaml, instead
@@ -24,7 +27,8 @@ and review start them without a move; review is how to start a loop with the rev
 off. On a worktree's board a move is only a move. Everything else edits the board's files alone.
 
 A board git tracks is read and written on origin's default branch, from the project or any worktree,
-and the project's checkout is brought up to it. Offline, it is written here, with a warning.
+and the project's checkout is brought up to it. Offline, it is written here, with a warning. So no git
+pull, commit or push is needed before or after a board command: it does its own.
 
 A card that will not be done is kept, not deleted: \`board move <id> Cancelled\` puts it in the
 Cancelled column after Done, which starts nothing.
