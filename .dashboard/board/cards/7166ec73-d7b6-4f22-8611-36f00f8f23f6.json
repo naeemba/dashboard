@@ -1,0 +1,11 @@
+{
+  "id": "7166ec73-d7b6-4f22-8611-36f00f8f23f6",
+  "title": "rebuild.sh installs dependencies before packaging",
+  "notes": "scripts/rebuild.sh runs pnpm run package with whatever node_modules holds; after #156 added yaml, a rebuild from a checkout installed earlier failed to resolve it. Run pnpm install --frozen-lockfile before pnpm run package, on every OS (#325 added the Windows path). A lockfile out of date stops the rebuild with pnpm's message; the installed build stays untouched. Update the rebuild docs and .claude/commands/rebuild.md if they describe the steps.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-18T11:19:20.137Z",
+  "updatedAt": "2026-11-18T11:19:20.137Z",
+  "column": "Backlog",
+  "order": 48
+}
