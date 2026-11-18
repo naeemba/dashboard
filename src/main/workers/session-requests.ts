@@ -10,7 +10,7 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { closedReport, doneReport, LAST_MESSAGE_KEPT, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
+import { closedReport, doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import { promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
@@ -424,8 +424,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return `${prefix}${id}\t${paneLabel(paneFromId(id).index)}\t${stateOf(id)}\t${ports.directoryOf(id) ?? ''}`;
   }
 
-  function paneLines(slot: number, prefix: string): string[] {
-    return ports.openPanes(slot).map((index) => paneLine(terminalId(slot, index), prefix));
+  // With reports, a fifth column: the end of the worker's last message, empty for one that has said none.
+  function paneLines(slot: number, prefix: string, reports: boolean): string[] {
+    return ports.openPanes(slot).map((index) => {
+      const id = terminalId(slot, index);
+      const said = lastMessages.get(id);
+      return reports ? `${paneLine(id, prefix)}\t${said === undefined ? '' : oneLineTail(said)}` : paneLine(id, prefix);
+    });
   }
 
   // A worker's line from list and the last message it ended a turn with, so main learns what a worker
@@ -437,9 +442,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }
 
   // --all puts the project's name first on each line, so the lines of two projects tell apart.
-  function list(slot: number, all: boolean): SessionReply {
-    if (!all) return answered(paneLines(slot, '').join('\n'));
-    return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`)).join('\n'));
+  function list(slot: number, all: boolean, reports: boolean): SessionReply {
+    if (!all) return answered(paneLines(slot, '', reports).join('\n'));
+    return answered(ports.openSlots().flatMap((each) => paneLines(each.slot, `${each.name}\t`, reports)).join('\n'));
   }
 
   // A pane holding main's worker that no run started this launch (resumed after a restart, a shipped
@@ -497,7 +502,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     try {
       switch (command.kind) {
         case 'claim': return sessionReply(await claim.call({ slot, project: command.project }));
-        case 'list': return list(slot, command.all);
+        case 'list': return list(slot, command.all, command.reports);
         case 'send': return await onWorker(command.id, slot, () => send(command.id, slot, projectPath ?? '', command.text));
         case 'run': {
           // --in is typed relative to where the command ran, main's own folder most often.

@@ -22,6 +22,11 @@ export function tail(text: string, characters: number): string {
   return text.length <= characters ? text : `…${text.slice(-characters)}`;
 }
 
+// The end of a worker's last message on one line, as `pane list --reports` adds it to the pane's line:
+// short, so a list of ten workers stays a screen, and with no tab or newline to break the columns.
+const LIST_TAIL = 200;
+export const oneLineTail = (text: string) => tail(text.replace(/\s+/g, ' ').trim(), LIST_TAIL);
+
 // What main is told about a worker the app closed (auto-release.ts) before main read a report from it:
 // the close takes back any stop notice, and main would wait on a pane that is gone. The worker may
 // have sent a report main has not read yet, and the pane is gone when main reads it, so nothing could
