@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-18T12:31:34.175Z",
-  "updatedAt": "2026-11-18T12:31:40.658Z",
+  "updatedAt": "2026-11-18T12:34:08.919Z",
   "branch": "release-sh-checks-for-a-running-app-before",
-  "column": "Doing",
+  "pullRequest": 333,
+  "comments": [
+    {
+      "at": "2026-11-18T12:34:08.893Z",
+      "body": "Pull request #333 opened: release.sh checks for a running app before it updates the checkout https://github.com/naeemba/dashboard/pull/333"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
