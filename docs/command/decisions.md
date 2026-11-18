@@ -102,9 +102,12 @@ running rather than what is installed.
 `pr land` merged any pull request whose checks had not registered a minute on,
 taking it for a repository with no CI. CI that never started on a commit (a
 workflow whose trigger missed, a GitHub outage) merged unchecked. Only a
-repository whose last five merged pull requests reported no check is merged so
+repository whose last twenty merged pull requests reported no check is merged so
 now; one whose pull requests report checks is refused, and a workflow filtered
-by `paths` that skips the change is landed by hand. It asks the merged pull
+by `paths` that skips the change is landed by hand. Twenty, not five: a run of
+docs-only or `[skip ci]` merges as long as the sample reads as no CI, and five
+such in a row is common where twenty is not; the larger sample is still one
+call. It asks the merged pull
 requests, not workflow files or Actions runs: the file count took Dependabot,
 Pages and CodeQL default setup for CI and refused every land in a repository
 with no CI on pull requests, and counting `pull_request` runs missed CI on a

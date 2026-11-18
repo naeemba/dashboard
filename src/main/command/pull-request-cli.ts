@@ -61,7 +61,7 @@ const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state
 function recentCheckCount(url: string): string[] | undefined {
   const [, repository] = /^https?:\/\/([^/]+\/[^/]+\/[^/]+)\/pull\//.exec(url) ?? [];
   if (repository === undefined) return undefined;
-  return ['pr', 'list', '--repo', repository, '--state', 'merged', '--limit', '5', '--json', 'statusCheckRollup', '-q', '[.[].statusCheckRollup | length] | add // 0'];
+  return ['pr', 'list', '--repo', repository, '--state', 'merged', '--limit', '20', '--json', 'statusCheckRollup', '-q', '[.[].statusCheckRollup | length] | add // 0'];
 }
 
 export async function landPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {

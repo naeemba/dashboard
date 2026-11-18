@@ -19,7 +19,7 @@ function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
 }
 
 const open = { ok: true, output: 'OPEN abc123 main https://github.com/acme/api/pull/12' };
-const RECENT_CHECKS = 'pr list --repo github.com/acme/api --state merged --limit 5 --json statusCheckRollup -q [.[].statusCheckRollup | length] | add // 0';
+const RECENT_CHECKS = 'pr list --repo github.com/acme/api --state merged --limit 20 --json statusCheckRollup -q [.[].statusCheckRollup | length] | add // 0';
 const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
 const lostAnswer = 'Post https://api.github.com/graphql: unexpected EOF';
 const MERGE = 'pr merge 12 --merge --match-head-commit abc123';
