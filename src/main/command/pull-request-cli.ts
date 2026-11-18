@@ -9,13 +9,16 @@ export const PULL_REQUEST_USAGE = `pr — land a pull request of the project you
 
 land notes the pull request's head commit, waits for every check on it (gh pr checks --watch), then
 merges that commit: gh pr merge --merge --match-head-commit <sha>, so a push during the wait is
-refused rather than merged unchecked. No checks reported a minute after asking is a repository with
-no CI, and it is merged. A merge call that fails is checked against the pull request: merged at
+refused rather than merged unchecked. No checks reported a minute after asking is merged only in a
+repository with no workflows at all; one that has workflows is refused, since its CI did not start on
+that commit (a push, or gh pr merge by hand, if it never will). A merge call that fails is checked against the pull request: merged at
 that commit is merged. A network error on the merge or the wait is tried once more, five seconds
 on. A failed check or a refused merge is printed and the pull request stays open. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; a land stopped at that
-limit has not failed, run it again. It runs in the project of the folder you are in, or with
---project in that project's folder from ~/.dashboard/projects.yaml.`;
+limit has not failed, run it again. Once merged, the checkout on the base branch (the project's own,
+or the worktree that has it) is fast-forwarded when it has nothing uncommitted, so no git pull is
+needed after. It runs in the project of the folder you are in, or with --project in that project's
+folder from ~/.dashboard/projects.yaml.`;
 
 type Parsed = { ok: true; target: string } | { ok: false; message: string };
 
@@ -32,6 +35,8 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
 
 // What gh answered: whether it exited 0, and what it printed on either stream.
 export type GitHubAnswer = { ok: boolean; output: string };
+// A landed pull request says the branch it merged into, for the fast-forward after (fast-forward-checkout.ts).
+export type LandAnswer = GitHubAnswer & { base?: string };
 export type LandPorts = { gh(words: string[]): Promise<GitHubAnswer>; wait(milliseconds: number): Promise<void> };
 
 // gh's words for a pull request whose CI has not started, or that runs none.
@@ -46,13 +51,17 @@ export const isNetworkError = (answer: GitHubAnswer) => !answer.ok && NETWORK_ER
 // A second try a few seconds on, so a Wi-Fi rejoin or a VPN reconnect does not fail both.
 export const RETRY_WAIT_MS = 5_000;
 
-// The pull request's state and head commit, as `OPEN <sha>`.
-const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid', '-q', '.state + " " + .headRefOid'];
+// The pull request's state, head commit and base branch, as `OPEN <sha> main`.
+const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName', '-q', '.state + " " + .headRefOid + " " + .baseRefName'];
 
-export async function landPullRequest(ports: LandPorts, target: string): Promise<GitHubAnswer> {
+// How many workflows the repository has: none is a repository without CI, whose pull requests never
+// report a check. gh fills in {owner}/{repo} from the folder it runs in.
+const WORKFLOW_COUNT = ['api', 'repos/{owner}/{repo}/actions/workflows', '-q', '.total_count'];
+
+export async function landPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {
   const head = await ports.gh(stateAndHead(target));
   if (!head.ok) return head;
-  const [state, sha] = head.output.trim().split(' ');
+  const [state, sha, base] = head.output.trim().split(' ');
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
   // A watch whose answer was lost is not a failed check: watch once more.
   const watchOnce = () => ports.gh(['pr', 'checks', target, '--watch']);
@@ -71,10 +80,16 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
   const noChecks = reportsNoChecks(checks);
   if (isNetworkError(checks)) return { ok: false, output: `lost gh's answer twice waiting on the checks of ${target}; nothing is merged, run it again\n\n${checks.output}` };
   if (!checks.ok && !noChecks) return { ok: false, output: `a check failed on ${sha}; ${target} is not merged\n\n${checks.output}` };
+  // Still none a minute on is a repository without CI, or CI that never started on this commit.
+  if (noChecks) {
+    const workflows = await ports.gh(WORKFLOW_COUNT);
+    if (!workflows.ok) return { ok: false, output: `no checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged: ${workflows.output}` };
+    if (workflows.output.trim() !== '0') return { ok: false, output: `no checks reported on ${sha} a minute on, and the repository has workflows; ${target} is not merged` };
+  }
   const merged = await mergeAt(ports, target, sha);
   if (isNetworkError(merged)) return { ok: false, output: `lost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again: ${merged.output}` };
   if (!merged.ok) return { ok: false, output: `gh refused to merge ${target} at ${sha}: ${merged.output}` };
-  return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', with no checks reported' : ''}` };
+  return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', a repository with no CI' : ''}`, base };
 }
 
 // A merge whose answer was lost may have gone through: a failed call is read back from the
@@ -83,7 +98,8 @@ async function mergeAt(ports: LandPorts, target: string, sha: string, retries = 
   const merged = await ports.gh(['pr', 'merge', target, '--merge', '--match-head-commit', sha]);
   if (merged.ok) return merged;
   const state = await ports.gh(stateAndHead(target));
-  if (state.ok && state.output.trim() === `MERGED ${sha}`) return state;
+  const [mergedState, mergedHead] = state.output.trim().split(' ');
+  if (state.ok && mergedState === 'MERGED' && mergedHead === sha) return state;
   if (retries === 0 || !isNetworkError(merged)) return merged;
   await ports.wait(RETRY_WAIT_MS);
   return mergeAt(ports, target, sha, retries - 1);
