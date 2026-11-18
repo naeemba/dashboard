@@ -8,3 +8,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-16 — `dashboard budget`: the 7-day usage against `budget.weeklyCap`, stale or missing exits 2 (command-decision-6)
 - 2026-11-16 — The app writes `~/.claude/usage-7d.json` from its Claude screens' measure, so `budget` reads fresh with no terminal statusline (command-decision-6)
 - 2026-11-16 — `pr land` reads a failed merge back from the pull request: merged at the noted commit is merged, a network error on the merge or the wait is tried once more
+- 2026-11-18 — `pr land` refuses a head no check started on where the repository has workflows, and fast-forwards the base checkout after; bare `dashboard` prints the usage, `--version` the installed stamp; `pane list --reports`; `pane --help` says pane (command-decision-7)
