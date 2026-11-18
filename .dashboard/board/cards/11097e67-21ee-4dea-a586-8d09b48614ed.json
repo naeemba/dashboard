@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-18T12:31:34.175Z",
-  "updatedAt": "2026-11-18T12:39:26.851Z",
+  "updatedAt": "2026-11-18T12:41:27.583Z",
   "branch": "release-sh-checks-for-a-running-app-before",
   "pullRequest": 333,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-18T12:39:26.851Z",
       "body": "Review loop on PR #333 converged in 1 round with no findings and no commits; no conflict with main. CI 5/5 passed on head 5a66eedf. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-18T12:41:27.565Z",
+      "body": "Pull request #333 merged: release.sh checks for a running app before it updates the checkout https://github.com/naeemba/dashboard/pull/333"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 269
 }
