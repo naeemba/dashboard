@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-18T10:59:14.942Z",
-  "updatedAt": "2026-11-18T11:22:30.468Z",
+  "updatedAt": "2026-11-18T11:23:12.333Z",
   "branch": "board-command-list-hides-done-and-cancelled",
   "pullRequest": 327,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-18T11:22:30.468Z",
       "body": "Review loop on PR #327: converged, ready to merge. 1 round: review posted 3 findings (2 low, 1 nit), all fixed in 74b099b4 (list refusal names --all, docs/board README CLAUDE.md lines, card lookup dedup). Those fixes were not re-reviewed (floor). No conflicts with main. CI: 5/5 checks pass on head 74b099b4."
+    },
+    {
+      "at": "2026-11-18T11:23:12.301Z",
+      "body": "Pull request #327 merged: board: list hides Done and Cancelled, short card ids, and usage says no git pull https://github.com/naeemba/dashboard/pull/327"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 265
 }
