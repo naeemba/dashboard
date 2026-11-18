@@ -4,7 +4,8 @@ The `dashboard` command: one entry that drives the app from any terminal, for
 you and for Claude sessions outside the app's panes. In a pane it is
 `node "$DASHBOARD_COMMAND" <noun> <verb> ...`; anywhere else it is
 `dashboard <noun> <verb> ...`, the launcher `scripts/rebuild.sh` installs in
-`~/.local/bin` on Linux and macOS. Each noun is a program of its own and parses
+`~/.local/bin` on Linux and macOS, and on Windows beside a `dashboard.cmd`
+for cmd and PowerShell. Each noun is a program of its own and parses
 its own verbs; this feature only picks the program.
 
 | Noun | Program | Verbs |

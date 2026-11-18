@@ -38,7 +38,7 @@ To build and install from this checkout instead:
 
     scripts/rebuild.sh
 
-It packages the app and installs it to `/Applications/Dashboard.app` on a mac or `~/.local/opt/dashboard` on Linux, leaving any running copy alone. On Linux nothing adds a launcher: run `~/.local/opt/dashboard/Dashboard`, or point a desktop entry of your own at it.
+It packages the app and installs it to `/Applications/Dashboard.app` on a mac, `~/.local/opt/dashboard` on Linux or `%LOCALAPPDATA%\Programs\Dashboard` on Windows (from Git Bash; [Windows setup](docs/app/windows-setup.md)), leaving any running copy alone. On Linux nothing adds a launcher: run `~/.local/opt/dashboard/Dashboard`, or point a desktop entry of your own at it.
 
 To cut a release, on main with CI green: `scripts/release.sh minor` (or `major`, `patch`; `/release minor` in Claude Code). It runs the Release workflow, waits for it, then installs the new version here the way `scripts/rebuild.sh` does. [Workflow](docs/workflow/README.md#how-to-release) has the rest.
 
