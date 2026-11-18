@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 repo=$(pwd -P)
 
 os=$(uname -s)
+windows=
 case "$os" in
   Darwin)
     parent=/Applications
@@ -28,6 +29,7 @@ case "$os" in
     resources=resources
     ;;
   MINGW*|MSYS*|CYGWIN*)
+    windows=yes
     parent="$(cygpath -u "$LOCALAPPDATA")/Programs"
     name=Dashboard
     pattern='out/Dashboard-win32-*'
@@ -64,9 +66,10 @@ stamp="$(node -p 'require("./package.json").version')+$(git rev-parse --short=12
 grep -a -q -F "$stamp" "$staged/$resources/app.asar" || { rm -rf "$staged"; echo "Stopped: the build does not carry $stamp; $installed is unchanged."; exit 1; }
 # Windows refuses to rename a folder whose Dashboard.exe is running; stop then, with the installed build in place.
 if [ -d "$installed" ]; then
-  mv "$installed" "$previous" 2>/dev/null || { rm -rf "$staged"; echo "Stopped: $installed is in use (a Dashboard runs from it?); it is unchanged. Quit it yourself and run this again."; exit 1; }
+  mv "$installed" "$previous" || { rm -rf "$staged"; echo "Stopped: could not move $installed aside (on Windows, a Dashboard running from it holds it); it is unchanged. Quit it yourself and run this again."; exit 1; }
 fi
-mv "$staged" "$installed"
+# A virus scanner still reading the new Dashboard.exe can fail this rename on Windows: put the old build back.
+mv "$staged" "$installed" || { [ -d "$previous" ] && mv "$previous" "$installed"; rm -rf "$staged"; echo "Stopped: could not move the new build into $installed; it is as it was before this run."; exit 1; }
 rm -rf "$previous"
 
 # The `dashboard` command for any terminal: no words open the app, `dashboard <noun> ...` runs the
@@ -77,12 +80,10 @@ launcher="$HOME/.local/bin/dashboard"
 # The paths the launcher hands to node: a Windows node reads C:/..., not the shell's /c/...
 target_app="$installed/$executable"
 target_entry="$installed/$resources/app.asar.unpacked/.vite/build/dashboard-cli-entry.js"
-case "$os" in
-  MINGW*|MSYS*|CYGWIN*)
-    target_app=$(cygpath -m "$target_app")
-    target_entry=$(cygpath -m "$target_entry")
-    ;;
-esac
+if [ -n "$windows" ]; then
+  target_app=$(cygpath -m "$target_app")
+  target_entry=$(cygpath -m "$target_entry")
+fi
 mkdir -p "$(dirname "$launcher")"
 cat > "$launcher.new" <<LAUNCHER
 #!/bin/sh
@@ -93,13 +94,11 @@ LAUNCHER
 chmod 755 "$launcher.new"
 mv -f "$launcher.new" "$launcher"
 # cmd and PowerShell do not run a sh script: the same launcher as a .cmd beside it.
-case "$os" in
-  MINGW*|MSYS*|CYGWIN*)
-    printf '@echo off\r\nrem Written by the Dashboard'"'"'s scripts/rebuild.sh; rebuilding writes it again.\r\nset "DASHBOARD_APP=%s"\r\nnode "%s" %%*\r\n' "$target_app" "$target_entry" > "$launcher.cmd.new"
-    mv -f "$launcher.cmd.new" "$launcher.cmd"
-    # A Start menu entry, so Windows search finds this build; "(rebuild)" keeps it apart from a Squirrel install's.
-    DASHBOARD_EXE=$(cygpath -w "$installed/$executable") powershell.exe -NoProfile -Command '$l = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Dashboard (rebuild).lnk"; $s = (New-Object -ComObject WScript.Shell).CreateShortcut($l); $s.TargetPath = $env:DASHBOARD_EXE; $s.WorkingDirectory = Split-Path $env:DASHBOARD_EXE; $s.Save()'
-    ;;
-esac
+if [ -n "$windows" ]; then
+  printf '@echo off\r\nsetlocal\r\nrem Written by the Dashboard'"'"'s scripts/rebuild.sh; rebuilding writes it again.\r\nset "DASHBOARD_APP=%s"\r\nnode "%s" %%*\r\n' "$target_app" "$target_entry" > "$launcher.cmd.new"
+  mv -f "$launcher.cmd.new" "$launcher.cmd"
+  # A Start menu entry, so Windows search finds this build; "(rebuild)" keeps it apart from a Squirrel install's.
+  DASHBOARD_EXE=$(cygpath -w "$installed/$executable") powershell.exe -NoProfile -Command '$l = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Dashboard (rebuild).lnk"; $s = (New-Object -ComObject WScript.Shell).CreateShortcut($l); $s.TargetPath = $env:DASHBOARD_EXE; $s.WorkingDirectory = Split-Path $env:DASHBOARD_EXE; $s.Save()'
+fi
 
 echo "Installed $stamp in $installed, and $launcher. The running app is untouched — restart it when you are ready."
