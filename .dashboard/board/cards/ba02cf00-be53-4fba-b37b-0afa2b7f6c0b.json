@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-18T10:59:14.942Z",
-  "updatedAt": "2026-11-18T10:59:14.943Z",
-  "column": "Backlog",
-  "order": 47
+  "updatedAt": "2026-11-18T10:59:48.513Z",
+  "branch": "board-command-list-hides-done-and-cancelled",
+  "column": "Doing",
+  "order": 0
 }
