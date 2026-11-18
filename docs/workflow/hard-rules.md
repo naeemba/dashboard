@@ -118,7 +118,10 @@ request diffs over 30 sessions; the 60 merged ones up to #279 each carried their
 worker moved it in its branch.
 
 CI enforces it: on a pull request, `scripts/board-unchanged.mjs` lists the files the merge commit changes
-against its base and fails the run when any is under `.dashboard/board/`, naming them and giving the
-`git restore --source=origin/main` that takes main's copy. `git log` shows no pull request that needed one;
+against its base and fails the run when any is under `.dashboard/board/` or is the old `board.json`
+(still read, so a stale copy brings back deleted cards), naming them and giving the `git restore` from
+the merge-base that leaves the branch with no board change. Restoring from `origin/main` instead leaves a
+copy of main's board as of the fetch, which conflicts the next time main moves one of those cards.
+`git log` shows no pull request that needed one;
 the seeded `.dashboard/CLAUDE.md` and `README.md` are changed by pull requests on purpose (#317) and sit
 outside the folder, so nothing is exempt.
