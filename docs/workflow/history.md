@@ -19,3 +19,4 @@ One line per merged change: date, pull request, why.
 - 2026-11-17 #320 — A hook refuses removing the session's own worktree and editing another one (workflow-decision-10)
 - 2026-11-17 — A hook refuses npm, yarn or bun in a pnpm project, and the other ways round (workflow-decision-9)
 - 2026-11-18 #328 — CI refuses a pull request that changes the board's files; pre-commit refuses code without node_modules; release.sh waits for CI (workflow-rule-7, workflow-rule-5, workflow-decision-6)
+- 2026-11-18 #331 — rebuild.sh runs pnpm install --frozen-lockfile before packaging, after a checkout installed before #156 failed to resolve yaml
