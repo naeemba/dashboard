@@ -3,7 +3,7 @@
 How a change is made and shipped here: never touch the running app, a decision
 gets a module and a test, and the build stamps its commit instead of every card
 bumping the version. Owns `.gitattributes`, the CI and release workflows (the release notes and download links in
-`scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` (its decisions in `scripts/release-checks.mjs`, tested beside it), the pre-commit hook (`.githooks/pre-commit`, turned on by the `prepare` script; its decision in `scripts/pre-commit.mjs`, tested beside it, run by `scripts/pre-commit-step.mjs`; workflow-rule-5), `scripts/version-unchanged.mjs`, CI's refusal of a pull request that moves the version (tested beside it; `scripts/version-unchanged-step.mjs` is its entry) and the
+`scripts/release-notes.mjs`, tested beside it), `scripts/release.sh` (its decisions in `scripts/release-checks.mjs`, tested beside it), the pre-commit hook (`.githooks/pre-commit`, turned on by the `prepare` script; its decision in `scripts/pre-commit.mjs`, tested beside it, run by `scripts/pre-commit-step.mjs`; workflow-rule-5), `scripts/version-unchanged.mjs`, CI's refusal of a pull request that moves the version (tested beside it; `scripts/version-unchanged-step.mjs` is its entry), `scripts/board-unchanged.mjs`, CI's refusal of a pull request that changes the board's files (tested beside it; `scripts/board-unchanged-step.mjs` is its entry; workflow-rule-7) and the
 `/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build
 hooks, the test run's temporary-folder guard and its eslint rule (`vitest.config.ts`, `vitest.temporary-folder-guard.ts`, tested beside it, its count in
 `vitest.temporary-folder-leftovers.ts`, tested beside it, and `src/main/testing/temporary-folder.ts`), `src/main/testing/source-files.ts` (every non-test `.ts` file under a folder, for the tests that read the source), the running-app guard (`src/main/workflow/running-app-guard.ts`, tested beside it, run by `board guard`; workflow-decision-7), the package-manager guard (`src/main/workflow/package-manager-guard.ts`, tested beside it, run by `board guard`; workflow-decision-9), the worktree guard (`src/main/workflow/worktree-guard.ts`, tested beside it, run by `board guard`; workflow-decision-10), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule
@@ -30,8 +30,8 @@ folders in `/tmp`, and on 2026-11-08 they filled its 16G and stopped every worke
 
     scripts/release.sh minor        # or major, or patch; /release minor in Claude Code runs the same
 
-Run it on main, clean and equal to `origin/main`, with CI green on that commit; it refuses otherwise and
-says which. It dispatches Release with the bump, watches the run, and once the release is published pulls
+Run it on main, clean and equal to `origin/main`; it refuses otherwise and says which. It waits while CI
+is still running on that commit, and stops as soon as a run has failed. It dispatches Release with the bump, watches the run, and once the release is published pulls
 main, runs `pnpm install --frozen-lockfile`, the three checks and `scripts/rebuild.sh`, which stops unless the
 installed `app.asar` carries the new `<version>+<commit>` stamp, and prints the version, the release URL
 and "restart the app when ready". It never quits or restarts the running app. A failed leg stops it with
@@ -51,11 +51,14 @@ follows. The workflow writes them, so they are the same whichever way the run wa
 - Given a code change is done, when the checks pass, then the installed app is left running and the change is reported as needing a rebuild.
 - Given a rule with branches, when it is written, then it lives in its own module beside a `.test.ts`.
 - Given a card's pull request, when it merges, then `package.json` `version` has not moved in it, and the build it makes shows the merged commit.
+- Given a pull request whose diff against its base changes a file under `.dashboard/board/`, when CI runs, then it fails naming the files and saying to take main's copy; `.dashboard/CLAUDE.md` and `README.md` go through.
 - Given a fresh checkout on Windows, when `pnpm start`, `pnpm run package` or `pnpm run make` runs, then node-pty's prebuilt binary is copied into `build/Release`, nothing is compiled, and the package carries conpty and winpty beside `pty.node`.
 - Given a pull request, when CI runs, then `windows-latest` installs, type-checks, runs the tests and makes the Squirrel installer without publishing it, and a test that needs POSIX paths, file modes, unix sockets or a half-open socket is skipped there with its reason beside it.
-- Given `pnpm install` in a checkout, when a commit stages a `.ts` or `.js` file that eslint or tsc refuses, then the commit is refused with their errors; a commit staging only `.dashboard/` or docs, or made in a checkout with no `node_modules`, goes through without running either.
+- Given `pnpm install` in a checkout, when a commit stages a `.ts` or `.js` file that eslint or tsc refuses, then the commit is refused with their errors; a commit staging only `.dashboard/` or docs goes through without running either, with or without `node_modules`.
+- Given a checkout with no `node_modules`, when a commit stages code or the type or lint settings, then it is refused and says to run `pnpm install`.
 - Given Release → Run workflow on main with a bump, when it runs, then `package.json` and a new `CHANGELOG.md` section (GitHub's generated notes since the last release) are committed to main and tagged `vX.Y.Z`, Linux, Windows and macOS (Apple silicon) each build and upload to a draft release, and the release is published with one download line per platform and a link to README.md's unsigned first-launch steps. Started from any other branch, it fails and says so.
-- Given `scripts/release.sh <bump>` on a branch other than main, with uncommitted changes, behind or ahead of `origin/main`, or with CI not green on that commit, when it runs, then it stops before dispatching and says which.
+- Given `scripts/release.sh <bump>` on a branch other than main, with uncommitted changes, behind or ahead of `origin/main`, or with no CI run on that commit or one that failed, when it runs, then it stops before dispatching and says which.
+- Given `scripts/release.sh <bump>` while CI is still running on that commit, when it runs, then it says it is waiting, polls every 15 seconds until every run has finished, and dispatches only if all are green.
 - Given `scripts/release.sh <bump>` whose run publishes, when it finishes, then main is fast-forwarded, the checks have passed, the installed `app.asar` carries `<version>+<commit>`, and the running app is still running.
 - Given `scripts/release.sh --resume <run id>` on a run with a failed job, when it runs, then it names the failed jobs, installs nothing, and the release stays a draft.
 - Given `scripts/release.sh --resume <run id>` on a clean main that `origin/main` is ahead of by the run's release commit, when it runs, then it watches the run and fast-forwards main to install it. With a commit `origin/main` lacks, or uncommitted changes, it stops and says which.

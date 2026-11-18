@@ -87,9 +87,11 @@ worker found "'wholePath' is defined but never used" mid-edit, a round trip afte
 eslint runs only when code is staged, and on the whole project (`eslint .`) when `eslint.config.*`,
 `package.json` or `pnpm-lock.yaml` is: a new rule otherwise passed on the config file alone and refused
 the files it targets only in CI. tsc also runs when `tsconfig*.json`, `package.json` or `pnpm-lock.yaml`
-is, since those change what it reports. Both skip a commit that only touches `.dashboard/` or docs, and a
-checkout with no `node_modules`: the app and the board command commit cards from throwaway worktrees, and a
-card must never wait on, or fail on, tsc. `filesToCheck` and `runsTypecheck` in `scripts/pre-commit.mjs`
+is, since those change what it reports. Both skip a commit that only touches `.dashboard/` or docs: the app
+and the board command commit cards from throwaway worktrees with no `node_modules`, and a card must never
+wait on, or fail on, tsc. A commit that stages code in a checkout with no `node_modules` is refused and
+told to run `pnpm install`: it used to go through unchecked, and that is how a broken merge from a fresh
+worktree reached #196. `filesToCheck`, `runsTypecheck` and `missingToolsRefusal` in `scripts/pre-commit.mjs`
 decide, tested beside it; `scripts/pre-commit-step.mjs` runs the tools with node, and `.gitattributes` pins
 the hook to LF, so the same hook works on Windows (a CRLF shebang refuses every commit). It reads the
 working tree, not the index: a half-staged file is checked as it stands on disk. `git commit --no-verify`
@@ -106,3 +108,17 @@ after review. No lint or test holds it earlier: 24 of the 40 test files with a `
 `win32` guard and pass on Windows, since they use the path as a string and never touch the disk, so a check
 on the literal would flag mostly correct tests. Card 43ceddd8 (make the POSIX path-literal tests portable
 instead of skipping them) is the way to a check that holds.
+
+## workflow-rule-7: A pull request leaves the board's files alone
+
+Every board write lands on main by itself (board-decision-5), from the screen or the `board` command, from
+the checkout or a worktree. A card file in a branch is a copy from the day it was written there: merged, it
+puts the card back to that day's column and drops what main has had since. Card files leaked into 12+ pull
+request diffs over 30 sessions; the 60 merged ones up to #279 each carried their own card, from when a
+worker moved it in its branch.
+
+CI enforces it: on a pull request, `scripts/board-unchanged.mjs` lists the files the merge commit changes
+against its base and fails the run when any is under `.dashboard/board/`, naming them and giving the
+`git restore --source=origin/main` that takes main's copy. `git log` shows no pull request that needed one;
+the seeded `.dashboard/CLAUDE.md` and `README.md` are changed by pull requests on purpose (#317) and sit
+outside the folder, so nothing is exempt.
