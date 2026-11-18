@@ -21,6 +21,10 @@ jobs:
       - name: Refuse a moved version
         if: github.event_name == 'pull_request'
         run: node scripts/version-unchanged-step.mjs "$(git show HEAD^1:package.json)"
+      # workflow-rule-7: every board write lands on the base by itself, so a card file here leaked in.
+      - name: Refuse the board's files
+        if: github.event_name == 'pull_request'
+        run: node scripts/board-unchanged-step.mjs "$GITHUB_BASE_REF"
       # Version from packageManager; before setup-node, whose pnpm cache needs it.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
