@@ -45,8 +45,9 @@ const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|[\\/]AppData
 // Where the process list cannot be read: the names a pattern must carry to be taken for the app's.
 const NAMES_APP = /dashboard|electron|claude|\bnode\b|(?:pane|screen)-host/i;
 
-// The installed build named in a command, by any spelling of home (on Windows, of %LOCALAPPDATA%).
-const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|(?:AppData[\\/]+Local|LOCALAPPDATA%?\}?)[\\/]+Programs[\\/]+Dashboard)(?![\w.-])`);
+// The installed build named in a command, by its tail, so any spelling of home (on Windows, of
+// %LOCALAPPDATA%, quoted or through cygpath) is caught.
+const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|[\\/]Programs[\\/]+Dashboard)(?![\w.-])`);
 const WRITES_INTO = new RegExp(String.raw`${SHELL_REDIRECT}\s*["']?[^\s"']*${INSTALLED.source}`);
 
 // The flags of each process finder that take a value, so the value is not read as a name.

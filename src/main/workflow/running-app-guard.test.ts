@@ -63,6 +63,8 @@ describe('stopsRunningApp', () => {
     'cat x | tee /Applications/Dashboard.app/Contents/Info.plist',
     'rm -rf /c/Users/me/AppData/Local/Programs/Dashboard',
     'rm -rf "$LOCALAPPDATA/Programs/Dashboard"',
+    'rm -rf "$LOCALAPPDATA"/Programs/Dashboard',
+    'rm -rf "$(cygpath -u "$LOCALAPPDATA")/Programs/Dashboard"',
     'cp -a out/Dashboard-win32-x64 "${LOCALAPPDATA}/Programs/Dashboard"',
     String.raw`rm -rf C:\Users\me\AppData\Local\Programs\Dashboard`,
     'kill 4248',

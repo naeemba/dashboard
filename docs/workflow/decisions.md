@@ -157,8 +157,9 @@ agent had to remember; now a PreToolUse Bash hook refuses the call. It refuses:
 - `systemctl stop`, `kill` or `restart` of `agents.slice` or `panes.slice`;
 - `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
 - a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, or `find` with
-  `-delete` or `-exec`, naming the installed build (on Windows `%LOCALAPPDATA%\Programs\Dashboard`, in
-  any spelling of `%LOCALAPPDATA%` and either slash), or a `>` or `tee` into it.
+  `-delete` or `-exec`, naming the installed build (on Windows `%LOCALAPPDATA%\Programs\Dashboard`, matched
+  by its `Programs/Dashboard` tail so any spelling of `%LOCALAPPDATA%`, quoted or through `cygpath`, and
+  either slash), or a `>` or `tee` into it.
 
 Each verb counts only at the start of a simple command (behind a `(` or `{`, `sudo` with its flags,
 `command`, `exec`, `nohup`, `nice` or `timeout <duration>` with their flags, `env` with its assignments, or a path), so a
