@@ -93,7 +93,9 @@ install, and writes the `dashboard` launcher to `~/.local/bin` as `dashboard`
 (Git Bash) and `dashboard.cmd` (cmd, PowerShell), and a "Dashboard (rebuild)"
 Start menu entry that Windows search finds. It never quits the running
 app; while a Dashboard runs from that folder Windows will not rename it, and
-the script stops with the old build in place.
+the script stops with the old build in place. The in-app update refuses this
+build ("this build came from scripts/rebuild.sh; it updates by rebuilding"):
+there is no Squirrel `Update.exe` above it to install a release.
 
 The installed app reads its `.env` from
 `%USERPROFILE%\.config\dashboard\.env`, not the repository's.

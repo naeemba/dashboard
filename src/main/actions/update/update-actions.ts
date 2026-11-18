@@ -1,5 +1,5 @@
 import { app, autoUpdater } from 'electron';
-import { rmSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import type { Release, UpdateState } from '../../../shared/app/update';
@@ -109,7 +109,7 @@ export function updateActions(main: UpdateMain): UpdateQuit {
     state: () => state,
     set(next: UpdateState) { state = next; main.send('update:change', state); },
   };
-  const installed = installFolder(process.platform, process.execPath, app.isPackaged);
+  const installed = installFolder(process.platform, process.execPath, app.isPackaged, existsSync);
   const installer = process.platform === 'win32' ? squirrel : isRefused(installed) ? null : zipInstaller(installed);
   const refusal = (release: Release) => updateRefusal(installed, release, process.platform, process.arch);
   // The release Restart was picked for, until the quit question is answered.

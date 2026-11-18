@@ -47,6 +47,10 @@ launch and six-hourly check off. The key still checks when pressed.
 - **Windows**: Squirrel's `Update.exe`, through Electron's `autoUpdater`,
   pointed at the release's download folder, where `release.yml` uploads
   `RELEASES` and the nupkg. Squirrel checks the package itself. Works unsigned.
+  A build with no `Update.exe` one folder above its executable's (a
+  `scripts/rebuild.sh` install in `%LOCALAPPDATA%\Programs\Dashboard`) is
+  refused at the check: "this build came from scripts/rebuild.sh; it updates
+  by rebuilding".
 - **macOS (Apple silicon)**: `Dashboard-darwin-arm64-<version>.zip`, unpacked
   with `ditto` beside `/Applications/Dashboard.app`, swapped in the same way,
   then `com.apple.quarantine` cleared. Electron's `autoUpdater` refuses unsigned

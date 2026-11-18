@@ -91,9 +91,16 @@ export function releaseFolderUrl(found: ReleaseAsset): string {
 }
 
 // What the swap replaces: the folder holding the executable on Linux, the .app bundle on a mac. A run
-// out of a checkout is not an install: it updates by pulling and rebuilding.
-export function installFolder(platform: NodeJS.Platform, executable: string, packaged: boolean): string | Refused {
+// out of a checkout is not an install: it updates by pulling and rebuilding. On Windows Squirrel updates
+// it, through the Update.exe one folder above the executable's; a rebuild.sh install has none.
+export function installFolder(platform: NodeJS.Platform, executable: string, packaged: boolean, exists: (file: string) => boolean): string | Refused {
   if (!packaged) return { refused: 'this is a development run; it updates by pulling and rebuilding, not from a release' };
+  if (platform === 'win32') {
+    const folder = path.win32.dirname(executable);
+    return exists(path.win32.join(folder, '..', 'Update.exe'))
+      ? folder
+      : { refused: 'this build came from scripts/rebuild.sh; it updates by rebuilding' };
+  }
   if (platform === 'darwin') {
     const bundle = executable.lastIndexOf('.app/');
     return bundle === -1 ? { refused: `${executable} is not inside an app bundle` } : executable.slice(0, bundle + 4);
