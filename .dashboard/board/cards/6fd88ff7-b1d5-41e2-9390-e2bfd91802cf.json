@@ -1,0 +1,11 @@
+{
+  "id": "6fd88ff7-b1d5-41e2-9390-e2bfd91802cf",
+  "title": "Running-app guard: cover the Windows Squirrel install and Windows process killers",
+  "notes": "running-app-guard.ts matches only .local/opt/dashboard and /Applications/Dashboard.app (INSTALLED line 49, RUNNING_APP line 43) and only pkill/killall/kill. On Windows an agent's rm -rf \"$LOCALAPPDATA/Dashboard\", taskkill /IM Dashboard.exe /F or Stop-Process -Name Dashboard goes through and kills or deletes the installed app mid-turn (workflow-rule-1). Issue: https://github.com/naeemba/dashboard/issues/326 Review: https://github.com/naeemba/dashboard/pull/325#discussion_r4612730992",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-18T10:55:04.232Z",
+  "updatedAt": "2026-11-18T10:55:04.232Z",
+  "column": "Backlog",
+  "order": 46
+}
