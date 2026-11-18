@@ -33,13 +33,14 @@ export const DASHBOARD_USAGE = `dashboard — drive the Dashboard app from any t
 Dashboard is a desktop app with one page per project: a main Claude session, the worker panes it
 dispatches into, an editor and a kanban board kept in the project's .dashboard/board folder.
 
-  dashboard                     open the app, or bring it to the front
+  dashboard --version           the installed build's stamp, version+commit; never starts the app
   dashboard board <command>     read and change a project's board
   dashboard pane <command>      claim a worker pane, start Claude in it, type into it, release it
   dashboard project <command>   list, add, change, open, close and switch to the projects in ~/.dashboard/projects.yaml
   dashboard pr land <n>         wait for a pull request's checks, then merge the commit they passed on
   dashboard budget [--cap <n>]  the 7-day usage against the cap you set once; exits 1 at the cap
   dashboard <noun> --help       what a noun takes
+  dashboard --<app flag>        start the app with that flag (--remote), or hand it to the running one
 
 pane, board ship and review, a board move into Ship or Review, and project open, close and focus
 need the running app and start it when none answers; every other board verb and move, and project
@@ -78,18 +79,21 @@ ${PULL_REQUEST_USAGE}`,
 
 const HELP = new Set(['--help', '-h', 'help']);
 
-// `app` is the app's own command line: none, or flags such as --remote, which the app reads at launch
-// and a running app reads from a second launch (launch-gate.ts).
+// `app` is the app's own command line, flags such as --remote, which the app reads at launch and a
+// running app reads from a second launch (launch-gate.ts). No words is the usage, not the app: an agent
+// running bare `dashboard` to learn it brought the app to the front over whatever the user was doing.
+// `version` is the stamp built into this file (__BUILD_VERSION__), the installed build's own.
 export type Route =
   | { kind: 'program'; noun: Noun; commandArguments: string[] }
   | { kind: 'help'; text: string }
+  | { kind: 'version' }
   | { kind: 'app'; appArguments: string[] }
   | { kind: 'refused'; message: string };
 
 export function routeDashboardCommand(commandArguments: readonly string[]): Route {
   const [word, ...rest] = commandArguments;
-  if (word === undefined) return { kind: 'app', appArguments: [] };
-  if (HELP.has(word)) return { kind: 'help', text: DASHBOARD_USAGE };
+  if (word === undefined || HELP.has(word)) return { kind: 'help', text: DASHBOARD_USAGE };
+  if (word === '--version' && rest.length === 0) return { kind: 'version' };
   if (word.startsWith('--')) return { kind: 'app', appArguments: [...commandArguments] };
   const noun = NOUNS.get(word);
   if (noun === undefined) return { kind: 'refused', message: `no such noun: ${word}\n\n${DASHBOARD_USAGE}` };

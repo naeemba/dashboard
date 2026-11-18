@@ -28,17 +28,22 @@ describe('routeDashboardCommand', () => {
     expect(routeDashboardCommand(['board'])).toEqual({ kind: 'program', noun: 'board', commandArguments: [] });
   });
 
-  // No words is what `dashboard` always did: open the app. A flag is the app's own, such as --remote.
-  it('leaves no words and a leading flag to the app', () => {
-    expect(routeDashboardCommand([])).toEqual({ kind: 'app', appArguments: [] });
+  // No words opened the app and raised it over the user's work each time an agent ran it to learn it.
+  it('answers no words with the usage, and leaves a leading flag to the app', () => {
+    expect(routeDashboardCommand([])).toEqual({ kind: 'help', text: DASHBOARD_USAGE });
     expect(routeDashboardCommand(['--remote'])).toEqual({ kind: 'app', appArguments: ['--remote'] });
+  });
+
+  // Agents unpacked app.asar to read which build was installed.
+  it('answers --version itself, never through the app', () => {
+    expect(routeDashboardCommand(['--version'])).toEqual({ kind: 'version' });
   });
 
   it('answers --help with the whole usage and <noun> --help with that noun\'s, which names its verbs', () => {
     expect(routeDashboardCommand(['--help'])).toEqual({ kind: 'help', text: DASHBOARD_USAGE });
     expect(routeDashboardCommand(['-h'])).toEqual({ kind: 'help', text: DASHBOARD_USAGE });
     const pane = routeDashboardCommand(['pane', '--help']);
-    expect(pane).toMatchObject({ kind: 'help', text: expect.stringContaining('session claim [--project <name|aka>]') });
+    expect(pane).toMatchObject({ kind: 'help', text: expect.stringContaining('pane claim [--project <name|aka>]') });
     expect(routeDashboardCommand(['board', 'help'])).toMatchObject({ kind: 'help', text: expect.stringContaining('board move <id> <column>') });
   });
 

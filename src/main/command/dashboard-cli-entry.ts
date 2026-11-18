@@ -16,6 +16,9 @@ async function run(): Promise<number> {
     case 'help':
       process.stdout.write(`${route.text}\n`);
       return 0;
+    case 'version':
+      process.stdout.write(`${__BUILD_VERSION__}\n`);
+      return 0;
     case 'refused':
       process.stderr.write(`${route.message}\n`);
       return 1;
