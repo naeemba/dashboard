@@ -10,8 +10,8 @@ export const PULL_REQUEST_USAGE = `pr — land a pull request of the project you
 land notes the pull request's head commit, waits for every check on it (gh pr checks --watch), then
 merges that commit: gh pr merge --merge --match-head-commit <sha>, so a push during the wait is
 refused rather than merged unchecked. No checks reported a minute after asking is merged only in a
-repository with no workflows at all; one that has workflows is refused, since its CI did not start on
-that commit (a push, or gh pr merge by hand, if it never will). A merge call that fails is checked against the pull request: merged at
+repository where no pull request ever ran a workflow; anywhere else it is refused, since its CI did not
+start on that commit (a push, or gh pr merge by hand, if it never will). A merge call that fails is checked against the pull request: merged at
 that commit is merged. A network error on the merge or the wait is tried once more, five seconds
 on. A failed check or a refused merge is printed and the pull request stays open. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; a land stopped at that
@@ -33,35 +33,41 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
   return { ok: true, target: targets[0] };
 }
 
-// What gh answered: whether it exited 0, and what it printed on either stream.
-export type GitHubAnswer = { ok: boolean; output: string };
+// What gh or git answered: whether it exited 0, and what it printed on either stream.
+export type ProgramAnswer = { ok: boolean; output: string };
 // A landed pull request says the branch it merged into, for the fast-forward after (fast-forward-checkout.ts).
-export type LandAnswer = GitHubAnswer & { base?: string };
-export type LandPorts = { gh(words: string[]): Promise<GitHubAnswer>; wait(milliseconds: number): Promise<void> };
+export type LandAnswer = ProgramAnswer & { base?: string };
+export type LandPorts = { gh(words: string[]): Promise<ProgramAnswer>; wait(milliseconds: number): Promise<void> };
 
 // gh's words for a pull request whose CI has not started, or that runs none.
 const NO_CHECKS = 'no checks reported';
 export const NO_CHECKS_WAIT_MS = 60_000;
-const reportsNoChecks = (answer: GitHubAnswer) => !answer.ok && answer.output.includes(NO_CHECKS);
+const reportsNoChecks = (answer: ProgramAnswer) => !answer.ok && answer.output.includes(NO_CHECKS);
 
 // gh's words when the request or its answer was lost on the way, not refused by GitHub: Go's
 // `Post "https://...": unexpected EOF`, a reset or timed-out connection, a 5xx from the API.
 const NETWORK_ERROR = /\b(?:Get|Post) "?https?:\/\/|unexpected EOF|connection (?:reset|refused)|i\/o timeout|TLS handshake timeout|HTTP 5\d\d/;
-export const isNetworkError = (answer: GitHubAnswer) => !answer.ok && NETWORK_ERROR.test(answer.output);
+export const isNetworkError = (answer: ProgramAnswer) => !answer.ok && NETWORK_ERROR.test(answer.output);
 // A second try a few seconds on, so a Wi-Fi rejoin or a VPN reconnect does not fail both.
 export const RETRY_WAIT_MS = 5_000;
 
-// The pull request's state, head commit and base branch, as `OPEN <sha> main`.
-const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName', '-q', '.state + " " + .headRefOid + " " + .baseRefName'];
+// The pull request's state, head commit, base branch and url, as `OPEN <sha> main https://...`.
+const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName,url', '-q', '.state + " " + .headRefOid + " " + .baseRefName + " " + .url'];
 
-// How many workflows the repository has: none is a repository without CI, whose pull requests never
-// report a check. gh fills in {owner}/{repo} from the folder it runs in.
-const WORKFLOW_COUNT = ['api', 'repos/{owner}/{repo}/actions/workflows', '-q', '.total_count'];
+// How many workflow runs a pull request ever started in the pull request's own repository (read from
+// its url, since a url target may name another repository than the folder's): none is a repository
+// without CI on pull requests. Counting workflow files instead counted Dependabot, Pages and
+// push-only workflows, none of which ever reports a check on a pull request.
+function pullRequestRunCount(url: string): string[] | undefined {
+  const [, host, repository] = /^https?:\/\/([^/]+)\/([^/]+\/[^/]+)\/pull\//.exec(url) ?? [];
+  if (host === undefined) return undefined;
+  return ['api', `repos/${repository}/actions/runs?event=pull_request&per_page=1`, '--hostname', host, '-q', '.total_count'];
+}
 
 export async function landPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {
   const head = await ports.gh(stateAndHead(target));
   if (!head.ok) return head;
-  const [state, sha, base] = head.output.trim().split(' ');
+  const [state, sha, base, url = ''] = head.output.trim().split(' ');
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
   // A watch whose answer was lost is not a failed check: watch once more.
   const watchOnce = () => ports.gh(['pr', 'checks', target, '--watch']);
@@ -80,11 +86,13 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
   const noChecks = reportsNoChecks(checks);
   if (isNetworkError(checks)) return { ok: false, output: `lost gh's answer twice waiting on the checks of ${target}; nothing is merged, run it again\n\n${checks.output}` };
   if (!checks.ok && !noChecks) return { ok: false, output: `a check failed on ${sha}; ${target} is not merged\n\n${checks.output}` };
-  // Still none a minute on is a repository without CI, or CI that never started on this commit.
+  // Still none a minute on is a repository without CI on pull requests, or CI that never started on this commit.
   if (noChecks) {
-    const workflows = await ports.gh(WORKFLOW_COUNT);
-    if (!workflows.ok) return { ok: false, output: `no checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged: ${workflows.output}` };
-    if (workflows.output.trim() !== '0') return { ok: false, output: `no checks reported on ${sha} a minute on, and the repository has workflows; ${target} is not merged` };
+    const runCount = pullRequestRunCount(url);
+    if (runCount === undefined) return { ok: false, output: `no checks reported on ${sha}, and gh gave no repository for ${target} to ask whether it has CI; ${target} is not merged` };
+    const runs = await ports.gh(runCount);
+    if (!runs.ok) return { ok: false, output: `no checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged: ${runs.output}` };
+    if (runs.output.trim() !== '0') return { ok: false, output: `no checks reported on ${sha} a minute on, in a repository whose pull requests run CI; ${target} is not merged` };
   }
   const merged = await mergeAt(ports, target, sha);
   if (isNetworkError(merged)) return { ok: false, output: `lost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again: ${merged.output}` };
@@ -94,7 +102,7 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
 
 // A merge whose answer was lost may have gone through: a failed call is read back from the
 // pull request, merged at the noted commit is merged, and a network error is tried once more.
-async function mergeAt(ports: LandPorts, target: string, sha: string, retries = 1): Promise<GitHubAnswer> {
+async function mergeAt(ports: LandPorts, target: string, sha: string, retries = 1): Promise<ProgramAnswer> {
   const merged = await ports.gh(['pr', 'merge', target, '--merge', '--match-head-commit', sha]);
   if (merged.ok) return merged;
   const state = await ports.gh(stateAndHead(target));

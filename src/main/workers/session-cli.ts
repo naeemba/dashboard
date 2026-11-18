@@ -274,7 +274,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       if (typeof id !== 'string') return id;
       const state = rest[1];
       if (state !== 'running' && state !== 'blocked' && state !== 'done') {
-        return refuse('session notify takes running, blocked or done');
+        return refuse('pane notify takes running, blocked or done');
       }
       return parseNotify(id, state, rest.slice(2));
     }

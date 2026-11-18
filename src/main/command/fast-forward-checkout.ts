@@ -1,14 +1,15 @@
 import { parseEveryWorktree } from '../../shared/ship/git-worktrees';
 import { blockingChanges } from '../ship/ship';
-import type { GitHubAnswer } from './pull-request-cli';
+import type { ProgramAnswer } from './pull-request-cli';
 
 // After `pr land` merges, the local checkout of the base branch is behind it, and every land was
 // followed by a git pull by hand. The checkout on that branch is the project's own folder or any
 // worktree of its repository, whichever has it; it is fast-forwarded only when nothing is
 // uncommitted there, `.dashboard/` aside as for a ship (blockingChanges), and only by --ff-only, so
-// nothing of the user's is ever merged or overwritten. Every answer is a line: the merge already
+// nothing of the user's is ever merged or overwritten. It fetches origin and merges origin/<base>, as a
+// ship does (ship-flow.ts), so a base with no upstream set is fast-forwarded all the same. Every answer is a line: the merge already
 // happened, so none of this fails the land.
-export type GitPort = (folder: string, words: string[]) => Promise<GitHubAnswer>;
+export type GitPort = (folder: string, words: string[]) => Promise<ProgramAnswer>;
 
 export async function fastForwardCheckout(git: GitPort, projectFolder: string, base: string): Promise<string> {
   const worktrees = await git(projectFolder, ['worktree', 'list', '--porcelain']);
@@ -19,6 +20,8 @@ export async function fastForwardCheckout(git: GitPort, projectFolder: string, b
   const status = await git(folder, ['status', '--porcelain', '--untracked-files=no']);
   if (!status.ok) return notForwarded(status.output);
   if (blockingChanges(status.output).length > 0) return `${base} in ${folder} has uncommitted changes, so it is not fast-forwarded`;
-  const pulled = await git(folder, ['pull', '--ff-only']);
-  return pulled.ok ? `fast-forwarded ${base} in ${folder}` : notForwarded(pulled.output);
+  const fetched = await git(folder, ['fetch', 'origin', base]);
+  if (!fetched.ok) return notForwarded(fetched.output);
+  const merged = await git(folder, ['merge', '--ff-only', `origin/${base}`]);
+  return merged.ok ? `fast-forwarded ${base} in ${folder}` : notForwarded(merged.output);
 }

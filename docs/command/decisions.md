@@ -102,8 +102,11 @@ running rather than what is installed.
 `pr land` merged any pull request whose checks had not registered a minute on,
 taking it for a repository with no CI. CI that never started on a commit (a
 workflow whose trigger missed, a GitHub outage) merged unchecked. Only a
-repository with no workflows at all is merged so now; one with workflows is
-refused, and a workflow filtered by `paths` that skips the change is landed by
-hand. The fast-forward after a merge is `--ff-only` in a checkout with nothing
+repository where no pull request ever ran a workflow is merged so now; one whose
+pull requests run CI is refused, and a workflow filtered by `paths` that skips
+the change is landed by hand. It counts pull request runs, not workflow files:
+the file count took Dependabot, Pages, CodeQL default setup and push-only
+workflows for CI, and refused every land in a repository with no CI on pull
+requests. The fast-forward after a merge is `--ff-only` in a checkout with nothing
 uncommitted, so it never merges or overwrites anything of the user's: 19 git
 pulls and 7 `gh pr view`s followed lands in the retro.

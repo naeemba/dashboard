@@ -18,9 +18,11 @@ its own verbs; this feature only picks the program.
 `pr land <number|url|branch>` lands a pull request; a review worker with
 merging on runs it to land its own (ship-decision-1). It notes the head commit, waits on `gh pr checks --watch`,
 then runs `gh pr merge --merge --match-head-commit <sha>`. No checks reported is
-asked once more a minute later; still none is merged only when the repository
-has no workflows at all (`gh api repos/{owner}/{repo}/actions/workflows`), and
-refused otherwise, since CI that never started on the commit is not a pass
+asked once more a minute later; still none is merged only when no pull request
+of the pull request's own repository (read from its url, so a url target for
+another repository is judged by that one) ever ran a workflow
+(`gh api repos/<owner>/<repo>/actions/runs?event=pull_request`), and refused
+otherwise, since CI that never started on the commit is not a pass
 (command-decision-7).
 A merge call that fails is read back from the pull request: merged at the
 noted commit is reported merged (the merge went through and only gh's answer
@@ -31,9 +33,11 @@ failed or the merge was refused. A failed check or a refused
 merge exits 1 and merges nothing. The wait is as long as CI takes: main runs it in the background at the longest
 timeout, and runs it again if that limit stops it. Once merged, the checkout on
 the base branch, the project's folder or whichever worktree of its repository
-has it (`git worktree list`), is pulled `--ff-only` when nothing but
-`.dashboard/` is uncommitted there (`blockingChanges`, as a ship reads it); a
-second line says it was fast-forwarded, or why not, and never fails the land.
+has it (`git worktree list`), fetches origin and merges `origin/<base>`
+`--ff-only`, as a ship does, when nothing but `.dashboard/` is uncommitted there
+(`blockingChanges`, as a ship reads it); a second line says it was
+fast-forwarded, or why not, and never fails the land, not even when git cannot
+run.
 A flag where the pull request
 goes (`pr land --help`) never reaches gh as the pull request. It is a merge by
 whoever runs it, so `review.autoMerge` does not gate it, and it is not in the
@@ -193,7 +197,7 @@ Folders: `src/main/command/`.
 - Given an open pull request whose checks pass, when `dashboard pr land 12` runs, then it merges the head commit it noted before the wait and prints `merged 12 at <sha>`; a push during the wait makes gh refuse the merge, and it says so and exits 1.
 - Given `gh pr merge` fails with `Post https://api.github.com/graphql: unexpected EOF` and the pull request is merged at the noted commit, when `pr land` reads it back, then it prints `merged 12 at <sha>`; still open, it tries the merge once more.
 - Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print.
-- Given a repository with workflows and a pull request on which none started, when `pr land` has asked twice a minute apart, then nothing is merged and it exits 1; with no workflows at all it merges and says the repository has no CI.
+- Given a repository whose pull requests have run workflows and a pull request on which none started, when `pr land` has asked twice a minute apart, then nothing is merged and it exits 1; where no pull request ever ran one (no workflows, or only Dependabot, Pages or push-only ones) it merges and says the repository has no CI.
 - Given the project's checkout is on main with nothing uncommitted, when `pr land 12` merges into main, then a second line says main was fast-forwarded in that folder; with an edited file there it says so and leaves the checkout as it was, and the land still exits 0.
 - Given the manager's main in `~/.dashboard`, when it runs `pr land 12 --project crm`, then gh runs in crm's folder.
 - Given a cap of 74 and a reading of 64% from three minutes ago, when `dashboard budget` runs, then it prints both and the age and exits 0; at 74% it exits 1.

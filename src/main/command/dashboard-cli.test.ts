@@ -37,6 +37,7 @@ describe('routeDashboardCommand', () => {
   // Agents unpacked app.asar to read which build was installed.
   it('answers --version itself, never through the app', () => {
     expect(routeDashboardCommand(['--version'])).toEqual({ kind: 'version' });
+    expect(routeDashboardCommand(['--version', 'x'])).toEqual({ kind: 'app', appArguments: ['--version', 'x'] });
   });
 
   it('answers --help with the whole usage and <noun> --help with that noun\'s, which names its verbs', () => {
