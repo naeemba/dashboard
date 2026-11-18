@@ -1,0 +1,11 @@
+{
+  "id": "59d43663-7d36-465d-97f7-48fc1031902b",
+  "title": "Review prompt still reads no checks a minute on as no CI",
+  "notes": "**[low]** [out-of-scope] The review prompt still holds the rule this change retires. `src/main/ship/review.ts:136-138` (the report path, merging off) tells the review worker that \"no checks reported\" a minute on means \"the repository run[s] no CI\".\n\nWhat happens: in a repository with workflows whose CI never started on the head commit (the case command-decision-7 records), a review with merging off reports \"converged, ready to merge\" with the CI state \"no CI\". The user merges it unchecked, the same outcome `pr land` now refuses. The two paths now disagree about one fact.\n\nOut of scope because `review.ts` is untouched and the prompt predates this change. It belongs in the follow-up: word step 2 of the report path the way the land's refusal reads (\"still none, in a repository with workflows, is CI that did not start; say so\"), and update ship-decision-2, which says the same thing.\n\nIssue: https://github.com/naeemba/dashboard/issues/330\nReview: https://github.com/naeemba/dashboard/pull/329#discussion_r4613100498",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-18T11:22:44.823Z",
+  "updatedAt": "2026-11-18T11:22:44.824Z",
+  "column": "Backlog",
+  "order": 49
+}
