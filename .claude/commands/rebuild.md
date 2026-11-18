@@ -7,11 +7,13 @@ effort: low
 
 Run `./scripts/rebuild.sh` and report what it printed.
 
-The script builds the app and swaps the new build into place: `/Applications` on a mac,
-`~/.local/opt/dashboard` on Linux, `%LOCALAPPDATA%\Programs\Dashboard` on Windows
-(Git Bash). It never
-launches the new version and never quits the running one — the change appears the
-next time I restart the app myself.
+The script installs dependencies from the lockfile (`pnpm install
+--frozen-lockfile`), builds the app and swaps the new build into place:
+`/Applications` on a mac, `~/.local/opt/dashboard` on Linux,
+`%LOCALAPPDATA%\Programs\Dashboard` on Windows (Git Bash). It never launches the
+new version and never quits the running one — the change appears the next time
+I restart the app myself.
 
 If the script exits non-zero, stop. Do not build by hand, do not retry, do not quit
-anything to clear the way. Tell me the reason it gave and leave it to me.
+anything to clear the way. Tell me the reason it gave and leave it to me. A
+lockfile out of date stops it with pnpm's message, before anything is built.

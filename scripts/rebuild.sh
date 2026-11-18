@@ -3,7 +3,7 @@
 # launched and not quit; the next restart picks the change up. On a mac that place is
 # /Applications/Dashboard.app; on Linux it is ~/.local/opt/dashboard, whose Dashboard executable a desktop entry of your own can run;
 # on Windows (Git Bash) it is %LOCALAPPDATA%\Programs\Dashboard, beside and apart from a Squirrel install.
-# The prepackage hook stops the build if an app is running out of this checkout.
+# It stops, before installing or building, if an app is running out of this checkout.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -47,6 +47,11 @@ installed="$parent/$name"
 staged="$parent/.$name.rebuild"
 previous="$parent/.$name.previous"
 
+# Install what the lockfile names first: a checkout installed before a dependency was added
+# packages without it. --frozen-lockfile stops on a lockfile out of date, before anything is built.
+# The running-app check goes first too, since an install rewrites node_modules under such an app.
+node scripts/no-running-app.mjs
+pnpm install --frozen-lockfile
 pnpm run package
 
 # Unquoted on purpose, so the shell expands the pattern.
