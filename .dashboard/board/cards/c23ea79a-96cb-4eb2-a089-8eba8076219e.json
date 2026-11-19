@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-19T11:04:49.415Z",
-  "updatedAt": "2026-11-19T11:04:55.783Z",
+  "updatedAt": "2026-11-19T11:08:52.946Z",
   "branch": "main-brings-a-review-loop-s-design-change-t",
-  "column": "Doing",
+  "pullRequest": 338,
+  "comments": [
+    {
+      "at": "2026-11-19T11:08:52.907Z",
+      "body": "Pull request #338 opened: Main asks the user before landing a review loop's design change https://github.com/naeemba/dashboard/pull/338"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
