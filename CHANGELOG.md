@@ -1,5 +1,25 @@
 # Changelog
 
+## v2.52.0 (2026-11-19)
+
+### What's new
+
+- Worker skills: subtasks in board show, PR recorded at once, codegraph, grep docs, history line before the PR
+- App: card worktrees get their packages installed, a clearer early-review refusal, main told about dashboard --version
+- pnpm check prints a three-line summary, and lint holds markdown line width
+- board review looks for the card's pull request before refusing
+- Main brings a review loop's design change to the user before landing
+
+### What's Changed
+* Worker skills: subtasks in board show, codegraph, docs by grep, history line before the PR by @naeemba in https://github.com/naeemba/dashboard/pull/335
+* Card worktrees get their packages installed, a clearer early-review refusal, main told about dashboard --version by @naeemba in https://github.com/naeemba/dashboard/pull/334
+* pnpm check prints a line a check, and lint holds markdown to 100 columns by @naeemba in https://github.com/naeemba/dashboard/pull/336
+* board review looks for the card's pull request before refusing by @naeemba in https://github.com/naeemba/dashboard/pull/337
+* Main's prompt: ask before landing a review loop's design change; add a project before working in it by @naeemba in https://github.com/naeemba/dashboard/pull/338
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.51.0...v2.52.0
+
 ## v2.51.0 (2026-11-18)
 
 ### What's new
