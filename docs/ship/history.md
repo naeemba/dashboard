@@ -21,4 +21,5 @@ One line per merged change: date and why.
 - 2026-11-17 — A review with merging on lands through `pr land`, so a merge whose answer gh lost is read back instead of reported failed (#301, #304)
 - 2026-11-17 — A ship no longer commits the card's Ship move onto its branch, whose merge put a finished card back in Ship (ship-decision-3)
 - 2026-11-17 — A review start without `/pr-loop` installed is refused with the install line; a stale install is a notice (ship-decision-4)
+- 2026-11-19 — A new worktree gets the frozen install its lockfile names, so its agent can run the checks at once
 - 2026-11-19 — The review prompt says `pr land`'s `merged <n> at <sha>` line is the merge, so the worker runs no `gh pr view` after it

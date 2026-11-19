@@ -33,3 +33,4 @@ One line per merged change: date and why.
 - 2026-11-16 — `pane finish` releases a worker once its card is Done or its branch merged; main's prompt dispatches a card with `board ship` and waits with a wake-up, not a sleep loop
 - 2026-11-16 — The finished-worker sweep closes a worker whose worktree's branch merged, as `pane finish` does, without waiting for a card or its grace period (workers-decision-1)
 - 2026-11-16 — A card worker the finished-worker sweep closes still gets its review: the review start that found it at work no longer leaves its card marked as tried
+- 2026-11-19 — Main's prompt names `dashboard --version` for the installed build, and every session may run it

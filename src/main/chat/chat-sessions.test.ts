@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, mainSessionStart, pathFromShell, relayed, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
-
-describe('pathFromShell', () => {
-  it('takes the last line, past whatever the shell printed on start', () => {
-    expect(pathFromShell('Welcome back\n/home/me/.nvm/bin:/usr/bin', '/usr/bin')).toBe('/home/me/.nvm/bin:/usr/bin');
-  });
-  it('keeps the app\'s own when the shell said nothing', () => expect(pathFromShell('', '/usr/bin')).toBe('/usr/bin'));
-});
+import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, mainSessionStart, relayed, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
 
 describe('relayed', () => {
   const streamed = (event: unknown) => ({ type: 'stream_event', event });

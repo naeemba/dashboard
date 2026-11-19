@@ -24,7 +24,13 @@ agent itself, and the review's, is started by pane.dispatch: a Claude screen
 off Windows, Claude Code in the terminal on it (workers-decision-8). Every
 worktree, a ship's, a review's or a throwaway's, is made by worktree.make and
 removed by worktree.remove; the record naming a card's pane is written by the
-keeper's `givePane`, whichever door started the agent.
+keeper's `givePane`, whichever door started the agent. Once the worktree is
+added, worktree.make runs the project's frozen install, picked by its lockfile
+(`pnpm install --frozen-lockfile`, `npm ci`, and yarn's and bun's
+`install --frozen-lockfile`), on the PATH the login shell builds
+(`src/main/app/shell-path.ts`, as a Claude screen's session gets), so the agent can run the checks straight away. An
+install that fails, or runs past five minutes (logged as `stopped after 5 minutes`), is a warning in the log, with ten lines of what the install printed on stdout and
+stderr from the first that names an error (pnpm says why on stdout, npm at the top of stderr above its help); the worktree stays.
 
 The agent is started on `/work-card <card id> bump-version|keep-version <base branch>`
 (`workPrompt`), the skill the app installs ([skills](../skills/README.md#work-card)).
@@ -62,6 +68,7 @@ with merging off, `pr land` with it on.
 
 - Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane, on a Claude screen off Windows.
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
+- Given a project with a lockfile, when a worktree is made for it, then the frozen install its lockfile names has run there, and a failed one is logged with the worktree kept (`make.test.ts`).
 - Given a card moved into Ship, when its ship makes the branch, then the branch has no commit of its own and its card file is origin's, so the merge never moves the card (ship-decision-3; `ship-flow.test.ts`).
 - Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.

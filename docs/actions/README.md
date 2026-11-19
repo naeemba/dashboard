@@ -72,7 +72,8 @@ Neither door holds any of the logic; each only asks.
   off origin's base, a reviewed card's branch checked out again, or a
   throwaway named after its prompt, each made only there. Only
   the throwaway takes the project's queue and fetches; the ship and the review
-  hold the queue already, and it is not re-entrant.
+  hold the queue already, and it is not re-entrant. Each then gets the
+  frozen install its lockfile names; a failed one is logged, not undone.
 - **worktree.remove** (`worktree:remove`, `pane release`, the review):
   `removalOf` says, per door, whether it is forced (only the dialog's, after
   you said yes), queued on the project (all but the review's, which holds it)

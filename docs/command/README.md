@@ -64,7 +64,9 @@ It needs no app and no gh.
 `session` is another name for `pane`. `dashboard` with no words prints the
 usage, as `dashboard --help` does, and `dashboard --version` the stamp built
 into the command, the installed build's `<version>+<commit>`; neither starts or
-raises the app (command-decision-7). Any other first word that is a flag
+raises the app (command-decision-7). Main's prompt names `--version` for the
+installed build, so main reads it rather than guessing, and it is allowed in
+every session the app starts. Any other first word that is a flag
 (`--remote`) goes to the app, which starts or comes to the front. `dashboard
 <noun> --help` prints a noun's usage, its verbs under the noun's own name
 (`pane claim`, never `session claim`), written for someone who has never seen
