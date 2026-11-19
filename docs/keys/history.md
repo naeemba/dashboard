@@ -1,6 +1,6 @@
 # Keys: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-09-05 #7 — Three modes per project, each with its key (keys-rule-1)
 - 2026-09-06 #9 — Ctrl+H lists the keys for the screen you are on (keys-rule-2)

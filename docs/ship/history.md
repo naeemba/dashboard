@@ -1,6 +1,6 @@
 # Ship: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-09-11 #27 — Ship a card into its own worktree, with an agent in one of the panes
 - 2026-09-14 #37 — Main says when the worktree record changes, so the renderer stops polling
