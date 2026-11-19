@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-19T09:25:38.840Z",
-  "updatedAt": "2026-11-19T10:07:50.498Z",
+  "updatedAt": "2026-11-19T10:21:52.692Z",
   "branch": "app-card-worktrees-get-their-packages-insta",
   "pullRequest": 334,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-19T10:07:50.498Z",
       "body": "PR #334 review loop: converged, ready to merge. 4 rounds, 13 findings fixed, 0 rejected. The last fix pass (two low items: board-usage note on the install wait for review/move, and a test for the 'stopped after 5 minutes' text) had no re-review after it. No conflict with main. CI: 3/3 passed on head 628e737a."
+    },
+    {
+      "at": "2026-11-19T10:21:52.668Z",
+      "body": "Pull request #334 merged: Card worktrees get their packages installed, a clearer early-review refusal, main told about dashboard --version https://github.com/naeemba/dashboard/pull/334"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 271
 }
