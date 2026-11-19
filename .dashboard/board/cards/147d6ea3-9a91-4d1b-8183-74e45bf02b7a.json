@@ -5,12 +5,16 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-19T09:25:32.140Z",
-  "updatedAt": "2026-11-19T09:32:19.840Z",
+  "updatedAt": "2026-11-19T09:33:43.673Z",
   "branch": "worker-skills-subtasks-in-board-show-pr-rec",
   "comments": [
     {
       "at": "2026-11-19T09:32:19.839Z",
       "body": "One more item: the review prompt (src/main/ship/review.ts) says pr land's 'merged <n> at <sha>' line is the merge, so no gh pr view afterwards (workers ran it 3 times after a land)."
+    },
+    {
+      "at": "2026-11-19T09:33:43.673Z",
+      "body": "Item 2 (run board set <id> --pull-request <n> right after gh pr create) is left out of this PR. It contradicts board-decision-6 ('An agent records no pull request') and BOARD_INSTRUCTIONS, which tell every worker not to record one. It would also not fix the refusal: board set from a worktree writes the project's board on origin, and finishedIn in src/main/ship/review-flow.ts ignores a project-board number on a card before Review (it is treated as the old closed PR), while the worktree's own board file never gets the number. So board review would still say 'has no pull request ... yet' until card.follow runs. A fix that works: when review() finds no pull request, run card.follow for that card (ask gh now) and look again before refusing. That needs its own card."
     }
   ],
   "column": "Doing",
