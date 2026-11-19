@@ -5,7 +5,31 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-19T09:25:32.140Z",
-  "updatedAt": "2026-11-19T09:25:32.140Z",
-  "column": "Backlog",
-  "order": 51
+  "updatedAt": "2026-11-19T09:49:53.936Z",
+  "branch": "worker-skills-subtasks-in-board-show-pr-rec",
+  "pullRequest": 335,
+  "comments": [
+    {
+      "at": "2026-11-19T09:32:19.839Z",
+      "body": "One more item: the review prompt (src/main/ship/review.ts) says pr land's 'merged <n> at <sha>' line is the merge, so no gh pr view afterwards (workers ran it 3 times after a land)."
+    },
+    {
+      "at": "2026-11-19T09:33:43.673Z",
+      "body": "Item 2 (run board set <id> --pull-request <n> right after gh pr create) is left out of this PR. It contradicts board-decision-6 ('An agent records no pull request') and BOARD_INSTRUCTIONS, which tell every worker not to record one. It would also not fix the refusal: board set from a worktree writes the project's board on origin, and finishedIn in src/main/ship/review-flow.ts ignores a project-board number on a card before Review (it is treated as the old closed PR), while the worktree's own board file never gets the number. So board review would still say 'has no pull request ... yet' until card.follow runs. A fix that works: when review() finds no pull request, run card.follow for that card (ask gh now) and look again before refusing. That needs its own card."
+    },
+    {
+      "at": "2026-11-19T09:36:52.677Z",
+      "body": "Pull request #335 opened: Worker skills: subtasks in board show, codegraph, docs by grep, history line before the PR https://github.com/naeemba/dashboard/pull/335"
+    },
+    {
+      "at": "2026-11-19T09:48:46.777Z",
+      "body": "Review loop on PR #335: converged, ready to merge. 1 round, 4 low/nit findings fixed in 859e1490 (codegraph wording, docs bullets gated on docs/<feature>/, parent-filter test, formatCard reuses cardAt); nothing re-reviewed that last commit. No conflicts. CI 5/5 passed on 859e1490."
+    },
+    {
+      "at": "2026-11-19T09:49:53.920Z",
+      "body": "Pull request #335 merged: Worker skills: subtasks in board show, codegraph, docs by grep, history line before the PR https://github.com/naeemba/dashboard/pull/335"
+    }
+  ],
+  "column": "Done",
+  "order": 270
 }

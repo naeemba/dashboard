@@ -1,6 +1,6 @@
 # Processes: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-11-16 #297 — A pane whose scope its close could not stop is a warning in
   the log, as the close key shows nothing (#259)

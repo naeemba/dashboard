@@ -1,3 +1,3 @@
 # Updates: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.

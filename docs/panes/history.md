@@ -1,6 +1,6 @@
 # Panes: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-09-04 #2 — Option+hjkl moves between panes
 - 2026-09-05 #4 — Cmd+Backspace clears the shell's current line

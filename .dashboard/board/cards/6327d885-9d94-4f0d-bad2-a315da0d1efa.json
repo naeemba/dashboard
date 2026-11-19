@@ -1,0 +1,11 @@
+{
+  "id": "6327d885-9d94-4f0d-bad2-a315da0d1efa",
+  "title": "board review looks for the card's pull request before refusing",
+  "notes": "Just after a worker opens its PR, board review refuses 'has no pull request on <branch> yet' (review-flow.ts ~347) because the app's follow has not yet moved the card to Review; board set --pull-request does not help while the card is in Doing (found on #334). Run the card's follow (card.follow) for that card before deciding to refuse, so a PR that exists is found. Ship after #334 merges: it changes the same refusal text.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-19T09:35:26.263Z",
+  "updatedAt": "2026-11-19T09:35:26.263Z",
+  "column": "Backlog",
+  "order": 51
+}

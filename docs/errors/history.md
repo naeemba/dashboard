@@ -1,6 +1,6 @@
 # Errors: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-09-21 #60 — A failed worktree read no longer truncates worktrees.json on
   launch (errors-decision-2)

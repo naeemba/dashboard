@@ -91,6 +91,8 @@ with merging off, `pr land` with it on.
   (#301).
 - Given merging is on and the network drops while `pr land` waits on the checks, when it exits
   printing `nothing is merged, run it again`, then the review runs it once more instead of stopping.
+- Given merging is on, when `pr land` exits printing `merged <n> at <sha>`, then the review takes
+  that line as the merge and runs no `gh pr view` to confirm it.
 - Given the review merged the pull request, when the app next asks gh about the card, then the app
   moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
 - Given no `~/.claude/commands/pr-loop.md`, when a review would start, then it is refused with

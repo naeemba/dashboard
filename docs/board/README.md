@@ -376,6 +376,8 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a board with cards in Done, when `board list` runs, then they are left out and a last line
   says how many, naming `--all`; `board show ba02cf00` shows the one card whose id starts with it,
   and a start two cards share is refused naming both (`board-cli.test.ts`).
+- Given a card with subtasks, when `board show <id>` runs, then a `Subtasks` block after the
+  description lists each one's column, id and title (`board-cli.test.ts`).
 - Given `crm` in `~/.dashboard/projects.yaml`, when `dashboard board move <id> Done --project crm`
   runs from any folder, then the card moves on crm's board.
 - Given the board is on screen, when `board move` writes the file from a pane, then the board

@@ -1,6 +1,6 @@
 # Skills: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-11-06 #225 — The app installs `/adopt-docs`, and the manager rolls it out
   to every project by hand (skills-decision-1, skills-decision-2)
@@ -11,3 +11,6 @@ One line per merged change: date, pull request, why.
   project's `bumpVersion`, off by default (projects-decision-1)
 - 2026-11-19 — `/work-card` runs a project's `check` script once and reads its log, rather than
   running the suite again to see its counts (workflow-decision-11)
+- 2026-11-19 — `/work-card` reads subtasks from `board show`, finds code with codegraph, greps docs,
+  and writes the history line before the pull request; `/adopt-docs` and the index say a new history
+  line names no pull request (skills-decision-2)

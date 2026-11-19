@@ -1,6 +1,6 @@
 # Workers: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-10-22 #76 — Resume each pane's Claude session after a restart
 - 2026-10-29 #84 — A main session that dispatches tasks into worker panes (workers-decision-1)

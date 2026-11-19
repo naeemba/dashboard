@@ -34,4 +34,5 @@ A card that will not be done is kept, not deleted: \`board move <id> Cancelled\`
 Cancelled column after Done, which starts nothing.
 
 --notes replaces the card's description. To record what you found, use \`comment\`: it appends to the
-card's trail and takes nothing away. \`show\` prints one card with its description and its trail.`;
+card's trail and takes nothing away. \`show\` prints one card with its description, its subtasks and its
+trail.`;
