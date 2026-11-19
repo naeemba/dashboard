@@ -4,7 +4,7 @@ import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/ap
 import { baseBranch, git, runProgram } from '../../app/git';
 import { loginShellPath } from '../../app/shell-path';
 import { bind, isRefused, type BoundAction } from '../action';
-import { worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
+import { INSTALL_TIMEOUT_MS, worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
 import { worktreeRemove, type WorktreeRemovePorts } from './remove';
 
 // Main's wiring for the worktree actions, and each door's call into them as its port takes it. Out of
@@ -21,10 +21,6 @@ async function removed(result: Promise<WorktreeRemoval | Refused>): Promise<Work
   const answer = await result;
   return isRefused(answer) ? { ok: false, message: answer.refused, dirty: [] } : answer;
 }
-
-// A frozen install with the store warm takes a second (workflow-decision-3); a cold npm ci, minutes. The
-// ship holds the project's queue meanwhile, so one that hangs is stopped here, not left to hold it.
-const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 
 // The app's own PATH lacks what the shell's startup files add (pnpm under PNPM_HOME, Homebrew's npm) when
 // it was started from a launcher, so the install runs on the shell's, read once.

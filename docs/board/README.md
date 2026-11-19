@@ -57,7 +57,10 @@ cancelled card is not stalled, and the release notes' What's new lists only Done
 There is a Ship column, just right of Todo. Moving a card into it — Shift
 with either arrow, a drop from either side, or `dashboard board move <id>
 Ship` — hands it to an agent, and `dashboard board ship <id>` does the same
-without the move. A card in Done moves only by dragging it: Shift with an
+without the move. The command answers only once the project's packages are
+installed in the card's worktree, minutes for a cold `npm ci`, so main gives
+it a ten-minute timeout (600000 ms) as it does `pane run --worktree`
+([workers](../workers/README.md)). A card in Done moves only by dragging it: Shift with an
 arrow on it is refused with an error naming the card, since the highlight may
 be on the wrong one (board-decision-3). The app refuses if the project has
 anything uncommitted

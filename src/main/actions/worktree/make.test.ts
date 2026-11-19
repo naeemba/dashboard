@@ -101,6 +101,25 @@ describe('worktree.make', () => {
     expect(installFailure(Object.assign(new Error('spawn pnpm ENOENT'), { code: 'ENOENT' }))).toContain('spawn pnpm ENOENT');
   });
 
+  // yarn berry names no error in a line the pattern reads: its reason is only near the bottom.
+  it('keeps the last ten lines of an install that names no error', () => {
+    const progress = Array.from({ length: 12 }, (_, index) => `➤ YN0000: step ${index}`).join('\n');
+    const yarnFailure = Object.assign(new Error('Command failed: yarn install --frozen-lockfile'), {
+      stdout: `${progress}\n➤ YN0028: The lockfile would have been modified by this install, which is explicitly forbidden.\n➤ YN0000: · Failed with errors`,
+      stderr: '',
+    });
+    const reason = installFailure(yarnFailure);
+    expect(reason).toContain('YN0028');
+    expect(reason).not.toContain('step 0\n');
+    expect(reason.split('\n')).toHaveLength(10);
+  });
+
+  // A slow cold install stopped at the limit prints only warnings; they are not why it stopped.
+  it('says an install was stopped at the time limit', () => {
+    const killed = Object.assign(new Error('Command failed: npm ci'), { killed: true, signal: 'SIGTERM', stdout: '', stderr: 'npm warn deprecated inflight@1.0.6' });
+    expect(installFailure(killed)).toBe('stopped after 5 minutes: npm warn deprecated inflight@1.0.6');
+  });
+
   it('installs nothing in a worktree with no lockfile', async () => {
     const { make, installed } = maker();
     await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: 'main' });

@@ -73,7 +73,8 @@ describe('mainPrompt verbs', () => {
   });
 
   // A cold install outlasts Bash's two-minute default, and main retried a worker that had started.
-  it('tells main to wait ten minutes for run --worktree', () => {
+  it('tells main to wait ten minutes for ship and run --worktree', () => {
+    expect(mainPrompt('/work/api')).toContain('ship and run --worktree answer');
     expect(mainPrompt('/work/api')).toContain('ten-minute timeout (600000 ms)');
   });
 

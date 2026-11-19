@@ -98,8 +98,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     `A card is dispatched with \`node "$DASHBOARD_BOARD" ship <id>${projectFlag}\`: it makes the card's worktree, a worker`
       + ' pane and its agent. run --card is for a shipped card whose agent has stopped. Any'
       + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
-      + ' committed, pushed and opened its pull request, and kept otherwise. run --worktree answers only'
-      + ' once the project\'s packages are installed there, which can take minutes: give that Bash call a'
+      + ' committed, pushed and opened its pull request, and kept otherwise. ship and run --worktree answer'
+      + ' only once the project\'s packages are installed in the new worktree, which can take minutes: give those Bash calls a'
       + ' ten-minute timeout (600000 ms). A worktree that is already'
       + ' there, one of this repository\'s on a branch you keep, takes --in <folder>: nothing makes or'
       + ' removes it. Research takes none of them and reads this checkout.',

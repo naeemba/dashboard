@@ -66,15 +66,22 @@ export function frozenInstall(folder: string, exists: (path: string) => boolean)
   return manager === 'npm' ? ['npm', 'ci'] : [manager, 'install', '--frozen-lockfile'];
 }
 
+// A frozen install with the store warm takes a second (workflow-decision-3); a cold npm ci, minutes. The
+// ship holds the project's queue meanwhile, so one that hangs is stopped at this, not left to hold it.
+export const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
+
 // Why an install failed: pnpm says it on stdout (`ERR_PNPM_OUTDATED_LOCKFILE …`), npm at the top of stderr
 // above its whole help, and execFile's message carries only stderr. So ten lines of both from the first
-// that names an error, else their last ten, else the error itself.
+// that names an error, else their last ten, else the error itself. One killed at the time limit says so
+// first, or its last warnings would read as the reason.
 export function installFailure(error: unknown): string {
   if (!isRecord(error)) return failureText(error);
+  const stopped = error.killed === true ? `stopped after ${INSTALL_TIMEOUT_MS / 60_000} minutes` : '';
   const lines = `${String(error.stdout ?? '')}\n${String(error.stderr ?? '')}`.trim().split('\n');
-  if (lines.join('') === '') return failureText(error);
+  if (lines.join('') === '') return stopped || failureText(error);
   const first = lines.findIndex((line) => /\berr(or\b|_)/i.test(line));
-  return (first === -1 ? lines.slice(-10) : lines.slice(first, first + 10)).join('\n');
+  const output = (first === -1 ? lines.slice(-10) : lines.slice(first, first + 10)).join('\n');
+  return stopped === '' ? output : `${stopped}: ${output}`;
 }
 
 // The project's frozen install in the worktree, if it has a lockfile; a failure is a warning in the log.
