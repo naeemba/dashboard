@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-19T09:25:32.140Z",
-  "updatedAt": "2026-11-19T09:48:46.777Z",
+  "updatedAt": "2026-11-19T09:49:53.936Z",
   "branch": "worker-skills-subtasks-in-board-show-pr-rec",
   "pullRequest": 335,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-19T09:48:46.777Z",
       "body": "Review loop on PR #335: converged, ready to merge. 1 round, 4 low/nit findings fixed in 859e1490 (codegraph wording, docs bullets gated on docs/<feature>/, parent-filter test, formatCard reuses cardAt); nothing re-reviewed that last commit. No conflicts. CI 5/5 passed on 859e1490."
+    },
+    {
+      "at": "2026-11-19T09:49:53.920Z",
+      "body": "Pull request #335 merged: Worker skills: subtasks in board show, codegraph, docs by grep, history line before the PR https://github.com/naeemba/dashboard/pull/335"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 270
 }
