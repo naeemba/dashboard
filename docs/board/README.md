@@ -60,7 +60,9 @@ Ship` — hands it to an agent, and `dashboard board ship <id>` does the same
 without the move. The command answers only once the project's packages are
 installed in the card's worktree, minutes for a cold `npm ci`, so main gives
 it a ten-minute timeout (600000 ms) as it does `pane run --worktree`
-([workers](../workers/README.md)). A card in Done moves only by dragging it: Shift with an
+([workers](../workers/README.md)). `board review <id>` and a move into Review
+wait for the same install, since a review makes the worktree again, and the
+board's usage says so. A card in Done moves only by dragging it: Shift with an
 arrow on it is refused with an error naming the card, since the highlight may
 be on the wrong one (board-decision-3). The app refuses if the project has
 anything uncommitted

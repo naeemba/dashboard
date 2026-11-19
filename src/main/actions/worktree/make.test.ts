@@ -118,6 +118,7 @@ describe('worktree.make', () => {
   it('says an install was stopped at the time limit', () => {
     const killed = Object.assign(new Error('Command failed: npm ci'), { killed: true, signal: 'SIGTERM', stdout: '', stderr: 'npm warn deprecated inflight@1.0.6' });
     expect(installFailure(killed)).toBe('stopped after 5 minutes: npm warn deprecated inflight@1.0.6');
+    expect(installFailure(Object.assign(new Error('Command failed: npm ci'), { killed: true, stdout: '', stderr: '' }))).toBe('stopped after 5 minutes');
   });
 
   it('installs nothing in a worktree with no lockfile', async () => {
