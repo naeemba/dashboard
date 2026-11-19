@@ -29,7 +29,7 @@ const STARTS_PROCESSES = [
   'src/main/nvim/nvim-remote.ts',
   'src/main/panes/shell-directory-lookup.ts',
   'src/main/update/install.ts',
-  'src/main/chat/chat-sessions.ts',
+  'src/main/app/shell-path.ts',
 ];
 
 // Any quoted mention, so a dynamic import, a require or double quotes cannot slip past.

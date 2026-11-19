@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/app/bridge';
 import { baseBranch, git, runProgram } from '../../app/git';
+import { loginShellPath } from '../../app/shell-path';
 import { bind, isRefused, type BoundAction } from '../action';
 import { worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
 import { worktreeRemove, type WorktreeRemovePorts } from './remove';
@@ -25,10 +26,19 @@ async function removed(result: Promise<WorktreeRemoval | Refused>): Promise<Work
 // ship holds the project's queue meanwhile, so one that hangs is stopped here, not left to hold it.
 const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 
+// The app's own PATH lacks what the shell's startup files add (pnpm under PNPM_HOME, Homebrew's npm) when
+// it was started from a launcher, so the install runs on the shell's, read once.
+let shellPath: Promise<string> | undefined;
+
+async function install(program: string, programArguments: string[], cwd: string): Promise<string> {
+  shellPath ??= loginShellPath(process.env.PATH ?? '');
+  const environment = { PATH: await shellPath };
+  return runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS, environment });
+}
+
 export function worktreeActions(main: WorktreeRemovePorts) {
   const make = bind(worktreeMake, {
-    git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log,
-    install: (program, programArguments, cwd) => runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS }),
+    git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install,
   });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
   return {

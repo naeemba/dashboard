@@ -1,19 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { bind } from '../action';
 import type { LogDraft } from '../../../shared/app/log-entry';
-import { frozenInstall, worktreeMake } from './make';
+import { frozenInstall, installFailure, worktreeMake } from './make';
 
-// `files` are the paths that exist; an install of `failing` throws.
+// An error shaped like execFile's for a failed pnpm: the reason on stdout, the message only stderr's.
+const PNPM_FAILURE = Object.assign(new Error('Command failed: pnpm install --frozen-lockfile\n(node) [DEP0169] DeprecationWarning'), {
+  stdout: 'ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile"',
+  stderr: '(node) [DEP0169] DeprecationWarning',
+});
+
+// `files` are the paths that exist; an install of `failing` throws. Each install is noted with whether
+// the queue was held while it ran.
 function maker(files: string[] = [], failing?: string) {
   const ran: string[] = [];
   const queued: string[] = [];
   const installed: string[] = [];
   const logged: LogDraft[] = [];
+  let queueHeld = false;
   const make = bind(worktreeMake, {
     exists: (path) => files.includes(path),
     async install(program, programArguments, cwd) {
-      installed.push(`${[program, ...programArguments].join(' ')} in ${cwd}`);
-      if (program === failing) throw new Error('ERR_PNPM_OUTDATED_LOCKFILE');
+      installed.push(`${[program, ...programArguments].join(' ')} in ${cwd}${queueHeld ? ', queue held' : ''}`);
+      if (program === failing) throw PNPM_FAILURE;
     },
     log: (draft) => logged.push(draft),
     async git(gitArguments) {
@@ -22,7 +30,11 @@ function maker(files: string[] = [], failing?: string) {
     },
     baseBranch: async () => 'main',
     newId: () => 'fresh-id',
-    queue: (projectPath, run) => { queued.push(projectPath); return run(); },
+    async queue(projectPath, run) {
+      queued.push(projectPath);
+      queueHeld = true;
+      try { return await run(); } finally { queueHeld = false; }
+    },
   });
   return { make, ran, queued, installed, logged };
 }
@@ -51,22 +63,36 @@ describe('worktree.make', () => {
     expect(queued).toEqual([]);
   });
 
-  it('installs the packages from the lockfile once the worktree is added, the card kind and the again kind', async () => {
+  it('installs the packages from the lockfile once the worktree is added, for every kind', async () => {
     const worktreePath = '/code/api.worktrees/fix';
     const { make, installed, logged } = maker([`${worktreePath}/pnpm-lock.yaml`, `${worktreePath}/.git`]);
-    const made = await make.call({ kind: 'again', projectPath: '/code/api', worktreePath, branch: 'fix' });
+    await make.call({ kind: 'again', projectPath: '/code/api', worktreePath, branch: 'fix' });
     expect(installed).toEqual([`pnpm install --frozen-lockfile in ${worktreePath}`]);
-    expect(made).toMatchObject({ output: expect.stringContaining('packages installed') });
     expect(logged).toEqual([]);
   });
 
-  it('logs a failed install and keeps the worktree it made', async () => {
+  it('installs in a new branch\'s worktree, the throwaway\'s inside the queue it takes', async () => {
+    const lockfiles = ['fix-login', 'try-a-thing'].flatMap((name) => [`/code/api.worktrees/${name}/pnpm-lock.yaml`, `/code/api.worktrees/${name}/.git`]);
+    const { make, installed } = maker(lockfiles);
+    await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: 'main' });
+    await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
+    expect(installed).toEqual([
+      expect.stringMatching(/^pnpm install --frozen-lockfile in \S*fix-login\S*$/),
+      expect.stringMatching(/^pnpm install --frozen-lockfile in \S*try-a-thing\S*, queue held$/),
+    ]);
+  });
+
+  it('logs a failed install with the reason pnpm gave, and keeps the worktree it made', async () => {
     const worktreePath = '/code/api.worktrees/fix';
     const { make, ran, logged } = maker([`${worktreePath}/pnpm-lock.yaml`, `${worktreePath}/.git`], 'pnpm');
-    const made = await make.call({ kind: 'again', projectPath: '/code/api', worktreePath, branch: 'fix' });
-    expect(made).toMatchObject({ worktreePath, output: expect.stringContaining('ERR_PNPM_OUTDATED_LOCKFILE') });
-    expect(logged).toEqual([expect.objectContaining({ level: 'warn', kind: 'worktree', project: '/code/api' })]);
+    expect(await make.call({ kind: 'again', projectPath: '/code/api', worktreePath, branch: 'fix' })).toMatchObject({ worktreePath });
+    expect(logged).toEqual([expect.objectContaining({ level: 'warn', kind: 'worktree', project: '/code/api', message: expect.stringContaining('ERR_PNPM_OUTDATED_LOCKFILE') })]);
     expect(ran.filter((line) => line.startsWith('worktree remove'))).toEqual([]);
+  });
+
+  it('reads an install failure from both streams, or from the error when it has none', () => {
+    expect(installFailure(PNPM_FAILURE)).toMatch(/^ERR_PNPM_OUTDATED_LOCKFILE.*\n\(node\) \[DEP0169\]/);
+    expect(installFailure(Object.assign(new Error('spawn pnpm ENOENT'), { code: 'ENOENT' }))).toContain('spawn pnpm ENOENT');
   });
 
   it('installs nothing in a worktree with no lockfile', async () => {

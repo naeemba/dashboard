@@ -1,5 +1,6 @@
 import { failureText } from '../../../shared/errors/failure';
 import type { LogDraft } from '../../../shared/app/log-entry';
+import { isRecord } from '../../../shared/app/is-record';
 import { action } from '../action';
 import { branchNameFor, worktreePathFor } from '../../ship/ship';
 import { nearestLockfile } from '../../workflow/package-manager-guard';
@@ -19,7 +20,7 @@ import { isFilledText } from '../pane/pane-input';
 //
 // Each gets the project's packages installed from its lockfile once it is added, so the agent in it can
 // run the checks straight away rather than meeting `vitest: command not found` (workflow-decision-3 says
-// what it costs). A failed install is logged and said in the output; the worktree stays.
+// what it costs). A failed install is logged; the worktree stays.
 
 export type WorktreeMakeInput =
   | { kind: 'card'; projectPath: string; title: string; cardId: string; base: string }
@@ -32,7 +33,7 @@ export type WorktreeMakePorts = {
   newId(): string;
   queue<T>(projectPath: string, run: () => Promise<T>): Promise<T>;
   exists(path: string): boolean;
-  // The install program, run in the worktree. Throws when it fails.
+  // The install program, run in the worktree. Throws when it fails, as execFile does.
   install(program: string, programArguments: string[], cwd: string): Promise<unknown>;
   log(draft: LogDraft): void;
 };
@@ -65,24 +66,30 @@ export function frozenInstall(folder: string, exists: (path: string) => boolean)
   return manager === 'npm' ? ['npm', 'ci'] : [manager, 'install', '--frozen-lockfile'];
 }
 
-// What the install adds to the output: nothing without a lockfile, or how it went.
-async function installed(ports: WorktreeMakePorts, projectPath: string, worktreePath: string): Promise<string> {
+// Why an install failed: pnpm says it on stdout, and execFile's message carries only stderr, so the end of
+// both when the error has them (`ERR_PNPM_OUTDATED_LOCKFILE …`), else the error itself.
+export function installFailure(error: unknown): string {
+  if (!isRecord(error)) return failureText(error);
+  const said = `${String(error.stdout ?? '')}\n${String(error.stderr ?? '')}`.trim();
+  return said === '' ? failureText(error) : said.split('\n').slice(-10).join('\n');
+}
+
+// The project's frozen install in the worktree, if it has a lockfile; a failure is a warning in the log.
+async function installed(ports: WorktreeMakePorts, projectPath: string, worktreePath: string): Promise<void> {
   const install = frozenInstall(worktreePath, ports.exists);
-  if (install === null) return '';
+  if (install === null) return;
   const [program, ...programArguments] = install;
   try {
     await ports.install(program, programArguments, worktreePath);
-    return ', packages installed';
   } catch (error) {
-    const message = `${install.join(' ')} failed in ${worktreePath}: ${failureText(error)}`;
+    const message = `${install.join(' ')} failed in ${worktreePath}: ${installFailure(error)}`;
     ports.log({ level: 'warn', kind: 'worktree', project: projectPath, message });
-    return `; ${message}`;
   }
 }
 
 async function made(ports: WorktreeMakePorts, projectPath: string, branch: string, worktreePath: string): Promise<MadeWorktree> {
-  const output = `made ${worktreePath} on ${branch}${await installed(ports, projectPath, worktreePath)}`;
-  return { output, branch, worktreePath };
+  await installed(ports, projectPath, worktreePath);
+  return { output: `made ${worktreePath} on ${branch}`, branch, worktreePath };
 }
 
 // A new branch off origin/<base>, named after the title with `id` to break a tie.
