@@ -13,7 +13,7 @@
     "premake": "node scripts/no-running-app.mjs && node scripts/node-pty-built.mjs",
     "make": "electron-forge make",
     "release": "electron-forge release",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/markdown-width-step.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prepare": "git config core.hooksPath .githooks"
