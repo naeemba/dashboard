@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-19T09:25:45.354Z",
-  "updatedAt": "2026-11-19T10:29:17.458Z",
+  "updatedAt": "2026-11-19T10:30:53.542Z",
   "branch": "pnpm-check-prints-a-three-line-summary-and",
   "pullRequest": 336,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-19T10:29:17.458Z",
       "body": "#334 merged: main merged in again (60bc833c), 5 docs conflicts resolved to main's text and the changed paragraphs reflowed to 100; pnpm check green, CI 5/5 pass on 60bc833c, MERGEABLE. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-19T10:30:53.524Z",
+      "body": "Pull request #336 merged: pnpm check prints a line a check, and lint holds markdown to 100 columns https://github.com/naeemba/dashboard/pull/336"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 272
 }
