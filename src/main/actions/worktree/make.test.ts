@@ -9,7 +9,8 @@ const PNPM_FAILURE = Object.assign(new Error('Command failed: pnpm install --fro
   stderr: '(node) [DEP0169] DeprecationWarning',
 });
 
-// `files` are the paths that exist; an install of `failing` throws. Each install is noted with whether
+// `files` are the paths that exist, read with `/` since the lockfile lookup joins with the platform's
+// separator and on Windows asks for `\code\api.worktrees\fix\.git`; an install of `failing` throws. Each install is noted with whether
 // the queue was held while it ran.
 function maker(files: string[] = [], failing?: string) {
   const ran: string[] = [];
@@ -18,7 +19,7 @@ function maker(files: string[] = [], failing?: string) {
   const logged: LogDraft[] = [];
   let queueHeld = false;
   const make = bind(worktreeMake, {
-    exists: (path) => files.includes(path),
+    exists: (path) => files.includes(path.replaceAll('\\', '/')),
     async install(program, programArguments, cwd) {
       installed.push(`${[program, ...programArguments].join(' ')} in ${cwd}${queueHeld ? ', queue held' : ''}`);
       if (program === failing) throw PNPM_FAILURE;
@@ -128,7 +129,7 @@ describe('worktree.make', () => {
   });
 
   it('picks the frozen install by the lockfile', () => {
-    const lockfile = (name: string) => (path: string) => path === `/w/${name}` || path === '/w/.git';
+    const lockfile = (name: string) => (path: string) => [`/w/${name}`, '/w/.git'].includes(path.replaceAll('\\', '/'));
     expect(frozenInstall('/w', lockfile('package-lock.json'))).toEqual(['npm', 'ci']);
     expect(frozenInstall('/w', lockfile('yarn.lock'))).toEqual(['yarn', 'install', '--frozen-lockfile']);
     expect(frozenInstall('/w', lockfile('bun.lock'))).toEqual(['bun', 'install', '--frozen-lockfile']);
