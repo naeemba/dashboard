@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/app/bridge';
-import { baseBranch, git } from '../../app/git';
+import { baseBranch, git, runProgram } from '../../app/git';
 import { bind, isRefused, type BoundAction } from '../action';
 import { worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
 import { worktreeRemove, type WorktreeRemovePorts } from './remove';
@@ -20,8 +21,15 @@ async function removed(result: Promise<WorktreeRemoval | Refused>): Promise<Work
   return isRefused(answer) ? { ok: false, message: answer.refused, dirty: [] } : answer;
 }
 
+// A frozen install with the store warm takes a second (workflow-decision-3); a cold npm ci, minutes. The
+// ship holds the project's queue meanwhile, so one that hangs is stopped here, not left to hold it.
+const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
+
 export function worktreeActions(main: WorktreeRemovePorts) {
-  const make = bind(worktreeMake, { git, baseBranch, newId: randomUUID, queue: main.queue });
+  const make = bind(worktreeMake, {
+    git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log,
+    install: (program, programArguments, cwd) => runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS }),
+  });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
   return {
     remove,
