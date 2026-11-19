@@ -1,6 +1,8 @@
 # Manager Sections and Command Runner Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the manager page a named strip along the top — general, board,
 command — and build the command section behind it: type a command once, run it
@@ -53,7 +55,8 @@ uses plain `child_process.spawn`), vitest, xterm.js.
 - Consumes: nothing.
 - Produces:
   - `type TaskState = 'idle' | 'running' | 'done' | 'cancelled'`
-  - `type TaskResult = { projectPath: string; state: TaskState; exitCode: number | null; lastLine: string; tail: string[] }`
+  - `type TaskResult = { projectPath: string; state: TaskState; exitCode: number | null; lastLine:
+    string; tail: string[] }`
   - `printableLines(output: string): string[]`
   - `lastPrintableLine(output: string): string`
   - `taskSummary(result: TaskResult): string`
@@ -544,10 +547,10 @@ around line 137, so read it before editing. Add `scopesOverlap` to the existing
 
 - [ ] **Step 6: Fix the three existing callers**
 
-- `src/renderer.ts:667` — `mapShortcut(event, settings.keys, pages[activeIndex].mode)` gains a fourth
-  argument. The manager is the page holding `MANAGER_SLOT`, and `isProjectPage`
-  in `manager.ts` is the one place that already answers this, so ask it rather
-  than comparing the slot here:
+- `src/renderer.ts:667` — `mapShortcut(event, settings.keys, pages[activeIndex].mode)` gains a
+  fourth argument. The manager is the page holding `MANAGER_SLOT`, and `isProjectPage` in
+  `manager.ts` is the one place that already answers this, so ask it rather than comparing the slot
+  here:
 
 ```ts
   const page = pages[activeIndex];
@@ -1215,7 +1218,8 @@ git commit -m "command: the screen — a box, the projects, and what each one an
 - Consumes: `SECTIONS`, `nextSectionMode` (Task 2); `createCommandView` (Task 6);
   action kinds `section-move`, `command-*` (Task 4).
 - Produces:
-  - `createSectionStrip(onPick: (mode: Mode) => void): { element: HTMLElement; render(mode: Mode): void }`
+  - `createSectionStrip(onPick: (mode: Mode) => void): { element: HTMLElement; render(mode: Mode):
+    void }`
   - `StatusPage` gains `commandStatusLabel: string`
 
 - [ ] **Step 1: Write `src/section-strip.ts`**

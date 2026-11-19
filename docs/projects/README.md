@@ -163,7 +163,8 @@ Folders: `src/main/projects/`.
 - The file: `projects-file.ts` (also reads it from disk), `projects-file.test.ts`
 - The project a word names: `project-named.ts`, `project-named.test.ts`
 - The first file `init` writes: `projects-first.ts`, `projects-first.test.ts`
-- Every later write — add, set, remove and the app's append: `projects-write.ts`, `projects-write.test.ts`
+- Every later write — add, set, remove and the app's append:
+  `projects-write.ts`, `projects-write.test.ts`
 - The `project` command: `project-cli.ts`, `project-cli.test.ts`, `project-program.ts`
   (run as `dashboard project`, see [command](../command/README.md))
 - Open, close and focus: the project actions in `src/main/actions/project/`
@@ -172,32 +173,68 @@ Folders: `src/main/projects/`.
 
 ## Scenarios
 
-- Given a project with `aka: [mandala]`, when `dashboard project find Mandala` runs, then that project is printed.
-- Given a file with a misspelt key on line 3 and a project with no name on line 4, when any verb runs, then both problems are printed, `projects.yaml:3:` and `projects.yaml:4:`, and it exits 1.
-- Given two projects that share a name or aka, when any verb runs, then the second one's line is named as the problem.
-- Given no `~/.dashboard/projects.yaml`, when `list` or `find` runs, then it says the file does not exist yet, names `dashboard project init`, and exits 1.
-- Given no `~/.dashboard/projects.yaml` and two projects open, when `dashboard project init` runs, then the file lists those two and every recent project still on disk, and `project list` reads it.
-- Given a `~/.dashboard/projects.yaml`, when `dashboard project init` runs, then the file is left as it was, and it says so and exits 1.
-- Given `path: ~/Workspace/new-crm` and the project not open, when `dashboard project open crm` runs in a pane, then a new-crm page appears, its main session starts, and it prints `opened new-crm; main-new-crm is running` once SendMessage to `main-new-crm` arrives.
-- Given api restored reading `Directory not found` and its drive mounted since, when `dashboard project open api` runs, then the page comes back with its shells and it prints `opened api; main-api is running`.
-- Given new-crm restored at launch and never shown, when `dashboard project open crm` runs, then its main starts and it prints `new-crm is already open; main-new-crm is running`; a main that does not start within a minute is refused with why.
-- Given new-crm opened from the picker as `~/ws/new-crm`, `ws` a symlink to `Workspace`, when `dashboard project close new-crm` runs, then that page closes.
-- Given new-crm open with `npm run dev` in terminal 2, when `dashboard project close new-crm` runs, then it prints `new-crm is still running in terminal 2 npm — stop it and close again`, exits 1 and the page stays.
-- Given new-crm open with every pane at a prompt, when `dashboard project close new-crm` runs, then the page goes with no dialog.
-- Given new-crm open on another tab, when `dashboard project focus crm` runs, then the window comes forward on new-crm's page and it prints `switched to new-crm`; a project not open is refused.
-- Given new-crm open and listed, and notes open but not listed, when `dashboard project list` runs, then new-crm reads `open` and notes is listed after the file's projects as `open, not in` the file.
-- Given `dashboard project close cr`, when no project is named or aka'd `cr`, then it is refused naming the near matches and nothing closes.
-- Given a commented projects.yaml, when `dashboard project add ~/api --aka backend` runs, then `- name: api` with `aka: [backend]` and `path: ~/api` is the last entry and every comment is still there.
-- Given a file written by `init`, when `dashboard project remove` takes out its first project, then the header comment is still at the top.
+- Given a project with `aka: [mandala]`, when `dashboard project find Mandala`
+  runs, then that project is printed.
+- Given a file with a misspelt key on line 3 and a project with no name on line
+  4, when any verb runs, then both problems are printed, `projects.yaml:3:` and
+  `projects.yaml:4:`, and it exits 1.
+- Given two projects that share a name or aka, when any verb runs, then the
+  second one's line is named as the problem.
+- Given no `~/.dashboard/projects.yaml`, when `list` or `find` runs, then it
+  says the file does not exist yet, names `dashboard project init`, and exits 1.
+- Given no `~/.dashboard/projects.yaml` and two projects open, when `dashboard
+  project init` runs, then the file lists those two and every recent project
+  still on disk, and `project list` reads it.
+- Given a `~/.dashboard/projects.yaml`, when `dashboard project init` runs, then
+  the file is left as it was, and it says so and exits 1.
+- Given `path: ~/Workspace/new-crm` and the project not open, when `dashboard
+  project open crm` runs in a pane, then a new-crm page appears, its main
+  session starts, and it prints `opened new-crm; main-new-crm is running` once
+  SendMessage to `main-new-crm` arrives.
+- Given api restored reading `Directory not found` and its drive mounted since,
+  when `dashboard project open api` runs, then the page comes back with its
+  shells and it prints `opened api; main-api is running`.
+- Given new-crm restored at launch and never shown, when `dashboard project open
+  crm` runs, then its main starts and it prints `new-crm is already open;
+  main-new-crm is running`; a main that does not start within a minute is
+  refused with why.
+- Given new-crm opened from the picker as `~/ws/new-crm`, `ws` a symlink to
+  `Workspace`, when `dashboard project close new-crm` runs, then that page
+  closes.
+- Given new-crm open with `npm run dev` in terminal 2, when `dashboard project
+  close new-crm` runs, then it prints `new-crm is still running in terminal 2
+  npm — stop it and close again`, exits 1 and the page stays.
+- Given new-crm open with every pane at a prompt, when `dashboard project close
+  new-crm` runs, then the page goes with no dialog.
+- Given new-crm open on another tab, when `dashboard project focus crm` runs,
+  then the window comes forward on new-crm's page and it prints `switched to
+  new-crm`; a project not open is refused.
+- Given new-crm open and listed, and notes open but not listed, when `dashboard
+  project list` runs, then new-crm reads `open` and notes is listed after the
+  file's projects as `open, not in` the file.
+- Given `dashboard project close cr`, when no project is named or aka'd `cr`,
+  then it is refused naming the near matches and nothing closes.
+- Given a commented projects.yaml, when `dashboard project add ~/api --aka
+  backend` runs, then `- name: api` with `aka: [backend]` and `path: ~/api` is
+  the last entry and every comment is still there.
+- Given a file written by `init`, when `dashboard project remove` takes out its
+  first project, then the header comment is still at the top.
 - Given api listed at ~/x/api, when `dashboard project add ~/y/api` runs, then it is added as api-2.
-- Given new-crm listed, when `dashboard project add ~/ws/new-crm` runs and `ws` links to `Workspace`, then it is refused as already listed, as new-crm.
+- Given new-crm listed, when `dashboard project add ~/ws/new-crm` runs and `ws`
+  links to `Workspace`, then it is refused as already listed, as new-crm.
 - Given new-crm with a `new-raxel` test deploy, when `dashboard project set crm --deploy name=new-raxel,address=https://staging.example.com` runs, then new-raxel's address changes, its role stays test, and every other deploy stays.
-- Given `dashboard project set crm --aka screensaver`, when screensaver is another project, then it is refused naming that project and the file is left as it was.
-- Given a projects.yaml that does not list ~/forks/crm, when the app opens that folder, then the file ends with `- name: crm-2` and `path: ~/forks/crm` (crm being taken).
+- Given `dashboard project set crm --aka screensaver`, when screensaver is
+  another project, then it is refused naming that project and the file is left
+  as it was.
+- Given a projects.yaml that does not list ~/forks/crm, when the app opens that
+  folder, then the file ends with `- name: crm-2` and `path: ~/forks/crm` (crm
+  being taken).
 - Given no projects.yaml, when the app opens a project, then no file is written.
 
 ## Open questions
 
-- `path` is printed as written by `list` and `find`; `~` is expanded only once something opens a
-  project from it (`project-named.ts`, used by `project open`, `close`, `focus`, `board --project` and `pane claim --project`).
-- A pane's own name, given on the screen, is not in the command's refusal: main never sees it, so the pane is named `terminal 2`.
+- `path` is printed as written by `list` and `find`; `~` is expanded only once
+  something opens a project from it (`project-named.ts`, used by `project open`,
+  `close`, `focus`, `board --project` and `pane claim --project`).
+- A pane's own name, given on the screen, is not in the command's refusal: main
+  never sees it, so the pane is named `terminal 2`.

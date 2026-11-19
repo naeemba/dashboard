@@ -24,16 +24,16 @@ end of a row, copies the entry as JSON, exactly as it was read; Alt+C copies
 from the popup too. An older entry with only the five row fields opens and
 copies the same, and a line the file could not parse is left out of the list.
 
-Each line of the file is one JSON entry: `time`, `level`, `kind`, `project`
-and `message`, the one sentence the row shows. Every entry also says which
-`build` wrote it (`<version>+<commit>`) and its `source` (`main` or
-`renderer`). An error entry carries `error` — `name`, `message`, `stack`, `code` and `cause`, the same shape nested — and where it
-came from when the writer knew: `action` (`project.close`), `channel` (the IPC
-channel whose handler threw; the same sentence again within a minute of the
-last is not written) and `context` ids (`slot`, `pane`, `card`,
-`session`). A stack is cut at 2000 characters. An entry from an older build,
-without any of these, still reads; so does one from a newer build with a level,
-kind or key this one does not know (app-decision-2).
+Each line of the file is one JSON entry: `time`, `level`, `kind`, `project` and
+`message`, the one sentence the row shows. Every entry also says which `build`
+wrote it (`<version>+<commit>`) and its `source` (`main` or `renderer`). An
+error entry carries `error` — `name`, `message`, `stack`, `code` and `cause`,
+the same shape nested — and where it came from when the writer knew: `action`
+(`project.close`), `channel` (the IPC channel whose handler threw; the same
+sentence again within a minute of the last is not written) and `context` ids
+(`slot`, `pane`, `card`, `session`). A stack is cut at 2000 characters. An entry
+from an older build, without any of these, still reads; so does one from a newer
+build with a level, kind or key this one does not know (app-decision-2).
 
 ### What's new
 
@@ -72,7 +72,8 @@ channel: on a remote screen it answers for this install, not the host's.
 
 ## Files
 
-Folders: `src/main/`, `src/main/app/`, `src/preload/`, `src/shared/app/`, `src/renderer/`, `src/renderer/app/`.
+Folders: `src/main/`, `src/main/app/`, `src/preload/`, `src/shared/app/`,
+`src/renderer/`, `src/renderer/app/`.
 
 A new file goes in `src/<process>/<feature>/`. The process is the side that
 runs it (a type-only import does not count): `main/` when only main or the two
@@ -111,8 +112,11 @@ its own side. `eslint.config.test.ts` pins each of those.
 - Restore: `session.ts`, `session-store.ts`
 - Atomic write, and a write skipped when the bytes match (`replaceFileIfChanged`): `replace-file.ts`
 - A JSON file of string values read as empty when broken: `string-record-file.ts`
-- Whether a socket is listening (the nvim server, the `dashboard` command finding the app): `can-connect.ts`
-- Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`, `default-branch.ts` (which branch on a remote is its default, for the ship and `/create-task` alike)
+- Whether a socket is listening (the nvim server, the `dashboard` command
+  finding the app): `can-connect.ts`
+- Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`,
+  `default-branch.ts` (which branch on a remote is its default, for the ship and
+  `/create-task` alike)
 - Log: `log-entry.ts`, `log-error.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,
   `clamp-index.ts`, `fuzzy.ts`, `is-record.ts`, `base-name.ts`, `slug.ts`, `age.ts`,
@@ -234,22 +238,41 @@ on Windows `localhost` bound to `::1` alone while the window asked
 
 ## Scenarios
 
-- Given a fresh launch with `pnpm start` on Windows, when the dev server reloads the page after bundling, then the window shows the manager and the restored projects, and no browser tab opens.
-- Given a link in a page, when it would navigate the window's own frame, then the window stays where it is.
-- Given three projects open, when the app restarts, then they come back in the order you cycled them, each on the view it was left on.
+- Given a fresh launch with `pnpm start` on Windows, when the dev server reloads
+  the page after bundling, then the window shows the manager and the restored
+  projects, and no browser tab opens.
+- Given a link in a page, when it would navigate the window's own frame, then
+  the window stays where it is.
+- Given three projects open, when the app restarts, then they come back in the
+  order you cycled them, each on the view it was left on.
 - Given a shell is running a task, when you close the window, then the app asks before it closes.
-- Given the picker is open, when you type part of a folder's name, then the list narrows to the folders whose letters appear in that order.
-- Given the picker is open, when you type a path starting with `/`, `\`, `~` or a drive letter, then a row opens that folder, on a remote screen too, where `~` is the host's home; it comes after the recents when one of their paths contains it, so Enter on `/api` opens `/code/api`, and is the first row otherwise, so Enter on a new folder that only loosely matches a recent opens what was typed.
-- Given a typed path that is not a folder, when you press Enter on its row, then the project is not opened and the status bar says `No folder at` the path.
-- Given a pane in a project is running a program, when you close the project, then it refuses and the status bar names the pane.
-- Given the app is running, when it is launched again, then no second window opens and the running window comes to the front.
-- Given the app is running, when it is launched again with `--user-data-dir` on another folder, then that copy runs on its own.
-- Given the app is killed while it writes `session.json`, when it next launches, then it opens the projects of the last whole write.
-- Given a reply carries markup that gets past the markdown renderer, when it is drawn, then no script in it runs.
-- Given a build merged two pull requests since the one the app last ran, when it launches, then what's new lists those two and nothing older.
+- Given the picker is open, when you type part of a folder's name, then the list
+  narrows to the folders whose letters appear in that order.
+- Given the picker is open, when you type a path starting with `/`, `\`, `~` or
+  a drive letter, then a row opens that folder, on a remote screen too, where
+  `~` is the host's home; it comes after the recents when one of their paths
+  contains it, so Enter on `/api` opens `/code/api`, and is the first row
+  otherwise, so Enter on a new folder that only loosely matches a recent opens
+  what was typed.
+- Given a typed path that is not a folder, when you press Enter on its row, then
+  the project is not opened and the status bar says `No folder at` the path.
+- Given a pane in a project is running a program, when you close the project,
+  then it refuses and the status bar names the pane.
+- Given the app is running, when it is launched again, then no second window
+  opens and the running window comes to the front.
+- Given the app is running, when it is launched again with `--user-data-dir` on
+  another folder, then that copy runs on its own.
+- Given the app is killed while it writes `session.json`, when it next launches,
+  then it opens the projects of the last whole write.
+- Given a reply carries markup that gets past the markdown renderer, when it is
+  drawn, then no script in it runs.
+- Given a build merged two pull requests since the one the app last ran, when it
+  launches, then what's new lists those two and nothing older.
 - Given the same build launches again, when the window opens, then what's new does not come up.
-- Given a fresh userData folder, when the app first launches, then what's new does not come up and the build is remembered.
-- Given what's new is open, when you press Enter on a row, then its pull request opens in the browser and the list stays up.
+- Given a fresh userData folder, when the app first launches, then what's new
+  does not come up and the build is remembered.
+- Given what's new is open, when you press Enter on a row, then its pull request
+  opens in the browser and the list stays up.
 
 ## Open questions
 

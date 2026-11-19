@@ -1,18 +1,27 @@
 # Terminal Dashboard v1 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A keyboard-first Electron app that opens a fixed list of projects, gives each one five shells in a fixed grid, and switches between them with shortcuts.
+**Goal:** A keyboard-first Electron app that opens a fixed list of projects, gives each one five
+shells in a fixed grid, and switches between them with shortcuts.
 
-**Architecture:** The Electron main process reads `.env`, spawns one pseudo-terminal per (project, terminal) pair with node-pty, and relays bytes over IPC. The renderer draws one xterm.js instance per pseudo-terminal, one hidden page per project, and intercepts shortcuts in the capture phase before xterm sees them. Pure logic (env parsing, shell choice, shortcut mapping) lives in small files with unit tests.
+**Architecture:** The Electron main process reads `.env`, spawns one pseudo-terminal per (project,
+terminal) pair with node-pty, and relays bytes over IPC. The renderer draws one xterm.js instance
+per pseudo-terminal, one hidden page per project, and intercepts shortcuts in the capture phase
+before xterm sees them. Pure logic (env parsing, shell choice, shortcut mapping) lives in small
+files with unit tests.
 
-**Tech Stack:** Electron 44, Electron Forge 7 (vite-typescript template), TypeScript, @xterm/xterm 6, @xterm/addon-fit 0.11, node-pty 1.1, vitest 4. Node 22.
+**Tech Stack:** Electron 44, Electron Forge 7 (vite-typescript template), TypeScript, @xterm/xterm
+6, @xterm/addon-fit 0.11, node-pty 1.1, vitest 4. Node 22.
 
 **Spec:** `docs/superpowers/specs/2026-09-03-terminal-dashboard-design.md`
 
 ## Global Constraints
 
-- No abbreviations in identifiers (`configuration`, not `config`). Library names keep their own spelling (`pty` in `node-pty`, IPC channel names).
+- No abbreviations in identifiers (`configuration`, not `config`). Library names keep their own
+  spelling (`pty` in `node-pty`, IPC channel names).
 - No source file over 600 lines of code.
 - No UI framework. Plain DOM.
 - `.env` is gitignored and never committed. `.env.example` is committed.
@@ -58,7 +67,9 @@ A terminal id is `${projectIndex}:${terminalIndex}`, for example `2:4`.
 ### Task 1: Scaffold the Electron app
 
 **Files:**
-- Create: everything the Forge template generates (`package.json`, `forge.config.ts`, `vite.*.config.ts`, `tsconfig.json`, `src/main.ts`, `src/preload.ts`, `src/renderer.ts`, `src/index.css`, `index.html`)
+- Create: everything the Forge template generates (`package.json`, `forge.config.ts`,
+  `vite.*.config.ts`, `tsconfig.json`, `src/main.ts`, `src/preload.ts`, `src/renderer.ts`,
+  `src/index.css`, `index.html`)
 - Create: `.env.example`
 - Modify: `.gitignore`
 
@@ -89,7 +100,8 @@ npm install @xterm/xterm@6 @xterm/addon-fit@0.11 node-pty@1
 npm install --save-dev vitest@4 @types/node@22
 ```
 
-`node-pty` must be in `dependencies`, not `devDependencies`. The Forge Vite plugin externalizes everything in `dependencies` from the main bundle, which is required for a native module.
+`node-pty` must be in `dependencies`, not `devDependencies`. The Forge Vite plugin externalizes
+everything in `dependencies` from the main bundle, which is required for a native module.
 
 - [ ] **Step 3: Add the test script**
 
@@ -320,7 +332,8 @@ git commit -m "Pick shell from env or platform default"
   };
   export function mapShortcut(input: KeyInput, isMac: boolean): Action | null;
   ```
-  `KeyInput` is a structural subset of the DOM `KeyboardEvent`, so the renderer passes the event straight in.
+  `KeyInput` is a structural subset of the DOM `KeyboardEvent`, so the renderer passes the event
+  straight in.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -452,7 +465,8 @@ git commit -m "Map key events to project and terminal actions"
 
 **Interfaces:**
 - Consumes: `parseProjects`, `Project` (Task 2), `pickShell` (Task 3), `TERMINAL_COUNT` (Task 4).
-- Produces: `window.dashboard: DashboardBridge` in the renderer, and the IPC channels listed in File Structure.
+- Produces: `window.dashboard: DashboardBridge` in the renderer, and the IPC channels listed in File
+  Structure.
 
 - [ ] **Step 1: Define the bridge type**
 
@@ -501,7 +515,9 @@ contextBridge.exposeInMainWorld('dashboard', bridge);
 
 - [ ] **Step 3: Write the main process**
 
-`src/main.ts`. Keep the template's `createWindow` body if it differs in window-loading details (the `MAIN_WINDOW_VITE_*` globals), but the window must be assigned to the module-level `mainWindow` variable.
+`src/main.ts`. Keep the template's `createWindow` body if it differs in window-loading details (the
+`MAIN_WINDOW_VITE_*` globals), but the window must be assigned to the module-level `mainWindow`
+variable.
 
 ```ts
 import { app, BrowserWindow, ipcMain } from 'electron';
@@ -588,8 +604,10 @@ app.on('window-all-closed', () => app.quit());
 
 Notes for the implementer:
 - `process.loadEnvFile` is Node 22 standard library. No dotenv dependency.
-- In development `app.getAppPath()` is the repository root, so `.env` at the root is found. Packaging is out of scope for v1.
-- The `shells.size === 0` guard makes a renderer reload (Cmd+R in development) reuse running shells instead of spawning a second set.
+- In development `app.getAppPath()` is the repository root, so `.env` at the root is found.
+  Packaging is out of scope for v1.
+- The `shells.size === 0` guard makes a renderer reload (Cmd+R in development) reuse running shells
+  instead of spawning a second set.
 
 - [ ] **Step 4: Type-check**
 
@@ -613,7 +631,8 @@ git commit -m "Spawn shells in main process and expose IPC bridge"
 - Modify: `src/renderer.ts` (replace template content)
 
 **Interfaces:**
-- Consumes: `window.dashboard` (Task 5), `mapShortcut`, `TERMINAL_COUNT`, `Action` (Task 4), `Project` type (Task 2).
+- Consumes: `window.dashboard` (Task 5), `mapShortcut`, `TERMINAL_COUNT`, `Action` (Task 4),
+  `Project` type (Task 2).
 
 - [ ] **Step 1: Write the HTML**
 
@@ -856,7 +875,8 @@ async function start(): Promise<void> {
 start();
 ```
 
-The `onData` and `onExit` listeners are registered before `getProjects` is awaited, so no shell output is lost between spawn and first render.
+The `onData` and `onExit` listeners are registered before `getProjects` is awaited, so no shell
+output is lost between spawn and first render.
 
 - [ ] **Step 4: Type-check and run the unit tests**
 
@@ -875,20 +895,27 @@ npm start
 
 Check each of these:
 
-1. Window opens on the first project with five terminals, two on top and three on bottom, all showing a shell prompt in that project's directory (`pwd` in each).
-2. Status bar shows all project names with the active one in brackets and the focused terminal number.
+1. Window opens on the first project with five terminals, two on top and three on bottom, all
+   showing a shell prompt in that project's directory (`pwd` in each).
+2. Status bar shows all project names with the active one in brackets and the focused terminal
+   number.
 3. Cmd+] and Cmd+[ cycle projects, wrapping at both ends. Cmd+Shift+2 jumps to the second project.
-4. Cmd+1 to Cmd+5 focus terminals. Cmd+Right and Cmd+Left cycle, wrapping. The focused pane has a blue outline.
+4. Cmd+1 to Cmd+5 focus terminals. Cmd+Right and Cmd+Left cycle, wrapping. The focused pane has a
+   blue outline.
 5. Clicking a terminal focuses it and updates the status bar.
 6. Ctrl+C in a terminal interrupts the shell command, it does not trigger a shortcut.
-7. Type `exit` in a terminal. It shows the exited message. Press Enter, a fresh shell appears in the same directory.
-8. The fake project page shows "Directory not found" and no terminals. Shortcuts still switch away from it.
+7. Type `exit` in a terminal. It shows the exited message. Press Enter, a fresh shell appears in the
+   same directory.
+8. The fake project page shows "Directory not found" and no terminals. Shortcuts still switch away
+   from it.
 9. Resize the window. Terminals refit, no clipped text.
 10. Quit the app. `ps aux | grep zsh` shows no leftover shells from the app.
 
 Record any failure and fix it before committing. Likely first-run issues and their fixes:
-- Terminals render blank on pages that were hidden at open time: call `pane.terminal.refresh(0, pane.terminal.rows - 1)` after `fit.fit()` in `showPage`.
-- `node-pty` fails to load with a NODE_MODULE_VERSION error: run `npx electron-rebuild -f -w node-pty`.
+- Terminals render blank on pages that were hidden at open time: call `pane.terminal.refresh(0,
+  pane.terminal.rows - 1)` after `fit.fit()` in `showPage`.
+- `node-pty` fails to load with a NODE_MODULE_VERSION error: run `npx electron-rebuild -f -w
+  node-pty`.
 
 - [ ] **Step 6: Commit**
 

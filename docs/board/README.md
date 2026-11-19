@@ -41,33 +41,28 @@ Backlog is where a card waits until somebody picks it; Todo holds only what has
 been picked. Every board gets Backlog in front of Todo, and the board command
 puts a card there when it is not told a column.
 
-A card that will not be done is kept, in Cancelled, the last column, which every
-board gets on read the way it gets Backlog. `d` on a card moves it there, a move
-like any other that undo takes back; only `d` on a card already in Cancelled
-deletes it, with its subtasks, after the confirm. Its subtasks stay where they
-are. Entering Cancelled starts nothing, from the board or from `board move <id>
-Cancelled`, and a card leaves it like any column, by key too (board-decision-4).
-A cancelled card is never pulled into Review, and its worktree stays, even once
-its agent has opened a pull request, until the worktree dialog removes it. `d` on a card in Done asks and then deletes
-it, since no key moves a card out of Done. Whatever
-treats Done as finished treats Cancelled the same: the manager's column counts
-leave both out, the subtask bar counts both as finished, a pane working a
+A card that will not be done is kept, in Cancelled, the last column, which every board gets on read
+the way it gets Backlog. `d` on a card moves it there, a move like any other that undo takes back;
+only `d` on a card already in Cancelled deletes it, with its subtasks, after the confirm. Its
+subtasks stay where they are. Entering Cancelled starts nothing, from the board or from `board move
+<id> Cancelled`, and a card leaves it like any column, by key too (board-decision-4). A cancelled
+card is never pulled into Review, and its worktree stays, even once its agent has opened a pull
+request, until the worktree dialog removes it. `d` on a card in Done asks and then deletes it, since
+no key moves a card out of Done. Whatever treats Done as finished treats Cancelled the same: the
+manager's column counts leave both out, the subtask bar counts both as finished, a pane working a
 cancelled card is not stalled, and the release notes' What's new lists only Done.
 
-There is a Ship column, just right of Todo. Moving a card into it — Shift
-with either arrow, a drop from either side, or `dashboard board move <id>
-Ship` — hands it to an agent, and `dashboard board ship <id>` does the same
-without the move. A card in Done moves only by dragging it: Shift with an
-arrow on it is refused with an error naming the card, since the highlight may
-be on the wrong one (board-decision-3). The app refuses if the project has
-anything uncommitted
-outside .dashboard/, fetches and branches off the project's base branch, makes a
-worktree in a folder beside the project, and starts an agent in a worker
-that is sitting at a prompt with nothing running in it, or in a new worker
-when none is. The agent is a Claude screen in that pane, as a worker main
-dispatches is, except on Windows, where it is Claude Code in the terminal; the
-review pane below is the same (workers-decision-8). Main is never taken. A pane still standing in an earlier card's
-worktree is taken last, since its transcript is still on screen.
+There is a Ship column, just right of Todo. Moving a card into it — Shift with either arrow, a drop
+from either side, or `dashboard board move <id> Ship` — hands it to an agent, and `dashboard board
+ship <id>` does the same without the move. A card in Done moves only by dragging it: Shift with an
+arrow on it is refused with an error naming the card, since the highlight may be on the wrong one
+(board-decision-3). The app refuses if the project has anything uncommitted outside .dashboard/,
+fetches and branches off the project's base branch, makes a worktree in a folder beside the project,
+and starts an agent in a worker that is sitting at a prompt with nothing running in it, or in a new
+worker when none is. The agent is a Claude screen in that pane, as a worker main dispatches is,
+except on Windows, where it is Claude Code in the terminal; the review pane below is the same
+(workers-decision-8). Main is never taken. A pane still standing in an earlier card's worktree is
+taken last, since its transcript is still on screen.
 
 Only what is in the foreground counts as running, and the pane it takes is
 restarted in the worktree: a line you typed but never submitted goes with it,
@@ -213,23 +208,20 @@ the same program, with no word in front. It is how an agent working a card moves
 its own. `board list` leaves out Done and Cancelled, most of an old board, and
 says in a last line how many cards that hid; `--all` lists them, `--column
 <name>` one column. Wherever a verb takes an id, any start of one that a single
-card's id begins with stands for it, such as its first eight characters; a start
-two cards share is refused, naming both, and a ship, a review or a move the app
-answers is sent the whole id. The usage and the seeded file both say no git
-pull, commit or push is needed around a board command: it syncs the board
-itself, below. The .dashboard/CLAUDE.md the app seeds into each project says
-what the folder holds, that the board is changed through the command, `node
-"$DASHBOARD_BOARD"` to print what it takes, that `list` leaves out Done and
-Cancelled, and that no git pull, commit or push is needed. Its first line carries a
-version, and it is written whenever the board is read and the file is missing
-or older than the app's (no version line counts as older), so a project seeded
-with an older text that spelled out the card format gets the new one. A file of
-the app's version or a later one is left alone, edited or not, and a checkout
-the sync brings up keeps an edit to it. Where git tracks the file, the rewrite
-is committed to origin's default branch by the sync below, as a card write is.
-Only a checkout on origin's default branch, a folder outside git, or a
-repository with no origin default branch has an older file rewritten; a feature branch's worktree keeps its copy until it
-merges main, so that merge has nothing in its way (board-decision-8).
+card's id begins with stands for it, such as its first eight characters; a start two cards share is
+refused, naming both, and a ship, a review or a move the app answers is sent the whole id. The usage
+and the seeded file both say no git pull, commit or push is needed around a board command: it syncs
+the board itself, below. The .dashboard/CLAUDE.md the app seeds into each project says what the
+folder holds, that the board is changed through the command, `node "$DASHBOARD_BOARD"` to print what
+it takes, that `list` leaves out Done and Cancelled, and that no git pull, commit or push is needed.
+Its first line carries a version, and it is written whenever the board is read and the file is
+missing or older than the app's (no version line counts as older), so a project seeded with an older
+text that spelled out the card format gets the new one. A file of the app's version or a later one
+is left alone, edited or not, and a checkout the sync brings up keeps an edit to it. Where git
+tracks the file, the rewrite is committed to origin's default branch by the sync below, as a card
+write is. Only a checkout on origin's default branch, a folder outside git, or a repository with no
+origin default branch has an older file rewritten; a feature branch's worktree keeps its copy until
+it merges main, so that merge has nothing in its way (board-decision-8).
 
 ## Kept in step with git
 
@@ -324,12 +316,13 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   (the glyphs and the card's line)
 - The git sync: `board-sync.ts` (its decisions), `board-sync-git.ts` (the git),
   `board-sync-queue.ts` (the app's one sync per project), each beside its `.test.ts`
-- The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`,
-  `board-usage.ts`, `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
-- The guard: `board-guard.ts` (which tools and paths are refused), `board-guard-install.ts`
-  (the program and the entry under `~/.claude`), each beside its `.test.ts`; `board guard` in
-  `board-program.ts` is the hook's command, and asks the running-app guard (workflow-decision-7), the
-  package-manager guard (workflow-decision-9) and the worktree guard (workflow-decision-10) too;
+- The `board` command: `board-cli.ts`, `board-cli-entry.ts`, `board-program.ts`, `board-usage.ts`,
+  `board-target.ts` (which project, `--project`), `linked-worktree.ts` (a worktree's board, where a
+  move asks the app nothing) (also `dashboard board`, see [command](../command/README.md))
+- The guard: `board-guard.ts` (which tools and paths are refused), `board-guard-install.ts` (the
+  program and the entry under `~/.claude`), each beside its `.test.ts`; `board guard` in
+  `board-program.ts` is the hook's command, and asks the running-app guard (workflow-decision-7),
+  the package-manager guard (workflow-decision-9) and the worktree guard (workflow-decision-10) too;
   `hook-answer.ts` is what the guards share
 - `/create-task` and its program: `create-task.ts`, `create-task-program.ts`,
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
@@ -361,11 +354,11 @@ build's copy differs. A dev run (`pnpm start`) installs nothing; run a branch's 
 - `~/.claude/skills/create-task/package.json`, `{"type":"commonjs"}`, so a `"type": "module"`
   package.json in `~/.claude` or `~` cannot make node read the program as ESM
 
-The program's path is fixed: `claude-pr-loop` runs it as an executable through `PR_LOOP_CARD_SCRIPT` with
-`--title`, `--notes` and `--priority`, and `--remote <name>` on a repo whose board lives on a
-remote other than `origin`. `--column <name>` picks the column (Backlog otherwise), `--seed`
-creates a board missing from the default branch, from this checkout's copy when it has one, and
-`--dry-run` prints the files it would commit instead of pushing them.
+The program's path is fixed: `claude-pr-loop` runs it as an executable through `PR_LOOP_CARD_SCRIPT`
+with `--title`, `--notes` and `--priority`, and `--remote <name>` on a repo whose board lives on a
+remote other than `origin`. `--column <name>` picks the column (Backlog otherwise), `--seed` creates
+a board missing from the default branch, from this checkout's copy when it has one, and `--dry-run`
+prints the files it would commit instead of pushing them.
 
 The card is written by the `board` command's own `add`, in a worktree of `<remote>/<default>`
 made for that one commit in the system temp folder and removed after, so it carries the same
@@ -384,39 +377,98 @@ board there does not parse, and when it cannot tell which branch on the remote i
 
 ## Scenarios
 
-- Given a plain terminal in a folder with no `.dashboard` and no git repository above it, when `dashboard board list` runs, then it is refused naming `--project` and no board is seeded there.
-- Given a board with cards in Done, when `board list` runs, then they are left out and a last line says how many, naming `--all`; `board show ba02cf00` shows the one card whose id starts with it, and a start two cards share is refused naming both (`board-cli.test.ts`).
-- Given `crm` in `~/.dashboard/projects.yaml`, when `dashboard board move <id> Done --project crm` runs from any folder, then the card moves on crm's board.
-- Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
-- Given the power goes out just after a board, notes or session write, when the app next launches, then it reads the old file or the new one, never an empty one (`replaceFile` flushes before it renames).
-- Given an agent ran `board move` after the board last read the file, when you rename another card before the reload arrives, then the file keeps both: the agent's move and your rename.
-- Given an agent ran `board move`, when you rename a card twice and the board's re-read lands between the two writes, then the board reads again and shows the second rename.
-- Given a card with subtasks, when you blank its title, then it is refused and the status bar says to delete it with `d`.
+- Given a plain terminal in a folder with no `.dashboard` and no git repository above it, when
+  `dashboard board list` runs, then it is refused naming `--project` and no board is seeded there.
+- Given a board with cards in Done, when `board list` runs, then they are left out and a last line
+  says how many, naming `--all`; `board show ba02cf00` shows the one card whose id starts with it,
+  and a start two cards share is refused naming both (`board-cli.test.ts`).
+- Given `crm` in `~/.dashboard/projects.yaml`, when `dashboard board move <id> Done --project crm`
+  runs from any folder, then the card moves on crm's board.
+- Given the board is on screen, when `board move` writes the file from a pane, then the board
+  re-reads without moving your selection.
+- Given the power goes out just after a board, notes or session write, when the app next launches,
+  then it reads the old file or the new one, never an empty one (`replaceFile` flushes before it
+  renames).
+- Given an agent ran `board move` after the board last read the file, when you rename another card
+  before the reload arrives, then the file keeps both: the agent's move and your rename.
+- Given an agent ran `board move`, when you rename a card twice and the board's re-read lands
+  between the two writes, then the board reads again and shows the second rename.
+- Given a card with subtasks, when you blank its title, then it is refused and the status bar says
+  to delete it with `d`.
 - Given you deleted a card, when you undo, then it comes back where it was.
-- Given a card in Doing, when you press `d`, then it moves to Cancelled with no question; `d` on it there asks, and Enter deletes it for good.
-- Given a board written before Cancelled existed, when the app or the command reads it, then it has an empty Cancelled column last.
-- Given the board's first read failed, when you press a key, then the board refuses it instead of writing over the file.
-- Given a card's pull request is open, when its agent finishes, then the card goes in Review, not Done.
-- Given a card in Ship, when its agent starts, then it is in Doing with its branch on it (`start.test.ts`).
-- Given a shipped card in Doing, when gh says its branch's pull request is open, then it is in Review with the number and one line naming the pull request; merged, it is in Done with a second line; closed unmerged from Review, it is back in Doing (`pull-request-column.test.ts`, `follow.test.ts`).
-- Given a card moved to Done while its pull request is still open, when the app next checks, then it is back in Review.
-- Given a card whose pull request has a check running, when it fails, then the card's glyph turns from ◌ to ✗ within a minute without the board being touched (`pull-request-status.test.ts` checks that `record` reports the change; main sending `board:change` on it is checked by hand).
-- Given gh is offline, when the app checks, then no card moves, nothing is written, and the log has one warning until a check goes through (`pull-request-sweep.test.ts`).
-- Given a filter keeps a card only because you just changed it, when an arrow moves the selection off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they are and lands on one of them only moves the highlight.
-- Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the branch, HEAD and working tree are as they were.
-- Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs, then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
-- Given the default branch has no board, neither `.dashboard/board/` nor `.dashboard/board.json`, when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with `--seed`.
-- Given a project still on `.dashboard/board.json`, when the board is first written, then every card is in its own file under `.dashboard/board/cards/`, `board.json` is gone, and the board reads back the same (`board-files.test.ts`, on a copy of this repository's own board).
-- Given a card file that does not parse, or parses to something that is not an object, when the board saves a change it read with a look, then that file is still there with its bytes; when the board next reads, it is set aside as `<id>.json.broken` (`<id>.json.2.broken` if that name is taken) and every file set aside is named (`board-files.test.ts`).
-- Given a `.dashboard/board.json` that does not parse, when the board reads, then it is moved aside as `board.json.broken` (`board.json.2.broken` and on if that name is taken, so a second break keeps the first damaged copy) and the board opens empty (`board-store.test.ts`).
-- Given a board file that does not parse, when the `board` command or card.move would write, then the file is left under its own name, nothing is written or committed, the command exits 1 naming the file (card.move answers `{ refused }` instead), and the same happens on every run after until the file is fixed (`board-files.test.ts` holds the read that leaves the file and names it; `src/main/actions/card/move.test.ts` holds card.move refusing and writing nothing). Given a card file the app set aside, the review sweep does not mark that card as deleted (`review-flow.test.ts`).
-- Given two branches that each add a card, or each move a different card, when both merge, then git merges them with no conflict (`board-files.test.ts`, with real merges).
-- Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files, then none is rewritten.
-- Given an installed `create-task.js` with mode 0644, when the app launches, then it is 0755 and runs as a command, its bytes not rewritten.
-- Given the remote's hook declines the push, when `create-task.js` runs, then it prints git's sentence and pushes once, not twice.
+- Given a card in Doing, when you press `d`, then it moves to Cancelled with no question; `d` on it
+  there asks, and Enter deletes it for good.
+- Given a board written before Cancelled existed, when the app or the command reads it, then it has
+  an empty Cancelled column last.
+- Given the board's first read failed, when you press a key, then the board refuses it instead of
+  writing over the file.
+- Given a card's pull request is open, when its agent finishes, then the card goes in Review, not
+  Done.
+- Given a card in Ship, when its agent starts, then it is in Doing with its branch on it
+  (`start.test.ts`).
+- Given a shipped card in Doing, when gh says its branch's pull request is open, then it is in
+  Review with the number and one line naming the pull request; merged, it is in Done with a second
+  line; closed unmerged from Review, it is back in Doing (`pull-request-column.test.ts`,
+  `follow.test.ts`).
+- Given a card moved to Done while its pull request is still open, when the app next checks, then it
+  is back in Review.
+- Given a card whose pull request has a check running, when it fails, then the card's glyph turns
+  from ◌ to ✗ within a minute without the board being touched (`pull-request-status.test.ts` checks
+  that `record` reports the change; main sending `board:change` on it is checked by hand).
+- Given gh is offline, when the app checks, then no card moves, nothing is written, and the log has
+  one warning until a check goes through (`pull-request-sweep.test.ts`).
+- Given a filter keeps a card only because you just changed it, when an arrow moves the selection
+  off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they
+  are and lands on one of them only moves the highlight.
+- Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority
+  high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the
+  branch, HEAD and working tree are as they were.
+- Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs,
+  then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
+- Given the default branch has no board, neither `.dashboard/board/` nor `.dashboard/board.json`,
+  when `create-task.js` runs without `--seed`, then it pushes nothing and says to re-run with
+  `--seed`.
+- Given a project still on `.dashboard/board.json`, when the board is first written, then every card
+  is in its own file under `.dashboard/board/cards/`, `board.json` is gone, and the board reads back
+  the same (`board-files.test.ts`, on a copy of this repository's own board).
+- Given a card file that does not parse, or parses to something that is not an object, when the
+  board saves a change it read with a look, then that file is still there with its bytes; when the
+  board next reads, it is set aside as `<id>.json.broken` (`<id>.json.2.broken` if that name is
+  taken) and every file set aside is named (`board-files.test.ts`).
+- Given a `.dashboard/board.json` that does not parse, when the board reads, then it is moved aside
+  as `board.json.broken` (`board.json.2.broken` and on if that name is taken, so a second break
+  keeps the first damaged copy) and the board opens empty (`board-store.test.ts`).
+- Given a board file that does not parse, when the `board` command or card.move would write, then
+  the file is left under its own name, nothing is written or committed, the command exits 1 naming
+  the file (card.move answers `{ refused }` instead), and the same happens on every run after until
+  the file is fixed (`board-files.test.ts` holds the read that leaves the file and names it;
+  `src/main/actions/card/move.test.ts` holds card.move refusing and writing nothing). Given a card
+  file the app set aside, the review sweep does not mark that card as deleted
+  (`review-flow.test.ts`).
+- Given two branches that each add a card, or each move a different card, when both merge, then git
+  merges them with no conflict (`board-files.test.ts`, with real merges).
+- Given the app launches, when `~/.claude/skills/create-task/` already holds this build's files,
+  then none is rewritten.
+- Given an installed `create-task.js` with mode 0644, when the app launches, then it is 0755 and
+  runs as a command, its bytes not rewritten.
+- Given the remote's hook declines the push, when `create-task.js` runs, then it prints git's
+  sentence and pushes once, not twice.
 - Given `--dry-run`, when `create-task.js` runs, then the remote's main is unchanged.
-- Given an agent in any pane the app opened, when it tries an Edit, Write or a `>` redirect into `.dashboard/board/cards/<id>.json`, then the call is refused with a message naming `node "$DASHBOARD_BOARD"`, and a `cat` or a `git checkout -- .dashboard/` of the same file goes through (`board-guard.test.ts`).
-- Given a `~/.claude/settings.json` linked into a dotfiles repo with hooks of its own, when the installed app launches, then one board guard entry is added to the file the link points at, the link, the mode and every other entry are as they were, and a second launch writes nothing (`board-guard-install.test.ts`).
-- Given a `~/.claude/settings.json` that links to a file not there yet, when the installed app launches, then it stays a link, nothing is written, and the log says what it links to (`board-guard-install.test.ts`).
-- Given an agent that opened its pull request and recorded nothing, when card.follow has moved its card into Review and the agent goes quiet, then the review starts on that pull request, and on that one rather than an earlier pull request's number left on its worktree's board (`review-flow.test.ts`).
-- Given a card re-shipped after its pull request closed unmerged, when its agent goes quiet before card.follow sees the new pull request, then no review starts on the old number its worktree's board came in with (`review-flow.test.ts`).
+- Given an agent in any pane the app opened, when it tries an Edit, Write or a `>` redirect into
+  `.dashboard/board/cards/<id>.json`, then the call is refused with a message naming `node
+  "$DASHBOARD_BOARD"`, and a `cat` or a `git checkout -- .dashboard/` of the same file goes through
+  (`board-guard.test.ts`).
+- Given a `~/.claude/settings.json` linked into a dotfiles repo with hooks of its own, when the
+  installed app launches, then one board guard entry is added to the file the link points at, the
+  link, the mode and every other entry are as they were, and a second launch writes nothing
+  (`board-guard-install.test.ts`).
+- Given a `~/.claude/settings.json` that links to a file not there yet, when the installed app
+  launches, then it stays a link, nothing is written, and the log says what it links to
+  (`board-guard-install.test.ts`).
+- Given an agent that opened its pull request and recorded nothing, when card.follow has moved its
+  card into Review and the agent goes quiet, then the review starts on that pull request, and on
+  that one rather than an earlier pull request's number left on its worktree's board
+  (`review-flow.test.ts`).
+- Given a card re-shipped after its pull request closed unmerged, when its agent goes quiet before
+  card.follow sees the new pull request, then no review starts on the old number its worktree's
+  board came in with (`review-flow.test.ts`).

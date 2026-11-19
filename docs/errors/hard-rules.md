@@ -1,6 +1,7 @@
 # Errors: hard rules
 
-The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what breaking it looked like.
+The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it;
+this is what breaking it looked like.
 
 ## errors-rule-1: A refusal is explained where it is decided
 
@@ -38,12 +39,13 @@ An error put in front of a person goes through `failureText`, never
 `undefined` message where `failureText` says `no reason given`, and the read
 never reaches `whenFailureRead`, so the bar's log line loses the Error and its
 stack (errors-decision-4). `pnpm exec eslint .` refuses `String(error)` and
-`${error}` everywhere in `src/` but the two files that format errors
-themselves: `failure.ts`, and `src/main/command/failure-line.ts`, the command
-line's own formatter, which prints a stack on purpose. `eslint.config.test.ts`
-pins it. The lint is a name match: it catches a value named `error` or
-`thrown`, nothing else, so a clean lint is not proof the rule held. Never an `eslint-disable` for it; a message that needs something
-`failureText` does not give is a change to `failureText`.
+`${error}` everywhere in `src/` but the two files that format errors themselves:
+`failure.ts`, and `src/main/command/failure-line.ts`, the command line's own
+formatter, which prints a stack on purpose. `eslint.config.test.ts` pins it. The
+lint is a name match: it catches a value named `error` or `thrown`, nothing
+else, so a clean lint is not proof the rule held. Never an `eslint-disable` for
+it; a message that needs something `failureText` does not give is a change to
+`failureText`.
 
 ## errors-rule-2: An IPC handler answers a refusal, it does not throw it
 

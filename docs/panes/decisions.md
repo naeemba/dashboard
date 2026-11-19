@@ -95,9 +95,9 @@ the same name and reaches the nvim the host kept; the page tells the screen it
 runs (`editors` in the project list), so arriving on it shows that nvim rather
 than starting one over it. Without the host it is named after the pid and page
 as before, since a second Dashboard on the same user data runs its editor itself
-and must not take the first one's socket. A second Dashboard on the same user data (a development build
-beside the installed app) is turned away by the host with `busy` while the
-first is connected, and runs its shells itself. The Claude
+and must not take the first one's socket. A second Dashboard on the same user
+data (a development build beside the installed app) is turned away by the host
+with `busy` while the first is connected, and runs its shells itself. The Claude
 screens run in the app and still stop on quit. workflow-rule-1 stays: a restart
 still stops every Claude screen.
 

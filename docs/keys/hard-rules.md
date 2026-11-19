@@ -1,6 +1,7 @@
 # Keys: hard rules
 
-The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what breaking it looked like.
+The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it;
+this is what breaking it looked like.
 
 ## keys-rule-1: Mode keys pass through
 

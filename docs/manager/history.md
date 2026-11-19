@@ -17,10 +17,15 @@ One line per merged change: date, pull request, why.
 - 2026-09-30 #65 — Name every column and every figure
 - 2026-10-01 #66 — A queue of what needs you, and a key to the next one
 - 2026-10-25 #81 — A log section
-- 2026-11-01 #155 — Terminals in the manager: main-manager and workers in ~/.dashboard (manager-decision-2)
+- 2026-11-01 #155 — Terminals in the manager: main-manager and workers in
+  ~/.dashboard (manager-decision-2)
 - 2026-11-04 #202 — The section strip takes no keyboard focus
-- 2026-11-09 #250 — A log entry opens formatted in a popup, stack one frame to a line, and copies as JSON
-- 2026-11-09 #256 — A command run across projects runs in a systemd scope per project under agents.slice (processes-decision-5)
-- 2026-11-09 #268 — Each pane's Memory column and the status bar's figure, read from its systemd scopes
+- 2026-11-09 #250 — A log entry opens formatted in a popup, stack one frame to a
+  line, and copies as JSON
+- 2026-11-09 #256 — A command run across projects runs in a systemd scope per
+  project under agents.slice (processes-decision-5)
+- 2026-11-09 #268 — Each pane's Memory column and the status bar's figure, read
+  from its systemd scopes
 - 2026-11-16 #302 — A Claude screen's question answered from its row by a digit, main's included
-- 2026-11-16 #301 — The manager's workers come back after a restart, listed under main-manager (manager-decision-2)
+- 2026-11-16 #301 — The manager's workers come back after a restart, listed
+  under main-manager (manager-decision-2)

@@ -1,30 +1,45 @@
 # Board Card Subtasks Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let any board card name another card as its parent, so work can be broken into subtasks that are still ordinary cards with their own column, priority and subtasks.
+**Goal:** Let any board card name another card as its parent, so work can be broken into subtasks
+that are still ordinary cards with their own column, priority and subtasks.
 
-**Architecture:** One new field, `parent: string | null`, on `Card`. There is no children array — children are found by scanning the board for cards that point at an id, so the two halves of the relation can never disagree. Cards stay flat in their columns; the relation shows as a badge on the child, a segmented progress bar on the parent, and a dialog (`o`) that lists a card's children.
+**Architecture:** One new field, `parent: string | null`, on `Card`. There is no children array —
+children are found by scanning the board for cards that point at an id, so the two halves of the
+relation can never disagree. Cards stay flat in their columns; the relation shows as a badge on the
+child, a segmented progress bar on the parent, and a dialog (`o`) that lists a card's children.
 
-**Tech Stack:** TypeScript, Electron, vitest, plain DOM (no framework). Tests run with `npm test`; types with `npx tsc --noEmit`; lint with `npx eslint .`.
+**Tech Stack:** TypeScript, Electron, vitest, plain DOM (no framework). Tests run with `npm test`;
+types with `npx tsc --noEmit`; lint with `npx eslint .`.
 
 **Spec:** `docs/superpowers/specs/2026-09-06-board-card-subtasks-design.md`
 
 ## Global Constraints
 
-- **Never rebuild, quit, restart or replace the running Dashboard app.** Building into `out/` or `.vite/` is fine. After the code changes, say the installed app needs a rebuild and restart, and stop. (`CLAUDE.md`)
-- **Keyboard first.** Every action must be reachable from the keyboard alone. A control that only responds to a click is unfinished. (`CLAUDE.md`)
-- **The help dialog is part of the change.** Any task that adds, removes or changes a key updates `src/help.ts` in the same change. (`CLAUDE.md`)
-- **No abbreviations in identifiers.** `descendants`, not `desc`; `column`, not `col`. (`rules/naming.md`)
-- **600 lines of code per file, hard ceiling.** `src/board-view.ts` is the one to watch — this is why the detail dialog is its own file. (`rules/file-size.md`)
+- **Never rebuild, quit, restart or replace the running Dashboard app.** Building into `out/` or
+  `.vite/` is fine. After the code changes, say the installed app needs a rebuild and restart, and
+  stop. (`CLAUDE.md`)
+- **Keyboard first.** Every action must be reachable from the keyboard alone. A control that only
+  responds to a click is unfinished. (`CLAUDE.md`)
+- **The help dialog is part of the change.** Any task that adds, removes or changes a key updates
+  `src/help.ts` in the same change. (`CLAUDE.md`)
+- **No abbreviations in identifiers.** `descendants`, not `desc`; `column`, not `col`.
+  (`rules/naming.md`)
+- **600 lines of code per file, hard ceiling.** `src/board-view.ts` is the one to watch — this is
+  why the detail dialog is its own file. (`rules/file-size.md`)
 - Every check must pass before each commit: `npm test`, `npx tsc --noEmit`, `npx eslint .`.
-- Comments in this codebase say *why*, in full sentences. Match that; do not add comments that restate the code.
+- Comments in this codebase say *why*, in full sentences. Match that; do not add comments that
+  restate the code.
 
 ---
 
 ### Task 1: `parent` on the card, and finding children
 
-Adds the field and the two read-only lookups everything else is built on. Nothing on screen changes yet.
+Adds the field and the two read-only lookups everything else is built on. Nothing on screen changes
+yet.
 
 **Files:**
 - Modify: `src/board.ts`
@@ -41,7 +56,9 @@ Adds the field and the two read-only lookups everything else is built on. Nothin
 
 - [ ] **Step 1: Write the failing tests**
 
-In `src/board.test.ts`, the local `board()` helper builds cards without a `parent`. Change it so it compiles against the new type, and add a second helper that can set parents. Replace the existing helper with:
+In `src/board.test.ts`, the local `board()` helper builds cards without a `parent`. Change it so it
+compiles against the new type, and add a second helper that can set parents. Replace the existing
+helper with:
 
 ```ts
 function board(...columns: string[][]): Board {
@@ -64,7 +81,8 @@ function withParents(source: Board, parents: Record<string, string>): Board {
 }
 ```
 
-Add `childrenOf`, `descendantsOf`, `isDescendantOf` and `childColumns` to the import list at the top of the file, then append:
+Add `childrenOf`, `descendantsOf`, `isDescendantOf` and `childColumns` to the import list at the top
+of the file, then append:
 
 ```ts
 describe('childrenOf', () => {
@@ -126,8 +144,8 @@ describe('childColumns', () => {
 
 - [ ] **Step 2: Run the tests and watch them fail**
 
-Run: `npm test -- board.test.ts`
-Expected: FAIL — `childrenOf` is not exported from `./board`, and the `board()` helper's cards do not satisfy `Card`.
+Run: `npm test -- board.test.ts` Expected: FAIL — `childrenOf` is not exported from `./board`, and
+the `board()` helper's cards do not satisfy `Card`.
 
 - [ ] **Step 3: Add the field and the lookups**
 
@@ -186,15 +204,17 @@ export function childColumns(board: Board, id: string): number[] {
 }
 ```
 
-`childColumns` cannot reuse `childrenOf` without a second lookup per child, so it repeats the filter with the index in hand. Two short passes read better than a lookup inside a map.
+`childColumns` cannot reuse `childrenOf` without a second lookup per child, so it repeats the filter
+with the index in hand. Two short passes read better than a lookup inside a map.
 
 - [ ] **Step 4: Run the tests and watch them pass**
 
 Run: `npm test -- board.test.ts`
 Expected: PASS.
 
-Then run the whole suite: `npm test`
-Expected: `board-state.test.ts` and `board-store.test.ts` may fail to typecheck where they build card literals without `parent`. Add `parent: null` to any card literal in those files. Do not change what those tests assert.
+Then run the whole suite: `npm test` Expected: `board-state.test.ts` and `board-store.test.ts` may
+fail to typecheck where they build card literals without `parent`. Add `parent: null` to any card
+literal in those files. Do not change what those tests assert.
 
 - [ ] **Step 5: Check types and lint**
 
@@ -226,7 +246,8 @@ git commit -m "board: give a card a parent id, and read children back from it"
 
 - [ ] **Step 1: Write the failing tests**
 
-Add `attachToCardAbove` and `detachCard` to the imports in `src/board.test.ts`, and a helper that reads parents back:
+Add `attachToCardAbove` and `detachCard` to the imports in `src/board.test.ts`, and a helper that
+reads parents back:
 
 ```ts
 function parents(result: Board): Record<string, string | null> {
@@ -326,7 +347,9 @@ export function detachCard(board: Board, selection: Selection): Change {
 }
 ```
 
-`editCard` is already in the file and already takes a `Partial<Card>`, so `parent` needs no new plumbing. `isDescendantOf` and `descendantsOf` are defined further down the file; function declarations hoist, so the order is fine.
+`editCard` is already in the file and already takes a `Partial<Card>`, so `parent` needs no new
+plumbing. `isDescendantOf` and `descendantsOf` are defined further down the file; function
+declarations hoist, so the order is fine.
 
 - [ ] **Step 4: Run the tests and watch them pass**
 
@@ -349,7 +372,8 @@ git commit -m "board: attach a card to the one above it, and cut it loose again"
 
 ### Task 3: Deleting a card takes its family
 
-Replaces what `d` does at the model level. The confirmation dialog is Task 6; this task changes the operation only.
+Replaces what `d` does at the model level. The confirmation dialog is Task 6; this task changes the
+operation only.
 
 **Files:**
 - Modify: `src/board.ts`
@@ -360,7 +384,8 @@ Replaces what `d` does at the model level. The confirmation dialog is Task 6; th
 - Consumes: `descendantsOf` from Task 1.
 - Produces: `export function deleteCardAndDescendants(board: Board, selection: Selection): Change`
 
-`deleteCard` stays exported and unchanged — `board-state.ts` calls it to drop a card whose title was left blank, and that card can never have children yet.
+`deleteCard` stays exported and unchanged — `board-state.ts` calls it to drop a card whose title was
+left blank, and that card can never have children yet.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -435,7 +460,8 @@ Expected: PASS.
 
 - [ ] **Step 5: Point the `d` key at it**
 
-In `src/board-view.ts`, swap the import of `deleteCard` for `deleteCardAndDescendants`, and change the `d` case:
+In `src/board-view.ts`, swap the import of `deleteCard` for `deleteCardAndDescendants`, and change
+the `d` case:
 
 ```ts
       case 'd':
@@ -466,11 +492,13 @@ git commit -m "board: deleting a card deletes its subtasks too"
 
 **Interfaces:**
 - Consumes: `Card` with `parent` from Task 1.
-- Produces: `parseBoard` reads and repairs `parent`. `writeBoard` needs no change — it serialises whatever is on the card.
+- Produces: `parseBoard` reads and repairs `parent`. `writeBoard` needs no change — it serialises
+  whatever is on the card.
 
 - [ ] **Step 1: Write the failing tests**
 
-In `src/board-store.test.ts`, the existing "reads a well-formed board" test asserts a whole card object and will fail once `parent` exists — that is the point. Update it and add the repair cases:
+In `src/board-store.test.ts`, the existing "reads a well-formed board" test asserts a whole card
+object and will fail once `parent` exists — that is the point. Update it and add the repair cases:
 
 ```ts
   it('reads a well-formed board', () => {
@@ -590,7 +618,10 @@ Then use it in `parseBoard`:
   return { columns: repairParents(columns) };
 ```
 
-Note what the ring test asserts: every card in a three-card ring is unsafe by this rule, so all three lose their parent, and the assertion only requires that at least one did and that the ring is gone. Cutting every card in a ring loose is the honest repair — there is no way to tell which of the three edges was the mistake.
+Note what the ring test asserts: every card in a three-card ring is unsafe by this rule, so all
+three lose their parent, and the assertion only requires that at least one did and that the ring is
+gone. Cutting every card in a ring loose is the honest repair — there is no way to tell which of the
+three edges was the mistake.
 
 Adjust the ring test to match:
 
@@ -603,7 +634,8 @@ Adjust the ring test to match:
   });
 ```
 
-A card whose parent is fine but whose *grandparent* is in a ring is also cut loose by `isSafe`, because walking up from it never terminates either. That is correct: it has no reachable root.
+A card whose parent is fine but whose *grandparent* is in a ring is also cut loose by `isSafe`,
+because walking up from it never terminates either. That is correct: it has no reachable root.
 
 - [ ] **Step 4: Run the tests and watch them pass**
 
@@ -612,7 +644,9 @@ Expected: PASS.
 
 - [ ] **Step 5: Update the format documentation**
 
-`EXPLANATION_FOR_AGENTS` in `src/board-store.ts` is pinned against the checked-in `.dashboard/CLAUDE.md` by a test, so both change together. In the sample JSON, add `"parent": null` after `"priority": "high"`, and add these bullets after the `priority` one:
+`EXPLANATION_FOR_AGENTS` in `src/board-store.ts` is pinned against the checked-in
+`.dashboard/CLAUDE.md` by a test, so both change together. In the sample JSON, add `"parent": null`
+after `"priority": "high"`, and add these bullets after the `priority` one:
 
 ```
 - \`parent\` is the \`id\` of another card, or \`null\`. It is the only thing that makes a card a
@@ -621,7 +655,8 @@ Expected: PASS.
   that are each other's ancestors, is reset to \`null\` when the app reads the file.
 ```
 
-Then copy the new text into `.dashboard/CLAUDE.md` so the two match exactly. The test that pins them will tell you if they do not.
+Then copy the new text into `.dashboard/CLAUDE.md` so the two match exactly. The test that pins them
+will tell you if they do not.
 
 - [ ] **Step 6: Run everything**
 
@@ -639,7 +674,8 @@ git commit -m "board: keep a card's parent in the file, and repair a broken one 
 
 ### Task 5: The badge, the bar, and the Tab keys
 
-The first task that changes the screen. There are no DOM tests in this codebase, so this task is verified by the type checker, the linter, and a described manual check the reviewer runs.
+The first task that changes the screen. There are no DOM tests in this codebase, so this task is
+verified by the type checker, the linter, and a described manual check the reviewer runs.
 
 **Files:**
 - Modify: `src/board-view.ts`
@@ -647,12 +683,14 @@ The first task that changes the screen. There are no DOM tests in this codebase,
 - Modify: `src/help.ts`
 
 **Interfaces:**
-- Consumes: `attachToCardAbove`, `detachCard`, `childColumns`, `childrenOf`, `isDescendantOf` from Tasks 1–2.
+- Consumes: `attachToCardAbove`, `detachCard`, `childColumns`, `childrenOf`, `isDescendantOf` from
+  Tasks 1–2.
 - Produces: nothing other tasks depend on.
 
 - [ ] **Step 1: Draw the badge and the bar**
 
-In `src/board-view.ts`, `renderCard(card, selected)` currently builds the title and optionally the notes. It needs the board to look a card's family up, which it already closes over as `state.board`.
+In `src/board-view.ts`, `renderCard(card, selected)` currently builds the title and optionally the
+notes. It needs the board to look a card's family up, which it already closes over as `state.board`.
 
 Above the title, when the card has a parent that is on the board:
 
@@ -746,11 +784,15 @@ In `src/index.css`, after the `.board-notes` rules:
 }
 ```
 
-`.board-progress-count` is a `span` inside `.board-progress`, so it inherits the segment rule and has to undo the parts of it that do not apply. Keep the two rules next to each other so that stays obvious.
+`.board-progress-count` is a `span` inside `.board-progress`, so it inherits the segment rule and
+has to undo the parts of it that do not apply. Keep the two rules next to each other so that stays
+obvious.
 
 - [ ] **Step 3: Wire up Tab and Shift+Tab**
 
-In `src/board-view.ts`, the keydown handler returns early for any event with a modifier held, after the arrow block. `Shift+Tab` has to be caught before that check. Put both cases immediately after the arrow-direction block:
+In `src/board-view.ts`, the keydown handler returns early for any event with a modifier held, after
+the arrow block. `Shift+Tab` has to be caught before that check. Put both cases immediately after
+the arrow-direction block:
 
 ```ts
     if (event.key === 'Tab') {
@@ -768,7 +810,8 @@ In `src/board-view.ts`, the keydown handler returns early for any event with a m
     }
 ```
 
-`Tab` would otherwise move browser focus off the board, which is why `preventDefault` runs on both branches.
+`Tab` would otherwise move browser focus off the board, which is why `preventDefault` runs on both
+branches.
 
 - [ ] **Step 4: Update the help dialog**
 
@@ -791,17 +834,21 @@ And extend the board blurb so it says what a subtask is, not just which keys exi
 
 - [ ] **Step 5: Run the checks**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: all clean. `help.test.ts` does not pin the board rows by exact list, so adding rows does not break it.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: all clean. `help.test.ts` does not pin
+the board rows by exact list, so adding rows does not break it.
 
 - [ ] **Step 6: Manual check**
 
-Build into `out/` only — **do not** package into `/Applications`, and **do not** quit or restart the running app.
+Build into `out/` only — **do not** package into `/Applications`, and **do not** quit or restart the
+running app.
 
-Run: `npm start` if that is safe in this environment; otherwise describe the check for the reviewer to run themselves. What to look for:
+Run: `npm start` if that is safe in this environment; otherwise describe the check for the reviewer
+to run themselves. What to look for:
 
-- Two cards in a column. Select the lower one, press `Tab`. It gains a badge naming the upper one, and the upper one gains a bar with one empty segment and `0/1`.
-- Move the subtask to the last column with `Shift+Right`. The parent's bar segment turns green and reads `1/1`.
+- Two cards in a column. Select the lower one, press `Tab`. It gains a badge naming the upper one,
+  and the upper one gains a bar with one empty segment and `0/1`.
+- Move the subtask to the last column with `Shift+Right`. The parent's bar segment turns green and
+  reads `1/1`.
 - `Shift+Tab` on the subtask. The badge and the parent's bar both go.
 - `u` after each of those puts it back.
 
@@ -893,11 +940,13 @@ and add the function inside `createBoardView`:
   }
 ```
 
-`element.focus()` runs either way: the board took the keyboard from the dialog, and without this the next keystroke lands nowhere.
+`element.focus()` runs either way: the board took the keyboard from the dialog, and without this the
+next keystroke lands nowhere.
 
 - [ ] **Step 3: Keep the global handler out of the dialog**
 
-In `src/renderer.ts`, the capture-phase listener ignores keys typed inside the picker, the help dialog and a card editor. Add the confirmation:
+In `src/renderer.ts`, the capture-phase listener ignores keys typed inside the picker, the help
+dialog and a card editor. Add the confirmation:
 
 ```ts
   if (event.target instanceof Element && event.target.closest('.picker, .help, .confirm, .board-edit')) return;
@@ -907,7 +956,8 @@ Update the comment above it to name four things rather than three.
 
 - [ ] **Step 4: Style it**
 
-In `src/index.css`, add `.confirm` to the `.picker, .help` selector that paints the sheet, and `.confirm-dialog` to the `.picker-dialog, .help-dialog` selector that boxes it. Then:
+In `src/index.css`, add `.confirm` to the `.picker, .help` selector that paints the sheet, and
+`.confirm-dialog` to the `.picker-dialog, .help-dialog` selector that boxes it. Then:
 
 ```css
 .confirm-dialog {
@@ -943,7 +993,8 @@ Expected: all clean.
 - [ ] **Step 7: Manual check**
 
 - `d` on a card with no subtasks asks `Delete "…"?`; Escape leaves it, Enter removes it.
-- `d` on a parent with two subtasks says `and its 2 subtasks`, and Enter removes all three across whatever columns they are in.
+- `d` on a parent with two subtasks says `and its 2 subtasks`, and Enter removes all three across
+  whatever columns they are in.
 - `u` afterwards brings the whole family back.
 - After either answer, arrow keys still move the selection — focus came back to the board.
 
@@ -970,10 +1021,13 @@ The dialog that shows a card's notes, its parent and its children, and adds chil
 - Modify: `src/help.ts`
 
 **Interfaces:**
-- Consumes: `childrenOf`, `Change`, `Selection`, `Board`, `Card` from Task 1; `openOverlay` from `src/overlay.ts`.
+- Consumes: `childrenOf`, `Change`, `Selection`, `Board`, `Card` from Task 1; `openOverlay` from
+  `src/overlay.ts`.
 - Produces:
-  - `export function addChildCard(board: Board, selection: Selection, id: string, title: string): Change` in `src/board.ts`
-  - `export type CardDetailOptions` and `export function openCardDetail(options: CardDetailOptions): Promise<Selection>` in `src/board-detail.ts`
+  - `export function addChildCard(board: Board, selection: Selection, id: string, title: string):
+    Change` in `src/board.ts`
+  - `export type CardDetailOptions` and `export function openCardDetail(options: CardDetailOptions):
+    Promise<Selection>` in `src/board-detail.ts`
 
 - [ ] **Step 1: Write the failing test for adding a child**
 
@@ -1232,7 +1286,8 @@ In `src/renderer.ts`:
 
 - [ ] **Step 8: Style it**
 
-In `src/index.css`, add `.card-detail` to the sheet selector and `.card-detail-dialog` to the box selector, next to `.confirm` from Task 6. Then:
+In `src/index.css`, add `.card-detail` to the sheet selector and `.card-detail-dialog` to the box
+selector, next to `.confirm` from Task 6. Then:
 
 ```css
 .card-detail-dialog {
@@ -1281,7 +1336,8 @@ In `src/index.css`, add `.card-detail` to the sheet selector and `.card-detail-d
 }
 ```
 
-Match the surrounding file: if `.picker-search` sets a font, colour and border for its input, give `.card-detail-add` the same treatment rather than inventing a second look.
+Match the surrounding file: if `.picker-search` sets a font, colour and border for its input, give
+`.card-detail-add` the same treatment rather than inventing a second look.
 
 - [ ] **Step 9: Update the help dialog**
 
@@ -1304,8 +1360,10 @@ Expected: both well under 600.
 - [ ] **Step 11: Manual check**
 
 - `o` on a card with no subtasks says so and offers `n`.
-- `n`, type a title, Enter — the subtask appears in the list, and behind the dialog it is at the bottom of the same column with a badge. Press `n` again straight away and add a second.
-- Arrows move the highlight; Enter closes the dialog with the board's selection on that subtask, in whatever column it is in.
+- `n`, type a title, Enter — the subtask appears in the list, and behind the dialog it is at the
+  bottom of the same column with a badge. Press `n` again straight away and add a second.
+- Arrows move the highlight; Enter closes the dialog with the board's selection on that subtask, in
+  whatever column it is in.
 - Escape closes the dialog with the selection back on the card you opened.
 - After closing either way, arrow keys still move the selection on the board.
 - `u` undoes the last subtask you added.
@@ -1329,13 +1387,18 @@ The board card that started this, and a last read of the help dialog against wha
 
 - [ ] **Step 1: Read Ctrl+H against the code**
 
-Open `src/help.ts` and `src/board-view.ts` side by side. Every key in the board's `switch` and every key handled before it — arrows, `Shift`+arrows, `Tab`, `Shift+Tab`, `Enter`, `e`, `o`, `p`, `s`, `n`, `d`, `u` — must have a row in `BOARD_SHORTCUTS`, and every row must name a key that works. Fix whichever side is wrong.
+Open `src/help.ts` and `src/board-view.ts` side by side. Every key in the board's `switch` and every
+key handled before it — arrows, `Shift`+arrows, `Tab`, `Shift+Tab`, `Enter`, `e`, `o`, `p`, `s`,
+`n`, `d`, `u` — must have a row in `BOARD_SHORTCUTS`, and every row must name a key that works. Fix
+whichever side is wrong.
 
-Read the board blurb again too. It should say what a subtask is, since that is what changed about the screen, not just which keys are new.
+Read the board blurb again too. It should say what a subtask is, since that is what changed about
+the screen, not just which keys are new.
 
 - [ ] **Step 2: Move the card**
 
-In `.dashboard/board.json`, move the card titled "Give board cards subtasks" from the Todo column to the Done column, at the top, and rewrite its notes to say what shipped:
+In `.dashboard/board.json`, move the card titled "Give board cards subtasks" from the Todo column to
+the Done column, at the top, and rewrite its notes to say what shipped:
 
 ```json
 {
@@ -1361,4 +1424,5 @@ git commit -m "board: mark subtasks done"
 
 - [ ] **Step 5: Say what is left**
 
-The installed Dashboard in `/Applications` is still running the old build. Say that it needs a rebuild and a restart to pick this up, and stop there — do not package, quit, or relaunch anything.
+The installed Dashboard in `/Applications` is still running the old build. Say that it needs a
+rebuild and a restart to pick this up, and stop there — do not package, quit, or relaunch anything.

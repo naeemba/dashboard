@@ -1,10 +1,18 @@
 # Settings Screen Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A hand-editable settings file and a keyboard-driven settings screen that together control the shell command, the theme, the font and every keyboard shortcut, all read from one table of actions.
+**Goal:** A hand-editable settings file and a keyboard-driven settings screen that together control
+the shell command, the theme, the font and every keyboard shortcut, all read from one table of
+actions.
 
-**Architecture:** One table in `src/actions.ts` names every action once — what it does, which screens it fires on, and the key it ships with. `src/binding.ts` turns a written shortcut like `Ctrl+Shift+K` into a physical key plus modifiers and back. `mapShortcut` becomes a lookup over that table; `help.ts` prints from it; a new overlay edits it. Settings live in `~/.config/dashboard/settings.json`, read by the main process and served to the renderer over IPC.
+**Architecture:** One table in `src/actions.ts` names every action once — what it does, which
+screens it fires on, and the key it ships with. `src/binding.ts` turns a written shortcut like
+`Ctrl+Shift+K` into a physical key plus modifiers and back. `mapShortcut` becomes a lookup over that
+table; `help.ts` prints from it; a new overlay edits it. Settings live in
+`~/.config/dashboard/settings.json`, read by the main process and served to the renderer over IPC.
 
 **Tech Stack:** TypeScript, Electron 44, vitest, xterm.js 6. No new dependencies.
 
@@ -12,31 +20,45 @@
 
 ## Global Constraints
 
-- No source file over 600 lines of code. Comments and blank lines do not count. Data-only files (the action table) are exempt.
-- Spell identifiers out in full. No abbreviations: `configuration` not `config`, `button` not `btn`. Established acronyms (`id`, `url`, `json`, `css`, `api`) are fine.
-- Every action must be reachable from the keyboard alone. A control that only answers a click is unfinished.
-- Every keydown handler reaches `if (isModified(event)) return;` before it acts on `event.key`. The one exception this plan adds is the armed capture row in the settings screen, and Task 11 writes that exception into `CLAUDE.md`.
-- A refusal is explained where it is decided: export the predicate from the file that enforces it and call it from the file that prints the message.
-- `src/help.ts` is part of every change that adds, removes or changes a key, a mode, or what a screen does.
-- Never quit, kill, restart or rebuild the running Dashboard app. Building into `out/` or `.vite/` is fine. After the last task, say the installed app needs a rebuild and stop.
-- No mention of Claude, Anthropic or any AI tooling in code, comments, docs or commit messages. No `Co-Authored-By` trailer.
+- No source file over 600 lines of code. Comments and blank lines do not count. Data-only files (the
+  action table) are exempt.
+- Spell identifiers out in full. No abbreviations: `configuration` not `config`, `button` not `btn`.
+  Established acronyms (`id`, `url`, `json`, `css`, `api`) are fine.
+- Every action must be reachable from the keyboard alone. A control that only answers a click is
+  unfinished.
+- Every keydown handler reaches `if (isModified(event)) return;` before it acts on `event.key`. The
+  one exception this plan adds is the armed capture row in the settings screen, and Task 11 writes
+  that exception into `CLAUDE.md`.
+- A refusal is explained where it is decided: export the predicate from the file that enforces it
+  and call it from the file that prints the message.
+- `src/help.ts` is part of every change that adds, removes or changes a key, a mode, or what a
+  screen does.
+- Never quit, kill, restart or rebuild the running Dashboard app. Building into `out/` or `.vite/`
+  is fine. After the last task, say the installed app needs a rebuild and stop.
+- No mention of Claude, Anthropic or any AI tooling in code, comments, docs or commit messages. No
+  `Co-Authored-By` trailer.
 - Checks after every task: `npm test`, `npx tsc --noEmit`, `npx eslint .`
 
 ---
 
 ### Task 1: Binding strings
 
-A binding is written the way a person writes a shortcut — `Ctrl+Shift+K`, `Alt+H`, `d`, `Left` — and matched against the physical key, `event.code`, never the character `event.key` reported. `event.key` lies twice: Option on macOS turns `h` into `˙`, and Shift turns `1` into `!`.
+A binding is written the way a person writes a shortcut — `Ctrl+Shift+K`, `Alt+H`, `d`, `Left` — and
+matched against the physical key, `event.code`, never the character `event.key` reported.
+`event.key` lies twice: Option on macOS turns `h` into `˙`, and Shift turns `1` into `!`.
 
 **Files:**
 - Create: `src/binding.ts`
-- Modify: `src/shortcuts.ts` — `KeyInput` moves out to `binding.ts` and is re-exported from here, so `binding.ts` does not have to import from the file that will shortly import it.
+- Modify: `src/shortcuts.ts` — `KeyInput` moves out to `binding.ts` and is re-exported from here, so
+  `binding.ts` does not have to import from the file that will shortly import it.
 - Test: `src/binding.test.ts`
 
 **Interfaces:**
 - Consumes: nothing. This is the bottom of the stack.
 - Produces:
-  - `type KeyInput = { key: string; code: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean; altKey: boolean }` — moved here from `shortcuts.ts`, which re-exports it so every existing import keeps working.
+  - `type KeyInput = { key: string; code: string; shiftKey: boolean; metaKey: boolean; ctrlKey:
+    boolean; altKey: boolean }` — moved here from `shortcuts.ts`, which re-exports it so every
+    existing import keeps working.
   - `type Keystroke = { code: string; ctrl: boolean; meta: boolean; alt: boolean; shift: boolean }`
   - `parseBinding(text: string): Keystroke | null`
   - `formatBinding(keystroke: Keystroke): string | null`
@@ -239,7 +261,8 @@ export function matchesBinding(input: KeyInput, binding: string | null): boolean
 
 - [ ] **Step 4: Move `KeyInput` out of `shortcuts.ts`**
 
-In `src/shortcuts.ts`, delete the `export type KeyInput = { ... }` block and put this in its place, next to the other imports:
+In `src/shortcuts.ts`, delete the `export type KeyInput = { ... }` block and put this in its place,
+next to the other imports:
 
 ```ts
 import { type KeyInput } from './binding';
@@ -247,7 +270,8 @@ import { type KeyInput } from './binding';
 export type { KeyInput };
 ```
 
-`isModified` stays in `shortcuts.ts` — every dialog imports it from there, and it is about what a handler does with a key rather than about what a binding is.
+`isModified` stays in `shortcuts.ts` — every dialog imports it from there, and it is about what a
+handler does with a key rather than about what a binding is.
 
 - [ ] **Step 5: Run the tests and watch them pass**
 
@@ -256,8 +280,8 @@ Expected: PASS, all cases.
 
 - [ ] **Step 6: Run the whole check set**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: all green. The existing `shortcuts.test.ts` and `help.test.ts` still pass — `KeyInput` only changed address.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: all green. The existing
+`shortcuts.test.ts` and `help.test.ts` still pass — `KeyInput` only changed address.
 
 - [ ] **Step 7: Commit**
 
@@ -274,19 +298,23 @@ Option turns h into a dead-key glyph and Shift turns 1 into an exclamation mark.
 
 ### Task 2: The action table
 
-Every action named once, with what it does, where it is listed, which screens it fires on, and the key it ships with. Three files read this table — the handler, the help dialog, the settings screen — and today each of them writes its own copy by hand.
+Every action named once, with what it does, where it is listed, which screens it fires on, and the
+key it ships with. Three files read this table — the handler, the help dialog, the settings screen —
+and today each of them writes its own copy by hand.
 
 **Files:**
 - Create: `src/actions.ts`
 - Test: `src/actions.test.ts`
 
 **Interfaces:**
-- Consumes: `parseBinding` from `src/binding.ts`; `Mode` from `src/modes.ts`; `Direction` from `src/terminals.ts`.
+- Consumes: `parseBinding` from `src/binding.ts`; `Mode` from `src/modes.ts`; `Direction` from
+  `src/terminals.ts`.
 - Produces:
   - `type Action` — the union, moved here from `shortcuts.ts` and widened with the board's kinds.
   - `type ActionName = (typeof ACTIONS)[number]['name']`
   - `type ActionGroup = 'app' | 'modes' | 'projects' | 'terminals' | 'board'`
-  - `type ActionEntry = { name: string; description: string; group: ActionGroup; scope: 'global' | 'terminals' | 'board'; action: Action; mac: string | null; other: string | null }`
+  - `type ActionEntry = { name: string; description: string; group: ActionGroup; scope: 'global' |
+    'terminals' | 'board'; action: Action; mac: string | null; other: string | null }`
   - `const ACTIONS: readonly ActionEntry[]`
   - `defaultBinding(entry: ActionEntry, isMac: boolean): string | null`
 
@@ -376,7 +404,8 @@ Expected: FAIL — `Failed to resolve import "./actions"`.
 
 - [ ] **Step 3: Write `src/actions.ts`**
 
-The `Action` union moves here from `shortcuts.ts` and gains the board's kinds, so that one lookup can answer for every screen.
+The `Action` union moves here from `shortcuts.ts` and gains the board's kinds, so that one lookup
+can answer for every screen.
 
 ```ts
 import type { Mode } from './modes';
@@ -590,8 +619,8 @@ export function actionByName(name: string): ActionEntry | undefined {
 
 - [ ] **Step 4: Run the test and watch it pass**
 
-Run: `npx vitest run src/actions.test.ts`
-Expected: PASS. If the clash test fails, two rows ship on the same key — fix the table, not the test.
+Run: `npx vitest run src/actions.test.ts` Expected: PASS. If the clash test fails, two rows ship on
+the same key — fix the table, not the test.
 
 - [ ] **Step 5: Run the whole check set**
 
@@ -613,16 +642,19 @@ screen will all read this instead of keeping their own copy."
 
 ### Task 3: The settings shape, its defaults, and reading the file
 
-Pure. Everything a bad file can do to you is decided here: one unreadable value costs you that value and nothing else, the way `parseSession` already treats `session.json`.
+Pure. Everything a bad file can do to you is decided here: one unreadable value costs you that value
+and nothing else, the way `parseSession` already treats `session.json`.
 
 **Files:**
 - Create: `src/settings.ts`
 - Test: `src/settings.test.ts`
 
 **Interfaces:**
-- Consumes: `ACTIONS`, `defaultBinding`, `actionByName` from `src/actions.ts`; `parseBinding` from `src/binding.ts`; `THEME`, `TITLE_BAR_HEIGHT` from `src/theme.ts`.
+- Consumes: `ACTIONS`, `defaultBinding`, `actionByName` from `src/actions.ts`; `parseBinding` from
+  `src/binding.ts`; `THEME`, `TITLE_BAR_HEIGHT` from `src/theme.ts`.
 - Produces:
-  - `type Settings = { shellCommand: string; font: { name: string; size: number }; theme: Record<string, string>; keys: Record<string, string | null> }`
+  - `type Settings = { shellCommand: string; font: { name: string; size: number }; theme:
+    Record<string, string>; keys: Record<string, string | null> }`
   - `defaultSettings(isMac: boolean): Settings`
   - `parseSettings(stored: unknown, isMac: boolean): Settings`
   - `holderOfBinding(settings: Settings, name: string, binding: string): string | null`
@@ -902,15 +934,22 @@ file never mentions."
 
 ### Task 4: The file on disk, and the shell that comes from it
 
-The main process reads `settings.json` before the window exists, because it needs the background colour to paint the first frame and the shell command to spawn the first pane. The renderer asks for it over IPC. This task also deletes `SHELL_COMMAND_FLAG`: once the shell is editable, a copy passed as a launch argument goes stale the moment you change it, and a dropped path gets quoted for the shell you used to have.
+The main process reads `settings.json` before the window exists, because it needs the background
+colour to paint the first frame and the shell command to spawn the first pane. The renderer asks for
+it over IPC. This task also deletes `SHELL_COMMAND_FLAG`: once the shell is editable, a copy passed
+as a launch argument goes stale the moment you change it, and a dropped path gets quoted for the
+shell you used to have.
 
 **Files:**
 - Create: `src/settings-store.ts`, `src/settings-store.test.ts`
 - Modify: `src/shell.ts` — `pickShell` takes the settings value first; `SHELL_COMMAND_FLAG` removed
 - Modify: `src/shell.test.ts` — the `pickShell` cases gain the settings argument
-- Modify: `src/main.ts` — read at startup, serve over IPC, paint from the theme, re-resolve the shell on write
-- Modify: `src/bridge.ts`, `src/preload.ts` — `getSettings` / `saveSettings`; `shellCommand` leaves the launch argument
-- Modify: `src/renderer.ts` — hold the settings and the resolved shell in module state, read at startup
+- Modify: `src/main.ts` — read at startup, serve over IPC, paint from the theme, re-resolve the
+  shell on write
+- Modify: `src/bridge.ts`, `src/preload.ts` — `getSettings` / `saveSettings`; `shellCommand` leaves
+  the launch argument
+- Modify: `src/renderer.ts` — hold the settings and the resolved shell in module state, read at
+  startup
 
 **Interfaces:**
 - Consumes: `parseSettings`, `defaultSettings`, `type Settings` from `src/settings.ts`.
@@ -918,8 +957,10 @@ The main process reads `settings.json` before the window exists, because it need
   - `settingsFilePath(home: string, xdgConfigHome: string | undefined): string`
   - `readSettings(file: string, isMac: boolean): Settings`
   - `writeSettings(file: string, settings: Settings): void`
-  - `pickShell(settings: Settings, environment: Record<string, string | undefined>, platform: string): string`
-  - Bridge: `getSettings(): Promise<{ settings: Settings; shellCommand: string }>`, `saveSettings(settings: Settings): void`
+  - `pickShell(settings: Settings, environment: Record<string, string | undefined>, platform:
+    string): string`
+  - Bridge: `getSettings(): Promise<{ settings: Settings; shellCommand: string }>`,
+    `saveSettings(settings: Settings): void`
 
 - [ ] **Step 1: Write the failing store test**
 
@@ -1058,9 +1099,11 @@ export function pickShell(
 }
 ```
 
-Delete the `SHELL_COMMAND_FLAG` export and the comment block above it. `quoteForShell`, `isPowerShell` and `editorArguments` are unchanged.
+Delete the `SHELL_COMMAND_FLAG` export and the comment block above it. `quoteForShell`,
+`isPowerShell` and `editorArguments` are unchanged.
 
-Update every `pickShell(...)` call in `src/shell.test.ts` to pass settings first — `pickShell(defaultSettings(true), { SHELL: '/bin/bash' }, 'darwin')` — and add one case:
+Update every `pickShell(...)` call in `src/shell.test.ts` to pass settings first —
+`pickShell(defaultSettings(true), { SHELL: '/bin/bash' }, 'darwin')` — and add one case:
 
 ```ts
 it('lets the settings file beat both environment variables', () => {
@@ -1091,7 +1134,8 @@ let settings = readSettings(settingsFile, process.platform === 'darwin');
 let shellCommand = pickShell(settings, process.env, process.platform);
 ```
 
-`spawnTerminal` already reads the module-level `shellCommand`, so a pane started after a change gets the new shell with no further edit. Add the IPC handlers next to the session ones:
+`spawnTerminal` already reads the module-level `shellCommand`, so a pane started after a change gets
+the new shell with no further edit. Add the IPC handlers next to the session ones:
 
 ```ts
 // The resolved shell travels with the settings, because the renderer needs to know which family of
@@ -1113,7 +1157,9 @@ In `createWindow`, paint from the settings and drop the launch argument:
     backgroundColor: settings.theme.background,
 ```
 
-and delete the whole `additionalArguments: [...]` line from `webPreferences`. Remove `SHELL_COMMAND_FLAG` from the `./shell` import. `backgroundColor` was `THEME`'s only use in `main.ts`, so the import becomes `import { TITLE_BAR_HEIGHT } from './theme';`.
+and delete the whole `additionalArguments: [...]` line from `webPreferences`. Remove
+`SHELL_COMMAND_FLAG` from the `./shell` import. `backgroundColor` was `THEME`'s only use in
+`main.ts`, so the import becomes `import { TITLE_BAR_HEIGHT } from './theme';`.
 
 - [ ] **Step 7: Wire the bridge and the preload**
 
@@ -1137,7 +1183,8 @@ In `src/preload.ts`, delete the `shellCommand` entry and the `SHELL_COMMAND_FLAG
 
 - [ ] **Step 8: Hold the settings in the renderer**
 
-In `src/renderer.ts`, add the import and the module state near the top, below `const isMac = bridge.platform === 'darwin';`:
+In `src/renderer.ts`, add the import and the module state near the top, below `const isMac =
+bridge.platform === 'darwin';`:
 
 ```ts
 import { defaultSettings, type Settings } from './settings';
@@ -1152,7 +1199,8 @@ let shellCommand = '';
 
 In `buildPane`'s drop handler, replace `bridge.shellCommand` with `shellCommand`.
 
-In `start()`, read the settings first — before the fonts, because Task 8 makes the font name come from them:
+In `start()`, read the settings first — before the fonts, because Task 8 makes the font name come
+from them:
 
 ```ts
 async function start(): Promise<void> {
@@ -1166,8 +1214,8 @@ async function start(): Promise<void> {
 
 - [ ] **Step 9: Run the whole check set**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: all green. `mapShortcut` is untouched and still works off its own hand-written branches; Task 5 replaces it.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: all green. `mapShortcut` is untouched
+and still works off its own hand-written branches; Task 5 replaces it.
 
 - [ ] **Step 10: Commit**
 
@@ -1189,17 +1237,22 @@ is quoted for the shell you used to have."
 
 ### Task 5: `mapShortcut` becomes a lookup
 
-The stack of hand-written branches goes away. Given a keystroke, the current mode and the bindings, find the action whose binding matches and whose scope covers this mode. The platform stops being a parameter — it only ever decided which default shipped, and Task 3 settled that.
+The stack of hand-written branches goes away. Given a keystroke, the current mode and the bindings,
+find the action whose binding matches and whose scope covers this mode. The platform stops being a
+parameter — it only ever decided which default shipped, and Task 3 settled that.
 
 **Files:**
 - Modify: `src/shortcuts.ts` — the whole body is replaced; only `isModified` survives
 - Modify: `src/shortcuts.test.ts` — rewritten against the new signature
-- Modify: `src/renderer.ts` — the call site, and `apply` gains the `settings` kind and the board kinds
+- Modify: `src/renderer.ts` — the call site, and `apply` gains the `settings` kind and the board
+  kinds
 - Modify: `src/help.test.ts` — its `mapShortcut` calls take the new arguments
 
 **Interfaces:**
-- Consumes: `ACTIONS`, `type Action`, `type ActionScope` from `src/actions.ts`; `matchesBinding`, `type KeyInput` from `src/binding.ts`; `type Settings` from `src/settings.ts`.
-- Produces: `mapShortcut(input: KeyInput, keys: Settings['keys'], mode?: Mode): Action | null`. `isModified` and the `KeyInput` and `Action` re-exports are unchanged in shape.
+- Consumes: `ACTIONS`, `type Action`, `type ActionScope` from `src/actions.ts`; `matchesBinding`,
+  `type KeyInput` from `src/binding.ts`; `type Settings` from `src/settings.ts`.
+- Produces: `mapShortcut(input: KeyInput, keys: Settings['keys'], mode?: Mode): Action | null`.
+  `isModified` and the `KeyInput` and `Action` re-exports are unchanged in shape.
 
 - [ ] **Step 1: Rewrite `src/shortcuts.test.ts`**
 
@@ -1339,13 +1392,15 @@ Expected: PASS.
 
 - [ ] **Step 5: Fix the call site in `src/renderer.ts`**
 
-Change the import `import { mapShortcut, type Action } from './shortcuts';` to keep working — `Action` is re-exported, so it does. Change the window listener:
+Change the import `import { mapShortcut, type Action } from './shortcuts';` to keep working —
+`Action` is re-exported, so it does. Change the window listener:
 
 ```ts
   const action = mapShortcut(event, settings.keys, pages[activeIndex]?.mode);
 ```
 
-`apply` gains the new kinds. Add `settings` beside `help` at the top, and the board kinds at the bottom of the switch:
+`apply` gains the new kinds. Add `settings` beside `help` at the top, and the board kinds at the
+bottom of the switch:
 
 ```ts
 function apply(action: Action): void {
@@ -1373,23 +1428,32 @@ function showSettings(): void {
 }
 ```
 
-`page.board?.runAction` does not exist yet, so add it to `BoardView` in Task 6. To keep this task's build green, stub it now in `src/board-view.ts` beside `statusLabel`:
+`page.board?.runAction` does not exist yet, so add it to `BoardView` in Task 6. To keep this task's
+build green, stub it now in `src/board-view.ts` beside `statusLabel`:
 
 ```ts
     // Task 6 moves the board's own key handling in here.
     runAction(_action: Action): void {},
 ```
 
-with `runAction(action: Action): void` added to the `BoardView` type and `import type { Action } from './actions';` at the top.
+with `runAction(action: Action): void` added to the `BoardView` type and `import type { Action }
+from './actions';` at the top.
 
 - [ ] **Step 6: Fix `src/help.test.ts`**
 
-Its `PROJECT_ROWS` cases call `mapShortcut(key(row.press), true, 'board')`. Change each to `mapShortcut(key(row.press), defaultSettings(true).keys, 'board')`, import `defaultSettings` from `./settings`, and change each `press` to name the `code` rather than the `key` — `{ code: 'KeyS', ctrlKey: true }`, `{ code: 'KeyO', ctrlKey: true }`, `{ code: 'Digit1', ctrlKey: true }`, `{ code: 'Digit1', ctrlKey: true, shiftKey: true }`, `{ code: 'BracketRight', metaKey: true }`. Task 7 rewrites this file properly; this step only keeps it compiling and passing.
+Its `PROJECT_ROWS` cases call `mapShortcut(key(row.press), true, 'board')`. Change each to
+`mapShortcut(key(row.press), defaultSettings(true).keys, 'board')`, import `defaultSettings` from
+`./settings`, and change each `press` to name the `code` rather than the `key` — `{ code: 'KeyS',
+ctrlKey: true }`, `{ code: 'KeyO', ctrlKey: true }`, `{ code: 'Digit1', ctrlKey: true }`, `{ code:
+'Digit1', ctrlKey: true, shiftKey: true }`, `{ code: 'BracketRight', metaKey: true }`. Task 7
+rewrites this file properly; this step only keeps it compiling and passing.
 
 - [ ] **Step 7: Run the whole check set**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: all green. The board still handles its own keys through its own listener — the stubbed `runAction` does nothing, and nothing calls it yet because board keys now come back from `mapShortcut`. **This is the one moment the board's keys are broken**; Task 6 is what closes it, so do not stop here.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: all green. The board still handles its
+own keys through its own listener — the stubbed `runAction` does nothing, and nothing calls it yet
+because board keys now come back from `mapShortcut`. **This is the one moment the board's keys are
+broken**; Task 6 is what closes it, so do not stop here.
 
 - [ ] **Step 8: Commit**
 
@@ -1409,7 +1473,9 @@ the rule follows a rebinding."
 
 ### Task 6: The board's keys come from the same lookup
 
-`board-view.ts` has its own `keydown` listener with a switch on bare letters. That switch is the third hand-written copy of the keys. It goes; the window listener finds the action and hands it to the board.
+`board-view.ts` has its own `keydown` listener with a switch on bare letters. That switch is the
+third hand-written copy of the keys. It goes; the window listener finds the action and hands it to
+the board.
 
 **Files:**
 - Modify: `src/board-view.ts` — the `keydown` listener is deleted, `runAction` is filled in
@@ -1448,12 +1514,15 @@ describe('every shipped default reaches its own action', () => {
 
 - [ ] **Step 2: Run it**
 
-Run: `npx vitest run src/shortcuts.test.ts`
-Expected: PASS already — Task 5 built the lookup. This test exists to fail later if a board row and the lookup drift, which is exactly the drift this whole change removes. If it fails now, the table is wrong; fix `actions.ts`.
+Run: `npx vitest run src/shortcuts.test.ts` Expected: PASS already — Task 5 built the lookup. This
+test exists to fail later if a board row and the lookup drift, which is exactly the drift this whole
+change removes. If it fails now, the table is wrong; fix `actions.ts`.
 
 - [ ] **Step 3: Fill in `runAction` and delete the listener**
 
-In `src/board-view.ts`, delete the entire `element.addEventListener('keydown', (event) => { ... });` block — the arrows, the Tab handling and the switch — and delete `ARROW_DIRECTIONS`, now unused. The `isModified` import goes too if nothing else in the file uses it.
+In `src/board-view.ts`, delete the entire `element.addEventListener('keydown', (event) => { ... });`
+block — the arrows, the Tab handling and the switch — and delete `ARROW_DIRECTIONS`, now unused. The
+`isModified` import goes too if nothing else in the file uses it.
 
 Replace the stub in the returned object:
 
@@ -1493,21 +1562,27 @@ Replace the stub in the returned object:
     },
 ```
 
-The window listener already calls `preventDefault()` and `stopPropagation()` on any key that matched, so nothing here needs to. And it already skips a keystroke aimed at `.board-edit`, `.card-detail` or `.confirm`, so a card being renamed still owns every key typed into it.
+The window listener already calls `preventDefault()` and `stopPropagation()` on any key that
+matched, so nothing here needs to. And it already skips a keystroke aimed at `.board-edit`,
+`.card-detail` or `.confirm`, so a card being renamed still owns every key typed into it.
 
-`Tab` is safe to take from the window now: `matchesBinding` needs every modifier to agree, so `Ctrl+Tab` matches nothing here and falls through to the window switcher, which is the rule `CLAUDE.md` already sets.
+`Tab` is safe to take from the window now: `matchesBinding` needs every modifier to agree, so
+`Ctrl+Tab` matches nothing here and falls through to the window switcher, which is the rule
+`CLAUDE.md` already sets.
 
 - [ ] **Step 4: Run the whole check set**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: all green. If `tsc` complains about an unused import in `board-view.ts`, delete it — `isModified` and `Direction` may both be unused now.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: all green. If `tsc` complains about an
+unused import in `board-view.ts`, delete it — `isModified` and `Direction` may both be unused now.
 
 - [ ] **Step 5: Check it by hand**
 
 Do NOT rebuild or restart the installed app. Run a development copy instead:
 
-Run: `npm start`
-Then: open a project, press `Ctrl+B`, and check the arrows move the selection, `Shift+Down` moves a card, `N` adds one, `E` edits a description, `Tab` attaches, `D` asks before deleting, and `U` undoes. Then press `Ctrl+T` and check that typing `dune` into a shell types `dune` rather than deleting a card. Quit the development copy when done; it is not the installed app.
+Run: `npm start` Then: open a project, press `Ctrl+B`, and check the arrows move the selection,
+`Shift+Down` moves a card, `N` adds one, `E` edits a description, `Tab` attaches, `D` asks before
+deleting, and `U` undoes. Then press `Ctrl+T` and check that typing `dune` into a shell types `dune`
+rather than deleting a card. Quit the development copy when done; it is not the installed app.
 
 - [ ] **Step 6: Commit**
 
@@ -1524,12 +1599,17 @@ view answers an action rather than a keystroke."
 
 ### Task 7: The help dialog prints from the table
 
-`BOARD_SHORTCUTS`, `terminalShortcuts` and the hand-written Projects list all go. The rows come from the action table and the bindings in force, so rebinding a key changes what `Ctrl+H` says.
+`BOARD_SHORTCUTS`, `terminalShortcuts` and the hand-written Projects list all go. The rows come from
+the action table and the bindings in force, so rebinding a key changes what `Ctrl+H` says.
 
 Two rules the rows follow:
 
-- **An action with no key gets no row.** The help dialog answers "what can I press here", and an unbound action is not something you can press. The settings screen is where you see everything, bound or not.
-- **A family collapses only while it is untouched.** `Ctrl+1…Ctrl+9` is one row while all nine still hold their defaults. Rebind one and all nine are listed separately, because `Ctrl+1…Ctrl+9` would be a lie.
+- **An action with no key gets no row.** The help dialog answers "what can I press here", and an
+  unbound action is not something you can press. The settings screen is where you see everything,
+  bound or not.
+- **A family collapses only while it is untouched.** `Ctrl+1…Ctrl+9` is one row while all nine still
+  hold their defaults. Rebind one and all nine are listed separately, because `Ctrl+1…Ctrl+9` would
+  be a lie.
 
 **Files:**
 - Modify: `src/actions.ts` — the three families gain `family` and `familyDescription`
@@ -1538,8 +1618,10 @@ Two rules the rows follow:
 - Modify: `src/renderer.ts` — `showHelp` passes the bindings
 
 **Interfaces:**
-- Consumes: `ACTIONS`, `defaultBinding` from `src/actions.ts`; `type Settings` from `src/settings.ts`.
-- Produces: `helpSections(mode: Mode, keys: Settings['keys'], isMac: boolean): Section[]`; `openHelp(mode: Mode, keys: Settings['keys'], isMac: boolean): Promise<void>`.
+- Consumes: `ACTIONS`, `defaultBinding` from `src/actions.ts`; `type Settings` from
+  `src/settings.ts`.
+- Produces: `helpSections(mode: Mode, keys: Settings['keys'], isMac: boolean): Section[]`;
+  `openHelp(mode: Mode, keys: Settings['keys'], isMac: boolean): Promise<void>`.
 
 - [ ] **Step 1: Add the family fields to `src/actions.ts`**
 
@@ -1552,7 +1634,10 @@ Add two optional fields to `ActionEntry`:
   familyDescription?: string;
 ```
 
-Add them to the three generated runs — `project-jump` gets `family: 'project-jump', familyDescription: 'Jump to a project'`; `project-move` gets `family: 'project-move', familyDescription: 'Move this project to that position'`; `terminal-focus` gets `family: 'terminal-focus', familyDescription: 'Focus a terminal'`.
+Add them to the three generated runs — `project-jump` gets `family: 'project-jump',
+familyDescription: 'Jump to a project'`; `project-move` gets `family: 'project-move',
+familyDescription: 'Move this project to that position'`; `terminal-focus` gets `family:
+'terminal-focus', familyDescription: 'Focus a terminal'`.
 
 - [ ] **Step 2: Rewrite `src/help.test.ts`**
 
@@ -1681,7 +1766,8 @@ Expected: FAIL — `helpSections` takes `(mode, isMac)`.
 
 - [ ] **Step 4: Rewrite the top half of `src/help.ts`**
 
-Everything from the imports down to `helpSections` is replaced. `openHelp`'s DOM building is unchanged apart from its signature.
+Everything from the imports down to `helpSections` is replaced. `openHelp`'s DOM building is
+unchanged apart from its signature.
 
 ```ts
 import { ACTIONS, defaultBinding, type ActionEntry, type ActionGroup } from './actions';
@@ -1790,7 +1876,8 @@ export function helpSections(mode: Mode, keys: Settings['keys'], isMac: boolean)
 }
 ```
 
-`groupShortcuts(mode, mode, ...)` works because the group names `terminals` and `board` are spelled the same as the modes.
+`groupShortcuts(mode, mode, ...)` works because the group names `terminals` and `board` are spelled
+the same as the modes.
 
 - [ ] **Step 5: Change `openHelp`'s signature and its footer**
 
@@ -1798,7 +1885,8 @@ export function helpSections(mode: Mode, keys: Settings['keys'], isMac: boolean)
 export function openHelp(mode: Mode, keys: Settings['keys'], isMac: boolean): Promise<void> {
 ```
 
-and inside, `for (const section of helpSections(mode, keys, isMac))`. Change the footer line, which names a key that can now move:
+and inside, `for (const section of helpSections(mode, keys, isMac))`. Change the footer line, which
+names a key that can now move:
 
 ```ts
     const helpKey = keys.help ?? 'nothing — the help key is unbound';
@@ -1837,7 +1925,9 @@ Ctrl+1…Ctrl+9 only while all nine still hold the key they shipped with."
 
 ### Task 8: The theme and the font come from the settings, live
 
-Every pane on every page repaints when a colour changes. The window's own background — the margin behind the panes — is painted by the main process before the renderer exists, so that one keeps the old colour until the next launch.
+Every pane on every page repaints when a colour changes. The window's own background — the margin
+behind the panes — is painted by the main process before the renderer exists, so that one keeps the
+old colour until the next launch.
 
 **Files:**
 - Modify: `src/renderer.ts` — `applyAppearance`, and `buildPane` reads the settings
@@ -1845,7 +1935,8 @@ Every pane on every page repaints when a colour changes. The window's own backgr
 
 **Interfaces:**
 - Consumes: `type Settings` from `src/settings.ts`.
-- Produces: `applyAppearance(): void` inside `renderer.ts`, called at startup and after every settings change.
+- Produces: `applyAppearance(): void` inside `renderer.ts`, called at startup and after every
+  settings change.
 
 - [ ] **Step 1: Replace the constants and the startup loop in `src/renderer.ts`**
 
@@ -1893,7 +1984,8 @@ function applyAppearance(): void {
 }
 ```
 
-`applyAppearance` reads `panesById` and `fitAllPages`, so it must be declared after both. Put it directly above `function focusTerminal`.
+`applyAppearance` reads `panesById` and `fitAllPages`, so it must be declared after both. Put it
+directly above `function focusTerminal`.
 
 - [ ] **Step 2: Make `buildPane` read the settings**
 
@@ -1905,7 +1997,8 @@ In `buildPane`, replace the three constants in the `new Terminal({ ... })` call:
     theme: settings.theme as ITheme,
 ```
 
-The `THEME` import in `renderer.ts` is now unused — drop it, keeping `TITLE_BAR_HEIGHT`. Add `import type { ITheme } from '@xterm/xterm';` beside the existing `Terminal` import.
+The `THEME` import in `renderer.ts` is now unused — drop it, keeping `TITLE_BAR_HEIGHT`. Add `import
+type { ITheme } from '@xterm/xterm';` beside the existing `Terminal` import.
 
 - [ ] **Step 3: Load the right font at startup and apply the appearance**
 
@@ -1921,11 +2014,14 @@ In `start()`, after the settings are read:
   applyAppearance();
 ```
 
-`document.fonts.load` on a family the machine does not have resolves with nothing loaded rather than throwing, and xterm falls back to Menlo. A font name the user typed wrongly costs them the font, not the window.
+`document.fonts.load` on a family the machine does not have resolves with nothing loaded rather than
+throwing, and xterm falls back to Menlo. A font name the user typed wrongly costs them the font, not
+the window.
 
 - [ ] **Step 4: Note what `THEME` is now, in `src/theme.ts`**
 
-Change the comment above `export const THEME` so it says this is the theme the app ships with and that `settings.json` overrides any colour in it. Keep every value.
+Change the comment above `export const THEME` so it says this is the theme the app ships with and
+that `settings.json` overrides any colour in it. Keep every value.
 
 - [ ] **Step 5: Check it by hand**
 
@@ -1939,7 +2035,9 @@ JSON
 npm start
 ```
 
-Expected: the panes and the status bar are on the dark blue background, the font is bigger, and the grid still fills the window with no cut-off last row. Then delete the file and run again: everything is back to the stock look.
+Expected: the panes and the status bar are on the dark blue background, the font is bigger, and the
+grid still fills the window with no cut-off last row. Then delete the file and run again: everything
+is back to the stock look.
 
 - [ ] **Step 6: Run the whole check set and commit**
 
@@ -1959,20 +2057,26 @@ cuts off the last row."
 
 ### Task 9: The settings screen, and its keys
 
-An overlay on the same sheet as the help dialog and the picker. This task builds the row list, the walking, and everything about rebinding: arm, capture, unbind, and the confirmation when a key is already taken.
+An overlay on the same sheet as the help dialog and the picker. This task builds the row list, the
+walking, and everything about rebinding: arm, capture, unbind, and the confirmation when a key is
+already taken.
 
 **Files:**
 - Create: `src/settings-rows.ts`, `src/settings-rows.test.ts`, `src/settings-view.ts`
 - Modify: `src/overlay.ts` — `confirmOverlay` takes the line under the question
-- Modify: `src/renderer.ts` — `showSettings` opens it; `.settings` joins the list of dialogs that own their keys
+- Modify: `src/renderer.ts` — `showSettings` opens it; `.settings` joins the list of dialogs that
+  own their keys
 - Modify: `src/index.css` — the sheet and the rows
 
 **Interfaces:**
-- Consumes: `ACTIONS`, `type ActionGroup` from `src/actions.ts`; `formatBinding`, `keystrokeOf` from `src/binding.ts`; `bindKey`, `holderOfBinding`, `resetKeys`, `defaultSettings`, `isHexColor`, `type Settings` from `src/settings.ts`; `confirmOverlay`, `openOverlay` from `src/overlay.ts`.
+- Consumes: `ACTIONS`, `type ActionGroup` from `src/actions.ts`; `formatBinding`, `keystrokeOf` from
+  `src/binding.ts`; `bindKey`, `holderOfBinding`, `resetKeys`, `defaultSettings`, `isHexColor`,
+  `type Settings` from `src/settings.ts`; `confirmOverlay`, `openOverlay` from `src/overlay.ts`.
 - Produces:
   - `type SettingsRow` and `settingsRows(settings: Settings): SettingsRow[]` from `settings-rows.ts`
   - `stepSelection(rows: SettingsRow[], index: number, step: number): number`
-  - `openSettings(settings: Settings, isMac: boolean, onChange: (next: Settings) => void): Promise<void>` from `settings-view.ts`
+  - `openSettings(settings: Settings, isMac: boolean, onChange: (next: Settings) => void):
+    Promise<void>` from `settings-view.ts`
 
 - [ ] **Step 1: Write the failing row-model test**
 
@@ -2112,7 +2216,8 @@ Expected: PASS.
 
 - [ ] **Step 5: Let `confirmOverlay` say something other than "delete"**
 
-In `src/overlay.ts`, give it a second argument. The existing call in `board-view.ts` passes nothing and keeps the wording it has:
+In `src/overlay.ts`, give it a second argument. The existing call in `board-view.ts` passes nothing
+and keeps the wording it has:
 
 ```ts
 export function confirmOverlay(message: string, keysLine = 'Enter deletes. Escape keeps it.'): Promise<boolean> {
@@ -2254,7 +2359,8 @@ Write the rest of the file in the same closure. `render()` rebuilds the list:
     }
 ```
 
-The keydown handler. The armed branch is deliberately ahead of the `isModified` guard, and it is the only place in the app that is:
+The keydown handler. The armed branch is deliberately ahead of the `isModified` guard, and it is the
+only place in the app that is:
 
 ```ts
     dialog.addEventListener('keydown', (event) => {
@@ -2348,11 +2454,14 @@ and add `.settings` to the list of dialogs that own every key typed inside them:
   )) return;
 ```
 
-**This one line matters more than it looks.** Without it the window listener sees the keystroke first, and arming a row then pressing `Ctrl+B` switches the page to the board behind the dialog instead of binding the key.
+**This one line matters more than it looks.** Without it the window listener sees the keystroke
+first, and arming a row then pressing `Ctrl+B` switches the page to the board behind the dialog
+instead of binding the key.
 
 - [ ] **Step 8: Style it in `src/index.css`**
 
-Add `.settings` to the `.picker, .help, .confirm, .card-detail` sheet rule and `.settings-dialog` to the dialog rule beside `.help-dialog`. Then:
+Add `.settings` to the `.picker, .help, .confirm, .card-detail` sheet rule and `.settings-dialog` to
+the dialog rule beside `.help-dialog`. Then:
 
 ```css
 /* Settings: one row per thing you can change, walked with the arrows. Taller than the help dialog
@@ -2427,7 +2536,12 @@ Add `.settings` to the `.picker, .help, .confirm, .card-detail` sheet rule and `
 
 Run: `npm start`, then `Ctrl+,`.
 
-Expected: the list opens on the first row under "Dashboard"; the arrows walk it and skip the headings; `Enter` on a key row shows `press a key…`; pressing `Ctrl+J` binds it and the row shows `Ctrl+J`; `x` on a row shows `unbound` in grey; `Enter` then `Ctrl+S` on a board row asks "Ctrl+S is already 'Open the project list'" and `Escape` leaves both alone; `Enter` on "Reset every key to its default" puts them all back. Close with `Escape`, open `Ctrl+H`, and check the help dialog shows whatever you bound. Check `~/.config/dashboard/settings.json` has the change in it.
+Expected: the list opens on the first row under "Dashboard"; the arrows walk it and skip the
+headings; `Enter` on a key row shows `press a key…`; pressing `Ctrl+J` binds it and the row shows
+`Ctrl+J`; `x` on a row shows `unbound` in grey; `Enter` then `Ctrl+S` on a board row asks "Ctrl+S is
+already 'Open the project list'" and `Escape` leaves both alone; `Enter` on "Reset every key to its
+default" puts them all back. Close with `Escape`, open `Ctrl+H`, and check the help dialog shows
+whatever you bound. Check `~/.config/dashboard/settings.json` has the change in it.
 
 - [ ] **Step 10: Run the whole check set and commit**
 
@@ -2451,7 +2565,8 @@ bind."
 
 ### Task 10: Editing a colour, the font and the shell
 
-The same gesture the board already uses for a card title: `Enter` opens a small text box in the row, `Escape` commits, and a value that will not do is refused with a message saying why.
+The same gesture the board already uses for a card title: `Enter` opens a small text box in the row,
+`Escape` commits, and a value that will not do is refused with a message saying why.
 
 **Files:**
 - Modify: `src/settings-view.ts` — `startEditing` is filled in
@@ -2461,7 +2576,8 @@ The same gesture the board already uses for a card title: `Enter` opens a small 
 
 **Interfaces:**
 - Consumes: `isHexColor` from `src/settings.ts`.
-- Produces: `isFontSize(value: string): boolean` from `src/settings.ts`; `startEditing(row: SettingsRow): void` inside `settings-view.ts`.
+- Produces: `isFontSize(value: string): boolean` from `src/settings.ts`; `startEditing(row:
+  SettingsRow): void` inside `settings-view.ts`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2585,7 +2701,8 @@ Replace the stub:
     }
 ```
 
-`finish` still takes its `save` argument because `blur` and a future cancel path both use it; today every caller passes `true`.
+`finish` still takes its `save` argument because `blur` and a future cancel path both use it; today
+every caller passes `true`.
 
 Add `isFontSize` and `isHexColor` to the `./settings` import.
 
@@ -2609,7 +2726,11 @@ Add `isFontSize` and `isHexColor` to the `./settings` import.
 
 Run: `npm start`, then `Ctrl+,`.
 
-Expected: arrow down to Colours, `Enter` on `background`, type `#1a1b26`, `Escape` — every pane and the status bar repaint at once. `Enter` on `red`, type `nonsense`, `Escape` — the row is unchanged and the footer says it is not a colour. `Enter` on Size, type `16` — the panes re-measure and the grid still fills the window. `Enter` on the shell row, type `/bin/bash`, `Escape`, then `Ctrl+S` and open a project: its five shells are bash while the panes already running are still what they were.
+Expected: arrow down to Colours, `Enter` on `background`, type `#1a1b26`, `Escape` — every pane and
+the status bar repaint at once. `Enter` on `red`, type `nonsense`, `Escape` — the row is unchanged
+and the footer says it is not a colour. `Enter` on Size, type `16` — the panes re-measure and the
+grid still fills the window. `Enter` on the shell row, type `/bin/bash`, `Escape`, then `Ctrl+S` and
+open a project: its five shells are bash while the panes already running are still what they were.
 
 - [ ] **Step 8: Run the whole check set and commit**
 
@@ -2629,7 +2750,9 @@ so the screen and the file cannot hold different ideas of what is allowed."
 
 ### Task 11: Make `Ctrl+H` and `CLAUDE.md` tell the truth
 
-The keys and the blurbs are separate halves of the help dialog, and only the keys look after themselves now. This task finishes the other half and rewrites the two hard rules this change made false.
+The keys and the blurbs are separate halves of the help dialog, and only the keys look after
+themselves now. This task finishes the other half and rewrites the two hard rules this change made
+false.
 
 **Files:**
 - Modify: `src/help.ts` — the settings blurb and the stale key names in the existing blurbs
@@ -2640,31 +2763,51 @@ The keys and the blurbs are separate halves of the help dialog, and only the key
 
 - [ ] **Step 1: Read every blurb against what the app now does**
 
-In `src/help.ts`, the three screen blurbs name keys by their shipped spelling. Any that still says "press Ctrl+N" is wrong the moment someone rebinds it — Task 7 already changed the nvim blurb to "the nvim key"; check the other two the same way, and check the board blurb still says "undo" rather than "u".
+In `src/help.ts`, the three screen blurbs name keys by their shipped spelling. Any that still says
+"press Ctrl+N" is wrong the moment someone rebinds it — Task 7 already changed the nvim blurb to
+"the nvim key"; check the other two the same way, and check the board blurb still says "undo" rather
+than "u".
 
-The `app` blurb Task 7 added is the settings screen's only home in the help dialog. Confirm it says three things: that every key on the list can be changed, where the file is, and that deleting the file puts everything back.
+The `app` blurb Task 7 added is the settings screen's only home in the help dialog. Confirm it says
+three things: that every key on the list can be changed, where the file is, and that deleting the
+file puts everything back.
 
 - [ ] **Step 2: Fix the comment on `.help-keys` in `src/index.css`**
 
-It says the column is wide enough for `"Ctrl+Right / Ctrl+Left"`, a row that no longer exists — each row names one binding now. Replace the reasoning with the longest a binding can be, `Ctrl+Cmd+Alt+Shift+Backspace`, and widen the column if `22ch` no longer fits it.
+It says the column is wide enough for `"Ctrl+Right / Ctrl+Left"`, a row that no longer exists — each
+row names one binding now. Replace the reasoning with the longest a binding can be,
+`Ctrl+Cmd+Alt+Shift+Backspace`, and widen the column if `22ch` no longer fits it.
 
 - [ ] **Step 3: Rewrite the two hard rules in `CLAUDE.md`**
 
-Under **The help dialog is part of the change**, the bullet about the keys is now false: the board rows and the project rows are no longer written out by hand. Replace that bullet with one saying the keys come from `src/actions.ts`, so adding a shortcut means adding a row to that table and nothing else — and that the blurb is still yours to keep true.
+Under **The help dialog is part of the change**, the bullet about the keys is now false: the board
+rows and the project rows are no longer written out by hand. Replace that bullet with one saying the
+keys come from `src/actions.ts`, so adding a shortcut means adding a row to that table and nothing
+else — and that the blurb is still yours to keep true.
 
-Under **Mode keys pass through**, the sentence "So every keydown handler reaches `if (isModified(event)) return;` before it acts on `event.key`" now has a third exception. Add it to the list of keys read before that guard, in the same shape as the other two:
+Under **Mode keys pass through**, the sentence "So every keydown handler reaches `if
+(isModified(event)) return;` before it acts on `event.key`" now has a third exception. Add it to the
+list of keys read before that guard, in the same shape as the other two:
 
-> - Every key, in the settings screen, while a row is armed. A row waiting for a binding has to read Ctrl, Cmd, Alt and Shift, or those four are the only keys you could never bind. It is one keystroke long and puts the guard back immediately after.
+> - Every key, in the settings screen, while a row is armed. A row waiting for a binding has to read
+> Ctrl, Cmd, Alt and Shift, or those four are the only keys you could never bind. It is one
+> keystroke long and puts the guard back immediately after.
 
-Also add a line saying the mode keys are `MODE_KEYS` no longer — they are three rows in `src/actions.ts` and can be rebound, and the pass-through rule is checked on the action rather than the key so it follows a rebinding.
+Also add a line saying the mode keys are `MODE_KEYS` no longer — they are three rows in
+`src/actions.ts` and can be rebound, and the pass-through rule is checked on the action rather than
+the key so it follows a rebinding.
 
 - [ ] **Step 4: Add a settings section to `README.md`**
 
-Six or seven lines: where the file is, that every field is optional, that a binding is written `Ctrl+Shift+K`, that `null` means no key, and that deleting the file puts everything back. If the README says anywhere that the shell comes from `SHELL_COMMAND` or that the theme is fixed, fix that too.
+Six or seven lines: where the file is, that every field is optional, that a binding is written
+`Ctrl+Shift+K`, that `null` means no key, and that deleting the file puts everything back. If the
+README says anywhere that the shell comes from `SHELL_COMMAND` or that the theme is fixed, fix that
+too.
 
 - [ ] **Step 5: Move the card on the board**
 
-In `.dashboard/board.json`, move the card titled "A settings screen, with the keyboard shortcuts in it" from Todo to the top of Done, and rewrite its `notes` to say what shipped:
+In `.dashboard/board.json`, move the card titled "A settings screen, with the keyboard shortcuts in
+it" from Todo to the top of Done, and rewrite its `notes` to say what shipped:
 
 ```
 Every key, the theme, the font and the shell live in ~/.config/dashboard/settings.json, and Ctrl+, edits them from the keyboard. One table in actions.ts names every action once; the handler, the help dialog and the settings screen all read it, so a shortcut is no longer written out in three places. A binding is a string like Ctrl+Shift+K and matches the physical key, so Option+H is Option+H whatever character the keyboard reported. Delete the file and everything is back to how it shipped.
@@ -2672,8 +2815,9 @@ Every key, the theme, the font and the shell live in ~/.config/dashboard/setting
 
 - [ ] **Step 6: Run everything one last time**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Then: `npm start`, press `Ctrl+H` on each of the three screens, and read every row. A key it names that does nothing, or a key that works and is not named, is a bug in this task.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Then: `npm start`, press `Ctrl+H` on each of the
+three screens, and read every row. A key it names that does nothing, or a key that works and is not
+named, is a bug in this task.
 
 - [ ] **Step 7: Commit**
 
@@ -2688,7 +2832,8 @@ before checking for one, which every other handler is forbidden to do."
 
 - [ ] **Step 8: Say what is left**
 
-Do not rebuild or restart the installed app. Report that the installed Dashboard needs a rebuild and a restart to pick this up, and that restarting kills every shell in every project.
+Do not rebuild or restart the installed app. Report that the installed Dashboard needs a rebuild and
+a restart to pick this up, and that restarting kills every shell in every project.
 
 ---
 
@@ -2713,5 +2858,7 @@ Checked against `docs/superpowers/specs/2026-09-06-settings-screen-design.md`:
 
 Two things the spec named that are worth calling out because they are easy to skip:
 
-- **Task 5 leaves the board's keys broken for one commit.** Task 6 closes it. Whoever runs this must not stop between them.
-- **Task 9's one-line change to the window listener** — adding `.settings` to the `closest()` list — is what stops `Ctrl+B` switching the page behind the dialog while a row is armed.
+- **Task 5 leaves the board's keys broken for one commit.** Task 6 closes it. Whoever runs this must
+  not stop between them.
+- **Task 9's one-line change to the window listener** — adding `.settings` to the `closest()` list —
+  is what stops `Ctrl+B` switching the page behind the dialog while a row is armed.

@@ -128,9 +128,11 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   `pane-output-wiring.ts` (output, exit and the working report), `terminals.ts`, `jumps.ts`
 - Shell and process: `shell.ts`, `process-tree.ts`, `shell-directory.ts`,
   `shell-directory-lookup.ts`, `working-panes.ts`, `free-pane.ts`, `waiting.ts`
-- Pane host: `pane-host-protocol.ts` (with the older versions' sockets, `olderHostSockets`), `host-socket.ts` (shared with the screen host, workers-decision-6), `pane-host-server.ts`,
-  `pane-host-entry.ts`, `pane-host-client.ts`, `pane-shell.ts`, `pane-shells.ts`,
-  `adopted-pane.ts`, and `vite.pane-host.config.ts` at the root
+- Pane host: `pane-host-protocol.ts` (with the older versions' sockets,
+  `olderHostSockets`), `host-socket.ts` (shared with the screen host,
+  workers-decision-6), `pane-host-server.ts`, `pane-host-entry.ts`,
+  `pane-host-client.ts`, `pane-shell.ts`, `pane-shells.ts`, `adopted-pane.ts`,
+  and `vite.pane-host.config.ts` at the root
 - Output no faster than it draws: `output-pauses.ts`, and `write-flow.ts` in
   the renderer
 - Links in output: `links.ts`, `wrapped-links.ts`, `print-widths.ts`
@@ -141,31 +143,73 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 
 ## Scenarios
 
-- Given a pane you are not looking at, when it rings its bell, then the pane is marked and a notification click takes you to it.
-- Given a link wrapped onto the next row, when you click it, then the whole link opens in the browser.
-- Given a worker pane is focused, when you zoom it, then it fills the page, and zooming again puts the layout back.
-- Given a pane printing flat out, when you press Ctrl+C, then it stops printing within a fraction of a second, with or without the pane host.
-- Given the window reloads or goes to show another host while a pane is paused for drawing, when a second passes, then the pane's shell is read again.
-- Given a pane on Linux, when you press Ctrl+Shift+C and Ctrl+Shift+V, then the selection is copied and the clipboard pasted.
-- Given a project behind another one with its panes printing, when you come back to it, then every pane shows its latest output and scrolls back through everything it printed meanwhile.
-- Given a pane link on the Claude screen, when you click it, then the page holding the pane comes forward with the pane focused, the way a notification click lands (see [chat](../chat/README.md)).
-- Given a shell that has finished what it ran, when anything asks whether the pane is busy, then one answer says it is free.
-- Given a pane `pane claim` has just opened, when `pane run` asks whether it is busy before `systemd-run` has started its shell, then it is free; a `systemd-run` you start at the prompt once the shell is up reads as a program like any other.
-- Given a worker pane running a job, when the app quits, crashes or is updated and opens again, then the pane comes back with the same shell, its screen and the job still running.
-- Given Windows, when the app quits and opens again, then every pane comes back the same as on a mac or Linux.
-- Given another user on the same Windows machine, when they open the pane host's pipe, then they hear no screen and the app keeps its panes.
-- Given another user on the same Windows machine listening on the pane host's pipe name before it starts, when the app connects, then it hears only `hello`, since it cannot answer the nonce with the token's proof, whether it answers `panes`, answers `busy`, closes or says nothing; the status bar says shells die with the app this run, and the next launch uses a new name.
-- Given a pane the pane host kept, when its project is closed or the pane is closed, then its shell is killed.
-- Given a pane host already running, when a second one starts on the same socket (two launches at once), then the second exits and leaves the socket to the first, so no shell is left where no app can reach it (workers-decision-6).
-- Given no `node` on the login shell's PATH (on Windows, the PATH), when the app starts, then the status bar says shells die with the app this run, and the panes work as before.
-- Given no pane host this run, when you close the window, then the quit question says every shell is killed.
-- Given the installed app running, when a development build on the same user data starts, then the installed app keeps its panes and the development build runs its shells itself.
-- Given the editor open with a file in it, when the app quits and opens again, then the same nvim is back with the file, and the scrollback key and a path in a pane reach it.
+- Given a pane you are not looking at, when it rings its bell, then the pane is
+  marked and a notification click takes you to it.
+- Given a link wrapped onto the next row, when you click it, then the whole link
+  opens in the browser.
+- Given a worker pane is focused, when you zoom it, then it fills the page, and
+  zooming again puts the layout back.
+- Given a pane printing flat out, when you press Ctrl+C, then it stops printing
+  within a fraction of a second, with or without the pane host.
+- Given the window reloads or goes to show another host while a pane is paused
+  for drawing, when a second passes, then the pane's shell is read again.
+- Given a pane on Linux, when you press Ctrl+Shift+C and Ctrl+Shift+V, then the
+  selection is copied and the clipboard pasted.
+- Given a project behind another one with its panes printing, when you come back
+  to it, then every pane shows its latest output and scrolls back through
+  everything it printed meanwhile.
+- Given a pane link on the Claude screen, when you click it, then the page
+  holding the pane comes forward with the pane focused, the way a notification
+  click lands (see [chat](../chat/README.md)).
+- Given a shell that has finished what it ran, when anything asks whether the
+  pane is busy, then one answer says it is free.
+- Given a pane `pane claim` has just opened, when `pane run` asks whether it is
+  busy before `systemd-run` has started its shell, then it is free; a
+  `systemd-run` you start at the prompt once the shell is up reads as a program
+  like any other.
+- Given a worker pane running a job, when the app quits, crashes or is updated
+  and opens again, then the pane comes back with the same shell, its screen and
+  the job still running.
+- Given Windows, when the app quits and opens again, then every pane comes back
+  the same as on a mac or Linux.
+- Given another user on the same Windows machine, when they open the pane host's
+  pipe, then they hear no screen and the app keeps its panes.
+- Given another user on the same Windows machine listening on the pane host's
+  pipe name before it starts, when the app connects, then it hears only `hello`,
+  since it cannot answer the nonce with the token's proof, whether it answers
+  `panes`, answers `busy`, closes or says nothing; the status bar says shells
+  die with the app this run, and the next launch uses a new name.
+- Given a pane the pane host kept, when its project is closed or the pane is
+  closed, then its shell is killed.
+- Given a pane host already running, when a second one starts on the same socket
+  (two launches at once), then the second exits and leaves the socket to the
+  first, so no shell is left where no app can reach it (workers-decision-6).
+- Given no `node` on the login shell's PATH (on Windows, the PATH), when the app
+  starts, then the status bar says shells die with the app this run, and the
+  panes work as before.
+- Given no pane host this run, when you close the window, then the quit question
+  says every shell is killed.
+- Given the installed app running, when a development build on the same user
+  data starts, then the installed app keeps its panes and the development build
+  runs its shells itself.
+- Given the editor open with a file in it, when the app quits and opens again,
+  then the same nvim is back with the file, and the scrollback key and a path in
+  a pane reach it.
 - Given no pane host this run, when the app quits, then nvim exits with it.
-- Given the host holding the workers but not the editor (it died, or the editor started without it), when you close the window, then the quit question says the editor stops with the app.
-- Given kept shells of a project the restored session does not name, when the window has put its session back, then they are killed, their scopes stopped, and the status bar names the project in a passing notice, with no desktop banner and one log line.
-- Given kept shells of a project the session names that failed to open (a disk not mounted, an open that threw), when the window has put its session back, then they keep running, the status bar names the project, and opening it later takes them back.
-- Given an update that bumps the pane host's protocol version, when the app opens, then the old host's shells are killed, unless an app of the old version still holds that host or the host has not answered within ten seconds.
+- Given the host holding the workers but not the editor (it died, or the editor
+  started without it), when you close the window, then the quit question says
+  the editor stops with the app.
+- Given kept shells of a project the restored session does not name, when the
+  window has put its session back, then they are killed, their scopes stopped,
+  and the status bar names the project in a passing notice, with no desktop
+  banner and one log line.
+- Given kept shells of a project the session names that failed to open (a disk
+  not mounted, an open that threw), when the window has put its session back,
+  then they keep running, the status bar names the project, and opening it later
+  takes them back.
+- Given an update that bumps the pane host's protocol version, when the app
+  opens, then the old host's shells are killed, unless an app of the old version
+  still holds that host or the host has not answered within ten seconds.
 
 ## Open questions
 

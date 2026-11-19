@@ -11,10 +11,10 @@ blurb for it; this is where the rest lives.
 
 One nvim filling the window. It starts the first time you press the nvim key for
 this project, not at launch, and the pane host keeps it through a quit or an
-update like any pane, buffers and all (panes-decision-1). Quit it and the pane says it exited; Enter starts
-it again, and so does coming back to this screen — the scrollback key needs a
-running nvim to hand a file to. The status bar names the file nvim has open, and
-just says nvim while nothing is open.
+update like any pane, buffers and all (panes-decision-1). Quit it and the pane
+says it exited; Enter starts it again, and so does coming back to this screen —
+the scrollback key needs a running nvim to hand a file to. The status bar names
+the file nvim has open, and just says nvim while nothing is open.
 
 The scrollback key on the terminals screen sends the pane you are looking at
 here as a file in a new tab, so an agent transcript can be searched and yanked
@@ -32,11 +32,18 @@ Folders: `src/main/nvim/`, `src/renderer/nvim/`.
 
 ## Scenarios
 
-- Given a pane printed `src/main/main.ts:42`, when you click it, then the project's nvim opens the file at line 42 in the window you were editing in.
-- Given a pane has paths on screen, when you press Alt+O, then a letter sits over each and one keystroke opens it.
-- Given a pane's shell has `cd`'d into a worktree, when you open a relative path it printed, then the worktree's copy opens.
-- Given the focused pane, when you press Ctrl+`, then its scrollback opens in nvim in a tab of its own.
-- Given text in the Claude screen's box, when you press Ctrl+G, then it opens in nvim in a tab of its own, and once you save it and come back, the box holds what you saved; `:wq` closes the tab and leaves the file you were editing in front.
+- Given a pane printed `src/main/main.ts:42`, when you click it, then the
+  project's nvim opens the file at line 42 in the window you were editing in.
+- Given a pane has paths on screen, when you press Alt+O, then a letter sits
+  over each and one keystroke opens it.
+- Given a pane's shell has `cd`'d into a worktree, when you open a relative path
+  it printed, then the worktree's copy opens.
+- Given the focused pane, when you press Ctrl+`, then its scrollback opens in
+  nvim in a tab of its own.
+- Given text in the Claude screen's box, when you press Ctrl+G, then it opens in
+  nvim in a tab of its own, and once you save it and come back, the box holds
+  what you saved; `:wq` closes the tab and leaves the file you were editing in
+  front.
 
 ## Known limits
 

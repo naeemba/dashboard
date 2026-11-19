@@ -9,27 +9,55 @@ One line per merged change: date, pull request, why.
 - 2026-10-30 #96 — Close a worker pane, or fold one to give its room to the others
 - 2026-10-30 #97 — A new-pane button in the title row
 - 2026-11-01 #135 — Session names use the shared slug instead of a second copy
-- 2026-11-02 #176 — Main is told when its worker finishes; the who-ran-it record (workers-decision-1, workers-decision-3)
-- 2026-11-02 #196 — A session request ends at its newline, not at a half close a Windows named pipe cannot do
-- 2026-11-02 #195 — Workers start under Windows PowerShell: claude's words escaped for the program, --settings wrapped whole
-- 2026-11-04 #203 — A pane command gives up on an app that never takes its request, and the app refuses another build (workers-decision-4)
-- 2026-11-05 #209 — Main hears a worker stopped only after three minutes with no report, once per stop, as a status line (workers-decision-1)
-- 2026-11-05 — Main hears a worker stopped at once when its Stop hook says nothing is in flight or scheduled, and a worker waiting on its own work is listed paused (workers-decision-1)
-- 2026-11-05 — `pane run --screen` runs a worker as a Claude screen in its pane, opt-in, its done detection from its own Stop hook (workers-decision-5)
-- 2026-11-06 — A worker screen's session runs in the screen host, so its turn goes on through an app restart (workers-decision-6)
-- 2026-11-06 #224 — A worker screen asks permission as a terminal worker does: the user's allow rules, then a question in its box; the trial's `gh pr create` refusal was not reproduced (workers-decision-5)
-- 2026-11-07 #228 — New Claude: the new-pane button splits into New Terminal and New Claude, which opens a Claude screen of your own, not main's worker (workers-decision-7)
-- 2026-11-07 #227 — `pane run` starts a Claude screen by default; `--terminal` asks for Claude Code in the terminal, and Windows keeps the terminal (workers-decision-5)
-- 2026-11-08 #233 — Every agent a pane starts goes through pane.dispatch: a ship and the review loop open a Claude screen off Windows too (workers-decision-8)
-- 2026-11-08 #241 — `pane release` takes back a stop notice still queued for the worker it releases, and a released screen worker's late hook no longer counts as the next one's (workers-decision-1)
-- 2026-11-09 #258 — Work sent with `pane send`, a ship or the review loop reports to the main that sent it, and the app closes a finished worker's pane itself (workers-decision-1)
-- 2026-11-09 #265 — A stop notice due while main is mid-turn waits for the turn to end, at most PAUSE_CEILING_MS from its start, and is dropped when that turn read the worker's report (workers-decision-1)
-- 2026-11-09 #267 — `pane release` after a merge that took the throwaway worktree no longer fails as `spawn git ENOENT`: a folder already gone is neither asked about nor removed, and git's registration of one deleted by hand is pruned
-- 2026-11-09 #283 — A killed screen host's sessions are ended before a worker starts again, neither host takes a live host's socket, and the app runs no worker itself while a host answers: one session per pane (workers-decision-6)
-- 2026-11-09 #284 — A resumed conversation opens as what it last ran as: a screen stays a screen, a terminal a terminal, one of unknown kind pane run's default (workers-decision-8)
-- 2026-11-16 #290 — Every session the app starts allows the pane, session and board commands in its own settings (workers-decision-9)
-- 2026-11-16 — A review worker with merging off reports its rounds, fixes, open items and CI to main instead of merging (ship-decision-1)
-- 2026-11-16 — A stop notice carries the end of the worker's last message, `pane report` prints it, and a turn you typed into a worker is not told to main (workers-decision-1)
-- 2026-11-16 — `pane finish` releases a worker once its card is Done or its branch merged; main's prompt dispatches a card with `board ship` and waits with a wake-up, not a sleep loop
-- 2026-11-16 — The finished-worker sweep closes a worker whose worktree's branch merged, as `pane finish` does, without waiting for a card or its grace period (workers-decision-1)
-- 2026-11-16 — A card worker the finished-worker sweep closes still gets its review: the review start that found it at work no longer leaves its card marked as tried
+- 2026-11-02 #176 — Main is told when its worker finishes; the who-ran-it record
+  (workers-decision-1, workers-decision-3)
+- 2026-11-02 #196 — A session request ends at its newline, not at a half close a Windows named pipe
+  cannot do
+- 2026-11-02 #195 — Workers start under Windows PowerShell: claude's words escaped for the program,
+  --settings wrapped whole
+- 2026-11-04 #203 — A pane command gives up on an app that never takes its request, and the app
+  refuses another build (workers-decision-4)
+- 2026-11-05 #209 — Main hears a worker stopped only after three minutes with no report, once per
+  stop, as a status line (workers-decision-1)
+- 2026-11-05 — Main hears a worker stopped at once when its Stop hook says nothing is in flight or
+  scheduled, and a worker waiting on its own work is listed paused (workers-decision-1)
+- 2026-11-05 — `pane run --screen` runs a worker as a Claude screen in its pane, opt-in, its done
+  detection from its own Stop hook (workers-decision-5)
+- 2026-11-06 — A worker screen's session runs in the screen host, so its turn goes on through an app
+  restart (workers-decision-6)
+- 2026-11-06 #224 — A worker screen asks permission as a terminal worker does: the user's allow
+  rules, then a question in its box; the trial's `gh pr create` refusal was not reproduced
+  (workers-decision-5)
+- 2026-11-07 #228 — New Claude: the new-pane button splits into New Terminal and New Claude, which
+  opens a Claude screen of your own, not main's worker (workers-decision-7)
+- 2026-11-07 #227 — `pane run` starts a Claude screen by default; `--terminal` asks for Claude Code
+  in the terminal, and Windows keeps the terminal (workers-decision-5)
+- 2026-11-08 #233 — Every agent a pane starts goes through pane.dispatch: a ship and the review loop
+  open a Claude screen off Windows too (workers-decision-8)
+- 2026-11-08 #241 — `pane release` takes back a stop notice still queued for the worker it releases,
+  and a released screen worker's late hook no longer counts as the next one's (workers-decision-1)
+- 2026-11-09 #258 — Work sent with `pane send`, a ship or the review loop reports to the main that
+  sent it, and the app closes a finished worker's pane itself (workers-decision-1)
+- 2026-11-09 #265 — A stop notice due while main is mid-turn waits for the turn to end, at most
+  PAUSE_CEILING_MS from its start, and is dropped when that turn read the worker's report
+  (workers-decision-1)
+- 2026-11-09 #267 — `pane release` after a merge that took the throwaway worktree no longer fails as
+  `spawn git ENOENT`: a folder already gone is neither asked about nor removed, and git's
+  registration of one deleted by hand is pruned
+- 2026-11-09 #283 — A killed screen host's sessions are ended before a worker starts again, neither
+  host takes a live host's socket, and the app runs no worker itself while a host answers: one
+  session per pane (workers-decision-6)
+- 2026-11-09 #284 — A resumed conversation opens as what it last ran as: a screen stays a screen, a
+  terminal a terminal, one of unknown kind pane run's default (workers-decision-8)
+- 2026-11-16 #290 — Every session the app starts allows the pane, session and board commands in its
+  own settings (workers-decision-9)
+- 2026-11-16 — A review worker with merging off reports its rounds, fixes, open items and CI to main
+  instead of merging (ship-decision-1)
+- 2026-11-16 — A stop notice carries the end of the worker's last message, `pane report` prints it,
+  and a turn you typed into a worker is not told to main (workers-decision-1)
+- 2026-11-16 — `pane finish` releases a worker once its card is Done or its branch merged; main's
+  prompt dispatches a card with `board ship` and waits with a wake-up, not a sleep loop
+- 2026-11-16 — The finished-worker sweep closes a worker whose worktree's branch merged, as `pane
+  finish` does, without waiting for a card or its grace period (workers-decision-1)
+- 2026-11-16 — A card worker the finished-worker sweep closes still gets its review: the review
+  start that found it at work no longer leaves its card marked as tried

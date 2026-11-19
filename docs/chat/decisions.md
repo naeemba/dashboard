@@ -5,38 +5,41 @@ Settled questions. Read the entry before re-litigating it.
 ## chat-decision-1: The Claude screen answers permissions itself, in one long session
 
 The Claude screen runs `query()` in streaming input mode, one per project page, and keeps it open:
-every prompt goes into the same process, and a tool that needs a yes arrives through `canUseTool` and
-waits there for the box over the prompt to answer it. Escape is `interrupt()`, which also declines
-whatever was being asked.
+every prompt goes into the same process, and a tool that needs a yes arrives through `canUseTool`
+and waits there for the box over the prompt to answer it. Escape is `interrupt()`, which also
+declines whatever was being asked.
 
-The two projects the card pointed at were read first and neither is copied. opcode starts the CLI with
-`--dangerously-skip-permissions` and stops a turn by killing the process. claude-code-webui runs a new
-`query()` per message and handles a refused tool by sending the message again with the tool added to
-`allowedTools`, which runs the turn twice. Both trade the question away; this screen exists to ask it.
+The two projects the card pointed at were read first and neither is copied. opcode starts the CLI
+with `--dangerously-skip-permissions` and stops a turn by killing the process. claude-code-webui
+runs a new `query()` per message and handles a refused tool by sending the message again with the
+tool added to `allowedTools`, which runs the turn twice. Both trade the question away; this screen
+exists to ask it.
 
-The session starts the first time the page's Claude screen is shown, not when the project opens. Each
-idle CLI holds about 100 MB, and six of them at launch were 600 MB for screens you might not open that
-day (performance finding 3). Showing the screen the first time in a conversation asks for its
-status-line measure with `start`, and `chat:measure` starts the session to answer, so the first reading
-is there as soon as it starts; the renderer skips it while a restore lands on each page in turn. Every
-other measure reads null from a page with no session, so a model picked after a crash does not start a
-CLI, and a session that fails to start is not started again on each visit. A prompt or a worker report through the app (`tell`) starts
-it too, as before. So does `dashboard project open`, and it answers only once the session has
-initialised (project.open, `actions/project/open.ts`): a manager opens a project to hand it to that project's main,
-whose SendMessage otherwise failed with "No agent named main-<name> is reachable" until someone showed
-the page. An explicit open starts main; a restore at launch does not, so ten restored pages still run no Claude.
+The session starts the first time the page's Claude screen is shown, not when the project opens.
+Each idle CLI holds about 100 MB, and six of them at launch were 600 MB for screens you might not
+open that day (performance finding 3). Showing the screen the first time in a conversation asks for
+its status-line measure with `start`, and `chat:measure` starts the session to answer, so the first
+reading is there as soon as it starts; the renderer skips it while a restore lands on each page in
+turn. Every other measure reads null from a page with no session, so a model picked after a crash
+does not start a CLI, and a session that fails to start is not started again on each visit. A prompt
+or a worker report through the app (`tell`) starts it too, as before. So does `dashboard project
+open`, and it answers only once the session has initialised (project.open,
+`actions/project/open.ts`): a manager opens a project to hand it to that project's main, whose
+SendMessage otherwise failed with "No agent named main-<name> is reachable" until someone showed the
+page. An explicit open starts main; a restore at launch does not, so ten restored pages still run no
+Claude.
 
 A worker's SendMessage needs a running session to arrive at (workers-decision-1). A worker main
-dispatched in this run had main running already, since main dispatched it. One that came back after a
-restart has not, so a page whose main dispatched a worker that came back starts its session at open
-(`chat-start.ts`). That is the dispatcher's page, which is another page than the worker's when the
-pane was claimed with `--project`: the worker SendMessages the main that dispatched it.
-`session.json` keeps the dispatcher's path with the worker's mark, since nothing else that survives a
-restart knows it.
+dispatched in this run had main running already, since main dispatched it. One that came back after
+a restart has not, so a page whose main dispatched a worker that came back starts its session at
+open (`chat-start.ts`). That is the dispatcher's page, which is another page than the worker's when
+the pane was claimed with `--project`: the worker SendMessages the main that dispatched it.
+`session.json` keeps the dispatcher's path with the worker's mark, since nothing else that survives
+a restart knows it.
 
-A started session is not stopped when idle. It may have background tasks or a worker still to report,
-and nothing here knows when both are over. Launch is what cost the memory; a session you opened stays
-until the project closes.
+A started session is not stopped when idle. It may have background tasks or a worker still to
+report, and nothing here knows when both are over. Launch is what cost the memory; a session you
+opened stays until the project closes.
 
 The app keeps the conversation's id per project in `chat-sessions.json` in the app's data folder,
 never in `.dashboard/`, since a conversation is personal and the board is tracked. The id is the one
@@ -50,60 +53,60 @@ terminal, checked against the pinned SDK by asking for `@package.json`'s version
 
 ## chat-decision-2: Slash commands are the session's; the screen adds the list and four of its own
 
-Every command typed into the box goes to the session as a prompt, and the CLI runs it the way it does in
-a terminal: skills, the project's commands and its own (`/compact`, `/context`, `/clear`).
+Every command typed into the box goes to the session as a prompt, and the CLI runs it the way it
+does in a terminal: skills, the project's commands and its own (`/compact`, `/context`, `/clear`).
 Checked against the pinned SDK by sending them through `query()`. What a terminal draws as a dialog
 the session answers with "isn't available in this environment"; of those, `/resume` and `/plan` are
 answered by the screen itself (chat-commands.ts) and never sent. So is `/model`: bare, the session
 prints a usage line instead of Claude Code's picker, so the screen lists `supportedModels()`; with a
 name the session offers, it goes through `chat:configure` like the model key, so the foot and the
 saved preference follow it; a name it does not offer is refused, not saved as the next start model.
-`/effort` is the screen's too: bare, the session has no picker to show here, so the screen lists auto
-and low to max; a named level goes through `chat:configure` like `/model`, which sends it to the
-session's flag layer with `applyFlagSettings`, so the foot and the saved preference follow it. Until
-one is picked the foot says `default effort` and no row is marked, because the session then runs at
-the level in the settings file, which the screen does not read. Auto is not that: it clears the flag
-layer, which puts the session on the model's default over the settings level, and a restart after it
-sends the same clear, since the start option cannot say null.
-`/diff` is the screen's too: the SDK has no review of a session's edits, so the screen builds one from
-the conversation's own Edit, Write and MultiEdit calls that worked (chat-diff.ts), not from git, so
-it shows what Claude changed and nothing else in the folder. The transcript is all it reads, so a
-code-only `/rewind`, which leaves the conversation alone, leaves the edits it put back on the sheet.
+`/effort` is the screen's too: bare, the session has no picker to show here, so the screen lists
+auto and low to max; a named level goes through `chat:configure` like `/model`, which sends it to
+the session's flag layer with `applyFlagSettings`, so the foot and the saved preference follow it.
+Until one is picked the foot says `default effort` and no row is marked, because the session then
+runs at the level in the settings file, which the screen does not read. Auto is not that: it clears
+the flag layer, which puts the session on the model's default over the settings level, and a restart
+after it sends the same clear, since the start option cannot say null. `/diff` is the screen's too:
+the SDK has no review of a session's edits, so the screen builds one from the conversation's own
+Edit, Write and MultiEdit calls that worked (chat-diff.ts), not from git, so it shows what Claude
+changed and nothing else in the folder. The transcript is all it reads, so a code-only `/rewind`,
+which leaves the conversation alone, leaves the edits it put back on the sheet.
 
 The list comes from `supportedCommands()`, which only a running session answers; the session is
 started with the project, so the list is there by the first slash.
 
-`/resume` lists the folder's conversations with `includeWorktrees: false`. A project's workers run in
-its worktrees, and with them in the list the project's own conversations are lost among theirs.
-A pick a worker pane runs is refused, answered as `{ refused }` for the status line: the drawer
-can resume one of main's older conversations into a pane in the project folder, and two Claudes on
-one conversation each write their own turns into it (drawer-decision-1).
+`/resume` lists the folder's conversations with `includeWorktrees: false`. A project's workers run
+in its worktrees, and with them in the list the project's own conversations are lost among theirs. A
+pick a worker pane runs is refused, answered as `{ refused }` for the status line: the drawer can
+resume one of main's older conversations into a pane in the project folder, and two Claudes on one
+conversation each write their own turns into it (drawer-decision-1).
 
-Plan mode is on the edits key, after accepting, the terminal's order. The plan arrives as the ask for
-`ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode` with
-it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
+Plan mode is on the edits key, after accepting, the terminal's order. The plan arrives as the ask
+for `ExitPlanMode`, drawn as markdown with Claude Code's three answers. Each yes sends a `setMode`
+with it, because the session leaves plan mode for `default` on a bare allow and the terminal's first
 answer goes on accepting edits.
 
 ## chat-decision-3: /rewind forks the conversation and keeps the code half in the session's checkpoints
 
 `/rewind` is the screen's own command, as `/resume` is: the session answers it with "isn't available
 in this environment". Every session starts with `enableFileCheckpointing`, so restoring code is
-`rewindFiles` with the picked prompt's id, the one its transcript gives it. A dry run first gives the
-count the notice prints; the real rewind reports only links it would not follow. Checked against the
-pinned SDK: a file written by the second prompt went back to the first prompt's text, and the same
-call worked on a resumed session before any prompt was sent.
+`rewindFiles` with the picked prompt's id, the one its transcript gives it. A dry run first gives
+the count the notice prints; the real rewind reports only links it would not follow. Checked against
+the pinned SDK: a file written by the second prompt went back to the first prompt's text, and the
+same call worked on a resumed session before any prompt was sent.
 
 Restoring the conversation closes the session and starts one with `resume`, `resumeSessionAt` set to
 the message before the prompt, and `forkSession`, so the old conversation stays whole in `/resume`.
 The fork names its new conversation only in the next turn's `init`, so until then main reads the
 remembered one cut at that message; any change of conversation drops the cut, but `/branch` keeps
-it: the copy is forked with `upToMessageId` at the cut, so it holds only what the rewind left. While the cut waits,
-`/resume` marks no conversation as current, so picking the one just cut goes through `chat:resume`
-and puts it back whole. Before the first prompt there is nothing to resume, and it is a new
-conversation.
+it: the copy is forked with `upToMessageId` at the cut, so it holds only what the rewind left. While
+the cut waits, `/resume` marks no conversation as current, so picking the one just cut goes through
+`chat:resume` and puts it back whole. Before the first prompt there is nothing to resume, and it is
+a new conversation.
 
-Claude Code also summarizes from or up to a prompt; that is left out. Esc Esc is left out too: Escape
-is the interrupt key, and a double press would need a timing rule beside it.
+Claude Code also summarizes from or up to a prompt; that is left out. Esc Esc is left out too:
+Escape is the interrupt key, and a double press would need a timing rule beside it.
 
 ## chat-decision-4: The @ list is git's files, not the SDK's file suggestions
 
@@ -115,13 +118,13 @@ are not offered. A folder that is not a repository lists nothing rather than wal
 ## chat-decision-5: The task strip's background key is Alt+B, and an ended pick is refused
 
 The terminal backgrounds tasks with Ctrl+B, but Ctrl+B is the board's mode key here, and a mode key
-passes through to the pane only in its own mode (keys-rule-1). So the strip's keys are Alt+T to pick,
-Alt+X to stop and Alt+B to background.
+passes through to the pane only in its own mode (keys-rule-1). So the strip's keys are Alt+T to
+pick, Alt+X to stop and Alt+B to background.
 
 A key pressed for a picked task whose row has since left the strip is refused with a notice, not
-turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that one task; falling back
-would background agents nobody picked. The pick lets go once the strip is empty, so the refusal only
-lasts while other tasks still run, which a background command can stretch across turns.
+turned into "every task" for Alt+B or "nothing" for Alt+X. The press meant that one task; falling
+back would background agents nobody picked. The pick lets go once the strip is empty, so the refusal
+only lasts while other tasks still run, which a background command can stretch across turns.
 
 ## chat-decision-6: /mcp is the screen's own, on the session's MCP calls
 
@@ -138,13 +141,13 @@ the sheet shows the tool count and the status only.
 ## chat-decision-7: A message sent while Claude is busy waits in the session's own queue
 
 Main stamps every prompt with a uuid. The CLI queues one that arrives mid-turn itself and reports it
-by that uuid in `command_lifecycle` messages: `queued`, then `started` and `completed`, or `cancelled`.
-The screen draws a prompt sent while busy grey under the conversation and moves it into the
-conversation on any state past `queued`, since one folded into the running turn may report `completed`
-without a `started`. Up in the empty box withdraws the last one through `cancelAsyncMessage`, which
-answers false once the session has taken it. A `/clear` the session runs itself clears the screen
-but keeps the grey prompts, since the process holding them goes on; a reset from the screen (a new
-conversation, `/resume`, a rewind) stops the session and drops them.
+by that uuid in `command_lifecycle` messages: `queued`, then `started` and `completed`, or
+`cancelled`. The screen draws a prompt sent while busy grey under the conversation and moves it into
+the conversation on any state past `queued`, since one folded into the running turn may report
+`completed` without a `started`. Up in the empty box withdraws the last one through
+`cancelAsyncMessage`, which answers false once the session has taken it. A `/clear` the session runs
+itself clears the screen but keeps the grey prompts, since the process holding them goes on; a reset
+from the screen (a new conversation, `/resume`, a rewind) stops the session and drops them.
 
 Neither the message type nor the method is in the pinned SDK's types (0.3.316); both were checked
 against it by sending two prompts into a running turn and cancelling the second: it was reported
@@ -153,12 +156,12 @@ does not see it: the queue lives in the session, and `chat:read` only reads the 
 
 ## chat-decision-8: /btw is the session's own side question, through a call the SDK does not declare
 
-`/btw` is the screen's own command: sent as a prompt it would join the conversation, which is what it
-must not do. The pinned SDK has `askSideQuestion` on every query, the control request Claude Code's
-/btw makes, but leaves it out of `sdk.d.ts`, so main reaches it through a cast. Checked against the
-pinned SDK: asked while a Bash call was running, it answered from that turn's prompt in under a
-second, and `getSessionMessages` afterwards held nothing of it. A release that drops the call fails
-the ask with an error on the screen and nothing else.
+`/btw` is the screen's own command: sent as a prompt it would join the conversation, which is what
+it must not do. The pinned SDK has `askSideQuestion` on every query, the control request Claude
+Code's /btw makes, but leaves it out of `sdk.d.ts`, so main reaches it through a cast. Checked
+against the pinned SDK: asked while a Bash call was running, it answered from that turn's prompt in
+under a second, and `getSessionMessages` afterwards held nothing of it. A release that drops the
+call fails the ask with an error on the screen and nothing else.
 
 The card's other way, a second `query()` resuming the conversation with `forkSession` and no tools,
 is left out: it starts a second process for every question, where the call asks the one running.
@@ -176,21 +179,22 @@ Images attached to the box are not stashed, and stay attached.
 ## chat-decision-10: The context popup reads the measure the meter already has, and sits above the meter
 
 The breakdown comes from the same `getContextUsage({ detail: 'summary' })` answer the status line's
-meter reads after each turn, so opening the popup asks main for nothing: it shows the last measure and
-says when it was taken. `/context` is the screen's own command and never reaches the session, which
-would answer it as text in the conversation.
+meter reads after each turn, so opening the popup asks main for nothing: it shows the last measure
+and says when it was taken. `/context` is the screen's own command and never reaches the session,
+which would answer it as text in the conversation.
 
 A row is classified on the SDK's `kind` and coloured by its `id`, never by its English name. A
-`deferred` row, and an MCP tool with `isLoaded: false`, is a tool schema that is not in the window, so
-it is left out rather than shown apart: the popup answers what fills the window. The SDK's `color` is
-a key of Claude Code's terminal theme, not a colour a page can paint, so each id takes one of the
-app's theme colours instead.
+`deferred` row, and an MCP tool with `isLoaded: false`, is a tool schema that is not in the window,
+so it is left out rather than shown apart: the popup answers what fills the window. The SDK's
+`color` is a key of Claude Code's terminal theme, not a colour a page can paint, so each id takes
+one of the app's theme colours instead.
 
-The popup is drawn above what opened it, lined up with whichever of its edges faces the middle of the
-window (`popup-placement.ts`). The context meter sits on the right of the foot, so its popup grows
-leftwards; the workers count on the left would grow rightwards from the same code, so the two never
-cover each other's anchor. The workers popup is still the centred search sheet; `anchored-popup.ts`
-takes rows with a choice, so moving it over is a change of caller, not of the popup.
+The popup is drawn above what opened it, lined up with whichever of its edges faces the middle of
+the window (`popup-placement.ts`). The context meter sits on the right of the foot, so its popup
+grows leftwards; the workers count on the left would grow rightwards from the same code, so the two
+never cover each other's anchor. The workers popup is still the centred search sheet;
+`anchored-popup.ts` takes rows with a choice, so moving it over is a change of caller, not of the
+popup.
 
 ## chat-decision-11: A streaming reply is cut at a paragraph break, and drawn whole when it cannot be
 
@@ -204,10 +208,11 @@ line break.
 A reply holding a link definition (`[name]: url`, also in a list item or a quote), an HTML comment,
 or a `<pre>`, `<script>`, `<style>` or `<textarea>` line is drawn whole every frame, as before: a
 definition applies to links anywhere in the text, and those HTML blocks run on past a blank line.
-Other HTML lines end at one, so they still cut. A fence opened in a list item or a quote, or a fenced
-line less indented than its opener, is drawn whole too: the scanner follows top-level fences only, and
-the container can end a fence where it would run on. Telling the refused cases apart from a safe cut
-costs more code than they are worth; Claude rarely writes any of these. The finished reply is an entry and is always drawn whole.
+Other HTML lines end at one, so they still cut. A fence opened in a list item or a quote, or a
+fenced line less indented than its opener, is drawn whole too: the scanner follows top-level fences
+only, and the container can end a fence where it would run on. Telling the refused cases apart from
+a safe cut costs more code than they are worth; Claude rarely writes any of these. The finished
+reply is an entry and is always drawn whole.
 
 What is still redrawn every frame: an open code fence, highlighted whole each frame until it closes,
 and a list still growing, since a blank line between items cannot be cut.
@@ -219,28 +224,29 @@ Checked against Anthropic's prompt caching page
 
 - "By default, the cache has a 5-minute lifetime. The cache is refreshed for no additional cost each
   time the cached content is used."
-- "If you find that 5 minutes is too short, Anthropic also offers a 1-hour cache duration", asked for
-  with `"ttl": "1h"` in `cache_control`.
+- "If you find that 5 minutes is too short, Anthropic also offers a 1-hour cache duration", asked
+  for with `"ttl": "1h"` in `cache_control`.
 - "The lifetime is measured from the start of the request that writes or reads the cache entry, not
   from the end of its response."
 - The usage block's `cache_creation` object carries `ephemeral_5m_input_tokens` and
   `ephemeral_1h_input_tokens`, and "`cache_read_input_tokens`: Number of tokens retrieved from the
   cache for this request".
 
-So `cache-warmth.ts` takes, from each of a conversation's own replies, the last one that wrote or read
-the cache. Its tier is the one the session last wrote: 1h if any of a write went to the hour-long
-cache, else 5m; a read keeps the tier, and with no write seen it guesses 5m, the shorter. The cache is
-warm until that reply's time plus the tier. The Claude screen reads the SDK's assistant messages
-(`chat-transcript.ts`); a worker pane's comes from its transcript lines, which the usage sweep already
-reads (`usage-store.ts`). A subagent's replies are left out of both: it runs its own cache.
+So `cache-warmth.ts` takes, from each of a conversation's own replies, the last one that wrote or
+read the cache. Its tier is the one the session last wrote: 1h if any of a write went to the
+hour-long cache, else 5m; a read keeps the tier, and with no write seen it guesses 5m, the shorter.
+The cache is warm until that reply's time plus the tier. The Claude screen reads the SDK's assistant
+messages (`chat-transcript.ts`); a worker pane's comes from its transcript lines, which the usage
+sweep already reads (`usage-store.ts`). A subagent's replies are left out of both: it runs its own
+cache.
 
-What it gets wrong, on purpose: the time is when the reply was written, not when its request started,
-so a long reply reads up to its own length too warm. A request that mixed tiers counts as 1h, though
-its 5m part goes cold first. An SDK message with no `timestamp` (an older Claude Code) is not counted,
-rather than stamped with when it arrived. The pill redraws once a minute, once a second in the last
-minute. A tick that finds the screen off view redraws nothing and sets no further timer; showing the
-screen again wakes the clock and redraws it. The workers
-popup reads the time when its rows are drawn and does not count down while open.
+What it gets wrong, on purpose: the time is when the reply was written, not when its request
+started, so a long reply reads up to its own length too warm. A request that mixed tiers counts as
+1h, though its 5m part goes cold first. An SDK message with no `timestamp` (an older Claude Code) is
+not counted, rather than stamped with when it arrived. The pill redraws once a minute, once a second
+in the last minute. A tick that finds the screen off view redraws nothing and sets no further timer;
+showing the screen again wakes the clock and redraws it. The workers popup reads the time when its
+rows are drawn and does not count down while open.
 
 ## chat-decision-13: The working line counts tool input, then takes each message's real output tokens
 
@@ -249,8 +255,8 @@ Checked against Anthropic's streaming page
 
 - "One or more `message_delta` events, indicating top-level changes to the final `Message` object."
 - "The token counts shown in the `usage` field of the `message_delta` event are *cumulative*."
-- A tool call's input streams as `content_block_delta` events of type `input_json_delta`, each with a
-  `partial_json` piece.
+- A tool call's input streams as `content_block_delta` events of type `input_json_delta`, each with
+  a `partial_json` piece.
 
 So `chat-transcript.ts` counts `input_json_delta` characters with text and thinking while a message
 streams, four characters to a token, and when that message's `message_delta` carries
@@ -268,8 +274,8 @@ subagents wrote is chat-decision-15.
 
 Enter on a row of the context popup opens a list a level down, in the same popup over the meter;
 Escape goes back a level and closes the top one, and a click beside it closes every level at once.
-What a row opens is decided in `chat-context-levels.ts` on the row's stable key (a category's `id`, a
-file's path, a tool's server), never on its English name, and a row that would open an empty list,
+What a row opens is decided in `chat-context-levels.ts` on the row's stable key (a category's `id`,
+a file's path, a tool's server), never on its English name, and a row that would open an empty list,
 the skills row from a CLI that names none, opens nothing.
 
 A memory file opens in the drawer's doc viewer. Memory files live outside the roots `docs:read`
@@ -278,13 +284,13 @@ paths the latest measure of each project's session named (`measured-memory.ts`) 
 reads exactly those as well, as text with no images: only the file was named, not its folder. A
 widening to the folders would let the channel read any markdown beside them.
 
-The messages row lists the largest turns from the usage each of Claude's messages carries, which
-the transcript already folds in (`Transcript.readings`), so it asks main for nothing. A turn weighs
-what it added to the window: the last total its messages read and wrote, less the previous turn's
-last total. After a compaction the window shrank, so that turn is counted from what its own first
-message read instead. The first turn's weight therefore leaves out the system prompt and tools, which
-its first message already read. A live message's usage carries the output only partly until the
-stream ends, so the running turn reads a little low until the next measure.
+The messages row lists the largest turns from the usage each of Claude's messages carries, which the
+transcript already folds in (`Transcript.readings`), so it asks main for nothing. A turn weighs what
+it added to the window: the last total its messages read and wrote, less the previous turn's last
+total. After a compaction the window shrank, so that turn is counted from what its own first message
+read instead. The first turn's weight therefore leaves out the system prompt and tools, which its
+first message already read. A live message's usage carries the output only partly until the stream
+ends, so the running turn reads a little low until the next measure.
 
 ## chat-decision-15: Agents are a list behind a key, their tokens are Claude Code's figure, and the working line estimates theirs
 
@@ -310,16 +316,16 @@ Checked against Claude Code 2.1.318 on 2026-11-05, one Agent call that lists `/e
   share of the working line to match.
 
 The list of agents is a search sheet behind the agents key rather than keys that walk the strip in
-place: the strip is a status line over the box that the box's own arrows (history, the queue) already
-use, and a sheet is how every other list on this screen is walked. The conversation opens over the
-screen rather than replacing it, so Escape lands back on the list and the main conversation keeps its
-place. Only an agent has a conversation to open; a workflow opens its panel of phases instead, whose
-Escape lands back on the list the same way (chat-decision-16), and a background command says so.
-Each kept conversation holds its tools' output, up to 20,000 characters a result, so only the last 20
-agents started keep one: a manager session running agents all day would otherwise hold megabytes of
-output for conversations nobody opens. A running agent's is never the one dropped: dropping it would
-start it again from its next message, with nothing saying its beginning was cut. A finished agent past
-that says so when picked.
+place: the strip is a status line over the box that the box's own arrows (history, the queue)
+already use, and a sheet is how every other list on this screen is walked. The conversation opens
+over the screen rather than replacing it, so Escape lands back on the list and the main conversation
+keeps its place. Only an agent has a conversation to open; a workflow opens its panel of phases
+instead, whose Escape lands back on the list the same way (chat-decision-16), and a background
+command says so. Each kept conversation holds its tools' output, up to 20,000 characters a result,
+so only the last 20 agents started keep one: a manager session running agents all day would
+otherwise hold megabytes of output for conversations nobody opens. A running agent's is never the
+one dropped: dropping it would start it again from its next message, with nothing saying its
+beginning was cut. A finished agent past that says so when picked.
 
 ## chat-decision-16: A workflow's progress is read from a field the SDK's types leave out, and it can be stopped, not paused
 
@@ -327,9 +333,9 @@ The strip's bar and the workflow panel read `workflow_progress`, a list the sess
 task_progress about a workflow. The Agent SDK's types (0.3.316) leave it out; the CLI bundled with
 that SDK sends it. Checked in that CLI's bundle:
 
-- It keeps one slot per `${type}:${index}` and swaps each `workflow_agent` or `workflow_phase` update
-  into its slot, then sends the whole deduplicated list. An agent's queued and running states are
-  never two entries, so its one entry is its latest state.
+- It keeps one slot per `${type}:${index}` and swaps each `workflow_agent` or `workflow_phase`
+  update into its slot, then sends the whole deduplicated list. An agent's queued and running states
+  are never two entries, so its one entry is its latest state.
 - `background_tasks_changed` and `task_started` both carry a workflow's `task_type` as
   `local_workflow`; `workflow_name` is only set on such a task.
 
@@ -350,8 +356,8 @@ Agent SDK 0.3.316 and the CLI bundled with it on 2026-11-09:
   running task's events carry no path, so reading the file would mean guessing where the CLI writes
   it, and a running command is the case the viewer is for.
 - `get_task_output` answers for a shell or Monitor task, running or ended, with the last 8 KiB the
-  command wrote, the tail the terminal's `/tasks` detail view reads; an ended task whose file is gone
-  reads as empty, which the viewer says in one sentence naming the task. The SDK's `Query` has
+  command wrote, the tail the terminal's `/tasks` detail view reads; an ended task whose file is
+  gone reads as empty, which the viewer says in one sentence naming the task. The SDK's `Query` has
   `getTaskOutput` but its types leave it out, so main checks it is there before calling it.
 - Only the end is shown, with a first line saying the start was cut and how much the command wrote
   in all, from the answer's `total_bytes`. A longer read is a file the CLI does not name while the
@@ -361,6 +367,6 @@ Only a task whose `task_type` is `local_bash` or `monitor_mcp` opens this way (`
 `ChatTask`). The CLI refuses `get_task_output` for any other kind, an MCP call or a remote agent,
 and that refusal would reach the view as a thrown error, so `taskOpening` refuses those first with a
 sentence naming the task. Whether to ask again after a read is `followAfter`'s, and whether the task
-runs is asked before each read (`readTaskOutput`), so the read after it ends holds what it printed as
-it exited.
+runs is asked before each read (`readTaskOutput`), so the read after it ends holds what it printed
+as it exited.
 

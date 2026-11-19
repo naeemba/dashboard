@@ -1,10 +1,16 @@
 # Backlog, Board Filter and Sort Button Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give every board a Backlog column in front of Todo, a filter that hides cards by any field, and a sort button on each column heading.
+**Goal:** Give every board a Backlog column in front of Todo, a filter that hides cards by any
+field, and a sort button on each column heading.
 
-**Architecture:** Backlog is one more read-time column repair in `board.ts`, run from `parseBoard`. The filter's rules (matching, which rows are visible, how the selection steps over hidden cards) are pure functions in a new `board-filter.ts`. A new `filter-dialog.ts` edits a filter. `board-view.ts` only holds the filter, draws the visible cards, and wires keys and buttons.
+**Architecture:** Backlog is one more read-time column repair in `board.ts`, run from `parseBoard`.
+The filter's rules (matching, which rows are visible, how the selection steps over hidden cards) are
+pure functions in a new `board-filter.ts`. A new `filter-dialog.ts` edits a filter. `board-view.ts`
+only holds the filter, draws the visible cards, and wires keys and buttons.
 
 **Tech Stack:** TypeScript, Electron renderer DOM, vitest (jsdom), lucide icons.
 
@@ -13,9 +19,11 @@
 ## Global Constraints
 
 - Every `<input>`/`<textarea>` created gets `dir = 'auto'` in the same change.
-- Every dialog key handler checks `if (isModified(event)) return;` first. The exception is Tab, which is swallowed before the guard so focus cannot leave the dialog.
+- Every dialog key handler checks `if (isModified(event)) return;` first. The exception is Tab,
+  which is swallowed before the guard so focus cannot leave the dialog.
 - A class that sets `display` gets a matching `.thing[hidden] { display: none }` next to it.
-- New keys are rows in `src/actions.ts` and nothing else. The help, settings and which-key screens read that table.
+- New keys are rows in `src/actions.ts` and nothing else. The help, settings and which-key screens
+  read that table.
 - `src/help.ts`'s board blurb must describe Backlog, the filter and the sort button.
 - No abbreviations in identifiers (`button`, not `btn`).
 - `board-view.ts` stays under 600 code lines (now 517).
@@ -25,11 +33,19 @@
 
 ## Review Focus
 
-1. A filter that hides every card in the column you are on. Expected: the selection sits on row 0, arrows still cross into other columns, and Enter/`d`/`p` act on nothing hidden. Covered in Task 3 (`settleSelection` with no visible rows) and Task 5 (actions on a hidden selection are refused).
-2. An agent's write (board:change) while a filter is on moves the selected card out of the filter. Expected: the selection settles onto a visible card instead of a hidden one being highlighted off screen. Covered in Task 5 (render settles).
-3. Shift+Up while filtered, with a hidden card directly above. Expected: the card swaps past the hidden one with the visible card above it. Covered in Task 3 (`reorderRow`).
-4. Dropping a dragged card below the last visible card of a filtered column. Expected: it lands right after that card, not at the end of the whole column. Covered in Task 3 (`realRow`).
-5. A board file written before Backlog existed, with a hand-made column order. Expected: Backlog goes first and nothing else moves. Ship still lands after the first of the old columns. Covered in Task 1.
+1. A filter that hides every card in the column you are on. Expected: the selection sits on row 0,
+   arrows still cross into other columns, and Enter/`d`/`p` act on nothing hidden. Covered in Task 3
+   (`settleSelection` with no visible rows) and Task 5 (actions on a hidden selection are refused).
+2. An agent's write (board:change) while a filter is on moves the selected card out of the filter.
+   Expected: the selection settles onto a visible card instead of a hidden one being highlighted off
+   screen. Covered in Task 5 (render settles).
+3. Shift+Up while filtered, with a hidden card directly above. Expected: the card swaps past the
+   hidden one with the visible card above it. Covered in Task 3 (`reorderRow`).
+4. Dropping a dragged card below the last visible card of a filtered column. Expected: it lands
+   right after that card, not at the end of the whole column. Covered in Task 3 (`realRow`).
+5. A board file written before Backlog existed, with a hand-made column order. Expected: Backlog
+   goes first and nothing else moves. Ship still lands after the first of the old columns. Covered
+   in Task 1.
 
 ---
 
@@ -43,7 +59,8 @@
 - Test: `src/board.test.ts`, `src/board-store.test.ts`, `src/board-cli.test.ts`
 
 **Interfaces:**
-- Produces: `BACKLOG_COLUMN = 'Backlog'`, `withBacklogColumn(board: Board): Board`, `isWaitingColumn(board: Board, index: number): boolean`.
+- Produces: `BACKLOG_COLUMN = 'Backlog'`, `withBacklogColumn(board: Board): Board`,
+  `isWaitingColumn(board: Board, index: number): boolean`.
 
 - [ ] **Step 1: Write the failing tests** in `src/board.test.ts`
 
@@ -81,7 +98,9 @@ describe('isWaitingColumn', () => {
 });
 ```
 
-In `src/board-store.test.ts`, update every expectation listing default columns (lines ~239, 246, 329, 343, 385, 393) so it starts with `'Backlog'`. For example `['Todo', 'Ship', 'Review']` becomes `['Backlog', 'Todo', 'Ship', 'Review']`. Then add:
+In `src/board-store.test.ts`, update every expectation listing default columns (lines ~239, 246,
+329, 343, 385, 393) so it starts with `'Backlog'`. For example `['Todo', 'Ship', 'Review']` becomes
+`['Backlog', 'Todo', 'Ship', 'Review']`. Then add:
 
 ```ts
 it('gives an old board Backlog in front of Todo and keeps Ship after Todo', () => {
@@ -91,7 +110,8 @@ it('gives an old board Backlog in front of Todo and keeps Ship after Todo', () =
 });
 ```
 
-In `src/board-cli.test.ts`, add a test that `add "x"` with no `--column` reports `Backlog`. Copy the shape of the existing `add` test in that file, then assert `result.output` contains `  Backlog  `.
+In `src/board-cli.test.ts`, add a test that `add "x"` with no `--column` reports `Backlog`. Copy the
+shape of the existing `add` test in that file, then assert `result.output` contains `  Backlog  `.
 
 - [ ] **Step 2: Run them, expect failures**
 
@@ -108,7 +128,8 @@ Next to `REVIEW_COLUMN`:
 export const BACKLOG_COLUMN = 'Backlog';
 ```
 
-`const DEFAULT_COLUMNS = [BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN, DONE_COLUMN];`
+`const DEFAULT_COLUMNS = [BACKLOG_COLUMN, 'Todo', SHIP_COLUMN, 'Doing', REVIEW_COLUMN,
+DONE_COLUMN];`
 
 After `withReviewColumn`:
 
@@ -126,22 +147,23 @@ export function isWaitingColumn(board: Board, index: number): boolean {
 }
 ```
 
-`src/board-store.ts:314`:
-`return withBacklogColumn(withReviewColumn(withShipColumn({ columns: repairCards(columns, makeId) })));`
-Add `withBacklogColumn` to the import from `./board`.
+`src/board-store.ts:314`: `return withBacklogColumn(withReviewColumn(withShipColumn({ columns:
+repairCards(columns, makeId) })));` Add `withBacklogColumn` to the import from `./board`.
 
-`src/board-view.ts:425`:
-`segment.className = columnIndex === last ? 'done' : isWaitingColumn(state.board, columnIndex) ? 'waiting' : 'underway';`
-Import `isWaitingColumn`.
+`src/board-view.ts:425`: `segment.className = columnIndex === last ? 'done' :
+isWaitingColumn(state.board, columnIndex) ? 'waiting' : 'underway';` Import `isWaitingColumn`.
 
-`src/icons.ts`: import `Inbox` from lucide, add `backlog: Inbox` to `ICONS`, and add `[BACKLOG_COLUMN.toLowerCase()]: 'backlog'` to `COLUMN_GLYPHS` (import `BACKLOG_COLUMN`).
+`src/icons.ts`: import `Inbox` from lucide, add `backlog: Inbox` to `ICONS`, and add
+`[BACKLOG_COLUMN.toLowerCase()]: 'backlog'` to `COLUMN_GLYPHS` (import `BACKLOG_COLUMN`).
 
-Fix the comment on `landsInShip` ("Ship sits second from the left") to "Ship sits just right of Todo".
+Fix the comment on `landsInShip` ("Ship sits second from the left") to "Ship sits just right of
+Todo".
 
 - [ ] **Step 4: Run all tests**
 
-Run: `npm test`
-Expected: PASS. If other tests hard-code the default column list or `emptyBoard()` indices (e.g. `{ column: 0 }` assumed to be Todo), update them to the new indices. Do not change behaviour to make them pass.
+Run: `npm test` Expected: PASS. If other tests hard-code the default column list or `emptyBoard()`
+indices (e.g. `{ column: 0 }` assumed to be Todo), update them to the new indices. Do not change
+behaviour to make them pass.
 
 - [ ] **Step 5: Commit**
 
@@ -158,7 +180,8 @@ git add -A src && git commit -m "Put a Backlog column in front of Todo on every 
 - Test: `src/board-filter.test.ts`
 
 **Interfaces:**
-- Consumes: `Board`, `Card`, `Priority`, `PRIORITIES`, `childrenOf` from `./board`; `timeOf` from `./age` (`timeOf(iso?: string): number | undefined`).
+- Consumes: `Board`, `Card`, `Priority`, `PRIORITIES`, `childrenOf` from `./board`; `timeOf` from
+  `./age` (`timeOf(iso?: string): number | undefined`).
 - Produces:
 
 ```ts
@@ -435,7 +458,9 @@ export function reorderRow(visible: number[][], selection: Selection, direction:
 export function realRow(visible: number[][], column: number, visibleRow: number, columnLength: number): number;
 ```
 
-`reorderRow` answers the `row` to hand `dropCard(board, selection, selection.column, row)`. `dropCard` reads `row` as "insert before the card now at this index", so moving down past real index `n` is `n + 1`. It answers `null` when there is no visible neighbour that way.
+`reorderRow` answers the `row` to hand `dropCard(board, selection, selection.column, row)`.
+`dropCard` reads `row` as "insert before the card now at this index", so moving down past real index
+`n` is `n + 1`. It answers `null` when there is no visible neighbour that way.
 
 - [ ] **Step 1: Write the failing tests** (append to `src/board-filter.test.ts`)
 
@@ -505,7 +530,9 @@ describe('realRow', () => {
 Run: `npx vitest run src/board-filter.test.ts`
 Expected: FAIL, functions not exported.
 
-- [ ] **Step 3: Implement** (append to `src/board-filter.ts`; add `import type { Selection } from './board'`, `import type { Direction } from './terminals'` and `import { clampIndex } from './clamp-index'`)
+- [ ] **Step 3: Implement** (append to `src/board-filter.ts`; add `import type { Selection } from
+  './board'`, `import type { Direction } from './terminals'` and `import { clampIndex } from
+  './clamp-index'`)
 
 ```ts
 // A selection on a card the filter hides moves to the first card it keeps in that column. A column
@@ -550,7 +577,9 @@ export function realRow(visible: number[][], column: number, visibleRow: number,
 }
 ```
 
-Check `clampIndex(value, last)`'s behaviour when `last` is `-1` (an empty `here`). Read `src/clamp-index.ts`. If it does not return 0 or -1 there, guard: `here.length === 0 ? selection` for up/down.
+Check `clampIndex(value, last)`'s behaviour when `last` is `-1` (an empty `here`). Read
+`src/clamp-index.ts`. If it does not return 0 or -1 there, guard: `here.length === 0 ? selection`
+for up/down.
 
 - [ ] **Step 4: Run, expect pass**
 
@@ -573,10 +602,16 @@ git add src/board-filter.ts src/board-filter.test.ts && git commit -m "Step the 
 - Modify: `src/board.css` (dialog styles at the end)
 
 **Interfaces:**
-- Consumes: `openOverlay(name, dismiss)` from `./overlay`; `isModified` from `./shortcuts`; `BoardFilter`, `emptyFilter`, `PRESENCES`, `FAMILIES`, `AGES` from `./board-filter`; `PRIORITIES` from `./board`.
-- Produces: `openFilterDialog(start: BoardFilter, onChange: (filter: BoardFilter) => void): Promise<BoardFilter>`. It calls `onChange` on every edit, so the board behind redraws live, and settles with the final filter on Enter (outside the Reset row), on Escape, or on a click on the margin.
+- Consumes: `openOverlay(name, dismiss)` from `./overlay`; `isModified` from `./shortcuts`;
+  `BoardFilter`, `emptyFilter`, `PRESENCES`, `FAMILIES`, `AGES` from `./board-filter`; `PRIORITIES`
+  from `./board`.
+- Produces: `openFilterDialog(start: BoardFilter, onChange: (filter: BoardFilter) => void):
+  Promise<BoardFilter>`. It calls `onChange` on every edit, so the board behind redraws live, and
+  settles with the final filter on Enter (outside the Reset row), on Escape, or on a click on the
+  margin.
 
-Pure row logic is exported for the test: `filterRows(): FilterRow[]` and `applyRowKey(filter, row, key): BoardFilter`.
+Pure row logic is exported for the test: `filterRows(): FilterRow[]` and `applyRowKey(filter, row,
+key): BoardFilter`.
 
 - [ ] **Step 1: Write the failing test** `src/filter-dialog.test.ts`
 
@@ -783,7 +818,8 @@ export function openFilterDialog(start: BoardFilter, onChange: (filter: BoardFil
 }
 ```
 
-Note: Enter on a priority toggles it, as the spec says, and does not close the dialog. Enter closes from the Text and choice rows. Escape closes from anywhere.
+Note: Enter on a priority toggles it, as the spec says, and does not close the dialog. Enter closes
+from the Text and choice rows. Escape closes from anywhere.
 
 Append to `src/board.css`:
 
@@ -798,7 +834,9 @@ Append to `src/board.css`:
 .filter-keys { margin: 10px 4px 0; color: var(--muted); font-size: 11px; }
 ```
 
-`.filter-row` sets `display` but nothing hides it with `hidden`, so no `[hidden]` rule is needed. Style `.filter-text` like `.search-input` by reading that rule in the CSS and copying its border, background and padding.
+`.filter-row` sets `display` but nothing hides it with `hidden`, so no `[hidden]` rule is needed.
+Style `.filter-text` like `.search-input` by reading that rule in the CSS and copying its border,
+background and padding.
 
 - [ ] **Step 4: Run, expect pass**
 
@@ -820,7 +858,8 @@ git add src/filter-dialog.ts src/filter-dialog.test.ts src/board.css && git comm
 - Modify: `src/board-view.ts`
 - Modify: `src/board.css`
 - Modify: `src/icons.ts` (`filter: Funnel`, `sort: ArrowDownWideNarrow`, `reset: X`)
-- Test: `src/actions.test.ts` (if it lists kinds or keys; otherwise none). The decisions are tested in Tasks 2–3.
+- Test: `src/actions.test.ts` (if it lists kinds or keys; otherwise none). The decisions are tested
+  in Tasks 2–3.
 
 **Interfaces:**
 - Consumes: everything from `board-filter.ts`, `openFilterDialog`.
@@ -843,7 +882,9 @@ Rows after `board-sort`:
   },
 ```
 
-Run `npx vitest run src/actions.test.ts src/shortcuts.test.ts`. If a test fails because it enumerates the table (counts, uniqueness), update its expectation. If `Shift+F` collides with another row, the uniqueness test says so; pick `Shift+F` only if it is free.
+Run `npx vitest run src/actions.test.ts src/shortcuts.test.ts`. If a test fails because it
+enumerates the table (counts, uniqueness), update its expectation. If `Shift+F` collides with
+another row, the uniqueness test says so; pick `Shift+F` only if it is free.
 
 - [ ] **Step 2: Wire the view** in `src/board-view.ts`
 
@@ -863,7 +904,9 @@ In `render()`, before `element.replaceChildren`:
     state = { ...state, selection: settleSelection(visible, state.selection) };
 ```
 
-`state` is reassigned without touching `previous`. `settleSelection` returns the same selection object when nothing moves. Building a new `state` every render is harmless, because `apply()` compares `next !== state` only for boards it was handed.
+`state` is reassigned without touching `previous`. `settleSelection` returns the same selection
+object when nothing moves. Building a new `state` every render is harmless, because `apply()`
+compares `next !== state` only for boards it was handed.
 
 Build the columns into a wrapper so a strip can sit above them:
 
@@ -875,8 +918,10 @@ Build the columns into a wrapper so a strip can sit above them:
 ```
 
 Inside the column body:
-- Cards: `list.append(...visible[columnIndex].map((cardIndex) => renderCard(column.cards[cardIndex], columnIndex === state.selection.column && cardIndex === state.selection.card)));`
-- Count: `count.textContent = isFilterActive(filter) ? `${visible[columnIndex].length}/${column.cards.length}` : String(column.cards.length);`
+- Cards: `list.append(...visible[columnIndex].map((cardIndex) => renderCard(column.cards[cardIndex],
+  columnIndex === state.selection.column && cardIndex === state.selection.card)));`
+- Count: `count.textContent = isFilterActive(filter) ?
+  `${visible[columnIndex].length}/${column.cards.length}` : String(column.cards.length);`
 - Sort button in the heading, before `count`:
 
 ```ts
@@ -895,8 +940,11 @@ Inside the column body:
       heading.append(icon(columnIcon(column.name)), column.name, sort, count);
 ```
 
-  On the manager, the `mousedown` on the stacked section (`cards-view.ts:79`) already makes this board active before the click lands.
-- Empty text: when `column.cards.length > 0 && visible[columnIndex].length === 0`, show `No card matches the filter` in the `.board-empty` paragraph. Otherwise keep the existing `column.cards.length === 0` branch.
+  On the manager, the `mousedown` on the stacked section (`cards-view.ts:79`) already makes this
+  board active before the click lands.
+- Empty text: when `column.cards.length > 0 && visible[columnIndex].length === 0`, show `No card
+  matches the filter` in the `.board-empty` paragraph. Otherwise keep the existing
+  `column.cards.length === 0` branch.
 
 The strip, as a function in the view:
 
@@ -974,7 +1022,10 @@ Change these cases:
         case 'board-filter-reset': return resetFilter();
 ```
 
-`stepSelection` with no filter on behaves exactly like `moveSelection`, because every row is visible. Check this against the tests in `board.test.ts` for `moveSelection`. If any case differs (a left/right move keeping the row index vs. the position), keep `moveSelection` when `!isFilterActive(filter)`:
+`stepSelection` with no filter on behaves exactly like `moveSelection`, because every row is
+visible. Check this against the tests in `board.test.ts` for `moveSelection`. If any case differs (a
+left/right move keeping the row index vs. the position), keep `moveSelection` when
+`!isFilterActive(filter)`:
 
 ```ts
           const selection = isFilterActive(filter)
@@ -984,11 +1035,14 @@ Change these cases:
 
 Use this form. It leaves unfiltered behaviour byte-for-byte as before.
 
-Drop: in `dropOnColumn`, replace `rowUnder(list, event.clientY)` with `realRow(visible, columnIndex, rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length)`.
+Drop: in `dropOnColumn`, replace `rowUnder(list, event.clientY)` with `realRow(visible, columnIndex,
+rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length)`.
 
 Arrival resets the filter. In `open()`, before `await readAgain(true)`: `filter = emptyFilter();`.
 
-Imports: `dropCard` is already imported. Add from `./board-filter`: `emptyFilter, filterSummary, isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows, type BoardFilter`. Add `openFilterDialog` from `./filter-dialog`, and `iconButton` from `./icons`.
+Imports: `dropCard` is already imported. Add from `./board-filter`: `emptyFilter, filterSummary,
+isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows, type BoardFilter`.
+Add `openFilterDialog` from `./filter-dialog`, and `iconButton` from `./icons`.
 
 - [ ] **Step 3: CSS** in `src/board.css`
 
@@ -1059,12 +1113,16 @@ Change `.board` to stack the strip over the columns, and move the row layout to 
 }
 ```
 
-The `.board-count` keeps its `margin-left: auto`, so the sort button sits right after the name. Style `.board-filter-reset` from the existing tab-bar button CSS that `iconButton` is already used with (`grep -n "iconButton(" src` to find a class, then copy its look).
+The `.board-count` keeps its `margin-left: auto`, so the sort button sits right after the name.
+Style `.board-filter-reset` from the existing tab-bar button CSS that `iconButton` is already used
+with (`grep -n "iconButton(" src` to find a class, then copy its look).
 
 - [ ] **Step 4: Run all checks**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: PASS. Then count code lines in `board-view.ts`: `grep -cvE '^\s*(//|$)' src/board-view.ts`. It must stay under 600. If it does not, move `filterBar` into `src/filter-bar.ts` as `filterBar(filter, visible, board, onReset): HTMLElement`.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: PASS. Then count code lines in
+`board-view.ts`: `grep -cvE '^\s*(//|$)' src/board-view.ts`. It must stay under 600. If it does not,
+move `filterBar` into `src/filter-bar.ts` as `filterBar(filter, visible, board, onReset):
+HTMLElement`.
 
 Also run the two Hard Rule checks:
 
@@ -1091,16 +1149,25 @@ git add -A src && git commit -m "Filter the board and sort a column from its hea
 - Modify: `package.json` (`1.11.0` → `1.12.0`)
 - Test: `src/help.test.ts` if it pins blurb text
 
-- [ ] **Step 1: Help blurb.** Read the full board blurb in `src/help.ts`. Add these sentences next to the existing column and search sentences, in the file's voice:
-  - "Backlog is where a card waits until somebody picks it; Todo holds what has been picked. Every board gets Backlog in front of Todo, and `board add` with no column puts a card there."
-  - "f filters the board by any field of a card — words in it, priority, subtasks, branch, pull request, comments, when it was made or last changed. Cards that do not match are hidden, a strip above the columns says what is filtered, and its Reset or Shift+F shows every card again. The filter is gone when you leave the board."
+- [ ] **Step 1: Help blurb.** Read the full board blurb in `src/help.ts`. Add these sentences next
+  to the existing column and search sentences, in the file's voice:
+  - "Backlog is where a card waits until somebody picks it; Todo holds what has been picked. Every
+    board gets Backlog in front of Todo, and `board add` with no column puts a card there."
+  - "f filters the board by any field of a card — words in it, priority, subtasks, branch, pull
+    request, comments, when it was made or last changed. Cards that do not match are hidden, a strip
+    above the columns says what is filtered, and its Reset or Shift+F shows every card again. The
+    filter is gone when you leave the board."
   - "s sorts the column urgent first, and so does the button on each column's heading."
 
   Do not restate key bindings that the table prints.
 
-- [ ] **Step 2: `.dashboard/CLAUDE.md`.** Add a bullet before the `Ship` bullet: "- The `Backlog` column is first on every board. A card nobody has chosen to work on waits there; `Todo` holds what has been picked. `board add` with no `--column` puts a card in Backlog." Update the JSON example's column name only if it claims to show the default order (it does not, so leave it).
+- [ ] **Step 2: `.dashboard/CLAUDE.md`.** Add a bullet before the `Ship` bullet: "- The `Backlog`
+  column is first on every board. A card nobody has chosen to work on waits there; `Todo` holds what
+  has been picked. `board add` with no `--column` puts a card in Backlog." Update the JSON example's
+  column name only if it claims to show the default order (it does not, so leave it).
 
-- [ ] **Step 3: Version.** `package.json` `"version": "1.12.0"`. Also update `package-lock.json`'s two top `version` fields to match, if present.
+- [ ] **Step 3: Version.** `package.json` `"version": "1.12.0"`. Also update `package-lock.json`'s
+  two top `version` fields to match, if present.
 
 - [ ] **Step 4: Run all checks**
 

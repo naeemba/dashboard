@@ -6,20 +6,20 @@ Settled questions. Read the entry before re-litigating it.
 
 **The review worker lands its pull request only when merging is on: the
 project's `autoMerge` in `projects.yaml` when its entry says one, settings
-`review.autoMerge` otherwise, off by default. A missing `projects.yaml`
-follows the setting, since no entry can be saying false; an unreadable one is
-off whatever the setting says. Off, the worker stops once `/pr-loop` and CI are
+`review.autoMerge` otherwise, off by default. A missing `projects.yaml` follows
+the setting, since no entry can be saying false; an unreadable one is off
+whatever the setting says. Off, the worker stops once `/pr-loop` and CI are
 done, merges nothing, moves nothing, says the ending on the card, and reports
 the rounds, the fixes, what is open and the CI state to the project's main. On,
 it runs `dashboard pr land`, which notes the head commit before the CI wait,
 waits for CI to pass on it, and merges that commit only (`--match-head-commit`),
-so a push during the wait is refused rather than merged.** The review used to merge whenever the loop
-converged: #290 was landed that way on 2026-11-16 with nobody's go-ahead, and
-two commits reached main with no review after them. A merge cannot be taken
-back, so the default is the one where a person decides; the CI wait is there
-because a fix pushed after the last review round had never been checked when
-the old prompt merged it. The decision is `landsPullRequest` in
-`projects-file.ts`, the prompt `reviewPrompt` in `review.ts`. (2026-11-16)
+so a push during the wait is refused rather than merged.** The review used to
+merge whenever the loop converged: #290 was landed that way on 2026-11-16 with
+nobody's go-ahead, and two commits reached main with no review after them. A
+merge cannot be taken back, so the default is the one where a person decides;
+the CI wait is there because a fix pushed after the last review round had never
+been checked when the old prompt merged it. The decision is `landsPullRequest`
+in `projects-file.ts`, the prompt `reviewPrompt` in `review.ts`. (2026-11-16)
 
 The merge went through `pr land` from 2026-11-17. The prompt had spelled the
 steps out for the agent to run by hand, so a network error on `gh pr merge`

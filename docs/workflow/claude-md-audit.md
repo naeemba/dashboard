@@ -85,10 +85,13 @@ Cheap checks first, then the hooks, then the one card that deletes what the othe
 6. eslint `max-lines` at 600 code lines (file-size)
 7. Test that every renderer key handler checks `isModified` first (keys-rule-1)
 8. Test that every `display` class has its `[hidden]` rule (conventions-rule-3)
-9. Hook that refuses quitting, killing or restarting the running app (workflow-rule-1): `board guard` carries it, workflow-decision-7
+9. Hook that refuses quitting, killing or restarting the running app (workflow-rule-1): `board
+   guard` carries it, workflow-decision-7
 10. Hook that refuses a zsh `path=` assignment (dotfiles, global zsh rule)
 11. Load the final-message rule once, from its hook (dotfiles)
 12. Shrink the seeded `.dashboard/CLAUDE.md` to the board command
-13. Delete from CLAUDE.md every rule the cards above moved, and the ones already enforced (workflow-rule-4, processes-rule-1, processes-rule-2, app-rule-2), keeping the one "never an `eslint-disable`" line for each rule eslint carries
+13. Delete from CLAUDE.md every rule the cards above moved, and the ones already enforced
+    (workflow-rule-4, processes-rule-1, processes-rule-2, app-rule-2), keeping the one "never an
+    `eslint-disable`" line for each rule eslint carries
 
 Cards 1 to 13 are done; card 13's result is workflow-decision-8.

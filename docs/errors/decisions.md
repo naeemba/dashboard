@@ -116,10 +116,11 @@ restarts the minute, so a save failing every 10 seconds for an hour is one line
 and one banner, not sixty.
 
 An error while the window is not in front raises a desktop notification, by the
-same rule, with `errors.notify` to turn it off. Until the settings file is
-read no banner is raised, so a launch failure does not reach someone who turned
-it off; it is still on the bar and in the log. The banner names no pane, so a click only brings the window forward; it does not go through
-project.focus, which needs one.
+same rule, with `errors.notify` to turn it off. Until the settings file is read
+no banner is raised, so a launch failure does not reach someone who turned it
+off; it is still on the bar and in the log. The banner names no pane, so a click
+only brings the window forward; it does not go through project.focus, which
+needs one.
 
 The quiet-minute rule is the bar's alone, not `log:write`'s: other writers
 repeat a line on purpose (an agent started twice is two lines).

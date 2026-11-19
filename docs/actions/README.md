@@ -127,15 +127,15 @@ them, the action it moves behind and the order the nouns move in are in
 that still do the work themselves; the rows it does not pin are held by the
 rule alone (actions-rule-1, actions-decision-4).
 
-Only card.move and settings.write have a channel of their own name
-(`card:move`, `settings:write`); settings.write's is the one that was there,
-answering with the shell rather than the action's result. The pane and project
-actions answer on the channels and commands that were there before
-(`pane:add`, `pane:close`, `sessions:resume`, `projects:open`, `projects:close`, `pane claim`, `send`, `release`, `run`,
-`project open`, `close`, `focus`), and so do the session actions (`chat:reset`,
-`chat:resume`, `chat:branch`, `chat:rewind`, `chat:rename`, `chat:configure`,
-`sessions:rename`); a screen that needs ship or review registers its
-channel in the same change.
+Only card.move and settings.write have a channel of their own name (`card:move`,
+`settings:write`); settings.write's is the one that was there, answering with
+the shell rather than the action's result. The pane and project actions answer
+on the channels and commands that were there before (`pane:add`, `pane:close`,
+`sessions:resume`, `projects:open`, `projects:close`, `pane claim`, `send`,
+`release`, `run`, `project open`, `close`, `focus`), and so do the session
+actions (`chat:reset`, `chat:resume`, `chat:branch`, `chat:rewind`,
+`chat:rename`, `chat:configure`, `sessions:rename`); a screen that needs ship or
+review registers its channel in the same change.
 
 The board asks card.move only for a move that changed the column
 (`screenMoveEntry` in `column-entry.ts`), in either direction, as the agreed
@@ -176,32 +176,60 @@ Folder: `src/main/actions/`.
   card actions with their ports
 - `card/move.ts`, `card/ship.ts`, `card/review.ts`, `card/card-input.ts`
 - `card/project-board.ts` — whether a folder's board is a project's own
-- `pane/pane-actions.ts` — main's wiring: dispatch, open, close, send, restore, restart and reap with their ports
+- `pane/pane-actions.ts` — main's wiring: dispatch, open, close, send, restore,
+  restart and reap with their ports
 - `pane/dispatch.ts` — pane.dispatch and `paneKind`
-- `pane/open.ts`, `pane/close.ts`, `pane/send.ts`, `pane/claim.ts`, `pane/release.ts`, `pane/restore.ts`, `pane/restart.ts`, `pane/reap.ts`
+- `pane/open.ts`, `pane/close.ts`, `pane/send.ts`, `pane/claim.ts`,
+  `pane/release.ts`, `pane/restore.ts`, `pane/restart.ts`, `pane/reap.ts`
 - `pane/pane-input.ts` — the input checks the pane actions share
 - `worktree/worktree-actions.ts` — main's wiring: make and remove, and each door's port into them
 - `worktree/make.ts`, `worktree/remove.ts`
-- `session/session-actions.ts` — main's wiring: the session actions, their ports and the screen's doors
-- `session/start.ts`, `session/reset.ts`, `session/resume.ts`, `session/branch.ts`, `session/rewind.ts`, `session/rename.ts`, `session/configure.ts`
-- `session/conversation-ports.ts` — what reset, resume, branch and rewind ask of the session, and `keepsItsConversation`
+- `session/session-actions.ts` — main's wiring: the session actions, their ports
+  and the screen's doors
+- `session/start.ts`, `session/reset.ts`, `session/resume.ts`,
+  `session/branch.ts`, `session/rewind.ts`, `session/rename.ts`,
+  `session/configure.ts`
+- `session/conversation-ports.ts` — what reset, resume, branch and rewind ask of
+  the session, and `keepsItsConversation`
 - `settings/settings-actions.ts` — main's wiring: settings.write and the screen's `settings:write`
 - `settings/write.ts`, `settings/adopt.ts`, `settings/cap.ts`
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios
 
-- Given a card in Todo, when `dashboard board move <id> Ship` runs, then the card is written into Ship and shipped, exactly as a drag into Ship does (`move.test.ts`).
-- Given `review.autoLoop` off, when a shipped card's pull request appears, then the card is moved into Review and no review starts until it is moved into Review by hand or `dashboard board review <id>` runs (`review-flow.test.ts`, `column-entry.test.ts`).
-- Given an agent moving its card on its worktree's board, when the move lands, then nothing starts (`column-entry.test.ts`), and `board move <id> Review` there is a file edit that exits 0 without asking the app (`board-cli.test.ts`, `linked-worktree.test.ts`).
-- Given a conversation on the Claude screen, when you `/rename` it, then the drawer lists it by that name too; renamed in the drawer, `/resume` lists it by the drawer's name (`rename.test.ts`).
-- Given main's worker screen, when you send /clear, /resume, /branch or /rewind, then each is refused and the conversation stays (`conversation.test.ts`).
-- Given a refused ship, when the board or the command asked, then the card stays where it was put and the answer says why (`move.test.ts`).
-- Given a new IPC handler that calls `worktrees.remove` itself, when the tests run, then `bypasses.test.ts` fails naming the file.
-- Given a removal from the worktree dialog while a ship of the same project is running git, when you press `d`, then the removal waits for the ship rather than racing it onto git's lock (`remove.test.ts`).
-- Given a card's `pane run` into a pane another card's record still names, when it starts, then that record gives the pane up and the card's names it (`worktree-keeper.test.ts`).
-- Given a Claude of yours running in a terminal pane, when the app restarts, then it comes back through pane.dispatch on its conversation, not typed into a shell (`restore.test.ts`); it is logged as an agent start, and once you exit it the pane reads exited and Enter gives a shell (checked by hand).
-- Given a conversation in the drawer, when you press Enter on it, then a new worker runs it through pane.dispatch, never a shell typed into (`open.test.ts`).
+- Given a card in Todo, when `dashboard board move <id> Ship` runs, then the
+  card is written into Ship and shipped, exactly as a drag into Ship does
+  (`move.test.ts`).
+- Given `review.autoLoop` off, when a shipped card's pull request appears, then
+  the card is moved into Review and no review starts until it is moved into
+  Review by hand or `dashboard board review <id>` runs (`review-flow.test.ts`,
+  `column-entry.test.ts`).
+- Given an agent moving its card on its worktree's board, when the move lands,
+  then nothing starts (`column-entry.test.ts`), and `board move <id> Review`
+  there is a file edit that exits 0 without asking the app (`board-cli.test.ts`,
+  `linked-worktree.test.ts`).
+- Given a conversation on the Claude screen, when you `/rename` it, then the
+  drawer lists it by that name too; renamed in the drawer, `/resume` lists it by
+  the drawer's name (`rename.test.ts`).
+- Given main's worker screen, when you send /clear, /resume, /branch or /rewind,
+  then each is refused and the conversation stays (`conversation.test.ts`).
+- Given a refused ship, when the board or the command asked, then the card stays
+  where it was put and the answer says why (`move.test.ts`).
+- Given a new IPC handler that calls `worktrees.remove` itself, when the tests
+  run, then `bypasses.test.ts` fails naming the file.
+- Given a removal from the worktree dialog while a ship of the same project is
+  running git, when you press `d`, then the removal waits for the ship rather
+  than racing it onto git's lock (`remove.test.ts`).
+- Given a card's `pane run` into a pane another card's record still names, when
+  it starts, then that record gives the pane up and the card's names it
+  (`worktree-keeper.test.ts`).
+- Given a Claude of yours running in a terminal pane, when the app restarts,
+  then it comes back through pane.dispatch on its conversation, not typed into a
+  shell (`restore.test.ts`); it is logged as an agent start, and once you exit
+  it the pane reads exited and Enter gives a shell (checked by hand).
+- Given a conversation in the drawer, when you press Enter on it, then a new
+  worker runs it through pane.dispatch, never a shell typed into
+  (`open.test.ts`).
 
 ## Known limits
 

@@ -1,10 +1,17 @@
 # Resume Claude Sessions Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Every pane that had Claude Code running when the app quit comes back on the next launch with `claude --resume <its session id>` typed into a shell in the folder that session ran in.
+**Goal:** Every pane that had Claude Code running when the app quit comes back on the next launch
+with `claude --resume <its session id>` typed into a shell in the folder that session ran in.
 
-**Architecture:** The token sweep already places each live session on its pane; it now also carries the session's `cwd` and hands the map to a new main-side session store. The store is the only writer of `session.json`: it merges the renderer's layout with one Claude slot per pane, and at launch hands each pane's saved slot to `spawnProject`, which types the resume line into the new shell. Decisions live in `claude-resume.ts` and `session.ts`, both tested; the rest is main wiring.
+**Architecture:** The token sweep already places each live session on its pane; it now also carries
+the session's `cwd` and hands the map to a new main-side session store. The store is the only writer
+of `session.json`: it merges the renderer's layout with one Claude slot per pane, and at launch
+hands each pane's saved slot to `spawnProject`, which types the resume line into the new shell.
+Decisions live in `claude-resume.ts` and `session.ts`, both tested; the rest is main wiring.
 
 **Tech Stack:** Electron main process, node-pty, TypeScript, vitest (node environment only).
 
@@ -12,22 +19,31 @@
 
 ## Global Constraints
 
-- `src/main.ts` must stay at or under 600 code lines (comments and blank lines do not count). Count: `grep -v '^\s*$' src/main.ts | grep -v '^\s*//' | wc -l`.
+- `src/main.ts` must stay at or under 600 code lines (comments and blank lines do not count). Count:
+  `grep -v '^\s*$' src/main.ts | grep -v '^\s*//' | wc -l`.
 - `src/renderer.ts` is at 600 and is not edited.
-- No abbreviations in identifiers (`configuration` not `config`, `message` not `msg`); `id`, `url`, `json` are fine.
+- No abbreviations in identifiers (`configuration` not `config`, `message` not `msg`); `id`, `url`,
+  `json` are fine.
 - IPC channels are `<noun>:<verb>`; no new channel is added.
-- Never quit, kill, restart or replace the running Dashboard app. Building into `out/` or `.vite/` is fine.
+- Never quit, kill, restart or replace the running Dashboard app. Building into `out/` or `.vite/`
+  is fine.
 - Comments in the codebase's style: full prose sentences explaining why, no mention of any AI tool.
 - Every merged card bumps `package.json` `version`: this is a capability, `1.14.0` to `1.15.0`.
 - Checks: `npm test`, `npx tsc --noEmit`, `npx eslint .` all pass at the end of every task.
 
 ## Review Focus
 
-1. A `session.json` slot whose session id is not a UUID (hand-edited, corrupted, or `x; rm -rf ~`) is typed into a shell. Expected: it is dropped on parse and never typed. Pinned in Task 2 (`isClaudeSlot`).
-2. A crash in the first 30 seconds after a launch, before the first sweep sees the resumed Claudes. Expected: the next launch still resumes them. Pinned in Task 2 (`heldSlots` within grace).
-3. A Claude exited after a restart, then a quit a minute later. Expected: not resumed next time. Pinned in Task 2 (`heldSlots` after grace).
-4. A worktree removed while the app was closed. Expected: plain shell at the project path, nothing typed. Pinned in Task 2 (`resumable`).
-5. A layout page for a project that is in the layout but has no open slot. Expected: written with an empty `claude` list, not a crash. Pinned in Task 2 (`withClaude`).
+1. A `session.json` slot whose session id is not a UUID (hand-edited, corrupted, or `x; rm -rf ~`)
+   is typed into a shell. Expected: it is dropped on parse and never typed. Pinned in Task 2
+   (`isClaudeSlot`).
+2. A crash in the first 30 seconds after a launch, before the first sweep sees the resumed Claudes.
+   Expected: the next launch still resumes them. Pinned in Task 2 (`heldSlots` within grace).
+3. A Claude exited after a restart, then a quit a minute later. Expected: not resumed next time.
+   Pinned in Task 2 (`heldSlots` after grace).
+4. A worktree removed while the app was closed. Expected: plain shell at the project path, nothing
+   typed. Pinned in Task 2 (`resumable`).
+5. A layout page for a project that is in the layout but has no open slot. Expected: written with an
+   empty `claude` list, not a crash. Pinned in Task 2 (`withClaude`).
 
 ---
 
@@ -42,7 +58,8 @@
 **Interfaces:**
 - Produces: `registerProjectFiles(boards: BoardWatchers): void`
 
-- [ ] **Step 1: Create `src/project-files-ipc.ts`** with the five handlers moved verbatim, comments included:
+- [ ] **Step 1: Create `src/project-files-ipc.ts`** with the five handlers moved verbatim, comments
+  included:
 
 ```typescript
 import { ipcMain } from 'electron';
@@ -88,7 +105,8 @@ export function registerProjectFiles(boards: BoardWatchers): void {
 }
 ```
 
-- [ ] **Step 2: Edit `src/main.ts`.** Delete the block from `// Reading also seeds the folder, so the first Ctrl+B` through the closing `});` of `notes:write`, and put in its place:
+- [ ] **Step 2: Edit `src/main.ts`.** Delete the block from `// Reading also seeds the folder, so
+  the first Ctrl+B` through the closing `});` of `notes:write`, and put in its place:
 
 ```typescript
 registerProjectFiles(boards);
@@ -100,7 +118,9 @@ Change the imports:
 import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
 ```
 
-delete `import { readNotes, writeNotes } from './notes-store';`, change `import { moveCardById, shipColumnIndex, type Board } from './board';` to `import { moveCardById, shipColumnIndex } from './board';`, and add beside the `pane-openers` import:
+delete `import { readNotes, writeNotes } from './notes-store';`, change `import { moveCardById,
+shipColumnIndex, type Board } from './board';` to `import { moveCardById, shipColumnIndex } from
+'./board';`, and add beside the `pane-openers` import:
 
 ```typescript
 import { registerProjectFiles } from './project-files-ipc';
@@ -131,11 +151,17 @@ git commit -m "Move the board and notes handlers out of main.ts to make room und
   - `type ClaudeSlot = { session: string; directory: string }`
   - `RESUME_GRACE_MS = 30_000`
   - `isClaudeSlot(value: unknown): value is ClaudeSlot`
-  - `heldSlots(live: ReadonlyMap<string, ClaudeSlot>, resumed: ReadonlyMap<string, ClaudeSlot>, sinceLaunch: number): ReadonlyMap<string, ClaudeSlot>`
-  - `withClaude(layout: Session, slotOf: (projectPath: string) => number, held: ReadonlyMap<string, ClaudeSlot>): SavedSession`
-  - `resumable(slot: ClaudeSlot | null | undefined, exists: (directory: string) => boolean): slot is ClaudeSlot`
+  - `heldSlots(live: ReadonlyMap<string, ClaudeSlot>, resumed: ReadonlyMap<string, ClaudeSlot>,
+    sinceLaunch: number): ReadonlyMap<string, ClaudeSlot>`
+  - `withClaude(layout: Session, slotOf: (projectPath: string) => number, held: ReadonlyMap<string,
+    ClaudeSlot>): SavedSession`
+  - `resumable(slot: ClaudeSlot | null | undefined, exists: (directory: string) => boolean): slot is
+    ClaudeSlot`
   - `resumeLine(slot: ClaudeSlot): string`
-- Produces, from `src/session.ts`: `type SavedPage = SessionPage & { claude: (ClaudeSlot | null)[] }`, `type SavedSession = { pages: SavedPage[]; activeIndex: number }`; `parseSession` and `readSession` return `SavedSession`; `writeSession(file: string, session: SavedSession)`. `Session` and `SessionPage` are unchanged and stay what the renderer sends.
+- Produces, from `src/session.ts`: `type SavedPage = SessionPage & { claude: (ClaudeSlot | null)[]
+  }`, `type SavedSession = { pages: SavedPage[]; activeIndex: number }`; `parseSession` and
+  `readSession` return `SavedSession`; `writeSession(file: string, session: SavedSession)`.
+  `Session` and `SessionPage` are unchanged and stay what the renderer sends.
 
 - [ ] **Step 1: Write the failing tests** in `src/claude-resume.test.ts`:
 
@@ -334,7 +360,10 @@ export type SavedPage = SessionPage & { claude: (ClaudeSlot | null)[] };
 export type SavedSession = { pages: SavedPage[]; activeIndex: number };
 ```
 
-Change `const EMPTY: Session` to `const EMPTY: SavedSession`; `function toSessionPage(stored: unknown): SessionPage | null` to return `SavedPage | null`; destructure `claude` as well (`const { path, mode, focused, names, claude } = (stored ?? {}) as { path?: unknown; mode?: unknown; focused?: unknown; names?: unknown; claude?: unknown };`), and add as the last field of the returned object:
+Change `const EMPTY: Session` to `const EMPTY: SavedSession`; `function toSessionPage(stored:
+unknown): SessionPage | null` to return `SavedPage | null`; destructure `claude` as well (`const {
+path, mode, focused, names, claude } = (stored ?? {}) as { path?: unknown; mode?: unknown; focused?:
+unknown; names?: unknown; claude?: unknown };`), and add as the last field of the returned object:
 
 ```typescript
     // A slot that is not a whole one is no session at all, never half of one: its id is typed into a
@@ -342,9 +371,16 @@ Change `const EMPTY: Session` to `const EMPTY: SavedSession`; `function toSessio
     claude: (Array.isArray(claude) ? claude : []).map((slot) => (isClaudeSlot(slot) ? slot : null)),
 ```
 
-Change `parseSession(stored: unknown): Session` and `readSession(file: string): Session` to return `SavedSession`, and `writeSession(file: string, session: Session)` to take `session: SavedSession`. Update the header comment's second sentence: "Not the shells themselves — those die with the app, and every pane comes back empty at its project's directory, and what each pane was called, except a pane that was running Claude Code, which resumes that conversation."
+Change `parseSession(stored: unknown): Session` and `readSession(file: string): Session` to return
+`SavedSession`, and `writeSession(file: string, session: Session)` to take `session: SavedSession`.
+Update the header comment's second sentence: "Not the shells themselves — those die with the app,
+and every pane comes back empty at its project's directory, and what each pane was called, except a
+pane that was running Claude Code, which resumes that conversation."
 
-- [ ] **Step 5: Update `src/session.test.ts`.** In `keeps a saved layout as it was written`, the expected page becomes `{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [], claude: [] }`; in `drops a page with no usable path and keeps the others`, `{ path: page.path, mode: 'board', focused: 3, names: [], claude: [] }`. Add before the last test:
+- [ ] **Step 5: Update `src/session.test.ts`.** In `keeps a saved layout as it was written`, the
+  expected page becomes `{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [],
+  claude: [] }`; in `drops a page with no usable path and keeps the others`, `{ path: page.path,
+  mode: 'board', focused: 3, names: [], claude: [] }`. Add before the last test:
 
 ```typescript
   // A slot's id is typed into a shell on launch, so a slot that is not whole is no slot.
@@ -360,7 +396,9 @@ Change `parseSession(stored: unknown): Session` and `readSession(file: string): 
   });
 ```
 
-- [ ] **Step 6: Keep main compiling.** `writeSession` now takes a `SavedSession`, and `main.ts`'s `session:write` handler hands it the renderer's `Session`. Until Task 4 replaces that handler, change it to:
+- [ ] **Step 6: Keep main compiling.** `writeSession` now takes a `SavedSession`, and `main.ts`'s
+  `session:write` handler hands it the renderer's `Session`. Until Task 4 replaces that handler,
+  change it to:
 
 ```typescript
 ipcMain.on('session:write', (_event, session: Session) => writeSession(sessionFile, { ...session, pages: session.pages.map((entry) => ({ ...entry, claude: [] })) }));
@@ -390,12 +428,16 @@ git commit -m "Keep which Claude session each pane runs in the saved session"
 **Interfaces:**
 - Consumes: nothing from Tasks 1-2.
 - Produces:
-  - `type LiveSession = { pid: number; session: string; directory: string }` from `src/usage-store.ts`
-  - `sessionsByPane<Live extends { pid: number }>(parents, panes, sessions: readonly Live[]): Map<string, Live>`
+  - `type LiveSession = { pid: number; session: string; directory: string }` from
+    `src/usage-store.ts`
+  - `sessionsByPane<Live extends { pid: number }>(parents, panes, sessions: readonly Live[]):
+    Map<string, Live>`
   - `UsageSweepPorts.placed(byPane: ReadonlyMap<string, LiveSession>): void`
   - `UsageSweep.placeNow(): Promise<Map<string, LiveSession>>`
 
-- [ ] **Step 1: Update the tests first.** In `src/usage-store.test.ts`, every expected record gains `directory: ''` (`{ pid: 900, session: 'a', directory: '' }`, `{ pid: 901, session: 'b', directory: '' }`), and add:
+- [ ] **Step 1: Update the tests first.** In `src/usage-store.test.ts`, every expected record gains
+  `directory: ''` (`{ pid: 900, session: 'a', directory: '' }`, `{ pid: 901, session: 'b',
+  directory: '' }`), and add:
 
 ```typescript
   it('reads the folder the session was started in', async () => {
@@ -406,7 +448,8 @@ git commit -m "Keep which Claude session each pane runs in the saved session"
   });
 ```
 
-In `src/pane-sessions.test.ts`, `places the live sessions and drops the ones with no pane` expects the whole records back:
+In `src/pane-sessions.test.ts`, `places the live sessions and drops the ones with no pane` expects
+the whole records back:
 
 ```typescript
   it('places the live sessions and drops the ones with no pane', () => {
@@ -417,7 +460,8 @@ In `src/pane-sessions.test.ts`, `places the live sessions and drops the ones wit
   });
 ```
 
-Any other `sessionsByPane` expectation in that file changes the same way: the map's values are the records passed in, not their `session` strings.
+Any other `sessionsByPane` expectation in that file changes the same way: the map's values are the
+records passed in, not their `session` strings.
 
 - [ ] **Step 2: Run them to see them fail**
 
@@ -433,7 +477,8 @@ Expected: FAIL on the `directory` field and on the map values.
 export type LiveSession = { pid: number; session: string; directory: string };
 ```
 
-Change the return type to `Promise<LiveSession[]>`, the array to `const sessions: LiveSession[] = [];`, the cast to `{ pid?: unknown; sessionId?: unknown; cwd?: unknown }`, and the push to:
+Change the return type to `Promise<LiveSession[]>`, the array to `const sessions: LiveSession[] =
+[];`, the cast to `{ pid?: unknown; sessionId?: unknown; cwd?: unknown }`, and the push to:
 
 ```typescript
       sessions.push({
@@ -443,7 +488,8 @@ Change the return type to `Promise<LiveSession[]>`, the array to `const sessions
       });
 ```
 
-- [ ] **Step 4: `src/pane-sessions.ts`.** Replace `sessionsByPane`'s signature and map type; the body is otherwise the same:
+- [ ] **Step 4: `src/pane-sessions.ts`.** Replace `sessionsByPane`'s signature and map type; the
+  body is otherwise the same:
 
 ```typescript
 // Every live session placed on the pane it is running in, whole: the token figures read its id, the
@@ -467,7 +513,8 @@ export function sessionsByPane<Live extends { pid: number }>(
 }
 ```
 
-- [ ] **Step 5: `src/usage-sweep.ts`.** Import `LiveSession`: `import { liveSessions, sweepUsage, type LiveSession } from './usage-store';`. Add to `UsageSweepPorts`, after `publish`:
+- [ ] **Step 5: `src/usage-sweep.ts`.** Import `LiveSession`: `import { liveSessions, sweepUsage,
+  type LiveSession } from './usage-store';`. Add to `UsageSweepPorts`, after `publish`:
 
 ```typescript
   // Where every live session is, by pane, after every sweep whether or not the figures moved. Main keeps
@@ -519,7 +566,8 @@ and the return:
   return { latest: () => usage, start: () => sweepLater(FIRST_SWEEP_MS), placeNow: placeSessions };
 ```
 
-In `src/main.ts`, add to the `usageSweep({ ... })` ports, after `publish`, a stand-in Task 4 replaces:
+In `src/main.ts`, add to the `usageSweep({ ... })` ports, after `publish`, a stand-in Task 4
+replaces:
 
 ```typescript
   placed: () => undefined,
@@ -543,11 +591,16 @@ git commit -m "Have the token sweep report each live session's folder and pane"
 
 **Files:**
 - Create: `src/session-store.ts`
-- Modify: `src/main.ts` (imports; `sessionFile` at line 129; `spawnProject` at 486-494; usage sweep ports; `session:read`/`session:write` at 612-615; the close handler in `createWindow`)
+- Modify: `src/main.ts` (imports; `sessionFile` at line 129; `spawnProject` at 486-494; usage sweep
+  ports; `session:read`/`session:write` at 612-615; the close handler in `createWindow`)
 
 **Interfaces:**
-- Consumes: `heldSlots`, `resumable`, `withClaude`, `resumeLine`, `ClaudeSlot` (Task 2); `readSession`, `writeSession`, `Session` (Task 2); `UsageSweep.placeNow`, `UsageSweepPorts.placed` (Task 3).
-- Produces: `sessionStore(file: string, slotOf: (projectPath: string) => number): ClaudeSessions` with `takeResume(projectPath: string, index: number, id: string): ClaudeSlot | null` and `placed(byPane: ReadonlyMap<string, ClaudeSlot>): void`.
+- Consumes: `heldSlots`, `resumable`, `withClaude`, `resumeLine`, `ClaudeSlot` (Task 2);
+  `readSession`, `writeSession`, `Session` (Task 2); `UsageSweep.placeNow`, `UsageSweepPorts.placed`
+  (Task 3).
+- Produces: `sessionStore(file: string, slotOf: (projectPath: string) => number): ClaudeSessions`
+  with `takeResume(projectPath: string, index: number, id: string): ClaudeSlot | null` and
+  `placed(byPane: ReadonlyMap<string, ClaudeSlot>): void`.
 
 - [ ] **Step 1: Create `src/session-store.ts`**
 
@@ -627,7 +680,8 @@ import { sessionStore } from './session-store';
 import { resumeLine } from './claude-resume';
 ```
 
-Delete `const sessionFile = path.join(app.getPath('userData'), 'session.json');` and change the comment above it to "The recently opened projects live next to the app's other per-user state."
+Delete `const sessionFile = path.join(app.getPath('userData'), 'session.json');` and change the
+comment above it to "The recently opened projects live next to the app's other per-user state."
 
 In `spawnProject`, replace the loop body:
 
@@ -649,7 +703,8 @@ In the `usageSweep({ ... })` ports, replace the Task 3 stand-in with:
   placed: (byPane) => claudeSessions.placed(byPane),
 ```
 
-Replace the four lines from `// Read once at startup and written back whenever the layout changes` through the `session:write` handler with:
+Replace the four lines from `// Read once at startup and written back whenever the layout changes`
+through the `session:write` handler with:
 
 ```typescript
 // Read once at startup and written back whenever the layout changes or a pane's Claude session does,
@@ -679,8 +734,8 @@ with
 
 - [ ] **Step 3: Run the checks**
 
-Run: `npm test && npx tsc --noEmit && npx eslint . && grep -v '^\s*$' src/main.ts | grep -v '^\s*//' | wc -l`
-Expected: PASS, and the count is at most 600.
+Run: `npm test && npx tsc --noEmit && npx eslint . && grep -v '^\s*$' src/main.ts | grep -v
+'^\s*//' | wc -l` Expected: PASS, and the count is at most 600.
 
 - [ ] **Step 4: Commit**
 
@@ -726,7 +781,8 @@ git add src/help.ts package.json
 git commit -m "Say in the help that a restart resumes each pane's Claude session"
 ```
 
-- [ ] **Step 5: Hand to the person for the check by hand.** Do not launch, quit or install the app. Say the installed app needs a rebuild (`/rebuild`) and a restart, then:
+- [ ] **Step 5: Hand to the person for the check by hand.** Do not launch, quit or install the app.
+  Say the installed app needs a rebuild (`/rebuild`) and a restart, then:
   1. Open a project; run `claude` in terminal 2 and terminal 4 and send a message in each.
   2. Wait 30 seconds, quit, relaunch: both conversations are back in their own panes.
   3. Ship a card so a pane runs in a worktree; quit and relaunch: that pane resumes in the worktree.

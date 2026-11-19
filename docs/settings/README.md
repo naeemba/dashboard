@@ -37,11 +37,11 @@ pull request opens starts its review loop by itself. Enter turns it over. Off,
 the card waits in Review until you move it into Review or run `dashboard board
 review <id>` (docs/actions).
 
-The Review section's second row, Merge (`review.autoMerge`, default off), says whether that review loop
-merges the pull request once it and CI are green. Off, the review stops there
-and reports to the project's main, and you merge. A project's `autoMerge` in
-`~/.dashboard/projects.yaml` wins over this row (ship-decision-1,
-[projects](../projects/README.md)).
+The Review section's second row, Merge (`review.autoMerge`, default off), says
+whether that review loop merges the pull request once it and CI are green. Off,
+the review stops there and reports to the project's main, and you merge. A
+project's `autoMerge` in `~/.dashboard/projects.yaml` wins over this row
+(ship-decision-1, [projects](../projects/README.md)).
 
 The Updates row (`updates.check`, default on) says whether the app reads
 GitHub's newest release on launch and every six hours. Enter turns it over; off,
@@ -91,12 +91,18 @@ the pull request it came from may still be open.
 Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
 
 - `settings.ts`, `settings-store.ts`, `settings-rows.ts`, `settings-view.ts`
-- the app's writes go through settings.write and `budget --cap`'s through settings.cap, `src/main/actions/settings/` (docs/actions); a change on disk comes in through settings.adopt
+- the app's writes go through settings.write and `budget --cap`'s through
+  settings.cap, `src/main/actions/settings/` (docs/actions); a change on disk
+  comes in through settings.adopt
 
 ## Scenarios
 
-- Given a row is armed, when you press a key with modifiers, then that keystroke becomes the binding.
+- Given a row is armed, when you press a key with modifiers, then that keystroke
+  becomes the binding.
 - Given a setting left at its shipped default, when the file is saved, then the line is left out.
-- Given an old file holding a shipped default, when the app launches, then the launch tidy removes the line.
-- Given a font size the screen accepts, when the file is read back, then the same range check keeps it (errors-decision-1).
-- Given the app running, when `dashboard budget --cap 60` writes the file, then main and the window take it, and the next save keeps it.
+- Given an old file holding a shipped default, when the app launches, then the
+  launch tidy removes the line.
+- Given a font size the screen accepts, when the file is read back, then the
+  same range check keeps it (errors-decision-1).
+- Given the app running, when `dashboard budget --cap 60` writes the file, then
+  main and the window take it, and the next save keeps it.

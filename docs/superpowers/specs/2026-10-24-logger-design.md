@@ -30,8 +30,10 @@ worktree). It is read in a fifth section of the manager.
 
 - `src/log-entry.ts`, shared and pure, beside `log-entry.test.ts`: the types,
   `parseLogLine(line)` (an entry or `undefined`), `logFileNames(base, count)`
-  (the five file names, live first: the rename order), `needsRotation(currentSize, appendSize, limit)`, and
-  `matchesLogFilter(entry, query)`: every word of the query appears in the level, kind, project or message.
+  (the five file names, live first: the rename order),
+  `needsRotation(currentSize, appendSize, limit)`, and `matchesLogFilter(entry,
+  query)`: every word of the query appears in the level, kind, project or
+  message.
 - `src/log-store.ts`, main only: `log(draft)` and `tail(count)`. Writes are
   synchronous: main is one thread, so two entries cannot interleave and no
   rotation runs twice. A write that fails is written to stderr and
