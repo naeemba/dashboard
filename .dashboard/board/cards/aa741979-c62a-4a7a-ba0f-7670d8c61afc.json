@@ -1,0 +1,11 @@
+{
+  "id": "aa741979-c62a-4a7a-ba0f-7670d8c61afc",
+  "title": "pnpm check prints a three-line summary, and lint holds markdown line width",
+  "notes": "From the retro over the 10 worker sessions for #325-#333 (2026-11-18).\n1. pnpm test | tail -5 ends on vitest's 'Isolate ... workers spawned' lines, so 5 sessions ran the whole suite twice to see the summary. Add a pnpm check script that runs test, typecheck and lint, writes the full output to a log file (path printed), and prints one summary line per check (pass/fail and counts). Point CLAUDE.md's Checks block and the work-card skill at it.\n2. A review round on #331 went to rewrapping markdown lines twice. Add a markdown line-width check to pnpm lint, at the width the docs already use (measure it; pick the width nearly all of docs/ already meets, and fix the few lines over it in the same PR). Code blocks, tables and URLs are exempt.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-19T09:25:45.354Z",
+  "updatedAt": "2026-11-19T09:25:45.354Z",
+  "column": "Backlog",
+  "order": 53
+}
