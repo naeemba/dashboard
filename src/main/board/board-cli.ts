@@ -203,9 +203,7 @@ export function formatList(board: Board, columns: readonly number[] = board.colu
 // The body is indented two spaces so that only a separator ever sits hard against the left margin: a
 // comment recording a diff hunk starts its line `--- a/src/board.ts`, and unindented it would read
 // back as another entry, dated `a/src/board.ts`.
-function formatCard(board: Board, selection: Selection): string {
-  const column = board.columns[selection.column].name;
-  const card = board.columns[selection.column].cards[selection.card];
+function formatCard(board: Board, column: string, card: Card): string {
   const flight = flightParts(card);
   const subtasks = board.columns.flatMap(({ name, cards }) => cards
     .filter((child) => child.parent === card.id)
@@ -306,7 +304,8 @@ export function runBoardCommand(
     if (extra.length > 0) return { ok: false, message: 'show takes nothing after the id' };
     const selection = findCard(board, id);
     if ('message' in selection) return { ok: false, message: selection.message };
-    return { ok: true, output: formatCard(board, selection), board: null };
+    const column = board.columns[selection.column];
+    return { ok: true, output: formatCard(board, column.name, column.cards[selection.card]), board: null };
   }
 
   if (command === 'comment') {

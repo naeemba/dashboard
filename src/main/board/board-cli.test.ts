@@ -400,9 +400,13 @@ describe('show', () => {
     const withChild = boardAfter(described, 'add', 'Child', '--column', 'Todo');
     const child = allCards(withChild).find((card) => card.title === 'Child')!;
     child.parent = id;
-    const result = run(withChild, 'show', id);
+    // Another card's subtask on the same board: only the shown card's own children are listed.
+    const withStray = boardAfter(withChild, 'add', 'Grandchild', '--column', 'Todo');
+    allCards(withStray).find((card) => card.title === 'Grandchild')!.parent = child.id;
+    const result = run(withStray, 'show', id);
     if (!result.ok) throw new Error(result.message);
     expect(result.output).toContain(`the why\n\nSubtasks\n  Todo  ${child.id}  Child`);
+    expect(result.output).not.toContain('Grandchild');
   });
 
   it('prints no Subtasks block for a card with none', () => {

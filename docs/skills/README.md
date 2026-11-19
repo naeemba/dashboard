@@ -51,8 +51,9 @@ aside).
 What a shipped card's agent is started on: `/work-card <card id> bump-version|keep-version <base branch>`
 ([ship](../ship/README.md)). It reads the card and its subtasks (the `Subtasks` block `board show`
 prints) and the project's `CLAUDE.md`, does the work, runs the project's checks and opens the pull
-request. It finds code with codegraph from the project's checkout, updates docs by grep, and writes
-the card's `history.md` line in the card's commit, with no pull request number. The checks are the ones `CLAUDE.md`
+request. It finds code with codegraph from the project's checkout (whose source can lag the
+worktree, so it reads a file before changing it) and, in a project with `docs/<feature>/`, updates
+docs by grep and writes the card's `history.md` line in the card's commit, with no pull request number. The checks are the ones `CLAUDE.md`
 names, else the project's test, type-check and lint scripts. The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
 `bump-version` tells it to bump last, from `origin/<base branch>` (the third word, the branch the
