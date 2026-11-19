@@ -708,6 +708,14 @@ describe('reviewSweep', () => {
     expect(log.started).toEqual([]);
   });
 
+  it('answers with the refusal when the start the follow made was refused, trying no second start', async () => {
+    const { entry } = flight(null);
+    const refused = { refused: 'Ship it  →  Review; the worktree has changes nobody committed' };
+    const { ports: made, log } = ports(entry, { follow: async () => refused });
+    await expect(reviewSweep(made).review(CARD)).resolves.toEqual(refused);
+    expect(log.started).toEqual([]);
+  });
+
   it('refuses as before when gh cannot answer the follow, asking it once', async () => {
     const { entry } = flight(null);
     let asked = 0;
