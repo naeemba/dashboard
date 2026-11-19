@@ -5,13 +5,17 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-19T09:35:26.263Z",
-  "updatedAt": "2026-11-19T10:37:53.003Z",
+  "updatedAt": "2026-11-19T10:50:49.719Z",
   "branch": "board-review-looks-for-the-card-s-pull-requ",
   "pullRequest": 337,
   "comments": [
     {
       "at": "2026-11-19T10:37:52.976Z",
       "body": "Pull request #337 opened: board review looks for the card's pull request before refusing https://github.com/naeemba/dashboard/pull/337"
+    },
+    {
+      "at": "2026-11-19T10:50:49.719Z",
+      "body": "PR #337 review loop: converged, ready to merge. 1 round, floor-addressed: 2 low findings (refused-follow test in review-flow.test.ts, card.follow callers line in docs/actions/README.md) fixed in 0c1c9922, no re-review after. No conflict with main. CI 5/5 passed on head 0c1c9922."
     }
   ],
   "column": "Review",
