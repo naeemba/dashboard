@@ -23,8 +23,8 @@ project `/adopt-docs` reaches afterwards gets the old pattern. (skills-decision-
 Run `pnpm check` and read its summary; the reason a check failed is in the log
 it names, so never run a check again to see the end of it.
 
-`pnpm install` turns on a pre-commit hook that runs eslint on the staged code and
-the typecheck (workflow-rule-5).
+`pnpm install` turns on a pre-commit hook that runs eslint on the staged code,
+the typecheck, and the markdown width on the staged markdown (workflow-rule-5).
 
 There is no DOM test environment: jsdom is not installed and nothing in `src/`
 declares one. A `*.test.ts` can test a decision module, never a view. DOM

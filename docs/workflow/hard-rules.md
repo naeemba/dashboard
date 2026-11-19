@@ -80,8 +80,9 @@ imported into a `*.test.ts` or `*-fixture.ts` under `src/`, and
 
 ## workflow-rule-5: A commit runs eslint and the typecheck first
 
-`.githooks/pre-commit` runs eslint on the staged `.ts`/`.js` files and `tsc --noEmit` on the whole
-project, and refuses the commit on either failure. `pnpm install` points `core.hooksPath` at
+`.githooks/pre-commit` runs eslint on the staged `.ts`/`.js` files, `tsc --noEmit` on the whole
+project and the markdown width on the staged markdown (workflow-decision-11), and refuses the commit
+on any failure. `pnpm install` points `core.hooksPath` at
 `.githooks` (the `prepare` script), so every worktree of the checkout gets it. Before it, `tsc
 --noEmit` ran only in CI and a worker found "'wholePath' is defined but never used" mid-edit, a
 round trip after it had committed.

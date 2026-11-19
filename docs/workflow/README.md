@@ -42,10 +42,11 @@ checkout's top (ignored as `*.log`), and prints one line each and the log's path
     Full output: /…/dashboard/check.log
 
 It exits non-zero when one failed, and the reason is in the log: there is no need to run a check
-again to see the end of it. `pnpm lint` is eslint, then a line-width check of every tracked
-markdown file but `CHANGELOG.md` and `.dashboard/`: no line over 100 characters, apart from code
-blocks, headings, table rows, front matter and lines holding a URL (workflow-decision-11). A file
-wraps at 80 or at 100; rewrap to the width around the change.
+again to see the end of it. `pnpm lint` (`scripts/lint-step.mjs`) is eslint and, even when eslint
+fails, a line-width check of every tracked markdown file but `CHANGELOG.md` and `.dashboard/`: no
+line over 100 characters, apart from code blocks, headings, table rows, front matter and lines
+holding a URL (workflow-decision-11). The pre-commit hook runs the same check on the staged
+markdown. A file wraps at 80 or at 100; rewrap to the width around the change.
 
 `pnpm test` runs in a temporary folder of its own: the guard points
 `TMPDIR` (`TEMP` and `TMP` on Windows) at a fresh `vitest-…` folder before any test file starts, so
