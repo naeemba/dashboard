@@ -3,7 +3,7 @@ import { APP_SESSION_SETTINGS, BOARD_INSTRUCTIONS, mainPrompt, mainSessionName }
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { peerSender, turnUnderWay } from '../../shared/chat/chat-events';
-import { execFile } from 'node:child_process';
+import { loginShellPath } from '../app/shell-path';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
@@ -108,24 +108,6 @@ type Session = {
   // The scope its Claude runs in, for the memory readout; the host's answer for a hosted one.
   unit: string | null;
 };
-
-// The PATH a pane's shell builds from its startup files, which the app itself never read when it was
-// started from a launcher: without it a hook running `node` or an MCP server started with `npx` works
-// for `claude` typed in a pane and not here. An interactive shell may print a banner first, so the
-// PATH is the last line; anything that goes wrong leaves the app's own.
-export function pathFromShell(output: string, fallback: string): string {
-  return output.split('\n').pop()?.trim() || fallback;
-}
-
-function loginShellPath(fallback: string): Promise<string> {
-  const shell = process.env.SHELL;
-  if (!shell || process.platform === 'win32') return Promise.resolve(fallback);
-  return new Promise((resolve) => {
-    execFile(shell, ['-ilc', 'printf %s "$PATH"'], { timeout: 5000, encoding: 'utf8' }, (error, output) => {
-      resolve(error ? fallback : pathFromShell(output, fallback));
-    });
-  });
-}
 
 // The messages the pane reads. The rest — a hook's progress lines (it is named when it starts), task
 // updates, and of the streamed events everything but a block starting, text, thinking or tool input

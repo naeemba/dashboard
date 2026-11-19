@@ -29,5 +29,7 @@ One line per merged change: date and why.
   finished card back in Ship (ship-decision-3)
 - 2026-11-17 — A review start without `/pr-loop` installed is refused with the install line; a stale
   install is a notice (ship-decision-4)
+- 2026-11-19 — A new worktree gets the frozen install its lockfile names, so its agent can run the
+  checks at once
 - 2026-11-19 — The review prompt says `pr land`'s `merged <n> at <sha>` line is the merge, so the
   worker runs no `gh pr view` after it

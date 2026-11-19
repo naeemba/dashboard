@@ -61,3 +61,5 @@ One line per merged change: date and why.
   `pane finish` does, without waiting for a card or its grace period (workers-decision-1)
 - 2026-11-16 — A card worker the finished-worker sweep closes still gets its review: the review
   start that found it at work no longer leaves its card marked as tried
+- 2026-11-19 — Main's prompt names `dashboard --version` for the installed build, and every session
+  may run it

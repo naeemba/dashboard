@@ -54,15 +54,19 @@ a cancelled card is not stalled, and the release notes' What's new lists only Do
 
 There is a Ship column, just right of Todo. Moving a card into it — Shift with either arrow, a drop
 from either side, or `dashboard board move <id> Ship` — hands it to an agent, and
-`dashboard board ship <id>` does the same without the move. A card in Done moves only by dragging
-it: Shift with an arrow on it is refused with an error naming the card, since the highlight may be
-on the wrong one (board-decision-3). The app refuses if the project has anything uncommitted outside
-.dashboard/, fetches and branches off the project's base branch, makes a worktree in a folder beside
-the project, and starts an agent in a worker that is sitting at a prompt with nothing running in it,
-or in a new worker when none is. The agent is a Claude screen in that pane, as a worker main
-dispatches is, except on Windows, where it is Claude Code in the terminal; the review pane below is
-the same (workers-decision-8). Main is never taken. A pane still standing in an earlier card's
-worktree is taken last, since its transcript is still on screen.
+`dashboard board ship <id>` does the same without the move. The command answers only once the
+project's packages are installed in the card's worktree, minutes for a cold `npm ci`, so main gives
+it a ten-minute timeout (600000 ms) as it does `pane run --worktree`
+([workers](../workers/README.md)). `board review <id>` and a move into Review wait for the same
+install, since a review makes the worktree again, and the board's usage says so. A card in Done
+moves only by dragging it: Shift with an arrow on it is refused with an error naming the card, since
+the highlight may be on the wrong one (board-decision-3). The app refuses if the project has
+anything uncommitted outside .dashboard/, fetches and branches off the project's base branch, makes
+a worktree in a folder beside the project, and starts an agent in a worker that is sitting at a
+prompt with nothing running in it, or in a new worker when none is. The agent is a Claude screen in
+that pane, as a worker main dispatches is, except on Windows, where it is Claude Code in the
+terminal; the review pane below is the same (workers-decision-8). Main is never taken. A pane still
+standing in an earlier card's worktree is taken last, since its transcript is still on screen.
 
 Only what is in the foreground counts as running, and the pane it takes is
 restarted in the worktree: a line you typed but never submitted goes with it,
@@ -107,18 +111,18 @@ If git refuses, because something in it is uncommitted, the card says so and the
 worktree waits for you on the worktree list. A card already past Review is never
 reviewed again.
 
-With the settings screen's Review row off (`review.autoLoop` in settings.json),
-a card whose pull request opens is moved into Review and waits there. Moving
-a card into Review yourself, with Shift and an arrow, a drop or
-`dashboard board move <id> Review`, starts its review loop whatever the setting, and so does
-`dashboard board review <id>`; a card with no worktree, no pull request yet, an agent still working,
-a card gone from the board, or a card already past Review is refused, and the status bar or the
-command says why. What entering a column starts is one table for the board, the command and the app
-(docs/actions). The card lands in Review either way, and carries a comment when the worktree could
-not be swapped, since nothing was waiting on screen to be told. Something left uncommitted in it is
-the one of those that mends itself: git will not give up a worktree with a change in it, so the app
-asks again every few seconds and the review starts on its own the moment that change is committed.
-Every other reason is asked once and the comment is the end of it.
+With the settings screen's Review row off (`review.autoLoop` in settings.json), a card whose pull
+request opens is moved into Review and waits there. Moving a card into Review yourself, with Shift
+and an arrow, a drop or `dashboard board move <id> Review`, starts its review loop whatever the
+setting, and so does `dashboard board review <id>`; a card with no worktree, no pull request the app
+has seen yet (it moves the card into Review once it sees one open, and the refusal says so), an
+agent still working, a card gone from the board, or a card already past Review is refused, and the
+status bar or the command says why. What entering a column starts is one table for the board, the
+command and the app (docs/actions). The card lands in Review either way, and carries a comment when
+the worktree could not be swapped, since nothing was waiting on screen to be told. Something left
+uncommitted in it is the one of those that mends itself: git will not give up a worktree with a
+change in it, so the app asks again every few seconds and the review starts on its own the moment
+that change is committed. Every other reason is asked once and the comment is the end of it.
 
 ### The column follows the pull request
 

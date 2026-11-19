@@ -53,7 +53,9 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
---worktree in a throwaway one that release removes once its work is pushed with a pull request open,
+--worktree in a throwaway one that release removes once its work is pushed with a pull request open
+(run answers once the project's packages are installed there, which can take minutes: give it a
+ten-minute timeout, 600000 ms),
 --in in a folder that is already there, inside the project or a worktree of its repository (one on
 a branch you keep yourself), which nothing makes or removes, and none of them in the project itself.
 The worker is a Claude screen; --terminal runs Claude Code in the

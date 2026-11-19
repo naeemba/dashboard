@@ -24,7 +24,9 @@ of the board of the folder you are in.
 ship, review and a move into Ship or Review ask the running app, starting it when none answers: a move
 into Ship ships the card to an agent in a worktree, and one into Review starts its review loop. ship
 and review start them without a move; review is how to start a loop with the review.autoLoop setting
-off. On a worktree's board a move is only a move. Everything else edits the board's files alone.
+off. Each answers only once the project's packages are installed in the card's worktree, which can
+take minutes: give those Bash calls a ten-minute timeout (600000 ms). On a worktree's board a move is
+only a move. Everything else edits the board's files alone.
 
 A board git tracks is read and written on origin's default branch, from the project or any worktree,
 and the project's checkout is brought up to it. Offline, it is written here, with a warning. So no git

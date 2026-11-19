@@ -300,6 +300,10 @@ describe('the command itself', () => {
     expect(run(emptyBoard())).toEqual({ ok: true, output: USAGE, board: null });
   });
 
+  it('tells a caller to wait ten minutes for ship, review and a move into Ship or Review', () => {
+    expect(USAGE).toContain('ten-minute timeout (600000 ms)');
+  });
+
   it('prints the usage after refusing a command it does not have', () => {
     const result = run(emptyBoard(), 'delete', 'whatever');
     expect(result.ok).toBe(false);

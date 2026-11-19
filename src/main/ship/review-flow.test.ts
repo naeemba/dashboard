@@ -671,7 +671,7 @@ describe('reviewSweep', () => {
       .resolves.toEqual({ refused: 'the agent on "Ship it" is still working' });
     const early = flight(null);
     await expect(reviewSweep(ports(early.entry).ports).review(CARD))
-      .resolves.toEqual({ refused: '"Ship it" has no pull request on ship-it yet' });
+      .resolves.toMatchObject({ refused: expect.stringMatching(/^"Ship it": the app has not seen a pull request on ship-it yet; it moves the card into Review/) });
     await expect(reviewSweep(ports(early.entry).ports).review('other'))
       .resolves.toEqual({ refused: 'card other has no worktree to review; ship it first' });
     const twice = flight(12);

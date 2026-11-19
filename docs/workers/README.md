@@ -73,9 +73,12 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given the command and the running app are different builds, when a worker's
   hook runs `session notify <id> done`, then the app still takes it and the pane
   goes green (workers-decision-4).
-- Given a request the app has taken, when its answer takes longer than 5 seconds
-  (a `pane run --card` making its worktree), then the command keeps waiting and
-  prints the answer.
+- Given a request the app has taken, when its answer takes longer than 5 seconds (a
+  `pane run --card` making its worktree), then the command keeps waiting and prints the answer. A
+  `pane run --worktree` answers only once the project's packages are installed in the new worktree
+  (worktree.make, [ship](../ship/README.md)), minutes for a cold `npm ci`, so main's prompt and its
+  usage tell main to give the call a ten-minute timeout (600000 ms) rather than Bash's two-minute
+  default, which would report a failure for a worker that then starts anyway.
 - Given the pane shell is Windows PowerShell, when main dispatches a task whose
   prompt holds double quotes, then the worker starts with its --settings JSON
   and its prompt exactly as they were written.

@@ -37,4 +37,6 @@ One line per merged change: date and why.
   for its merge of main (board-decision-8)
 - 2026-11-18 #327 — `board list` leaves out Done and Cancelled, a unique start of an id names its
   card, and the usage says no git pull is needed (board-decision-8)
+- 2026-11-19 — A review refused before the app has seen the pull request says the card moves into
+  Review once it does
 - 2026-11-19 — `board show` lists the card's subtasks, since `list` prints no parent
