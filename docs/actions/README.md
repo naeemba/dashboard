@@ -26,10 +26,12 @@ Neither door holds any of the logic; each only asks.
   a card on a project open in the app.
 - **card.review** (`dashboard board review <id>`): the review start in
   `review-flow.ts` — the worktree swapped for a review one and `/pr-loop`
-  started in it. Refused for a card with no worktree, no pull request on its
-  branch's board, an agent still working, a review already running, or a card
-  past Review. One started this way that meets a dirty worktree is started
-  again by the sweep once the commit lands, whatever the setting.
+  started in it. A card with no pull request recorded runs card.follow first,
+  so one opened since the sweep last asked gh is found. Refused for a card
+  with no worktree, no pull request on its branch, an agent still working, a
+  review already running, or a card past Review. One started this way that
+  meets a dirty worktree is started again by the sweep once the commit lands,
+  whatever the setting.
 
 - **card.start**: a card whose agent has just been given its pane: its branch
   written and the card into Doing, unless it is there or past it. No door of

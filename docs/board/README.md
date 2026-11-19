@@ -114,10 +114,12 @@ reviewed again.
 With the settings screen's Review row off (`review.autoLoop` in settings.json), a card whose pull
 request opens is moved into Review and waits there. Moving a card into Review yourself, with Shift
 and an arrow, a drop or `dashboard board move <id> Review`, starts its review loop whatever the
-setting, and so does `dashboard board review <id>`; a card with no worktree, no pull request the app
-has seen yet (it moves the card into Review once it sees one open, and the refusal says so), an
-agent still working, a card gone from the board, or a card already past Review is refused, and the
-status bar or the command says why. What entering a column starts is one table for the board, the
+setting, and so does `dashboard board review <id>`. A start that finds no pull request on the card
+asks gh for it first, as the pull request sweep would on its next check, so the review of a pull
+request opened a moment ago is not refused. A card with no worktree, no pull request on its branch
+(it moves the card into Review once one opens, and the refusal says so), an agent still working, a
+card gone from the board, or a card already past Review is refused, and the status bar or the
+command says why. What entering a column starts is one table for the board, the
 command and the app (docs/actions). The card lands in Review either way, and carries a comment when
 the worktree could not be swapped, since nothing was waiting on screen to be told. Something left
 uncommitted in it is the one of those that mends itself: git will not give up a worktree with a
