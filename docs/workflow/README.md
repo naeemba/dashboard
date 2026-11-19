@@ -42,10 +42,13 @@ checkout's top (ignored as `*.log`), and prints one line each and the log's path
     Full output: /…/dashboard/check.log
 
 It exits non-zero when one failed, and the reason is in the log: there is no need to run a check
-again to see the end of it. `pnpm lint` (`scripts/lint-step.mjs`) is eslint and, even when eslint
-fails, a line-width check of every tracked markdown file but `CHANGELOG.md` and `.dashboard/`: no
-line over 100 characters, apart from code blocks, headings, table rows, front matter and lines
-holding a URL (workflow-decision-11). The pre-commit hook runs the same check on the staged
+again to see the end of it. A check that died before counting anything (a missing module, a broken
+config) says `no test count`, `no error count` or `no problem count` instead of a count of 0.
+
+`pnpm lint` (`scripts/lint-step.mjs`) is eslint and, even when eslint fails, a line-width check of
+every tracked markdown file but `CHANGELOG.md` and `.dashboard/`: no line over 100 characters, apart
+from code blocks, headings, table rows, front matter and lines holding a URL
+(workflow-decision-11). The pre-commit hook runs the same check on the staged
 markdown. A file wraps at 80 or at 100; rewrap to the width around the change.
 
 `pnpm test` runs in a temporary folder of its own: the guard points
@@ -91,9 +94,9 @@ started (workflow-decision-5).
 - Given a card's pull request, when it merges, then `package.json` `version` has not moved in it,
   and the build it makes shows the merged commit.
 - Given a pull request whose diff against its base changes a file under `.dashboard/board/` or the
-  old `.dashboard/board.json`, when CI runs, then it fails naming the files and giving the `git
-  restore` from the merge-base that leaves the branch with no board change; `.dashboard/CLAUDE.md`
-  and `README.md` go through.
+  old `.dashboard/board.json`, when CI runs, then it fails naming the files and giving the
+  `git restore` from the merge-base that leaves the branch with no board change;
+  `.dashboard/CLAUDE.md` and `README.md` go through.
 - Given a fresh checkout on Windows, when `pnpm start`, `pnpm run package` or `pnpm run make` runs,
   then node-pty's prebuilt binary is copied into `build/Release`, nothing is compiled, and the
   package carries conpty and winpty beside `pty.node`.
@@ -165,9 +168,9 @@ started (workflow-decision-5).
   commit message naming any of these go through (`running-app-guard.test.ts`).
 - Given an agent in any Claude session the board guard reaches, in a project whose lockfile is
   `pnpm-lock.yaml`, when it runs `npm install`, `npm ci` or `yarn add`, then the call is refused
-  naming the lockfile and saying to install with pnpm; `pnpm install`, `npm test`, `bun test`, `npm
-  version --no-git-tag-version`, `npx`, `npm i -g x`, `pnpm dlx x`, and a commit message naming `npm
-  install` go through; in a monorepo package with its own lockfile, that one names the manager;
+  naming the lockfile and saying to install with pnpm; `pnpm install`, `npm test`, `bun test`,
+  `npm version --no-git-tag-version`, `npx`, `npm i -g x`, `pnpm dlx x`, and a commit message naming
+  `npm install` go through; in a monorepo package with its own lockfile, that one names the manager;
   outside a repository nothing is refused (`package-manager-guard.test.ts`).
 - Given an agent in any Claude session the board guard reaches, when it runs `git worktree remove`
   of the folder it runs in (`.`, `"$PWD"`, its path, `cd .. && git worktree remove <name>`), or an

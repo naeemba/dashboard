@@ -31,6 +31,10 @@ describe('longLines', () => {
     expect(longLines(`\`\`\`\`md\n\`\`\`\n${long}\n\`\`\`\n\`\`\`\`\n`, 100)).toEqual([]);
   });
 
+  it('closes a fence only on its own character', () => {
+    expect(longLines(`~~~\n\`\`\`\n${long}\n~~~\n${long}\n`, 100)).toEqual([{ line: 5, length: 149 }]);
+  });
+
   it('exempts an indented code block, but not a list item\'s indented second line', () => {
     expect(longLines(`Run it:\n\n    ${long}\n\n    ${long}\n`, 100)).toEqual([]);
     expect(longLines(`- item\n    ${long}\n`, 100)).toEqual([{ line: 2, length: 153 }]);
@@ -38,6 +42,10 @@ describe('longLines', () => {
 
   it('exempts the front matter', () => {
     expect(longLines(`---\ndescription: ${long}\n---\n\nBody\n`, 100)).toEqual([]);
+  });
+
+  it('reads a CRLF file the same, front matter and width', () => {
+    expect(longLines(`---\r\ndescription: ${long}\r\n---\r\n\r\n${'x'.repeat(100)}\r\n`, 100)).toEqual([]);
   });
 });
 

@@ -24,4 +24,10 @@ describe('summaryLine', () => {
     expect(summaryLine('lint', output, false)).toBe('lint       FAIL  4 problems');
     expect(summaryLine('lint', '', true)).toBe('lint       pass  0 problems');
   });
+
+  it('says so when tsc or eslint failed before counting anything', () => {
+    const output = "Error: Cannot find module 'eslint/bin/eslint.js'\n";
+    expect(summaryLine('typecheck', output, false)).toBe('typecheck  FAIL  no error count');
+    expect(summaryLine('lint', output, false)).toBe('lint       FAIL  no problem count');
+  });
 });
