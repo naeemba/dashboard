@@ -153,6 +153,8 @@ describe('reviewPrompt', () => {
     expect(prompt).toContain('run_in_background, timeout 7200000');
     expect(prompt).toContain('stopped at that time limit has not failed');
     expect(prompt).toContain('a land that prints `nothing is merged, run it again`');
+    // Workers ran `gh pr view` after the land's own line to check a merge that line already said.
+    expect(prompt).toContain('printing `merged 12 at <sha>`, is merged: that line is gh\'s merge itself');
     expect(prompt).not.toMatch(/gh pr merge 12|--match-head-commit|gh pr checks 12 --watch/);
   });
 
