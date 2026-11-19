@@ -1,0 +1,11 @@
+{
+  "id": "c23ea79a-96cb-4eb2-a089-8eba8076219e",
+  "title": "Main brings a review loop's design change to the user before landing",
+  "notes": "Retro 2026-11-19: on #329 the review loop replaced the card's rule (merge with no checks only when the repo has no workflows) with a heuristic (sample the last 20 merged PRs), and main landed it reporting only a status line. Add one sentence to main's prompt (src/main/workers/dispatch.ts, the part about worker reports and landing): when a worker's report says the review loop changed what the card asked for, or its design, main asks the user before landing instead of relaying it. Keep it one sentence; a test pins the prompt text if one does today.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-19T11:04:49.415Z",
+  "updatedAt": "2026-11-19T11:04:49.415Z",
+  "column": "Backlog",
+  "order": 51
+}
