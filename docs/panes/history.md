@@ -18,11 +18,19 @@ One line per merged change: date and why.
 - 2026-10-22 #79 — Strip trailing spaces so a path Claude Code cut is joined back whole
 - 2026-10-30 #92 — Keep the main pane half the terminals view after a worker is zoomed
 - 2026-11-01 #144 — A dropped file with no path on disk types nothing, not `''`
-- 2026-11-02 #179 — Hidden projects stop drawing their terminals: off screen, and xterm's selection redraw held while paused
-- 2026-11-02 #195 — A program's words are escaped for Windows PowerShell 5.1, which passes double quotes through bare
-- 2026-11-04 #204 — The pane host runs on Windows, over a named pipe named after a secret token, so panes survive a restart there too
-- 2026-11-07 #228 — The new-pane button is two halves, New Terminal and New Claude, each with its key (workers-decision-7)
-- 2026-11-09 #283 — A pane host starting leaves the socket to one already answering on it (workers-decision-6)
-- 2026-11-16 #289 — A pane whose shell systemd-run is still starting reads as at its prompt, not running systemd-run
-- 2026-11-16 #303 — The editor is kept by the pane host, kept shells no page takes back are ended, and so are an older host's
-- 2026-11-16 #313 — A shown terminal skips xterm's selection redraw on scroll when nothing is selected
+- 2026-11-02 #179 — Hidden projects stop drawing their terminals: off screen, and xterm's selection
+  redraw held while paused
+- 2026-11-02 #195 — A program's words are escaped for Windows PowerShell 5.1, which passes double
+  quotes through bare
+- 2026-11-04 #204 — The pane host runs on Windows, over a named pipe named after a secret token, so
+  panes survive a restart there too
+- 2026-11-07 #228 — The new-pane button is two halves, New Terminal and New Claude, each with its
+  key (workers-decision-7)
+- 2026-11-09 #283 — A pane host starting leaves the socket to one already answering on it
+  (workers-decision-6)
+- 2026-11-16 #289 — A pane whose shell systemd-run is still starting reads as at its prompt, not
+  running systemd-run
+- 2026-11-16 #303 — The editor is kept by the pane host, kept shells no page takes back are ended,
+  and so are an older host's
+- 2026-11-16 #313 — A shown terminal skips xterm's selection redraw on scroll when nothing is
+  selected

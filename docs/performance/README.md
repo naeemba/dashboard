@@ -20,13 +20,13 @@ Folder: `scripts/performance/`.
   9434 (main).
 - `demo-instance.mjs`: what the measurements are built from. It covers the
   DevTools protocol client, key presses, CPU and private memory per process from
-  `/proc` (the pane host's too, found by its socket folder), keystroke-echo latency, and input-to-paint from the Event Timing API.
-  `withInstance` refuses to start while anything answers on 9433 or 9434, which
-  would be an earlier run's instance, or another process's inspector, with
-  every number read off it. Afterwards it
-  kills the whole demo, Ctrl+C included. That covers the process group, anything
-  carrying the demo's `--user-data-dir`, and every pane process with the demo's
-  HOME, since panes run in sessions of their own.
+  `/proc` (the pane host's too, found by its socket folder), keystroke-echo
+  latency, and input-to-paint from the Event Timing API. `withInstance` refuses
+  to start while anything answers on 9433 or 9434, which would be an earlier
+  run's instance, or another process's inspector, with every number read off it.
+  Afterwards it kills the whole demo, Ctrl+C included. That covers the process
+  group, anything carrying the demo's `--user-data-dir`, and every pane process
+  with the demo's HOME, since panes run in sessions of their own.
 - `measure.mjs`: one command per measurement, each printing a JSON line per step.
 - `calculations.mjs`: the parts that decide something (which process is the
   demo's, what a chord sends, quantiles, the source-map split), pinned by
@@ -112,8 +112,11 @@ To see the usage sweep inside the app, copy some large `.jsonl` files into
 
 ## Scenarios
 
-- Given a fix to a finding in history.md, when its measurement is rerun on the same machine, then the new number goes in a new dated section beside the old one.
-- Given the installed app is running, when any measurement runs, then the installed app's windows, ports and user data are untouched.
+- Given a fix to a finding in history.md, when its measurement is rerun on the
+  same machine, then the new number goes in a new dated section beside the old
+  one.
+- Given the installed app is running, when any measurement runs, then the
+  installed app's windows, ports and user data are untouched.
 
 ## Open questions
 

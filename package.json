@@ -13,9 +13,10 @@
     "premake": "node scripts/no-running-app.mjs && node scripts/node-pty-built.mjs",
     "make": "electron-forge make",
     "release": "electron-forge release",
-    "lint": "eslint .",
+    "lint": "node scripts/lint-step.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check": "node scripts/check-step.mjs",
     "prepare": "git config core.hooksPath .githooks"
   },
   "keywords": [],

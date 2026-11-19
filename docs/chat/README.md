@@ -1,9 +1,9 @@
 # Chat
 
-The Claude screen: the project's main session, an Agent SDK `query()` kept
-open per project and drawn as HTML over a prompt box. It asks for tool
-permissions itself, runs slash commands, rewinds to an earlier prompt, and shows images, PDFs and the agents
-Claude has running.
+The Claude screen: the project's main session, an Agent SDK `query()` kept open
+per project and drawn as HTML over a prompt box. It asks for tool permissions
+itself, runs slash commands, rewinds to an earlier prompt, and shows images,
+PDFs and the agents Claude has running.
 
 ## On screen
 
@@ -184,16 +184,17 @@ nothing to show (chat-decision-17).
 A running workflow's strip row also carries a bar and how many of its agents
 have ended of those started, `▰▰▰▱▱▱▱▱▱▱ 3/10 agents`, beside its tokens and
 elapsed time. The workflow key (Alt+P) opens the picked workflow, or the first
-one in the strip with none picked, as does a click on its row: its phases, each marked done (✓), running (●)
-or not started (○) with its agents ended of started, and under the picked phase
-its agents with their model, tool calls, tokens and time. The arrows walk the
-phases and a last row, Stop the workflow, which Enter stops; a click on a row
-picks it and does what Enter does. The panel keeps up while the workflow runs,
-and once it ends says so and drops the stop row. The session sends this as a
-`workflow_progress` list on each task_progress about the workflow, a field the
-Agent SDK's types leave out; a session that sends none shows the row without a
-bar and the panel without phases. There is no pause: the SDK can stop a task but
-offers no way to pause one (chat-decision-16).
+one in the strip with none picked, as does a click on its row: its phases, each
+marked done (✓), running (●) or not started (○) with its agents ended of
+started, and under the picked phase its agents with their model, tool calls,
+tokens and time. The arrows walk the phases and a last row, Stop the workflow,
+which Enter stops; a click on a row picks it and does what Enter does. The panel
+keeps up while the workflow runs, and once it ends says so and drops the stop
+row. The session sends this as a `workflow_progress` list on each task_progress
+about the workflow, a field the Agent SDK's types leave out; a session that
+sends none shows the row without a bar and the panel without phases. There is no
+pause: the SDK can stop a task but offers no way to pause one
+(chat-decision-16).
 
 The row under the box holds what Claude Code's status line does: on the left the
 model, whether edits are asked about or accepted, the effort level (default
@@ -245,81 +246,260 @@ or view, is in view when you come back, and one scrolled up stays where it was.
 
 Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 
-- Main's half: `chat-sessions.ts`, `claude-process.ts` (the CLI it starts, in its systemd scope), `chat-commands.ts`, `chat-permission.ts`, `chat-elicitation.ts`,
-  `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`, `chat-export-target.ts`,
-  `chat-start.ts`, `chat-chrome.ts` (whether a session gets `--chrome`)
+- Main's half: `chat-sessions.ts`, `claude-process.ts` (the CLI it starts, in
+  its systemd scope), `chat-commands.ts`, `chat-permission.ts`,
+  `chat-elicitation.ts`, `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`,
+  `chat-export-target.ts`, `chat-start.ts`, `chat-chrome.ts` (whether a session
+  gets `--chrome`)
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
-  `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`, `chat-tags.ts`, `chat-reveal.ts`,
-  `chat-live-view.ts`, `chat-live-cut.ts`, `chat-stamp.ts`, `chat-screen-click.ts`
-- Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`, `foot-choices.ts`,
-  `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`, `chat-task-strip.ts`, `chat-task-commands.ts`,
-  `chat-agents.ts`, `chat-agents-view.ts`,
-  `chat-mentions.ts`, `chat-rewind.ts`, `chat-rewind-view.ts`, `chat-screen-commands.ts`,
-  `chat-screen-dispatch.ts`, `chat-attachments.ts`, `chat-attachment-keys.ts`,
-  `chat-line-editing.ts`,
-  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`, `chat-queue-view.ts`, `chat-btw-view.ts`,
-  `chat-hooks.ts`, `chat-export.ts`, `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
-  `chat-context.ts`, `chat-context-levels.ts`, `chat-context-view.ts`, `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`), `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
-  `src/shared/usage/cache-warmth.ts`); the popup it opens is `src/renderer/app/anchored-popup.ts`
-  with `popup-placement.ts`
+  `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`,
+  `chat-tags.ts`, `chat-reveal.ts`, `chat-live-view.ts`, `chat-live-cut.ts`,
+  `chat-stamp.ts`, `chat-screen-click.ts`
+- Around the box: `chat-ask-view.ts`, `chat-menu-view.ts`, `chat-foot-view.ts`,
+  `foot-choices.ts`, `chat-status.ts`, `chat-history.ts`, `chat-tasks.ts`,
+  `chat-task-strip.ts`, `chat-task-commands.ts`, `chat-agents.ts`,
+  `chat-agents-view.ts`, `chat-mentions.ts`, `chat-rewind.ts`,
+  `chat-rewind-view.ts`, `chat-screen-commands.ts`, `chat-screen-dispatch.ts`,
+  `chat-attachments.ts`, `chat-attachment-keys.ts`, `chat-line-editing.ts`,
+  `chat-mcp.ts`, `chat-mcp-view.ts`, `chat-rename.ts`, `chat-queue.ts`,
+  `chat-queue-view.ts`, `chat-btw-view.ts`, `chat-hooks.ts`, `chat-export.ts`,
+  `chat-export-view.ts`, `chat-workers-view.ts`, `chat-pane-links.ts`,
+  `chat-context.ts`, `chat-context-levels.ts`, `chat-context-view.ts`,
+  `chat-measure-refresh.ts` (with `src/renderer/app/single-flight.ts`),
+  `chat-first-show.ts`, `chat-cache-clock.ts` (the rule is
+  `src/shared/usage/cache-warmth.ts`); the popup it opens is
+  `src/renderer/app/anchored-popup.ts` with `popup-placement.ts`
 - Styles: `chat.css`; the foot row and its context popup in `chat-foot.css`
 
 ## Scenarios
 
-- Given a tool needs a yes, when the session asks, then a box over the prompt holds the question until you answer it.
-- Given main ran a worker with `pane run` (a Claude screen unless `--terminal`, or on Windows), when its pane is drawn, then it holds this same screen, run under the pane's own key in the worker's folder, conversation and hooks; /clear, /resume, /branch and /rewind are refused there, so it stays on the conversation it was started on (workers-decision-5). A Claude screen opened by hand with New Claude holds it too, and all four act on its own conversation (workers-decision-7).
-- Given Claude Code's config has `claudeInChromeDefaultEnabled: true`, when any Claude screen's session starts, then it has the Claude in Chrome tools, as claude typed in a pane does; with the setting off, absent, or the config unreadable, it has none. `CLAUDE_CODE_ENABLE_CFC` in the app's environment overrides the config either way: `0` leaves the tools out with the setting on, `1` brings them with it unset.
-- Given an MCP server asks for a form or a sign-in link, when the session passes it on, then the same box walks the form a field at a time, or opens the link, and every step can decline; a yes or no or a pick opens on the server's default, a typed answer outside the field's bounds keeps the box open saying what it takes, a required multi-select or a link that is not http(s) can only be declined, an optional multi-select can also be skipped, and Escape or the session ending reaches the server as a cancel, not a decline; the server's other dialogs are not declared, so Claude Code keeps its own fallback.
-- Given a turn is running, when you press Escape, then the turn is interrupted and any pending question is given up on: a tool call is declined, a server form cancelled.
-- Given the app restarts, when you send the next prompt, then the project's conversation is resumed from `chat-sessions.json`.
-- Given the app launches with five projects, when you have shown none of their Claude screens, then no project runs a `claude` CLI; showing one starts that page's session and its status line fills in, and a page one of main's workers came back on starts at launch so the worker's report has somewhere to arrive.
-- Given a conversation is under way, when you send `/branch`, then the page carries on in a copy of it and the original stays in `/resume`.
-- Given you type `/model` with a name the session does not offer, when you send it, then it is refused and not saved.
-- Given a long conversation at its end on a worker screen, when `pane send` gives it a prompt and the reply arrives while another page or view is in front, then coming back shows the reply at the bottom, not the log stopped at the prompt; a log you scrolled up stays where you left it.
-- Given Claude is working, when you send a message, then it waits grey under the conversation until the session takes it, and Up in the empty box takes it back.
-- Given a message names a PDF, when it is drawn, then it is a tile that opens in the built-in viewer.
-- Given you type `/effort high`, when you send it, then the next turn runs at high and the foot says `high effort`; `ultrathink` in a prompt shows in the foot while its turn runs.
-- Given the foot reads `Opus 5.5 · auto mode · default effort`, when you click `auto mode`, then a sheet lists asking before edits, accepting edits, planning and auto mode with auto mode marked and highlighted; Enter on planning puts the session in plan mode and the foot says `planning`. A click on the model opens the /model sheet and one on the effort the /effort sheet, each on the one it is on.
-- Given you type `/fast` or press Alt+F, when fast mode was off, then the session turns it on and the foot shows `· fast` after the model; again turns it off. `/fast on` and `/fast off` set it rather than toggle, and the foot starts from what the session reports, so one already fast from the settings file shows `· fast` from the first turn.
-- Given you type `@` and part of a path in the box, when the list of the project's files narrows to it, then Tab or Enter puts the picked file in as an @ mention.
-- Given you send a message over 12 lines, when it is drawn in the thread, then it shows its first 6 lines and a "… N more lines" row that a click or the unfold key opens, and Claude gets the whole text.
-- Given a folded message carries an image or names a PDF, when it is drawn folded, then its images and PDF tiles still show below the fold.
-- Given main ran `pane run`, when its output or a reply names `dashboard://pane/<slot>:<index>`, then it is drawn as a `pane <id>` link in the link colour; a click, or Alt+G on its selected entry, lands on that pane on its own project's page, and on a pane no longer open says so and goes nowhere. Pane numbers are reused, so a link to a pane closed and opened again lands on whatever holds that number now.
-- Given Claude has answered, when the foot is drawn, then beside the meters it says `warm 42m` in green, an hour or five minutes from the last reply that wrote or read the prompt cache by the tier that reply's session last wrote; yellow under five minutes, seconds in the last minute, `cold` once expired. It counts down while the screen is on view and stops at the first tick that finds it off view, until it is shown again; a worker's row in the workers popup says the same of its own session (chat-decision-12).
-- Given main has workers open, when the foot is drawn, then between what Claude is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a click on it or Alt+W opens a list of them (the manager's across every project) that updates while open, the arrows walk it, Enter lands on the pane and Escape closes it.
-- Given a turn has been measured, when you click the context meter, press Alt+U or send `/context`, then a popup opens just above the meter, lined up with its right edge, listing each part of the window (system prompt, tools, memory files, skills, messages, free space and the rest) with its tokens, share and a bar in its colour, then the memory files and the MCP tools biggest first, five each and an `N more` row; deferred tool schemas are left out. Its heading says when the numbers were measured, it follows a new measure while open, the arrows walk its rows and Escape puts the keyboard back in the box (chat-decision-10). Before any measure it says so instead of opening.
-- Given the context popup is open, when you press Enter on the messages row, then it lists the largest turns biggest first, Enter on one closes the popup with that turn's prompt selected, and Escape on the list goes back to the top level instead (chat-decision-14).
-- Given the context popup is open, when you press Enter on a memory file, then it opens in the doc viewer, read by main because the last measure named that path; putting the viewer away comes back to the popup (chat-decision-14).
-- Given the meters are showing, when you click the refresh button after them or press Alt+Shift+U, then the context, the model and the plan's limits are read from the session now; the button turns until the read ends and presses meanwhile do nothing. A read that fails says `Usage not refreshed:` and why, one with no session running says so, and either way the meters keep their last numbers. The next reading that lands, from the key or a turn ending, clears that message.
-- Given a turn has ended with a suggested next prompt, when the box is empty, then it shows grey there and Tab fills the box with it; with the slash list open, Tab still fills the picked command.
-- Given one Edit changes two lines far apart, when its diff is drawn, then each change shows with one unchanged line either side and a "…" line for what is skipped between them.
-- Given a MultiEdit makes two edits, when its diff is drawn, then a dimmed "…" row sits between them, the same row that stands for skipped lines inside one edit.
-- Given Claude puts up a TodoWrite list, when its call is drawn, then the line says how many items are done and unfolds to a checklist: done items struck through, the one under way in bold by its "-ing" wording.
-- Given an Edit whose old and new text are the same, when it is drawn, then its input shows instead of an empty diff.
-- Given the project has earlier conversations, when you press Ctrl+R, then a search lists every prompt sent in the 20 most recent (`HISTORY_CONVERSATIONS`), newest first, this conversation's from the screen and the others read off disk only once they change, and the one picked goes in the box.
-- Given Claude has started a subagent, when you unfold its Agent call, then the subagent's own text and tool calls are listed under the call, a skill it loaded as one line and its prompt not repeated, a subagent of its own indented under its line; a conversation read back after a restart has none.
-- Given Claude has edited files in the conversation, when you send `/diff`, then a sheet lists each file it changed, in the order first touched, with each edit's change in turn under a heading counting the lines in and out across them; a failed or refused edit is not in it. A code-only `/rewind` keeps the conversation, so the edits it put back are still listed.
-- Given Claude edited files after a prompt, when you /rewind to it and restore code, then the files are as they were before it; restore conversation, and the conversation picks up from just before it with the prompt back in the box.
-- Given text in the box, when you press Ctrl+G, then it opens in the project's nvim, and once saved there and you come back, the box holds what you saved.
-- Given Claude thinks before it answers, when the block arrives, then it is a folded Thinking line that unfolds to the summary.
-- Given main's worker stopped without a report, when the app tells main so, then it is told once the turn ends, or once the turn has run 30 minutes for every notice held in it; it is queued behind the turn, grey in the queue strip, when the CLI sends no session state or the turn has already run 30 minutes, and once main takes it the thread shows it as a notice line linking the worker's pane, never as a prompt you typed; Up skips it in the queue and /rewind leaves it out; one saved under the older "has finished its turn" wording reads back the same way (workers-decision-1).
-- Given a request fails and the session retries it, or a plan limit nears or is hit, when the session says so, then a notice line in the thread says the error and the wait, or which limit and when it resets; the same limit line shows once.
-- Given Claude has a task running, when you pick its row in the strip with Alt+T and press Alt+X, then the session stops it; Alt+B sends it to the background instead, and with no row picked Alt+B backgrounds every foreground task.
-- Given Claude ran an agent, when its call is on screen, then the call's line reads `Agent List X11 and read hostname 3 tools · 33.1K tokens · 5s`, counting while the agent runs and kept after it ends or the conversation is read back.
-- Given a workflow is running, when you press Alt+P, then a panel lists its phases with their marks and counts and the picked phase's agents with model, tokens and time; Up and Down walk the phases, Enter on Stop the workflow stops it, and Escape goes back to the box; a click on the workflow's strip row opens the same panel, whose Escape goes to the Alt+A list.
-- Given an agent is running or has finished this conversation, when you press Alt+A, then a list shows it, running ones first, finished ones with `completed`, their count and the first line of their report; Enter opens its conversation, which grows as the agent works, Escape goes back to the list, and a click on its strip row opens the same view (chat-decision-15).
-- Given a background shell command or a Monitor is running or has finished this conversation, when you press Alt+A and Enter on it, then its output shows over the screen and grows while it runs, the last lines in view; Escape goes back to the list, and an ended one with no output left says so in one sentence naming it (chat-decision-17).
-- Given a background task finishes while nothing runs, when the session starts a turn of its own on it, then the working line shows and the foot says `working`, as for a prompt you sent, until the turn's result.
-- Given a turn's agent writes, when it sends each message, then the working line's `↓ N tokens` grows by what it wrote, four characters a token (chat-decision-15).
-- Given a half-written prompt in the box, when you press Alt+S, then the box empties and Up from the empty box brings the draft back before any sent prompt; the last 10 stashed are kept until they are sent.
-- Given Up showing an earlier prompt over a half-written draft, when you press Alt+S, then the draft is stashed, not the prompt Up showed; a waiting question keeps the keyboard.
-- Given a message you sent or Claude wrote, when it is drawn, then a grey line above it gives the time it was written, with the date on the first message of each day (judged against the message above, so it never changes while the pane stays open), and for Claude's the model that wrote it; Claude Code's own notices (`<synthetic>`) get the time alone.
-- Given Claude has replied, when you send `/copy`, then the reply's markdown, all Claude wrote since the turn began (a prompt, or a message such as a background task finishing that starts a turn of its own) with its tool calls left out, is on the clipboard; `/copy 2` takes the reply before it, and a count past the first reply is refused.
-- Given Claude is streaming a long reply with tables, code blocks and links, when it finishes, then it is drawn exactly as a reply that arrived at once; while it streams, only the text after the last paragraph break outside a code fence is redrawn each frame.
-- Given an MCP server failed to connect, when you type /mcp and pick it, then Reconnect tries it again and Disable turns it off; a disabled one offers only Enable.
-- Given a conversation is on the screen, when you send `/rename Board drag fix`, then it is renamed and `/resume` and the drawer list it by that name; with no name or no conversation yet, it is refused.
-- Given a turn is running, when you send `/btw` and a question, then a sheet answers it from the conversation so far, without tools, and the question and answer never join the conversation.
-- Given you pressed Ctrl+W twice in the box, when you press Ctrl+Y, then both words come back as one; Alt+Y straight after swaps them for the kill before, and Ctrl+U and Ctrl+K kill to the line's start and end the same way.
-- Given a turn writes a large file, when its Write streams in, then the working line's `↓ N tokens` counts the file as it comes, and once each message ends it shows that message's real output tokens, summed over the turn: a turn whose Write Claude Code reports at 735 tokens says 735, where text and thinking alone said 1 (chat-decision-13).
-- Given a hook runs during a turn, when it starts, then the working line says `Running PreToolUse:Bash hook…` until it answers; a hook that fails leaves a folded `PreToolUse:Bash hook failed (exit 2)` line that unfolds to what it printed as terminal text (not markdown), and one that succeeds leaves nothing. A SessionStart hook failing before a resumed conversation is read back goes under that conversation, not in place of it.
-- Given a conversation on the screen, when you send `/export` and pick Copy to clipboard, then its text is on the clipboard, prompts behind `>` and each tool call one line; Save to file writes it to a dated `.txt` in the project's folder, and `/export notes` writes `notes.txt` there; a name outside the folder or already taken is refused and nothing is written.
+- Given a tool needs a yes, when the session asks, then a box over the prompt
+  holds the question until you answer it.
+- Given main ran a worker with `pane run` (a Claude screen unless `--terminal`,
+  or on Windows), when its pane is drawn, then it holds this same screen, run
+  under the pane's own key in the worker's folder, conversation and hooks;
+  /clear, /resume, /branch and /rewind are refused there, so it stays on the
+  conversation it was started on (workers-decision-5). A Claude screen opened by
+  hand with New Claude holds it too, and all four act on its own conversation
+  (workers-decision-7).
+- Given Claude Code's config has `claudeInChromeDefaultEnabled: true`, when any
+  Claude screen's session starts, then it has the Claude in Chrome tools, as
+  claude typed in a pane does; with the setting off, absent, or the config
+  unreadable, it has none. `CLAUDE_CODE_ENABLE_CFC` in the app's environment
+  overrides the config either way: `0` leaves the tools out with the setting on,
+  `1` brings them with it unset.
+- Given an MCP server asks for a form or a sign-in link, when the session passes
+  it on, then the same box walks the form a field at a time, or opens the link,
+  and every step can decline; a yes or no or a pick opens on the server's
+  default, a typed answer outside the field's bounds keeps the box open saying
+  what it takes, a required multi-select or a link that is not http(s) can only
+  be declined, an optional multi-select can also be skipped, and Escape or the
+  session ending reaches the server as a cancel, not a decline; the server's
+  other dialogs are not declared, so Claude Code keeps its own fallback.
+- Given a turn is running, when you press Escape, then the turn is interrupted
+  and any pending question is given up on: a tool call is declined, a server
+  form cancelled.
+- Given the app restarts, when you send the next prompt, then the project's
+  conversation is resumed from `chat-sessions.json`.
+- Given the app launches with five projects, when you have shown none of their
+  Claude screens, then no project runs a `claude` CLI; showing one starts that
+  page's session and its status line fills in, and a page one of main's workers
+  came back on starts at launch so the worker's report has somewhere to arrive.
+- Given a conversation is under way, when you send `/branch`, then the page
+  carries on in a copy of it and the original stays in `/resume`.
+- Given you type `/model` with a name the session does not offer, when you send
+  it, then it is refused and not saved.
+- Given a long conversation at its end on a worker screen, when `pane send`
+  gives it a prompt and the reply arrives while another page or view is in
+  front, then coming back shows the reply at the bottom, not the log stopped at
+  the prompt; a log you scrolled up stays where you left it.
+- Given Claude is working, when you send a message, then it waits grey under the
+  conversation until the session takes it, and Up in the empty box takes it
+  back.
+- Given a message names a PDF, when it is drawn, then it is a tile that opens in
+  the built-in viewer.
+- Given you type `/effort high`, when you send it, then the next turn runs at
+  high and the foot says `high effort`; `ultrathink` in a prompt shows in the
+  foot while its turn runs.
+- Given the foot reads `Opus 5.5 · auto mode · default effort`, when you click
+  `auto mode`, then a sheet lists asking before edits, accepting edits, planning
+  and auto mode with auto mode marked and highlighted; Enter on planning puts
+  the session in plan mode and the foot says `planning`. A click on the model
+  opens the /model sheet and one on the effort the /effort sheet, each on the
+  one it is on.
+- Given you type `/fast` or press Alt+F, when fast mode was off, then the
+  session turns it on and the foot shows `· fast` after the model; again turns
+  it off. `/fast on` and `/fast off` set it rather than toggle, and the foot
+  starts from what the session reports, so one already fast from the settings
+  file shows `· fast` from the first turn.
+- Given you type `@` and part of a path in the box, when the list of the
+  project's files narrows to it, then Tab or Enter puts the picked file in as an
+  @ mention.
+- Given you send a message over 12 lines, when it is drawn in the thread, then
+  it shows its first 6 lines and a "… N more lines" row that a click or the
+  unfold key opens, and Claude gets the whole text.
+- Given a folded message carries an image or names a PDF, when it is drawn
+  folded, then its images and PDF tiles still show below the fold.
+- Given main ran `pane run`, when its output or a reply names
+  `dashboard://pane/<slot>:<index>`, then it is drawn as a `pane <id>` link in
+  the link colour; a click, or Alt+G on its selected entry, lands on that pane
+  on its own project's page, and on a pane no longer open says so and goes
+  nowhere. Pane numbers are reused, so a link to a pane closed and opened again
+  lands on whatever holds that number now.
+- Given Claude has answered, when the foot is drawn, then beside the meters it
+  says `warm 42m` in green, an hour or five minutes from the last reply that
+  wrote or read the prompt cache by the tier that reply's session last wrote;
+  yellow under five minutes, seconds in the last minute, `cold` once expired. It
+  counts down while the screen is on view and stops at the first tick that finds
+  it off view, until it is shown again; a worker's row in the workers popup says
+  the same of its own session (chat-decision-12).
+- Given main has workers open, when the foot is drawn, then between what Claude
+  is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a
+  click on it or Alt+W opens a list of them (the manager's across every project)
+  that updates while open, the arrows walk it, Enter lands on the pane and
+  Escape closes it.
+- Given a turn has been measured, when you click the context meter, press Alt+U
+  or send `/context`, then a popup opens just above the meter, lined up with its
+  right edge, listing each part of the window (system prompt, tools, memory
+  files, skills, messages, free space and the rest) with its tokens, share and a
+  bar in its colour, then the memory files and the MCP tools biggest first, five
+  each and an `N more` row; deferred tool schemas are left out. Its heading says
+  when the numbers were measured, it follows a new measure while open, the
+  arrows walk its rows and Escape puts the keyboard back in the box
+  (chat-decision-10). Before any measure it says so instead of opening.
+- Given the context popup is open, when you press Enter on the messages row,
+  then it lists the largest turns biggest first, Enter on one closes the popup
+  with that turn's prompt selected, and Escape on the list goes back to the top
+  level instead (chat-decision-14).
+- Given the context popup is open, when you press Enter on a memory file, then
+  it opens in the doc viewer, read by main because the last measure named that
+  path; putting the viewer away comes back to the popup (chat-decision-14).
+- Given the meters are showing, when you click the refresh button after them or
+  press Alt+Shift+U, then the context, the model and the plan's limits are read
+  from the session now; the button turns until the read ends and presses
+  meanwhile do nothing. A read that fails says `Usage not refreshed:` and why,
+  one with no session running says so, and either way the meters keep their last
+  numbers. The next reading that lands, from the key or a turn ending, clears
+  that message.
+- Given a turn has ended with a suggested next prompt, when the box is empty,
+  then it shows grey there and Tab fills the box with it; with the slash list
+  open, Tab still fills the picked command.
+- Given one Edit changes two lines far apart, when its diff is drawn, then each
+  change shows with one unchanged line either side and a "…" line for what is
+  skipped between them.
+- Given a MultiEdit makes two edits, when its diff is drawn, then a dimmed "…"
+  row sits between them, the same row that stands for skipped lines inside one
+  edit.
+- Given Claude puts up a TodoWrite list, when its call is drawn, then the line
+  says how many items are done and unfolds to a checklist: done items struck
+  through, the one under way in bold by its "-ing" wording.
+- Given an Edit whose old and new text are the same, when it is drawn, then its
+  input shows instead of an empty diff.
+- Given the project has earlier conversations, when you press Ctrl+R, then a
+  search lists every prompt sent in the 20 most recent
+  (`HISTORY_CONVERSATIONS`), newest first, this conversation's from the screen
+  and the others read off disk only once they change, and the one picked goes in
+  the box.
+- Given Claude has started a subagent, when you unfold its Agent call, then the
+  subagent's own text and tool calls are listed under the call, a skill it
+  loaded as one line and its prompt not repeated, a subagent of its own indented
+  under its line; a conversation read back after a restart has none.
+- Given Claude has edited files in the conversation, when you send `/diff`, then
+  a sheet lists each file it changed, in the order first touched, with each
+  edit's change in turn under a heading counting the lines in and out across
+  them; a failed or refused edit is not in it. A code-only `/rewind` keeps the
+  conversation, so the edits it put back are still listed.
+- Given Claude edited files after a prompt, when you /rewind to it and restore
+  code, then the files are as they were before it; restore conversation, and the
+  conversation picks up from just before it with the prompt back in the box.
+- Given text in the box, when you press Ctrl+G, then it opens in the project's
+  nvim, and once saved there and you come back, the box holds what you saved.
+- Given Claude thinks before it answers, when the block arrives, then it is a
+  folded Thinking line that unfolds to the summary.
+- Given main's worker stopped without a report, when the app tells main so, then
+  it is told once the turn ends, or once the turn has run 30 minutes for every
+  notice held in it; it is queued behind the turn, grey in the queue strip, when
+  the CLI sends no session state or the turn has already run 30 minutes, and
+  once main takes it the thread shows it as a notice line linking the worker's
+  pane, never as a prompt you typed; Up skips it in the queue and /rewind leaves
+  it out; one saved under the older "has finished its turn" wording reads back
+  the same way (workers-decision-1).
+- Given a request fails and the session retries it, or a plan limit nears or is
+  hit, when the session says so, then a notice line in the thread says the error
+  and the wait, or which limit and when it resets; the same limit line shows
+  once.
+- Given Claude has a task running, when you pick its row in the strip with Alt+T
+  and press Alt+X, then the session stops it; Alt+B sends it to the background
+  instead, and with no row picked Alt+B backgrounds every foreground task.
+- Given Claude ran an agent, when its call is on screen, then the call's line
+  reads `Agent List X11 and read hostname 3 tools · 33.1K tokens · 5s`, counting
+  while the agent runs and kept after it ends or the conversation is read back.
+- Given a workflow is running, when you press Alt+P, then a panel lists its
+  phases with their marks and counts and the picked phase's agents with model,
+  tokens and time; Up and Down walk the phases, Enter on Stop the workflow stops
+  it, and Escape goes back to the box; a click on the workflow's strip row opens
+  the same panel, whose Escape goes to the Alt+A list.
+- Given an agent is running or has finished this conversation, when you press
+  Alt+A, then a list shows it, running ones first, finished ones with
+  `completed`, their count and the first line of their report; Enter opens its
+  conversation, which grows as the agent works, Escape goes back to the list,
+  and a click on its strip row opens the same view (chat-decision-15).
+- Given a background shell command or a Monitor is running or has finished this
+  conversation, when you press Alt+A and Enter on it, then its output shows over
+  the screen and grows while it runs, the last lines in view; Escape goes back
+  to the list, and an ended one with no output left says so in one sentence
+  naming it (chat-decision-17).
+- Given a background task finishes while nothing runs, when the session starts a
+  turn of its own on it, then the working line shows and the foot says
+  `working`, as for a prompt you sent, until the turn's result.
+- Given a turn's agent writes, when it sends each message, then the working
+  line's `↓ N tokens` grows by what it wrote, four characters a token
+  (chat-decision-15).
+- Given a half-written prompt in the box, when you press Alt+S, then the box
+  empties and Up from the empty box brings the draft back before any sent
+  prompt; the last 10 stashed are kept until they are sent.
+- Given Up showing an earlier prompt over a half-written draft, when you press
+  Alt+S, then the draft is stashed, not the prompt Up showed; a waiting question
+  keeps the keyboard.
+- Given a message you sent or Claude wrote, when it is drawn, then a grey line
+  above it gives the time it was written, with the date on the first message of
+  each day (judged against the message above, so it never changes while the pane
+  stays open), and for Claude's the model that wrote it; Claude Code's own
+  notices (`<synthetic>`) get the time alone.
+- Given Claude has replied, when you send `/copy`, then the reply's markdown,
+  all Claude wrote since the turn began (a prompt, or a message such as a
+  background task finishing that starts a turn of its own) with its tool calls
+  left out, is on the clipboard; `/copy 2` takes the reply before it, and a
+  count past the first reply is refused.
+- Given Claude is streaming a long reply with tables, code blocks and links,
+  when it finishes, then it is drawn exactly as a reply that arrived at once;
+  while it streams, only the text after the last paragraph break outside a code
+  fence is redrawn each frame.
+- Given an MCP server failed to connect, when you type /mcp and pick it, then
+  Reconnect tries it again and Disable turns it off; a disabled one offers only
+  Enable.
+- Given a conversation is on the screen, when you send `/rename Board drag fix`,
+  then it is renamed and `/resume` and the drawer list it by that name; with no
+  name or no conversation yet, it is refused.
+- Given a turn is running, when you send `/btw` and a question, then a sheet
+  answers it from the conversation so far, without tools, and the question and
+  answer never join the conversation.
+- Given you pressed Ctrl+W twice in the box, when you press Ctrl+Y, then both
+  words come back as one; Alt+Y straight after swaps them for the kill before,
+  and Ctrl+U and Ctrl+K kill to the line's start and end the same way.
+- Given a turn writes a large file, when its Write streams in, then the working
+  line's `↓ N tokens` counts the file as it comes, and once each message ends it
+  shows that message's real output tokens, summed over the turn: a turn whose
+  Write Claude Code reports at 735 tokens says 735, where text and thinking
+  alone said 1 (chat-decision-13).
+- Given a hook runs during a turn, when it starts, then the working line says
+  `Running PreToolUse:Bash hook…` until it answers; a hook that fails leaves a
+  folded `PreToolUse:Bash hook failed (exit 2)` line that unfolds to what it
+  printed as terminal text (not markdown), and one that succeeds leaves nothing.
+  A SessionStart hook failing before a resumed conversation is read back goes
+  under that conversation, not in place of it.
+- Given a conversation on the screen, when you send `/export` and pick Copy to
+  clipboard, then its text is on the clipboard, prompts behind `>` and each tool
+  call one line; Save to file writes it to a dated `.txt` in the project's
+  folder, and `/export notes` writes `notes.txt` there; a name outside the
+  folder or already taken is refused and nothing is written.

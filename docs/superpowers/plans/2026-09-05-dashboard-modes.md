@@ -1,10 +1,16 @@
 # Dashboard Modes Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give each project page three modes — the current five-shell grid, a full-window nvim, and a keyboard-driven kanban board — switched with Ctrl+T, Ctrl+N and Ctrl+B.
+**Goal:** Give each project page three modes — the current five-shell grid, a full-window nvim, and
+a keyboard-driven kanban board — switched with Ctrl+T, Ctrl+N and Ctrl+B.
 
-**Architecture:** A page stops being a grid and becomes a container holding three stacked views, one visible. The mode lives on the page, so each project remembers its own. Nvim is a sixth pty per project reusing the existing pane machinery. The board is built in the renderer over pure data functions, stored as `board.json` in a `.dashboard/` folder inside the project.
+**Architecture:** A page stops being a grid and becomes a container holding three stacked views, one
+visible. The mode lives on the page, so each project remembers its own. Nvim is a sixth pty per
+project reusing the existing pane machinery. The board is built in the renderer over pure data
+functions, stored as `board.json` in a `.dashboard/` folder inside the project.
 
 **Tech Stack:** Electron 44, TypeScript 6, vitest 5, xterm 6, node-pty 1.1. No new dependencies.
 
@@ -12,14 +18,23 @@
 
 ## Global Constraints
 
-- **Never restart the running app.** Do not run `npm run package`, `open -a Dashboard`, `pkill`, or `osascript ... quit`. Building into `out/` or `.vite/` is fine. When the work is done, say the installed app needs a rebuild and restart to pick it up, and stop. (`CLAUDE.md`)
-- **Keyboard first.** Every action must be reachable from the keyboard alone. A control that only responds to a click is unfinished. (`CLAUDE.md`)
-- **No abbreviations in identifiers.** `configuration`, not `config`; `directory`, not `dir`. Established spellings like `id`, `url`, `json` are fine.
+- **Never restart the running app.** Do not run `npm run package`, `open -a Dashboard`, `pkill`, or
+  `osascript ... quit`. Building into `out/` or `.vite/` is fine. When the work is done, say the
+  installed app needs a rebuild and restart to pick it up, and stop. (`CLAUDE.md`)
+- **Keyboard first.** Every action must be reachable from the keyboard alone. A control that only
+  responds to a click is unfinished. (`CLAUDE.md`)
+- **No abbreviations in identifiers.** `configuration`, not `config`; `directory`, not `dir`.
+  Established spellings like `id`, `url`, `json` are fine.
 - **600 lines of code per file, hard ceiling.** Comments and blank lines do not count.
-- **Checks:** `npm test`, `npx tsc --noEmit`, `npx eslint .` — all three must pass before every commit.
-- **No self-reference in commits.** Do not mention Claude, Anthropic, or any AI tooling in commit messages, code comments, or documentation. No `Co-Authored-By` trailer.
-- **Comment style:** this codebase explains *why*, not *what*, in full sentences above the code. Match it.
-- **Test style:** vitest, `describe`/`it`, tests live beside the source as `src/<name>.test.ts`. There is no DOM test environment — pure logic is tested, DOM code is not (see `picker.ts` / `picker.test.ts` for the established split).
+- **Checks:** `npm test`, `npx tsc --noEmit`, `npx eslint .` — all three must pass before every
+  commit.
+- **No self-reference in commits.** Do not mention Claude, Anthropic, or any AI tooling in commit
+  messages, code comments, or documentation. No `Co-Authored-By` trailer.
+- **Comment style:** this codebase explains *why*, not *what*, in full sentences above the code.
+  Match it.
+- **Test style:** vitest, `describe`/`it`, tests live beside the source as `src/<name>.test.ts`.
+  There is no DOM test environment — pure logic is tested, DOM code is not (see `picker.ts` /
+  `picker.test.ts` for the established split).
 
 ---
 
@@ -58,12 +73,14 @@
 - Test: `src/shortcuts.test.ts`
 
 **Interfaces:**
-- Consumes: `TERMINAL_COUNT`, `Direction` from `src/terminals.ts` (already imported by `shortcuts.ts`).
+- Consumes: `TERMINAL_COUNT`, `Direction` from `src/terminals.ts` (already imported by
+  `shortcuts.ts`).
 - Produces:
   - `type Mode = 'terminals' | 'nvim' | 'board'` from `src/modes.ts`
   - `const MODE_KEYS: Record<string, Mode>` from `src/modes.ts`
   - `Action` gains `{ kind: 'mode-set'; mode: Mode }`
-  - `mapShortcut(input: KeyInput, isMac: boolean, mode?: Mode): Action | null` — third parameter defaults to `'terminals'`
+  - `mapShortcut(input: KeyInput, isMac: boolean, mode?: Mode): Action | null` — third parameter
+    defaults to `'terminals'`
 
 - [ ] **Step 1: Create the mode module**
 
@@ -242,8 +259,9 @@ export function mapShortcut(input: KeyInput, isMac: boolean, mode: Mode = 'termi
 
 - [ ] **Step 5: Run the full test suite**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: all pass. The existing `shortcuts.test.ts` cases call `mapShortcut` with two arguments and must still pass on the `'terminals'` default.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: all pass. The existing
+`shortcuts.test.ts` cases call `mapShortcut` with two arguments and must still pass on the
+`'terminals'` default.
 
 - [ ] **Step 6: Commit**
 
@@ -822,14 +840,19 @@ git commit -m "Read and write a project's board file"
 
 ## Task 4: Three views on a page
 
-Mode switching with real terminals and two empty placeholder views. Nvim and the board arrive in Tasks 5 and 6, so this task is verified by the checks and by the terminals grid still behaving exactly as before.
+Mode switching with real terminals and two empty placeholder views. Nvim and the board arrive in
+Tasks 5 and 6, so this task is verified by the checks and by the terminals grid still behaving
+exactly as before.
 
 **Files:**
 - Modify: `src/renderer.ts`, `src/index.css`
 
 **Interfaces:**
-- Consumes: `Mode` from `src/modes.ts`; `Action` (now with `mode-set`) and `mapShortcut`'s third parameter from `src/shortcuts.ts`.
-- Produces (used by Tasks 5 and 6): `Page` gains `mode: Mode`, `views: Record<Mode, HTMLElement>`; `setMode(mode: Mode): void`; `buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane`.
+- Consumes: `Mode` from `src/modes.ts`; `Action` (now with `mode-set`) and `mapShortcut`'s third
+  parameter from `src/shortcuts.ts`.
+- Produces (used by Tasks 5 and 6): `Page` gains `mode: Mode`, `views: Record<Mode, HTMLElement>`;
+  `setMode(mode: Mode): void`;
+  `buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane`.
 
 - [ ] **Step 1: Stack the views in `src/index.css`**
 
@@ -870,7 +893,8 @@ Replace the `.page` and `.page.missing` rules, and add the view rules after them
 }
 ```
 
-Leave `.page[hidden] { visibility: hidden; }` where it is. The `.pane:nth-child` rules keep working: the panes are still the direct children of the grid, which is now `.view-terminals`.
+Leave `.page[hidden] { visibility: hidden; }` where it is. The `.pane:nth-child` rules keep working:
+the panes are still the direct children of the grid, which is now `.view-terminals`.
 
 - [ ] **Step 2: Give a page its three views in `src/renderer.ts`**
 
@@ -894,7 +918,8 @@ type Page = {
 };
 ```
 
-Change `buildPane` to take the view it belongs to and a focus callback, instead of reaching for `page`. Exactly three lines change; everything between them stays as it is.
+Change `buildPane` to take the view it belongs to and a focus callback, instead of reaching for
+`page`. Exactly three lines change; everything between them stays as it is.
 
 Its signature and first three lines become:
 
@@ -915,7 +940,8 @@ Its last lines, replacing the focus listener that used `page` and `terminalIndex
 }
 ```
 
-Nothing else in the function moves. The terminal, the fit addon, the web-links addon, `onData`, the drop handler and `onResize` are untouched — none of them referenced `page`.
+Nothing else in the function moves. The terminal, the fit addon, the web-links addon, `onData`, the
+drop handler and `onResize` are untouched — none of them referenced `page`.
 
 Replace `buildPage`:
 
@@ -978,7 +1004,8 @@ function focusMode(page: Page): void {
 }
 ```
 
-In `showPage`, replace the last line `focusTerminal(pages[activeIndex].focused);` with `focusMode(pages[activeIndex]);`.
+In `showPage`, replace the last line `focusTerminal(pages[activeIndex].focused);` with
+`focusMode(pages[activeIndex]);`.
 
 - [ ] **Step 4: Show the mode in the status bar**
 
@@ -1033,8 +1060,10 @@ git commit -m "Give each page three views and a mode"
 - Modify: `src/main.ts`, `src/renderer.ts`, `src/index.css`
 
 **Interfaces:**
-- Consumes: `terminalId`, `TERMINAL_COUNT` from `src/terminals.ts`; `buildPane`, `setMode`, `Page` from Task 4.
-- Produces: `EDITOR_INDEX = TERMINAL_COUNT` as the terminal index of a project's nvim pane; `Page` gains `editor: Pane | null` and `editorStarted: boolean`.
+- Consumes: `terminalId`, `TERMINAL_COUNT` from `src/terminals.ts`; `buildPane`, `setMode`, `Page`
+  from Task 4.
+- Produces: `EDITOR_INDEX = TERMINAL_COUNT` as the terminal index of a project's nvim pane; `Page`
+  gains `editor: Pane | null` and `editorStarted: boolean`.
 
 - [ ] **Step 1: Let main spawn something other than a shell**
 
@@ -1112,7 +1141,8 @@ Add to the `Page` type:
   editorStarted: boolean;
 ```
 
-In `buildPage`, initialise them as `editor: null, editorStarted: false`, and after the loop that builds the five panes:
+In `buildPage`, initialise them as `editor: null, editorStarted: false`, and after the loop that
+builds the five panes:
 
 ```ts
   const editorId = terminalId(slot, EDITOR_INDEX);
@@ -1186,7 +1216,8 @@ git commit -m "Run nvim as a project's sixth terminal"
 - Modify: `src/main.ts`, `src/bridge.ts`, `src/preload.ts`, `src/renderer.ts`, `src/index.css`
 
 **Interfaces:**
-- Consumes: everything from `src/board.ts` (Task 2) and `src/board-store.ts` (Task 3); `Direction` from `src/terminals.ts`; `Page`, `setMode`, `report` from Task 4.
+- Consumes: everything from `src/board.ts` (Task 2) and `src/board-store.ts` (Task 3); `Direction`
+  from `src/terminals.ts`; `Page`, `setMode`, `report` from Task 4.
 - Produces:
   - `bridge.readBoard(projectPath: string): Promise<Board>`
   - `bridge.writeBoard(projectPath: string, board: Board): Promise<void>`
@@ -1457,7 +1488,8 @@ In `focusMode`, add the board branch before `renderStatus()`:
   if (page.mode === 'board' && page.board) report(page.board.open());
 ```
 
-`report` takes a `Promise<void>` and already writes any failure to the status bar, so a board that cannot be read says so instead of showing a blank page.
+`report` takes a `Promise<void>` and already writes any failure to the status bar, so a board that
+cannot be read says so instead of showing a blank page.
 
 In `modeLabel`, replace the board line:
 
@@ -1547,8 +1579,9 @@ Expected: all pass.
 
 - [ ] **Step 8: Check the file sizes**
 
-Run: `wc -l src/renderer.ts src/board-view.ts src/main.ts`
-Expected: all under 600. If `renderer.ts` is close, stop and split the mode handling into its own module rather than committing an oversized file.
+Run: `wc -l src/renderer.ts src/board-view.ts src/main.ts` Expected: all under 600. If `renderer.ts`
+is close, stop and split the mode handling into its own module rather than committing an oversized
+file.
 
 - [ ] **Step 9: Commit**
 
@@ -1586,7 +1619,8 @@ Add these rows to the top of the shortcuts table, above "Open the project list":
 | Board mode | Ctrl+B |
 ```
 
-Change the "Focus terminal N" and "Next / previous terminal" rows to say they are terminals-mode only:
+Change the "Focus terminal N" and "Next / previous terminal" rows to say they are terminals-mode
+only:
 
 ```markdown
 | Focus terminal N | Mod+1..5 (terminals mode, macOS only — see below) |
@@ -1644,4 +1678,5 @@ git commit -m "Document the three modes"
 
 - [ ] **Step 6: Report and stop**
 
-Say the installed app needs a rebuild and restart to pick the change up, and stop there. Do not rebuild it, do not restart it, do not quit it.
+Say the installed app needs a rebuild and restart to pick the change up, and stop there. Do not
+rebuild it, do not restart it, do not quit it.

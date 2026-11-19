@@ -14,23 +14,23 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 
 - Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`
 - Review: `review.ts`, `review-flow.ts`, `review-finished.ts`, `review-loop-install.ts`
-- Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`, `worktree-scan.ts`,
-  `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
+- Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`,
+  `worktree-scan.ts`, `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
   `worktree-removal.ts`, `worktrees.css`
 
-Started by the card.ship and card.review actions (docs/actions), which are what
-a move into Ship or Review, and `dashboard board ship` and `review`, call. The
-agent itself, and the review's, is started by pane.dispatch: a Claude screen
-off Windows, Claude Code in the terminal on it (workers-decision-8). Every
-worktree, a ship's, a review's or a throwaway's, is made by worktree.make and
-removed by worktree.remove; the record naming a card's pane is written by the
-keeper's `givePane`, whichever door started the agent. Once the worktree is
-added, worktree.make runs the project's frozen install, picked by its lockfile
-(`pnpm install --frozen-lockfile`, `npm ci`, and yarn's and bun's
-`install --frozen-lockfile`), on the PATH the login shell builds
-(`src/main/app/shell-path.ts`, as a Claude screen's session gets), so the agent can run the checks straight away. An
-install that fails, or runs past five minutes (logged as `stopped after 5 minutes`), is a warning in the log, with ten lines of what the install printed on stdout and
-stderr from the first that names an error (pnpm says why on stdout, npm at the top of stderr above its help); the worktree stays.
+Started by the card.ship and card.review actions (docs/actions), which are what a move into Ship or
+Review, and `dashboard board ship` and `review`, call. The agent itself, and the review's, is
+started by pane.dispatch: a Claude screen off Windows, Claude Code in the terminal on it
+(workers-decision-8). Every worktree, a ship's, a review's or a throwaway's, is made by
+worktree.make and removed by worktree.remove; the record naming a card's pane is written by the
+keeper's `givePane`, whichever door started the agent. Once the worktree is added, worktree.make
+runs the project's frozen install, picked by its lockfile (`pnpm install --frozen-lockfile`,
+`npm ci`, and yarn's and bun's `install --frozen-lockfile`), on the PATH the login shell builds
+(`src/main/app/shell-path.ts`, as a Claude screen's session gets), so the agent can run the checks
+straight away. An install that fails, or runs past five minutes (logged as
+`stopped after 5 minutes`), is a warning in the log, with ten lines of what the install printed on
+stdout and stderr from the first that names an error (pnpm says why on stdout, npm at the top of
+stderr above its help); the worktree stays.
 
 The agent is started on `/work-card <card id> bump-version|keep-version <base branch>`
 (`workPrompt`), the skill the app installs ([skills](../skills/README.md#work-card)).
@@ -66,25 +66,54 @@ with merging off, `pr land` with it on.
 
 ## Scenarios
 
-- Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree are made and an agent starts in a free pane, on a Claude screen off Windows.
+- Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree
+  are made and an agent starts in a free pane, on a Claude screen off Windows.
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
-- Given a project with a lockfile, when a worktree is made for it, then the frozen install its lockfile names has run there, and a failed one is logged with the worktree kept (`make.test.ts`).
-- Given a card moved into Ship, when its ship makes the branch, then the branch has no commit of its own and its card file is origin's, so the merge never moves the card (ship-decision-3; `ship-flow.test.ts`).
-- Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
-- Given an agent set a pull request number, when the review cannot take the worktree yet, then it tries again instead of giving up.
-- Given the sweep saw a card's agent stopped, when the review start finds it back at work (it stopped for its background agents), then nothing is marked and a later tick starts the review, after its pane closes too (#300, #313; `review-flow.test.ts`).
-- Given merging is off and a card waits in Review after its loop posted `Review loop finished:` on the pull request, when the app restarts, then no second review starts unless the pull request carries a commit dated after that comment (its committer date, not when it was pushed) (`review-finished.ts`, `review-flow.test.ts`).
-- Given merging is off (the default), when the review loop and CI finish, then the review merges nothing, the card stays in Review with the ending in a comment on it, and the project's main hears the rounds, the fixes, what is open and the CI state.
-- Given settings `review.autoMerge` is on but the project's entry says `autoMerge: false`, when its card is reviewed, then nothing is merged; the entry wins either way, and a folder the file does not list follows the setting.
-- Given merging is on and a fix was pushed after the last review round, when the loop ends, then the review runs `pr land`, which waits for CI on that commit and merges it with `--match-head-commit`; a failed check stops it with a comment on the card.
-- Given merging is on and `gh pr merge` loses its answer to a network error after the merge went through, when `pr land` reads the pull request back, then the review reports it merged, not failed (#301).
-- Given merging is on and the network drops while `pr land` waits on the checks, when it exits printing `nothing is merged, run it again`, then the review runs it once more instead of stopping.
-- Given merging is on, when `pr land` exits printing `merged <n> at <sha>`, then the review takes that line as the merge and runs no `gh pr view` to confirm it.
-- Given the review merged the pull request, when the app next asks gh about the card, then the app moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
-- Given no `~/.claude/commands/pr-loop.md`, when a review would start, then it is refused with `git clone … && ./install.sh`, the line is on the card, and the worktree is left as it was (`review-flow.test.ts`).
-- Given the claude-pr-loop checkout was pulled but `install.sh` not rerun, when the app starts or a review starts, then the status bar says the installed workflow differs and to run `./install.sh` in the checkout (`review-loop-install.test.ts`).
-- Given a `worktrees.json` that does not parse, when the app reads it, then it is moved aside as `worktrees.json.broken` (`worktrees.json.2.broken` and on if that name is taken) and the list opens empty (`worktree-store.test.ts`).
-- Given a worktree with modified files, when you remove it from the list, then the app says so instead of git's raw `fatal:`.
+- Given a project with a lockfile, when a worktree is made for it, then the frozen install its
+  lockfile names has run there, and a failed one is logged with the worktree kept (`make.test.ts`).
+- Given a card moved into Ship, when its ship makes the branch, then the branch has no commit of its
+  own and its card file is origin's, so the merge never moves the card (ship-decision-3;
+  `ship-flow.test.ts`).
+- Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its
+  agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
+- Given an agent set a pull request number, when the review cannot take the worktree yet, then it
+  tries again instead of giving up.
+- Given the sweep saw a card's agent stopped, when the review start finds it back at work (it
+  stopped for its background agents), then nothing is marked and a later tick starts the review,
+  after its pane closes too (#300, #313; `review-flow.test.ts`).
+- Given merging is off and a card waits in Review after its loop posted `Review loop finished:` on
+  the pull request, when the app restarts, then no second review starts unless the pull request
+  carries a commit dated after that comment (its committer date, not when it was pushed)
+  (`review-finished.ts`, `review-flow.test.ts`).
+- Given merging is off (the default), when the review loop and CI finish, then the review merges
+  nothing, the card stays in Review with the ending in a comment on it, and the project's main hears
+  the rounds, the fixes, what is open and the CI state.
+- Given settings `review.autoMerge` is on but the project's entry says `autoMerge: false`, when its
+  card is reviewed, then nothing is merged; the entry wins either way, and a folder the file does
+  not list follows the setting.
+- Given merging is on and a fix was pushed after the last review round, when the loop ends, then the
+  review runs `pr land`, which waits for CI on that commit and merges it with `--match-head-commit`;
+  a failed check stops it with a comment on the card.
+- Given merging is on and `gh pr merge` loses its answer to a network error after the merge went
+  through, when `pr land` reads the pull request back, then the review reports it merged, not failed
+  (#301).
+- Given merging is on and the network drops while `pr land` waits on the checks, when it exits
+  printing `nothing is merged, run it again`, then the review runs it once more instead of stopping.
+- Given merging is on, when `pr land` exits printing `merged <n> at <sha>`, then the review takes
+  that line as the merge and runs no `gh pr view` to confirm it.
+- Given the review merged the pull request, when the app next asks gh about the card, then the app
+  moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
+- Given no `~/.claude/commands/pr-loop.md`, when a review would start, then it is refused with
+  `git clone … && ./install.sh`, the line is on the card, and the worktree is left as it was
+  (`review-flow.test.ts`).
+- Given the claude-pr-loop checkout was pulled but `install.sh` not rerun, when the app starts or a
+  review starts, then the status bar says the installed workflow differs and to run `./install.sh`
+  in the checkout (`review-loop-install.test.ts`).
+- Given a `worktrees.json` that does not parse, when the app reads it, then it is moved aside as
+  `worktrees.json.broken` (`worktrees.json.2.broken` and on if that name is taken) and the list
+  opens empty (`worktree-store.test.ts`).
+- Given a worktree with modified files, when you remove it from the list, then the app says so
+  instead of git's raw `fatal:`.
 
 ## Known limits
 

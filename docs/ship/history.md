@@ -11,15 +11,25 @@ One line per merged change: date and why.
 - 2026-09-28 #62 — A ship leaves main's board.json the way it found it
 - 2026-10-05 #67 — The worktree list shows every git worktree: size, dirty, remove
 - 2026-11-01 #135 — Branch names cut the shared slug (branchSlug) instead of owning their own
-- 2026-11-08 #233 — A shipped card's agent and its review loop start through pane.dispatch, a Claude screen off Windows (workers-decision-8)
-- 2026-11-16 #288 — A ship tells `/work-card` whether to bump the version, from projects.yaml (projects-decision-1)
+- 2026-11-08 #233 — A shipped card's agent and its review loop start through pane.dispatch, a Claude
+  screen off Windows (workers-decision-8)
+- 2026-11-16 #288 — A ship tells `/work-card` whether to bump the version, from projects.yaml
+  (projects-decision-1)
 - 2026-11-16 #290 — The review prompt no longer moves the card to Done (board-decision-7)
-- 2026-11-16 — The review merges only with `review.autoMerge` or the project's `autoMerge` on, after CI passes on the head commit; off, it reports to main (ship-decision-1)
+- 2026-11-16 — The review merges only with `review.autoMerge` or the project's `autoMerge` on, after
+  CI passes on the head commit; off, it reports to main (ship-decision-1)
 - 2026-11-16 #305 — A worktrees.json that breaks twice keeps both damaged copies
-- 2026-11-16 — A review start refused because the agent was back at work, or its project closed, is tried again on a later tick instead of never (#300, #313)
-- 2026-11-16 — A card in Review whose loop finished after the pull request's newest commit date is not reviewed again after a restart
-- 2026-11-17 — A review with merging on lands through `pr land`, so a merge whose answer gh lost is read back instead of reported failed (#301, #304)
-- 2026-11-17 — A ship no longer commits the card's Ship move onto its branch, whose merge put a finished card back in Ship (ship-decision-3)
-- 2026-11-17 — A review start without `/pr-loop` installed is refused with the install line; a stale install is a notice (ship-decision-4)
-- 2026-11-19 — A new worktree gets the frozen install its lockfile names, so its agent can run the checks at once
-- 2026-11-19 — The review prompt says `pr land`'s `merged <n> at <sha>` line is the merge, so the worker runs no `gh pr view` after it
+- 2026-11-16 — A review start refused because the agent was back at work, or its project closed, is
+  tried again on a later tick instead of never (#300, #313)
+- 2026-11-16 — A card in Review whose loop finished after the pull request's newest commit date is
+  not reviewed again after a restart
+- 2026-11-17 — A review with merging on lands through `pr land`, so a merge whose answer gh lost is
+  read back instead of reported failed (#301, #304)
+- 2026-11-17 — A ship no longer commits the card's Ship move onto its branch, whose merge put a
+  finished card back in Ship (ship-decision-3)
+- 2026-11-17 — A review start without `/pr-loop` installed is refused with the install line; a stale
+  install is a notice (ship-decision-4)
+- 2026-11-19 — A new worktree gets the frozen install its lockfile names, so its agent can run the
+  checks at once
+- 2026-11-19 — The review prompt says `pr land`'s `merged <n> at <sha>` line is the merge, so the
+  worker runs no `gh pr view` after it

@@ -1,6 +1,7 @@
 # Keys: hard rules
 
-The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what breaking it looked like.
+The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it;
+this is what breaking it looked like.
 
 ## keys-rule-1: Mode keys pass through
 
@@ -20,11 +21,10 @@ a pane). A Tab trap on the dialog would stop only the first. The hold is in
 `openOverlay`, not in each dialog, because two dialogs that each had to
 remember it forgot it while five others never had it.
 
-**Every dialog that reads `event.key` for itself must check `if
-(isModified(event)) return;` first.** Take Ctrl+N in the card detail dialog and
-pressing it mid-word opens a "Subtask title" box. Take Cmd+Enter in the delete
-confirmation and a stray keystroke deletes a card and its whole family. Both
-happened before this was written down.
+**Every dialog that reads `event.key` for itself must check
+`if (isModified(event)) return;` first.** Take Ctrl+N in the card detail dialog and pressing it
+mid-word opens a "Subtask title" box. Take Cmd+Enter in the delete confirmation and a stray
+keystroke deletes a card and its whole family. Both happened before this was written down.
 
 The manager list asks `isBareCharacter` instead, because it takes Shift on
 purpose. Both predicates read the same list of modifiers that are not typing, so

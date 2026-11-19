@@ -32,19 +32,31 @@ Folders: `src/main/remote-host/`, `src/shared/remote-host/`, `src/renderer/remot
 
 ## Scenarios
 
-- Given only `host.port` is set, when the host starts, then it listens on `127.0.0.1` and a machine on the network cannot connect.
+- Given only `host.port` is set, when the host starts, then it listens on `127.0.0.1` and a machine
+  on the network cannot connect.
 - Given `host.bind` is set in the file, when the host starts, then it listens on that interface.
-- Given a hello with a token of a different length, when the host checks it, then it refuses the token without throwing.
-- Given the host holds no token, when a screen says hello with an empty one, then the host refuses it.
-- Given a screen connects, when its first frame is not a valid hello with the host's token, then the host reads nothing else from it.
-- Given a screen joins mid-run, when it arrives, then it is shown the projects and every pane's recent output.
-- Given two screens draw one pane, when they report sizes, then the shell gets the smallest columns and rows, the way tmux does.
-- Given a screen opens a project, when the host pushes `projects:change`, then every screen's pages match the host's list.
-- Given a screen asks the host for the folder dialog, when the host refuses, then that screen's status bar says to type the path on the host (errors-rule-2; main's half in `project-actions.test.ts`, the status bar checked by hand).
-- Given no `host.port` and the window never away, when a pane prints, then main keeps no screen copy of it.
+- Given a hello with a token of a different length, when the host checks it, then it refuses the
+  token without throwing.
+- Given the host holds no token, when a screen says hello with an empty one, then the host refuses
+  it.
+- Given a screen connects, when its first frame is not a valid hello with the host's token, then the
+  host reads nothing else from it.
+- Given a screen joins mid-run, when it arrives, then it is shown the projects and every pane's
+  recent output.
+- Given two screens draw one pane, when they report sizes, then the shell gets the smallest columns
+  and rows, the way tmux does.
+- Given a screen opens a project, when the host pushes `projects:change`, then every screen's pages
+  match the host's list.
+- Given a screen asks the host for the folder dialog, when the host refuses, then that screen's
+  status bar says to type the path on the host (errors-rule-2; main's half in
+  `project-actions.test.ts`, the status bar checked by hand).
+- Given no `host.port` and the window never away, when a pane prints, then main keeps no screen copy
+  of it.
 - Given a mac screen on a Linux host, when it reads its keys, then it keeps its own Cmd keys.
-- Given the app is running, when it is launched again with `--remote`, then the running app joins the remembered host, once its window has restored.
-- Given the window is already joined to the remembered host, when the app is launched again with `--remote`, then it stays joined: no second connect, no replay.
+- Given the app is running, when it is launched again with `--remote`, then the running app joins
+  the remembered host, once its window has restored.
+- Given the window is already joined to the remembered host, when the app is launched again with
+  `--remote`, then it stays joined: no second connect, no replay.
 
 ## Open questions
 

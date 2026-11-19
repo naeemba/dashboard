@@ -53,16 +53,14 @@ whatever column main's folder has it.
 lived in `landsInShip` in `board.ts`: only Shift+Right or a drop shipped, never
 a move to the left and never `board move <id> Ship`, so a key that sent a card
 straight to a column could not start a worktree by mistake. That made the
-command a second, silent set of rules: an agent or a person typing `dashboard
-board move <id> Ship` wrote the card into Ship and nothing shipped, with nothing
-saying why. A command is as deliberate as a keystroke, so now a move into Ship
-from the command, a drop from either side or Shift+Right goes through card.move
-and ships (actions-decision-1); so does a move into Review, which starts the
-review loop, and so does Shift+Left. What it costs: walking a card from Doing
-back to Todo ships it at the Ship step, and a card walked rightward through
-Review starts its loop at that step. A card whose agent still works is refused,
-as a second ship always was. A finished card cannot be walked back from Done by
-key at all (board-decision-3).
+command a second, silent set of rules: an agent or a person typing
+`dashboard board move <id> Ship` wrote the card into Ship and nothing shipped, with nothing saying
+why. A command is as deliberate as a keystroke, so now a move into Ship from the command, a drop
+from either side or Shift+Right goes through card.move and ships (actions-decision-1); so does a
+move into Review, which starts the review loop, and so does Shift+Left. What it costs: walking a
+card from Doing back to Todo ships it at the Ship step, and a card walked rightward through Review
+starts its loop at that step. A card whose agent still works is refused, as a second ship always
+was. A finished card cannot be walked back from Done by key at all (board-decision-3).
 
 ## board-decision-3: A card in Done moves only by dragging it
 
@@ -207,21 +205,18 @@ written there.** The fallback that writes the board in place is safe in the
 project's checkout, whose next sync replays the uncommitted edit. In a worktree
 the card file is the branch's: it is committed with the work and merged onto
 main with whatever column it had that day. On 2026-11-17, 2 of about 8 board
-writes from one checkout failed with `cannot fetch origin/main` (`Connection
-closed by <host> port 22`) and went through when run again, so the fallback is
-hit, not hypothetical. A fetch or push whose connection dropped is now tried
-again a second later, three tries in all, before anything falls back. A failure
-that would fail the same way again (no such repository, a refused key, an
-unknown host, a fetch that ran out of time) is not, or a `board` command offline
-would take seconds more for nothing. Keeping a fallback write out of the branch's
-commits instead (`skip-worktree`, a path the commit leaves out) was not taken:
-the agent would read back a move origin never got, and the refusal says to run
-it again when the connection dropped, which the retries above say usually works.
-A push whose connection dropped after origin took it is not pushed twice: the
-next try finds the commit on origin and stops, so a `comment` or an `add` is not
-made a second time. When the last try's push drops, nothing is left to look, so
-the refusal says the push may have landed and to check the card before running
-it again, not to run it again.
+writes from one checkout failed with `cannot fetch origin/main`
+(`Connection closed by <host> port 22`) and went through when run again, so the fallback is hit, not
+hypothetical. A fetch or push whose connection dropped is now tried again a second later, three
+tries in all, before anything falls back. A failure that would fail the same way again (no such
+repository, a refused key, an unknown host, a fetch that ran out of time) is not, or a `board`
+command offline would take seconds more for nothing. Keeping a fallback write out of the branch's
+commits instead (`skip-worktree`, a path the commit leaves out) was not taken: the agent would read
+back a move origin never got, and the refusal says to run it again when the connection dropped,
+which the retries above say usually works. A push whose connection dropped after origin took it is
+not pushed twice: the next try finds the commit on origin and stops, so a `comment` or an `add` is
+not made a second time. When the last try's push drops, nothing is left to look, so the refusal says
+the push may have landed and to check the card before running it again, not to run it again.
 
 **What it costs.** A commit on main per save. A fetch per `board` command, reads
 included, about a second. A repository whose main refuses pushes keeps its
@@ -283,31 +278,27 @@ over a card, a script, or an editor in a pane still does: matching those means
 parsing the shell, and the guard is a guard rail, not a sandbox.
 
 **One decision, one command, three doors.** `board-guard.ts` decides from the
-tool's name and input, with the test, and every door runs the same `node
-"$HOME/.claude/dashboard/board.js" guard`: a terminal worker from its
-`--settings`, a Claude screen (main's and a worker's, hosted or not) from the
-session's settings, and any other Claude from `~/.claude/settings.json`. One
-string, so a session that has it from two of those runs it once: Claude Code
-drops identical commands. A command hook rather than an SDK callback because a
-hosted screen's hooks are told to the app, never asked, so a callback could not
-refuse anything there. It names the board command as `$DASHBOARD_BOARD` inside a
-pane the app opened and as its own path outside one. What it costs: a node
-start per Edit, Write and shell command, and a dev run's sessions use the copy
-the installed app last put there.
+tool's name and input, with the test, and every door runs the same
+`node "$HOME/.claude/dashboard/board.js" guard`: a terminal worker from its `--settings`, a Claude
+screen (main's and a worker's, hosted or not) from the session's settings, and any other Claude from
+`~/.claude/settings.json`. One string, so a session that has it from two of those runs it once:
+Claude Code drops identical commands. A command hook rather than an SDK callback because a hosted
+screen's hooks are told to the app, never asked, so a callback could not refuse anything there. It
+names the board command as `$DASHBOARD_BOARD` inside a pane the app opened and as its own path
+outside one. What it costs: a node start per Edit, Write and shell command, and a dev run's sessions
+use the copy the installed app last put there.
 
 **A Claude the app did not start gets it from `~/.claude/settings.json`.** At
 each launch the installed app copies its board program to
-`~/.claude/dashboard/board.js` and adds one PreToolUse entry running `node
-"$HOME/.claude/dashboard/board.js" guard`, only when no entry already runs that
-command. Nothing else in the file is rewritten: every other key and hook stays
-as it was, the file keeps its mode, a linked `settings.json` stays a link and
-the entry lands in the file it points at, and a file that is not JSON, or whose
-hooks are not the shape Claude Code reads, is refused with one warning in the
-log and left alone. `$HOME` rather than an absolute path, so a settings file
-shared between machines through a dotfiles repo needs one entry, not one per
-machine. What it costs: removing the entry by hand is undone at the next
-launch; keep it out by keeping the app from launching, or delete the hook's
-command file, which turns the entry into a non-blocking error.
+`~/.claude/dashboard/board.js` and adds one PreToolUse entry running
+`node "$HOME/.claude/dashboard/board.js" guard`, only when no entry already runs that command.
+Nothing else in the file is rewritten: every other key and hook stays as it was, the file keeps its
+mode, a linked `settings.json` stays a link and the entry lands in the file it points at, and a file
+that is not JSON, or whose hooks are not the shape Claude Code reads, is refused with one warning in
+the log and left alone. `$HOME` rather than an absolute path, so a settings file shared between
+machines through a dotfiles repo needs one entry, not one per machine. What it costs: removing the
+entry by hand is undone at the next launch; keep it out by keeping the app from launching, or delete
+the hook's command file, which turns the entry into a non-blocking error.
 
 **What an agent has to know is in the instructions the app gives it.**
 `BOARD_INSTRUCTIONS` in `dispatch.ts` is appended to the system prompt of main
@@ -334,33 +325,32 @@ every board. Each file's first line now carries `SEEDED_DOCS_VERSION`, and each
 board read writes `.dashboard/CLAUDE.md` and `.dashboard/README.md` again when
 either is missing or carries a lower version or none, so a project with the old
 text gets the new one the next time its board is read. Rewriting any text that
-was not this build's own, as this first did, had two builds with different
-texts push their own over each other on origin at every board write: merge a
-new text while the installed app is still the old build, and its next card move
-put the old text back on main. A version only ever goes up, so a build older
-than the file leaves it alone, and so does every build for an edit to a file of
-its own version. In a project that commits `.dashboard/`, the rewrite
-goes to origin's default branch through the board's own sync, in the commit
-with the cards or in one of its own when no card changed, and the checkout is
-fast-forwarded onto it, so no project is left with a modified file nobody made.
-Only a file git already tracks there is committed: a project that never
-committed `README.md` does not get it pushed. Neither file is written through a
-symbolic link, the file's or the `.dashboard` folder's. What it costs: a text
-change has to raise the version (a test pins the two); an edit to a file with
-no version line, which every text seeded before there was one is, is undone at
-the next board read; and a checkout on another branch, such as a card's
-worktree made before the new text reached main, keeps its old text until that
-branch merges main. A read there writes a missing doc but never rewrites one
-that is there: rewritten in place it was a change nobody committed, and in
-insta-experiences' card worktrees the worker's `git merge` of the target branch
-refused over it and stalled mid-task. The board guard refuses the hand edit the
-old text describes, so the branch's copy costs a turn at most
-(`seeded-docs-checkout.ts`). A repository with no origin default branch (no
-origin remote, or none of origin/HEAD, main and master) is treated like a
-folder outside git and rewritten on any branch: no merge of main will ever bring
-the new text there and the sync cannot push it, so left alone a local-only repo
-would keep telling an agent to edit board.json for good. What an agent should know about a project goes in
-the project's own `CLAUDE.md`.
+was not this build's own, as this first did, had two builds with different texts
+push their own over each other on origin at every board write: merge a new text
+while the installed app is still the old build, and its next card move put the
+old text back on main. A version only ever goes up, so a build older than the
+file leaves it alone, and so does every build for an edit to a file of its own
+version. In a project that commits `.dashboard/`, the rewrite goes to origin's
+default branch through the board's own sync, in the commit with the cards or in
+one of its own when no card changed, and the checkout is fast-forwarded onto it,
+so no project is left with a modified file nobody made. Only a file git already
+tracks there is committed: a project that never committed `README.md` does not
+get it pushed. Neither file is written through a symbolic link, the file's or
+the `.dashboard` folder's. What it costs: a text change has to raise the version
+(a test pins the two); an edit to a file with no version line, which every text
+seeded before there was one is, is undone at the next board read; and a checkout
+on another branch, such as a card's worktree made before the new text reached
+main, keeps its old text until that branch merges main. A read there writes a
+missing doc but never rewrites one that is there: rewritten in place it was a
+change nobody committed, and in insta-experiences' card worktrees the worker's
+`git merge` of the target branch refused over it and stalled mid-task. The board
+guard refuses the hand edit the old text describes, so the branch's copy costs a
+turn at most (`seeded-docs-checkout.ts`). A repository with no origin default
+branch (no origin remote, or none of origin/HEAD, main and master) is treated
+like a folder outside git and rewritten on any branch: no merge of main will
+ever bring the new text there and the sync cannot push it, so left alone a
+local-only repo would keep telling an agent to edit board.json for good. What an
+agent should know about a project goes in the project's own `CLAUDE.md`.
 
 **An agent records no pull request: the review starts from the one the app
 found.** The sweep that hands a finished card to a reviewer used to learn the

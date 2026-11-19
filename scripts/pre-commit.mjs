@@ -1,6 +1,8 @@
 // What the pre-commit hook checks (workflow-rule-5). The entry is scripts/pre-commit-step.mjs, kept apart
 // so importing this file never runs the checks.
 
+import { checkedFile } from './markdown-width.mjs';
+
 const CODE = /\.(ts|mts|cts|js|mjs|cjs)$/;
 // Files that change what tsc reports without being code: its settings and the installed type packages.
 const TYPE_SETTINGS = /^(tsconfig[^/]*\.json|package\.json|pnpm-lock\.yaml)$/;
@@ -26,4 +28,9 @@ export function runsTypecheck(stagedFiles) {
 export function missingToolsRefusal(stagedFiles, { toolsInstalled }) {
   if (toolsInstalled || (filesToCheck(stagedFiles).length === 0 && !runsTypecheck(stagedFiles))) return '';
   return 'This checkout has no eslint or tsc in node_modules, so the staged code cannot be checked. Run pnpm install, then commit again.';
+}
+
+// The staged markdown held to the line width `pnpm lint` holds the tracked files to.
+export function markdownToCheck(stagedFiles) {
+  return stagedFiles.filter(checkedFile);
 }

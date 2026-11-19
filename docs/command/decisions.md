@@ -107,10 +107,10 @@ now; one whose pull requests report checks is refused, and a workflow filtered
 by `paths` that skips the change is landed by hand. Twenty, not five: a run of
 docs-only or `[skip ci]` merges as long as the sample reads as no CI, and five
 such in a row is common where twenty is not; the larger sample is still one
-call. It asks the merged pull
-requests, not workflow files or Actions runs: the file count took Dependabot,
-Pages and CodeQL default setup for CI and refused every land in a repository
-with no CI on pull requests, and counting `pull_request` runs missed CI on a
-`push` trigger or from an outside service, merging unchecked there again. The fast-forward after a merge is `--ff-only` in a checkout with nothing
-uncommitted, so it never merges or overwrites anything of the user's: 19 git
-pulls and 7 `gh pr view`s followed lands in the retro.
+call. It asks the merged pull requests, not workflow files or Actions runs: the
+file count took Dependabot, Pages and CodeQL default setup for CI and refused
+every land in a repository with no CI on pull requests, and counting
+`pull_request` runs missed CI on a `push` trigger or from an outside service,
+merging unchecked there again. The fast-forward after a merge is `--ff-only` in
+a checkout with nothing uncommitted, so it never merges or overwrites anything
+of the user's: 19 git pulls and 7 `gh pr view`s followed lands in the retro.

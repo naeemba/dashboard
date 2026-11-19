@@ -1,6 +1,7 @@
 # Workflow: hard rules
 
-The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what breaking it looked like.
+The one-line rule is in `CLAUDE.md`, or the entry names the check that holds it; this is what
+breaking it looked like.
 
 ## workflow-rule-1: Never rebuild or restart the running app
 
@@ -77,51 +78,55 @@ stopped every worker. `pnpm exec eslint .` refuses `mkdtemp` and `mkdtempSync`
 imported into a `*.test.ts` or `*-fixture.ts` under `src/`, and
 `eslint.config.test.ts` pins it.
 
-## workflow-rule-5: A commit runs eslint and the typecheck first
+## workflow-rule-5: A commit runs eslint, the typecheck and the markdown width first
 
-`.githooks/pre-commit` runs eslint on the staged `.ts`/`.js` files and `tsc --noEmit` on the whole project,
-and refuses the commit on either failure. `pnpm install` points `core.hooksPath` at `.githooks` (the
-`prepare` script), so every worktree of the checkout gets it. Before it, `tsc --noEmit` ran only in CI and a
-worker found "'wholePath' is defined but never used" mid-edit, a round trip after it had committed.
+`.githooks/pre-commit` runs eslint on the staged `.ts`/`.js` files, `tsc --noEmit` on the whole
+project and the markdown width on the staged markdown (workflow-decision-11), and refuses the commit
+on any failure. `pnpm install` points `core.hooksPath` at
+`.githooks` (the `prepare` script), so every worktree of the checkout gets it. Before it,
+`tsc --noEmit` ran only in CI and a worker found "'wholePath' is defined but never used" mid-edit, a
+round trip after it had committed.
 
 eslint runs only when code is staged, and on the whole project (`eslint .`) when `eslint.config.*`,
-`package.json` or `pnpm-lock.yaml` is: a new rule otherwise passed on the config file alone and refused
-the files it targets only in CI. tsc also runs when `tsconfig*.json`, `package.json` or `pnpm-lock.yaml`
-is, since those change what it reports. Both skip a commit that only touches `.dashboard/` or docs: the app
-and the board command commit cards from throwaway worktrees with no `node_modules`, and a card must never
-wait on, or fail on, tsc. A commit that stages code in a checkout with no `node_modules` is refused and
-told to run `pnpm install`: it used to go through unchecked, and that is how a broken merge from a fresh
-worktree reached #196. `filesToCheck`, `runsTypecheck` and `missingToolsRefusal` in `scripts/pre-commit.mjs`
-decide, tested beside it; `scripts/pre-commit-step.mjs` runs the tools with node, and `.gitattributes` pins
-the hook to LF, so the same hook works on Windows (a CRLF shebang refuses every commit). It reads the
-working tree, not the index: a half-staged file is checked as it stands on disk. `git commit --no-verify`
-gets past it; CI runs both anyway.
+`package.json` or `pnpm-lock.yaml` is: a new rule otherwise passed on the config file alone and
+refused the files it targets only in CI. tsc also runs when `tsconfig*.json`, `package.json` or
+`pnpm-lock.yaml` is, since those change what it reports. Both skip a commit that only touches
+`.dashboard/` or docs: the app and the board command commit cards from throwaway worktrees with no
+`node_modules`, and a card must never wait on, or fail on, tsc. A commit that stages code in a
+checkout with no `node_modules` is refused and told to run `pnpm install`: it used to go through
+unchecked, and that is how a broken merge from a fresh worktree reached #196. `filesToCheck`,
+`runsTypecheck` and `missingToolsRefusal` in `scripts/pre-commit.mjs` decide, tested beside it;
+`scripts/pre-commit-step.mjs` runs the tools with node, and `.gitattributes` pins the hook to LF, so
+the same hook works on Windows (a CRLF shebang refuses every commit). It reads the working tree, not
+the index: a half-staged file is checked as it stands on disk. `git commit --no-verify` gets past
+it; CI runs both anyway.
 
 ## workflow-rule-6: A test that touches paths or processes passes on Windows
 
-Windows has been a target since #191, and `windows-latest` runs the tests on every pull request. #288 and #289
-built expected paths with `/` and reached that job only after their review loop had finished, so the fix
-was another round. A test that names a path builds it with `path.join`; one that needs POSIX paths, file
-modes, unix sockets or signals skips on `win32` with a named `it.skipIf` saying why (`posixPathsOnly` in
-`src/main/drawer/docs-list.test.ts`, `posixModesOnly` in `src/main/app/log-store.test.ts`). CI's Windows job holds it,
-after review. No lint or test holds it earlier: 24 of the 40 test files with a `/tmp/`-style literal have no
-`win32` guard and pass on Windows, since they use the path as a string and never touch the disk, so a check
-on the literal would flag mostly correct tests. Card 43ceddd8 (make the POSIX path-literal tests portable
-instead of skipping them) is the way to a check that holds.
+Windows has been a target since #191, and `windows-latest` runs the tests on every pull
+request. #288 and #289 built expected paths with `/` and reached that job only after their review
+loop had finished, so the fix was another round. A test that names a path builds it with
+`path.join`; one that needs POSIX paths, file modes, unix sockets or signals skips on `win32` with a
+named `it.skipIf` saying why (`posixPathsOnly` in `src/main/drawer/docs-list.test.ts`,
+`posixModesOnly` in `src/main/app/log-store.test.ts`). CI's Windows job holds it, after review. No
+lint or test holds it earlier: 24 of the 40 test files with a `/tmp/`-style literal have no `win32`
+guard and pass on Windows, since they use the path as a string and never touch the disk, so a check
+on the literal would flag mostly correct tests. Card 43ceddd8 (make the POSIX path-literal tests
+portable instead of skipping them) is the way to a check that holds.
 
 ## workflow-rule-7: A pull request leaves the board's files alone
 
-Every board write lands on main by itself (board-decision-5), from the screen or the `board` command, from
-the checkout or a worktree. A card file in a branch is a copy from the day it was written there: merged, it
-puts the card back to that day's column and drops what main has had since. Card files leaked into 12+ pull
-request diffs over 30 sessions; the 60 merged ones up to #279 each carried their own card, from when a
-worker moved it in its branch.
+Every board write lands on main by itself (board-decision-5), from the screen or the `board`
+command, from the checkout or a worktree. A card file in a branch is a copy from the day it was
+written there: merged, it puts the card back to that day's column and drops what main has had since.
+Card files leaked into 12+ pull request diffs over 30 sessions; the 60 merged ones up to #279 each
+carried their own card, from when a worker moved it in its branch.
 
-CI enforces it: on a pull request, `scripts/board-unchanged.mjs` lists the files the merge commit changes
-against its base and fails the run when any is under `.dashboard/board/` or is the old `board.json`
-(still read, so a stale copy brings back deleted cards), naming them and giving the `git restore` from
-the merge-base that leaves the branch with no board change. Restoring from `origin/main` instead leaves a
-copy of main's board as of the fetch, which conflicts the next time main moves one of those cards.
-`git log` shows no pull request that needed one;
-the seeded `.dashboard/CLAUDE.md` and `README.md` are changed by pull requests on purpose (#317) and sit
+CI enforces it: on a pull request, `scripts/board-unchanged.mjs` lists the files the merge commit
+changes against its base and fails the run when any is under `.dashboard/board/` or is the old
+`board.json` (still read, so a stale copy brings back deleted cards), naming them and giving the
+`git restore` from the merge-base that leaves the branch with no board change. Restoring from
+`origin/main` instead leaves a copy of main's board as of the fetch, which conflicts the next time
+main moves one of those cards. `git log` shows no pull request that needed one; the seeded
+`.dashboard/CLAUDE.md` and `README.md` are changed by pull requests on purpose (#317) and sit
 outside the folder, so nothing is exempt.

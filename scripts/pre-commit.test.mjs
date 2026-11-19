@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filesToCheck, missingToolsRefusal, runsTypecheck } from './pre-commit.mjs';
+import { filesToCheck, markdownToCheck, missingToolsRefusal, runsTypecheck } from './pre-commit.mjs';
 
 describe('filesToCheck', () => {
   it('keeps the staged code files', () => {
@@ -54,5 +54,12 @@ describe('missingToolsRefusal', () => {
 
   it('refuses nothing once the tools are installed', () => {
     expect(missingToolsRefusal(['src/main/main.ts'], installed)).toBe('');
+  });
+});
+
+describe('markdownToCheck', () => {
+  it('holds the staged docs to the width, not the board or the changelog', () => {
+    expect(markdownToCheck(['docs/workflow/README.md', '.dashboard/notes.md', 'CHANGELOG.md', 'src/main/main.ts']))
+      .toEqual(['docs/workflow/README.md']);
   });
 });

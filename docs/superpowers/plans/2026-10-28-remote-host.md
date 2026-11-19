@@ -1,40 +1,64 @@
 # Remote Host Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The laptop's Dashboard serves its session over a websocket; the mac's Dashboard connects from the Ctrl+S picker and becomes a second screen of the same shells, boards and notes.
+**Goal:** The laptop's Dashboard serves its session over a websocket; the mac's Dashboard connects
+from the Ctrl+S picker and becomes a second screen of the same shells, boards and notes.
 
-**Architecture:** Main's IPC handlers move from `ipcMain` calls into one channel table that both `ipcMain` and a websocket server dispatch into, each call tagged with the screen it came from. Pushes to the renderer become broadcasts to every screen. On the client, the same table is bypassed: a relay forwards every non-local channel to the host and relays the host's pushes to the renderer. The renderer changes in one place only: the host owns the list of open projects and pushes it, and the renderer reconciles its pages from that list.
+**Architecture:** Main's IPC handlers move from `ipcMain` calls into one channel table that both
+`ipcMain` and a websocket server dispatch into, each call tagged with the screen it came from.
+Pushes to the renderer become broadcasts to every screen. On the client, the same table is bypassed:
+a relay forwards every non-local channel to the host and relays the host's pushes to the renderer.
+The renderer changes in one place only: the host owns the list of open projects and pushes it, and
+the renderer reconciles its pages from that list.
 
 **Tech Stack:** Electron, node-pty, `ws` (new), vitest.
 
 **Spec:** `docs/superpowers/specs/2026-10-28-remote-host-design.md`
 
-Card: `cb8ff4a0-49d5-4696-ab2c-e18197c11484`. Move it to Doing before Task 1's first edit (`node "$DASHBOARD_BOARD" move cb8ff4a0 Doing`), and to Review when the pull request is open. One pull request, branch `remote-host`.
+Card: `cb8ff4a0-49d5-4696-ab2c-e18197c11484`. Move it to Doing before Task 1's first edit
+(`node "$DASHBOARD_BOARD" move cb8ff4a0 Doing`), and to Review when the pull request is open. One
+pull request, branch `remote-host`.
 
 ## Global Constraints
 
 - Checks before every commit: `npm test`, `npx tsc --noEmit`, `npx eslint .`.
 - Never quit, kill, restart or replace the running Dashboard app.
-- Identifiers spelled out in full, no abbreviations (`connection`, not `conn`; `request`, not `req`).
+- Identifiers spelled out in full, no abbreviations (`connection`, not `conn`; `request`, not
+  `req`).
 - Every `<input>` and `<textarea>` created gets `dir = 'auto'`.
 - A refusal is explained where it is decided; an error shown to a person goes through `failureText`.
 - IPC channels are `<noun>:<verb>`.
-- `src/main.ts` is at its 600-line ceiling: every task that touches it must leave it no longer. New code goes in new files.
+- `src/main.ts` is at its 600-line ceiling: every task that touches it must leave it no longer. New
+  code goes in new files.
 - `src/help.ts` is updated in the same change as the picker rows (Task 9).
 - `package.json` `version` bumps minor: `1.16.0` → `1.17.0` (Task 10).
 - No mention of any AI tool in commits, comments or docs.
-- Plain text over the home wifi, guarded by the token, is the accepted scope. Do not add TLS or a login.
+- Plain text over the home wifi, guarded by the token, is the accepted scope. Do not add TLS or a
+  login.
 
 ## Review Focus
 
-Inputs the spec implies but no task's tests exercise unless added here. Each line's test is added to the owning task.
+Inputs the spec implies but no task's tests exercise unless added here. Each line's test is added to
+the owning task.
 
-1. **Settings stay on the screen that shows them.** A mac connected to a Linux host must keep its own Cmd bindings, font and theme, and the host's `shellCommand` must stay the host's. `settings:read` and `settings:write` are client-local channels. Test in Task 1: `isClientChannel('settings:read')` is true.
-2. **A dropped request never hangs a dialog.** A reply that never comes must reject after 10 seconds with `No answer from <address>`, so a board write made during a wifi drop fails on the status bar instead of leaving the card half-moved forever. Test in Task 8.
-3. **The two screens do not fight over a pane's size.** Host window 200 columns, mac 120: the shell gets 120. Mac disconnects: the shell goes back to 200. Test in Task 3.
-4. **The second screen's first paint is the current screen, not an hour of scrollback doubled.** The ring is capped and replay begins with a terminal reset. Test in Task 2: a ring given more than its capacity keeps only the tail; `replay()` starts with `\x1bc`.
-5. **A project opened on one screen appears on the other, and one closed disappears, without the renderer building a page twice.** `applyProjects` is idempotent: the same list twice leaves the pages untouched. Test in Task 5 (`page-reconcile.test.ts`).
+1. **Settings stay on the screen that shows them.** A mac connected to a Linux host must keep its
+   own Cmd bindings, font and theme, and the host's `shellCommand` must stay the host's.
+   `settings:read` and `settings:write` are client-local channels. Test in Task 1:
+   `isClientChannel('settings:read')` is true.
+2. **A dropped request never hangs a dialog.** A reply that never comes must reject after 10 seconds
+   with `No answer from <address>`, so a board write made during a wifi drop fails on the status bar
+   instead of leaving the card half-moved forever. Test in Task 8.
+3. **The two screens do not fight over a pane's size.** Host window 200 columns, mac 120: the shell
+   gets 120. Mac disconnects: the shell goes back to 200. Test in Task 3.
+4. **The second screen's first paint is the current screen, not an hour of scrollback doubled.** The
+   ring is capped and replay begins with a terminal reset. Test in Task 2: a ring given more than
+   its capacity keeps only the tail; `replay()` starts with `\x1bc`.
+5. **A project opened on one screen appears on the other, and one closed disappears, without the
+   renderer building a page twice.** `applyProjects` is idempotent: the same list twice leaves the
+   pages untouched. Test in Task 5 (`page-reconcile.test.ts`).
 
 ---
 
@@ -213,7 +237,8 @@ export function helloRefusal(
 }
 ```
 
-Check `src/is-record.ts` exports `isRecord(value: unknown): value is Record<string, unknown>`; it is imported by `settings.ts` already.
+Check `src/is-record.ts` exports `isRecord(value: unknown): value is Record<string, unknown>`; it is
+imported by `settings.ts` already.
 
 - [ ] **Step 5: Run the test, expect pass**
 
@@ -242,7 +267,9 @@ git commit -m "Add the frame protocol and channel lists for a remote screen"
   export type PaneRing = { push(data: string): void; replay(): string; clear(): void };
   export function paneRing(limit = PANE_RING_LIMIT): PaneRing;
   ```
-  `replay()` returns `'\x1bc' + <last limit characters>`; `'\x1bc'` is the terminal's full reset, so a screen that already had the pane's output is cleared before the replay rather than shown it twice.
+  `replay()` returns `'\x1bc' + <last limit characters>`; `'\x1bc'` is the terminal's full reset, so
+  a screen that already had the pane's output is cleared before the replay rather than shown it
+  twice.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -315,7 +342,8 @@ In `src/main.ts`, beside `const shells = new Map<string, pty.IPty>();` add:
 const rings = new Map<string, PaneRing>();
 ```
 
-Import `paneRing, type PaneRing` from `'./pane-ring'`. In `spawnTerminal`, after the pty is spawned, before `terminalProcess.onData(...)`:
+Import `paneRing, type PaneRing` from `'./pane-ring'`. In `spawnTerminal`, after the pty is spawned,
+before `terminalProcess.onData(...)`:
 
 ```ts
   const ring = paneRing();
@@ -326,7 +354,8 @@ Import `paneRing, type PaneRing` from `'./pane-ring'`. In `spawnTerminal`, after
   });
 ```
 
-(Replace the existing one-line `onData`.) In `projects:close`, inside the `for (const id of paneIds(slot))` loop, add `rings.delete(id);` beside `paneSizes.delete(id);`.
+(Replace the existing one-line `onData`.) In `projects:close`, inside the
+`for (const id of paneIds(slot))` loop, add `rings.delete(id);` beside `paneSizes.delete(id);`.
 
 - [ ] **Step 6: Checks and commit**
 
@@ -336,7 +365,8 @@ git add src/pane-ring.ts src/pane-ring.test.ts src/main.ts
 git commit -m "Keep the tail of each pane's output for a screen that joins later"
 ```
 
-If `wc -l src/main.ts` grew past where it was, move the `rings` map and the two lines into `pane-channels.ts`'s `main` argument instead; the constraint is no growth.
+If `wc -l src/main.ts` grew past where it was, move the `rings` map and the two lines into
+`pane-channels.ts`'s `main` argument instead; the constraint is no growth.
 
 ---
 
@@ -359,7 +389,9 @@ If `wc -l src/main.ts` grew past where it was, move the `rings` map and the two 
   };
   export function screens(): Screens;
   ```
-- `sizeOfPane(sizes, id)` in `terminals.ts` changes its first parameter from `ReadonlyMap<string, PaneSize>` to `{ sizeOf(id: string): PaneSize | undefined }`. A `Map` does not satisfy that; `Screens` does.
+- `sizeOfPane(sizes, id)` in `terminals.ts` changes its first parameter from
+  `ReadonlyMap<string, PaneSize>` to `{ sizeOf(id: string): PaneSize | undefined }`. A `Map` does
+  not satisfy that; `Screens` does.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -463,13 +495,19 @@ export function sizeOfPane(sizes: { sizeOf(id: string): PaneSize | undefined }, 
 }
 ```
 
-Fix the existing `terminals.test.ts` case for `sizeOfPane` if it passes a `Map`: wrap as `{ sizeOf: (id) => map.get(id) }`.
+Fix the existing `terminals.test.ts` case for `sizeOfPane` if it passes a `Map`: wrap as
+`{ sizeOf: (id) => map.get(id) }`.
 
 - [ ] **Step 4: Replace `paneSizes` in main and pane-channels**
 
-In `src/main.ts`: `const paneSizes = new Map<string, PaneSize>();` becomes `const paneScreens = screens();` (import `screens` from `'./screens'`, drop the `PaneSize` import if now unused). `sizeOfPane(paneSizes, id)` → `sizeOfPane(paneScreens, id)`. `paneSizes.delete(id)` → `paneScreens.drop(id)`. `registerPaneChannels({ shells, paneSizes, ... })` → `registerPaneChannels({ shells, screens: paneScreens, ... })`.
+In `src/main.ts`: `const paneSizes = new Map<string, PaneSize>();` becomes
+`const paneScreens = screens();` (import `screens` from `'./screens'`, drop the `PaneSize` import if
+now unused). `sizeOfPane(paneSizes, id)` → `sizeOfPane(paneScreens, id)`. `paneSizes.delete(id)` →
+`paneScreens.drop(id)`. `registerPaneChannels({ shells, paneSizes, ... })` →
+`registerPaneChannels({ shells, screens: paneScreens, ... })`.
 
-In `src/pane-channels.ts`: the `main` type gains `screens: Screens` in place of `paneSizes`; the resize handler becomes
+In `src/pane-channels.ts`: the `main` type gains `screens: Screens` in place of `paneSizes`; the
+resize handler becomes
 
 ```ts
   ipcMain.on('pty:resize', (_event, id: string, cols: number, rows: number) => {
@@ -495,7 +533,8 @@ git commit -m "Size each shell to the smallest of the screens looking at it"
 
 **Files:**
 - Create: `src/channels.ts`, `src/channels.test.ts`
-- Modify: `src/main.ts`, `src/pane-channels.ts`, `src/pane-openers.ts`, `src/log-ipc.ts`, `src/project-files-ipc.ts`, `src/session-store.ts`, `src/task-runner.ts`
+- Modify: `src/main.ts`, `src/pane-channels.ts`, `src/pane-openers.ts`, `src/log-ipc.ts`,
+  `src/project-files-ipc.ts`, `src/session-store.ts`, `src/task-runner.ts`
 
 **Interfaces:**
 - Produces:
@@ -513,7 +552,9 @@ git commit -m "Size each shell to the smallest of the screens looking at it"
   export function registerWithIpc(table: Channels, remote: () => RemoteTarget | null): void;
   export type RemoteTarget = { invoke(channel: string, args: unknown[]): Promise<unknown>; send(channel: string, args: unknown[]): void };
   ```
-- Every `register*` function stops importing `ipcMain` and takes `table: Channels`. Handler bodies gain a leading `screen: string` parameter in place of `_event`. Nothing else in a body changes except `pane-channels.ts`'s resize, which uses `screen`.
+- Every `register*` function stops importing `ipcMain` and takes `table: Channels`. Handler bodies
+  gain a leading `screen: string` parameter in place of `_event`. Nothing else in a body changes
+  except `pane-channels.ts`'s resize, which uses `screen`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -613,24 +654,34 @@ export function registerWithIpc(table: Channels, remote: () => RemoteTarget | nu
 }
 ```
 
-Make `channels()` remember its names so `registerWithIpc` can take them from the table rather than a list: add `handled(): string[]` and `listened(): string[]` to `Channels`, returning `[...handlers.keys()]` and `[...listeners.keys()]`, and change `registerWithIpc(table, remote)` to read `table.handled()` and `table.listened()`. Update the test's type expectations accordingly. `registerWithIpc` runs once, after every `register*` call in main, so order in main matters: it is the last line before `app.on('ready', ...)`.
+Make `channels()` remember its names so `registerWithIpc` can take them from the table rather than a
+list: add `handled(): string[]` and `listened(): string[]` to `Channels`, returning
+`[...handlers.keys()]` and `[...listeners.keys()]`, and change `registerWithIpc(table, remote)` to
+read `table.handled()` and `table.listened()`. Update the test's type expectations accordingly.
+`registerWithIpc` runs once, after every `register*` call in main, so order in main matters: it is
+the last line before `app.on('ready', ...)`.
 
 - [ ] **Step 4: Run the unit test, expect pass**
 
 - [ ] **Step 5: Migrate every registration**
 
-Mechanical. In each file, replace `import { ipcMain } from 'electron'` with `import type { Channels } from './channels'` (keep other electron imports such as `Notification`, `app`, `shell`), add a `table: Channels` parameter, and rewrite:
+Mechanical. In each file, replace `import { ipcMain } from 'electron'` with
+`import type { Channels } from './channels'` (keep other electron imports such as `Notification`,
+`app`, `shell`), add a `table: Channels` parameter, and rewrite:
 
 - `ipcMain.handle('x:y', (_event, a, b) => ...)` → `table.handle('x:y', (_screen, a, b) => ...)`
 - `ipcMain.on('x:y', (_event, a) => ...)` → `table.on('x:y', (_screen, a) => ...)`
 
 Files and signatures after:
 
-- `src/pane-channels.ts`: `registerPaneChannels(table: Channels, main: {...})`. Resize uses the screen: `main.screens.resize(screen, id, { cols, rows })`. `notification:show` stays here; it only ever runs for `LOCAL_SCREEN` because the client keeps that channel (Task 1), so no branch.
+- `src/pane-channels.ts`: `registerPaneChannels(table: Channels, main: {...})`. Resize uses the
+  screen: `main.screens.resize(screen, id, { cols, rows })`. `notification:show` stays here; it only
+  ever runs for `LOCAL_SCREEN` because the client keeps that channel (Task 1), so no branch.
 - `src/pane-openers.ts`: `registerPaneOpeners(table: Channels, main: {...})`.
 - `src/log-ipc.ts`: `registerLog(table: Channels, directory, send)`.
 - `src/project-files-ipc.ts`: `registerProjectFiles(table: Channels, boards, changes)`.
-- `src/session-store.ts`: `sessionStore(table: Channels, file, slotOf)`. The `session:write` handler ignores a remote screen's layout:
+- `src/session-store.ts`: `sessionStore(table: Channels, file, slotOf)`. The `session:write` handler
+  ignores a remote screen's layout:
   ```ts
   table.on('session:write', (screen, next: Session) => {
     // A couch layout must not overwrite the desk's: the file is the host window's.
@@ -641,11 +692,14 @@ Files and signatures after:
   ```
   Import `LOCAL_SCREEN` from `'./screens'`.
 - `src/task-runner.ts`: `registerTasks(table: Channels, ports)`.
-- `src/main.ts`: create `const table = channels();` near the top (after `failures`), replace every `ipcMain.handle`/`ipcMain.on` with `table.handle`/`table.on` and `_event` with `_screen`, pass `table` to every `register*` and to `sessionStore`, and add before `app.on('ready', ...)`:
+- `src/main.ts`: create `const table = channels();` near the top (after `failures`), replace every
+  `ipcMain.handle`/`ipcMain.on` with `table.handle`/`table.on` and `_event` with `_screen`, pass
+  `table` to every `register*` and to `sessionStore`, and add before `app.on('ready', ...)`:
   ```ts
   registerWithIpc(table, () => null);
   ```
-  Remove `ipcMain` from the electron import. `projects:open`'s `dialog.showOpenDialog(mainWindow, ...)` stays for now; Task 9 refuses it for a remote screen.
+  Remove `ipcMain` from the electron import. `projects:open`'s
+  `dialog.showOpenDialog(mainWindow, ...)` stays for now; Task 9 refuses it for a remote screen.
 
 - [ ] **Step 6: Checks**
 
@@ -653,7 +707,9 @@ Files and signatures after:
 npx tsc --noEmit && npx eslint . && npm test && wc -l src/main.ts
 ```
 
-Expected: all pass; `main.ts` not longer than before the task. Start the app once by hand (`npm start`), open a project, type in a pane, resize the window, open the board, run a command on the command screen: every channel still answers.
+Expected: all pass; `main.ts` not longer than before the task. Start the app once by hand
+(`npm start`), open a project, type in a pane, resize the window, open the board, run a command on
+the command screen: every channel still answers.
 
 - [ ] **Step 7: Commit**
 
@@ -668,7 +724,9 @@ git commit -m "Route every main channel through one table tagged with the screen
 
 **Files:**
 - Create: `src/page-reconcile.ts`, `src/page-reconcile.test.ts`
-- Modify: `src/bridge.ts:36-37`, `src/preload.ts`, `src/main.ts:572-630`, `src/renderer.ts:424-433` (`setPage`), `src/renderer.ts:461-520` (`closeProject`), `src/renderer.ts:543-552` (`openProject`), `src/log-entry.ts:8`
+- Modify: `src/bridge.ts:36-37`, `src/preload.ts`, `src/main.ts:572-630`, `src/renderer.ts:424-433`
+  (`setPage`), `src/renderer.ts:461-520` (`closeProject`), `src/renderer.ts:543-552`
+  (`openProject`), `src/log-entry.ts:8`
 
 **Interfaces:**
 - Produces:
@@ -684,7 +742,10 @@ git commit -m "Route every main channel through one table tagged with the screen
     | { kind: 'build'; slot: number; project: Project };
   export function pageMoves(current: { slot: number; project: Project }[], currentHost: string, next: OpenProjects): PageMove[];
   ```
-  `pageMoves` is the decision; the renderer applies it. `reset` comes first and alone when the host changed (every page goes, then every project builds). A page whose slot holds the same path with the same `missing` is untouched. A project in the list with no page → `build`. A page whose slot is now `null` or a different path → `remove` then `build` when there is a project.
+  `pageMoves` is the decision; the renderer applies it. `reset` comes first and alone when the host
+  changed (every page goes, then every project builds). A page whose slot holds the same path with
+  the same `missing` is untouched. A project in the list with no page → `build`. A page whose slot
+  is now `null` or a different path → `remove` then `build` when there is a project.
 - `LOG_KINDS` gains `'screen'`.
 
 - [ ] **Step 1: Write the failing test**
@@ -770,7 +831,9 @@ export function pageMoves(
 
 - [ ] **Step 5: Bridge and preload**
 
-`src/bridge.ts`: add `export type OpenProjects = { host: string; projects: (Project | null)[] };` and change `openProject`'s return to `Promise<{ index: number; open: OpenProjects } | null>`; add `onProjectsChange(listener: (open: OpenProjects) => void): void;`.
+`src/bridge.ts`: add `export type OpenProjects = { host: string; projects: (Project | null)[] };`
+and change `openProject`'s return to `Promise<{ index: number; open: OpenProjects } | null>`; add
+`onProjectsChange(listener: (open: OpenProjects) => void): void;`.
 
 `src/preload.ts`: add
 
@@ -793,9 +856,15 @@ function openProjects(): OpenProjects {
 }
 ```
 
-`projects:open` returns `{ index, open: openProjects() }` instead of `{ index, project, replaced }`, and before the return: `sendToRenderer('projects:change', openProjects());`. `projects:close`, at its end: `sendToRenderer('projects:change', openProjects());`. The `replaced` boolean is no longer returned; keep the local `replaced` for the branch that spawns.
+`projects:open` returns `{ index, open: openProjects() }` instead of `{ index, project, replaced }`,
+and before the return: `sendToRenderer('projects:change', openProjects());`. `projects:close`, at
+its end: `sendToRenderer('projects:change', openProjects());`. The `replaced` boolean is no longer
+returned; keep the local `replaced` for the branch that spawns.
 
-Check `main.ts` length. If it grew, move `openProjects()` into `src/screens.ts`? No: it reads `projects`. Instead shorten a comment block in `projects:close` by the same number of lines, or move `processTree` (`main.ts:184-197`) into `src/process-tree.ts` with its comment, exported as is. Prefer the move.
+Check `main.ts` length. If it grew, move `openProjects()` into `src/screens.ts`? No: it reads
+`projects`. Instead shorten a comment block in `projects:close` by the same number of lines, or move
+`processTree` (`main.ts:184-197`) into `src/process-tree.ts` with its comment, exported as is.
+Prefer the move.
 
 - [ ] **Step 7: Renderer applies the list**
 
@@ -818,7 +887,9 @@ In `src/renderer.ts`:
    }
    ```
 
-   `closeProject`'s tail becomes `bridge.closeProject(slot); removePage(slot);` followed by the existing landing logic (the lines after `pages.splice` that pick the tab to land on; read them and keep them, using the `closingPosition` already computed before the call).
+   `closeProject`'s tail becomes `bridge.closeProject(slot); removePage(slot);` followed by the
+   existing landing logic (the lines after `pages.splice` that pick the tab to land on; read them
+   and keep them, using the `closingPosition` already computed before the call).
 3. Add:
 
    ```ts
@@ -838,7 +909,11 @@ In `src/renderer.ts`:
    bridge.onProjectsChange(applyProjects);
    ```
 
-   Import `pageMoves` from `'./page-reconcile'` and `type OpenProjects` from `'./bridge'`. `activeIndex` can point past the end after removals; the `showPage(0)` line lands on the manager when the page you stood on went. Read `landOn`/`showPage` to confirm `activeIndex` is clamped there; if `showPage` already modulo-wraps (it does: `(index + pages.length) % pages.length`), pass `Math.min(activeIndex, pages.length - 1)` instead of 0.
+   Import `pageMoves` from `'./page-reconcile'` and `type OpenProjects` from `'./bridge'`.
+   `activeIndex` can point past the end after removals; the `showPage(0)` line lands on the manager
+   when the page you stood on went. Read `landOn`/`showPage` to confirm `activeIndex` is clamped
+   there; if `showPage` already modulo-wraps (it does: `(index + pages.length) % pages.length`),
+   pass `Math.min(activeIndex, pages.length - 1)` instead of 0.
 4. `openProject` becomes:
 
    ```ts
@@ -859,7 +934,8 @@ In `src/renderer.ts`:
 npm test && npx tsc --noEmit && npx eslint . && wc -l src/main.ts
 ```
 
-By hand in the app: open two projects, close one with the close key, reopen it; the tabs behave as before. Quit and relaunch: the session restores.
+By hand in the app: open two projects, close one with the close key, reopen it; the tabs behave as
+before. Quit and relaunch: the session restores.
 
 - [ ] **Step 9: Commit**
 
@@ -873,7 +949,8 @@ git commit -m "Let main own the list of open projects and push it to every scree
 ### Task 6: Settings for the host and the remote
 
 **Files:**
-- Modify: `src/settings.ts`, `src/settings.test.ts`, `src/settings-rows.ts`, `src/settings-rows.test.ts`, `src/settings-view.ts`
+- Modify: `src/settings.ts`, `src/settings.test.ts`, `src/settings-rows.ts`,
+  `src/settings-rows.test.ts`, `src/settings-view.ts`
 - Create: `src/host-token.ts`, `src/host-token.test.ts`
 
 **Interfaces:**
@@ -883,9 +960,16 @@ git commit -m "Let main own the list of open projects and push it to every scree
   remote: { address: string; token: string };
   ```
   Defaults: `{ port: null, token: '' }` and `{ address: '', token: '' }`.
-- `src/host-token.ts`: `export function ensureHostToken(settings: Settings, random: () => string): { settings: Settings; generated: boolean }`. Returns the same settings when the token is non-empty; otherwise a copy with `host.token = random()`.
-- `settingsRows` gains, under a `Host` heading: `{ kind: 'host-port'; label: 'Port'; value: string }` (empty when null) and `{ kind: 'host-token'; label: 'Token'; value: string }`. The token row's Enter copies the token to the clipboard and says `Token copied`. No row for `remote`: the connect dialog writes it.
-- `isPort(value: string): boolean`: integer 1 to 65535, exported from `settings.ts` beside `isFontSize` and used by both the parser and the screen's refusal message.
+- `src/host-token.ts`: `export function ensureHostToken(settings: Settings, random: () => string): {
+  settings: Settings; generated: boolean
+  }`. Returns the same settings when the token is non-empty; otherwise a copy with `host.token =
+  random()`.
+- `settingsRows` gains, under a `Host` heading:
+  `{ kind: 'host-port'; label: 'Port'; value: string }` (empty when null) and
+  `{ kind: 'host-token'; label: 'Token'; value: string }`. The token row's Enter copies the token to
+  the clipboard and says `Token copied`. No row for `remote`: the connect dialog writes it.
+- `isPort(value: string): boolean`: integer 1 to 65535, exported from `settings.ts` beside
+  `isFontSize` and used by both the parser and the screen's refusal message.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -944,7 +1028,10 @@ describe('ensureHostToken', () => {
 });
 ```
 
-In `src/settings-rows.test.ts`, add a case: rows include `{ kind: 'heading', label: 'Host' }`, `{ kind: 'host-port', label: 'Port', value: '' }` and `{ kind: 'host-token', label: 'Token', value: 'abc' }` for `parseSettings({ host: { token: 'abc' } }, false)`, and `value: '7777'` for the port when set.
+In `src/settings-rows.test.ts`, add a case: rows include `{ kind: 'heading', label: 'Host' }`,
+`{ kind: 'host-port', label: 'Port', value: '' }` and
+`{ kind: 'host-token', label: 'Token', value: 'abc' }` for
+`parseSettings({ host: { token: 'abc' } }, false)`, and `value: '7777'` for the port when set.
 
 - [ ] **Step 2: Run, expect failure**
 
@@ -973,7 +1060,10 @@ and in `parseSettings`:
     },
 ```
 
-with `const storedHost = asRecord(raw.host); const storedRemote = asRecord(raw.remote);`. Check `withoutDuplicates` and `resetKeys` spread the whole object so the new fields survive; `tidySettingsFile` in `settings-store.ts` writes `parseSettings`' output, so the file gains the fields on the next write.
+with `const storedHost = asRecord(raw.host); const storedRemote = asRecord(raw.remote);`. Check
+`withoutDuplicates` and `resetKeys` spread the whole object so the new fields survive;
+`tidySettingsFile` in `settings-store.ts` writes `parseSettings`' output, so the file gains the
+fields on the next write.
 
 `src/host-token.ts`:
 
@@ -997,7 +1087,8 @@ export function ensureHostToken(settings: Settings, random: () => string): { set
   rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
 ```
 
-`src/settings-view.ts`: in `startEditing`, `host-token` is not editable: add `row.kind === 'host-token'` to the early return. In `finish`, before the final `else`:
+`src/settings-view.ts`: in `startEditing`, `host-token` is not editable: add
+`row.kind === 'host-token'` to the early return. In `finish`, before the final `else`:
 
 ```ts
         } else if (row.kind === 'host-port') {
@@ -1007,7 +1098,8 @@ export function ensureHostToken(settings: Settings, random: () => string): { set
           else commit({ ...settings, host: { ...settings.host, port: text === '' ? null : Number(text) } });
 ```
 
-In `activate`: `if (row.kind === 'host-token') { void navigator.clipboard.writeText(row.value); return say('Token copied'); }`. Import `isPort`.
+In `activate`: `if (row.kind === 'host-token') { void navigator.clipboard.writeText(row.value);
+return say('Token copied'); }`. Import `isPort`.
 
 In `src/main.ts`, after `readSettings`: 
 
@@ -1017,7 +1109,9 @@ settings = tokenCheck.settings;
 if (tokenCheck.generated) writeSettings(settingsFile, settings, isMac);
 ```
 
-Import `randomBytes` from `'node:crypto'` and `ensureHostToken` from `'./host-token'`. Confirm `settings` is declared with `let`; `settings:write` already reassigns it. Watch `main.ts` length; offset by moving `processTree` out if Task 5 did not already.
+Import `randomBytes` from `'node:crypto'` and `ensureHostToken` from `'./host-token'`. Confirm
+`settings` is declared with `let`; `settings:write` already reassigns it. Watch `main.ts` length;
+offset by moving `processTree` out if Task 5 did not already.
 
 - [ ] **Step 4: Checks and commit**
 
@@ -1049,11 +1143,15 @@ git commit -m "Add the host port and token and the remote address to the setting
   export type RemoteHost = { broadcast(channel: string, args: unknown[]): void; close(): void };
   export function startRemoteHost(port: number, ports: HostPorts): RemoteHost;
   ```
-- Main's `sendToRenderer` becomes a broadcast: the local window plus `remoteHost?.broadcast`. `notification:click` is the one push that stays local; it is sent from `pane-channels.ts` through `main.send`, which is `sendToRenderer`; since no remote screen ever calls `notification:show`, no remote screen is ever told to click, and the broadcast of it is harmless. Leave it.
+- Main's `sendToRenderer` becomes a broadcast: the local window plus `remoteHost?.broadcast`.
+  `notification:click` is the one push that stays local; it is sent from `pane-channels.ts` through
+  `main.send`, which is `sendToRenderer`; since no remote screen ever calls `notification:show`, no
+  remote screen is ever told to click, and the broadcast of it is harmless. Leave it.
 
 - [ ] **Step 1: Implement `src/remote-host.ts`**
 
-No unit test: this file is socket wiring, like `pane-channels.ts`; every decision in it is `remote-protocol.ts`'s and `channels.ts`'s, which are tested. Verified by hand in Task 10.
+No unit test: this file is socket wiring, like `pane-channels.ts`; every decision in it is
+`remote-protocol.ts`'s and `channels.ts`'s, which are tested. Verified by hand in Task 10.
 
 ```ts
 import { WebSocketServer, type WebSocket } from 'ws';
@@ -1139,7 +1237,11 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
 }
 ```
 
-Sends (`table.on`) arrive as requests too: the client (Task 8) gives every frame an id and ignores the reply for a send. `table.invoke` on a channel registered with `on` rejects with `No such channel`; so `remote-host.ts` must route: try `invoke`, and if the table has it as a listener, `dispatch` instead. Add to `Channels` a `kind(channel): 'handle' | 'on' | undefined` and in the host:
+Sends (`table.on`) arrive as requests too: the client (Task 8) gives every frame an id and ignores
+the reply for a send. `table.invoke` on a channel registered with `on` rejects with
+`No such channel`; so `remote-host.ts` must route: try `invoke`, and if the table has it as a
+listener, `dispatch` instead. Add to `Channels` a `kind(channel): 'handle' | 'on' | undefined` and
+in the host:
 
 ```ts
       if (ports.table.kind(frame.channel) === 'on') {
@@ -1181,11 +1283,16 @@ if (settings.host.port !== null) {
 }
 ```
 
-`onLeave` must also resize every shell to the remaining screens: after `forget`, `for (const [id, shell] of shells) { const size = paneScreens.sizeOf(id); if (size) shell.resize(size.cols, size.rows); }`. Put that loop in a function `resizeShellsToScreens()` in `pane-channels.ts`'s returned object if `main.ts` is tight.
+`onLeave` must also resize every shell to the remaining screens: after `forget`, `for (const [id,
+shell] of shells) { const size = paneScreens.sizeOf(id); if (size) shell.resize(size.cols,
+size.rows); }`. Put that loop in a function
+`resizeShellsToScreens()` in `pane-channels.ts`'s returned object if `main.ts` is tight.
 
 In `app.on('will-quit')`: `remoteHost?.close();`.
 
-Changing the port on the settings screen takes effect on the next launch: say so in the `host-port` row's refusal message? No, in `src/help.ts` (Task 9) and in the settings row label: `Port (next launch)`. Update the Task 6 row label and test accordingly.
+Changing the port on the settings screen takes effect on the next launch: say so in the `host-port`
+row's refusal message? No, in `src/help.ts` (Task 9) and in the settings row label:
+`Port (next launch)`. Update the Task 6 row label and test accordingly.
 
 - [ ] **Step 3: Checks and commit**
 
@@ -1200,7 +1307,8 @@ git commit -m "Serve the session to remote screens over a websocket"
 ### Task 8: The client relays to the host
 
 **Files:**
-- Create: `src/remote-client.ts`, `src/remote-client.test.ts`, `src/pending-requests.ts`, `src/pending-requests.test.ts`
+- Create: `src/remote-client.ts`, `src/remote-client.test.ts`, `src/pending-requests.ts`,
+  `src/pending-requests.test.ts`
 - Modify: `src/bridge.ts`, `src/preload.ts`, `src/main.ts`
 
 **Interfaces:**
@@ -1225,8 +1333,14 @@ git commit -m "Serve the session to remote screens over a websocket"
   export type RemoteClient = RemoteTarget & { address: string; close(): void };
   export function connectRemote(address: string, token: string, ports: ClientPorts): Promise<RemoteClient>;  // resolves after the hello is accepted; rejects with the refusal reason
   ```
-  After the first accepted hello, a drop starts a reconnect every 2 seconds; `status('Reconnecting to <address>…')` while down, `status('')` when back. Each successful reconnect sends the hello again and the host replays (Task 7's `onJoin`). Requests made while down reject at once with `Not connected to <address>`; sends while down are dropped.
-- Bridge: `connectHost(address: string, token: string): Promise<string>` (resolves `''` or a refusal message), `disconnectHost(): Promise<void>`, `onHostStatus(listener: (text: string) => void): void` (channel `host:status`). Channels `host:connect`, `host:disconnect`.
+  After the first accepted hello, a drop starts a reconnect every 2 seconds;
+  `status('Reconnecting to <address>…')` while down, `status('')` when back. Each successful
+  reconnect sends the hello again and the host replays (Task 7's `onJoin`). Requests made while down
+  reject at once with `Not connected to <address>`; sends while down are dropped.
+- Bridge: `connectHost(address: string, token: string): Promise<string>` (resolves `''` or a refusal
+  message), `disconnectHost(): Promise<void>`,
+  `onHostStatus(listener: (text: string) => void): void` (channel `host:status`). Channels
+  `host:connect`, `host:disconnect`.
 
 - [ ] **Step 1: Write the failing test for pending requests**
 
@@ -1482,7 +1596,8 @@ export function connectRemote(address: string, token: string, ports: ClientPorts
 }
 ```
 
-A `send` is sent as a request so the host's single path handles it; its reply is never waited for (`pending.open` is not called), so `settle` returns false and nothing else happens.
+A `send` is sent as a request so the host's single path handles it; its reply is never waited for
+(`pending.open` is not called), so `settle` returns false and nothing else happens.
 
 - [ ] **Step 5: Run, expect pass**
 
@@ -1571,7 +1686,9 @@ const remote = registerRemote(table, {
 registerWithIpc(table, remote.current);
 ```
 
-`host:connect`'s `connectRemote` succeeding makes the host push `projects:change` with its list (Task 7's `onJoin`), which the renderer applies with a `reset` because the host differs. On `host:disconnect`, the local list goes out with host `local` and the renderer resets back.
+`host:connect`'s `connectRemote` succeeding makes the host push `projects:change` with its list
+(Task 7's `onJoin`), which the renderer applies with a `reset` because the host differs. On
+`host:disconnect`, the local list goes out with host `local` and the renderer resets back.
 
 `--remote` at launch: in `app.on('ready')`, after `createWindow()`:
 
@@ -1584,7 +1701,9 @@ registerWithIpc(table, remote.current);
   }
 ```
 
-Watch `main.ts` length; it must not grow. Move `processTree` out (Task 5 note) if not yet done, and move the `remoteHost` start block of Task 7 into `remote-ipc.ts` as a second exported function `startHostIfConfigured` if still needed.
+Watch `main.ts` length; it must not grow. Move `processTree` out (Task 5 note) if not yet done, and
+move the `remoteHost` start block of Task 7 into `remote-ipc.ts` as a second exported function
+`startHostIfConfigured` if still needed.
 
 - [ ] **Step 7: Checks and commit**
 
@@ -1599,7 +1718,8 @@ git commit -m "Relay every channel to a remote host once a screen has connected"
 ### Task 9: The picker's connect rows and the renderer's connect flow
 
 **Files:**
-- Modify: `src/picker.ts`, `src/picker.test.ts`, `src/renderer.ts:543-565`, `src/help.ts:287-300`, `src/main.ts:575-580` (`projects:open` with null from a remote screen)
+- Modify: `src/picker.ts`, `src/picker.test.ts`, `src/renderer.ts:543-565`, `src/help.ts:287-300`,
+  `src/main.ts:575-580` (`projects:open` with null from a remote screen)
 
 **Interfaces:**
 - `PickerChoice` becomes
@@ -1614,11 +1734,15 @@ git commit -m "Relay every channel to a remote host once a screen has connected"
   export function pickerRows(projects: Project[], query: string, state: PickerState): Row[];
   export function openPicker(projects: Project[], state: PickerState): Promise<PickerChoice>;
   ```
-  Rows after the matches, in order: the new-project row; then when `connectedTo` is set, `Disconnect from <address>`; otherwise `Connect to a host…` and, when `lastAddress` is non-empty, `Reconnect to <lastAddress>` before it.
+  Rows after the matches, in order: the new-project row; then when `connectedTo` is set,
+  `Disconnect from <address>`; otherwise `Connect to a host…` and, when `lastAddress` is non-empty,
+  `Reconnect to <lastAddress>` before it.
 
 - [ ] **Step 1: Update the tests**
 
-In `src/picker.test.ts`, every `pickerRows(a, b)` call gains `{ connectedTo: null, lastAddress: '' }`, and `row.choice` comparisons change from a path to `{ kind: 'open', path }` (`toBeNull()` becomes `toEqual({ kind: 'open', path: null })`). Add:
+In `src/picker.test.ts`, every `pickerRows(a, b)` call gains
+`{ connectedTo: null, lastAddress: '' }`, and `row.choice` comparisons change from a path to
+`{ kind: 'open', path }` (`toBeNull()` becomes `toEqual({ kind: 'open', path: null })`). Add:
 
 ```ts
 describe('connect rows', () => {
@@ -1692,7 +1816,8 @@ export function openPicker(projects: Project[], state: PickerState): Promise<Pic
 }
 ```
 
-Check `lucide` has a `plug` icon under the name the glyph helper expects (grep the glyph map in `src/icons.ts` or wherever `'folderPlus'` is resolved); if not, use `'link'`.
+Check `lucide` has a `plug` icon under the name the glyph helper expects (grep the glyph map in
+`src/icons.ts` or wherever `'folderPlus'` is resolved); if not, use `'link'`.
 
 - [ ] **Step 3: Renderer flow**
 
@@ -1725,9 +1850,12 @@ async function showPicker(): Promise<void> {
 }
 ```
 
-Collapse the first line to one `await bridge.getRecentProjects()`; the comment explains why no branch. `bridge.onHostStatus((text) => showNotice('host', text));` beside the other listeners. Check `showNotice(span, text)`'s signature in `renderer.ts` and that an empty text clears the span.
+Collapse the first line to one `await bridge.getRecentProjects()`; the comment explains why no
+branch. `bridge.onHostStatus((text) => showNotice('host', text));` beside the other listeners. Check
+`showNotice(span, text)`'s signature in `renderer.ts` and that an empty text clears the span.
 
-Opening a new project while connected: `openProject(null)` would open a folder dialog on the host's desk. In `openProject`, before the bridge call:
+Opening a new project while connected: `openProject(null)` would open a folder dialog on the host's
+desk. In `openProject`, before the bridge call:
 
 ```ts
   if (projectPath === null && currentHost !== 'local') {
@@ -1737,7 +1865,8 @@ Opening a new project while connected: `openProject(null)` would open a folder d
   }
 ```
 
-And in `main.ts`'s `projects:open`, the dialog branch refuses a remote screen so a stray null can never raise a dialog on the desk:
+And in `main.ts`'s `projects:open`, the dialog branch refuses a remote screen so a stray null can
+never raise a dialog on the desk:
 
 ```ts
   if (projectPath === null) {
@@ -1749,13 +1878,16 @@ And in `main.ts`'s `projects:open`, the dialog branch refuses a remote screen so
 
 - [ ] **Step 4: Help**
 
-In `src/help.ts`, the `projects` blurb gains, after the sentence about the window opening on the last run's projects:
+In `src/help.ts`, the `projects` blurb gains, after the sentence about the window opening on the
+last run's projects:
 
 ```
 'The project list has one more row at the bottom, Connect to a host: another Dashboard, on another machine, that has a port and a token in its settings. Connected, this window is a second screen of that session — its projects, its shells, its boards — and the row becomes Disconnect. Opening a new project while connected asks for a folder path on the host, since a folder dialog here would show this machine\'s disk. '
 ```
 
-And the settings screen blurb (find the `settings:` entry) gains: `'The Host rows make this Dashboard reachable from another: a port, read at the next launch, and the token the other machine pastes once. The laptop must not sleep on lid close; that is the operating system\'s setting.'`
+And the settings screen blurb (find the `settings:` entry) gains: `'The Host rows make this
+Dashboard reachable from another: a port, read at the next launch, and the token the other machine
+pastes once. The laptop must not sleep on lid close; that is the operating system\'s setting.'`
 
 - [ ] **Step 5: Checks**
 
@@ -1763,7 +1895,10 @@ And the settings screen blurb (find the `settings:` entry) gains: `'The Host row
 npm test && npx tsc --noEmit && npx eslint . && wc -l src/main.ts src/renderer.ts
 ```
 
-`renderer.ts` is already over 600 lines (check `wc -l`); if it is, the `showPicker` growth must be offset: move `showPicker` and the connect prompts into a new `src/connect-flow.ts` exporting `showPicker(ports)` with the pieces it needs (`projectPages`, `openProject`, `settings` getter and setter, `currentHost`, `showPage`, `showNotice`) handed in.
+`renderer.ts` is already over 600 lines (check `wc -l`); if it is, the `showPicker` growth must be
+offset: move `showPicker` and the connect prompts into a new `src/connect-flow.ts` exporting
+`showPicker(ports)` with the pieces it needs (`projectPages`, `openProject`, `settings` getter and
+setter, `currentHost`, `showPage`, `showNotice`) handed in.
 
 - [ ] **Step 6: Commit**
 
@@ -1777,11 +1912,13 @@ git commit -m "Connect to a host from the project list and open the host's folde
 ### Task 10: Version, documentation, hand check
 
 **Files:**
-- Modify: `package.json` (`version`), `README.md` (an `Second screen` section), `docs/decisions.md` (one entry), `.dashboard/board.json` through the `board` command only
+- Modify: `package.json` (`version`), `README.md` (an `Second screen` section), `docs/decisions.md`
+  (one entry), `.dashboard/board.json` through the `board` command only
 
 - [ ] **Step 1: Version**
 
-`package.json` `version`: `1.16.0` → `1.17.0`. Run `npm install` so the lockfile's own version line follows.
+`package.json` `version`: `1.16.0` → `1.17.0`. Run `npm install` so the lockfile's own version line
+follows.
 
 - [ ] **Step 2: README**
 
@@ -1829,7 +1966,8 @@ The two counts agree; the last grep prints nothing.
 
 - [ ] **Step 5: Hand check with two instances on one machine**
 
-Do not touch the installed app. Build into `out/` with `npm run package` only if the forge config permits a second instance; otherwise run two dev instances:
+Do not touch the installed app. Build into `out/` with `npm run package` only if the forge config
+permits a second instance; otherwise run two dev instances:
 
 ```bash
 # terminal 1: host, with a settings file naming a port
@@ -1839,9 +1977,15 @@ XDG_CONFIG_HOME=/tmp/dashboard-host npm start
 XDG_CONFIG_HOME=/tmp/dashboard-client npm start
 ```
 
-Check `settingsFilePath(home, xdgConfigHome)` in `settings-store.ts` honours `XDG_CONFIG_HOME`; if it does not on Linux, use `HOME=/tmp/dashboard-client` instead.
+Check `settingsFilePath(home, xdgConfigHome)` in `settings-store.ts` honours `XDG_CONFIG_HOME`; if
+it does not on Linux, use `HOME=/tmp/dashboard-client` instead.
 
-In the client: Ctrl+S, Connect to a host, `127.0.0.1:7777`, token. Expect: the host's tabs appear, every pane shows its current screen. Type in a pane on each side; both show it. Resize the client narrower; the host's pane reflows. Open a project from the client by path; it appears on the host. Close one on the host; it disappears on the client. Kill the host (Ctrl+C in terminal 1): client status bar reads `Reconnecting to 127.0.0.1:7777…`; start the host again: panes clear and replay. Wrong token: `The host refused the token`. Disconnect: the client's own projects return.
+In the client: Ctrl+S, Connect to a host, `127.0.0.1:7777`, token. Expect: the host's tabs appear,
+every pane shows its current screen. Type in a pane on each side; both show it. Resize the client
+narrower; the host's pane reflows. Open a project from the client by path; it appears on the host.
+Close one on the host; it disappears on the client. Kill the host (Ctrl+C in terminal 1): client
+status bar reads `Reconnecting to 127.0.0.1:7777…`; start the host again: panes clear and replay.
+Wrong token: `The host refused the token`. Disconnect: the client's own projects return.
 
 - [ ] **Step 6: Commit, push, pull request, board**
 
@@ -1866,6 +2010,7 @@ node "$DASHBOARD_BOARD" move cb8ff4a0 Review
 node "$DASHBOARD_BOARD" set cb8ff4a0 --branch remote-host --pull-request <number>
 ```
 
-Commit the board change straight to `main` in a temporary worktree of `origin/main`, never on the feature branch.
+Commit the board change straight to `main` in a temporary worktree of `origin/main`, never on the
+feature branch.
 
 Then say the installed app needs a rebuild and restart, and stop.

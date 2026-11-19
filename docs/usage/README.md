@@ -23,8 +23,12 @@ every launch reads everything again, off main's thread.
 
 ## Scenarios
 
-- Given Claude Code has written session logs for a project, when the sweep runs, then the manager's row shows its five-hour, week and all-time totals.
+- Given Claude Code has written session logs for a project, when the sweep runs, then the manager's
+  row shows its five-hour, week and all-time totals.
 - Given a pane runs Claude Code, when its replies cost tokens, then the pane's own figure moves.
-- Given a pane's session wrote or read the prompt cache, when the sweep runs, then the snapshot carries that pane's last use of it and the tier it last wrote, for the workers popup; a subagent's replies are left out.
+- Given a pane's session wrote or read the prompt cache, when the sweep runs, then the snapshot
+  carries that pane's last use of it and the tier it last wrote, for the workers popup; a subagent's
+  replies are left out.
 - Given the logs are read, when the sweep runs, then nothing in them is written to.
-- Given years of logs, when the app launches, then typing and pane output do not stall while the first sweep reads them.
+- Given years of logs, when the app launches, then typing and pane output do not stall while the
+  first sweep reads them.

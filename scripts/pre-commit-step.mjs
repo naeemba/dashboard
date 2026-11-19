@@ -1,11 +1,11 @@
 // The pre-commit hook's way into pre-commit.mjs, run by .githooks/pre-commit from the checkout's top
 // (workflow-rule-5). The tsc run is package.json's `typecheck`.
 /* global process, console */
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { filesToCheck, missingToolsRefusal, runsTypecheck } from './pre-commit.mjs';
+import { filesToCheck, markdownToCheck, missingToolsRefusal, runsTypecheck } from './pre-commit.mjs';
+import { ESLINT, run } from './run-node.mjs';
 
-const ESLINT = 'node_modules/eslint/bin/eslint.js';
 // `tsc` in node_modules/.bin is TypeScript 7's, the package `@typescript/native`.
 const TSC = 'node_modules/@typescript/native/bin/tsc';
 
@@ -20,7 +20,8 @@ if (refusal) {
 }
 const files = filesToCheck(staged);
 
-const run = (script, args) => spawnSync(process.execPath, [script, ...args], { stdio: 'inherit' }).status === 0;
 const linted = files.length === 0 || run(ESLINT, ['--no-warn-ignored', ...files]);
 const typed = !runsTypecheck(staged) || run(TSC, ['--noEmit']);
-process.exit(linted && typed ? 0 : 1);
+const markdown = markdownToCheck(staged);
+const wrapped = markdown.length === 0 || run('scripts/markdown-width-step.mjs', markdown);
+process.exit(linted && typed && wrapped ? 0 : 1);

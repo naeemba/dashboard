@@ -24,11 +24,14 @@ One line per merged change: date and why.
 - 2026-11-01 #112 — /branch carries on in a copy of the conversation, keeping the original
 - 2026-11-01 #111 — /diff reviews every file Claude changed in the conversation
 - 2026-11-01 #120 — API retry and rate-limit notices in the thread
-- 2026-11-01 #117 — /mcp lists the session's MCP servers and reconnects, disables or enables one (chat-decision-6)
+- 2026-11-01 #117 — /mcp lists the session's MCP servers and reconnects, disables or enables one
+  (chat-decision-6)
 - 2026-11-01 #122 — /rename names the conversation; /resume lists it by that name
-- 2026-11-01 #114 — Queue a message sent while Claude is busy, grey until taken, Up withdraws it (chat-decision-7)
+- 2026-11-01 #114 — Queue a message sent while Claude is busy, grey until taken, Up withdraws it
+  (chat-decision-7)
 - 2026-11-01 #113 — Ctrl+G edits the prompt in the project's nvim
-- 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history (chat-decision-8)
+- 2026-11-01 #118 — /btw: a side question answered beside the turn, kept out of history
+  (chat-decision-8)
 - 2026-11-01 #127 — Readline kill and yank keys in the box: Ctrl+W, U, K, Y and Alt+Y
 - 2026-11-01 #116 — Answer an MCP server's forms and sign-in links in the ask box
 - 2026-11-01 #123 — Stash the box's draft with Alt+S, Up brings it back (chat-decision-9)
@@ -40,17 +43,29 @@ One line per merged change: date and why.
 - 2026-11-01 #135 — An exported file's name cuts the shared slug instead of its own copy
 - 2026-11-01 #143 — The image-size notice and help blurb read the limit from IMAGE_LIMIT
 - 2026-11-02 #176 — Pane links, and the foot's workers count and popup (Alt+W)
-- 2026-11-05 #208 — Pane links in the screen's link colour, and Alt+G follows a selected entry's links
+- 2026-11-05 #208 — Pane links in the screen's link colour, and Alt+G follows a selected entry's
+  links
 - 2026-11-05 #212 — The working line counts tool input and each message's real output tokens
-- 2026-11-05 #215 — Agents key (Alt+A), each agent's conversation, and subagent tokens on the Agent call and the working line
-- 2026-11-07 #229 — `dashboard project open` starts the project's main session and waits until it is reachable
-- 2026-11-07 #232 — Every Claude screen takes the app's 7px scrollbar, and main's fills its column like a worker's
+- 2026-11-05 #215 — Agents key (Alt+A), each agent's conversation, and subagent tokens on the Agent
+  call and the working line
+- 2026-11-07 #229 — `dashboard project open` starts the project's main session and waits until it is
+  reachable
+- 2026-11-07 #232 — Every Claude screen takes the app's 7px scrollbar, and main's fills its column
+  like a worker's
 - 2026-11-08 #239 — A click on the foot's model, mode or effort opens a sheet of its choices
-- 2026-11-08 #237 — A running workflow's bar on its strip row, and its phases and agents behind Alt+P
-- 2026-11-09 #251 — Opening a background shell command or Monitor shows its output, followed live (chat-decision-17)
-- 2026-11-09 #256 — The session's Claude runs in a systemd scope of its own, a worker screen's too (processes-decision-5)
-- 2026-11-09 #265 — Main's session runs with `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS`, so a worker's stop notice can wait for main's turn to end (workers-decision-1)
-- 2026-11-09 #271 — Claude screens get Claude in Chrome when Claude Code's config turns it on by default
-- 2026-11-09 #264 — Remove any attached image from the prompt: an x on each thumbnail, Alt+D walks them
-- 2026-11-16 #311 — A turn the session starts by itself, after a background task finishes, shows the working line
-- 2026-11-16 — A log at its end goes to its end when its screen is shown again, so a reply that arrived out of sight is not left below the prompt
+- 2026-11-08 #237 — A running workflow's bar on its strip row, and its phases and agents behind
+  Alt+P
+- 2026-11-09 #251 — Opening a background shell command or Monitor shows its output, followed live
+  (chat-decision-17)
+- 2026-11-09 #256 — The session's Claude runs in a systemd scope of its own, a worker screen's too
+  (processes-decision-5)
+- 2026-11-09 #265 — Main's session runs with `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS`, so a worker's
+  stop notice can wait for main's turn to end (workers-decision-1)
+- 2026-11-09 #271 — Claude screens get Claude in Chrome when Claude Code's config turns it on by
+  default
+- 2026-11-09 #264 — Remove any attached image from the prompt: an x on each thumbnail, Alt+D walks
+  them
+- 2026-11-16 #311 — A turn the session starts by itself, after a background task finishes, shows the
+  working line
+- 2026-11-16 — A log at its end goes to its end when its screen is shown again, so a reply that
+  arrived out of sight is not left below the prompt

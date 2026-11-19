@@ -1,10 +1,17 @@
 # Ship a Card Into a Worktree — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development
+> (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
+> checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Moving a board card into a new `Ship` column creates a git worktree off a freshly fetched base branch, takes a pane you have never typed into, and starts `claude "/work-card <id>"` in it.
+**Goal:** Moving a board card into a new `Ship` column creates a git worktree off a freshly fetched
+base branch, takes a pane you have never typed into, and starts `claude "/work-card <id>"` in it.
 
-**Architecture:** A new column name in `board.ts`; the pure decisions (branch name, worktree path, free pane, blocking dirt) in a new `ship.ts` with a test beside it; a local `worktrees.json` in userData through a new `worktree-store.ts`; three new IPC channels whose handlers run `git` asynchronously in the main process; and a `Ctrl+W` overlay to remove worktrees. `renderer.ts` gains nothing — it is already over the 600-line limit.
+**Architecture:** A new column name in `board.ts`; the pure decisions (branch name, worktree path,
+free pane, blocking dirt) in a new `ship.ts` with a test beside it; a local `worktrees.json` in
+userData through a new `worktree-store.ts`; three new IPC channels whose handlers run `git`
+asynchronously in the main process; and a `Ctrl+W` overlay to remove worktrees. `renderer.ts` gains
+nothing — it is already over the 600-line limit.
 
 **Tech Stack:** TypeScript, Electron, node-pty, vitest, xterm.js. No new dependencies.
 
@@ -12,15 +19,24 @@
 
 ## Global Constraints
 
-- **Never rebuild, restart, quit or replace the running Dashboard app.** Building into `out/` or `.vite/` is fine. After changes, run the tests and say the installed app needs a rebuild to pick them up.
-- **No abbreviations in identifiers.** `configuration` not `config`, `repository` not `repo`, `message` not `msg`. Established acronyms (`id`, `url`, `json`, `api`, `uid`) are fine.
-- **No source file over 600 lines of code.** `renderer.ts` is already at 744 — it may be edited but must not get longer.
-- **Every new `<input>` or `<textarea>` gets `element.dir = 'auto'`** in the same change that adds it.
-- **Every dialog that reads `event.key` starts with `if (isModified(event)) return;`** — see `src/overlay.ts` and `src/picker.ts` for the pattern.
-- **A refusal is explained where it is decided.** Export the predicate from the file that enforces it and call it from the file that prints the message. Never write the condition twice.
+- **Never rebuild, restart, quit or replace the running Dashboard app.** Building into `out/` or
+  `.vite/` is fine. After changes, run the tests and say the installed app needs a rebuild to pick
+  them up.
+- **No abbreviations in identifiers.** `configuration` not `config`, `repository` not `repo`,
+  `message` not `msg`. Established acronyms (`id`, `url`, `json`, `api`, `uid`) are fine.
+- **No source file over 600 lines of code.** `renderer.ts` is already at 744 — it may be edited but
+  must not get longer.
+- **Every new `<input>` or `<textarea>` gets `element.dir = 'auto'`** in the same change that adds
+  it.
+- **Every dialog that reads `event.key` starts with `if (isModified(event)) return;`** — see
+  `src/overlay.ts` and `src/picker.ts` for the pattern.
+- **A refusal is explained where it is decided.** Export the predicate from the file that enforces
+  it and call it from the file that prints the message. Never write the condition twice.
 - **IPC channels are `<noun>:<verb>`** — `worktree:create`, not `create:worktree`.
-- **`src/help.ts` is part of every change** that adds or alters a key, a mode, or what a screen does.
-- **No mention of Claude, Anthropic, or any AI tool** in commit messages, code comments, or documentation. (The literal command `claude` that the pane runs is a program name and is fine.)
+- **`src/help.ts` is part of every change** that adds or alters a key, a mode, or what a screen
+  does.
+- **No mention of Claude, Anthropic, or any AI tool** in commit messages, code comments, or
+  documentation. (The literal command `claude` that the pane runs is a program name and is fine.)
 - **No `Co-Authored-By` or "Generated with" trailers** in commits.
 - Checks that must pass before every commit: `npm test`, `npx tsc --noEmit`, `npx eslint .`
 
@@ -28,13 +44,18 @@
 
 ### Task 1: The Ship column
 
-A fourth column named `Ship`, second from the left. New boards ship with it; every board that already exists gets an empty one inserted when it is read, so nobody hand-edits a file. Plus the board operation the ship needs: move a card straight to a column, rather than one step at a time.
+A fourth column named `Ship`, second from the left. New boards ship with it; every board that
+already exists gets an empty one inserted when it is read, so nobody hand-edits a file. Plus the
+board operation the ship needs: move a card straight to a column, rather than one step at a time.
 
 **Files:**
-- Modify: `src/board.ts` (add `SHIP_COLUMN`, change `DEFAULT_COLUMNS`, add `shipColumnIndex`, `withShipColumn`, `moveCardToColumn`)
-- Modify: `src/board-store.ts:202-210` (`parseBoard` applies `withShipColumn`), and `EXPLANATION_FOR_AGENTS` at line 28
+- Modify: `src/board.ts` (add `SHIP_COLUMN`, change `DEFAULT_COLUMNS`, add `shipColumnIndex`,
+  `withShipColumn`, `moveCardToColumn`)
+- Modify: `src/board-store.ts:202-210` (`parseBoard` applies `withShipColumn`), and
+  `EXPLANATION_FOR_AGENTS` at line 28
 - Modify: `src/board.test.ts:59`, `src/board-store.test.ts:191,205,231`
-- Modify: `.dashboard/CLAUDE.md`, `.dashboard/README.md` (regenerated from the constants — a test pins them)
+- Modify: `.dashboard/CLAUDE.md`, `.dashboard/README.md` (regenerated from the constants — a test
+  pins them)
 - Test: `src/board.test.ts`, `src/board-store.test.ts`
 
 **Interfaces:**
@@ -47,7 +68,8 @@ A fourth column named `Ship`, second from the left. New boards ship with it; eve
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `src/board.test.ts`. Replace the existing assertion on line 59 rather than adding a second one:
+Add to `src/board.test.ts`. Replace the existing assertion on line 59 rather than adding a second
+one:
 
 ```typescript
 import {
@@ -111,7 +133,8 @@ describe('moveCardToColumn', () => {
 });
 ```
 
-Update the three assertions in `src/board-store.test.ts` (lines 191, 205, 231) from `['Todo', 'Doing', 'Done']` to `['Todo', 'Ship', 'Doing', 'Done']`, and add:
+Update the three assertions in `src/board-store.test.ts` (lines 191, 205, 231) from
+`['Todo', 'Doing', 'Done']` to `['Todo', 'Ship', 'Doing', 'Done']`, and add:
 
 ```typescript
 it('gives a three-column board read from disk its Ship column', () => {
@@ -194,7 +217,8 @@ In `src/board-store.ts`, import `withShipColumn` and change the last line of `pa
   return withShipColumn({ columns: repairCards(columns, makeId) });
 ```
 
-In `EXPLANATION_FOR_AGENTS`, after the line that reads ``- \`columns\` is ordered. The first column is the leftmost on screen.``, add:
+In `EXPLANATION_FOR_AGENTS`, after the line that reads
+``- \`columns\` is ordered. The first column is the leftmost on screen.``, add:
 
 ```
 - The \`Ship\` column is not an ordinary one. Moving a card into it asks the
@@ -208,7 +232,8 @@ In `EXPLANATION_FOR_AGENTS`, after the line that reads ``- \`columns\` is ordere
 
 - [ ] **Step 4: Regenerate this repo's own `.dashboard` docs**
 
-A test pins `.dashboard/CLAUDE.md` and `.dashboard/README.md` against the two constants, and `seedBoardDirectory` only writes a file that is not there. So delete and re-seed:
+A test pins `.dashboard/CLAUDE.md` and `.dashboard/README.md` against the two constants, and
+`seedBoardDirectory` only writes a file that is not there. So delete and re-seed:
 
 ```bash
 rm .dashboard/CLAUDE.md .dashboard/README.md
@@ -216,12 +241,15 @@ node -e "require('tsx/cjs'); require('./src/board-store.ts').seedBoardDirectory(
   || echo "no tsx — copy the constants by hand instead"
 ```
 
-If that fails, open `src/board-store.ts` and copy the two template literals into the files verbatim, resolving the `\`` escapes to plain backticks. Verify with `npx vitest run src/board-store.test.ts`.
+If that fails, open `src/board-store.ts` and copy the two template literals into the files verbatim,
+resolving the `\`` escapes to plain backticks. Verify with `npx vitest run src/board-store.test.ts`.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: PASS. If `board-state.test.ts` or `manager.test.ts` fail, read the failure — they build their own boards through a helper and should be untouched. Any test that failed because it counted on three columns gets its expectation updated, never the production code bent back.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: PASS. If `board-state.test.ts` or
+`manager.test.ts` fail, read the failure — they build their own boards through a helper and should
+be untouched. Any test that failed because it counted on three columns gets its expectation updated,
+never the production code bent back.
 
 - [ ] **Step 6: Commit**
 
@@ -234,7 +262,8 @@ git commit -m "board: a Ship column, and a way to send a card straight to one"
 
 ### Task 2: ship.ts — the decisions
 
-Every branch in this feature that is not git's or Electron's, in one module with a test beside it, the way `waiting.ts` and `session.ts` already are.
+Every branch in this feature that is not git's or Electron's, in one module with a test beside it,
+the way `waiting.ts` and `session.ts` already are.
 
 **Files:**
 - Create: `src/ship.ts`
@@ -247,7 +276,9 @@ Every branch in this feature that is not git's or Electron's, in one module with
   - `worktreePathFor(projectPath: string, branch: string): string`
   - `freePane(typedIn: readonly number[], count: number): number | null`
   - `blockingChanges(porcelain: string): string[]`
-- Imports: `BOARD_FILE_PATH` from `./board-store` (added in Task 1). **Do not declare a second copy of the path here** — board-store.ts owns `.dashboard` and `board.json` already, and two spellings drift the day the folder is renamed.
+- Imports: `BOARD_FILE_PATH` from `./board-store` (added in Task 1). **Do not declare a second copy
+  of the path here** — board-store.ts owns `.dashboard` and `board.json` already, and two spellings
+  drift the day the folder is renamed.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -454,7 +485,9 @@ git commit -m "ship: branch names, worktree paths, free panes and what blocks a 
 
 ### Task 3: worktree-store.ts — what is in flight
 
-`worktrees.json` in userData, beside `session.json` and `recents.json`. Local state about local checkouts: never in git, so it can never conflict, and — like the session — a damaged file means nothing is recorded rather than the app failing to start.
+`worktrees.json` in userData, beside `session.json` and `recents.json`. Local state about local
+checkouts: never in git, so it can never conflict, and — like the session — a damaged file means
+nothing is recorded rather than the app failing to start.
 
 **Files:**
 - Create: `src/worktree-store.ts`
@@ -463,14 +496,16 @@ git commit -m "ship: branch names, worktree paths, free panes and what blocks a 
 **Interfaces:**
 - Consumes: nothing.
 - Produces:
-  - `type WorktreeEntry = { cardId: string; title: string; projectPath: string; branch: string; worktreePath: string; pane: number | null; startedAt: string }`
+  - `type WorktreeEntry = { cardId: string; title: string; projectPath: string; branch: string;
+    worktreePath: string; pane: number | null; startedAt: string }`
   - `parseWorktrees(stored: unknown): WorktreeEntry[]`
   - `readWorktrees(file: string): WorktreeEntry[]`
   - `writeWorktrees(file: string, entries: WorktreeEntry[]): void`
   - `entryForCard(entries: readonly WorktreeEntry[], cardId: string): WorktreeEntry | undefined`
   - `withEntry(entries: readonly WorktreeEntry[], entry: WorktreeEntry): WorktreeEntry[]`
   - `withoutWorktree(entries: readonly WorktreeEntry[], worktreePath: string): WorktreeEntry[]`
-  - `livingEntries(entries: readonly WorktreeEntry[], exists: (path: string) => boolean): WorktreeEntry[]`
+  - `livingEntries(entries: readonly WorktreeEntry[], exists: (path: string) => boolean):
+    WorktreeEntry[]`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -686,7 +721,8 @@ git commit -m "worktrees: a local record of what is in flight"
 
 ### Task 4: shell.ts — starting the agent in a pane
 
-The agent runs through the same login-and-interactive shell nvim gets, for the same reason: an app launched from the Dock has almost no PATH, and `claude` lives wherever the user's shell puts it.
+The agent runs through the same login-and-interactive shell nvim gets, for the same reason: an app
+launched from the Dock has almost no PATH, and `claude` lives wherever the user's shell puts it.
 
 **Files:**
 - Modify: `src/shell.ts` (add `agentArguments` below `editorArguments`)
@@ -763,9 +799,14 @@ git commit -m "shell: start an agent in a pane with the PATH the terminals have"
 
 ### Task 5: main.ts — the ship itself
 
-The git sequence, the pane hand-over, and the channel the renderer calls. Handlers stay inline and untested under the exemption already written down for the quit guard: what could break here is git's and Electron's plumbing, and a test of those is a test of mocks. Every decision they call into is in `ship.ts` and `board.ts`, which are tested.
+The git sequence, the pane hand-over, and the channel the renderer calls. Handlers stay inline and
+untested under the exemption already written down for the quit guard: what could break here is git's
+and Electron's plumbing, and a test of those is a test of mocks. Every decision they call into is in
+`ship.ts` and `board.ts`, which are tested.
 
-**Every git call is awaited.** Main is the single process every pane's bytes flow through — a synchronous `git fetch` on a slow network stops all five shells painting until it returns, which reads as the app having hung.
+**Every git call is awaited.** Main is the single process every pane's bytes flow through — a
+synchronous `git fetch` on a slow network stops all five shells painting until it returns, which
+reads as the app having hung.
 
 **Files:**
 - Modify: `src/main.ts`
@@ -773,7 +814,10 @@ The git sequence, the pane hand-over, and the channel the renderer calls. Handle
 - Modify: `src/bridge.ts`
 
 **Interfaces:**
-- Consumes: `branchNameFor`, `worktreePathFor`, `freePane`, `blockingChanges`, `BOARD_FILE_PATH` (Task 2); `readWorktrees`, `writeWorktrees`, `withEntry`, `entryForCard`, `livingEntries`, `type WorktreeEntry` (Task 3); `agentArguments` (Task 4); `shipColumnIndex`, `withShipColumn`, `moveCardToColumn`, `selectionOf` (Task 1 and existing `board.ts`)
+- Consumes: `branchNameFor`, `worktreePathFor`, `freePane`, `blockingChanges`, `BOARD_FILE_PATH`
+  (Task 2); `readWorktrees`, `writeWorktrees`, `withEntry`, `entryForCard`, `livingEntries`,
+  `type WorktreeEntry` (Task 3); `agentArguments` (Task 4); `shipColumnIndex`, `withShipColumn`,
+  `moveCardToColumn`, `selectionOf` (Task 1 and existing `board.ts`)
 - Produces on the bridge:
   - `type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number }`
   - `type ShipResult = { ok: true; entry: WorktreeEntry } | { ok: false; message: string }`
@@ -800,7 +844,8 @@ import { moveCardToColumn, selectionOf, shipColumnIndex, withShipColumn } from '
 import { agentArguments, editorArguments, pickShell } from './shell';
 ```
 
-(`editorArguments` and `pickShell` are already imported from `./shell` — extend that line rather than adding a second import of the same module.)
+(`editorArguments` and `pickShell` are already imported from `./shell` — extend that line rather
+than adding a second import of the same module.)
 
 Below the `sessionFile` line, add:
 
@@ -884,7 +929,9 @@ function startAgent(id: string, worktreePath: string, cardId: string): void {
 
 Add below the `board:write` handler:
 
-`ShipRequest` and `ShipResult` are declared in `src/bridge.ts` in Step 6 below. Import them here rather than declaring a second copy — two spellings of one shape is how the renderer and main come to disagree about what a refusal looks like:
+`ShipRequest` and `ShipResult` are declared in `src/bridge.ts` in Step 6 below. Import them here
+rather than declaring a second copy — two spellings of one shape is how the renderer and main come
+to disagree about what a refusal looks like:
 
 ```typescript
 import type { ShipRequest, ShipResult } from './bridge';
@@ -1021,8 +1068,9 @@ In `src/preload.ts`, add to the bridge object:
 
 - [ ] **Step 7: Verify it compiles and nothing regressed**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: PASS. Nothing tests these handlers — the exemption in `CLAUDE.md` covers them — so this step is about the types lining up and the existing suite still being green.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: PASS. Nothing tests these handlers —
+the exemption in `CLAUDE.md` covers them — so this step is about the types lining up and the
+existing suite still being green.
 
 - [ ] **Step 8: Commit**
 
@@ -1035,15 +1083,18 @@ git commit -m "ship: make the worktree, take a pane, start the agent in it"
 
 ### Task 6: board-view.ts — the Ship landing and the badge
 
-The half you can see. A card that lands in Ship starts the flow; a card that has been shipped says so under its title, so it cannot sit in Todo looking untouched and get shipped twice.
+The half you can see. A card that lands in Ship starts the flow; a card that has been shipped says
+so under its title, so it cannot sit in Todo looking untouched and get shipped twice.
 
 **Files:**
 - Modify: `src/board-view.ts`
-- Modify: `src/renderer.ts:486-493` (pass `slot` into `createBoardView` — one changed line, no new ones)
+- Modify: `src/renderer.ts:486-493` (pass `slot` into `createBoardView` — one changed line, no new
+  ones)
 - Test: none new; `board-view.ts` is DOM wiring and the decisions it calls are tested in Tasks 1–3.
 
 **Interfaces:**
-- Consumes: `shipCard`, `listWorktrees` (Task 5); `shipColumnIndex` (Task 1); `type WorktreeEntry` (Task 3)
+- Consumes: `shipCard`, `listWorktrees` (Task 5); `shipColumnIndex` (Task 1); `type WorktreeEntry`
+  (Task 3)
 - Produces: `BoardOptions` gains `slot: number`
 
 - [ ] **Step 1: Widen the options and hold the records**
@@ -1101,7 +1152,8 @@ In `open()`, after `landedRead = token;` and before `render()`:
         .filter((entry) => entry.projectPath === options.projectPath);
 ```
 
-Wrap the call in its own `try`/`catch` that leaves `shipped` as it was, so a failure to read the record never costs you the board.
+Wrap the call in its own `try`/`catch` that leaves `shipped` as it was, so a failure to read the
+record never costs you the board.
 
 - [ ] **Step 4: Start the ship when a card lands in Ship**
 
@@ -1144,11 +1196,13 @@ In `runAction`, replace the `board-move` case:
         }
 ```
 
-Add `shipColumnIndex` to the existing import from `./board`, and `type WorktreeEntry` from `./worktree-store`.
+Add `shipColumnIndex` to the existing import from `./board`, and `type WorktreeEntry` from
+`./worktree-store`.
 
 - [ ] **Step 5: Pass the slot in from the renderer**
 
-In `src/renderer.ts`, the `createBoardView({` call at line 486 gains one line inside the object it already passes:
+In `src/renderer.ts`, the `createBoardView({` call at line 486 gains one line inside the object it
+already passes:
 
 ```typescript
       slot,
@@ -1166,7 +1220,9 @@ In `index.css`, beside the existing `.board-flight` rule, add:
 }
 ```
 
-Add `--shipped` to the theme's variable block with the same value the flight line uses, or reuse `.board-flight`'s colour directly if the theme has no spare name. Check `src/theme.ts` for how colours reach the CSS before inventing a variable.
+Add `--shipped` to the theme's variable block with the same value the flight line uses, or reuse
+`.board-flight`'s colour directly if the theme has no spare name. Check `src/theme.ts` for how
+colours reach the CSS before inventing a variable.
 
 - [ ] **Step 7: Verify**
 
@@ -1184,9 +1240,15 @@ git commit -m "board: a card landing in Ship starts it, and says so afterwards"
 
 ### Task 7: the pane says which checkout it is on
 
-Five panes all reading `terminal 3` with two of them in worktrees is how a command lands in the wrong checkout. This takes the narrow slice the ship needs and leaves the rest to the "Panes name themselves" card.
+Five panes all reading `terminal 3` with two of them in worktrees is how a command lands in the
+wrong checkout. This takes the narrow slice the ship needs and leaves the rest to the "Panes name
+themselves" card.
 
-This task also pays renderer.ts's line budget. Tasks 6 and 8 each add a wiring line to a file that is already 144 lines over the 600-line limit, and the Global Constraints forbid making it longer. So the right-hand status span moves out into its own module — it is a decision with branches in it, which `CLAUDE.md` says belongs beside a test anyway — and renderer.ts ends the branch no longer than it started.
+This task also pays renderer.ts's line budget. Tasks 6 and 8 each add a wiring line to a file that
+is already 144 lines over the 600-line limit, and the Global Constraints forbid making it longer. So
+the right-hand status span moves out into its own module — it is a decision with branches in it,
+which `CLAUDE.md` says belongs beside a test anyway — and renderer.ts ends the branch no longer than
+it started.
 
 **Files:**
 - Modify: `src/terminals.ts` (`paneLabel` takes an optional branch; add `branchOfPane`)
@@ -1198,10 +1260,13 @@ This task also pays renderer.ts's line budget. Tasks 6 and 8 each add a wiring l
 - Consumes: `type WorktreeEntry` (Task 3)
 - Produces:
   - `paneLabel(index: number, branch?: string): string`
-  - `branchOfPane(entries: readonly { pane: number | null; branch: string }[], pane: number): string | undefined`
+  - `branchOfPane(entries: readonly { pane: number | null; branch: string }[], pane: number):
+    string | undefined`
   - `modeLabel(page: StatusPage): string` in `status.ts`
 
-`branchOfPane` goes in `terminals.ts` and **not** in `ship.ts`: `ship.ts` reaches `node:fs` through `board-store.ts`, and this function is called from renderer-side code that must never pull `node:fs` into its bundle.
+`branchOfPane` goes in `terminals.ts` and **not** in `ship.ts`: `ship.ts` reaches `node:fs` through
+`board-store.ts`, and this function is called from renderer-side code that must never pull `node:fs`
+into its bundle.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1257,11 +1322,13 @@ export function branchOfPane(
 }
 ```
 
-Test it: a pane with an entry, a pane with none, and an entry whose `pane` is `null` never matching pane 0 — `null` means no pane, and matching it to pane 0 would label the wrong shell.
+Test it: a pane with an entry, a pane with none, and an entry whose `pane` is `null` never matching
+pane 0 — `null` means no pane, and matching it to pane 0 would label the wrong shell.
 
 - [ ] **Step 5: Move the status span out of renderer.ts**
 
-`renderer.ts` currently holds `modeLabel` at lines 134-139. Move it to a new `src/status.ts`, widened to say which branch a pane is on:
+`renderer.ts` currently holds `modeLabel` at lines 134-139. Move it to a new `src/status.ts`,
+widened to say which branch a pane is on:
 
 ```typescript
 import { branchOfPane, paneLabel } from './terminals';
@@ -1293,7 +1360,10 @@ export function modeLabel(page: StatusPage): string {
 
 Test every branch of it, including a focused pane that is on a worktree and one that is not.
 
-In `renderer.ts`, delete the old `modeLabel` and call this one, building the `StatusPage` inline from the page. The page needs a `worktrees` field beside `board`; fill it from the board view's records where the board is read. Confirm with `wc -l src/renderer.ts` that the file is no longer than it was before Task 6.
+In `renderer.ts`, delete the old `modeLabel` and call this one, building the `StatusPage` inline
+from the page. The page needs a `worktrees` field beside `board`; fill it from the board view's
+records where the board is read. Confirm with `wc -l src/renderer.ts` that the file is no longer
+than it was before Task 6.
 
 - [ ] **Step 6: Verify**
 
@@ -1313,7 +1383,9 @@ git commit -m "terminals: a pane on a worktree says which branch"
 
 Nothing is removed automatically. This is the screen you remove from.
 
-An overlay rather than a section on the manager page, for the reason in `CLAUDE.md`: on the manager a bare `d` is a letter that can no longer reach a waiting pane's shell. Inside an overlay no pane can receive a keystroke, so bare keys are free there.
+An overlay rather than a section on the manager page, for the reason in `CLAUDE.md`: on the manager
+a bare `d` is a letter that can no longer reach a waiting pane's shell. Inside an overlay no pane
+can receive a keystroke, so bare keys are free there.
 
 **Files:**
 - Create: `src/worktree-view.ts`
@@ -1323,10 +1395,13 @@ An overlay rather than a section on the manager page, for the reason in `CLAUDE.
 - Test: `src/actions.test.ts` (the new row is bound and unique)
 
 **Interfaces:**
-- Consumes: `listWorktrees` (Task 5); `openOverlay`, `confirmOverlay` (existing `overlay.ts`); `isModified` (existing `shortcuts.ts`); `clampIndex` (existing); `age` (existing `age.ts`)
+- Consumes: `listWorktrees` (Task 5); `openOverlay`, `confirmOverlay` (existing `overlay.ts`);
+  `isModified` (existing `shortcuts.ts`); `clampIndex` (existing); `age` (existing `age.ts`)
 - Produces:
-  - `removeWorktree(worktreePath: string, force: boolean): Promise<{ ok: boolean; message: string; dirty: string[] }>` on the bridge
-  - `openWorktrees(bridge: DashboardBridge): Promise<string | undefined>` — resolves with the worktree path to jump to, or undefined
+  - `removeWorktree(worktreePath: string, force: boolean): Promise<{ ok: boolean; message: string;
+    dirty: string[] }>` on the bridge
+  - `openWorktrees(bridge: DashboardBridge): Promise<string | undefined>` — resolves with the
+    worktree path to jump to, or undefined
 
 - [ ] **Step 1: Add the removal handler in main**
 
@@ -1355,7 +1430,8 @@ ipcMain.handle('worktree:remove', async (_event, worktreePath: string, force: bo
 });
 ```
 
-Add `withoutWorktree` to the existing `./worktree-store` import. The branch is deliberately left behind — the pull request may still be open on it.
+Add `withoutWorktree` to the existing `./worktree-store` import. The branch is deliberately left
+behind — the pull request may still be open on it.
 
 Add to `src/bridge.ts` inside `DashboardBridge`:
 
@@ -1528,16 +1604,22 @@ In `src/renderer.ts`, add one case beside the existing `help` case in the action
       case 'worktrees': return void openWorktrees(bridge);
 ```
 
-Import `openWorktrees` on the existing import block. (Jumping to the pane the overlay resolves with is not wired in this task — the resolve value is there for it, and `Enter` closing the dialog is already useful. If wiring it costs `renderer.ts` new lines, leave it and add a `ponytail:` comment on the resolve saying so.)
+Import `openWorktrees` on the existing import block. (Jumping to the pane the overlay resolves with
+is not wired in this task — the resolve value is there for it, and `Enter` closing the dialog is
+already useful. If wiring it costs `renderer.ts` new lines, leave it and add a `ponytail:` comment
+on the resolve saying so.)
 
 - [ ] **Step 4: Style it**
 
-In `index.css`, beside the `.picker` rules, add `.worktrees-dialog`, `.worktrees-list`, `.worktrees-branch`, `.worktrees-detail`, `.worktrees-keys`, `.worktrees-empty` and a `.highlighted` rule, copying the shape the picker already uses so the two dialogs look like one app.
+In `index.css`, beside the `.picker` rules, add `.worktrees-dialog`, `.worktrees-list`,
+`.worktrees-branch`, `.worktrees-detail`, `.worktrees-keys`, `.worktrees-empty` and a `.highlighted`
+rule, copying the shape the picker already uses so the two dialogs look like one app.
 
 - [ ] **Step 5: Verify**
 
-Run: `npm test && npx tsc --noEmit && npx eslint .`
-Expected: PASS. `actions.test.ts` checks every row has a unique name and that defaults do not collide — if `Ctrl+W` clashes with an existing binding, the test says so; pick another key and change the row.
+Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: PASS. `actions.test.ts` checks every
+row has a unique name and that defaults do not collide — if `Ctrl+W` clashes with an existing
+binding, the test says so; pick another key and change the row.
 
 - [ ] **Step 6: Commit**
 
@@ -1550,12 +1632,14 @@ git commit -m "worktrees: a list you can remove from, on Ctrl+W"
 
 ### Task 9: the help dialog, and the agent's instructions
 
-A change is not done until `Ctrl+H` tells the truth about it. The keys print themselves from the action table; the blurbs do not.
+A change is not done until `Ctrl+H` tells the truth about it. The keys print themselves from the
+action table; the blurbs do not.
 
 **Files:**
 - Modify: `src/help.ts` (the `board` and `app` blurbs)
 - Modify: `src/help.test.ts` if it pins blurb text
-- Create: `~/.claude/commands/work-card.md` (outside this repository — in the dotfiles checkout at `/Users/sharp/workspace/dotfiles/claude/commands/work-card.md`)
+- Create: `~/.claude/commands/work-card.md` (outside this repository — in the dotfiles checkout at
+  `/Users/sharp/workspace/dotfiles/claude/commands/work-card.md`)
 
 **Interfaces:**
 - Consumes: everything above.
@@ -1563,7 +1647,8 @@ A change is not done until `Ctrl+H` tells the truth about it. The keys print the
 
 - [ ] **Step 1: Update the board blurb**
 
-In `src/help.ts`, add to the end of the `board` blurb, before the sentence about the manager's board:
+In `src/help.ts`, add to the end of the `board` blurb, before the sentence about the manager's
+board:
 
 ```
 'The board has a Ship column second from the left. Moving a card into it hands '
@@ -1587,8 +1672,8 @@ Add to the end of the `app` blurb:
 
 - [ ] **Step 3: Run the help tests**
 
-Run: `npx vitest run src/help.test.ts`
-Expected: PASS. `help.test.ts` checks that every mode has a blurb and every action a row — if it pins exact blurb text, update the expectation.
+Run: `npx vitest run src/help.test.ts` Expected: PASS. `help.test.ts` checks that every mode has a
+blurb and every action a row — if it pins exact blurb text, update the expectation.
 
 - [ ] **Step 4: Write the agent's skill**
 
@@ -1654,7 +1739,8 @@ main branch when this work does.
 Run: `npm test && npx tsc --noEmit && npx eslint .`
 Expected: PASS.
 
-Then say — do not do — that the installed app needs a rebuild and a restart to pick these changes up.
+Then say — do not do — that the installed app needs a rebuild and a restart to pick these changes
+up.
 
 - [ ] **Step 6: Commit**
 
@@ -1669,12 +1755,27 @@ The skill file lives in the dotfiles checkout and is committed there separately.
 
 ## Self-review
 
-**Spec coverage.** Ship column → Task 1. Branch names, worktree paths, free pane, blocking dirt → Task 2. `worktrees.json` → Task 3. Agent launch through a login shell → Task 4. The eight-step git flow, the typed-pane tracking, the IPC → Task 5. The Ship landing and the badge → Task 6. The pane saying its branch → Task 7. Ctrl+W and removal → Task 8. Help blurbs and `/work-card` → Task 9.
+**Spec coverage.** Ship column → Task 1. Branch names, worktree paths, free pane, blocking dirt →
+Task 2. `worktrees.json` → Task 3. Agent launch through a login shell → Task 4. The eight-step git
+flow, the typed-pane tracking, the IPC → Task 5. The Ship landing and the badge → Task 6. The pane
+saying its branch → Task 7. Ctrl+W and removal → Task 8. Help blurbs and `/work-card` → Task 9.
 
-**One thing the spec asks for that no task fully covers:** the design says a failed ship "reaches the status bar naming the step". Task 5 returns one message per refusal and Task 6 prints it, but the message for a failure inside the `try` is the raw git error behind `ship failed:`. That matches the spec's error table for `git worktree add` and is looser than it for the fetch. Left as is — a git error names its own step better than a wrapper would.
+**One thing the spec asks for that no task fully covers:** the design says a failed ship "reaches
+the status bar naming the step". Task 5 returns one message per refusal and Task 6 prints it, but
+the message for a failure inside the `try` is the raw git error behind `ship failed:`. That matches
+the spec's error table for `git worktree add` and is looser than it for the fetch. Left as is — a
+git error names its own step better than a wrapper would.
 
-**Two things deliberately left to the implementer's judgement**, both flagged in the task text rather than hidden: the exact colour variable for `.board-shipped` in Task 6 Step 6, and whether wiring "Enter jumps to the pane" into `renderer.ts` in Task 8 Step 3 would push that file longer.
+**Two things deliberately left to the implementer's judgement**, both flagged in the task text
+rather than hidden: the exact colour variable for `.board-shipped` in Task 6 Step 6, and whether
+wiring "Enter jumps to the pane" into `renderer.ts` in Task 8 Step 3 would push that file longer.
 
-**Type consistency.** `WorktreeEntry` is defined once in Task 3 and imported everywhere after. `ShipRequest` and `ShipResult` were declared twice on the first draft — in `bridge.ts` and again in `main.ts` — and that is fixed above: `bridge.ts` owns them and `main.ts` imports them. `paneLabel` has one signature, added in Task 7 and used by Tasks 6 and 8. `blockingChanges` is called from three places in `main.ts` and defined once in `ship.ts`.
+**Type consistency.** `WorktreeEntry` is defined once in Task 3 and imported everywhere after.
+`ShipRequest` and `ShipResult` were declared twice on the first draft — in `bridge.ts` and again in
+`main.ts` — and that is fixed above: `bridge.ts` owns them and `main.ts` imports them. `paneLabel`
+has one signature, added in Task 7 and used by Tasks 6 and 8. `blockingChanges` is called from three
+places in `main.ts` and defined once in `ship.ts`.
 
-**Key collision.** `Ctrl+W` is not taken by any existing row in `ACTIONS` — the bound set is Ctrl+S, Ctrl+O, Ctrl+H, Ctrl+comma, Ctrl+T, Ctrl+N, Ctrl+B, Ctrl+1..9, Ctrl+Shift+1..9, the Cmd tab and pane keys, Alt+HJKL, and the bare board and manager letters. `actions.test.ts` will say so either way.
+**Key collision.** `Ctrl+W` is not taken by any existing row in `ACTIONS` — the bound set is Ctrl+S,
+Ctrl+O, Ctrl+H, Ctrl+comma, Ctrl+T, Ctrl+N, Ctrl+B, Ctrl+1..9, Ctrl+Shift+1..9, the Cmd tab and pane
+keys, Alt+HJKL, and the bare board and manager letters. `actions.test.ts` will say so either way.
