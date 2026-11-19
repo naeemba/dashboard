@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-19T09:25:45.354Z",
-  "updatedAt": "2026-11-19T09:25:45.354Z",
-  "column": "Backlog",
-  "order": 53
+  "updatedAt": "2026-11-19T09:26:08.113Z",
+  "branch": "pnpm-check-prints-a-three-line-summary-and",
+  "column": "Doing",
+  "order": 2
 }
