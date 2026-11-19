@@ -71,7 +71,10 @@ project is held to.
   version, merge \`origin/$2\` the same way, keep its number and bump again
   from it.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
-  type-check and lint scripts. All of them must pass. If one fails and you cannot fix it, stop: do not open the pull
+  type-check and lint scripts. A project with a \`check\` script that runs them
+  all and prints a summary (\`pnpm check\`) is checked with that, once: read the
+  log it names for a failure rather than running the suite again. All of them
+  must pass. If one fails and you cannot fix it, stop: do not open the pull
   request, and say what failed and why in a comment on the card.
 - Commit in small pieces with messages that say what changed and why.
 - Push the branch and open the pull request with \`gh pr create\`.
