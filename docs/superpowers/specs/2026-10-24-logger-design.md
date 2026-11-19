@@ -31,8 +31,8 @@ worktree). It is read in a fifth section of the manager.
 - `src/log-entry.ts`, shared and pure, beside `log-entry.test.ts`: the types,
   `parseLogLine(line)` (an entry or `undefined`), `logFileNames(base, count)`
   (the five file names, live first: the rename order),
-  `needsRotation(currentSize, appendSize, limit)`, and `matchesLogFilter(entry,
-  query)`: every word of the query appears in the level, kind, project or
+  `needsRotation(currentSize, appendSize, limit)`, and
+  `matchesLogFilter(entry, query)`: every word of the query appears in the level, kind, project or
   message.
 - `src/log-store.ts`, main only: `log(draft)` and `tail(count)`. Writes are
   synchronous: main is one thread, so two entries cannot interleave and no
@@ -78,16 +78,14 @@ months. A command-screen run is logged as `task run on 3 projects`.
   Alt+L already reach it and the four sections before it stay where they are.
 - `'log'` joins `MODES` (not `PROJECT_MODES`: no project has it), with a
   branch in `focusMode` and `modeLabel`, and a name and blurb in `src/help.ts`.
-- `src/log-view.ts`: rows newest first, each `time  level  kind  project
-  message`, error rows coloured. Arrow keys walk the rows; Enter, or a click,
-  unfolds the row to its full message and project path, and again folds it.
-  A filter box sits above the rows the way the command box sits above the
-  command screen's, and takes the keyboard on arrival. Every word typed must
-  appear in the row's level, kind, project or message (`error ship` finds
-  the ships that failed), through `matchesLogFilter`. No letter key opens it: a
-  bare letter bound on this screen would fire while you type in the box.
-  Escape empties it. The box gets `dir = 'auto'`. The keys (arrows, Enter,
-  Escape) are rows in `src/actions.ts`, scoped to `log`.
+- `src/log-view.ts`: rows newest first, each
+  `time  level  kind  project message`, error rows coloured. Arrow keys walk the rows; Enter, or a
+  click, unfolds the row to its full message and project path, and again folds it. A filter box sits
+  above the rows the way the command box sits above the command screen's, and takes the keyboard on
+  arrival. Every word typed must appear in the row's level, kind, project or message (`error ship`
+  finds the ships that failed), through `matchesLogFilter`. No letter key opens it: a bare letter
+  bound on this screen would fire while you type in the box. Escape empties it. The box gets
+  `dir = 'auto'`. The keys (arrows, Enter, Escape) are rows in `src/actions.ts`, scoped to `log`.
 - On arrival the view asks `log:read`; while it exists, `log:appended`
   entries are added at the top. The view keeps at most 1000 rows; older ones
   are in the file. The section's heading prints the path of `dashboard.log`

@@ -18,30 +18,27 @@ its own verbs; this feature only picks the program.
 
 `pr land <number|url|branch>` lands a pull request; a review worker with merging
 on runs it to land its own (ship-decision-1). It notes the head commit, waits on
-`gh pr checks --watch`, then runs `gh pr merge --merge --match-head-commit
-<sha>`. No checks reported is asked once more a minute later; still none is
-merged only when the last twenty merged pull requests of the pull request's own
-repository (read from its url, so a url target for another repository is judged
-by that one) reported no check (`gh pr list --repo <host>/<owner>/<repo> --state
-merged --json statusCheckRollup`), whatever triggered them or whichever service
-ran them, and refused otherwise, since CI that never started on the commit is
-not a pass (command-decision-7). A merge call that fails is read back from the
-pull request: merged at the noted commit is reported merged (the merge went
-through and only gh's answer was lost), and a network error is tried once more
-five seconds on. A network error on the wait is watched once more five seconds
-on, not read as a failed check. A second network error says gh's answer was
-lost, never that a check failed or the merge was refused. A failed check or a
-refused merge exits 1 and merges nothing. The wait is as long as CI takes: main
-runs it in the background at the longest timeout, and runs it again if that
-limit stops it. Once merged, the checkout on the base branch, the project's
-folder or whichever worktree of its repository has it (`git worktree list`),
-fetches origin and merges `origin/<base>` `--ff-only`, as a ship does, when
-nothing but `.dashboard/` is uncommitted there (`blockingChanges`, as a ship
-reads it); a second line says it was fast-forwarded, or why not, and never fails
-the land, not even when git cannot run. A flag where the pull request goes (`pr
-land --help`) never reaches gh as the pull request. It is a merge by whoever
-runs it, so `review.autoMerge` does not gate it, and it is not in the rules the
-app allows every session (command-decision-5). It needs gh, never the app.
+`gh pr checks --watch`, then runs
+`gh pr merge --merge --match-head-commit <sha>`. No checks reported is asked once more a minute
+later; still none is merged only when the last twenty merged pull requests of the pull request's own
+repository (read from its url, so a url target for another repository is judged by that one)
+reported no check
+(`gh pr list --repo <host>/<owner>/<repo> --state merged --json statusCheckRollup`), whatever
+triggered them or whichever service ran them, and refused otherwise, since CI that never started on
+the commit is not a pass (command-decision-7). A merge call that fails is read back from the pull
+request: merged at the noted commit is reported merged (the merge went through and only gh's answer
+was lost), and a network error is tried once more five seconds on. A network error on the wait is
+watched once more five seconds on, not read as a failed check. A second network error says gh's
+answer was lost, never that a check failed or the merge was refused. A failed check or a refused
+merge exits 1 and merges nothing. The wait is as long as CI takes: main runs it in the background at
+the longest timeout, and runs it again if that limit stops it. Once merged, the checkout on the base
+branch, the project's folder or whichever worktree of its repository has it (`git worktree list`),
+fetches origin and merges `origin/<base>` `--ff-only`, as a ship does, when nothing but
+`.dashboard/` is uncommitted there (`blockingChanges`, as a ship reads it); a second line says it
+was fast-forwarded, or why not, and never fails the land, not even when git cannot run. A flag where
+the pull request goes (`pr land --help`) never reaches gh as the pull request. It is a merge by
+whoever runs it, so `review.autoMerge` does not gate it, and it is not in the rules the app allows
+every session (command-decision-5). It needs gh, never the app.
 
 `budget` reads the 7-day usage of the Claude account from
 `~/.claude/usage-7d.json`, which the user's statusline writes each time it draws
@@ -63,10 +60,10 @@ gh.
 usage, as `dashboard --help` does, and `dashboard --version` the stamp built
 into the command, the installed build's `<version>+<commit>`; neither starts or
 raises the app (command-decision-7). Any other first word that is a flag
-(`--remote`) goes to the app, which starts or comes to the front. `dashboard
-<noun> --help` prints a noun's usage, its verbs under the noun's own name
-(`pane claim`, never `session claim`), written for someone who has never seen
-the app: that is how a Claude session learns it.
+(`--remote`) goes to the app, which starts or comes to the front.
+`dashboard <noun> --help` prints a noun's usage, its verbs under the noun's own name (`pane claim`,
+never `session claim`), written for someone who has never seen the app: that is how a Claude session
+learns it.
 
 ## When it starts the app
 
@@ -116,20 +113,20 @@ The app does not edit your files. Copy this into your global `CLAUDE.md`:
     switch projects, dispatch worker panes, move board cards. When you find
     something about a project that `dashboard project find <name>` does not
     show — a deployment and its address, the site, another name for it —
-    record it: `dashboard project set <name> --deploy
-    name=<n>,role=<r>,address=<a>`, `--site <url>`, `--aka <name>`.
+    record it:
+    `dashboard project set <name> --deploy name=<n>,role=<r>,address=<a>`, `--site <url>`,
+    `--aka <name>`.
 
 ## On screen
 
 What each screen does, in full. The help dialog keeps only a short
 blurb for it; this is where the rest lives.
 
-One command, run in the projects you mark. Type it once — `npm audit`, `npm
-outdated`, the test suite — and choose how it runs. Enter gives every marked
-project a process of its own and puts the answers side by side: each row shows
-how its project exited and the last line it printed, Enter on a finished row
-shows the last few lines under it, and Escape stops the run. Nothing there
-touches the shells, so whatever was in them is still there.
+One command, run in the projects you mark. Type it once — `npm audit`,
+`npm outdated`, the test suite — and choose how it runs. Enter gives every marked project a process
+of its own and puts the answers side by side: each row shows how its project exited and the last
+line it printed, Enter on a finished row shows the last few lines under it, and Escape stops the
+run. Nothing there touches the shells, so whatever was in them is still there.
 
 The other key types the command into a shell instead — one free pane in each
 marked project, or a new worker where none is free, where it has history, prints
@@ -190,11 +187,10 @@ Folders: `src/main/command/`.
 - Given a pane, when `node "$DASHBOARD_COMMAND" board move <id> Done` runs, then
   the card moves exactly as `node "$DASHBOARD_BOARD" move <id> Done` moves it.
 - Given a pane, when `node "$DASHBOARD_COMMAND" pane claim` or `session claim`
-  runs, then a worker pane opens and its id is printed, as `node
-  "$DASHBOARD_SESSION" claim` does.
-- Given a skill or a worker hook calling `node "$DASHBOARD_BOARD"` or `node
-  "$DASHBOARD_SESSION"` with the old words, when it runs, then it works
-  unchanged.
+  runs, then a worker pane opens and its id is printed, as
+  `node "$DASHBOARD_SESSION" claim` does.
+- Given a skill or a worker hook calling `node "$DASHBOARD_BOARD"` or
+  `node "$DASHBOARD_SESSION"` with the old words, when it runs, then it works unchanged.
 - Given a noun it does not know, when the command runs, then it prints the nouns
   it takes and exits 1.
 - Given a plain terminal and no app running, when `dashboard pane list --all`
@@ -202,13 +198,13 @@ Folders: `src/main/command/`.
 - Given a plain terminal and no app running, when `dashboard board list` runs in
   a project, then the cards print and no window appears.
 - Given a plain terminal in `~/Downloads`, when `dashboard board list` runs,
-  then it is refused naming `--project`, and `dashboard board list --project
-  crm` prints crm's board.
+  then it is refused naming `--project`, and
+  `dashboard board list --project crm` prints crm's board.
 - Given a plain terminal, when `dashboard pane claim` runs, then it is refused naming `--project`.
-- Given a worker's hook whose app has quit, when it runs `pane notify <id>
-  done`, then it says no Dashboard is running and nothing starts.
-- Given a projects.yaml with a broken entry and a project open, when `dashboard
-  project list` runs, then the file's error prints and it exits 1.
+- Given a worker's hook whose app has quit, when it runs
+  `pane notify <id> done`, then it says no Dashboard is running and nothing starts.
+- Given a projects.yaml with a broken entry and a project open, when
+  `dashboard project list` runs, then the file's error prints and it exits 1.
 - Given a plain terminal, when `dashboard pane send 9:1 hi` runs and page 9 is
   not open, then it is refused naming `9:1`, not the folder.
 - Given `dashboard`, `dashboard --help` or `dashboard pane --help`, when it
@@ -231,14 +227,14 @@ Folders: `src/main/command/`.
   then nothing is merged and it exits 1; where none of the last twenty reported
   one (no workflows, or only Dependabot or Pages ones) it merges and says the
   repository has no CI.
-- Given the project's checkout is on main with nothing uncommitted, when `pr
-  land 12` merges into main, then a second line says main was fast-forwarded in
-  that folder; with an edited file there it says so and leaves the checkout as
-  it was, and the land still exits 0.
-- Given the manager's main in `~/.dashboard`, when it runs `pr land 12 --project
-  crm`, then gh runs in crm's folder.
-- Given a cap of 74 and a reading of 64% from three minutes ago, when `dashboard
-  budget` runs, then it prints both and the age and exits 0; at 74% it exits 1.
+- Given the project's checkout is on main with nothing uncommitted, when
+  `pr land 12` merges into main, then a second line says main was fast-forwarded in that folder;
+  with an edited file there it says so and leaves the checkout as it was, and the land still
+  exits 0.
+- Given the manager's main in `~/.dashboard`, when it runs
+  `pr land 12 --project crm`, then gh runs in crm's folder.
+- Given a cap of 74 and a reading of 64% from three minutes ago, when
+  `dashboard budget` runs, then it prints both and the age and exits 0; at 74% it exits 1.
 - Given no statusline drawn and no Claude screen measured for an hour, when
   `dashboard budget` runs, then it says the reading is too old and exits 2.
 - Given a turn ends on a Claude screen in the app, when `dashboard budget` runs,

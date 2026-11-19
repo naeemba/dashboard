@@ -182,41 +182,42 @@ Folders: `src/main/projects/`.
   second one's line is named as the problem.
 - Given no `~/.dashboard/projects.yaml`, when `list` or `find` runs, then it
   says the file does not exist yet, names `dashboard project init`, and exits 1.
-- Given no `~/.dashboard/projects.yaml` and two projects open, when `dashboard
-  project init` runs, then the file lists those two and every recent project
-  still on disk, and `project list` reads it.
+- Given no `~/.dashboard/projects.yaml` and two projects open, when
+  `dashboard project init` runs, then the file lists those two and every recent project still on
+  disk, and `project list` reads it.
 - Given a `~/.dashboard/projects.yaml`, when `dashboard project init` runs, then
   the file is left as it was, and it says so and exits 1.
-- Given `path: ~/Workspace/new-crm` and the project not open, when `dashboard
-  project open crm` runs in a pane, then a new-crm page appears, its main
-  session starts, and it prints `opened new-crm; main-new-crm is running` once
-  SendMessage to `main-new-crm` arrives.
+- Given `path: ~/Workspace/new-crm` and the project not open, when
+  `dashboard project open crm` runs in a pane, then a new-crm page appears, its main session starts,
+  and it prints `opened new-crm; main-new-crm is running` once SendMessage to `main-new-crm`
+  arrives.
 - Given api restored reading `Directory not found` and its drive mounted since,
   when `dashboard project open api` runs, then the page comes back with its
   shells and it prints `opened api; main-api is running`.
-- Given new-crm restored at launch and never shown, when `dashboard project open
-  crm` runs, then its main starts and it prints `new-crm is already open;
-  main-new-crm is running`; a main that does not start within a minute is
+- Given new-crm restored at launch and never shown, when
+  `dashboard project open crm` runs, then its main starts and it prints
+  `new-crm is already open; main-new-crm is running`; a main that does not start within a minute is
   refused with why.
 - Given new-crm opened from the picker as `~/ws/new-crm`, `ws` a symlink to
   `Workspace`, when `dashboard project close new-crm` runs, then that page
   closes.
-- Given new-crm open with `npm run dev` in terminal 2, when `dashboard project
-  close new-crm` runs, then it prints `new-crm is still running in terminal 2
-  npm — stop it and close again`, exits 1 and the page stays.
-- Given new-crm open with every pane at a prompt, when `dashboard project close
-  new-crm` runs, then the page goes with no dialog.
+- Given new-crm open with `npm run dev` in terminal 2, when
+  `dashboard project close new-crm` runs, then it prints
+  `new-crm is still running in terminal 2 npm — stop it and close again`, exits 1 and the page
+  stays.
+- Given new-crm open with every pane at a prompt, when
+  `dashboard project close new-crm` runs, then the page goes with no dialog.
 - Given new-crm open on another tab, when `dashboard project focus crm` runs,
-  then the window comes forward on new-crm's page and it prints `switched to
-  new-crm`; a project not open is refused.
-- Given new-crm open and listed, and notes open but not listed, when `dashboard
-  project list` runs, then new-crm reads `open` and notes is listed after the
-  file's projects as `open, not in` the file.
+  then the window comes forward on new-crm's page and it prints
+  `switched to new-crm`; a project not open is refused.
+- Given new-crm open and listed, and notes open but not listed, when
+  `dashboard project list` runs, then new-crm reads `open` and notes is listed after the file's
+  projects as `open, not in` the file.
 - Given `dashboard project close cr`, when no project is named or aka'd `cr`,
   then it is refused naming the near matches and nothing closes.
-- Given a commented projects.yaml, when `dashboard project add ~/api --aka
-  backend` runs, then `- name: api` with `aka: [backend]` and `path: ~/api` is
-  the last entry and every comment is still there.
+- Given a commented projects.yaml, when
+  `dashboard project add ~/api --aka backend` runs, then `- name: api` with `aka: [backend]` and
+  `path: ~/api` is the last entry and every comment is still there.
 - Given a file written by `init`, when `dashboard project remove` takes out its
   first project, then the header comment is still at the top.
 - Given api listed at ~/x/api, when `dashboard project add ~/y/api` runs, then it is added as api-2.

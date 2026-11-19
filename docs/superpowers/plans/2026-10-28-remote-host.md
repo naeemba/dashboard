@@ -18,9 +18,9 @@ the renderer reconciles its pages from that list.
 
 **Spec:** `docs/superpowers/specs/2026-10-28-remote-host-design.md`
 
-Card: `cb8ff4a0-49d5-4696-ab2c-e18197c11484`. Move it to Doing before Task 1's first edit (`node
-"$DASHBOARD_BOARD" move cb8ff4a0 Doing`), and to Review when the pull request is open. One pull
-request, branch `remote-host`.
+Card: `cb8ff4a0-49d5-4696-ab2c-e18197c11484`. Move it to Doing before Task 1's first edit
+(`node "$DASHBOARD_BOARD" move cb8ff4a0 Doing`), and to Review when the pull request is open. One
+pull request, branch `remote-host`.
 
 ## Global Constraints
 
@@ -354,8 +354,8 @@ before `terminalProcess.onData(...)`:
   });
 ```
 
-(Replace the existing one-line `onData`.) In `projects:close`, inside the `for (const id of
-paneIds(slot))` loop, add `rings.delete(id);` beside `paneSizes.delete(id);`.
+(Replace the existing one-line `onData`.) In `projects:close`, inside the
+`for (const id of paneIds(slot))` loop, add `rings.delete(id);` beside `paneSizes.delete(id);`.
 
 - [ ] **Step 6: Checks and commit**
 
@@ -389,9 +389,9 @@ If `wc -l src/main.ts` grew past where it was, move the `rings` map and the two 
   };
   export function screens(): Screens;
   ```
-- `sizeOfPane(sizes, id)` in `terminals.ts` changes its first parameter from `ReadonlyMap<string,
-  PaneSize>` to `{ sizeOf(id: string): PaneSize | undefined }`. A `Map` does not satisfy that;
-  `Screens` does.
+- `sizeOfPane(sizes, id)` in `terminals.ts` changes its first parameter from
+  `ReadonlyMap<string, PaneSize>` to `{ sizeOf(id: string): PaneSize | undefined }`. A `Map` does
+  not satisfy that; `Screens` does.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -495,16 +495,16 @@ export function sizeOfPane(sizes: { sizeOf(id: string): PaneSize | undefined }, 
 }
 ```
 
-Fix the existing `terminals.test.ts` case for `sizeOfPane` if it passes a `Map`: wrap as `{ sizeOf:
-(id) => map.get(id) }`.
+Fix the existing `terminals.test.ts` case for `sizeOfPane` if it passes a `Map`: wrap as
+`{ sizeOf: (id) => map.get(id) }`.
 
 - [ ] **Step 4: Replace `paneSizes` in main and pane-channels**
 
-In `src/main.ts`: `const paneSizes = new Map<string, PaneSize>();` becomes `const paneScreens =
-screens();` (import `screens` from `'./screens'`, drop the `PaneSize` import if now unused).
-`sizeOfPane(paneSizes, id)` → `sizeOfPane(paneScreens, id)`. `paneSizes.delete(id)` →
-`paneScreens.drop(id)`. `registerPaneChannels({ shells, paneSizes, ... })` → `registerPaneChannels({
-shells, screens: paneScreens, ... })`.
+In `src/main.ts`: `const paneSizes = new Map<string, PaneSize>();` becomes
+`const paneScreens = screens();` (import `screens` from `'./screens'`, drop the `PaneSize` import if
+now unused). `sizeOfPane(paneSizes, id)` → `sizeOfPane(paneScreens, id)`. `paneSizes.delete(id)` →
+`paneScreens.drop(id)`. `registerPaneChannels({ shells, paneSizes, ... })` →
+`registerPaneChannels({ shells, screens: paneScreens, ... })`.
 
 In `src/pane-channels.ts`: the `main` type gains `screens: Screens` in place of `paneSizes`; the
 resize handler becomes
@@ -665,9 +665,9 @@ the last line before `app.on('ready', ...)`.
 
 - [ ] **Step 5: Migrate every registration**
 
-Mechanical. In each file, replace `import { ipcMain } from 'electron'` with `import type { Channels
-} from './channels'` (keep other electron imports such as `Notification`, `app`, `shell`), add a
-`table: Channels` parameter, and rewrite:
+Mechanical. In each file, replace `import { ipcMain } from 'electron'` with
+`import type { Channels } from './channels'` (keep other electron imports such as `Notification`,
+`app`, `shell`), add a `table: Channels` parameter, and rewrite:
 
 - `ipcMain.handle('x:y', (_event, a, b) => ...)` → `table.handle('x:y', (_screen, a, b) => ...)`
 - `ipcMain.on('x:y', (_event, a) => ...)` → `table.on('x:y', (_screen, a) => ...)`
@@ -698,8 +698,8 @@ Files and signatures after:
   ```ts
   registerWithIpc(table, () => null);
   ```
-  Remove `ipcMain` from the electron import. `projects:open`'s `dialog.showOpenDialog(mainWindow,
-  ...)` stays for now; Task 9 refuses it for a remote screen.
+  Remove `ipcMain` from the electron import. `projects:open`'s
+  `dialog.showOpenDialog(mainWindow, ...)` stays for now; Task 9 refuses it for a remote screen.
 
 - [ ] **Step 6: Checks**
 
@@ -707,9 +707,9 @@ Files and signatures after:
 npx tsc --noEmit && npx eslint . && npm test && wc -l src/main.ts
 ```
 
-Expected: all pass; `main.ts` not longer than before the task. Start the app once by hand (`npm
-start`), open a project, type in a pane, resize the window, open the board, run a command on the
-command screen: every channel still answers.
+Expected: all pass; `main.ts` not longer than before the task. Start the app once by hand
+(`npm start`), open a project, type in a pane, resize the window, open the board, run a command on
+the command screen: every channel still answers.
 
 - [ ] **Step 7: Commit**
 
@@ -961,12 +961,13 @@ git commit -m "Let main own the list of open projects and push it to every scree
   ```
   Defaults: `{ port: null, token: '' }` and `{ address: '', token: '' }`.
 - `src/host-token.ts`: `export function ensureHostToken(settings: Settings, random: () => string): {
-  settings: Settings; generated: boolean }`. Returns the same settings when the token is non-empty;
-  otherwise a copy with `host.token = random()`.
-- `settingsRows` gains, under a `Host` heading: `{ kind: 'host-port'; label: 'Port'; value: string
-  }` (empty when null) and `{ kind: 'host-token'; label: 'Token'; value: string }`. The token row's
-  Enter copies the token to the clipboard and says `Token copied`. No row for `remote`: the connect
-  dialog writes it.
+  settings: Settings; generated: boolean
+  }`. Returns the same settings when the token is non-empty; otherwise a copy with `host.token =
+  random()`.
+- `settingsRows` gains, under a `Host` heading:
+  `{ kind: 'host-port'; label: 'Port'; value: string }` (empty when null) and
+  `{ kind: 'host-token'; label: 'Token'; value: string }`. The token row's Enter copies the token to
+  the clipboard and says `Token copied`. No row for `remote`: the connect dialog writes it.
 - `isPort(value: string): boolean`: integer 1 to 65535, exported from `settings.ts` beside
   `isFontSize` and used by both the parser and the screen's refusal message.
 
@@ -1027,10 +1028,10 @@ describe('ensureHostToken', () => {
 });
 ```
 
-In `src/settings-rows.test.ts`, add a case: rows include `{ kind: 'heading', label: 'Host' }`, `{
-kind: 'host-port', label: 'Port', value: '' }` and `{ kind: 'host-token', label: 'Token', value:
-'abc' }` for `parseSettings({ host: { token: 'abc' } }, false)`, and `value: '7777'` for the port
-when set.
+In `src/settings-rows.test.ts`, add a case: rows include `{ kind: 'heading', label: 'Host' }`,
+`{ kind: 'host-port', label: 'Port', value: '' }` and
+`{ kind: 'host-token', label: 'Token', value: 'abc' }` for
+`parseSettings({ host: { token: 'abc' } }, false)`, and `value: '7777'` for the port when set.
 
 - [ ] **Step 2: Run, expect failure**
 
@@ -1086,8 +1087,8 @@ export function ensureHostToken(settings: Settings, random: () => string): { set
   rows.push({ kind: 'host-token', label: 'Token', value: settings.host.token });
 ```
 
-`src/settings-view.ts`: in `startEditing`, `host-token` is not editable: add `row.kind ===
-'host-token'` to the early return. In `finish`, before the final `else`:
+`src/settings-view.ts`: in `startEditing`, `host-token` is not editable: add
+`row.kind === 'host-token'` to the early return. In `finish`, before the final `else`:
 
 ```ts
         } else if (row.kind === 'host-port') {
@@ -1237,10 +1238,10 @@ export function startRemoteHost(port: number, ports: HostPorts): RemoteHost {
 ```
 
 Sends (`table.on`) arrive as requests too: the client (Task 8) gives every frame an id and ignores
-the reply for a send. `table.invoke` on a channel registered with `on` rejects with `No such
-channel`; so `remote-host.ts` must route: try `invoke`, and if the table has it as a listener,
-`dispatch` instead. Add to `Channels` a `kind(channel): 'handle' | 'on' | undefined` and in the
-host:
+the reply for a send. `table.invoke` on a channel registered with `on` rejects with
+`No such channel`; so `remote-host.ts` must route: try `invoke`, and if the table has it as a
+listener, `dispatch` instead. Add to `Channels` a `kind(channel): 'handle' | 'on' | undefined` and
+in the host:
 
 ```ts
       if (ports.table.kind(frame.channel) === 'on') {
@@ -1284,14 +1285,14 @@ if (settings.host.port !== null) {
 
 `onLeave` must also resize every shell to the remaining screens: after `forget`, `for (const [id,
 shell] of shells) { const size = paneScreens.sizeOf(id); if (size) shell.resize(size.cols,
-size.rows); }`. Put that loop in a function `resizeShellsToScreens()` in `pane-channels.ts`'s
-returned object if `main.ts` is tight.
+size.rows); }`. Put that loop in a function
+`resizeShellsToScreens()` in `pane-channels.ts`'s returned object if `main.ts` is tight.
 
 In `app.on('will-quit')`: `remoteHost?.close();`.
 
 Changing the port on the settings screen takes effect on the next launch: say so in the `host-port`
-row's refusal message? No, in `src/help.ts` (Task 9) and in the settings row label: `Port (next
-launch)`. Update the Task 6 row label and test accordingly.
+row's refusal message? No, in `src/help.ts` (Task 9) and in the settings row label:
+`Port (next launch)`. Update the Task 6 row label and test accordingly.
 
 - [ ] **Step 3: Checks and commit**
 
@@ -1332,13 +1333,14 @@ git commit -m "Serve the session to remote screens over a websocket"
   export type RemoteClient = RemoteTarget & { address: string; close(): void };
   export function connectRemote(address: string, token: string, ports: ClientPorts): Promise<RemoteClient>;  // resolves after the hello is accepted; rejects with the refusal reason
   ```
-  After the first accepted hello, a drop starts a reconnect every 2 seconds; `status('Reconnecting
-  to <address>…')` while down, `status('')` when back. Each successful reconnect sends the hello
-  again and the host replays (Task 7's `onJoin`). Requests made while down reject at once with `Not
-  connected to <address>`; sends while down are dropped.
+  After the first accepted hello, a drop starts a reconnect every 2 seconds;
+  `status('Reconnecting to <address>…')` while down, `status('')` when back. Each successful
+  reconnect sends the hello again and the host replays (Task 7's `onJoin`). Requests made while down
+  reject at once with `Not connected to <address>`; sends while down are dropped.
 - Bridge: `connectHost(address: string, token: string): Promise<string>` (resolves `''` or a refusal
-  message), `disconnectHost(): Promise<void>`, `onHostStatus(listener: (text: string) => void):
-  void` (channel `host:status`). Channels `host:connect`, `host:disconnect`.
+  message), `disconnectHost(): Promise<void>`,
+  `onHostStatus(listener: (text: string) => void): void` (channel `host:status`). Channels
+  `host:connect`, `host:disconnect`.
 
 - [ ] **Step 1: Write the failing test for pending requests**
 
@@ -1732,15 +1734,15 @@ git commit -m "Relay every channel to a remote host once a screen has connected"
   export function pickerRows(projects: Project[], query: string, state: PickerState): Row[];
   export function openPicker(projects: Project[], state: PickerState): Promise<PickerChoice>;
   ```
-  Rows after the matches, in order: the new-project row; then when `connectedTo` is set, `Disconnect
-  from <address>`; otherwise `Connect to a host…` and, when `lastAddress` is non-empty, `Reconnect
-  to <lastAddress>` before it.
+  Rows after the matches, in order: the new-project row; then when `connectedTo` is set,
+  `Disconnect from <address>`; otherwise `Connect to a host…` and, when `lastAddress` is non-empty,
+  `Reconnect to <lastAddress>` before it.
 
 - [ ] **Step 1: Update the tests**
 
-In `src/picker.test.ts`, every `pickerRows(a, b)` call gains `{ connectedTo: null, lastAddress: ''
-}`, and `row.choice` comparisons change from a path to `{ kind: 'open', path }` (`toBeNull()`
-becomes `toEqual({ kind: 'open', path: null })`). Add:
+In `src/picker.test.ts`, every `pickerRows(a, b)` call gains
+`{ connectedTo: null, lastAddress: '' }`, and `row.choice` comparisons change from a path to
+`{ kind: 'open', path }` (`toBeNull()` becomes `toEqual({ kind: 'open', path: null })`). Add:
 
 ```ts
 describe('connect rows', () => {

@@ -28,9 +28,9 @@ quit (or, after a crash, at the last sweep before it).
   `liveSessions` (`usage-store.ts`) and places each live session on its pane through
   `sessionsByPane` (`pane-sessions.ts`), by walking the process tree from the session's pid up to a
   pane's shell pid.
-- Each of those files also carries `cwd`, the folder the session was started in. `claude --resume
-  <id>` looks the session up under the folder it is run in, so a session started in a worktree pane
-  has to be resumed from that worktree.
+- Each of those files also carries `cwd`, the folder the session was started in.
+  `claude --resume <id>` looks the session up under the folder it is run in, so a session started in
+  a worktree pane has to be resumed from that worktree.
 - `paneIsBusy` (`pane-reading.ts`) reads a pane whose foreground program is not its shell as busy,
   so a resumed Claude is never a pane a ship or the command screen takes.
 

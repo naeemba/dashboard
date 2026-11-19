@@ -57,8 +57,8 @@ matched against the physical key, `event.code`, never the character `event.key` 
 - Consumes: nothing. This is the bottom of the stack.
 - Produces:
   - `type KeyInput = { key: string; code: string; shiftKey: boolean; metaKey: boolean; ctrlKey:
-    boolean; altKey: boolean }` — moved here from `shortcuts.ts`, which re-exports it so every
-    existing import keeps working.
+    boolean; altKey: boolean
+    }` — moved here from `shortcuts.ts`, which re-exports it so every existing import keeps working.
   - `type Keystroke = { code: string; ctrl: boolean; meta: boolean; alt: boolean; shift: boolean }`
   - `parseBinding(text: string): Keystroke | null`
   - `formatBinding(keystroke: Keystroke): string | null`
@@ -1183,8 +1183,8 @@ In `src/preload.ts`, delete the `shellCommand` entry and the `SHELL_COMMAND_FLAG
 
 - [ ] **Step 8: Hold the settings in the renderer**
 
-In `src/renderer.ts`, add the import and the module state near the top, below `const isMac =
-bridge.platform === 'darwin';`:
+In `src/renderer.ts`, add the import and the module state near the top, below
+`const isMac = bridge.platform === 'darwin';`:
 
 ```ts
 import { defaultSettings, type Settings } from './settings';
@@ -1436,17 +1436,18 @@ build green, stub it now in `src/board-view.ts` beside `statusLabel`:
     runAction(_action: Action): void {},
 ```
 
-with `runAction(action: Action): void` added to the `BoardView` type and `import type { Action }
-from './actions';` at the top.
+with `runAction(action: Action): void` added to the `BoardView` type and
+`import type { Action } from './actions';` at the top.
 
 - [ ] **Step 6: Fix `src/help.test.ts`**
 
 Its `PROJECT_ROWS` cases call `mapShortcut(key(row.press), true, 'board')`. Change each to
 `mapShortcut(key(row.press), defaultSettings(true).keys, 'board')`, import `defaultSettings` from
-`./settings`, and change each `press` to name the `code` rather than the `key` — `{ code: 'KeyS',
-ctrlKey: true }`, `{ code: 'KeyO', ctrlKey: true }`, `{ code: 'Digit1', ctrlKey: true }`, `{ code:
-'Digit1', ctrlKey: true, shiftKey: true }`, `{ code: 'BracketRight', metaKey: true }`. Task 7
-rewrites this file properly; this step only keeps it compiling and passing.
+`./settings`, and change each `press` to name the `code` rather than the `key` —
+`{ code: 'KeyS', ctrlKey: true }`, `{ code: 'KeyO', ctrlKey: true }`,
+`{ code: 'Digit1', ctrlKey: true }`, `{ code: 'Digit1', ctrlKey: true, shiftKey: true }`,
+`{ code: 'BracketRight', metaKey: true }`. Task 7 rewrites this file properly; this step only keeps
+it compiling and passing.
 
 - [ ] **Step 7: Run the whole check set**
 
@@ -1634,10 +1635,10 @@ Add two optional fields to `ActionEntry`:
   familyDescription?: string;
 ```
 
-Add them to the three generated runs — `project-jump` gets `family: 'project-jump',
-familyDescription: 'Jump to a project'`; `project-move` gets `family: 'project-move',
-familyDescription: 'Move this project to that position'`; `terminal-focus` gets `family:
-'terminal-focus', familyDescription: 'Focus a terminal'`.
+Add them to the three generated runs — `project-jump` gets
+`family: 'project-jump', familyDescription: 'Jump to a project'`; `project-move` gets
+`family: 'project-move', familyDescription: 'Move this project to that position'`; `terminal-focus`
+gets `family: 'terminal-focus', familyDescription: 'Focus a terminal'`.
 
 - [ ] **Step 2: Rewrite `src/help.test.ts`**
 
@@ -1997,8 +1998,8 @@ In `buildPane`, replace the three constants in the `new Terminal({ ... })` call:
     theme: settings.theme as ITheme,
 ```
 
-The `THEME` import in `renderer.ts` is now unused — drop it, keeping `TITLE_BAR_HEIGHT`. Add `import
-type { ITheme } from '@xterm/xterm';` beside the existing `Terminal` import.
+The `THEME` import in `renderer.ts` is now unused — drop it, keeping `TITLE_BAR_HEIGHT`. Add
+`import type { ITheme } from '@xterm/xterm';` beside the existing `Terminal` import.
 
 - [ ] **Step 3: Load the right font at startup and apply the appearance**
 
@@ -2576,8 +2577,8 @@ The same gesture the board already uses for a card title: `Enter` opens a small 
 
 **Interfaces:**
 - Consumes: `isHexColor` from `src/settings.ts`.
-- Produces: `isFontSize(value: string): boolean` from `src/settings.ts`; `startEditing(row:
-  SettingsRow): void` inside `settings-view.ts`.
+- Produces: `isFontSize(value: string): boolean` from `src/settings.ts`;
+  `startEditing(row: SettingsRow): void` inside `settings-view.ts`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2785,9 +2786,9 @@ rows and the project rows are no longer written out by hand. Replace that bullet
 keys come from `src/actions.ts`, so adding a shortcut means adding a row to that table and nothing
 else — and that the blurb is still yours to keep true.
 
-Under **Mode keys pass through**, the sentence "So every keydown handler reaches `if
-(isModified(event)) return;` before it acts on `event.key`" now has a third exception. Add it to the
-list of keys read before that guard, in the same shape as the other two:
+Under **Mode keys pass through**, the sentence "So every keydown handler reaches
+`if (isModified(event)) return;` before it acts on `event.key`" now has a third exception. Add it to
+the list of keys read before that guard, in the same shape as the other two:
 
 > - Every key, in the settings screen, while a row is armed. A row waiting for a binding has to read
 > Ctrl, Cmd, Alt and Shift, or those four are the only keys you could never bind. It is one

@@ -133,8 +133,8 @@ describe('moveCardToColumn', () => {
 });
 ```
 
-Update the three assertions in `src/board-store.test.ts` (lines 191, 205, 231) from `['Todo',
-'Doing', 'Done']` to `['Todo', 'Ship', 'Doing', 'Done']`, and add:
+Update the three assertions in `src/board-store.test.ts` (lines 191, 205, 231) from
+`['Todo', 'Doing', 'Done']` to `['Todo', 'Ship', 'Doing', 'Done']`, and add:
 
 ```typescript
 it('gives a three-column board read from disk its Ship column', () => {
@@ -217,8 +217,8 @@ In `src/board-store.ts`, import `withShipColumn` and change the last line of `pa
   return withShipColumn({ columns: repairCards(columns, makeId) });
 ```
 
-In `EXPLANATION_FOR_AGENTS`, after the line that reads ``- \`columns\` is ordered. The first column
-is the leftmost on screen.``, add:
+In `EXPLANATION_FOR_AGENTS`, after the line that reads
+``- \`columns\` is ordered. The first column is the leftmost on screen.``, add:
 
 ```
 - The \`Ship\` column is not an ordinary one. Moving a card into it asks the
@@ -815,8 +815,8 @@ reads as the app having hung.
 
 **Interfaces:**
 - Consumes: `branchNameFor`, `worktreePathFor`, `freePane`, `blockingChanges`, `BOARD_FILE_PATH`
-  (Task 2); `readWorktrees`, `writeWorktrees`, `withEntry`, `entryForCard`, `livingEntries`, `type
-  WorktreeEntry` (Task 3); `agentArguments` (Task 4); `shipColumnIndex`, `withShipColumn`,
+  (Task 2); `readWorktrees`, `writeWorktrees`, `withEntry`, `entryForCard`, `livingEntries`,
+  `type WorktreeEntry` (Task 3); `agentArguments` (Task 4); `shipColumnIndex`, `withShipColumn`,
   `moveCardToColumn`, `selectionOf` (Task 1 and existing `board.ts`)
 - Produces on the bridge:
   - `type ShipRequest = { projectPath: string; cardId: string; title: string; slot: number }`

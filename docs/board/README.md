@@ -44,25 +44,25 @@ puts a card there when it is not told a column.
 A card that will not be done is kept, in Cancelled, the last column, which every board gets on read
 the way it gets Backlog. `d` on a card moves it there, a move like any other that undo takes back;
 only `d` on a card already in Cancelled deletes it, with its subtasks, after the confirm. Its
-subtasks stay where they are. Entering Cancelled starts nothing, from the board or from `board move
-<id> Cancelled`, and a card leaves it like any column, by key too (board-decision-4). A cancelled
-card is never pulled into Review, and its worktree stays, even once its agent has opened a pull
-request, until the worktree dialog removes it. `d` on a card in Done asks and then deletes it, since
-no key moves a card out of Done. Whatever treats Done as finished treats Cancelled the same: the
-manager's column counts leave both out, the subtask bar counts both as finished, a pane working a
-cancelled card is not stalled, and the release notes' What's new lists only Done.
+subtasks stay where they are. Entering Cancelled starts nothing, from the board or from
+`board move <id> Cancelled`, and a card leaves it like any column, by key too (board-decision-4). A
+cancelled card is never pulled into Review, and its worktree stays, even once its agent has opened a
+pull request, until the worktree dialog removes it. `d` on a card in Done asks and then deletes it,
+since no key moves a card out of Done. Whatever treats Done as finished treats Cancelled the same:
+the manager's column counts leave both out, the subtask bar counts both as finished, a pane working
+a cancelled card is not stalled, and the release notes' What's new lists only Done.
 
 There is a Ship column, just right of Todo. Moving a card into it — Shift with either arrow, a drop
-from either side, or `dashboard board move <id> Ship` — hands it to an agent, and `dashboard board
-ship <id>` does the same without the move. A card in Done moves only by dragging it: Shift with an
-arrow on it is refused with an error naming the card, since the highlight may be on the wrong one
-(board-decision-3). The app refuses if the project has anything uncommitted outside .dashboard/,
-fetches and branches off the project's base branch, makes a worktree in a folder beside the project,
-and starts an agent in a worker that is sitting at a prompt with nothing running in it, or in a new
-worker when none is. The agent is a Claude screen in that pane, as a worker main dispatches is,
-except on Windows, where it is Claude Code in the terminal; the review pane below is the same
-(workers-decision-8). Main is never taken. A pane still standing in an earlier card's worktree is
-taken last, since its transcript is still on screen.
+from either side, or `dashboard board move <id> Ship` — hands it to an agent, and
+`dashboard board ship <id>` does the same without the move. A card in Done moves only by dragging
+it: Shift with an arrow on it is refused with an error naming the card, since the highlight may be
+on the wrong one (board-decision-3). The app refuses if the project has anything uncommitted outside
+.dashboard/, fetches and branches off the project's base branch, makes a worktree in a folder beside
+the project, and starts an agent in a worker that is sitting at a prompt with nothing running in it,
+or in a new worker when none is. The agent is a Claude screen in that pane, as a worker main
+dispatches is, except on Windows, where it is Claude Code in the terminal; the review pane below is
+the same (workers-decision-8). Main is never taken. A pane still standing in an earlier card's
+worktree is taken last, since its transcript is still on screen.
 
 Only what is in the foreground counts as running, and the pane it takes is
 restarted in the worktree: a line you typed but never submitted goes with it,
@@ -109,18 +109,16 @@ reviewed again.
 
 With the settings screen's Review row off (`review.autoLoop` in settings.json),
 a card whose pull request opens is moved into Review and waits there. Moving
-a card into Review yourself, with Shift and an arrow, a drop or `dashboard
-board move <id> Review`, starts its review loop whatever the setting, and so
-does `dashboard board review <id>`; a card with no worktree, no pull request
-yet, an agent still working, a card gone from the board, or a card already
-past Review is refused, and the status bar or the command says why. What
-entering a column starts is one table for the board, the command and the app
-(docs/actions). The card lands in Review either way, and carries a comment when
-the worktree could not be swapped, since nothing was waiting on screen to be
-told. Something left uncommitted in it is the one of those that mends itself:
-git will not give up a worktree with a change in it, so the app asks again
-every few seconds and the review starts on its own the moment that change
-is committed. Every other reason is asked once and the comment is the end of it.
+a card into Review yourself, with Shift and an arrow, a drop or
+`dashboard board move <id> Review`, starts its review loop whatever the setting, and so does
+`dashboard board review <id>`; a card with no worktree, no pull request yet, an agent still working,
+a card gone from the board, or a card already past Review is refused, and the status bar or the
+command says why. What entering a column starts is one table for the board, the command and the app
+(docs/actions). The card lands in Review either way, and carries a comment when the worktree could
+not be swapped, since nothing was waiting on screen to be told. Something left uncommitted in it is
+the one of those that mends itself: git will not give up a worktree with a change in it, so the app
+asks again every few seconds and the review starts on its own the moment that change is committed.
+Every other reason is asked once and the comment is the end of it.
 
 ### The column follows the pull request
 
@@ -141,26 +139,22 @@ it finds:
   the line is written and the card stays, without `; back to Doing`.
 
 Each of those is said on the card when it differs from the last line about that
-pull request, naming the pull request, its title and its link (`Pull request #12
-opened: …`), and the move is made only then, so a card you move on afterwards
-stays where you put it. A pull request
-closed and then reopened counts as opened again, since the last line about it
-is the close. Only a project's own board is followed: a worktree opened as a
-page is not, so its tracked card files stay clean. An open pull
-request is preferred over a newer closed one on the same branch, so a second
-pull request after a closed first is followed. Asked about: a card with a branch,
-on its card or its worktree's record, that is not in Cancelled, whose merge is
-not on it yet, and that, if it is in Done, changed in the last day. A card with
-no branch, a research card, is never asked about; main moves it as before.
-After the number the card shows one glyph from the same answer
-(board-decision-9): ◌ checks running, ✗ a check failed, ✓ approved, ● mergeable,
-◆ merged, in that order of what wins. An open pull request conflicting or
-waiting on a review shows none. The glyph is held in memory, not written on the
-card, so a restart shows none until the next check; merged is read from the
-card's merge line, since a merged card is never asked about again.
-`gh` missing, logged out or offline moves nothing and writes nothing, and logs
-one warning per project (`board` kind) until a check goes through. A board
-shown again within 30 seconds of the last check asks nothing.
+pull request, naming the pull request, its title and its link
+(`Pull request #12 opened: …`), and the move is made only then, so a card you move on afterwards
+stays where you put it. A pull request closed and then reopened counts as opened again, since the
+last line about it is the close. Only a project's own board is followed: a worktree opened as a page
+is not, so its tracked card files stay clean. An open pull request is preferred over a newer closed
+one on the same branch, so a second pull request after a closed first is followed. Asked about: a
+card with a branch, on its card or its worktree's record, that is not in Cancelled, whose merge is
+not on it yet, and that, if it is in Done, changed in the last day. A card with no branch, a
+research card, is never asked about; main moves it as before. After the number the card shows one
+glyph from the same answer (board-decision-9): ◌ checks running, ✗ a check failed, ✓ approved, ●
+mergeable, ◆ merged, in that order of what wins. An open pull request conflicting or waiting on a
+review shows none. The glyph is held in memory, not written on the card, so a restart shows none
+until the next check; merged is read from the card's merge line, since a merged card is never asked
+about again. `gh` missing, logged out or offline moves nothing and writes nothing, and logs one
+warning per project (`board` kind) until a check goes through. A board shown again within 30 seconds
+of the last check asks nothing.
 
 A board too long to read is searched rather than walked: / opens a box over it,
 typing narrows the list to the cards whose titles match and then the cards with
@@ -202,26 +196,26 @@ that say which board the rest of them are aimed at, and Escape to go back to the
 manager's list.
 
 Every pane also carries DASHBOARD_COMMAND, the path to a command whose board
-words list cards and move them from a shell: run `node "$DASHBOARD_COMMAND"
-board` in a project to see what it takes, or DASHBOARD_BOARD, the older path to
-the same program, with no word in front. It is how an agent working a card moves
-its own. `board list` leaves out Done and Cancelled, most of an old board, and
-says in a last line how many cards that hid; `--all` lists them, `--column
-<name>` one column. Wherever a verb takes an id, any start of one that a single
-card's id begins with stands for it, such as its first eight characters; a start two cards share is
-refused, naming both, and a ship, a review or a move the app answers is sent the whole id. The usage
-and the seeded file both say no git pull, commit or push is needed around a board command: it syncs
-the board itself, below. The .dashboard/CLAUDE.md the app seeds into each project says what the
-folder holds, that the board is changed through the command, `node "$DASHBOARD_BOARD"` to print what
-it takes, that `list` leaves out Done and Cancelled, and that no git pull, commit or push is needed.
-Its first line carries a version, and it is written whenever the board is read and the file is
-missing or older than the app's (no version line counts as older), so a project seeded with an older
-text that spelled out the card format gets the new one. A file of the app's version or a later one
-is left alone, edited or not, and a checkout the sync brings up keeps an edit to it. Where git
-tracks the file, the rewrite is committed to origin's default branch by the sync below, as a card
-write is. Only a checkout on origin's default branch, a folder outside git, or a repository with no
-origin default branch has an older file rewritten; a feature branch's worktree keeps its copy until
-it merges main, so that merge has nothing in its way (board-decision-8).
+words list cards and move them from a shell: run
+`node "$DASHBOARD_COMMAND" board` in a project to see what it takes, or DASHBOARD_BOARD, the older
+path to the same program, with no word in front. It is how an agent working a card moves its own.
+`board list` leaves out Done and Cancelled, most of an old board, and says in a last line how many
+cards that hid; `--all` lists them, `--column <name>` one column. Wherever a verb takes an id, any
+start of one that a single card's id begins with stands for it, such as its first eight characters;
+a start two cards share is refused, naming both, and a ship, a review or a move the app answers is
+sent the whole id. The usage and the seeded file both say no git pull, commit or push is needed
+around a board command: it syncs the board itself, below. The .dashboard/CLAUDE.md the app seeds
+into each project says what the folder holds, that the board is changed through the command,
+`node "$DASHBOARD_BOARD"` to print what it takes, that `list` leaves out Done and Cancelled, and
+that no git pull, commit or push is needed. Its first line carries a version, and it is written
+whenever the board is read and the file is missing or older than the app's (no version line counts
+as older), so a project seeded with an older text that spelled out the card format gets the new one.
+A file of the app's version or a later one is left alone, edited or not, and a checkout the sync
+brings up keeps an edit to it. Where git tracks the file, the rewrite is committed to origin's
+default branch by the sync below, as a card write is. Only a checkout on origin's default branch, a
+folder outside git, or a repository with no origin default branch has an older file rewritten; a
+feature branch's worktree keeps its copy until it merges main, so that merge has nothing in its way
+(board-decision-8).
 
 ## Kept in step with git
 
@@ -420,9 +414,9 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given a filter keeps a card only because you just changed it, when an arrow moves the selection
   off it, then the board redraws and the card is gone; an arrow that leaves the drawn cards as they
   are and lands on one of them only moves the highlight.
-- Given a feature branch with uncommitted work, when `create-task.js --title t --notes n --priority
-  high` runs, then the card is on `origin/main` in Backlog with that notes and priority, and the
-  branch, HEAD and working tree are as they were.
+- Given a feature branch with uncommitted work, when
+  `create-task.js --title t --notes n --priority high` runs, then the card is on `origin/main` in
+  Backlog with that notes and priority, and the branch, HEAD and working tree are as they were.
 - Given a repo whose board lives on a second remote, when `create-task.js --remote gitlab` runs,
   then the card is pushed there and `origin` is untouched; `--remote ""` is refused.
 - Given the default branch has no board, neither `.dashboard/board/` nor `.dashboard/board.json`,
@@ -455,9 +449,9 @@ board there does not parse, and when it cannot tell which branch on the remote i
   sentence and pushes once, not twice.
 - Given `--dry-run`, when `create-task.js` runs, then the remote's main is unchanged.
 - Given an agent in any pane the app opened, when it tries an Edit, Write or a `>` redirect into
-  `.dashboard/board/cards/<id>.json`, then the call is refused with a message naming `node
-  "$DASHBOARD_BOARD"`, and a `cat` or a `git checkout -- .dashboard/` of the same file goes through
-  (`board-guard.test.ts`).
+  `.dashboard/board/cards/<id>.json`, then the call is refused with a message naming
+  `node "$DASHBOARD_BOARD"`, and a `cat` or a `git checkout -- .dashboard/` of the same file goes
+  through (`board-guard.test.ts`).
 - Given a `~/.claude/settings.json` linked into a dotfiles repo with hooks of its own, when the
   installed app launches, then one board guard entry is added to the file the link points at, the
   link, the mode and every other entry are as they were, and a second launch writes nothing

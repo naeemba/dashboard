@@ -22,8 +22,8 @@ its status-line measure with `start`, and `chat:measure` starts the session to a
 reading is there as soon as it starts; the renderer skips it while a restore lands on each page in
 turn. Every other measure reads null from a page with no session, so a model picked after a crash
 does not start a CLI, and a session that fails to start is not started again on each visit. A prompt
-or a worker report through the app (`tell`) starts it too, as before. So does `dashboard project
-open`, and it answers only once the session has initialised (project.open,
+or a worker report through the app (`tell`) starts it too, as before. So does
+`dashboard project open`, and it answers only once the session has initialised (project.open,
 `actions/project/open.ts`): a manager opens a project to hand it to that project's main, whose
 SendMessage otherwise failed with "No agent named main-<name> is reachable" until someone showed the
 page. An explicit open starts main; a restore at launch does not, so ten restored pages still run no
@@ -111,9 +111,10 @@ Escape is the interrupt key, and a double press would need a timing rule beside 
 ## chat-decision-4: The @ list is git's files, not the SDK's file suggestions
 
 The SDK has a `file_suggestions` request, but only as an internal type: the `Query` has no method to
-send it. So the screen lists the files itself, from main, with `git ls-files -z --cached --others
---exclude-standard`, less `git ls-files -z --deleted`, and matches them in chat-mentions.ts. Folders
-are not offered. A folder that is not a repository lists nothing rather than walking node_modules.
+send it. So the screen lists the files itself, from main, with
+`git ls-files -z --cached --others --exclude-standard`, less `git ls-files -z --deleted`, and
+matches them in chat-mentions.ts. Folders are not offered. A folder that is not a repository lists
+nothing rather than walking node_modules.
 
 ## chat-decision-5: The task strip's background key is Alt+B, and an ended pick is refused
 
@@ -295,8 +296,8 @@ ends, so the running turn reads a little low until the next measure.
 ## chat-decision-15: Agents are a list behind a key, their tokens are Claude Code's figure, and the working line estimates theirs
 
 Checked against Claude Code 2.1.318 on 2026-11-05, one Agent call that lists `/etc/X11` and reads
-`/etc/hostname`, run both in the terminal and as `claude -p --output-format stream-json --verbose
---include-partial-messages`:
+`/etc/hostname`, run both in the terminal and as
+`claude -p --output-format stream-json --verbose --include-partial-messages`:
 
 - The terminal's agent row read `40.3k tokens` going to `45.8k`: the `total_tokens` that
   `task_progress` and `task_notification` carry, which is the agent's last request's whole context

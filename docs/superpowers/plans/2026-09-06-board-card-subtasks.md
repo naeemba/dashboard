@@ -1026,8 +1026,9 @@ The dialog that shows a card's notes, its parent and its children, and adds chil
 - Produces:
   - `export function addChildCard(board: Board, selection: Selection, id: string, title: string):
     Change` in `src/board.ts`
-  - `export type CardDetailOptions` and `export function openCardDetail(options: CardDetailOptions):
-    Promise<Selection>` in `src/board-detail.ts`
+  - `export type CardDetailOptions` and
+    `export function openCardDetail(options: CardDetailOptions): Promise<Selection>` in
+    `src/board-detail.ts`
 
 - [ ] **Step 1: Write the failing test for adding a child**
 

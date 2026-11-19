@@ -11,9 +11,9 @@ it from the file that displays it.
 
 What drift looks like: someone changes `commitTitle` to refuse only while a
 subtask is unfinished. You blank the title of a card whose subtasks are all
-Done. The card is deleted — and the status bar says `"Ship it" has subtasks —
-delete it with d`. You read that, assume the card survived, and it is gone. No
-test fails.
+Done. The card is deleted — and the status bar says
+`"Ship it" has subtasks — delete it with d`. You read that, assume the card survived, and it is
+gone. No test fails.
 
 The predicates live in `board.ts`, `settings.ts`, `ship.ts`, `pane-reading.ts`,
 `notes-state.ts` and `board-state.ts`. A refusal worth a message reuses one or
@@ -23,12 +23,11 @@ adds another — never a second copy of the condition. This lists them:
 
 A predicate is only worth anything if it asks the same question as the thing
 doing the refusing. `blockingChanges` skips `.dashboard/` on purpose, so a ship
-does not refuse itself over the Ship move that started it. Ask it before `git
-worktree remove` and it answers "nothing in the way" about a worktree git is
-about to refuse: the app's own message never prints and a raw `fatal: ...
-contains modified or untracked files` lands on the card instead. `changedFiles`
-is the same list without the exemption, and that is the one the worktree list
-and the review ask.
+does not refuse itself over the Ship move that started it. Ask it before
+`git worktree remove` and it answers "nothing in the way" about a worktree git is about to refuse:
+the app's own message never prints and a raw `fatal: ... contains modified or untracked files` lands
+on the card instead. `changedFiles` is the same list without the exemption, and that is the one the
+worktree list and the review ask.
 
 The prose counts too. A comment that restates a rule living in another file is a
 second copy no test can catch — the code stays right while the sentence goes
@@ -51,12 +50,11 @@ it; a message that needs something `failureText` does not give is a change to
 
 A handler that throws makes `ipcMain.handle` reject the renderer's `invoke`
 with Electron's wrapper in front of the message. `projects:open` used to refuse
-another screen's folder dialog that way, and that screen read `Error invoking
-remote method 'projects:open': Error: Type the folder's path on the host`
-instead of the sentence. It now answers `{ refused }`, the shape `pdf:read`
-already used, and the view prints the text as it is.
-`project-actions.test.ts` pins it for `projects:open`: each refusal the
-handler makes is answered, not thrown.
+another screen's folder dialog that way, and that screen read
+`Error invoking remote method 'projects:open': Error: Type the folder's path on the host` instead of
+the sentence. It now answers `{ refused }`, the shape `pdf:read` already used, and the view prints
+the text as it is. `project-actions.test.ts` pins it for `projects:open`: each refusal the handler
+makes is answered, not thrown.
 
 Throwing stays right for a failure: `readBoard` on a broken file throws, and
 the status bar says something broke (errors-decision-2).

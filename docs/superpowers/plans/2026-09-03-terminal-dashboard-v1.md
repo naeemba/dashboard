@@ -912,10 +912,10 @@ Check each of these:
 10. Quit the app. `ps aux | grep zsh` shows no leftover shells from the app.
 
 Record any failure and fix it before committing. Likely first-run issues and their fixes:
-- Terminals render blank on pages that were hidden at open time: call `pane.terminal.refresh(0,
-  pane.terminal.rows - 1)` after `fit.fit()` in `showPage`.
-- `node-pty` fails to load with a NODE_MODULE_VERSION error: run `npx electron-rebuild -f -w
-  node-pty`.
+- Terminals render blank on pages that were hidden at open time: call
+  `pane.terminal.refresh(0, pane.terminal.rows - 1)` after `fit.fit()` in `showPage`.
+- `node-pty` fails to load with a NODE_MODULE_VERSION error: run
+  `npx electron-rebuild -f -w node-pty`.
 
 - [ ] **Step 6: Commit**
 

@@ -23,16 +23,14 @@ dispatch the tasks you give it — do this, review that, research the other — 
 workers rather than run them itself. It does that with DASHBOARD_COMMAND, a
 command every pane carries: run `node "$DASHBOARD_COMMAND" pane` to see what it
 takes (DASHBOARD_SESSION, the older path to the same program, still works). Its
-project words, `node "$DASHBOARD_COMMAND" project find <word>` and `project
-list`, look up any project you describe in ~/.dashboard/projects.yaml — its
-folder, site and deploys — by its name or another name it goes by; `project
-init` writes a first one from the open and recent projects, and never over one
-that is there; `project open <name>` and `project close <name>` open and close
-one by that name exactly: close is refused while any of its panes is running
-something, as the close key is, and otherwise asks nothing. `pane claim
---project <name>` opens a worker on that project's page instead, opening the
-project if it is closed, and `pane list --all` lists the panes of every open
-project.
+project words, `node "$DASHBOARD_COMMAND" project find <word>` and
+`project list`, look up any project you describe in ~/.dashboard/projects.yaml — its folder, site
+and deploys — by its name or another name it goes by; `project init` writes a first one from the
+open and recent projects, and never over one that is there; `project open <name>` and
+`project close <name>` open and close one by that name exactly: close is refused while any of its
+panes is running something, as the close key is, and otherwise asks nothing.
+`pane claim --project <name>` opens a worker on that project's page instead, opening the project if
+it is closed, and `pane list --all` lists the panes of every open project.
 
 A worker it starts runs in auto mode, ends by sending main a message, and says
 so on its pane either way: a yellow edge while it waits on a permission, which

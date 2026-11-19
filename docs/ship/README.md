@@ -93,8 +93,8 @@ with merging off, `pr land` with it on.
   printing `nothing is merged, run it again`, then the review runs it once more instead of stopping.
 - Given the review merged the pull request, when the app next asks gh about the card, then the app
   moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
-- Given no `~/.claude/commands/pr-loop.md`, when a review would start, then it is refused with `git
-  clone … && ./install.sh`, the line is on the card, and the worktree is left as it was
+- Given no `~/.claude/commands/pr-loop.md`, when a review would start, then it is refused with
+  `git clone … && ./install.sh`, the line is on the card, and the worktree is left as it was
   (`review-flow.test.ts`).
 - Given the claude-pr-loop checkout was pulled but `install.sh` not rerun, when the app starts or a
   review starts, then the status bar says the installed workflow differs and to run `./install.sh`

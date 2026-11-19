@@ -121,11 +121,11 @@ commands live.
 
 ## workflow-decision-6: release.sh outlasts a GitHub blip, and a resume accepts the release commit
 
-Agreed on 2026-11-08, after cutting v2.43.0 (run 42395223367). `gh run watch` failed with `failed to
-get run: ... EOF` while the run was still building; the failed-leg `gh run view` failed the same way
-inside a `$(...)` under `set -eu`, and the script exited with no `Stopped:` line. Then `--resume`
-refused with "main is not origin/main", because the run's prepare job had pushed `Release vX.Y.Z` to
-main.
+Agreed on 2026-11-08, after cutting v2.43.0 (run 42395223367). `gh run watch` failed with
+`failed to get run: ... EOF` while the run was still building; the failed-leg `gh run view` failed
+the same way inside a `$(...)` under `set -eu`, and the script exited with no `Stopped:` line. Then
+`--resume` refused with "main is not origin/main", because the run's prepare job had pushed
+`Release vX.Y.Z` to main.
 
 - The two decisions with branches live in `scripts/release-checks.mjs`, tested beside it, and the
   script asks through `scripts/release-checks-step.mjs`: Node is there wherever pnpm is, and the
@@ -162,9 +162,9 @@ line an agent had to remember; now a PreToolUse Bash hook refuses the call. It r
   against the command line, otherwise the process's name), and a process is the app's when its
   command line is out of the installed build (`~/.local/opt/dashboard/`, `Dashboard.app/`,
   `AppData\Local\Programs\Dashboard\`, which covers its pane host, screen host and Claude), is a
-  pane or screen host anywhere, or is electron out of a checkout named `dashboard*`. So `killall
-  node` is refused while the pane host runs and `pkill -f vitest` goes through. On a mac, with no
-  `/proc`, the pattern is refused when it names Dashboard, electron, node or claude;
+  pane or screen host anywhere, or is electron out of a checkout named `dashboard*`. So
+  `killall node` is refused while the pane host runs and `pkill -f vitest` goes through. On a mac,
+  with no `/proc`, the pattern is refused when it names Dashboard, electron, node or claude;
 - a `kill` of a literal pid or process group (`-<pid>`) that is the app's, and a `-1` in a pid's
   place (`kill -9 -1`; `kill -1 <pid>` is a SIGHUP and is judged by its pid);
 - `systemctl stop`, `kill` or `restart` of `agents.slice` or `panes.slice`;
@@ -237,8 +237,8 @@ the skill.
   `npx` or `npm view` touch neither. Nor do a global install (`-g`, `--global`, `--location=global`,
   `yarn global`) or a one-off run (`pnpm dlx`, `npm exec`, `yarn dlx`), so those go through in any
   project.
-- **It reads the command's text**, as the other two guards do: a `cd` earlier in the command, an `sh
-  -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through. The
+- **It reads the command's text**, as the other two guards do: a `cd` earlier in the command, an
+  `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through. The
   refusal names the lockfile and the manager and leaves the translation to the agent: `npm ci` has
   no `pnpm ci`, and `yarn` has no `i`.
 
@@ -254,12 +254,13 @@ cutting the command into simple commands as the running-app guard does
   last `cd` before it in the same command), where the session's shell is left by that command (a
   `cd` inside a `( … )` subshell does not move it, and closing the subshell puts where the command
   runs back there), or the session's start folder (`CLAUDE_PROJECT_DIR`), where its shell goes back
-  to. So from the worktree, in a session started in `/p`, `cd /p && git worktree remove
-  /p/.adopt-docs` goes through while `(cd /p && git worktree remove /p/.adopt-docs)` is refused: the
-  second leaves the shell in the folder it removes. Removing it kills the session's shell and leaves
-  its pane in a folder that is gone. The path is read from where it runs and its `git -C`; removing
-  any other worktree goes through, so `/adopt-docs`, which moves into the worktree it made inside
-  the checkout, still removes it with `cd <checkout> && git worktree remove <worktree>`;
+  to. So from the worktree, in a session started in `/p`,
+  `cd /p && git worktree remove /p/.adopt-docs` goes through while
+  `(cd /p && git worktree remove /p/.adopt-docs)` is refused: the second leaves the shell in the
+  folder it removes. Removing it kills the session's shell and leaves its pane in a folder that is
+  gone. The path is read from where it runs and its `git -C`; removing any other worktree goes
+  through, so `/adopt-docs`, which moves into the worktree it made inside the checkout, still
+  removes it with `cd <checkout> && git worktree remove <worktree>`;
 - an Edit, Write or NotebookEdit of a file in another worktree of the same repository, the main
   checkout included: the deepest worktree `git worktree list` names for the file against the one for
   the `cwd`. A file outside every worktree goes through, and so does a shell write (`sed -i`, `>`)

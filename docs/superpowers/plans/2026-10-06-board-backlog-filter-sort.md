@@ -530,9 +530,9 @@ describe('realRow', () => {
 Run: `npx vitest run src/board-filter.test.ts`
 Expected: FAIL, functions not exported.
 
-- [ ] **Step 3: Implement** (append to `src/board-filter.ts`; add `import type { Selection } from
-  './board'`, `import type { Direction } from './terminals'` and `import { clampIndex } from
-  './clamp-index'`)
+- [ ] **Step 3: Implement** (append to `src/board-filter.ts`; add
+  `import type { Selection } from './board'`, `import type { Direction } from './terminals'` and
+  `import { clampIndex } from './clamp-index'`)
 
 ```ts
 // A selection on a card the filter hides moves to the first card it keeps in that column. A column
@@ -606,12 +606,12 @@ git add src/board-filter.ts src/board-filter.test.ts && git commit -m "Step the 
   `BoardFilter`, `emptyFilter`, `PRESENCES`, `FAMILIES`, `AGES` from `./board-filter`; `PRIORITIES`
   from `./board`.
 - Produces: `openFilterDialog(start: BoardFilter, onChange: (filter: BoardFilter) => void):
-  Promise<BoardFilter>`. It calls `onChange` on every edit, so the board behind redraws live, and
-  settles with the final filter on Enter (outside the Reset row), on Escape, or on a click on the
-  margin.
+  Promise<BoardFilter>`. It calls
+  `onChange` on every edit, so the board behind redraws live, and settles with the final filter on
+  Enter (outside the Reset row), on Escape, or on a click on the margin.
 
-Pure row logic is exported for the test: `filterRows(): FilterRow[]` and `applyRowKey(filter, row,
-key): BoardFilter`.
+Pure row logic is exported for the test: `filterRows(): FilterRow[]` and
+`applyRowKey(filter, row, key): BoardFilter`.
 
 - [ ] **Step 1: Write the failing test** `src/filter-dialog.test.ts`
 
@@ -942,8 +942,8 @@ Inside the column body:
 
   On the manager, the `mousedown` on the stacked section (`cards-view.ts:79`) already makes this
   board active before the click lands.
-- Empty text: when `column.cards.length > 0 && visible[columnIndex].length === 0`, show `No card
-  matches the filter` in the `.board-empty` paragraph. Otherwise keep the existing
+- Empty text: when `column.cards.length > 0 && visible[columnIndex].length === 0`, show
+  `No card matches the filter` in the `.board-empty` paragraph. Otherwise keep the existing
   `column.cards.length === 0` branch.
 
 The strip, as a function in the view:
@@ -1041,8 +1041,8 @@ rowUnder(list, event.clientY), state.board.columns[columnIndex].cards.length)`.
 Arrival resets the filter. In `open()`, before `await readAgain(true)`: `filter = emptyFilter();`.
 
 Imports: `dropCard` is already imported. Add from `./board-filter`: `emptyFilter, filterSummary,
-isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows, type BoardFilter`.
-Add `openFilterDialog` from `./filter-dialog`, and `iconButton` from `./icons`.
+isFilterActive, realRow, reorderRow, settleSelection, stepSelection, visibleRows, type
+BoardFilter`. Add `openFilterDialog` from `./filter-dialog`, and `iconButton` from `./icons`.
 
 - [ ] **Step 3: CSS** in `src/board.css`
 
@@ -1121,8 +1121,8 @@ with (`grep -n "iconButton(" src` to find a class, then copy its look).
 
 Run: `npm test && npx tsc --noEmit && npx eslint .` Expected: PASS. Then count code lines in
 `board-view.ts`: `grep -cvE '^\s*(//|$)' src/board-view.ts`. It must stay under 600. If it does not,
-move `filterBar` into `src/filter-bar.ts` as `filterBar(filter, visible, board, onReset):
-HTMLElement`.
+move `filterBar` into `src/filter-bar.ts` as
+`filterBar(filter, visible, board, onReset): HTMLElement`.
 
 Also run the two Hard Rule checks:
 

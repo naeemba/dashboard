@@ -62,12 +62,12 @@ which made every real stop three minutes late.
 
 Claude Code's Stop hook input says which it is. `background_tasks` lists what is still in flight
 (shells, subagents, monitors, workflows; empty when nothing is) and `session_crons` what is
-scheduled to wake the session (CronCreate, ScheduleWakeup, `/loop`). The worker's hook runs `session
-notify <id> done --stop-input`; the command reads the input and sends the app only the two counts.
-Checked against Claude Code 2.1.318 with a throwaway `claude -p` whose Stop hook logged its input:
-the stop it ended with a `sleep 25` still running in the background had `background_tasks: [{type:
-"shell", status: "running", ...}]`, and the stop after the task woke it had `[]`; `session_crons`
-was `[]` in both.
+scheduled to wake the session (CronCreate, ScheduleWakeup, `/loop`). The worker's hook runs
+`session notify <id> done --stop-input`; the command reads the input and sends the app only the two
+counts. Checked against Claude Code 2.1.318 with a throwaway `claude -p` whose Stop hook logged its
+input: the stop it ended with a `sleep 25` still running in the background had
+`background_tasks: [{type: "shell", status: "running", ...}]`, and the stop after the task woke it
+had `[]`; `session_crons` was `[]` in both.
 
 So stop-notices.ts decides each stop on its own. Anything in either list is a pause: nobody is told,
 `pane list` and the workers popup say what it waits on, and the next stop decides again. Both empty
@@ -181,17 +181,18 @@ in the pane, or the pane closing takes it out. session.json marks those panes `d
 a restart they come back as main's workers, resumed as the pane's agent with the worker's flags, and
 no other conversation does: a Claude you opened by hand and no main ever sent work is refused.
 
-**Work handed over is reported, however it arrived.** The report line, `SendMessage to
-main-<project> when done`, used to be added only by `pane run`. Work that reached a pane any other
-way carried no line and no dispatcher: `pane send` into a pane, a ship, the review loop. A worker on
-another project (2026-11-09) finished a pull request and told nobody, then said nothing marked the
-task as coming from another session. Now pane.dispatch gives a ship's and the review loop's agent
-its project's main as dispatcher, and pane.send makes an agent a main sends text the main's worker
-and adds the line to the text (send.ts holds the rule: only to an agent that reports its turn ends,
-since a shell would run the line). So the stop notices, their withdrawal and the false-notice rules
-above cover these panes too. Text sent to a shell is typed as it is and hands nothing over, and so
-is text sent to Claude Code started without the worker hooks (resumed from the drawer): handed over,
-it was listed at work forever, its stop never told and the app never closing it.
+**Work handed over is reported, however it arrived.** The report line,
+`SendMessage to main-<project> when done`, used to be added only by `pane run`. Work that reached a
+pane any other way carried no line and no dispatcher: `pane send` into a pane, a ship, the review
+loop. A worker on another project (2026-11-09) finished a pull request and told nobody, then said
+nothing marked the task as coming from another session. Now pane.dispatch gives a ship's and the
+review loop's agent its project's main as dispatcher, and pane.send makes an agent a main sends text
+the main's worker and adds the line to the text (send.ts holds the rule: only to an agent that
+reports its turn ends, since a shell would run the line). So the stop notices, their withdrawal and
+the false-notice rules above cover these panes too. Text sent to a shell is typed as it is and hands
+nothing over, and so is text sent to Claude Code started without the worker hooks (resumed from the
+drawer): handed over, it was listed at work forever, its stop never told and the app never closing
+it.
 
 What this costs: a ship's agent on a Claude screen is main's, so /clear, /resume, /branch and
 /rewind are refused in it as in any worker screen, and main may release it. A screen you opened by
@@ -213,8 +214,8 @@ pane always is), a worker blocked on a question or paused on its own background 
 ten seconds, and a pane it released is looked at again once it answers, since the keyboard or a turn
 may have moved meanwhile. Nor any pane on the manager page: the saved layout has no manager page, so
 the pane you are typing in there cannot be told apart, and the manager's main releases its own
-workers. Each close is logged with pane.release's answer and shown as a passing notice, `Closed pane
-2:3: card done`.
+workers. Each close is logged with pane.release's answer and shown as a passing notice,
+`Closed pane 2:3: card done`.
 
 The card's Done is read on the project's board, not the worktree's: a card agent moving its own copy
 to Done while it waits for CI is still at work, and it is its turn ending, not the column, that lets
@@ -331,13 +332,13 @@ How it is built, so the chat code does not fork:
   worker), name, auto mode and hooks come from `screen-workers.ts` through `ChatHost.worker`. No
   dispatch prompt is appended. /clear, /resume, /branch and /rewind are refused on it: it keeps the
   conversation it was started on, which is what a restart resumes.
-- Done detection is the session's own Stop hook, as an SDK callback in the app, not a `session
-  notify` command: its input carries `background_tasks` and `session_crons` natively, which feed the
-  same `stop-notices.ts` rules (workers-decision-1). UserPromptSubmit and PostToolUse report
-  running. A permission question is the screen's own ask, which marks the pane blocked. Stop does
-  not run for an interrupted turn or a session that dies, so the SDK's `result` and the session's
-  end also end the turn for the review sweep, without a report to main. A worker back from a restart
-  starts with its turn over, unless the screen host kept it mid-turn (workers-decision-6).
+- Done detection is the session's own Stop hook, as an SDK callback in the app, not a
+  `session notify` command: its input carries `background_tasks` and `session_crons` natively, which
+  feed the same `stop-notices.ts` rules (workers-decision-1). UserPromptSubmit and PostToolUse
+  report running. A permission question is the screen's own ask, which marks the pane blocked. Stop
+  does not run for an interrupted turn or a session that dies, so the SDK's `result` and the
+  session's end also end the turn for the review sweep, without a report to main. A worker back from
+  a restart starts with its turn over, unless the screen host kept it mid-turn (workers-decision-6).
 - Pane readings carry `screen`, so `paneIsBusy` and every picker and refusal built on it count the
   pane as an agent's; its hidden shell sits at a prompt and its command runs nothing.
 - The pane keeps its plain shell, hidden under the screen, so everything that counts panes, releases
@@ -385,9 +386,9 @@ A worker screen is asked as a terminal worker is:
 - A call auto mode blocks is refused in the terminal too; neither asks until repeated denials.
 
 Why the trial's session reached the classifier is not known: its debug log and demo instance are
-gone. If a worker screen is refused again, run the command through the CLI with `--permission-mode
-dontAsk` in the same folder; a refusal there means the rules did not match, not that the screen
-differs.
+gone. If a worker screen is refused again, run the command through the CLI with
+`--permission-mode dontAsk` in the same folder; a refusal there means the rules did not match, not
+that the screen differs.
 
 ## workers-decision-6: A worker screen's session runs in the screen host, outside the app
 
@@ -559,12 +560,13 @@ What it changes, on purpose:
 ## workers-decision-9: The app's own commands are allowed in the settings it starts a session with
 
 **Every session the app starts (main's screen, a worker's screen or terminal) is started with
-`permissions.allow` rules for `node "$DASHBOARD_COMMAND" pane *`, `session *`, `node
-"$DASHBOARD_BOARD" *` and the bare `node "$DASHBOARD_COMMAND" budget`, a reading (`budget --cap` is
-asked; command-decision-6)** (`APP_SESSION_SETTINGS` in `src/main/workers/dispatch.ts`, beside the
-board guard, passed in the screen's `settings` and a terminal worker's `--settings`). Before, the
-rules lived only in the user's own `~/.claude/settings.json`, so on a fresh machine main's first
-`pane claim` waited on a question, or the classifier, until the rule was copied in by hand.
+`permissions.allow` rules for `node "$DASHBOARD_COMMAND" pane *`, `session *`,
+`node "$DASHBOARD_BOARD" *` and the bare `node "$DASHBOARD_COMMAND" budget`, a reading
+(`budget --cap` is asked; command-decision-6)** (`APP_SESSION_SETTINGS` in
+`src/main/workers/dispatch.ts`, beside the board guard, passed in the screen's `settings` and a
+terminal worker's `--settings`). Before, the rules lived only in the user's own
+`~/.claude/settings.json`, so on a fresh machine main's first `pane claim` waited on a question, or
+the classifier, until the rule was copied in by hand.
 
 `permissions.allow`, not `autoMode.allow`. Claude Code does read `autoMode` from a `--settings`
 source (user, flag and policy settings; project and local are ignored as repo-controlled), and

@@ -120,10 +120,10 @@ last good value, and draws.
 ### Task 3: Fetching in main and the IPC channel
 
 **Files:**
-- Create: `src/markets-fetch.ts` (wiring, exempt from the test rule). It holds `readMarkets(place:
-  string): Promise<MarketsSnapshot>`.
-- Modify: `src/main.ts` (one import, plus `ipcMain.handle('markets:read', () =>
-  readMarkets(settings.weatherPlace))`)
+- Create: `src/markets-fetch.ts` (wiring, exempt from the test rule). It holds
+  `readMarkets(place: string): Promise<MarketsSnapshot>`.
+- Modify: `src/main.ts` (one import, plus
+  `ipcMain.handle('markets:read', () => readMarkets(settings.weatherPlace))`)
 - Modify: `src/bridge.ts` (`readMarkets(): Promise<MarketsSnapshot>`)
 - Modify: `src/preload.ts` (`readMarkets: () => ipcRenderer.invoke('markets:read')`)
 - Modify: any test fake typed as `DashboardBridge` that `tsc` flags
@@ -146,8 +146,8 @@ last good value, and draws.
 **Files:**
 - Create: `src/markets-view.ts`. `createMarketsView(bridge): HTMLElement` asks now and every 30
   minutes.
-- Create: `src/markets.css`, imported from `markets-view.ts`. It moves `.page.page-manager
-  .section-strip` and `.page.page-manager .view` down by `--markets-height`.
+- Create: `src/markets.css`, imported from `markets-view.ts`. It moves
+  `.page.page-manager .section-strip` and `.page.page-manager .view` down by `--markets-height`.
 - Modify: `src/manager-page.ts` (append the row before the strip)
 - Modify: `src/help.ts` (the manager blurb names the row; the settings blurb names the place, if it
   lists settings)

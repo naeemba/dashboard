@@ -89,15 +89,14 @@ that way: a pane that has died wants Enter in the pane itself, and one getting
 on with its work is left alone. Main, and a worker drawn as a Claude screen,
 have no terminal to type into, so the row shows the question with its answers
 numbered and a digit picks one. The digits follow the labels the row prints, so
-`2` is not always No: a tool call that comes with an "always" rule lists `2.
-Yes, and do not ask again for this` and moves No to `3`. A tool call, or a
-single question with one pick, is answered that way. A tool call's row shows the
-call itself, the tool and its command, path or URL, over the session's own
-title, and a call the row cannot show whole that way (a plan, an agent, an MCP
-tool, a call cut to fit) takes no digit (manager-decision-3). A form, several
-questions or an answer to type are answered on the screen itself, and its row
-shows only the question. A project with nothing to report says nothing waiting
-beside its name, and still opens to show what its panes are up to.
+`2` is not always No: a tool call that comes with an "always" rule lists
+`2. Yes, and do not ask again for this` and moves No to `3`. A tool call, or a single question with
+one pick, is answered that way. A tool call's row shows the call itself, the tool and its command,
+path or URL, over the session's own title, and a call the row cannot show whole that way (a plan, an
+agent, an MCP tool, a call cut to fit) takes no digit (manager-decision-3). A form, several
+questions or an answer to type are answered on the screen itself, and its row shows only the
+question. A project with nothing to report says nothing waiting beside its name, and still opens to
+show what its panes are up to.
 
 The close key works from here too, and this is the one screen where it needs a
 highlight: there is no project behind this page, so what it takes is the project

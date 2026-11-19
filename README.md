@@ -53,10 +53,10 @@ It packages the app and installs it to `/Applications/Dashboard.app` on a mac,
 [Windows setup](docs/app/windows-setup.md)), leaving any running copy alone. On Linux nothing adds a
 launcher: run `~/.local/opt/dashboard/Dashboard`, or point a desktop entry of your own at it.
 
-To cut a release, on main with CI green: `scripts/release.sh minor` (or `major`, `patch`; `/release
-minor` in Claude Code). It runs the Release workflow, waits for it, then installs the new version
-here the way `scripts/rebuild.sh` does. [Workflow](docs/workflow/README.md#how-to-release) has the
-rest.
+To cut a release, on main with CI green: `scripts/release.sh minor` (or `major`, `patch`;
+`/release minor` in Claude Code). It runs the Release workflow, waits for it, then installs the new
+version here the way `scripts/rebuild.sh` does. [Workflow](docs/workflow/README.md#how-to-release)
+has the rest.
 
 On a mac, building signs the app with a self-signed certificate named `Dashboard Local` in the login
 keychain, and fails without it. Create it once in Keychain Access → Certificate Assistant → Create a
@@ -179,8 +179,8 @@ letter and refuses the moment another modifier is held, so Ctrl+Shift with a let
 pane as bytes anyway and this costs the shells nothing.
 
 Every pane the app opens carries `DASHBOARD_BOARD`, the path to a command that edits the board of
-the project you are in. It goes through the same code the app does. `node "$DASHBOARD_COMMAND" board
-<command>` is the same program as `node "$DASHBOARD_BOARD"`.
+the project you are in. It goes through the same code the app does.
+`node "$DASHBOARD_COMMAND" board <command>` is the same program as `node "$DASHBOARD_BOARD"`.
 
     node "$DASHBOARD_BOARD" list
     node "$DASHBOARD_BOARD" show 0f6a2c5e-...

@@ -30,14 +30,14 @@ requests, and writes the pattern this repository uses:
 
 It moves existing docs into the right feature without dropping any text, never deletes a doc it
 cannot place, and lists those docs (and any source file no feature claims) in the pull request. It
-works in a worktree of `origin/<default branch>` on a `docs/adopt-docs` branch, at `<repository
-root>/.adopt-docs`, a fixed path every later command names in full and that is excluded from the
-starting checkout's `git status`, so the checkout it starts in is left as it was, and changes only
-Markdown. A repository whose default branch is already in the pattern (an index of feature folders
-and the docs rule in `CLAUDE.md`), or that already has a `docs/adopt-docs` branch from an earlier
-run, is skipped with no pull request. Started in a subfolder rather than the repository's top level,
-it stops, since the worktree would sit outside the session's working directory and its `cd` into it
-would not carry over. It never merges (skills-decision-1).
+works in a worktree of `origin/<default branch>` on a `docs/adopt-docs` branch, at
+`<repository root>/.adopt-docs`, a fixed path every later command names in full and that is excluded
+from the starting checkout's `git status`, so the checkout it starts in is left as it was, and
+changes only Markdown. A repository whose default branch is already in the pattern (an index of
+feature folders and the docs rule in `CLAUDE.md`), or that already has a `docs/adopt-docs` branch
+from an earlier run, is skipped with no pull request. Started in a subfolder rather than the
+repository's top level, it stops, since the worktree would sit outside the session's working
+directory and its `cd` into it would not carry over. It never merges (skills-decision-1).
 
 The skill's text is `ADOPT_DOCS_SKILL`, written from this repository's own `docs/` as the worked
 example. A change to the pattern here (the index's wording, the id scheme, the CLAUDE.md rule)
@@ -48,15 +48,15 @@ aside).
 
 ## /work-card
 
-What a shipped card's agent is started on: `/work-card <card id> bump-version|keep-version <base
-branch>` ([ship](../ship/README.md)). It reads the card and its subtasks and the project's
-`CLAUDE.md`, does the work, runs the project's checks and opens the pull request. The checks are the
-ones `CLAUDE.md` names, else the project's test, type-check and lint scripts; a `check` script that
-runs them all and prints a summary is run once, its log read for a failure. The second word is the
-project's `bumpVersion` in `projects.yaml` (projects-decision-1): `keep-version`, the default, tells
-the agent to leave every version alone; `bump-version` tells it to bump last, from `origin/<base
-branch>` (the third word, the branch the worktree was cut from), with `npm version
---no-git-tag-version`.
+What a shipped card's agent is started on:
+`/work-card <card id> bump-version|keep-version <base branch>` ([ship](../ship/README.md)). It reads
+the card and its subtasks and the project's `CLAUDE.md`, does the work, runs the project's checks
+and opens the pull request. The checks are the ones `CLAUDE.md` names, else the project's test,
+type-check and lint scripts; a `check` script that runs them all and prints a summary is run once,
+its log read for a failure. The second word is the project's `bumpVersion` in `projects.yaml`
+(projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
+`bump-version` tells it to bump last, from `origin/<base branch>` (the third word, the branch the
+worktree was cut from), with `npm version --no-git-tag-version`.
 
 It does not repeat what every worker is already told or held to: the board's rules are
 `BOARD_INSTRUCTIONS`, appended to every worker's system prompt, and the board guard's hook refuses
@@ -110,6 +110,6 @@ Folders: `src/main/skills/`.
   checkout on an older branch, then it says "already in the docs pattern" and opens nothing.
 - Given a repository with a `docs/adopt-docs` branch, when `/adopt-docs` runs, then it says "earlier
   run: docs/adopt-docs exists" and opens nothing.
-- Given a change to the docs rule in `CLAUDE.md` or the preamble of `docs/README.md`, when `pnpm
-  test` runs without the same change to `ADOPT_DOCS_SKILL`, then it fails naming the file that
+- Given a change to the docs rule in `CLAUDE.md` or the preamble of `docs/README.md`, when
+  `pnpm test` runs without the same change to `ADOPT_DOCS_SKILL`, then it fails naming the file that
   changed.

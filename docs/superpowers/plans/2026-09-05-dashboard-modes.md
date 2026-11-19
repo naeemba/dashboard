@@ -851,8 +851,8 @@ exactly as before.
 - Consumes: `Mode` from `src/modes.ts`; `Action` (now with `mode-set`) and `mapShortcut`'s third
   parameter from `src/shortcuts.ts`.
 - Produces (used by Tasks 5 and 6): `Page` gains `mode: Mode`, `views: Record<Mode, HTMLElement>`;
-  `setMode(mode: Mode): void`; `buildPane(view: HTMLElement, id: string, onFocus?: () => void):
-  Pane`.
+  `setMode(mode: Mode): void`;
+  `buildPane(view: HTMLElement, id: string, onFocus?: () => void): Pane`.
 
 - [ ] **Step 1: Stack the views in `src/index.css`**
 

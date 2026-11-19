@@ -105,8 +105,9 @@ export function registerProjectFiles(boards: BoardWatchers): void {
 }
 ```
 
-- [ ] **Step 2: Edit `src/main.ts`.** Delete the block from `// Reading also seeds the folder, so
-  the first Ctrl+B` through the closing `});` of `notes:write`, and put in its place:
+- [ ] **Step 2: Edit `src/main.ts`.** Delete the block from
+  `// Reading also seeds the folder, so the first Ctrl+B` through the closing `});` of
+  `notes:write`, and put in its place:
 
 ```typescript
 registerProjectFiles(boards);
@@ -118,9 +119,10 @@ Change the imports:
 import { BOARD_FILE_PATH, readBoard, writeBoard } from './board-store';
 ```
 
-delete `import { readNotes, writeNotes } from './notes-store';`, change `import { moveCardById,
-shipColumnIndex, type Board } from './board';` to `import { moveCardById, shipColumnIndex } from
-'./board';`, and add beside the `pane-openers` import:
+delete `import { readNotes, writeNotes } from './notes-store';`, change
+`import { moveCardById, shipColumnIndex, type Board } from './board';` to
+`import { moveCardById, shipColumnIndex } from './board';`, and add beside the `pane-openers`
+import:
 
 ```typescript
 import { registerProjectFiles } from './project-files-ipc';
@@ -158,8 +160,9 @@ git commit -m "Move the board and notes handlers out of main.ts to make room und
   - `resumable(slot: ClaudeSlot | null | undefined, exists: (directory: string) => boolean): slot is
     ClaudeSlot`
   - `resumeLine(slot: ClaudeSlot): string`
-- Produces, from `src/session.ts`: `type SavedPage = SessionPage & { claude: (ClaudeSlot | null)[]
-  }`, `type SavedSession = { pages: SavedPage[]; activeIndex: number }`; `parseSession` and
+- Produces, from `src/session.ts`:
+  `type SavedPage = SessionPage & { claude: (ClaudeSlot | null)[] }`,
+  `type SavedSession = { pages: SavedPage[]; activeIndex: number }`; `parseSession` and
   `readSession` return `SavedSession`; `writeSession(file: string, session: SavedSession)`.
   `Session` and `SessionPage` are unchanged and stay what the renderer sends.
 
@@ -378,9 +381,10 @@ and every pane comes back empty at its project's directory, and what each pane w
 pane that was running Claude Code, which resumes that conversation."
 
 - [ ] **Step 5: Update `src/session.test.ts`.** In `keeps a saved layout as it was written`, the
-  expected page becomes `{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [],
-  claude: [] }`; in `drops a page with no usable path and keeps the others`, `{ path: page.path,
-  mode: 'board', focused: 3, names: [], claude: [] }`. Add before the last test:
+  expected page becomes
+  `{ path: '/Users/sharp/work/api', mode: 'board', focused: 3, names: [], claude: [] }`; in
+  `drops a page with no usable path and keeps the others`,
+  `{ path: page.path, mode: 'board', focused: 3, names: [], claude: [] }`. Add before the last test:
 
 ```typescript
   // A slot's id is typed into a shell on launch, so a slot that is not whole is no slot.
@@ -436,8 +440,8 @@ git commit -m "Keep which Claude session each pane runs in the saved session"
   - `UsageSweep.placeNow(): Promise<Map<string, LiveSession>>`
 
 - [ ] **Step 1: Update the tests first.** In `src/usage-store.test.ts`, every expected record gains
-  `directory: ''` (`{ pid: 900, session: 'a', directory: '' }`, `{ pid: 901, session: 'b',
-  directory: '' }`), and add:
+  `directory: ''` (`{ pid: 900, session: 'a', directory: '' }`,
+  `{ pid: 901, session: 'b', directory: '' }`), and add:
 
 ```typescript
   it('reads the folder the session was started in', async () => {
@@ -477,8 +481,9 @@ Expected: FAIL on the `directory` field and on the map values.
 export type LiveSession = { pid: number; session: string; directory: string };
 ```
 
-Change the return type to `Promise<LiveSession[]>`, the array to `const sessions: LiveSession[] =
-[];`, the cast to `{ pid?: unknown; sessionId?: unknown; cwd?: unknown }`, and the push to:
+Change the return type to `Promise<LiveSession[]>`, the array to
+`const sessions: LiveSession[] = [];`, the cast to
+`{ pid?: unknown; sessionId?: unknown; cwd?: unknown }`, and the push to:
 
 ```typescript
       sessions.push({
@@ -513,8 +518,9 @@ export function sessionsByPane<Live extends { pid: number }>(
 }
 ```
 
-- [ ] **Step 5: `src/usage-sweep.ts`.** Import `LiveSession`: `import { liveSessions, sweepUsage,
-  type LiveSession } from './usage-store';`. Add to `UsageSweepPorts`, after `publish`:
+- [ ] **Step 5: `src/usage-sweep.ts`.** Import `LiveSession`:
+  `import { liveSessions, sweepUsage, type LiveSession } from './usage-store';`. Add to
+  `UsageSweepPorts`, after `publish`:
 
 ```typescript
   // Where every live session is, by pane, after every sweep whether or not the figures moved. Main keeps

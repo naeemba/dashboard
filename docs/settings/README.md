@@ -34,8 +34,8 @@ starts its next change from the new copy.
 
 The Review row (`review.autoLoop`, default on) says whether a shipped card whose
 pull request opens starts its review loop by itself. Enter turns it over. Off,
-the card waits in Review until you move it into Review or run `dashboard board
-review <id>` (docs/actions).
+the card waits in Review until you move it into Review or run
+`dashboard board review <id>` (docs/actions).
 
 The Review section's second row, Merge (`review.autoMerge`, default off), says
 whether that review loop merges the pull request once it and CI are green. Off,

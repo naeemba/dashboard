@@ -33,18 +33,15 @@ pull request (#304), and every review with merging on now gets that.
 `pr land <n>` when merging is on, whose wait is that watch,
 which wakes the agent when it exits, and for nothing else during the wait: no
 `gh pr view` or `gh pr checks` by hand and no foreground `sleep`. A "no checks
-reported" right after a push gets one more background `sleep 60 && gh pr
-checks <n> --watch`; still none means the repository runs no CI. The watch asks
-for the longest background limit, two hours, and one stopped at that limit is
-run again, not read as a failed check.** The
-2026-11-16 retro of thirty sessions found 166 hand polls of `gh pr view` and
-`gh pr checks` in one new-crm manager session, and `sleep N; gh pr checks`
-refused six times, because a foreground `sleep` is blocked. A ci-wait script
-was the other option and was not taken: the prompt runs in every project's
-review worktree, where a script in this repository is not on disk. A watch that
-hangs is covered by the worker's pause ceiling (docs/workers/decisions.md).
-`/pr-loop` itself lives in the user's dotfiles and is not changed here.
-(2026-11-16)
+reported" right after a push gets one more background
+`sleep 60 && gh pr checks <n> --watch`; still none means the repository runs no CI. The watch asks
+for the longest background limit, two hours, and one stopped at that limit is run again, not read as
+a failed check.** The 2026-11-16 retro of thirty sessions found 166 hand polls of `gh pr view` and
+`gh pr checks` in one new-crm manager session, and `sleep N; gh pr checks` refused six times,
+because a foreground `sleep` is blocked. A ci-wait script was the other option and was not taken:
+the prompt runs in every project's review worktree, where a script in this repository is not on
+disk. A watch that hangs is covered by the worker's pause ceiling (docs/workers/decisions.md).
+`/pr-loop` itself lives in the user's dotfiles and is not changed here. (2026-11-16)
 
 ## ship-decision-3: A ship writes no board on the branch
 
@@ -70,10 +67,9 @@ behind origin, a workflow copy that differs from the checkout's, a checkout file
 notice saying what to run. Only `/pr-loop` is
 checked, since no review runs `/mr-loop`.** Before 2026-11-17 nothing checked
 it: a missing install sent a review worker into a command that did not exist,
-and an out-of-date one ran old behaviour silently, most often after a `git
-pull` in the checkout, which refreshes the linked commands but not the copied
-workflow. Bundling the commands into the app was the other option and was not
-taken: the repository is used on its own too, and a second copy would drift
-from it. The fetch runs at most once a day, read off the checkout's
-`FETCH_HEAD`, so relaunching does not reach GitHub each time.
-`review-loop-install.ts`. (2026-11-17)
+and an out-of-date one ran old behaviour silently, most often after a
+`git pull` in the checkout, which refreshes the linked commands but not the copied workflow.
+Bundling the commands into the app was the other option and was not taken: the repository is used on
+its own too, and a second copy would drift from it. The fetch runs at most once a day, read off the
+checkout's `FETCH_HEAD`, so relaunching does not reach GitHub each time. `review-loop-install.ts`.
+(2026-11-17)

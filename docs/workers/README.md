@@ -58,9 +58,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 
 - Given a project is open, when main dispatches a task, then a worker pane opens
   in the list on the right and runs it.
-- Given Dashboard on Windows, when a pane runs `node "$DASHBOARD_COMMAND" pane
-  list`, then the app's answer comes back over the named pipe rather than an
-  empty reply.
+- Given Dashboard on Windows, when a pane runs
+  `node "$DASHBOARD_COMMAND" pane list`, then the app's answer comes back over the named pipe rather
+  than an empty reply.
 - Given a rebuild swapped the command under an app still running the old build,
   when a pane runs `pane list`, `claim` or `run`, then within 5 seconds it
   prints that the running app is likely older than the command and needs a
@@ -79,16 +79,15 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given the pane shell is Windows PowerShell, when main dispatches a task whose
   prompt holds double quotes, then the worker starts with its --settings JSON
   and its prompt exactly as they were written.
-- Given a worker's agent stops, when its Stop hook runs `session notify <id>
-  done`, then the pane gets a green edge and `session list` says `done`.
-- Given main dispatched a worker, when the worker's Stop hook runs `session
-  notify <id> done --stop-input` with no background task in flight and no wakeup
-  scheduled, and main has not read a report from it within 10 seconds, then the
-  main that dispatched it (the claimer's main for a pane claimed with
-  `--project`) gets one prompt naming the worker and its pane, queued behind its
-  turn if it is busy, and the Claude screen draws it as a status line; a card's
-  agent tells its project's main the same way, and a Claude opened by hand tells
-  nobody until a main sends it work (workers-decision-1).
+- Given a worker's agent stops, when its Stop hook runs
+  `session notify <id> done`, then the pane gets a green edge and `session list` says `done`.
+- Given main dispatched a worker, when the worker's Stop hook runs
+  `session notify <id> done --stop-input` with no background task in flight and no wakeup scheduled,
+  and main has not read a report from it within 10 seconds, then the main that dispatched it (the
+  claimer's main for a pane claimed with `--project`) gets one prompt naming the worker and its
+  pane, queued behind its turn if it is busy, and the Claude screen draws it as a status line; a
+  card's agent tells its project's main the same way, and a Claude opened by hand tells nobody until
+  a main sends it work (workers-decision-1).
 - Given a worker waiting on its own background work, when its turn ends with a
   background task in flight or a wakeup scheduled, then main is told nothing,
   and `pane list` says `paused, waiting on 2 background tasks` and the workers
@@ -186,13 +185,13 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   saying the work is not in and the pane stays open. A worker in the project's
   own checkout is finished only by its card. A worktree already removed by the
   merge is released without asking git.
-- Given main is asked to work a card, when it reads its prompt and `pane
-  --help`, then both send it to `board ship <id>`, which makes the worktree, the
-  pane and the agent; there is no pane verb for it.
+- Given main is asked to work a card, when it reads its prompt and
+  `pane --help`, then both send it to `board ship <id>`, which makes the worktree, the pane and the
+  agent; there is no pane verb for it.
 - Given a worker whose report main has read, when it has been sent nothing for
   `workers.closeAfterMinutes` (default 10) after the last of the work sent, the
-  report read and its stop, then the app releases it with `Closed pane 2:3:
-  reported done`; 0 turns this off and leaves only the card's and the merged
+  report read and its stop, then the app releases it with
+  `Closed pane 2:3: reported done`; 0 turns this off and leaves only the card's and the merged
   branch's close.
 - Given a card worker in Review whose review has not started, when the app
   closes its pane as reported done, then the review sweep still starts the
@@ -202,10 +201,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   on it (zoomed or not), it is on the manager page, it is blocked on a question,
   it is paused on its own background work, or no main ever handed it work, then
   the app leaves it open.
-- Given a plain terminal outside every project, when `dashboard pane claim
-  --project crm` runs, then a worker opens on crm's page and reports to crm's
-  main; `pane run`, `send` and `release` there act on the project their pane id
-  names.
+- Given a plain terminal outside every project, when
+  `dashboard pane claim --project crm` runs, then a worker opens on crm's page and reports to crm's
+  main; `pane run`, `send` and `release` there act on the project their pane id names.
 - Given several open projects, when `pane list --all` runs, then every open
   page's panes are listed, the manager's first, each line led by its project's
   name.
@@ -221,13 +219,12 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   session, from the usage sweep (chat-decision-12).
 - Given a throwaway worktree with uncommitted work, when the worker is released,
   then the worktree is kept and the reply says why.
-- Given a throwaway worktree a merge already removed (`gh pr merge
-  --delete-branch` takes the branch's worktree with it), when the worker is
-  released, then the pane closes and the reply says `released 2:3; <folder> was
-  already removed`, not `session release failed: spawn git ENOENT`; a folder
-  deleted by hand is pruned from git too, so its branch can be checked out
-  again; a prune that fails (the project folder gone as well) is named in the
-  reply, and the release still stands.
+- Given a throwaway worktree a merge already removed
+  (`gh pr merge --delete-branch` takes the branch's worktree with it), when the worker is released,
+  then the pane closes and the reply says `released 2:3; <folder> was already removed`, not
+  `session release failed: spawn git ENOENT`; a folder deleted by hand is pruned from git too, so
+  its branch can be checked out again; a prune that fails (the project folder gone as well) is named
+  in the reply, and the release still stands.
 - Given main runs `pane run <id> "<prompt>"` (with `--card` or `--worktree` or
   neither), when the worker starts, then the pane shows a Claude screen instead
   of its terminal, in the same folder, in auto mode, named and indexed as a
@@ -239,21 +236,18 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   or `--terminal`, with the worker settings, the report to main, its scope and
   the close once its branch merged), the path read from the folder the command
   ran in; `pane release` closes the pane and leaves the folder, which nothing
-  made. A folder that is not there, or is neither inside the project nor in `git
-  worktree list` from it, is refused saying so, and `--in` with `--card` or
-  `--worktree` is refused. A worktree another pane's agent is at work in is
-  refused, naming that pane, since two agents in one worktree write over each
-  other's work, and `--card` is refused the same way for a card's worktree an
-  `--in` worker is in; the project's own checkout is not, since main stands
-  there, nor is an agent in a worktree nested below the one asked for. A
-  worktree nested in the checkout (`.claude/worktrees/<name>`, a folder whose
-  `.git` file points into a repository's `.git/worktrees/`, which a submodule's
-  does not) is its own worktree, so its worker closes once its branch merged,
-  after a restart too, or once the worktree is gone. The main checkout is
-  offered too when the project was opened at a linked worktree. A worker outside
-  the project's folder and `<project>.worktrees/` (`../api-mr174`) is not
-  counted in the project's token totals on the manager, only in its pane's own
-  figure.
+  made. A folder that is not there, or is neither inside the project nor in
+  `git worktree list` from it, is refused saying so, and `--in` with `--card` or `--worktree` is
+  refused. A worktree another pane's agent is at work in is refused, naming that pane, since two
+  agents in one worktree write over each other's work, and `--card` is refused the same way for a
+  card's worktree an `--in` worker is in; the project's own checkout is not, since main stands
+  there, nor is an agent in a worktree nested below the one asked for. A worktree nested in the
+  checkout (`.claude/worktrees/<name>`, a folder whose `.git` file points into a repository's
+  `.git/worktrees/`, which a submodule's does not) is its own worktree, so its worker closes once
+  its branch merged, after a restart too, or once the worktree is gone. The main checkout is offered
+  too when the project was opened at a linked worktree. A worker outside the project's folder and
+  `<project>.worktrees/` (`../api-mr174`) is not counted in the project's token totals on the
+  manager, only in its pane's own figure.
 - Given a pane with a shell and no agent, when main runs `pane send` with text
   whose command starts Claude Code (`claude ...`, by name or path, also after
   `&&`, `;` or `|`, or inside `sh -c`), then the send is refused, nothing is
@@ -289,8 +283,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   stays on the conversation it was started on; /rename and Ctrl+R act on the
   worker's own conversation, not main's.
 - Given a worker on a Claude screen, when `pane send` names its pane, then the
-  text goes in as its next prompt rather than into the hidden shell; `pane
-  release` closes the pane and ends the session.
+  text goes in as its next prompt rather than into the hidden shell;
+  `pane release` closes the pane and ends the session.
 - Given a worker on a Claude screen, when it runs a command, then it is decided
   as a terminal worker's: allow rules first, a call auto mode cannot decide asks
   in its box, a call it blocks is refused (workers-decision-5).
