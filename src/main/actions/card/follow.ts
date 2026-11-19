@@ -1,5 +1,6 @@
 import { pullRequestLabel, selectionOf, type Board } from '../../../shared/board/board';
 import type { CardMoveResult, Refused } from '../../../shared/app/bridge';
+import type { ColumnEntry } from '../../../shared/board/column-entry';
 import { brokenFilesRefusal } from '../../board/board-cli';
 import { followedBranch, followStep, type PullRequest } from '../../board/pull-request-column';
 import { action, isRefused } from '../action';
@@ -23,8 +24,9 @@ export type CardFollowPorts = {
 // A card's column set from its pull request (board-decision-6): found from its branch through gh, the
 // number recorded, a line said when the state differs from the last one about that pull request,
 // and the move made through card.move as the app's own.
-// pull-request-column.ts holds every decision; this reads, asks and writes.
-export const cardFollow = action<CardFollowPorts, CardInput, { output: string }>('card.follow', {
+// pull-request-column.ts holds every decision; this reads, asks and writes. `ran` is what the move
+// started, so a review start that asked for this knows when the move already started it.
+export const cardFollow = action<CardFollowPorts, CardInput, { output: string; ran?: ColumnEntry }>('card.follow', {
   words: ['id'],
   input: cardInput,
   async run(ports, { projectPath, id }) {
@@ -44,6 +46,6 @@ export const cardFollow = action<CardFollowPorts, CardInput, { output: string }>
     if (step.board !== null) ports.write(projectPath, step.board);
     if (step.column === null) return { output: pull === null ? `${branch} has no pull request` : `"${card.title}" follows ${pullRequestLabel(pull.number)}` };
     const moved = await ports.move({ projectPath, id, column: step.column, source: 'automatic' });
-    return isRefused(moved) ? moved : { output: moved.output };
+    return isRefused(moved) ? moved : { output: moved.output, ran: moved.ran };
   },
 });
