@@ -153,6 +153,10 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a pane claimed with `--project`, when the asker runs it, then it works
   in that project as `<project>-terminal-<n>` and reports to the asker's main;
   any other project but the pane's own is refused it.
+- Given main has work in a repository that is not a project yet, when it
+  dispatches it, then its prompt says to run `project add <path> --name <name>`
+  and `pane claim --project <name>`, never a pane on its own page in that
+  repository.
 - Given main runs a worker, when `pane run` answers, then the line ends with
   `dashboard://pane/<id>`, which the Claude screen draws as a link to the pane;
   `pane claim` still prints the bare id, since main passes it straight to `run`.
