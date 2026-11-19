@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-19T09:25:38.840Z",
-  "updatedAt": "2026-11-19T09:26:05.065Z",
+  "updatedAt": "2026-11-19T09:34:53.559Z",
   "branch": "app-card-worktrees-get-their-packages-insta",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 334,
+  "comments": [
+    {
+      "at": "2026-11-19T09:34:53.535Z",
+      "body": "Pull request #334 opened: Card worktrees get their packages installed, a clearer early-review refusal, main told about dashboard --version https://github.com/naeemba/dashboard/pull/334"
+    }
+  ],
+  "column": "Review",
+  "order": 0
 }
