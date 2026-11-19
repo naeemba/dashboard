@@ -4,7 +4,8 @@ import { awaitsReview, followedPullRequest, intoReview, isCancelled, reviewPromp
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
 import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
-import type { ColumnEntry } from '../../shared/board/column-entry';
+import { isRefused } from '../actions/action';
+import type { CardFollowAnswer } from '../actions/card/follow';
 import { entryForCard } from './worktree-store';
 import { notOpenRefusal } from './ship';
 
@@ -66,8 +67,8 @@ export type ReviewPorts = {
   loopChecked: () => void;
   // card.follow for one card: gh asked for the pull request on its branch, the number recorded and
   // the card moved into Review when one is open, as the pull request sweep does on its next tick.
-  // `ran` is what that move started. Throws when gh cannot answer.
-  follow: (projectPath: string, id: string) => Promise<{ output: string; ran?: ColumnEntry } | Refused>;
+  // Throws when gh cannot answer.
+  follow: (projectPath: string, id: string) => Promise<CardFollowAnswer | Refused>;
 };
 
 // The pull request this card's work opened, or null while there is none yet. That number is the whole
@@ -360,7 +361,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       if (answer === null) {
         return { refused: `"${entry.title}": the app has not seen a pull request on ${entry.branch} yet; it moves the card into Review once it sees one open, and the review can start then (by itself with review.autoLoop on)` };
       }
-      return 'refused' in answer || answer.ran === 'review' ? answer : review(id, true);
+      return isRefused(answer) || answer.ran === 'review' ? answer : review(id, true);
     }
     // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
     // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a
