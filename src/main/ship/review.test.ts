@@ -180,6 +180,8 @@ describe('reviewPrompt', () => {
 
     it('reports to the project\'s main and leaves the card where it is', () => {
       expect(reporting).toContain('Your report to main');
+      // Main asks the user before landing only when the report says so (#329).
+      expect(reporting).toContain('whether any round changed what the card asked for or its design');
       expect(reporting).not.toContain(`move ${CARD}`);
     });
 

@@ -139,7 +139,8 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     '3. Do not merge it, and do not move the card: it stays in Review until the user merges.',
     '4. Whatever the ending, say it on the card, "converged, ready to merge" or what is still open:',
     `   ${sayOnCard}. Your report to main (the SendMessage asked for below) says how many rounds`,
-    '   the loop ran, what each one fixed, what is still open, and the CI state of the head commit.',
+    '   the loop ran, what each one fixed, what is still open, the CI state of the head commit, and',
+    '   whether any round changed what the card asked for or its design, naming the change.',
   ];
   const land = [
     '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',

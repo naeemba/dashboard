@@ -33,3 +33,5 @@ One line per merged change: date and why.
   checks at once
 - 2026-11-19 — The review prompt says `pr land`'s `merged <n> at <sha>` line is the merge, so the
   worker runs no `gh pr view` after it
+- 2026-11-19 — The review report says whether any round changed what the card asked for or its
+  design, so main can ask before landing it

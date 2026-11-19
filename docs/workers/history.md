@@ -63,3 +63,8 @@ One line per merged change: date and why.
   start that found it at work no longer leaves its card marked as tried
 - 2026-11-19 — Main's prompt names `dashboard --version` for the installed build, and every session
   may run it
+- 2026-11-19 — Main asks the user before landing a pull request whose review loop changed what the
+  card asked for or its design, and the review report says whether one did: a loop swapped a card's
+  rule for its own heuristic and main landed it, relaying the change
+- 2026-11-19 — Main's prompt names `project add` for work in a repository that is not a project yet:
+  main ran such a change in a pane on its own page, working in another repository

@@ -153,6 +153,10 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a pane claimed with `--project`, when the asker runs it, then it works
   in that project as `<project>-terminal-<n>` and reports to the asker's main;
   any other project but the pane's own is refused it.
+- Given main has work in a repository that is not a project yet, when it
+  dispatches it, then its prompt says to run `project add <path> --name <name>`
+  and `pane claim --project <name>`, never a pane on its own page in that
+  repository.
 - Given main runs a worker, when `pane run` answers, then the line ends with
   `dashboard://pane/<id>`, which the Claude screen draws as a link to the pane;
   `pane claim` still prints the bare id, since main passes it straight to `run`.
@@ -170,7 +174,11 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   to that main as a worker's is.
 - Given merging is off for the project, when a review worker finishes, then its
   report to main names the loop's rounds, what each fixed, what is still open
-  and the CI state, and the merge is the user's (ship-decision-1).
+  and the CI state, and whether any round changed what the card asked for or
+  its design, and the merge is the user's (ship-decision-1).
+- Given a worker's report says its review loop changed what the card asked
+  for, or its design (the review prompt asks it to say so), when main is asked
+  to land it, then main asks the user first instead of relaying the change.
 - Given a worker main handed work, when its turn ends with nothing in flight or
   scheduled and its card is Done or Cancelled on the project's board, then
   within half a minute the app releases the pane through pane.release, logs it,
