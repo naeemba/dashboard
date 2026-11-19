@@ -4,7 +4,6 @@ import {
   addComment,
   branchFrom,
   cardAt,
-  childrenOf,
   backlogColumnIndex,
   columnNamed,
   flightParts,
@@ -208,11 +207,9 @@ function formatCard(board: Board, selection: Selection): string {
   const column = board.columns[selection.column].name;
   const card = board.columns[selection.column].cards[selection.card];
   const flight = flightParts(card);
-  const subtasks = childrenOf(board, card.id).map((child) => {
-    // childrenOf read it off this board, so it is there.
-    const at = selectionOf(board, child.id)!;
-    return `  ${[board.columns[at.column].name, child.id, child.title].join('  ')}`;
-  });
+  const subtasks = board.columns.flatMap(({ name, cards }) => cards
+    .filter((child) => child.parent === card.id)
+    .map((child) => `  ${[name, child.id, child.title].join('  ')}`));
   return [
     [column, card.priority, card.id, card.title].join('  '),
     ...(flight.length === 0 ? [] : [flight.join(' · ')]),

@@ -40,16 +40,17 @@ project is held to.
 ## Then do the work
 
 - Find code with codegraph when the project has an index. This worktree has
-  none of its own: the project's checkout is the folder that holds
-  \`$(git rev-parse --path-format=absolute --git-common-dir)\`. When that folder
-  has a \`.codegraph/\`, run \`codegraph explore "<symbols or question>" -p <that
-  folder>\` before reading a file, and read only the lines it did not show.
+  none of its own; the project's checkout is
+  \`"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"\`.
+  When it has a \`.codegraph/\`, run \`codegraph explore "<symbols or question>"
+  -p <that folder>\` before reading a file, and read only the lines it did not
+  show.
 - Before changing a function that already exists, ask what calls it.
 - Update a feature's docs in \`docs/<feature>/\` by grep: \`grep -n\` its
   \`README.md\` for what you changed, and read a rule or decision only by its id
   (\`grep -n -A15 '<feature>-decision-3' docs/<feature>/decisions.md\`). Never
   read a whole \`README.md\` or \`decisions.md\`.
-- A \`history.md\` line for the card goes in the card's own commit, before the
+- A \`history.md\` line for the card goes in the card's commit, before the
   pull request is opened: the date and why, with no pull request number. A
   second commit to add the number is a second push and a second CI run.
 - Build what the card asks for, following the project's own rules.

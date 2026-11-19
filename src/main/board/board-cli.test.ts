@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asksApp, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList, withWholeId } from './board-cli';
 import { USAGE } from './board-usage';
-import { emptyBoard, cardById, type Board } from '../../shared/board/board';
+import { allCards, emptyBoard, cardById, type Board } from '../../shared/board/board';
 
 // Ids are handed in rather than generated, so a test can name the card it just made.
 let counter = 0;
@@ -394,12 +394,11 @@ describe('show', () => {
     expect(result.output).toContain('  --- a/src/board.ts');
   });
 
-  // `list` prints no parent, so this block is the only place the command says what a card's subtasks are.
   it('lists the subtasks with their column, id and title, after the description', () => {
     const { board, id } = withCard('Parent');
     const described = boardAfter(board, 'set', id, '--notes', 'the why');
     const withChild = boardAfter(described, 'add', 'Child', '--column', 'Todo');
-    const child = withChild.columns.flatMap((column) => column.cards).find((card) => card.title === 'Child')!;
+    const child = allCards(withChild).find((card) => card.title === 'Child')!;
     child.parent = id;
     const result = run(withChild, 'show', id);
     if (!result.ok) throw new Error(result.message);

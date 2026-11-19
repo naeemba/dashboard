@@ -9,9 +9,9 @@ Every rule and decision has a stable id, `<feature>-rule-N` and
 `<feature>-decision-N`, never renumbered. History lines, pull requests and
 commits cite the id.
 
-A change's history line goes in its own commit, before its pull request is
-opened: the date and why, with no pull request number, which nobody has yet.
-`git log` finds the pull request that merged it.
+A change's history line goes in the change's commit, before its pull request
+is opened: the date and why, with no pull request number, which nobody has
+yet. `git log` finds the pull request that merged it.
 
 A hard rule's one line is in `CLAUDE.md`, unless its entry names the test,
 lint or CI step that holds it.
