@@ -178,8 +178,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   its design, and the merge is the user's (ship-decision-1).
 - Given a worker's report says its review loop changed what the card asked
   for, or its design (the review prompt asks it to say so), when main is asked
-  to land it, then main asks the user
-  first instead of relaying the change.
+  to land it, then main asks the user first instead of relaying the change.
 - Given a worker main handed work, when its turn ends with nothing in flight or
   scheduled and its card is Done or Cancelled on the project's board, then
   within half a minute the app releases the pane through pane.release, logs it,
