@@ -65,19 +65,24 @@ export function frozenInstall(folder: string, exists: (path: string) => boolean)
   return manager === 'npm' ? ['npm', 'ci'] : [manager, 'install', '--frozen-lockfile'];
 }
 
-async function made(ports: WorktreeMakePorts, projectPath: string, branch: string, worktreePath: string): Promise<MadeWorktree> {
-  const output = `made ${worktreePath} on ${branch}`;
+// What the install adds to the output: nothing without a lockfile, or how it went.
+async function installed(ports: WorktreeMakePorts, projectPath: string, worktreePath: string): Promise<string> {
   const install = frozenInstall(worktreePath, ports.exists);
-  if (install === null) return { output, branch, worktreePath };
+  if (install === null) return '';
   const [program, ...programArguments] = install;
   try {
     await ports.install(program, programArguments, worktreePath);
-    return { output: `${output}, packages installed`, branch, worktreePath };
+    return ', packages installed';
   } catch (error) {
     const message = `${install.join(' ')} failed in ${worktreePath}: ${failureText(error)}`;
     ports.log({ level: 'warn', kind: 'worktree', project: projectPath, message });
-    return { output: `${output}; ${message}`, branch, worktreePath };
+    return `; ${message}`;
   }
+}
+
+async function made(ports: WorktreeMakePorts, projectPath: string, branch: string, worktreePath: string): Promise<MadeWorktree> {
+  const output = `made ${worktreePath} on ${branch}${await installed(ports, projectPath, worktreePath)}`;
+  return { output, branch, worktreePath };
 }
 
 // A new branch off origin/<base>, named after the title with `id` to break a tie.

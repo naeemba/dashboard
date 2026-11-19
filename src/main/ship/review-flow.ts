@@ -344,10 +344,9 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (ports.agentWorksIn(slot, entry.pane)) return early(`the agent on "${entry.title}" is still working`);
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
-    // Just after the pull request opens, too: card.follow asks gh within two minutes and moves the card into
-    // Review, which is when finishedIn sees the number.
+    // Just after the pull request opens, too, until card.follow's next ask of gh moves the card into Review.
     if (pullRequest === null) {
-      return { refused: `"${entry.title}" has no pull request on ${entry.branch} the app has seen yet; it moves the card into Review within two minutes of one opening, and the review can start then (by itself with review.autoLoop on)` };
+      return { refused: `"${entry.title}" has no pull request on ${entry.branch} the app has seen yet; it moves the card into Review once it sees one open, and the review can start then (by itself with review.autoLoop on)` };
     }
     // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
     // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a

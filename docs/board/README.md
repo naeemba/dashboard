@@ -117,8 +117,8 @@ a card whose pull request opens is moved into Review and waits there. Moving
 a card into Review yourself, with Shift and an arrow, a drop or `dashboard
 board move <id> Review`, starts its review loop whatever the setting, and so
 does `dashboard board review <id>`; a card with no worktree, no pull request
-the app has seen yet (it moves the card into Review within two minutes of one
-opening, and the refusal says so), an agent still working, a card gone from the board, or a card already
+the app has seen yet (it moves the card into Review once it sees one open,
+and the refusal says so), an agent still working, a card gone from the board, or a card already
 past Review is refused, and the status bar or the command says why. What
 entering a column starts is one table for the board, the command and the app
 (docs/actions). The card lands in Review either way, and carries a comment when
