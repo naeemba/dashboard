@@ -63,13 +63,17 @@ describe('mainPrompt', () => {
 describe('mainPrompt verbs', () => {
   // Main once rebuilt dispatch, finish and land as /tmp scripts it lost; the prompt names the verbs.
   // Main once told the user they were on an older build than the one installed.
-  it('dispatches a card with board ship and names finish, pr land, budget and --version', () => {
+  // Main once ran another repository's work in a pane on its own page, not knowing project add.
+  // Main once landed a loop that swapped the card's rule for its own, relaying the change.
+  it('dispatches a card with board ship and names finish, pr land, budget, --version and project add', () => {
     const prompt = mainPrompt('/work/api');
     expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id>`');
     expect(prompt).toContain('finish <id>');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n>`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" budget`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" --version`');
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" project add <path> --name <name>`');
+    expect(prompt).toContain('ask me before landing it rather than relaying the change');
   });
 
   // A cold install outlasts Bash's two-minute default, and main retried a worker that had started.

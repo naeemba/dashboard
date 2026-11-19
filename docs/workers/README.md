@@ -174,9 +174,11 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   to that main as a worker's is.
 - Given merging is off for the project, when a review worker finishes, then its
   report to main names the loop's rounds, what each fixed, what is still open
-  and the CI state, and the merge is the user's (ship-decision-1).
+  and the CI state, and whether any round changed what the card asked for or
+  its design, and the merge is the user's (ship-decision-1).
 - Given a worker's report says its review loop changed what the card asked
-  for, or its design, when main is asked to land it, then main asks the user
+  for, or its design (the review prompt asks it to say so), when main is asked
+  to land it, then main asks the user
   first instead of relaying the change.
 - Given a worker main handed work, when its turn ends with nothing in flight or
   scheduled and its card is Done or Cancelled on the project's board, then

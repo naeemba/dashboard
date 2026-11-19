@@ -87,7 +87,8 @@ with merging off, `pr land` with it on.
   (`review-finished.ts`, `review-flow.test.ts`).
 - Given merging is off (the default), when the review loop and CI finish, then the review merges
   nothing, the card stays in Review with the ending in a comment on it, and the project's main hears
-  the rounds, the fixes, what is open and the CI state.
+  the rounds, the fixes, what is open, the CI state, and whether a round changed what the card
+  asked for or its design.
 - Given settings `review.autoMerge` is on but the project's entry says `autoMerge: false`, when its
   card is reviewed, then nothing is merged; the entry wins either way, and a folder the file does
   not list follows the setting.

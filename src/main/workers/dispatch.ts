@@ -85,10 +85,11 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     'Dispatch with the pane command, `node "$DASHBOARD_COMMAND" pane`:',
     '  claim [--project <name|aka>]',
     '                         open a worker pane; prints its id. --project opens it on the page of',
-    '                         the project of that name, opening the project if it is closed',
-    '                         Work in a repository that is not a project yet goes on its own page:'
-      + ' `node "$DASHBOARD_COMMAND" project add <path> --name <name>`, then `pane claim --project <name>`;'
-      + ' never a pane on this page working in another repository.',
+    '                         the project of that name, opening the project if it is closed.',
+    '                         Work in a repository that is not a project yet goes on its own page:',
+    '                         `node "$DASHBOARD_COMMAND" project add <path> --name <name>`, then',
+    '                         `pane claim --project <name>`; never a pane on this page working in',
+    '                         another repository.',
     ...runUsage,
     '  list [--all] [--reports]',
     '                         every pane, and whether its worker is running, blocked or done;',
