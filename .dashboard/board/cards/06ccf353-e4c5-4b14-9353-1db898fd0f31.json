@@ -1,0 +1,11 @@
+{
+  "id": "06ccf353-e4c5-4b14-9353-1db898fd0f31",
+  "title": "Review worker asks before landing a loop's design change when merging is on",
+  "notes": "When merging is on (autoMerge, ship-decision-1), reviewPrompt's land steps (src/main/ship/review.ts:144-156) run pr land once the loop has converged, and nothing checks whether a round changed what the card asked for. A #329-style swap of the card's rule then merges with nobody asked, the outcome #338 prevents only where main lands. Fix: stop before pr land on such a change and report it to main. Issue: https://github.com/naeemba/dashboard/issues/339 Review: https://github.com/naeemba/dashboard/pull/338#discussion_r4627908449",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-19T11:14:57.760Z",
+  "updatedAt": "2026-11-19T11:14:57.760Z",
+  "column": "Backlog",
+  "order": 51
+}
