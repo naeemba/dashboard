@@ -108,7 +108,9 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ` background (${LONGEST_BACKGROUND_RUN}): it waits for its checks and`
       + ' merges the commit they passed on. A land stopped at that time limit has not failed: run it once'
       + ' more, it notes the head again. To wait for anything,'
-      + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.',
+      + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.'
+      + ' When a worker\'s report says its review loop changed what the card asked for, or its design,'
+      + ' ask me before landing it rather than relaying the change.',
     '',
     'Check the 7-day usage with `node "$DASHBOARD_COMMAND" budget` before each round of a long unattended'
       + ' loop: it exits 0 under the cap I set once, 1 at or over it, 2 when the reading is missing or'
