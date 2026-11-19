@@ -4,6 +4,7 @@ import {
   addComment,
   branchFrom,
   cardAt,
+  childrenOf,
   backlogColumnIndex,
   columnNamed,
   flightParts,
@@ -195,19 +196,28 @@ export function formatList(board: Board, columns: readonly number[] = board.colu
   ].join('\n');
 }
 
-// One card in full: the line `list` prints for it, then its description, then its trail oldest
-// first. The trail is the half you cannot get from `list` — a line per card has nowhere to put it —
-// and reading it back is what stops the same finding being written twice.
+// One card in full: the line `list` prints for it, then its description, then its subtasks, then its
+// trail oldest first. The trail is the half you cannot get from `list` — a line per card has nowhere
+// to put it — and reading it back is what stops the same finding being written twice. The subtasks
+// are here because `list` prints no parent: a worker told to read them had nothing to find them by.
 //
 // The body is indented two spaces so that only a separator ever sits hard against the left margin: a
 // comment recording a diff hunk starts its line `--- a/src/board.ts`, and unindented it would read
 // back as another entry, dated `a/src/board.ts`.
-function formatCard(column: string, card: Card): string {
+function formatCard(board: Board, selection: Selection): string {
+  const column = board.columns[selection.column].name;
+  const card = board.columns[selection.column].cards[selection.card];
   const flight = flightParts(card);
+  const subtasks = childrenOf(board, card.id).map((child) => {
+    // childrenOf read it off this board, so it is there.
+    const at = selectionOf(board, child.id)!;
+    return `  ${[board.columns[at.column].name, child.id, child.title].join('  ')}`;
+  });
   return [
     [column, card.priority, card.id, card.title].join('  '),
     ...(flight.length === 0 ? [] : [flight.join(' · ')]),
     ...(card.notes === '' ? [] : ['', card.notes]),
+    ...(subtasks.length === 0 ? [] : ['', 'Subtasks', ...subtasks]),
     ...(card.comments ?? []).flatMap((comment, at) => [
       '',
       `--- #${at + 1} · ${comment.at ?? 'no date'}`,
@@ -299,8 +309,7 @@ export function runBoardCommand(
     if (extra.length > 0) return { ok: false, message: 'show takes nothing after the id' };
     const selection = findCard(board, id);
     if ('message' in selection) return { ok: false, message: selection.message };
-    const column = board.columns[selection.column];
-    return { ok: true, output: formatCard(column.name, column.cards[selection.card]), board: null };
+    return { ok: true, output: formatCard(board, selection), board: null };
   }
 
   if (command === 'comment') {

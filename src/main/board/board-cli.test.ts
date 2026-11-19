@@ -394,6 +394,24 @@ describe('show', () => {
     expect(result.output).toContain('  --- a/src/board.ts');
   });
 
+  // `list` prints no parent, so this block is the only place the command says what a card's subtasks are.
+  it('lists the subtasks with their column, id and title, after the description', () => {
+    const { board, id } = withCard('Parent');
+    const described = boardAfter(board, 'set', id, '--notes', 'the why');
+    const withChild = boardAfter(described, 'add', 'Child', '--column', 'Todo');
+    const child = withChild.columns.flatMap((column) => column.cards).find((card) => card.title === 'Child')!;
+    child.parent = id;
+    const result = run(withChild, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output).toContain(`the why\n\nSubtasks\n  Todo  ${child.id}  Child`);
+  });
+
+  it('prints no Subtasks block for a card with none', () => {
+    const { board, id } = withCard();
+    const result = run(board, 'show', id);
+    expect(result.ok && result.output).not.toContain('Subtasks');
+  });
+
   it('refuses a card that is not there', () => {
     expect(run(emptyBoard(), 'show', 'nope')).toMatchObject({ ok: false, message: 'no card with id nope' });
   });
