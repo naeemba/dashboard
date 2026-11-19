@@ -28,13 +28,16 @@ export function longLines(text, width = WIDTH) {
       frontMatter = index === 0 || line !== '---';
       return;
     }
-    indentedCode = !fence && INDENTED.test(line) && (indentedCode || lines[index - 1]?.trim() === '')
-      || (indentedCode && line.trim() === '');
+    // A blank line keeps the block as it was.
+    if (line.trim() !== '') {
+      indentedCode = !fence && INDENTED.test(line) && (indentedCode || lines[index - 1]?.trim() === '');
+    }
+    const length = [...line].length;
     const marker = line.match(FENCE)?.[1];
     if (marker && !fence) fence = marker;
     else if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
-    else if (!fence && !indentedCode && !EXEMPT.test(line) && [...line].length > width) {
-      found.push({ line: index + 1, length: [...line].length });
+    else if (!fence && !indentedCode && !EXEMPT.test(line) && length > width) {
+      found.push({ line: index + 1, length });
     }
   });
   return found;
