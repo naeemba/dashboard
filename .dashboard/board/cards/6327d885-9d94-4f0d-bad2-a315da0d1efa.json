@@ -5,8 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-19T09:35:26.263Z",
-  "updatedAt": "2026-11-19T10:29:54.431Z",
+  "updatedAt": "2026-11-19T10:37:53.003Z",
   "branch": "board-review-looks-for-the-card-s-pull-requ",
-  "column": "Doing",
+  "pullRequest": 337,
+  "comments": [
+    {
+      "at": "2026-11-19T10:37:52.976Z",
+      "body": "Pull request #337 opened: board review looks for the card's pull request before refusing https://github.com/naeemba/dashboard/pull/337"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
