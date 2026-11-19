@@ -1,0 +1,11 @@
+{
+  "id": "147d6ea3-9a91-4d1b-8183-74e45bf02b7a",
+  "title": "Worker skills: subtasks in board show, PR recorded at once, codegraph, grep docs, history line before the PR",
+  "notes": "From the retro over the 10 worker sessions for #325-#333 (2026-11-18).\n1. work-card-skill.ts:32-34 says a card's subtasks are shown by list; neither list nor show prints a parent, so all 5 implementers grepped for nothing. Make board show print a Subtasks block (id, column, title) and point the skill at show only.\n2. Right after gh pr create, the skill runs board set <id> --pull-request <n>, so board review works at once (main was refused 'has no pull request ... yet' on #329).\n3. When the project folder has .codegraph/, the skill says to run codegraph explore from there before reading files (workers cat'd whole files: 207k chars across 5; two confirmed .codegraph existed and still didn't use it).\n4. Docs rule (CLAUDE.md docs paragraph, adopt-docs-skill.ts, and the work-card skill): to update a feature's docs, grep the README for what changed and read a decision only by its id, never cat the whole README/decisions (137k chars read across 5 workers; docs/board/README.md is 32.7k).\n5. The history line is written in the card's commit before the PR is opened, without the PR number (4 of 5 workers made a second commit+push+CI run to add '#<n>'). Change the history format in adopt-docs-skill.ts (~line 175) and docs/README.md preamble to match; skills-decision-2 applies.\nDocs: docs/skills, docs/board.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-19T09:25:32.140Z",
+  "updatedAt": "2026-11-19T09:25:32.140Z",
+  "column": "Backlog",
+  "order": 51
+}
