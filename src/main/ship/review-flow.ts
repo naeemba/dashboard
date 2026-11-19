@@ -4,6 +4,7 @@ import { awaitsReview, followedPullRequest, intoReview, isCancelled, reviewPromp
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
 import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
+import type { ColumnEntry } from '../../shared/board/column-entry';
 import { entryForCard } from './worktree-store';
 import { notOpenRefusal } from './ship';
 
@@ -63,6 +64,10 @@ export type ReviewPorts = {
   // A start under way: the installed `/pr-loop` asked whether it is current, and the status bar told
   // when it is not (review-loop-install.ts). Not awaited; it never refuses.
   loopChecked: () => void;
+  // card.follow for one card: gh asked for the pull request on its branch, the number recorded and
+  // the card moved into Review when one is open, as the pull request sweep does on its next tick.
+  // `ran` is what that move started. Throws when gh cannot answer.
+  follow: (projectPath: string, id: string) => Promise<{ output: string; ran?: ColumnEntry } | Refused>;
 };
 
 // The pull request this card's work opened, or null while there is none yet. That number is the whole
@@ -331,7 +336,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // Cards the sweep's own move is under way for right now: card.move awaits the start it makes.
   const arriving = new Set<string>();
 
-  async function review(id: string): Promise<{ output: string } | Refused> {
+  // `followed` is whether card.follow has been asked once already in this start.
+  async function review(id: string, followed = false): Promise<{ output: string } | Refused> {
     const entry = entryForCard(ports.worktrees(), id);
     if (entry === undefined) return { refused: `card ${id} has no worktree to review; ship it first` };
     if (entry.reviewing || starting.has(id)) return { refused: `"${entry.title}" is already being reviewed` };
@@ -344,9 +350,17 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     if (ports.agentWorksIn(slot, entry.pane)) return early(`the agent on "${entry.title}" is still working`);
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
-    // Just after the pull request opens, too, until card.follow's next ask of gh moves the card into Review.
+    // Just after the pull request opens the card is still in Doing until the pull request sweep's next
+    // ask of gh, so the card's follow is run now rather than refusing a pull request that is open. Its
+    // move into Review may start the review itself (review.autoLoop on), and then its answer is this
+    // one's; otherwise the start is tried once more on the board the follow left. gh failing, or no
+    // pull request yet, is the refusal.
     if (pullRequest === null) {
-      return { refused: `"${entry.title}": the app has not seen a pull request on ${entry.branch} yet; it moves the card into Review once it sees one open, and the review can start then (by itself with review.autoLoop on)` };
+      const answer = followed ? null : await ports.follow(entry.projectPath, id).catch(() => null);
+      if (answer === null) {
+        return { refused: `"${entry.title}": the app has not seen a pull request on ${entry.branch} yet; it moves the card into Review once it sees one open, and the review can start then (by itself with review.autoLoop on)` };
+      }
+      return 'refused' in answer || answer.ran === 'review' ? answer : review(id, true);
     }
     // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
     // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BOARD_DIRECTORY, BOARD_FOLDER_PATH, readBoard, writeBoard } from '../board/board-store';
-import { CANCELLED_COLUMN, columnNamed, emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
+import { CANCELLED_COLUMN, REVIEW_COLUMN, columnNamed, emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from './review-flow';
 import { intoReview } from './review';
 import type { WorktreeEntry } from '../../shared/app/bridge';
@@ -82,6 +82,7 @@ function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: 
       reviewFinished: async () => false,
       loopMissing: () => null,
       loopChecked: () => undefined,
+      follow: async () => ({ output: 'ship-it has no pull request' }),
       ...over,
     },
   };
@@ -679,5 +680,40 @@ describe('reviewSweep', () => {
     const first = sweep.review(CARD);
     await expect(sweep.review(CARD)).resolves.toEqual({ refused: '"Ship it" is already being reviewed' });
     await first;
+  });
+
+  // Just after the agent opens its pull request: the card is still in Doing with no number on it until
+  // the pull request sweep next asks gh, and the review by hand runs the card's follow rather than refuse.
+  it('runs the card follow before refusing a review by hand, and starts on the pull request it finds', async () => {
+    const { entry, projectPath } = flight(null);
+    const followed: string[] = [];
+    const { ports: made, log } = ports(entry, {
+      follow: async (_projectPath, id) => {
+        followed.push(id);
+        const board = boardWithCard(12);
+        writeBoard(projectPath, moveCardById(board, CARD, columnNamed(board, REVIEW_COLUMN)) ?? board);
+        return { output: 'Ship it  →  Review', ran: 'nothing' };
+      },
+    });
+    await expect(reviewSweep(made).review(CARD)).resolves.toEqual({ output: 'review started for "Ship it", pull request #12' });
+    expect(followed).toEqual([CARD]);
+    expect(log.started).toHaveLength(1);
+  });
+
+  it('answers with the follow when its move into Review started the review, starting nothing more', async () => {
+    const { entry } = flight(null);
+    const started = { output: 'Ship it  →  Review\nreview started for "Ship it", pull request #12', ran: 'review' as const };
+    const { ports: made, log } = ports(entry, { follow: async () => started });
+    await expect(reviewSweep(made).review(CARD)).resolves.toEqual(started);
+    expect(log.started).toEqual([]);
+  });
+
+  it('refuses as before when gh cannot answer the follow, asking it once', async () => {
+    const { entry } = flight(null);
+    let asked = 0;
+    const { ports: made } = ports(entry, { follow: async () => { asked += 1; throw new Error('gh: offline'); } });
+    await expect(reviewSweep(made).review(CARD))
+      .resolves.toMatchObject({ refused: expect.stringMatching(/the app has not seen a pull request on ship-it yet/) });
+    expect(asked).toBe(1);
   });
 });
