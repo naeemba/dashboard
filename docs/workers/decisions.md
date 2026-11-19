@@ -541,8 +541,9 @@ What it changes, on purpose:
 
 **Every session the app starts (main's screen, a worker's screen or terminal) is started with
 `permissions.allow` rules for `node "$DASHBOARD_COMMAND" pane *`, `session *`,
-`node "$DASHBOARD_BOARD" *` and the bare `node "$DASHBOARD_COMMAND" budget`, a reading
-(`budget --cap` is asked; command-decision-6)** (`APP_SESSION_SETTINGS` in `src/main/workers/dispatch.ts`, beside the board guard, passed in
+`node "$DASHBOARD_BOARD" *`, and two readings: the bare `node "$DASHBOARD_COMMAND" budget`
+(`budget --cap` is asked; command-decision-6) and `node "$DASHBOARD_COMMAND" --version`, which
+main's prompt names for the installed build** (`APP_SESSION_SETTINGS` in `src/main/workers/dispatch.ts`, beside the board guard, passed in
 the screen's `settings` and a terminal worker's `--settings`). Before, the rules lived only in the
 user's own `~/.claude/settings.json`, so on a fresh machine main's first `pane claim` waited on a
 question, or the classifier, until the rule was copied in by hand.

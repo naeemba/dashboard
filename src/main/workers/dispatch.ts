@@ -49,6 +49,7 @@ const APP_COMMAND_PERMISSIONS = {
     'Bash(node "$DASHBOARD_BOARD" *)',
     // A reading only: `budget --cap` changes the cap, and is asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',
+    'Bash(node "$DASHBOARD_COMMAND" --version)',
   ],
 };
 
@@ -110,6 +111,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     'Check the 7-day usage with `node "$DASHBOARD_COMMAND" budget` before each round of a long unattended'
       + ' loop: it exits 0 under the cap I set once, 1 at or over it, 2 when the reading is missing or'
       + ' stale. Stop on anything but 0, and never ask me for the cap again; `budget --cap <n>` sets it.',
+    '',
+    'The installed build is `node "$DASHBOARD_COMMAND" --version`; run it before saying which build I am on.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so, with the end of its"

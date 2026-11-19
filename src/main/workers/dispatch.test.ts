@@ -62,12 +62,14 @@ describe('mainPrompt', () => {
 
 describe('mainPrompt verbs', () => {
   // Main once rebuilt dispatch, finish and land as /tmp scripts it lost; the prompt names the verbs.
-  it('dispatches a card with board ship and names finish, pr land and budget', () => {
+  // Main once told the user they were on an older build than the one installed.
+  it('dispatches a card with board ship and names finish, pr land, budget and --version', () => {
     const prompt = mainPrompt('/work/api');
     expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id>`');
     expect(prompt).toContain('finish <id>');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n>`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" budget`');
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" --version`');
   });
 
   // ~/.dashboard is in no project: both commands refuse there without --project.
@@ -96,10 +98,10 @@ describe('workerSettings', () => {
   });
 
   // A fresh machine has no rule for them in ~/.claude/settings.json.
-  it('allows the pane, session and board commands, and reading the budget', () => {
+  it('allows the pane, session and board commands, and reading the budget and the version', () => {
     expect(JSON.parse(workerSettings('2:3')).permissions.allow).toEqual(expect.arrayContaining([
       'Bash(node "$DASHBOARD_COMMAND" pane *)', 'Bash(node "$DASHBOARD_COMMAND" session *)', 'Bash(node "$DASHBOARD_BOARD" *)',
-      'Bash(node "$DASHBOARD_COMMAND" budget)',
+      'Bash(node "$DASHBOARD_COMMAND" budget)', 'Bash(node "$DASHBOARD_COMMAND" --version)',
     ]));
   });
 
