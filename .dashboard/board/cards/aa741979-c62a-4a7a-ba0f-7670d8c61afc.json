@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-19T09:25:45.354Z",
-  "updatedAt": "2026-11-19T10:13:00.416Z",
+  "updatedAt": "2026-11-19T10:29:17.458Z",
   "branch": "pnpm-check-prints-a-three-line-summary-and",
   "pullRequest": 336,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-19T10:13:00.416Z",
       "body": "Review loop floor-addressed in 2 rounds (7 findings fixed in round 1, 2 low/nit in round 2: eslint-died lint row, plural moved to check.mjs); commits b3643cfb 48caffdd 860b4561. #335 merged meanwhile: main merged in (c3c4f42e), docs conflicts kept main's text rewrapped to 100, duplicate history lines dropped; pnpm check green, CI 5/5 pass on c3c4f42e. Still open: #334 must land first, then merge main in again. Otherwise converged, ready to merge."
+    },
+    {
+      "at": "2026-11-19T10:29:17.458Z",
+      "body": "#334 merged: main merged in again (60bc833c), 5 docs conflicts resolved to main's text and the changed paragraphs reflowed to 100; pnpm check green, CI 5/5 pass on 60bc833c, MERGEABLE. Converged, ready to merge."
     }
   ],
   "column": "Review",
