@@ -30,4 +30,11 @@ describe('summaryLine', () => {
     expect(summaryLine('typecheck', output, false)).toBe('typecheck  FAIL  no error count');
     expect(summaryLine('lint', output, false)).toBe('lint       FAIL  no problem count');
   });
+
+  it('says eslint died even when the markdown check counted problems', () => {
+    const output = 'Error: config threw\neslint failed\n✖ 3 problems (markdown lines over 100 columns)\n';
+    expect(summaryLine('lint', output, false)).toBe('lint       FAIL  no eslint count, 3 markdown problems');
+    const counted = '✖ 1 problem (1 error, 0 warnings)\neslint failed\n✖ 3 problems (markdown lines)\n';
+    expect(summaryLine('lint', counted, false)).toBe('lint       FAIL  4 problems');
+  });
 });

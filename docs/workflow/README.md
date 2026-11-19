@@ -43,7 +43,9 @@ checkout's top (ignored as `*.log`), and prints one line each and the log's path
 
 It exits non-zero when one failed, and the reason is in the log: there is no need to run a check
 again to see the end of it. A check that died before counting anything (a missing module, a broken
-config) says `no test count`, `no error count` or `no problem count` instead of a count of 0.
+config) says `no test count`, `no error count` or `no problem count` instead of a count of 0, and
+an eslint that died while the markdown check counted lines says `no eslint count, 3 markdown
+problems`.
 
 `pnpm lint` (`scripts/lint-step.mjs`) is eslint and, even when eslint fails, a line-width check of
 every tracked markdown file but `CHANGELOG.md` and `.dashboard/`: no line over 100 characters, apart

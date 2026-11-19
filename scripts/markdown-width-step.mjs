@@ -6,7 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { WIDTH, checkedFile, longLines } from './markdown-width.mjs';
-import { plural } from './run-node.mjs';
+import { plural } from './check.mjs';
 
 const named = process.argv.slice(2);
 const files = named.length > 0
