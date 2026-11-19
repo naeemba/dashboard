@@ -392,6 +392,7 @@ board there does not parse, and when it cannot tell which branch on the remote i
 
 - Given a plain terminal in a folder with no `.dashboard` and no git repository above it, when `dashboard board list` runs, then it is refused naming `--project` and no board is seeded there.
 - Given a board with cards in Done, when `board list` runs, then they are left out and a last line says how many, naming `--all`; `board show ba02cf00` shows the one card whose id starts with it, and a start two cards share is refused naming both (`board-cli.test.ts`).
+- Given a card with subtasks, when `board show <id>` runs, then a `Subtasks` block after the description lists each one's column, id and title (`board-cli.test.ts`).
 - Given `crm` in `~/.dashboard/projects.yaml`, when `dashboard board move <id> Done --project crm` runs from any folder, then the card moves on crm's board.
 - Given the board is on screen, when `board move` writes the file from a pane, then the board re-reads without moving your selection.
 - Given the power goes out just after a board, notes or session write, when the app next launches, then it reads the old file or the new one, never an empty one (`replaceFile` flushes before it renames).

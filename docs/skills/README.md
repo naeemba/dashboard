@@ -23,7 +23,8 @@ requests, and writes the pattern this repository uses:
 - `docs/<feature>/README.md`: what it is, its files, its scenarios, open questions
 - `docs/<feature>/hard-rules.md`: rules whose breaking was seen, with ids `<feature>-rule-N`
 - `docs/<feature>/decisions.md`: settled questions with dates and pull requests, ids `<feature>-decision-N`
-- `docs/<feature>/history.md`: one dated line per merged pull request
+- `docs/<feature>/history.md`: one dated line per merged change, written in the change's commit
+  before its pull request opens, so a new line names no pull request number
 - `docs/README.md`: the index
 - the docs rule near the top of `CLAUDE.md` (created if missing), and each existing rule's id
 
@@ -48,8 +49,11 @@ aside).
 ## /work-card
 
 What a shipped card's agent is started on: `/work-card <card id> bump-version|keep-version <base branch>`
-([ship](../ship/README.md)). It reads the card and its subtasks and the project's `CLAUDE.md`, does
-the work, runs the project's checks and opens the pull request. The checks are the ones `CLAUDE.md`
+([ship](../ship/README.md)). It reads the card and its subtasks (the `Subtasks` block `board show`
+prints) and the project's `CLAUDE.md`, does the work, runs the project's checks and opens the pull
+request. It finds code with codegraph from the project's checkout (whose source can lag the
+worktree, so it reads a file before changing it) and, in a project with `docs/<feature>/`, updates
+docs by grep and writes the card's `history.md` line in the card's commit, with no pull request number. The checks are the ones `CLAUDE.md`
 names, else the project's test, type-check and lint scripts. The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
 `bump-version` tells it to bump last, from `origin/<base branch>` (the third word, the branch the

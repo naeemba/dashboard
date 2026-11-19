@@ -1,6 +1,6 @@
 # Chat: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-10-29 #83 — An Agent SDK session drawn as HTML (chat-decision-1)
 - 2026-10-29 #86 — Fix what it got wrong; slash commands, plan mode and /resume (chat-decision-2)

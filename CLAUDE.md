@@ -7,7 +7,9 @@ Feature docs live in `docs/`; a change to a feature's files changes its docs
 in the same PR. `docs/README.md` is the index. Each rule below names the id of
 the entry saying what breaking it looked like, in `docs/<feature>/hard-rules.md`;
 settled questions are in each feature's `decisions.md`. Read the entry before
-arguing with a rule.
+arguing with a rule. To update a feature's docs, grep its README for what
+changed and read a rule or decision by its id, never a whole README or
+`decisions.md`.
 
 A change to the docs pattern (the index preamble, the id scheme, the docs rule
 above) changes `src/main/skills/adopt-docs-skill.ts` in the same PR, or every

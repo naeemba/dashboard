@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { asksApp, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList, withWholeId } from './board-cli';
 import { USAGE } from './board-usage';
-import { emptyBoard, cardById, type Board } from '../../shared/board/board';
+import { allCards, emptyBoard, cardById, type Board } from '../../shared/board/board';
 
 // Ids are handed in rather than generated, so a test can name the card it just made.
 let counter = 0;
@@ -396,6 +396,27 @@ describe('show', () => {
     if (!result.ok) throw new Error(result.message);
     expect(result.output.split('\n').filter((line) => line.startsWith('--- '))).toHaveLength(1);
     expect(result.output).toContain('  --- a/src/board.ts');
+  });
+
+  it('lists the subtasks with their column, id and title, after the description', () => {
+    const { board, id } = withCard('Parent');
+    const described = boardAfter(board, 'set', id, '--notes', 'the why');
+    const withChild = boardAfter(described, 'add', 'Child', '--column', 'Todo');
+    const child = allCards(withChild).find((card) => card.title === 'Child')!;
+    child.parent = id;
+    // Another card's subtask on the same board: only the shown card's own children are listed.
+    const withStray = boardAfter(withChild, 'add', 'Grandchild', '--column', 'Todo');
+    allCards(withStray).find((card) => card.title === 'Grandchild')!.parent = child.id;
+    const result = run(withStray, 'show', id);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.output).toContain(`the why\n\nSubtasks\n  Todo  ${child.id}  Child`);
+    expect(result.output).not.toContain('Grandchild');
+  });
+
+  it('prints no Subtasks block for a card with none', () => {
+    const { board, id } = withCard();
+    const result = run(board, 'show', id);
+    expect(result.ok && result.output).not.toContain('Subtasks');
   });
 
   it('refuses a card that is not there', () => {

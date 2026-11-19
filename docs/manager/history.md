@@ -1,6 +1,6 @@
 # Manager: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-09-08 #17 — A first tab that is not a project
 - 2026-09-08 #18 — The manager lists what wants you, one row per project

@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-19T09:25:45.354Z",
-  "updatedAt": "2026-11-19T09:25:45.354Z",
-  "column": "Backlog",
-  "order": 53
+  "updatedAt": "2026-11-19T09:39:32.636Z",
+  "branch": "pnpm-check-prints-a-three-line-summary-and",
+  "pullRequest": 336,
+  "comments": [
+    {
+      "at": "2026-11-19T09:39:32.613Z",
+      "body": "Pull request #336 opened: pnpm check prints a line a check, and lint holds markdown to 100 columns https://github.com/naeemba/dashboard/pull/336"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }

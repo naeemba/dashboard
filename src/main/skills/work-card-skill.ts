@@ -30,8 +30,8 @@ pane here — none of that is yours to redo.
 ## Read the card first
 
 Read the card with \`node "$DASHBOARD_BOARD" show $0\`. Read its title, its
-description, its priority, and every card whose parent is this card (\`list\`
-shows them) — those are its subtasks and they are part of the job.
+description, its priority, and every card under \`Subtasks\` in what it prints
+(\`show\` each one) — they are part of the job.
 
 Read \`CLAUDE.md\` at the top of the repository before you write anything. It
 is not optional and it is not a summary of the code; it is the rules this
@@ -39,7 +39,23 @@ project is held to.
 
 ## Then do the work
 
+- Find code with codegraph when the project has an index. This worktree has
+  none of its own; the project's checkout is
+  \`"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"\`.
+  When it has a \`.codegraph/\`, run \`codegraph explore "<symbols or question>"
+  -p <that folder>\` to find what to read. It shows the checkout's code, not
+  this worktree's: read a file here before you change it, and never trust it
+  for a file you already changed.
 - Before changing a function that already exists, ask what calls it.
+- When the project keeps its docs in \`docs/<feature>/\`, update a feature's
+  docs there by grep: \`grep -n\` its
+  \`README.md\` for what you changed, and read a rule or decision only by its id
+  (\`grep -n -A15 '<feature>-decision-3' docs/<feature>/decisions.md\`). Never
+  read a whole \`README.md\` or \`decisions.md\`.
+- When the project keeps its docs in \`docs/<feature>/\`, a \`history.md\`
+  line for the card goes in the card's commit, before the
+  pull request is opened: the date and why, with no pull request number. A
+  second commit to add the number is a second push and a second CI run.
 - Build what the card asks for, following the project's own rules.
 - The version: $1.
   \`${KEEP_VERSION}\`, or anything but \`${BUMP_VERSION}\`, means this project
