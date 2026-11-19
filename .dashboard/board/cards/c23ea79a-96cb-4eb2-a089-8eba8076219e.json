@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-19T11:04:49.415Z",
-  "updatedAt": "2026-11-19T11:26:14.984Z",
+  "updatedAt": "2026-11-19T11:27:53.104Z",
   "branch": "main-brings-a-review-loop-s-design-change-t",
   "pullRequest": 338,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-19T11:26:14.983Z",
       "body": "Review loop on #338: 2 rounds, ended floor-addressed. Round 1 fixed 4 of 5 findings (c541a47e). The one it rejected, docs/workers/README.md:178 about the land path when merging is on, is out of scope for this PR and stays open as later work. Round 2 fixed 3 low/nit findings (a757a5a8), and no review ran on that commit. No conflict with main. CI passed 5/5 on a757a5a8. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-19T11:27:53.079Z",
+      "body": "Pull request #338 merged: Main's prompt: ask before landing a review loop's design change; add a project before working in it https://github.com/naeemba/dashboard/pull/338"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 274
 }
