@@ -29,8 +29,8 @@ added, worktree.make runs the project's frozen install, picked by its lockfile
 (`pnpm install --frozen-lockfile`, `npm ci`, and yarn's and bun's
 `install --frozen-lockfile`), on the PATH the login shell builds
 (`src/main/app/shell-path.ts`, as a Claude screen's session gets), so the agent can run the checks straight away. An
-install that fails, or runs past five minutes, is a warning in the log, with the end of what the install printed on stdout and
-stderr (pnpm says why on stdout); the worktree stays.
+install that fails, or runs past five minutes, is a warning in the log, with ten lines of what the install printed on stdout and
+stderr from the first that names an error (pnpm says why on stdout, npm at the top of stderr above its help); the worktree stays.
 
 The agent is started on `/work-card <card id> bump-version|keep-version <base branch>`
 (`workPrompt`), the skill the app installs ([skills](../skills/README.md#work-card)).

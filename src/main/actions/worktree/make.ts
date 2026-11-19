@@ -66,12 +66,15 @@ export function frozenInstall(folder: string, exists: (path: string) => boolean)
   return manager === 'npm' ? ['npm', 'ci'] : [manager, 'install', '--frozen-lockfile'];
 }
 
-// Why an install failed: pnpm says it on stdout, and execFile's message carries only stderr, so the end of
-// both when the error has them (`ERR_PNPM_OUTDATED_LOCKFILE …`), else the error itself.
+// Why an install failed: pnpm says it on stdout (`ERR_PNPM_OUTDATED_LOCKFILE …`), npm at the top of stderr
+// above its whole help, and execFile's message carries only stderr. So ten lines of both from the first
+// that names an error, else their last ten, else the error itself.
 export function installFailure(error: unknown): string {
   if (!isRecord(error)) return failureText(error);
-  const said = `${String(error.stdout ?? '')}\n${String(error.stderr ?? '')}`.trim();
-  return said === '' ? failureText(error) : said.split('\n').slice(-10).join('\n');
+  const lines = `${String(error.stdout ?? '')}\n${String(error.stderr ?? '')}`.trim().split('\n');
+  if (lines.join('') === '') return failureText(error);
+  const first = lines.findIndex((line) => /\berr(or\b|_)/i.test(line));
+  return (first === -1 ? lines.slice(-10) : lines.slice(first, first + 10)).join('\n');
 }
 
 // The project's frozen install in the worktree, if it has a lockfile; a failure is a warning in the log.

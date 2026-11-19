@@ -92,6 +92,12 @@ describe('worktree.make', () => {
 
   it('reads an install failure from both streams, or from the error when it has none', () => {
     expect(installFailure(PNPM_FAILURE)).toMatch(/^ERR_PNPM_OUTDATED_LOCKFILE.*\n\(node\) \[DEP0169\]/);
+    const npmHelp = Array.from({ length: 90 }, (_, index) => `npm error   --option-${index}`).join('\n');
+    const npmFailure = Object.assign(new Error('Command failed: npm ci'), {
+      stdout: '',
+      stderr: `npm warn old lockfile\nnpm error code EUSAGE\nnpm error \`npm ci\` can only install packages when your package.json and package-lock.json are in sync\nnpm error Missing: is-number@7.0.0 from lock file\n${npmHelp}\nnpm error Run "npm help ci" for more info`,
+    });
+    expect(installFailure(npmFailure)).toMatch(/^npm error code EUSAGE\n.*in sync\nnpm error Missing: is-number/);
     expect(installFailure(Object.assign(new Error('spawn pnpm ENOENT'), { code: 'ENOENT' }))).toContain('spawn pnpm ENOENT');
   });
 

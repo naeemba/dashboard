@@ -72,6 +72,11 @@ describe('mainPrompt verbs', () => {
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" --version`');
   });
 
+  // A cold install outlasts Bash's two-minute default, and main retried a worker that had started.
+  it('tells main to wait ten minutes for run --worktree', () => {
+    expect(mainPrompt('/work/api')).toContain('ten-minute timeout (600000 ms)');
+  });
+
   // ~/.dashboard is in no project: both commands refuse there without --project.
   it('tells the manager\'s main which project ship and pr land run in', () => {
     const prompt = mainPrompt(MANAGER_FOLDER);
