@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-19T09:25:38.840Z",
-  "updatedAt": "2026-11-19T09:25:38.840Z",
-  "column": "Backlog",
-  "order": 52
+  "updatedAt": "2026-11-19T09:26:05.065Z",
+  "branch": "app-card-worktrees-get-their-packages-insta",
+  "column": "Doing",
+  "order": 1
 }
