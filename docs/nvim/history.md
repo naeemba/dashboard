@@ -1,6 +1,6 @@
 # Nvim: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-09-05 #7 — nvim becomes one of a project's modes
 - 2026-09-06 #8 — Fix the editor pane's PATH

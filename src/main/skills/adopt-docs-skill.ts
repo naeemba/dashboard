@@ -174,13 +174,16 @@ history says what was chosen but not why, write only what was chosen.
 
 **history.md**, one line per merged change that touched the feature, oldest
 first: each merged pull request by its merge date, each direct push by its
-commit date and short hash:
+commit date and short hash. These lines are written after the fact, so they name
+their pull request; a line a change adds for itself from now on is written in
+its own commit before the pull request opens, and names none:
 
     # <Feature>: history
 
-    One line per merged change: date, pull request, why.
+    One line per merged change: date and why.
 
     - 2026-03-14 #42 — <why, in one line> (<feature>-decision-1)
+    - 2026-04-02 — <why, in one line> (<feature>-rule-2)
 
 ## 5. Move what is already there
 
@@ -219,6 +222,10 @@ stays where it is. Nothing is lost:
     \`<feature>-decision-N\`, never renumbered. History lines, pull requests and
     commits cite the id.
 
+    A change's history line goes in the change's commit, before its pull request
+    is opened: the date and why, with no pull request number, which nobody has
+    yet. \`git log\` finds the pull request that merged it.
+
     A hard rule's one line is in \`CLAUDE.md\`, unless its entry names the test,
     lint or CI step that holds it.
 
@@ -240,7 +247,9 @@ imports when it is a link or an \`@\` import. Near the top, under the title:
     in the same PR. \`docs/README.md\` is the index. Each rule below names the id of
     the entry saying what breaking it looked like, in
     \`docs/<feature>/hard-rules.md\`; settled questions are in each feature's
-    \`decisions.md\`. Read the entry before arguing with a rule.
+    \`decisions.md\`. Read the entry before arguing with a rule. To update a
+    feature's docs, grep its README for what changed and read a rule or decision
+    by its id, never a whole README or \`decisions.md\`.
 
 Then end each rule already in \`CLAUDE.md\` that now has a hard-rules entry
 with its id in brackets: \`(billing-rule-1)\`, and add a one-line rule, with its

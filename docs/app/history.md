@@ -1,6 +1,6 @@
 # App: history
 
-One line per merged change: date, pull request, why.
+One line per merged change: date and why.
 
 - 2026-09-03 #1 — Terminal dashboard v1: one window, a page per project
 - 2026-09-05 #3 — Open projects from a searchable list instead of a config file

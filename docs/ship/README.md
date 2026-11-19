@@ -72,6 +72,7 @@ with merging off, `pr land` with it on.
 - Given merging is on and a fix was pushed after the last review round, when the loop ends, then the review runs `pr land`, which waits for CI on that commit and merges it with `--match-head-commit`; a failed check stops it with a comment on the card.
 - Given merging is on and `gh pr merge` loses its answer to a network error after the merge went through, when `pr land` reads the pull request back, then the review reports it merged, not failed (#301).
 - Given merging is on and the network drops while `pr land` waits on the checks, when it exits printing `nothing is merged, run it again`, then the review runs it once more instead of stopping.
+- Given merging is on, when `pr land` exits printing `merged <n> at <sha>`, then the review takes that line as the merge and runs no `gh pr view` to confirm it.
 - Given the review merged the pull request, when the app next asks gh about the card, then the app moves it to Done on origin's main and on screen; the review pane moves no card (board-decision-7).
 - Given no `~/.claude/commands/pr-loop.md`, when a review would start, then it is refused with `git clone … && ./install.sh`, the line is on the card, and the worktree is left as it was (`review-flow.test.ts`).
 - Given the claude-pr-loop checkout was pulled but `install.sh` not rerun, when the app starts or a review starts, then the status bar says the installed workflow differs and to run `./install.sh` in the checkout (`review-loop-install.test.ts`).
