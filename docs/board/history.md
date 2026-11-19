@@ -40,3 +40,4 @@ One line per merged change: date and why.
 - 2026-11-19 — A review refused before the app has seen the pull request says the card moves into
   Review once it does
 - 2026-11-19 — `board show` lists the card's subtasks, since `list` prints no parent
+- 2026-11-19 — A review start asks gh for the card's pull request before refusing that it has none

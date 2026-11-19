@@ -26,10 +26,12 @@ Neither door holds any of the logic; each only asks.
   a card on a project open in the app.
 - **card.review** (`dashboard board review <id>`): the review start in
   `review-flow.ts` — the worktree swapped for a review one and `/pr-loop`
-  started in it. Refused for a card with no worktree, no pull request on its
-  branch's board, an agent still working, a review already running, or a card
-  past Review. One started this way that meets a dirty worktree is started
-  again by the sweep once the commit lands, whatever the setting.
+  started in it. A card with no pull request recorded runs card.follow first,
+  so one opened since the sweep last asked gh is found. Refused for a card
+  with no worktree, no pull request on its branch, an agent still working, a
+  review already running, or a card past Review. One started this way that
+  meets a dirty worktree is started again by the sweep once the commit lands,
+  whatever the setting.
 
 - **card.start**: a card whose agent has just been given its pane: its branch
   written and the card into Doing, unless it is there or past it. No door of
@@ -37,7 +39,8 @@ Neither door holds any of the logic; each only asks.
   main.ts: a ship, the review, `pane run --card`, a restore) calls it.
 - **card.follow**: one card's column from its pull request, asked of `gh` from
   its branch (board-decision-6); the move goes through card.move as the app's
-  own. Called by the sweep in `pull-request-sweep.ts` only.
+  own. Called by the sweep in `pull-request-sweep.ts`, and by the review start
+  in `review-flow.ts` for a card with no pull request recorded.
 
 - **pane.dispatch**: every agent a pane starts — `pane run`, a ship, the review
   loop, a resume after a restart or from the drawer, New Claude — screen or
