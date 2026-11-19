@@ -1,0 +1,11 @@
+{
+  "id": "eed87f48-3083-4921-b880-8db327124431",
+  "title": "App: card worktrees get their packages installed, a clearer early-review refusal, main told about dashboard --version",
+  "notes": "From the retro over the 10 worker sessions for #325-#333 (2026-11-18).\n1. src/main/actions/worktree/make.ts:58 runs git worktree add and nothing else, so all 5 implementers hit 'vitest: command not found' and installed by hand. After the add, run the project's frozen install when it has a lockfile (pnpm install --frozen-lockfile for pnpm; pick by lockfile, as package-manager-guard does). With pnpm's store it is about 1 s (workflow-decision-3). A failed install is reported but does not undo the worktree.\n2. review-flow.ts:347 refuses 'has no pull request on <branch> yet' just after a PR opens. Say that the app starts the review by itself once it sees the pull request, and that board set <id> --pull-request <n> records it now.\n3. Main's prompt (src/main/workers/dispatch.ts or wherever main's system text lives) names dashboard --version for the installed build, so main checks instead of guessing (it told the user they were on an older build when they were on v2.50.0). Keep main's prompt short.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-19T09:25:38.840Z",
+  "updatedAt": "2026-11-19T09:25:38.840Z",
+  "column": "Backlog",
+  "order": 52
+}
