@@ -1,9 +1,10 @@
+import { dirname, join } from 'node:path';
 import { isRecord } from '../../shared/app/is-record';
 
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
 // package-manager-guard.ts, worktree-guard.ts): a field of the tool's input, the file tools, the
 // shell's redirect or tee into a file, a command line cut into its simple commands and the verb each
-// runs, and the refusal they print.
+// runs, the repository a folder is in, and the refusal they print.
 
 export function textField(input: unknown, field: string): string {
   const value = isRecord(input) ? input[field] : undefined;
@@ -15,6 +16,14 @@ export const FILE_FIELDS: Record<string, string> = { Edit: 'file_path', Write: '
 
 // A `>`, `>>`, `tee` or `tee -a` into whatever follows.
 export const SHELL_REDIRECT = String.raw`(?:>>?|\btee(?:\s+-a)?)`;
+
+// The folder holding `.git` at or above `folder` (a worktree's is a file), or null outside a repository.
+export function repositoryTop(folder: string, exists: (path: string) => boolean): string | null {
+  for (let current = folder; ; current = dirname(current)) {
+    if (exists(join(current, '.git'))) return current;
+    if (dirname(current) === current) return null;
+  }
+}
 
 // A refusal as a PreToolUse hook prints it on stdout.
 export function hookRefusal(reason: string) {
