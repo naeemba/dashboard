@@ -1,0 +1,11 @@
+{
+  "id": "fed5100a-1811-4277-8d38-086da65ebbcc",
+  "title": "Main sessions from an earlier launch are stopped, and a launch never starts a second main",
+  "notes": "Found 2026-11-20 from the user's cloud session: each project had 2-3 'claude --resume <same id> --name main-<project>' processes; the orphans (ppid 1, 22 h old) lived in agent-main-<project>-*.scope units from earlier launches. Workers' SendMessage to main-<project> could reach the orphan, so main never answered; the CPU was at 100%. Stopping the orphan scopes fixed it.\nCauses: src/main/processes/scope.ts:43-50 starts a main in its own systemd-run --user --scope unit with nothing tying it to the app; only stopAll() (chat-sessions.ts:732-734, from will-quit at main.ts:888) ends it, asynchronously, so a crash, kill or a quit where the close does not land leaves the CLI and its MCP children running. And start() (chat-sessions.ts:270-292) resumes remembered[projectPath] under main-<project> without checking for a live holder.\nFix, mains only (worker scopes belong to the screen host, workers-decision-6):\n(a) At launch, before any main starts: list agent-main-*.scope units and stop those this app instance does not own (or with no claude left). A decision module with a test: input units with pids/ppids/owner, output the ones to stop. Through an action (actions-rule-1).\n(b) start() never makes a second holder of a conversation: refuse or adopt when a live scope already runs it.\n(c) Tie a main's scope to the app's life: BindsTo=/PartOf= the app's unit when it has one, else stop the units synchronously (systemctl --user stop) on quit. Prove it: a test or a documented hand check that a SIGKILLed app leaves no agent-main scope on the next launch.\nDocs: docs/processes (decision + history).",
+  "priority": "urgent",
+  "parent": null,
+  "createdAt": "2026-11-20T13:19:30.852Z",
+  "updatedAt": "2026-11-20T13:19:30.852Z",
+  "column": "Backlog",
+  "order": 54
+}
