@@ -5,14 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T14:26:49.367Z",
-  "updatedAt": "2026-11-20T14:27:44.946Z",
+  "updatedAt": "2026-11-20T14:36:11.866Z",
   "branch": "browser-sign-in-popups-finish-sign-in-with",
+  "pullRequest": 343,
   "comments": [
     {
       "at": "2026-11-20T14:27:29.769Z",
       "body": "Runs alongside card fcd6c123 (dashboard browser command), which also changes src/main/actions/browser/ and browser-views.ts. Keep your change to the popup path; merge main in when the other lands."
+    },
+    {
+      "at": "2026-11-20T14:36:11.846Z",
+      "body": "Pull request #343 opened: Browser: sign-in popups finish (Sign in with GitHub, SSO) https://github.com/naeemba/dashboard/pull/343"
     }
   ],
-  "column": "Doing",
+  "column": "Review",
   "order": 0
 }
