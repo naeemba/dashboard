@@ -1,0 +1,11 @@
+{
+  "id": "80350e66-1917-47b3-99b3-30381c27bf1e",
+  "title": "Browser mode: a per-project browser with tabs, beside board and nvim",
+  "notes": "User decision 2026-11-20: build the embedded browser. Design and risks are in research card 3826c4ab's comment; read it first.\n- A new project mode, browser, beside board, nvim and notes: a row in PROJECT_MODES and ACTIONS, a view in page.ts, branches in focusMode and modeLabel, a name and blurb in help.ts (keys-rule-1, keys-rule-2).\n- Electron WebContentsView, one per tab, with a session partition per project (persist:browser-<project>), so logins stay in their project.\n- Tabs: a keyboard-first tab row (open, close, switch, address bar row; conventions-rule-1: a click moves the selection then does what Enter does). Each tab records who holds it: the user, or a pane id once an agent claims it (claiming comes in the next card; leave the field and show it in the row).\n- Resizing: the view follows the page's layout bounds on window resize, drawer and mode changes, and is hidden when the mode is not shown.\n- Navigation: window-navigation.ts frameNavigation must know a browser view's contents, so its loads stay inside it while the app window stays locked (today a view's first load would go to the system browser, window-navigation.ts:16-18, app-window.ts:32-55). Tests for both sides.\n- Overlays: a native view draws over all HTML. Make one place every overlay goes through (help, picker, which-key, confirm, notices) hide or shrink the view while it is open, with a test, so a future overlay cannot forget.\n- No agent control here; that is the next card.\nDocs: a docs/browser feature folder (README, hard-rules, decisions, history). The view behaviour is checked by hand by the user; list what to check in the PR.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-20T12:01:37.603Z",
+  "updatedAt": "2026-11-20T12:01:37.604Z",
+  "column": "Backlog",
+  "order": 52
+}
