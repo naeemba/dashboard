@@ -5,7 +5,7 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-20T13:19:30.852Z",
-  "updatedAt": "2026-11-20T14:08:37.059Z",
+  "updatedAt": "2026-11-20T14:10:20.695Z",
   "branch": "main-sessions-from-an-earlier-launch-are-st",
   "pullRequest": 342,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-20T14:08:37.059Z",
       "body": "Review loop on PR #342: converged, ready to merge. 2 rounds, 6 findings addressed, 0 rejected, nothing open. 09059e63: agent scopes carry a 'Dashboard agent for <folder>' description so the older-build fallback only stops a main's unit (a worker in a project named main is no longer stopped at launch); stop-earlier-mains returns what it stopped; tasks share whenReady; shared re-ask tested. fecb22a2: processes README open questions name the older-build worker exception. CI 5/5 passed on fecb22a2."
+    },
+    {
+      "at": "2026-11-20T14:10:20.663Z",
+      "body": "Pull request #342 merged: Main sessions from an earlier launch are stopped, and a launch never starts a second main https://github.com/naeemba/dashboard/pull/342"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 277
 }
