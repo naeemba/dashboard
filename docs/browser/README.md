@@ -37,8 +37,14 @@ click on a tab moves the highlight there, then does what Enter does; a release t
 began elsewhere, a drag from the address bar or another tab, does nothing.
 
 A page that opens a window (a link with `target=_blank`, a `window.open`) opens
-a tab instead. A tab an agent holds names its pane after its title; every tab
-is yours for now.
+a tab instead. A `window.open` tab is the window the page made, in the same
+sign-ins, so it keeps its `window.opener` and a sign-in popup ("Sign in with
+GitHub", most SSO buttons) hands the sign-in back; a link with `target=_blank`
+gives up its opener, as in any browser, and opens a plain tab at its address. A
+sign-in popup that closes itself takes its tab with it, and the screen goes back
+to the page that opened it while that is open. The tab outlives the page that
+opened it, as any tab does. A tab an agent holds names its pane after its title;
+every tab is yours for now.
 
 The tabs close with the project's page: the project closed, or the screen
 joining another host or coming back from one. The sign-ins do not: cookies and storage are
@@ -92,6 +98,9 @@ The keys are in `src/shared/keys/browser-actions.ts` and
 - Given two tabs, when you close the one on screen, then the one after it shows,
   else the one before.
 - Given a link that opens a new window, when you click it, then it opens in a new tab.
+- Given a "Sign in with GitHub" popup, when you sign in, then the popup's tab
+  closes and the page that opened it is signed in and on screen, even when other
+  tabs sit after it.
 - Given the drawer opens or the window resizes, then the page fills the box left for it.
 
 ## Open questions
@@ -99,9 +108,5 @@ The keys are in `src/shared/keys/browser-actions.ts` and
 - Tabs do not come back after a restart; the mode does, on the address bar.
 - Google refuses to sign in inside an embedded browser ("disallowed_useragent"),
   so a site behind a Google login never signs in here.
-- A sign-in popup opens as a tab with no `window.opener`, so a site that sends
-  the sign-in back through the opener ("Sign in with GitHub", most SSO buttons)
-  never finishes it. Keeping the opener means building the popup's view from
-  `createWindow` in the same partition.
 - The sign-ins are kept per folder path on this machine, so a host's project at
   the same path as one of yours shares its sign-ins while you are joined to it.

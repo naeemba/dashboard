@@ -29,19 +29,20 @@ export const browserOpen = action<BrowserPorts, { projectPath: string; url: stri
 
 const NO_TAB_NAMED = { refused: 'no tab was named' };
 
-export const browserClose = action<BrowserPorts, { projectPath: string; tab: number }, { output: string }>('browser.close', {
+// `opener` is the tab a popup that closed itself came from, which gets the screen back (withoutTab).
+export const browserClose = action<BrowserPorts, { projectPath: string; tab: number; opener: number | null }, { output: string }>('browser.close', {
   words: ['tab'],
   input: (raw) => {
     const project = projectInput(raw);
     if (isRefused(project)) return project;
     const tab = wholeNumber(raw.tab);
-    return tab === null ? NO_TAB_NAMED : { ...project, tab };
+    return tab === null ? NO_TAB_NAMED : { ...project, tab, opener: wholeNumber(raw.opener) };
   },
-  async run(ports, { projectPath, tab }) {
+  async run(ports, { projectPath, tab, opener }) {
     const id = namedTab(ports.browserOf(projectPath), tab);
     if (isRefused(id)) return id;
     ports.dropView(id);
-    ports.keep(projectPath, withoutTab(ports.browserOf(projectPath), id));
+    ports.keep(projectPath, withoutTab(ports.browserOf(projectPath), id, opener));
     return { output: `closed tab ${id}` };
   },
 });

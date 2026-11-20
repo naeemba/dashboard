@@ -10,12 +10,14 @@ export function withTab(state: BrowserState, tab: BrowserTab): BrowserState {
 }
 
 // A closed tab hands the screen to the one after it, else the one before: where your eye already
-// is, as every browser does it. The last one closed leaves none.
-export function withoutTab(state: BrowserState, id: number): BrowserState {
+// is, as every browser does it. A popup that closes itself hands it back to its `opener` instead,
+// while that is open: the page it signed you in to. The last one closed leaves none.
+export function withoutTab(state: BrowserState, id: number, opener: number | null = null): BrowserState {
   const place = state.tabs.findIndex((tab) => tab.id === id);
   if (place === -1) return state;
   const tabs = state.tabs.filter((tab) => tab.id !== id);
   if (state.active !== id) return { tabs, active: state.active };
+  if (tabs.some((tab) => tab.id === opener)) return { tabs, active: opener };
   return { tabs, active: (tabs[place] ?? tabs[place - 1])?.id ?? null };
 }
 
