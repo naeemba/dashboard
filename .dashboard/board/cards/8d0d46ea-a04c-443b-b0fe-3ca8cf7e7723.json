@@ -1,0 +1,11 @@
+{
+  "id": "8d0d46ea-a04c-443b-b0fe-3ca8cf7e7723",
+  "title": "Browser: sign-in popups finish (Sign in with GitHub, SSO)",
+  "notes": "Follow-up to #341 (browser mode). A page's window.open for a sign-in (\"Sign in with GitHub\", most SSO buttons) opens as a new tab with no window.opener, so a site that hands the sign-in back through the opener never finishes (docs/browser/README.md Open questions). Make the popup keep its opener: build the popup's view from the webContents Electron creates for window.open (setWindowOpenHandler with createWindow / overrideBrowserWindowOptions, or the WebContentsView equivalent), in the same partition, shown as a tab the user can see and close; when the site closes it (window.close), the tab goes. All through the browser actions (actions-rule-1); frameNavigation and browser-rule-1 unchanged. Test the decision parts; list the hand check (sign in with GitHub on a real site) in the PR. Move the item out of Open questions in docs/browser.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-20T14:26:49.367Z",
+  "updatedAt": "2026-11-20T14:26:49.368Z",
+  "column": "Backlog",
+  "order": 54
+}
