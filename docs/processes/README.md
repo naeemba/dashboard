@@ -216,7 +216,8 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
   is connected and none of its sessions runs.
 - A worker screen's and a task's scope is not stopped by the app: a task's ends
   with its command, a worker's with its CLI, and what either detached outlives
-  it. A main's is (processes-decision-6).
+  it. A main's is (processes-decision-6), and so, once at launch, is an older
+  build's worker screen in a project named `main`, which has a main's shape.
 - Only this run's names are checked before one is handed out. A name a previous
   run's pane host still holds collides about once in 36^4 starts of the same
   pane; that pane's `systemd-run` then exits 1 ("already loaded"), and Enter
