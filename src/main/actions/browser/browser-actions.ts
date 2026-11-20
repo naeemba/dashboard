@@ -1,4 +1,4 @@
-import { tmpdir } from 'node:os';
+import { app } from 'electron';
 import path from 'node:path';
 import type { Channels } from '../../app/channels';
 import { browserPage } from '../../browser/browser-page';
@@ -24,8 +24,9 @@ export function browserActions(table: Channels, main: BrowserViewsMain) {
     opened: (projectPath, url) => void open.call({ projectPath, url }),
     closed: (projectPath, tab, opener) => void close.call({ projectPath, tab, opener }),
   });
-  // Where `browser screenshot` saves its pictures: this machine's temporary folder, out of every checkout.
-  const page = browserPage(views.pages, views.ports.allBrowsers, path.join(tmpdir(), 'dashboard-browser'));
+  // Where `browser screenshot` saves its pictures: the app's own folder, which only this user reads,
+  // rather than a shared /tmp, and out of every checkout.
+  const page = browserPage(views.pages, views.ports.allBrowsers, path.join(app.getPath('userData'), 'browser-screenshots'));
   const ports: BrowserPorts = { ...views.ports, ...page.ports };
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);

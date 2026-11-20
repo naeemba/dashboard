@@ -86,8 +86,9 @@ prints the verbs.
   header and footer, forms or anything hidden; links on the page's own site are
   their path, and a long query string is cut. Made in the app, so a page behind a
   login never goes to a reading service. Cut at 4000 tokens unless told.
-- `screenshot <tab> [--full] [--element <css>]` saves a PNG under the system's
-  temporary folder, in `dashboard-browser/`, and prints its path.
+- `screenshot <tab> [--full] [--element <css>]` saves a PNG in the app's user
+  data folder, under `browser-screenshots/` (only you read it), and prints its
+  path. A full page is cut at 4000 by 16000 pixels.
 - `snapshot <tab>` lists what can be clicked or typed in, from the page's
   accessibility tree, each with a ref (`e3`) good until the next snapshot.
   `click <tab> <ref>`, `type <tab> <ref> "<text>"` (typed at the end of what the

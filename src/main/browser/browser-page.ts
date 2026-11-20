@@ -19,6 +19,8 @@ import { snapshotOf, type AXNode } from './page-snapshot';
 
 // The tallest page a full screenshot takes: past it, the picture is a strip nobody reads.
 const TALLEST_SHOT = 16_000;
+// A page that lays itself out wider than any screen is cut there, so a picture is never gigabytes.
+const WIDEST_SHOT = 4000;
 
 type ReadOptions = { maxTokens: number | null; selector: string | null };
 type ShotOptions = { full: boolean; element: string | null };
@@ -88,7 +90,7 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
   async function fullShot(id: number): Promise<Buffer> {
     const metrics = await pages.send(id, 'Page.getLayoutMetrics');
     const content = isRecord(metrics) && isRecord(metrics.cssContentSize) ? metrics.cssContentSize : {};
-    const width = Math.ceil(Number(content.width) || 0);
+    const width = Math.min(Math.ceil(Number(content.width) || 0), WIDEST_SHOT);
     const height = Math.min(Math.ceil(Number(content.height) || 0), TALLEST_SHOT);
     if (width === 0 || height === 0) return pages.capture(id);
     const shot = await pages.send(id, 'Page.captureScreenshot', {
@@ -112,9 +114,9 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     const picture = element !== null ? await elementShot(id, element) : full ? await fullShot(id) : await pages.capture(id);
     if (isRefused(picture)) return picture;
     if (picture.length === 0) return { refused: `tab ${id} drew nothing to take a picture of` };
-    await mkdir(folder, { recursive: true });
+    await mkdir(folder, { recursive: true, mode: 0o700 });
     const file = path.join(folder, `tab-${id}-${new Date().toISOString().replace(/[:.]/g, '-')}.png`);
-    await writeFile(file, picture);
+    await writeFile(file, picture, { mode: 0o600, flag: 'wx' });
     return file;
   }
 
