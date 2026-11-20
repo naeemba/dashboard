@@ -35,3 +35,5 @@ One line per merged change: date and why.
   worker runs no `gh pr view` after it
 - 2026-11-19 — The review report says whether any round changed what the card asked for or its
   design, so main can ask before landing it
+- 2026-11-20 — The review prompt says never to run tests in parallel or start a second run while one
+  is going (workflow-decision-12)
