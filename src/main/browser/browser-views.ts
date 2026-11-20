@@ -17,10 +17,10 @@ export type BrowserViewsMain = {
 };
 
 // What a page does to its tabs, each a browser action: a new window opened, which is a tab
-// (browser.open), and itself closed (browser.close).
+// (browser.open), and itself closed (browser.close), with the tab that opened it, if one did.
 export type BrowserPageDoors = {
   opened(projectPath: string, url: string): void;
-  closed(projectPath: string, tab: number): void;
+  closed(projectPath: string, tab: number, opener: number | null): void;
 };
 
 export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
@@ -28,9 +28,10 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
   const views = new Map<number, WebContentsView>();
   let placed: BrowserPlacement | null = null;
   let lastId = 0;
-  // The window a page's window.open made, held for the browser.open call that makes its tab: the
-  // next view made takes it rather than making contents of its own.
-  let adopting: WebContents | null = null;
+  // The window a page's window.open made and the tab that opened it, held for the browser.open call
+  // that makes its tab: the next view made takes it rather than making contents of its own. That
+  // happens inside `page.opened` only because `bind`'s `call` awaits nothing before `run`.
+  let adopting: { contents: WebContents; opener: number } | null = null;
   // Each partition's permission rule is set once, by its first tab.
   const ruled = new Set<string>();
 
@@ -59,7 +60,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     send(projectPath);
   }
 
-  function wire(projectPath: string, id: number, contents: WebContents): void {
+  function wire(projectPath: string, id: number, contents: WebContents, opener: number | null): void {
     // The new window is a tab built from the contents Chromium made for it, so it keeps its
     // `window.opener` and a sign-in popup can hand the sign-in back. It outlives its opener, as a tab
     // does: the opener going elsewhere never takes a half-done sign-in with it.
@@ -73,7 +74,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
           // that gave up its opener gets none and nothing loads it, so its tab loads the address, and
           // what is returned then is never read.
           const popup = (options as { webContents?: WebContents }).webContents;
-          adopting = popup ?? null;
+          adopting = popup === undefined ? null : { contents: popup, opener: id };
           page.opened(projectPath, url);
           adopting = null;
           return popup ?? contents;
@@ -81,8 +82,9 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       };
     });
     // A page that closes itself (window.close, as a sign-in popup does once it is done) takes its tab
-    // with it. A tab an action dropped has left `views` already.
-    contents.once('destroyed', () => { if (views.has(id)) page.closed(projectPath, id); });
+    // with it, and the screen goes back to the tab that opened it. A tab an action dropped has left
+    // `views` already.
+    contents.once('destroyed', () => { if (views.has(id)) page.closed(projectPath, id, opener); });
     contents.on('page-title-updated', (_event, title) => record(projectPath, id, { title }));
     contents.on('did-navigate', (_event, url) => record(projectPath, id, { url }));
     contents.on('did-navigate-in-page', (_event, url, isMainFrame) => { if (isMainFrame) record(projectPath, id, { url }); });
@@ -122,8 +124,8 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       adopting = null;
       const view = new WebContentsView(popup === null
         ? { webPreferences: { partition, sandbox: true, contextIsolation: true, nodeIntegration: false } }
-        : { webContents: popup });
-      wire(projectPath, id, view.webContents);
+        : { webContents: popup.contents });
+      wire(projectPath, id, view.webContents, popup?.opener ?? null);
       view.setVisible(false);
       main.window()?.contentView.addChildView(view);
       views.set(id, view);

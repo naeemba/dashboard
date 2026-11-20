@@ -14,7 +14,7 @@ export function browserActions(table: Channels, main: BrowserViewsMain) {
   // A page's window that is no web page is denied before it opens (browser-views.ts).
   const views = browserViews(main, {
     opened: (projectPath, url) => void open.call({ projectPath, url }),
-    closed: (projectPath, tab) => void close.call({ projectPath, tab }),
+    closed: (projectPath, tab, opener) => void close.call({ projectPath, tab, opener }),
   });
   const open = bind(browserOpen, views.ports);
   const close = bind(browserClose, views.ports);

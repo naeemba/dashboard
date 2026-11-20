@@ -37,10 +37,13 @@ click on a tab moves the highlight there, then does what Enter does; a release t
 began elsewhere, a drag from the address bar or another tab, does nothing.
 
 A page that opens a window (a link with `target=_blank`, a `window.open`) opens
-a tab instead. The tab is the window the page made, in the same sign-ins, so it
-keeps its `window.opener` and a sign-in popup ("Sign in with GitHub", most SSO
-buttons) hands the sign-in back; a page that closes itself takes its tab with
-it. The tab outlives the page that opened it, as any tab does. A tab an agent
+a tab instead. A `window.open` tab is the window the page made, in the same
+sign-ins, so it keeps its `window.opener` and a sign-in popup ("Sign in with
+GitHub", most SSO buttons) hands the sign-in back; a link with `target=_blank`
+gives up its opener, as in any browser, and opens a plain tab at its address. A
+page that closes itself takes its tab with it, and the screen goes back to the
+tab that opened it while that is open. The tab outlives the page that opened
+it, as any tab does. A tab an agent
 holds names its pane after its title; every tab is yours for now.
 
 The tabs close with the project's page: the project closed, or the screen
