@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T13:19:37.668Z",
-  "updatedAt": "2026-11-20T13:19:52.957Z",
+  "updatedAt": "2026-11-20T13:40:21.388Z",
   "branch": "one-test-run-at-a-time-per-worktree",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 340,
+  "comments": [
+    {
+      "at": "2026-11-20T13:40:21.358Z",
+      "body": "Pull request #340 opened: One test run at a time per worktree https://github.com/naeemba/dashboard/pull/340"
+    }
+  ],
+  "column": "Review",
+  "order": 0
 }
