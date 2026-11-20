@@ -15,22 +15,26 @@ import { browserFocus, browserHide, browserReset, browserShow } from './view';
 
 // Main's wiring for the browser actions and their doors, out of main.ts, which is at its 600-line
 // ceiling. The screen reaches each through its `browser:<verb>` channel; a page's new window is
-// browser.open; a project closing, or its page leaving the screen, is browser.reset; the browser
-// command reaches them through `requests`, and a pane let go of is browser.release of all its tabs.
-// docs/browser/README.md has the whole of it.
+// browser.open and a page closing itself browser.close; a project closing, or its page leaving the
+// screen, is browser.reset; the browser command reaches them through `requests`, and a pane let go
+// of is browser.release of all its tabs. docs/browser/README.md has the whole of it.
 export function browserActions(table: Channels, main: BrowserViewsMain) {
-  // Refused, a page's window that is no web page opens nowhere.
-  const views = browserViews(main, (projectPath, url) => void open.call({ projectPath, url }));
+  // A page's window that is no web page is denied before it opens (browser-views.ts).
+  const views = browserViews(main, {
+    opened: (projectPath, url) => void open.call({ projectPath, url }),
+    closed: (projectPath, tab, opener) => void close.call({ projectPath, tab, opener }),
+  });
   // Where `browser screenshot` saves its pictures: this machine's temporary folder, out of every checkout.
   const page = browserPage(views.pages, views.ports.allBrowsers, path.join(tmpdir(), 'dashboard-browser'));
   const ports: BrowserPorts = { ...views.ports, ...page.ports };
   const open = bind(browserOpen, ports);
+  const close = bind(browserClose, ports);
   const reset = bind(browserReset, ports);
   const release = bind(browserRelease, ports);
   const navigate = bind(browserNavigate, ports);
   const step = bind(browserStep, ports);
   registerActions(table, [
-    open, bind(browserClose, ports), bind(browserSwitch, ports), navigate, step, bind(browserShow, ports),
+    open, close, bind(browserSwitch, ports), navigate, step, bind(browserShow, ports),
     bind(browserHide, ports), bind(browserFocus, ports), reset, bind(browserRevoke, ports),
   ]);
   // A read, so no action: the tabs a page built after they were opened draws.

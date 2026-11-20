@@ -23,6 +23,12 @@ describe('the tab list', () => {
     expect(withoutTab({ tabs: [tab(1)], active: 1 }, 1)).toEqual(NO_TABS);
   });
 
+  it('hands a closed popup\'s screen back to its opener while that is open', () => {
+    expect(withoutTab({ ...three, active: 3 }, 3, 1).active).toBe(1);
+    expect(withoutTab({ tabs: [tab(2), tab(3)], active: 3 }, 3, 1).active).toBe(2);
+    expect(withoutTab(three, 3, 1).active).toBe(2);
+  });
+
   it('keeps the tab on screen when another one closes', () => {
     expect(withoutTab(three, 1)).toEqual({ tabs: [tab(2), tab(3)], active: 2 });
   });

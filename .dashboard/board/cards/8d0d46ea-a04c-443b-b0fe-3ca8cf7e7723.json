@@ -5,13 +5,27 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T14:26:49.367Z",
-  "updatedAt": "2026-11-20T14:27:29.769Z",
+  "updatedAt": "2026-11-20T14:56:20.621Z",
+  "branch": "browser-sign-in-popups-finish-sign-in-with",
+  "pullRequest": 343,
   "comments": [
     {
       "at": "2026-11-20T14:27:29.769Z",
       "body": "Runs alongside card fcd6c123 (dashboard browser command), which also changes src/main/actions/browser/ and browser-views.ts. Keep your change to the popup path; merge main in when the other lands."
+    },
+    {
+      "at": "2026-11-20T14:36:11.846Z",
+      "body": "Pull request #343 opened: Browser: sign-in popups finish (Sign in with GitHub, SSO) https://github.com/naeemba/dashboard/pull/343"
+    },
+    {
+      "at": "2026-11-20T14:55:06.404Z",
+      "body": "PR #343 review loop: converged, ready to merge. 2 rounds (floor-addressed at low). Round 1 fixed 3 findings in b7b2f437: a popup that closes itself now hands the screen back to its opener (tab remembers its opener, browser.close takes it); bind comment names popup adoption; README says target=_blank gives up its opener. Round 2 fixed 1 low docs finding in d571dd35 (close rule in browser + actions README, hand check); final check accepted it. Nothing rejected or waiting on a person. CI 5/5 passed on head d571dd35. No conflict with main."
+    },
+    {
+      "at": "2026-11-20T14:56:20.596Z",
+      "body": "Pull request #343 merged: Browser: sign-in popups finish (Sign in with GitHub, SSO) https://github.com/naeemba/dashboard/pull/343"
     }
   ],
-  "column": "Backlog",
-  "order": 54
+  "column": "Done",
+  "order": 279
 }

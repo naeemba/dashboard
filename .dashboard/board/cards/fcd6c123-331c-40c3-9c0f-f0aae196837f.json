@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T12:01:44.123Z",
-  "updatedAt": "2026-11-20T14:27:36.360Z",
+  "updatedAt": "2026-11-20T14:27:50.324Z",
+  "branch": "dashboard-browser-command-agents-claim-tabs",
   "comments": [
     {
       "at": "2026-11-20T12:02:50.484Z",
@@ -16,6 +17,6 @@
       "body": "Runs alongside card 8d0d46ea (sign-in popups keep their opener), which changes the window.open path in browser-views.ts. Keep clear of it; merge main in when the other lands."
     }
   ],
-  "column": "Backlog",
-  "order": 53
+  "column": "Doing",
+  "order": 1
 }

@@ -44,6 +44,12 @@ describe('browser.close', () => {
     expect(ports.browsers.get(project)).toEqual({ tabs: [tab(2)], active: 2 });
   });
 
+  it('hands the screen back to the opener of a popup that closed itself', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1), tab(2), tab(3)], active: 3 } });
+    await bind(browserClose, ports).call({ projectPath: project, tab: 3, opener: 1 });
+    expect(ports.browsers.get(project)).toEqual({ tabs: [tab(1), tab(2)], active: 1 });
+  });
+
   it('reads the tab id the command sends as a word', async () => {
     const ports = fakePorts({ [project]: { tabs: [tab(1), tab(3)], active: 1 } });
     await expect(bind(browserClose, ports).call({ projectPath: project, tab: '3' })).resolves.toEqual({ output: 'closed tab 3' });
