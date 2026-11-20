@@ -19,8 +19,8 @@ there. Its test holds the rule; nothing holds where a new layer is appended.
 
 Every change to a tab, the view on screen or its place is a browser action in
 `src/main/actions/browser/`, and every door calls one: the screen's channels, a
-page's new window, a project closing. The views are reached only through the
-actions' ports in `browser-views.ts`, the one file that makes one, and
-`bypasses.test.ts` holds that. What a page does by itself (a title set, a link
-followed) is written down by `browser-views.ts` and is no action: nobody asked
-for it (browser-decision-2).
+page's new window, a page closing itself, a project closing. The views are
+reached only through the actions' ports in `browser-views.ts`, the one file that
+makes one, and `bypasses.test.ts` holds that. What a page does by itself (a
+title set, a link followed) is written down by `browser-views.ts` and is no
+action: nobody asked for it (browser-decision-2).
