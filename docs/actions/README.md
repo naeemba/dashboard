@@ -119,6 +119,16 @@ Neither door holds any of the logic; each only asks.
   on disk to something main does not hold becomes main's live copy with its
   shell, and the window's; nothing is written back.
 
+- **browser.open**, **.close**, **.switch** (`browser:open`, `browser:close`,
+  `browser:switch`, and a page's new window for the open): a project's tabs, a
+  new one on screen; a closed one hands the screen to the one after it.
+- **browser.navigate**, **.step** (`browser:navigate`, `browser:step`): the tab
+  on screen to an address, or back, forward or loaded again.
+- **browser.show**, **.hide**, **.focus** (`browser:show`, `browser:hide`,
+  `browser:focus`): the tab on screen drawn in a box of the window, or none, and
+  the keyboard into it. **browser.reset** (a project closing): every tab of it
+  gone. All in `src/main/actions/browser/` ([browser](../browser/README.md)).
+
 - **processes.install-slices** (launch, on Linux once systemd answers): writes
   `agents.slice` and `panes.slice` into the user's systemd folder where missing,
   never over one that is there, and reloads the manager only when it wrote one
