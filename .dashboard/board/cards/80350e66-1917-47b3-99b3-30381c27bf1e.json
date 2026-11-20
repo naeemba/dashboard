@@ -5,8 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T12:01:37.603Z",
-  "updatedAt": "2026-11-20T12:01:57.846Z",
+  "updatedAt": "2026-11-20T12:02:44.130Z",
   "branch": "browser-mode-a-per-project-browser-with-tab",
+  "comments": [
+    {
+      "at": "2026-11-20T12:02:44.130Z",
+      "body": "User requirement: engineer it properly, everything through actions (actions-rule-1; read docs/actions first). Every change of browser state is an action in src/main/actions/browser/ built with action() like the others: tab open, close, switch, navigate, back/reload, claim, release, revoke, resize/reset, and view show/hide/bounds. Every door calls those actions and nothing else: IPC handlers from the renderer, keys, the dashboard browser command's answers, and the sweeps that release a finished pane's tabs. No door touches a WebContentsView or webContents directly. Refusals are values ({ refused }, errors-rule-2) with the predicate exported where it is decided (errors-rule-1). Reads (read, screenshot, snapshot, console, network, tabs) may be queries, but go through one browser module, never a door's own code. bypasses.test.ts must not gain a count; add tests per action."
+    }
+  ],
   "column": "Doing",
   "order": 0
 }
