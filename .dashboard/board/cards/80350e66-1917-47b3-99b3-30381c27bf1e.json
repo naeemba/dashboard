@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T12:01:37.603Z",
-  "updatedAt": "2026-11-20T13:41:19.239Z",
+  "updatedAt": "2026-11-20T14:24:32.417Z",
   "branch": "browser-mode-a-per-project-browser-with-tab",
   "pullRequest": 341,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-20T13:41:19.201Z",
       "body": "Pull request #341 opened: Browser mode: a per-project browser with tabs https://github.com/naeemba/dashboard/pull/341"
+    },
+    {
+      "at": "2026-11-20T14:24:32.417Z",
+      "body": "PR #341 review loop converged in 4 rounds, ready to merge. 18 findings fixed in 32f30a12, 35c8d8eb, c0be80dc. 1 rejected: the browser.css [hidden] rules stay because hidden-rule.test.ts requires them. CI passed 5/5 on head c0be80dc. No conflicts with main. Scope change: the sign-in popup and same-path sign-ins moved to open questions in the docs."
     }
   ],
   "column": "Review",
