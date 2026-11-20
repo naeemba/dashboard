@@ -5,8 +5,9 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T12:01:44.123Z",
-  "updatedAt": "2026-11-20T14:27:50.324Z",
+  "updatedAt": "2026-11-20T14:59:19.151Z",
   "branch": "dashboard-browser-command-agents-claim-tabs",
+  "pullRequest": 344,
   "comments": [
     {
       "at": "2026-11-20T12:02:50.484Z",
@@ -15,8 +16,12 @@
     {
       "at": "2026-11-20T14:27:36.359Z",
       "body": "Runs alongside card 8d0d46ea (sign-in popups keep their opener), which changes the window.open path in browser-views.ts. Keep clear of it; merge main in when the other lands."
+    },
+    {
+      "at": "2026-11-20T14:59:19.132Z",
+      "body": "Pull request #344 opened: dashboard browser: agents claim tabs, read, screenshot, act, release https://github.com/naeemba/dashboard/pull/344"
     }
   ],
-  "column": "Doing",
-  "order": 1
+  "column": "Review",
+  "order": 0
 }
