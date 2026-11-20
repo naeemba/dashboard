@@ -13,7 +13,8 @@ type Opened = { output: string; tab: number };
 // An empty address is a new tab with nothing loaded yet, which the screen then asks an address for.
 // `opener` is the tab whose page opened this one as a window: a popup from an agent's tab is that
 // agent's, behind the one on screen, so its work never takes the page from under you. One from the
-// tab on screen comes on screen whoever holds it: you opened it, from the page you are looking at.
+// tab on screen comes on screen whoever opened it, you or the agent holding that tab (its clicks
+// count as a gesture too): it is the page you are looking at, as in any browser.
 type OpenInput = { projectPath: string; url: string; pane: string | null; opener: number | null };
 
 export const browserOpen = action<BrowserPorts, OpenInput, Opened>('browser.open', {

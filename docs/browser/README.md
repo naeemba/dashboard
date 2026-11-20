@@ -46,7 +46,8 @@ sign-in popup that closes itself takes its tab with it, and the screen goes back
 to the page that opened it while that is open. The tab outlives the page that
 opened it, as any tab does. A window opened from an agent's tab is that agent's
 tab, behind the one you are on; opened from the tab on screen, it comes on
-screen, still the agent's. A tab an agent holds names its pane after its title.
+screen whoever opened it, you or the agent holding that tab, still the agent's.
+A tab an agent holds names its pane after its title.
 The revoke key (Ctrl+Shift+E, Cmd+Shift+E on a mac) takes the tab on screen back
 from it: the tab is yours, the agent's next call on it is refused saying you took it back,
 and that pane may not claim it again until the pane itself is let go
