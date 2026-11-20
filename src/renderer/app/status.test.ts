@@ -7,6 +7,7 @@ function page(overrides: Partial<StatusPage>): StatusPage {
     focused: 0,
     paneCount: 5,
     boardLabel: '',
+    browserLabel: '',
     hasProjects: true,
     managerStatusLabel: '',
     commandStatusLabel: '',
@@ -50,6 +51,10 @@ describe('modeLabel', () => {
 
   it('names the board and its label on board mode', () => {
     expect(modeLabel(page({ mode: 'board', boardLabel: 'Doing · high' }))).toBe('board · Doing · high');
+  });
+
+  it('names the browser and its tab on screen on browser mode', () => {
+    expect(modeLabel(page({ mode: 'browser', browserLabel: 'Pull request #3' }))).toBe('browser · Pull request #3');
   });
 
   // One box, no selection in it and no key of its own. Without the branch this falls through to the

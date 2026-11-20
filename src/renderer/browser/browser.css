@@ -1,0 +1,80 @@
+/* The browser screen: the tab row, the address bar, and the box the web page is drawn over. The page
+   is a native view main lays on that box (browser-views.ts), so nothing here is ever drawn inside it.
+   Both classes, to beat `.view { display: block }` in index.css whichever stylesheet loads last; a
+   hidden view keeps this grid under `.view[hidden]`'s visibility, as every view does. */
+.view.view-browser {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.browser {
+  display: contents;
+}
+
+.browser[hidden],
+.browser-tabs[hidden] {
+  display: none;
+}
+
+.browser-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 6px 0;
+  overflow-x: auto;
+  outline: none;
+  font-family: var(--ui-font);
+  font-size: 12px;
+}
+
+.browser-tab {
+  flex: 0 1 200px;
+  min-width: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.browser-tab.active {
+  background: var(--surface-raised);
+  color: var(--brightWhite);
+}
+
+.browser-tab-new {
+  flex: 0 0 auto;
+}
+
+/* Only while the row has the keyboard: elsewhere the tab on screen is the one marked. */
+.browser-tabs:focus .browser-tab.highlighted {
+  outline: 1px solid var(--focus-outline);
+  outline-offset: -1px;
+}
+
+.browser-tab-holder {
+  margin-left: 6px;
+  color: var(--yellow);
+}
+
+.browser-address {
+  margin: 0 6px 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--white);
+  font-family: var(--mono-font);
+  font-size: 12px;
+  outline: none;
+}
+
+.browser-address:focus {
+  border-color: var(--focus-outline);
+}
+
+.browser-page {
+  min-height: 0;
+  background: var(--background);
+}

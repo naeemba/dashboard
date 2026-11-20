@@ -19,7 +19,7 @@ import { openUpdates, watchUpdates } from './app/update-view';
 import { preloadFont } from './app/font-preload';
 import { createAddPaneButton, createModeSwitch, createTabStrip, showsAddPane } from './app/chrome-bars';
 import { createDrawer } from './drawer/drawer-view';
-import { matchesBinding } from '../shared/keys/binding';
+import { matchesBinding, type KeyInput } from '../shared/keys/binding';
 import { mapShortcut, pressesWalkedToButton, type Action } from './keys/shortcuts';
 import { failureText } from '../shared/errors/failure';
 import { createStatusError } from './errors/status-error';
@@ -186,7 +186,7 @@ function statusPage(page: Page): StatusPage {
     focused: page.focused,
     // Main counted, so the bar names it on a project with no workers yet, as it does beside them.
     paneCount: openIndices(page).length,
-    boardLabel: page.board?.statusLabel() ?? '',
+    boardLabel: page.board?.statusLabel() ?? '', browserLabel: page.browser?.statusLabel() ?? '',
     hasProjects: projectPages().length > 0,
     managerStatusLabel: page.manager?.statusLabel() ?? '',
     commandStatusLabel: page.command?.statusLabel() ?? '',
@@ -399,6 +399,7 @@ function focusMode(page: Page, entering: boolean): void {
     page.editor.terminal.focus();
   }
   if (page.mode === 'notes') focusNotes(page, entering);
+  if (page.mode === 'browser') page.browser?.focus();
   if (page.mode === 'board' && page.board) {
     // open() never rejects — a failed read reports itself through onError and still renders — so no
     // report() wrapper is needed here.
@@ -722,6 +723,7 @@ function apply(action: Action): void {
     case 'notes-ink-toggle': return toggleNotesPage(page);
     case 'ink': return page.ink?.command(action.command);
     case 'chat-edit': return editFocusedBox(focusedChat(page)?.element, action.edit);
+    case 'browser': return page.browser?.runCommand(action.command);
     // Whatever is left belongs to the screen you are on, which its mode names. Reached from here
     // rather than from each view's own listener, so one lookup decides every key on every screen —
     // and a fifth screen costs nothing but its mode.
@@ -749,13 +751,19 @@ window.addEventListener('keydown', (event) => {
   if (event.target instanceof Element && event.target.closest(OVERLAY_SELECTOR)) return;
   const walkedToButton = event.target instanceof HTMLButtonElement && event.target.matches(':focus-visible');
   if (pressesWalkedToButton(event, walkedToButton)) return;
-  const page = pages[activeIndex];
-  const action = mapShortcut(event, settings.keys, page.mode, !isProjectPage(page), chatFocused(page), page.inkShowing);
-  if (!action) return;
+  if (!pressKey(event)) return;
   event.preventDefault();
   event.stopPropagation();
-  apply(action);
 }, true);
+
+// What a key does on the screen in front, whether the window had it or a web page did (browser-keys.ts).
+function pressKey(input: KeyInput): boolean {
+  const page = pages[activeIndex];
+  const action = mapShortcut(input, settings.keys, page.mode, !isProjectPage(page), chatFocused(page), page.inkShowing);
+  if (action) apply(action);
+  return action !== null;
+}
+bridge.onBrowserKey(pressKey);
 
 // Both halves of a drop have to be cancelled here, and cancelling them at the window covers every pane
 // too, since the events bubble. Without it a file dropped on the page navigates the window to it,

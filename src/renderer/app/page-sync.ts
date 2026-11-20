@@ -40,6 +40,7 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
   function discardPage(page: Page): void {
     discardPanes(page.slot);
     page.board?.close();
+    page.browser?.close();
   }
 
   // Takes a project's page off the screen and out of the list, for a project main's list no longer
