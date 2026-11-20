@@ -1,0 +1,11 @@
+{
+  "id": "fcd6c123-331c-40c3-9c0f-f0aae196837f",
+  "title": "dashboard browser command: agents claim tabs, read, screenshot, act, release",
+  "notes": "After the browser mode card merges. A dashboard command (like pane and board, not an MCP server; one call, short output) over the app's socket, driving only browser views through webContents.debugger (CDP). Never --remote-debugging-port: it would expose the app window and terminals.\nVerbs (names to fit the command's style):\n- open <url> [--project]: opens a new tab claimed by the calling pane; claim <tab> / release <tab>; tabs: list with holder and url. A pane may act only on tabs it holds; the user may take any tab back with a key (revoke), and the agent's next call on it is refused, saying so (errors-rule-1). A pane's tabs are released when its pane is released, finished or its agent exits.\n- go <tab> <url>, back, reload; resize <tab> <width>x<height> (viewport emulation, for checking a layout at a phone width) and reset.\n- read <tab> [--max-tokens n] [--selector css]: the page's main content as compact markdown (readability-style extraction, links kept short, scripts/styles/nav dropped), in the spirit of Agent Reach's reader (Jina Reader, --max-tokens) but local: page content behind logins never goes to a remote service. Report the token estimate it returned.\n- screenshot <tab> [--full] [--element css]: saves a PNG and prints its path, so a worker can attach it to a PR.\n- click / type / press on an element by a ref from a snapshot verb (the accessibility tree trimmed to interactive elements with short refs), and console / network: the last errors and failed requests.\n- The calling pane is known from the environment the app gives panes; outside a pane, refuse.\nPrompts: main's prompt and the work-card skill name the command in one line each. Docs: docs/browser. Tests for every decision module (claims, revoke, the reader's trimming).",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-20T12:01:44.123Z",
+  "updatedAt": "2026-11-20T12:01:44.123Z",
+  "column": "Backlog",
+  "order": 53
+}
