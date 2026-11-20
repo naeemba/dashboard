@@ -100,10 +100,11 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
     chips.forEach((chip, index) => {
       chip.classList.toggle('highlighted', index === highlighted);
       // A click moves the highlight there, then does what Enter does (conventions-rule-1). The press
-      // keeps the keyboard where it is: focusing the row would redraw it, and a chip rebuilt under the
-      // pointer never gets its click.
+      // keeps the keyboard where it is, and the release acts: a push from main redraws the row, and a
+      // chip rebuilt between press and release never gets a click, but the chip there gets the mouseup.
       chip.addEventListener('mousedown', (event) => event.preventDefault());
-      chip.addEventListener('click', () => {
+      chip.addEventListener('mouseup', (event) => {
+        if (event.button !== 0) return;
         highlighted = index;
         choose();
       });

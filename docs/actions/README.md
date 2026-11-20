@@ -195,7 +195,7 @@ Folder: `src/main/actions/`.
 - `pane/dispatch.ts` — pane.dispatch and `paneKind`
 - `pane/open.ts`, `pane/close.ts`, `pane/send.ts`, `pane/claim.ts`,
   `pane/release.ts`, `pane/restore.ts`, `pane/restart.ts`, `pane/reap.ts`
-- `pane/pane-input.ts` — the input checks the pane actions share
+- `pane/pane-input.ts` — the input checks the pane, card and browser actions share
 - `worktree/worktree-actions.ts` — main's wiring: make and remove, and each door's port into them
 - `worktree/make.ts`, `worktree/remove.ts`
 - `session/session-actions.ts` — main's wiring: the session actions, their ports

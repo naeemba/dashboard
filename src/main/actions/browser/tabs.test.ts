@@ -61,6 +61,11 @@ describe('browser.switch', () => {
     expect(fake.browsers.get(project)?.active).toBe(3);
   });
 
+  it('reads the tab id the command sends as a word, and refuses naming nothing', async () => {
+    await expect(bind(browserSwitch, ports()).call({ projectPath: project, tab: '3' })).resolves.toEqual({ output: 'on tab 3' });
+    await expect(bind(browserSwitch, ports()).call({ projectPath: project })).resolves.toEqual({ refused: 'no tab was named' });
+  });
+
   it('steps from the tab on screen, round the ends', async () => {
     const fake = ports();
     await bind(browserSwitch, fake).call({ projectPath: project, step: -1 });
