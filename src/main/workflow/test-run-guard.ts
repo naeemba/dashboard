@@ -6,10 +6,9 @@
 // cover it if parallel runs show up there.
 
 import { basename } from 'node:path';
-import { hookRefusal, invocation, repositoryTop, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
+import { hookRefusal, invocation, repositoryTop, resolveWord, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
 import { isInside } from '../panes/shell-directory';
 import type { ProcessList, RunningProcess } from './running-app-guard';
-import { resolveWord } from './worktree-guard';
 
 // What may stand before the program a command line runs, with its flags, assignments and timeout's
 // duration: `timeout 600 pnpm test`, `node --max-old-space-size=4096 vitest.mjs`, `python3 -m pytest`.
