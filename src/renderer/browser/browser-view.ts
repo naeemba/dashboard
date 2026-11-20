@@ -41,6 +41,13 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
   let state: BrowserState = NO_TABS;
   // The highlighted chip while the tab row has the keyboard; the last place is the new tab chip.
   let highlighted = 0;
+  // The chip a left press landed on, by its tab id ('new' for the new tab chip), held here rather than
+  // on the node so a redraw between press and release still matches. A release acts only on it.
+  let pressed: number | 'new' | null = null;
+  // Any release ends the press, so one that started on a chip and ended off the row is not kept for
+  // the next stray release. Bubbling, it runs after the chip's own mouseup has read it.
+  const endPress = (): void => { pressed = null; };
+  window.addEventListener('mouseup', endPress);
 
   const element = document.createElement('div');
   element.className = 'browser';
@@ -98,13 +105,19 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
       return chip;
     }), Object.assign(document.createElement('span'), { className: 'browser-tab browser-tab-new', textContent: '+ New tab' })];
     chips.forEach((chip, index) => {
+      const id = state.tabs[index]?.id ?? 'new';
       chip.classList.toggle('highlighted', index === highlighted);
       // A click moves the highlight there, then does what Enter does (conventions-rule-1). The press
       // keeps the keyboard where it is, and the release acts: a push from main redraws the row, and a
       // chip rebuilt between press and release never gets a click, but the chip there gets the mouseup.
-      chip.addEventListener('mousedown', (event) => event.preventDefault());
+      // Paired with the press, because mouseup goes to whatever is under the pointer: a drag from the
+      // address bar, or from another chip, let go over this one does nothing.
+      chip.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        if (event.button === 0) pressed = id;
+      });
       chip.addEventListener('mouseup', (event) => {
-        if (event.button !== 0) return;
+        if (event.button !== 0 || pressed !== id) return;
         highlighted = index;
         choose();
       });
@@ -209,6 +222,7 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
       void bridge.browser('reset', { projectPath }).catch(() => undefined);
       screens.delete(projectPath);
       resized.unobserve(page);
+      window.removeEventListener('mouseup', endPress);
       queue();
     },
   };

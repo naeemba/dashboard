@@ -33,7 +33,8 @@ Enter loads what you typed in the tab on screen; Escape puts the address back an
 returns to the page. Up from the address bar walks the tab row: Left and Right
 move the highlight along the tabs and the new tab chip at the end, Enter goes to
 the highlighted tab, Down goes back to the address bar and Escape to the page. A
-click on a tab moves the highlight there, then does what Enter does.
+click on a tab moves the highlight there, then does what Enter does; a release that
+began elsewhere, a drag from the address bar or another tab, does nothing.
 
 A page that opens a window (a link with `target=_blank`, a `window.open`) opens
 a tab instead. A tab an agent holds names its pane after its title; every tab
