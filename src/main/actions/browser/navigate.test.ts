@@ -25,12 +25,36 @@ describe('browser.navigate', () => {
   });
 });
 
+describe('browser.navigate for an agent', () => {
+  const agents = () => fakePorts({ [project]: { tabs: [{ id: 4, url: 'about:blank', title: '', holder: 'user' }, { id: 5, url: 'about:blank', title: '', holder: '3:1' }], active: 4 } });
+
+  it('loads the address in the tab the pane holds, not the one on screen', async () => {
+    const ports = agents();
+    await expect(bind(browserNavigate, ports).call({ pane: '3:1', tab: '5', url: 'localhost:3000' }))
+      .resolves.toEqual({ output: 'tab 5 to http://localhost:3000' });
+    expect(ports.done).toEqual(['load 5 http://localhost:3000']);
+  });
+
+  it('refuses the user\'s tab, loading nothing', async () => {
+    const ports = agents();
+    await expect(bind(browserNavigate, ports).call({ pane: '3:1', tab: 4, url: 'example.com' }))
+      .resolves.toEqual({ refused: 'tab 4 is the user\'s; `browser claim 4` it first' });
+    expect(ports.done).toEqual([]);
+  });
+});
+
 describe('browser.step', () => {
   it('goes back, forward or loads again in the tab on screen', async () => {
     const ports = open();
     await bind(browserStep, ports).call({ projectPath: project, step: 'back' });
     await bind(browserStep, ports).call({ projectPath: project, step: 'reload' });
     expect(ports.done).toEqual(['back 4', 'reload 4']);
+  });
+
+  it('steps the tab an agent holds', async () => {
+    const ports = fakePorts({ [project]: { tabs: [{ id: 5, url: 'about:blank', title: '', holder: '3:1' }], active: 5 } });
+    await bind(browserStep, ports).call({ pane: '3:1', tab: 5, step: 'forward' });
+    expect(ports.done).toEqual(['forward 5']);
   });
 
   it('refuses a step it does not know', async () => {

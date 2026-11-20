@@ -1,0 +1,70 @@
+import { describe, expect, it } from 'vitest';
+import type { BrowserTab } from '../../../shared/browser/browser';
+import { bind } from '../action';
+import { fakePorts } from './browser-fixture';
+import { browserClaim, browserRelease, browserRevoke } from './claims';
+
+const tab = (id: number, holder = 'user', takenFrom?: string): BrowserTab => ({
+  id, url: 'about:blank', title: '', holder, ...(takenFrom === undefined ? {} : { takenFrom }),
+});
+const project = '/work/api';
+
+describe('browser.claim', () => {
+  it('gives the pane the user\'s tab', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1)], active: 1 } });
+    await expect(bind(browserClaim, ports).call({ pane: '3:1', tab: '1' })).resolves.toEqual({ output: 'pane 3:1 holds tab 1' });
+    expect(ports.browsers.get(project)?.tabs[0].holder).toBe('3:1');
+  });
+
+  it('refuses another pane\'s tab and changes nothing', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1, '3:2')], active: 1 } });
+    await expect(bind(browserClaim, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ refused: 'tab 1 is held by pane 3:2' });
+    expect(ports.browsers.get(project)?.tabs[0].holder).toBe('3:2');
+  });
+
+  it('refuses a claim that names no pane or no tab', async () => {
+    await expect(bind(browserClaim, fakePorts()).call({ tab: 1 })).resolves.toEqual({ refused: 'no pane was given' });
+    await expect(bind(browserClaim, fakePorts()).call({ pane: '3:1', tab: 'one' })).resolves.toEqual({ refused: 'no tab was named' });
+  });
+});
+
+describe('browser.release', () => {
+  it('hands one tab the pane holds back to the user', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1, '3:1')], active: 1 } });
+    await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ output: 'tab 1 is the user\'s again' });
+    expect(ports.browsers.get(project)?.tabs[0].holder).toBe('user');
+  });
+
+  it('refuses a tab the pane does not hold', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1, '3:2')], active: 1 } });
+    await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ refused: 'tab 1 is held by pane 3:2' });
+  });
+
+  it('with no tab named, lets go of every tab the pane holds in every project, and no other pane\'s', async () => {
+    const ports = fakePorts({
+      [project]: { tabs: [tab(1, '3:1'), tab(2, '3:2'), tab(3, 'user', '3:1')], active: 1 },
+      '/work/web': { tabs: [tab(4, '3:1')], active: 4 },
+    });
+    await expect(bind(browserRelease, ports).call({ pane: '3:1' })).resolves.toEqual({ output: 'released 2 tabs of 3:1' });
+    expect(ports.browsers.get(project)?.tabs).toEqual([tab(1), tab(2, '3:2'), tab(3)]);
+    expect(ports.browsers.get('/work/web')?.tabs).toEqual([tab(4)]);
+    expect(ports.done).toEqual([]);
+  });
+});
+
+describe('browser.revoke', () => {
+  it('takes the tab on screen back from its agent, whose next call is refused saying so', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1, '3:1')], active: 1 } });
+    await expect(bind(browserRevoke, ports).call({ projectPath: project })).resolves.toEqual({ output: 'took tab 1 back from 3:1' });
+    expect(ports.browsers.get(project)?.tabs[0]).toEqual(tab(1, 'user', '3:1'));
+    await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 }))
+      .resolves.toEqual({ refused: 'the user took tab 1 back from this pane; it is theirs now' });
+    await expect(bind(browserClaim, ports).call({ pane: '3:1', tab: 1 })).resolves.toHaveProperty('refused');
+  });
+
+  it('refuses a tab that is already yours, and a project with none', async () => {
+    await expect(bind(browserRevoke, fakePorts({ [project]: { tabs: [tab(1)], active: 1 } })).call({ projectPath: project }))
+      .resolves.toEqual({ refused: 'tab 1 is already yours' });
+    await expect(bind(browserRevoke, fakePorts()).call({ projectPath: project })).resolves.toEqual({ refused: 'this project has no tab open' });
+  });
+});

@@ -11,6 +11,12 @@ describe('the tab list', () => {
     expect(withTab(three, tab(4)).active).toBe(4);
   });
 
+  it('puts an agent\'s tab behind the one on screen, or on screen when there is none', () => {
+    const agents = { ...tab(4), holder: '3:1' };
+    expect(withTab(three, agents).active).toBe(2);
+    expect(withTab(NO_TABS, agents).active).toBe(4);
+  });
+
   it('hands a closed tab\'s screen to the one after it, else the one before', () => {
     expect(withoutTab(three, 2).active).toBe(3);
     expect(withoutTab({ ...three, active: 3 }, 3).active).toBe(2);
