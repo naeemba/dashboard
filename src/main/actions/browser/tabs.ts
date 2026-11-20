@@ -12,7 +12,8 @@ type Opened = { output: string; tab: number };
 
 // An empty address is a new tab with nothing loaded yet, which the screen then asks an address for.
 // `opener` is the tab whose page opened this one as a window: a popup from an agent's tab is that
-// agent's, behind the one on screen, so its work never takes the page from under you.
+// agent's, behind the one on screen, so its work never takes the page from under you. One from the
+// tab on screen comes on screen whoever holds it: you opened it, from the page you are looking at.
 type OpenInput = { projectPath: string; url: string; pane: string | null; opener: number | null };
 
 export const browserOpen = action<BrowserPorts, OpenInput, Opened>('browser.open', {
@@ -26,9 +27,11 @@ export const browserOpen = action<BrowserPorts, OpenInput, Opened>('browser.open
     return isRefused(url) ? url : { ...project, url, pane: raw.pane ?? null, opener: wholeNumber(raw.opener) };
   },
   async run(ports, { projectPath, url, pane, opener }) {
-    const holder = pane ?? ports.browserOf(projectPath).tabs.find((each) => each.id === opener)?.holder ?? 'user';
+    const before = ports.browserOf(projectPath);
+    const holder = pane ?? before.tabs.find((each) => each.id === opener)?.holder ?? 'user';
     const id = ports.makeView(projectPath, url);
-    ports.keep(projectPath, withTab(ports.browserOf(projectPath), { id, url, title: '', holder }));
+    const state = withTab(ports.browserOf(projectPath), { id, url, title: '', holder });
+    ports.keep(projectPath, opener !== null && opener === before.active ? { ...state, active: id } : state);
     return { output: `opened tab ${id}`, tab: id };
   },
 });
