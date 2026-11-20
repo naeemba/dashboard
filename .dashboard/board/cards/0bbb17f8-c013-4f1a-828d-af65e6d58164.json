@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T13:19:37.668Z",
-  "updatedAt": "2026-11-20T13:19:37.668Z",
-  "column": "Backlog",
-  "order": 55
+  "updatedAt": "2026-11-20T13:19:52.957Z",
+  "branch": "one-test-run-at-a-time-per-worktree",
+  "column": "Doing",
+  "order": 2
 }
