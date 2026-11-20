@@ -4,13 +4,12 @@
 //
 // Manager is not here, and neither are command and log: those are the manager's own, no project has
 // them, and a saved page naming one would come back on a view its page never built.
-export const PROJECT_MODES = ['terminals', 'nvim', 'board', 'notes'] as const;
-// The same four as a type, so page.ts builds its record of views from this list rather than spelling
-// the four names again beside it. A fifth project view is then one row above and nothing else to keep
-// in step.
+export const PROJECT_MODES = ['terminals', 'nvim', 'board', 'notes', 'browser'] as const;
+// The same five as a type, so page.ts builds its record of views from this list rather than spelling
+// the five names again beside it. The other places a new project view goes are keys-rule-1's.
 export type ProjectMode = typeof PROJECT_MODES[number];
 
-// A page shows one of these at a time. A project opens as terminals and moves between the first four;
+// A page shows one of these at a time. A project opens as terminals and moves between the first five;
 // the manager page has five of its own — board and notes, which it shares with every project, plus
 // manager, command and log, which no project has — and never leaves those five.
 //

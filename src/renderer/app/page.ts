@@ -2,6 +2,7 @@ import { Terminal } from '@xterm/xterm';
 import type { ILink, ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { createBoardView, type BoardView } from '../board/board-view';
+import { createBrowserView, listenForBrowsers, type BrowserView } from '../browser/browser-view';
 import type { DashboardBridge, Project, WorkerState, WorktreeEntry } from '../../shared/app/bridge';
 import { createChatView, type ChatView } from '../chat/chat-view';
 import type { CommandView } from '../manager/command-view';
@@ -108,9 +109,9 @@ const BELL_SETTLE_MS = 1000;
 export type Page = {
   project: Project;
   element: HTMLElement;
-  // Only the views this page actually has. A project has four and so does the manager, though not the
-  // same four; a dead project has none, and that is what stops the mode keys switching it to a view
-  // that was never built.
+  // Only the views this page actually has. A project has five and the manager five of its own; a dead
+  // project has none, and that is what stops the mode keys switching it to a view that was never
+  // built.
   views: Partial<Record<Mode, HTMLElement>>;
   mode: Mode;
   // The open workers in the order they are drawn, by number. Main is the Claude screen, `chat`, not one
@@ -146,6 +147,8 @@ export type Page = {
   // The Claude screen. Null where the board is: the manager and a dead project have no folder to run
   // a session in.
   chat: ChatView | null;
+  // The project's browser tabs. A project's alone: the manager has no browser mode.
+  browser: BrowserView | null;
 };
 
 // The pane with the keyboard, or the one that last had it. Undefined on a page with no terminals, and
@@ -318,6 +321,8 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
   options.bridge.onPaneMark((id, state) => markersById.get(id)?.(state));
   // Once, for every Claude screen: a PDF opened on any of them is the one viewer on screen.
   options.bridge.onViewerDismiss(dismissViewerFromFrame);
+  // Once, for every browser screen: main's pushes, and where the web page goes.
+  listenForBrowsers(options.bridge);
   // `parent` is where the box goes: the nvim view for the editor, the worker list for a worker.
   function buildPane(parent: HTMLElement, id: string, page: Page, index: number, onFocus?: () => void): Pane {
     const container = document.createElement('div');
@@ -611,11 +616,11 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     element.className = 'page';
     const views: Record<ProjectMode, HTMLElement> = {
       terminals: makeView('terminals', 'terminals'), nvim: makeView('nvim', 'terminals'),
-      board: makeView('board', 'terminals'), notes: makeView('notes', 'terminals'),
+      board: makeView('board', 'terminals'), notes: makeView('notes', 'terminals'), browser: makeView('browser', 'terminals'),
     };
     const page: Page = {
       project, element, views, mode: 'terminals', panes: [], focused: MAIN_INDEX, workers: null, slot, editor: null,
-      editorStarted: false, board: null, notes: null, ink: null, inkShowing: false, manager: null, command: null, strip: null, markets: null, log: null, chat: null,
+      editorStarted: false, board: null, notes: null, ink: null, inkShowing: false, manager: null, command: null, strip: null, markets: null, log: null, chat: null, browser: null,
     };
     // Deliberate insurance against one race: the picker only offers folders that exist, so the sole way here
     // is deleting the folder between the dialog closing and the existence check. Then you get this page
@@ -661,6 +666,14 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
     // Hidden until the toggle key asks for it: see showNotesPage.
     page.ink.element.hidden = true;
     views.notes.append(page.notes.element, page.ink.element);
+    page.browser = createBrowserView({
+      bridge: options.bridge,
+      projectPath: project.path,
+      onError: (message) => options.onError(`browser:${slot}`, message),
+      onNotice: (message) => options.onNotice(`browser:${slot}`, message),
+      onChanged: options.onChanged,
+    });
+    views.browser.append(page.browser.element);
     return page;
   }
 

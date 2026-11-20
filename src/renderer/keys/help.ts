@@ -14,7 +14,7 @@ import { isModified } from './shortcuts';
 export type Section = { title: string; blurb: string; shortcuts: Shortcut[] };
 
 export const MODE_NAMES: Record<Mode, string> = {
-  terminals: 'Terminals', nvim: 'nvim', board: 'Board', notes: 'Notes',
+  terminals: 'Terminals', nvim: 'nvim', board: 'Board', notes: 'Notes', browser: 'Browser',
   manager: 'Manager', command: 'Command', log: 'Log',
 };
 
@@ -40,6 +40,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
     + 'key turns between them. No save key: written a moment after you stop, read only when you '
     + 'arrive. Draw with mouse, pen or touch; the keys pick tool, colour and width.',
+  browser: 'The project\'s own browser: tabs, an address bar and the page, signed in apart from '
+    + 'every other project and from the app. These keys work from inside the page too; '
+    + 'every other key is the page\'s. Up from the address walks the tabs. A tab an agent holds names '
+    + 'its pane. The tabs close with the project; the sign-ins stay.',
   manager: 'The first tab, and no project: no shells, so the terminal and nvim keys do nothing here. '
     + 'Needs you lists what waits on you across the open projects, oldest first; under it, each '
     + 'project with its panes, figures and worktrees. A letter, digit or symbol answers the '
@@ -79,6 +83,12 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
 export const UNBOUND_SHORTCUTS: Partial<Record<Mode, Shortcut[]>> = {
   nvim: [{ keys: 'Everything else', action: 'Goes straight to nvim' }],
   notes: [{ keys: 'Everything else', action: 'Goes into the notes' }],
+  browser: [
+    { keys: 'Left, Right, Enter', action: 'On the tab row: walk the tabs and the new tab, and go to one' },
+    { keys: 'Up, Down', action: 'Between the tab row and the address bar' },
+    { keys: 'Escape', action: 'From the tab row or the address bar back to the page' },
+    { keys: 'Everything else', action: 'Goes to the web page' },
+  ],
   manager: [{ keys: 'A letter, digit or symbol', action: 'Straight to the selected waiting pane' }],
   command: [{ keys: 'Space', action: 'Mark or unmark the project under the selection' }],
 };

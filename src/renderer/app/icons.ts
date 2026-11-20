@@ -4,7 +4,7 @@
 import {
   ArrowDownWideNarrow, Ban, Bitcoin, Bot, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, Copy, CornerLeftUp, createElement,
-  DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
+  DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Globe, Inbox, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, PanelLeft, Plug, RefreshCw, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
   Terminal, Trees, X,
   type IconNode,
@@ -42,6 +42,7 @@ const ICONS = {
   folderPlus: FolderPlus,
   branch: GitBranch,
   general: LayoutDashboard,
+  globe: Globe,
   keyboard: Keyboard,
   log: ScrollText,
   notes: NotebookPen,
@@ -98,7 +99,7 @@ export function labelled(
 // Complete on purpose, so a new mode does not compile until it has one.
 export const MODE_GLYPHS: Record<Mode, IconName> = {
   terminals: 'terminal', nvim: 'editor', board: 'board', notes: 'notes', manager: 'general', command: 'command',
-  log: 'log',
+  log: 'log', browser: 'globe',
 };
 
 // A button holding an icon and a name, the shape every bar of tabs in the app is built from.

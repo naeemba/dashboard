@@ -18,14 +18,16 @@ its key does. The manager has five sections of its own, named along the top: its
 list of what the panes want, a board of its own above every project's, one
 command run across projects, a page of notes about none of them, and what the
 app itself has been doing. Two of the five mode keys land on a section rather
-than doing nothing there — the board key and the notes key.
+than doing nothing there — the board key and the notes key. The browser key does
+nothing on the manager, which has no browser.
 
 ## Files
 
 Folders: `src/shared/keys/`, `src/renderer/keys/`.
 
-- Table and modes: `actions.ts`, `modes.ts`
-- Keystrokes: `binding.ts`, `shortcuts.ts`, `keycaps.ts`, `test-key.ts`
+- Table and modes: `actions.ts`, `browser-actions.ts` (the browser screen's rows), `modes.ts`
+- Keystrokes: `binding.ts`, `shortcuts.ts`, `lookup.ts` (which action a key is,
+  shared so main asks it about a web page's keys), `browser-keys.ts`, `keycaps.ts`, `test-key.ts`
 - Help and strip: `help.ts`, `shortcut-rows.ts`, `which-key.ts`,
   `which-key-view.ts`, `which-key-tracking.ts`, `which-key.css`
 

@@ -230,7 +230,10 @@ everything but the window's main frame. Electron raises it for that frame too,
 and judged there the dev page counted as a web link: it opened in the browser
 and the window's load was cancelled. A viewer in a contents of its own has a
 main frame as well, and only this rule holds it, so the exemption is the
-window's main frame, not every main frame.
+window's main frame, not every main frame. A browser tab's contents is the one place a web page
+loads: any of its frames may go to a web page or the empty page, and nowhere
+else, asked by the contents rather than by the address, so a PDF's link still
+leaves for the browser ([browser](../browser/README.md)).
 
 The dev server listens on `127.0.0.1`, not `localhost` (`vite.renderer.config.ts`):
 on Windows `localhost` bound to `::1` alone while the window asked

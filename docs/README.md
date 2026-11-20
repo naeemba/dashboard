@@ -32,6 +32,7 @@ lint or CI step that holds it.
 | [actions](actions/README.md) | What the app does on request — card, pane, worktree, project, session and settings — defined once in main for the screen and the command, and the plan for the rest |
 | [ship](ship/README.md) | A card into a worktree with an agent, the review, the worktree list |
 | [notes](notes/README.md) | Text and handwriting notes per project and for the manager |
+| [browser](browser/README.md) | A web browser per project, as one of its modes: tabs, address bar, its own sign-ins |
 | [drawer](drawer/README.md) | The drawer of a page's docs and the Claude sessions the app started |
 | [manager](manager/README.md) | The first tab: what wants you, every board, the command runner |
 | [usage](usage/README.md) | Token usage per project and per pane |

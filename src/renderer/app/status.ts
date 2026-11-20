@@ -18,6 +18,8 @@ export type StatusPage = {
   focused: number;
   paneCount: number;
   boardLabel: string;
+  // The browser's tab on screen, by its title, or `no tab`.
+  browserLabel: string;
   hasProjects: boolean;
   managerStatusLabel: string;
   commandStatusLabel: string;
@@ -71,6 +73,7 @@ export function modeLabel(page: StatusPage): string {
   // end of the bar to follow. Without the branch it would fall through to the pane label below and
   // name a terminal you are not looking at.
   if (page.mode === 'notes') return 'notes';
+  if (page.mode === 'browser') return `browser · ${page.browserLabel}`;
   // The filter box is the whole of what this screen takes, as the notes box is, so it is named and
   // nothing more rather than falling through to a pane you are not looking at.
   if (page.mode === 'log') return 'log';

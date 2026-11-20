@@ -1,0 +1,26 @@
+# Browser: hard rules
+
+## browser-rule-1: A layer that floats over the app is a child of the body
+
+The web page is a native view laid over the window, drawn above every bit of its
+HTML. Anything drawn over the app while the page shows has to take the page off
+first, or it is drawn under it: press the help key with the page on screen and
+the dialog opens behind the page, unseen, while every key you press goes to it.
+
+`browserPlacement` (`browser-placement.ts`) decides it from where a layer lives,
+not from a list of dialogs: the app's own regions are the body's `#title`,
+`#pages` and `#status`, and any other child of the body that is drawn floats
+over them. Every sheet `openOverlay` builds, the which-key strip and the file
+hints are children of the body, and so are covered without a line of their own.
+A floating thing drawn inside a page instead would not be, so it is never built
+there. Its test holds the rule; nothing holds where a new layer is appended.
+
+## browser-rule-2: No door touches a view
+
+Every change to a tab, the view on screen or its place is a browser action in
+`src/main/actions/browser/`, and every door calls one: the screen's channels, a
+page's new window, a project closing. The views are reached only through the
+actions' ports in `browser-views.ts`, the one file that makes one, and
+`bypasses.test.ts` holds that. What a page does by itself (a title set, a link
+followed) is written down by `browser-views.ts` and is no action: nobody asked
+for it (browser-decision-2).

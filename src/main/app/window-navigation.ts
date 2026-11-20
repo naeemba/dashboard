@@ -1,4 +1,5 @@
 import { isOpenableLink } from '../../shared/panes/links';
+import { isBrowsable } from '../browser/address';
 
 // Where the app window and its PDF viewer may go, and the key that puts the viewer away.
 
@@ -10,10 +11,14 @@ import { isOpenableLink } from '../../shared/panes/links';
 // window stopped half loaded, its script never run: `pnpm start` showed an empty window on Windows.
 // Only the window's main frame: a viewer in a contents of its own has a main frame too, and nothing
 // but this rule holds it.
+// A browser tab's contents (browser-views.ts) is the one place a web page loads: any of its frames may
+// go to a web page, and nowhere else. Asked by the contents, never by the URL, so a PDF's link still
+// leaves for the browser rather than loading in the overlay.
 export function frameNavigation(
-  url: string, frame: { isMainFrame: boolean; isWindowContents: boolean },
+  url: string, frame: { isMainFrame: boolean; isWindowContents: boolean; isBrowserTab: boolean },
 ): 'allow' | 'browser' | 'refuse' {
   if (frame.isMainFrame && frame.isWindowContents) return 'allow';
+  if (frame.isBrowserTab && isBrowsable(url)) return 'allow';
   if (/^(blob|chrome-extension):/.test(url)) return 'allow';
   return isOpenableLink(url) ? 'browser' : 'refuse';
 }

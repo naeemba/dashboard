@@ -2,6 +2,7 @@ import { projectPosition } from '../manager/manager';
 import { SECTIONS } from '../manager/manager-sections';
 import type { Mode } from './modes';
 import type { Direction } from '../panes/terminals';
+import { BROWSER_ACTIONS, type BrowserCommand } from './browser-actions';
 
 // The readline keys of the Claude screen's boxes; chat-line-editing.ts holds what each does.
 export type LineEdit = 'kill-word' | 'kill-line-start' | 'kill-line-end' | 'yank' | 'yank-pop';
@@ -70,7 +71,8 @@ export type Action =
   | { kind: 'notes-ink-toggle' }
   | { kind: 'ink'; command: InkCommand }
   | { kind: 'chat'; command: ChatCommand }
-  | { kind: 'chat-edit'; edit: LineEdit };
+  | { kind: 'chat-edit'; edit: LineEdit }
+  | { kind: 'browser'; command: BrowserCommand };
 
 // What the handwriting page's own keys ask of it. One action kind for all of them, answered by the ink
 // view, so the renderer passes them on without a case each.
@@ -94,7 +96,7 @@ export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'co
 // is the handwriting page of that screen, heard only while that page is the one showing, which only the
 // renderer knows — the same way it alone knows whether the Claude screen holds the keyboard.
 export type ActionScope =
-  'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'notes' | 'claude' | 'manager-page' | 'ink';
+  'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'notes' | 'claude' | 'manager-page' | 'ink' | 'browser';
 
 // Whether two actions can be heard at the same moment, which is the whole of what "these two want the
 // same key" means. Exported because two places ask it and they must not each hold their own idea of
@@ -123,7 +125,7 @@ export function scopesOverlap(one: ActionScope, other: ActionScope): boolean {
 // Which heading the help dialog and the settings screen list it under. Not the same thing as scope:
 // help and settings answer from everywhere but belong under their own heading rather than Projects.
 export type ActionGroup =
-  'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'notes' | 'manager' | 'command' | 'log' | 'claude' | 'sections';
+  'app' | 'modes' | 'projects' | 'terminals' | 'board' | 'notes' | 'manager' | 'command' | 'log' | 'claude' | 'sections' | 'browser';
 
 export type ActionEntry = {
   // It is the key in settings.json, so renaming one is renaming a line in the user's file. A rename
@@ -292,6 +294,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'mode-notes', description: 'Notes mode', group: 'modes', scope: 'global',
     action: { kind: 'mode-set', mode: 'notes' }, mac: 'Ctrl+Shift+N', other: 'Ctrl+Shift+N',
+  },
+  // Shift for the reason mode-notes gives: Ctrl+B is the board's. B for browser.
+  {
+    name: 'mode-browser', description: 'Browser mode', group: 'modes', scope: 'global',
+    action: { kind: 'mode-set', mode: 'browser' }, mac: 'Ctrl+Shift+B', other: 'Ctrl+Shift+B',
   },
   // The first is main and the rest count down the worker list, so 2 is the top worker whatever its
   // number; pane-layout.ts says why a position rather than a pane number. Past the eighth worker,
@@ -752,6 +759,7 @@ export const ACTIONS: readonly ActionEntry[] = [
     name: 'claude-editor', description: 'Edit the prompt in nvim; save and come back to take it',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'editor' }, mac: 'Ctrl+G', other: 'Ctrl+G',
   },
+  ...BROWSER_ACTIONS,
 ];
 
 export function defaultBinding(entry: ActionEntry, isMac: boolean): string | null {

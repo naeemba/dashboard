@@ -79,6 +79,9 @@ Rules a test, lint or CI step holds are not repeated here (workflow-decision-8).
   command answer, key, sweep) calls the action in `src/main/actions/<noun>/`;
   a new kind of change adds one. `bypasses.test.ts` names the calls still made
   outside one: lower a count, never raise it. (actions-rule-1)
+- **A layer that floats over the app is a child of the body**, beside `#title`,
+  `#pages` and `#status`: only there does the browser's web page, a native view
+  over all HTML, go away under it. (browser-rule-1)
 - **Never an `eslint-disable`** for the import boundaries between processes (a
   type both sides name moves to `src/shared/`; app-rule-2) or for `mkdtemp` in a
   test (use `temporaryFolder()`; workflow-rule-4), or for `max-lines` (split the
