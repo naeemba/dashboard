@@ -76,6 +76,7 @@ import { workingPanes, WORKING_REPORT_MS } from '../shared/panes/working-panes';
 import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
 import { settingsActions } from './actions/settings/settings-actions';
+import { browserActions } from './actions/browser/browser-actions';
 import type { Settings } from '../shared/settings/settings';
 import { oneAtATime } from './ship/ship';
 import {
@@ -176,6 +177,8 @@ const settingsDoors = settingsActions(table, {
   tell: (next, shell) => liveWindow()?.webContents.send('settings:change', { settings: next, shellCommand: shell }),
 });
 keepHostToken(settings, (made) => { void settingsDoors.write.call({ settings: made }); });
+// Each project's browser tabs, beside the window: browser-actions.ts.
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys });
 // A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
 // nothing strips those lines until the settings screen is next opened. Tidying it once here drops
 // everything that still matches this build, so the next default to move reaches these people. It cannot
@@ -442,6 +445,7 @@ function closeProjectSlot(slot: number): void {
   projects[slot] = undefined;
   logStore.log({ level: 'info', kind: 'project', project: closing.path, message: 'closed' });
   boards.forget(closing.path);
+  void browser.reset.call({ projectPath: closing.path });
   chats.stop(slot);
   for (const id of [...terminalCommands.keys()]) if (paneFromId(id).slot === slot) dropPane(id);
   // A project that never shipped a card has nothing to give up here, and worktrees.set is the one that
@@ -835,6 +839,7 @@ function createWindow(): void {
       await updates.beforeQuit();
     },
     loaded: () => { failures.drain(); checkReviewLoop(sayReviewLoop); }, shellsDieAtQuit: panes.workDiesAtQuit, editorDiesAtQuit: panes.editorDiesAtQuit, quitCancelled: updates.quitCancelled,
+    isBrowserTab: browser.owns,
   });
   // Last, so a throw anywhere above is still the launch failing rather than a message sent to a window
   // that was never finished.

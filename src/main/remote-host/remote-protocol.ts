@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
+import { BROWSER_VERBS } from '../../shared/browser/browser';
 import { isRecord } from '../../shared/app/is-record';
 
 // The wire between a screen and the host: the bridge's own channels, one JSON frame per
@@ -31,11 +32,13 @@ export const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 // Place, and do not depend on whose session is shown. Connecting and disconnecting are the client's own by definition, and
 // so is the window saying it has restored its own session, which is what `--remote` waits for. So is the
 // what's-new record: it says which build of this install you last saw, whatever host it shows. And the
-// update: the app that updates is the one on this desk, not the host's (docs/updates).
+// update: the app that updates is the one on this desk, not the host's (docs/updates). And the
+// browser: its tabs are drawn on this window, so they are this app's (docs/browser).
 const CLIENT_CHANNELS = new Set([
   'link:open', 'notification:show', 'settings:read', 'settings:write', 'host:connect', 'host:disconnect',
   'session:restored', 'markets:read', 'whats-new:record',
   'update:read', 'update:check', 'update:download', 'update:restart',
+  ...BROWSER_VERBS.map((verb) => `browser:${verb}`), 'browser:read',
 ]);
 
 export function isClientChannel(channel: string): boolean {

@@ -119,6 +119,10 @@ const bridge: DashboardBridge = {
   chatSideQuestion: (slot, question) => ipcRenderer.invoke('chat-side-question:ask', slot, question),
   workers: () => ipcRenderer.invoke('workers:read'),
   onChat: (listener) => ipcRenderer.on('chat:receive', (_event, slot, chatEvent) => listener(slot, chatEvent)),
+  browser: (verb, request) => ipcRenderer.invoke(`browser:${verb}`, request),
+  readBrowser: (projectPath) => ipcRenderer.invoke('browser:read', projectPath),
+  onBrowserChange: (listener) => ipcRenderer.on('browser:change', (_event, projectPath, state) => listener(projectPath, state)),
+  onBrowserKey: (listener) => ipcRenderer.on('browser:key', (_event, input) => listener(input)),
 };
 
 contextBridge.exposeInMainWorld('dashboard', bridge);

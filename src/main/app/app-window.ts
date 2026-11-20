@@ -21,6 +21,8 @@ export type AppWindowOptions = {
   shellsDieAtQuit(): boolean;
   // The editor's shell runs in the app this time, so the quit stops it rather than keeping it.
   editorDiesAtQuit(): boolean;
+  // Whether a contents is a browser tab's (browser-views.ts), the one kind a web page loads in.
+  isBrowserTab(contents: Electron.WebContents): boolean;
 };
 
 export function openAppWindow(options: AppWindowOptions): BrowserWindow {
@@ -40,10 +42,11 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
     });
     // The PDF viewer keeps its own blob and pages, and a link in the PDF opens in the browser rather
     // than inside the overlay or in a bare window of its own. The window's main frame is left to
-    // will-navigate below, which keeps it on the app's page.
+    // will-navigate below, which keeps it on the app's page. A browser tab keeps its web pages, and
+    // its new windows are its own handler's, set after this one.
     contents.on('will-frame-navigate', (event) => {
       const where = frameNavigation(event.url, {
-        isMainFrame: event.isMainFrame, isWindowContents: contents === window.webContents,
+        isMainFrame: event.isMainFrame, isWindowContents: contents === window.webContents, isBrowserTab: options.isBrowserTab(contents),
       });
       if (where === 'allow') return;
       event.preventDefault();

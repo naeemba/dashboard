@@ -16,6 +16,8 @@ import type { PaneUse } from '../panes/pane-reading';
 import type { PaneName } from '../panes/close-refusal';
 import type { LogDraft, LogEntry, LogRead } from './log-entry';
 import type { Mode } from '../keys/modes';
+import type { KeyInput } from '../keys/binding';
+import type { BrowserState, BrowserVerb } from '../browser/browser';
 import type { Settings } from '../settings/settings';
 import type { TaskResult } from '../manager/tasks';
 import type { UsageSnapshot } from '../usage/usage';
@@ -372,6 +374,12 @@ export type DashboardBridge = {
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).
   onViewerDismiss(listener: () => void): void;
   onChat(listener: (slot: number, event: ChatEvent) => void): void;
+  // A browser action (docs/browser), through its `browser:<verb>` channel, answering what it did or why not.
+  browser(verb: BrowserVerb, request: Record<string, unknown>): Promise<{ output: string } | Refused>;
+  readBrowser(projectPath: string): Promise<BrowserState>;
+  onBrowserChange(listener: (projectPath: string, state: BrowserState) => void): void;
+  // A key pressed inside a web page that the window's lookup acts on, which only main hears (browser-keys.ts).
+  onBrowserKey(listener: (input: KeyInput) => void): void;
 };
 
 export type ChatContent = (

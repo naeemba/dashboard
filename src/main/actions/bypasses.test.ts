@@ -41,6 +41,9 @@ const BYPASSES: { call: string; allowed: Record<string, number> }[] = [
   { call: 'swapInto(', allowed: { 'src/main/actions/update/update-actions.ts': 1, 'src/main/update/install.ts': 1 } },
   { call: 'app.relaunch(', allowed: { 'src/main/actions/update/update-actions.ts': 1 } },
   { call: 'quitAndInstall(', allowed: { 'src/main/actions/update/update-actions.ts': 1 } },
+  // A browser tab's view: made only by browser.open's port, and handed to nothing but the browser
+  // actions' ports (browser-views.ts).
+  { call: 'new WebContentsView(', allowed: { 'src/main/browser/browser-views.ts': 1 } },
 ];
 
 function callsOf(call: string): Record<string, number> {
