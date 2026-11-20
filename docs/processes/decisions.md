@@ -68,3 +68,39 @@ scope it leaves the SDK's own spawn in place.
 Asking inside the spawn hook was the other way: it would need the screen host
 to have its own systemd check and its own names (processes-decision-3's reasons),
 and the unit would not be known until the SDK chose to start the process.
+
+## processes-decision-6: A main's scope says which launch started it, and never outlives the app
+
+A project's main session runs in `agent-main-<project>-<random>.scope` with a
+description naming the app's userData folder and a random id for this launch
+(`main-scopes.ts`). Three things keep only this launch's main running under a
+name:
+
+- At launch, before any main starts, `processes.stop-earlier-mains` lists the
+  `agent-main-*` scopes and stops every live one whose description names this
+  folder and another launch, and every one an older build started for a main
+  (its description is the command line, and its unit is named for the
+  `--name main-<x>` in it). It waits for the stop, up to ten seconds, and reads
+  back what is left.
+- A main about to start whose name one of those still holds asks the stop
+  again, and refuses with the unit and the `systemctl --user stop` that ends
+  it when it is still there.
+- The scope is bound (`BindsTo=`, `After=`) to the app's own unit, read off
+  `/proc/self/cgroup` when the user manager runs it (`app-dashboard-<pid>.scope`
+  from a desktop launch), so a killed app takes its mains with it. At quit,
+  every main this run started is stopped with `--no-block`, which systemd
+  carries out after the app has gone.
+
+What it replaced: a main's scope tied to nothing, ended only by the SDK's close
+at quit, which a quit does not wait for. On 2026-11-20 each project had two or
+three CLIs resuming the same conversation under `main-<project>`, the oldest 22
+hours old; a worker's SendMessage reached one of the orphans, so the main on
+screen never heard its reports, and the CPU sat at 100%.
+
+The folder in the description keeps a copy on its own userData (the
+performance demo) from stopping the installed app's mains. Every other agent's
+scope this build starts carries `Dashboard agent for <folder>`, so systemd-run's
+default description can only mean an older build: a worker in a project named
+`main` (`agent-main-terminal-2-*`, `--name main-terminal-2`) is never stopped.
+The one exception is an older build's worker screen in such a project, which
+has a main's shape and is stopped once; the fallback goes when older builds do.

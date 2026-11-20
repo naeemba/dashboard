@@ -129,6 +129,7 @@ settings, and stays.
 | Verb | Where | Doors | Bypass |
 |---|---|---|---|
 | install-slices | processes.install-slices, `actions/processes/install-slices.ts`, bound in `processes/launch-scopes.ts` | launch, once systemd answers | no |
+| stop-earlier-mains | processes.stop-earlier-mains, `actions/processes/stop-earlier-mains.ts`, bound in `processes/launch-scopes.ts` | launch, once systemd answers; a main about to start whose name one still held | no |
 
 ## The action set
 
@@ -160,6 +161,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | update.download | that there is a release to download; a failure kept on the state for the dialog |
 | update.restart | that a download is staged and is the release; the update armed and the quit asked for |
 | processes.install-slices | which slice units are missing, never one that is there; a reload only when one was written |
+| processes.stop-earlier-mains | which main scopes an earlier launch of this app (or an older build) left, never this launch's or another app folder's; what the stop left running |
 | update.install | Quit swaps the armed update in and relaunches; any other answer forgets it; no relaunch when the swap fails |
 
 ## The plan

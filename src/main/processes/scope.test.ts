@@ -39,6 +39,26 @@ describe('scopedCommand', () => {
       .toEqual({ ...ZSH, unit: null });
   });
 
+  it('describes an agent so it never reads as an older build\'s main, and never a task or shell', () => {
+    const described = { ...support(['k4f2', 'x9q0', 'a1b2']), agentDescription: 'Dashboard agent for /x' };
+    const agent = scopedCommand({ kind: 'agent', id: 'main-terminal-2', ...ZSH }, described);
+    expect(agent.args.slice(agent.args.indexOf('MemoryMax=8G') + 1, agent.args.indexOf('--'))).toEqual(['--description=Dashboard agent for /x']);
+    expect(scopedCommand({ kind: 'task', id: 'shop', ...ZSH }, described).args.some((arg) => arg.startsWith('--description'))).toBe(false);
+    expect(scopedCommand({ kind: 'shell', id: 'shop', ...ZSH }, described).args.some((arg) => arg.startsWith('--description'))).toBe(false);
+  });
+
+  it("starts a main as an agent that names its launch and is bound to the app's unit", () => {
+    const main = { description: 'Dashboard main session for /x, launch ab12', boundTo: 'app-dashboard-7.scope' };
+    const scoped = scopedCommand({ kind: 'main', id: 'main-shop', file: '/sdk/claude', args: [] }, { ...support(['k4f2']), main });
+    expect(scoped.unit).toBe('agent-main-shop-k4f2.scope');
+    expect(scoped.args.slice(scoped.args.indexOf('MemoryMax=8G') + 1)).toEqual([
+      '--description=Dashboard main session for /x, launch ab12', '-p', 'BindsTo=app-dashboard-7.scope', '-p', 'After=app-dashboard-7.scope',
+      '--', '/sdk/claude',
+    ]);
+    const unbound = scopedCommand({ kind: 'main', id: 'main-shop', file: '/sdk/claude', args: [] }, { ...support(['k4f2']), main: { ...main, boundTo: null } });
+    expect(unbound.args.filter((arg) => arg.startsWith('BindsTo'))).toEqual([]);
+  });
+
   it('tries a second suffix when the first name is taken', () => {
     expect(scopedCommand({ kind: 'shell', id: 'p-1', ...ZSH }, support(['aaaa', 'bbbb'], ['pane-p-1-aaaa.scope'])).unit)
       .toBe('pane-p-1-bbbb.scope');

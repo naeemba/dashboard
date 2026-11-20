@@ -28,6 +28,9 @@ manager's tasks starts in a scope of its own:
   SDK's spawn runs the CLI through it, in the app or in the screen host
   (processes-decision-5). A session that fails ends with the last of the CLI's
   stderr (or systemd-run's refusal) in its error, as an unscoped one does.
+  A main's scope never outlives the app: it is bound to the app's own unit and
+  stopped at quit, and a launch stops what an earlier one left before any main
+  starts (processes-decision-6).
 - A command the manager runs across projects runs in
   `task-<project>-<random>.scope` under `agents.slice` with an agent's caps: a
   build or a test suite is what grows to an agent's size.
@@ -124,12 +127,17 @@ then `systemctl --user daemon-reload` (processes-decision-2).
 
 Folders: `src/main/processes/`, `src/main/actions/processes/`.
 
-- The decisions: `scope.ts` (the command and its unit name), `scope-support.ts`
-  (whether scopes work here, and every name handed out)
+- The decisions: `scope.ts` (the command, its unit name and description),
+  `scope-support.ts` (whether scopes work here, every name handed out, and a
+  main held until an earlier launch's are stopped), `main-scopes.ts` (a main's
+  and an agent's description, the binding, and which earlier mains to stop)
 - The runner's name: `src/shared/processes/scope-runner.ts`, which
   `pane-shell.ts` also reads (docs/panes)
 - The edge: `launch-scopes.ts` (the probes, the slice files, daemon-reload,
-  stopping a pane's scope), `spawn-scoped.ts` (the one spawn a task and the
+  stopping a pane's scope, listing and stopping an earlier launch's mains for
+  `processes.stop-earlier-mains`, stopping this run's mains at quit
+  (`stopMainsNow`), and reading `/proc/self/cgroup` for the unit a main is
+  bound to), `spawn-scoped.ts` (the one spawn a task and the
   SDK's Claude start through)
 - The stop: `src/main/actions/pane/close.ts` (which unit, and when),
   `src/main/actions/project/close.ts` (every pane's of a closed project),
@@ -138,6 +146,7 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - The SDK's Claude: `src/main/chat/claude-process.ts` (which binary, and its
   spawn routed through the scope)
 - The slices: `install-slices.ts`, the action and both unit files' text
+- An earlier launch's mains: `stop-earlier-mains.ts`, the action
 - The guard: `process-starts.test.ts` (processes-rule-1)
 - The readout: `memory-sweep.ts` (which scopes, read where, added up by pane),
   `src/shared/processes/scope-memory.ts` (the figure and the near-cap mark),
@@ -189,6 +198,14 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - Given a worker screen the screen host kept through a restart, when the app
   opens again, then its row shows the memory of the scope it first started in.
 - Given a mac, or a pane host from before scopes, then no Memory figure shows.
+- Given a project whose main is running, when the app is killed with
+  `kill -9 <pid>` (the pid of `app-dashboard-<pid>.scope`), then
+  `systemctl --user list-units 'agent-main-*'` lists none within a second; when
+  it quits, the same; and when an older build left one, the next launch stops
+  it before the project's main starts and the log names it.
+- Given an earlier launch's main that did not stop, when the project's main
+  starts, then its screen says it is still running, in which unit, and the
+  `systemctl --user stop` that ends it.
 
 ## Open questions
 
@@ -197,8 +214,10 @@ Folders: `src/main/processes/`, `src/main/actions/processes/`.
 - A screen host started by an older build ignores the scope main sends with a
   worker screen: that host's sessions run unscoped until it exits, once no app
   is connected and none of its sessions runs.
-- A session's and a task's scope is not stopped by the app: a task's ends with
-  its command, a session's with its CLI, and what either detached outlives it.
+- A worker screen's and a task's scope is not stopped by the app: a task's ends
+  with its command, a worker's with its CLI, and what either detached outlives
+  it. A main's is (processes-decision-6), and so, once at launch, is an older
+  build's worker screen in a project named `main`, which has a main's shape.
 - Only this run's names are checked before one is handed out. A name a previous
   run's pane host still holds collides about once in 36^4 starts of the same
   pane; that pane's `systemd-run` then exits 1 ("already loaded"), and Enter

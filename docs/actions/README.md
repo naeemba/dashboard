@@ -124,6 +124,11 @@ Neither door holds any of the logic; each only asks.
   never over one that is there, and reloads the manager only when it wrote one
   ([processes](../processes/README.md)).
 
+- **processes.stop-earlier-mains** (launch, on Linux once systemd answers, and
+  a main about to start whose name one still held): stops the main sessions an
+  earlier launch left running, waits for the stop, and answers what is left
+  (processes-decision-6).
+
 Everything else that changes state still does it from its door. Every one of
 them, the action it moves behind and the order the nouns move in are in
 [`inventory.md`](inventory.md); `bypasses.test.ts` pins the calls and wrappers

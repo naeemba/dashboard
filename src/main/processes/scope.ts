@@ -8,23 +8,29 @@ import { SCOPE_RUNNER } from '../../shared/processes/scope-runner';
 // An agent is a Claude the app started (in a pane's terminal, or a session): it goes under
 // agents.slice, capped on its own. A task is one of the manager's commands across projects (builds,
 // tests): under agents.slice with the same caps, named `task-*` so it reads apart from a session. A
-// shell is the user's own pane or the editor: under panes.slice, uncapped.
-export type ScopeKind = 'agent' | 'task' | 'shell';
+// shell is the user's own pane or the editor: under panes.slice, uncapped. A main is a project's main
+// session, an agent whose scope also says which launch started it and stops with the app
+// (main-scopes.ts).
+export type ScopeKind = 'agent' | 'main' | 'task' | 'shell';
 
 // What one agent may hold before the kernel reclaims from it (high) and before it is killed (max).
 // The slice's own caps are in its unit file (install-slices.ts), where a drop-in tunes them.
 const AGENT_MEMORY_HIGH = '6G';
 const AGENT_MEMORY_MAX = '8G';
 
-const SLICES: Record<ScopeKind, string> = { agent: 'agents.slice', task: 'agents.slice', shell: 'panes.slice' };
-const PREFIXES: Record<ScopeKind, string> = { agent: 'agent', task: 'task', shell: 'pane' };
+const SLICES: Record<ScopeKind, string> = { agent: 'agents.slice', main: 'agents.slice', task: 'agents.slice', shell: 'panes.slice' };
+const PREFIXES: Record<ScopeKind, string> = { agent: 'agent', main: 'agent', task: 'task', shell: 'pane' };
 
 // What the edge knows: whether scopes work on this machine at all, a fresh random suffix, and
-// whether a unit name is already in use.
+// whether a unit name is already in use. `main` is what a main's scope carries, once known: its
+// description, and the app's own unit it is bound to, or null for none. `agentDescription` is what
+// every other agent's scope carries, so no agent scope this build starts keeps systemd-run's default.
 export type ScopeSupport = {
   available: boolean;
   suffix(): string;
   taken(unit: string): boolean;
+  main?: { description: string; boundTo: string | null };
+  agentDescription?: string;
 };
 
 // `id` names the scope in systemd-cgtop and `systemctl --user status 'agent-*'`: a pane's project
@@ -45,20 +51,34 @@ export function scopedCommand(request: ScopeRequest, support: ScopeSupport): Sco
     args: [
       '--user', '--scope', '--collect', '--quiet', `--slice=${SLICES[request.kind]}`, `--unit=${unit}`,
       ...(request.kind !== 'shell' ? ['-p', `MemoryHigh=${AGENT_MEMORY_HIGH}`, '-p', `MemoryMax=${AGENT_MEMORY_MAX}`] : []),
+      ...(request.kind === 'main' ? mainProperties(support.main) : []),
+      ...(request.kind === 'agent' && support.agentDescription !== undefined ? [`--description=${support.agentDescription}`] : []),
       '--', request.file, ...request.args,
     ],
     unit,
   };
 }
 
+// BindsTo stops the scope when the app's unit stops, the app killed included; After orders that stop.
+function mainProperties(main: ScopeSupport['main']): string[] {
+  if (main === undefined) return [];
+  const bound = main.boundTo === null ? [] : ['-p', `BindsTo=${main.boundTo}`, '-p', `After=${main.boundTo}`];
+  return [`--description=${main.description}`, ...bound];
+}
+
 // A name not in use, on the second try at most. Two misses in a row mean something other than chance
 // is holding the names, and the process runs unscoped rather than not at all.
 function freeUnit(request: ScopeRequest, support: ScopeSupport): string | null {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const unit = `${PREFIXES[request.kind]}-${scopeSlug(request.id)}-${support.suffix()}.scope`;
+    const unit = `${unitPrefix(request.kind, request.id)}${support.suffix()}.scope`;
     if (!support.taken(unit)) return unit;
   }
   return null;
+}
+
+// What every unit this file names for `kind` and `id` starts with, before its random suffix.
+export function unitPrefix(kind: ScopeKind, id: string): string {
+  return `${PREFIXES[kind]}-${scopeSlug(id)}-`;
 }
 
 // The same scope running another command: systemd-run's own options up to its `--`, then `file` and
