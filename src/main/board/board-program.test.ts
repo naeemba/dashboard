@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addCard, emptyBoard } from '../../shared/board/board';
 import { BOARD_FOLDER_PATH, EXPLANATION_FOR_AGENTS, readBoard, seedBoardDirectory, writeBoard } from './board-store';
 import { guardAnswer, runBoardProgram } from './board-program';
+import { runningProcess } from '../workflow/running-app-guard';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { syncBoard } from './board-sync-git';
 import { boardOn, clone, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
@@ -173,7 +174,7 @@ describe('the board command on a board git tracks', { timeout: 60_000 }, () => {
 });
 
 describe('board guard', () => {
-  const nothing = { listProcesses: () => null, exists: () => false, listWorktrees: () => null };
+  const nothing = { listProcesses: () => null, workingFolder: () => null, exists: () => false, listWorktrees: () => null };
   const write = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: '/p/.dashboard/board/cards/a.json' } });
 
   it('names $DASHBOARD_BOARD in a pane the app opened, and its own path outside one', () => {
@@ -185,9 +186,16 @@ describe('board guard', () => {
     expect(guardAnswer(JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'cat .dashboard/board/cards/a.json' } }), undefined, 'board.js', nothing, undefined)).toBe('');
   });
 
+  it('refuses a second test run in the worktree of the hook\'s cwd', () => {
+    const test = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'pnpm test' }, cwd: '/work/app' });
+    const vitest = () => [runningProcess(4300, 'node', ['node', 'vitest.mjs', 'run'])];
+    const machine = { ...nothing, listProcesses: vitest, workingFolder: () => '/work/app', exists: (path: string) => path.replaceAll('\\', '/') === '/work/app/.git' };
+    expect(JSON.parse(guardAnswer(test, undefined, 'board.js', machine, undefined)).hookSpecificOutput.permissionDecisionReason).toContain('pid 4300');
+  });
+
   it('refuses killing the running app, with its own reason', () => {
     const kill = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'kill 4242' } });
-    const app = () => [{ pid: 4242, names: ['Dashboard'], commandLine: '/home/me/.local/opt/dashboard/Dashboard --type=renderer' }];
+    const app = () => [runningProcess(4242, 'Dashboard', ['/home/me/.local/opt/dashboard/Dashboard', '--type=renderer'])];
     expect(JSON.parse(guardAnswer(kill, undefined, 'board.js', { ...nothing, listProcesses: app }, undefined)).hookSpecificOutput.permissionDecisionReason).toContain('rebuild');
     expect(guardAnswer(kill, undefined, 'board.js', nothing, undefined)).toBe('');
   });

@@ -38,3 +38,6 @@ One line per merged change: date and why.
   main and installs, not only in rebuild.sh after both
 - 2026-11-19 — `pnpm check` runs the three checks into `check.log` and prints a line each;
   `pnpm lint` holds markdown to 100 columns, and the docs are rewrapped to it (workflow-decision-11)
+- 2026-11-20 — `board guard` refuses a test command while another test run is going in the same
+  worktree, after three parallel vitest runs in one new-crm worktree filled the machine's memory
+  (workflow-decision-12)

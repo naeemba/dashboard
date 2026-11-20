@@ -20,7 +20,9 @@ file under a folder, for the tests that read the source), the running-app guard
 workflow-decision-7), the package-manager guard (`src/main/workflow/package-manager-guard.ts`,
 tested beside it, run by `board guard`; workflow-decision-9), the worktree guard
 (`src/main/workflow/worktree-guard.ts`, tested beside it, run by `board guard`;
-workflow-decision-10), `scripts/node-pty-built.mjs` and `scripts/no-running-app.mjs` (its rule in
+workflow-decision-10), the test-run guard (`src/main/workflow/test-run-guard.ts`, tested beside it,
+run by `board guard`; workflow-decision-12), `scripts/node-pty-built.mjs` and
+`scripts/no-running-app.mjs` (its rule in
 `scripts/running-app.mjs`, tested beside it), written in Node so the same hook runs on a mac, Linux
 and Windows; `pnpm check` (its summary in `scripts/check.mjs`, tested beside it, run by
 `scripts/check-step.mjs`) and the markdown width half of `pnpm lint` (`scripts/markdown-width.mjs`,
@@ -179,6 +181,12 @@ started (workflow-decision-5).
   Edit or Write of a file in another worktree of its repository, the main checkout included, then
   the call is refused saying why; removing another worktree, a file outside the repository and a
   commit message naming the command go through (`worktree-guard.test.ts`).
+- Given an agent in any Claude session the board guard reaches, on Linux, when it runs `pnpm test`,
+  `pnpm check`, `vitest`, `npm run test:unit`, `pytest` or `cargo test` while a test run is going
+  in the same worktree, a subfolder of it included, then the call is refused naming the running
+  one's pid and command line and saying to wait for it; a run while the only one going is in
+  another worktree, `pnpm lint`, `pnpm add -D vitest` and a commit message naming `pnpm test` go
+  through (`test-run-guard.test.ts`).
 - Given a test that makes a temporary folder and never removes it, when `pnpm test` ends, then the
   run fails naming the folder's prefix and count, and nothing it made is left in `/tmp`.
 - Given a clean `pnpm test`, when it ends, then `/tmp` holds the same `dashboard-*`, `create-task-*`

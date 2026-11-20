@@ -291,3 +291,29 @@ time to read its counts; and a review round on #331 went to rewrapping markdown 
   requests' notes and `.dashboard/` by the app, so neither is checked.
 - **It is a script in `pnpm lint`, not an eslint plugin**: a markdown plugin is a new dependency,
   and the check is thirty lines of Node beside a test.
+
+## workflow-decision-12: One test run at a time per worktree, held by a hook
+
+Agreed on 2026-11-20, after a new-crm worker ran three `vitest run --maxWorkers=2` at once
+(about 1.7 GB each) in one worktree: the machine hit a load of 83 and 13.6 of 16 GB of swap, and
+the `agents.slice` caps (`install-slices.ts`) did not stop it. The user chose to cap concurrent test
+runs, not to tighten the slice. `board guard` refuses, after the package manager's question
+(`src/main/workflow/test-run-guard.ts`):
+
+- **A test command** in any simple command of the line, `sh -c '…'` bodies included: a runner
+  (`vitest`, `jest`, `pytest`), a package manager's `test`, `t`, `check` or `test:*` script
+  (`pnpm test`, `npm run test:unit`, `bun test`), a runner through one (`pnpm vitest`,
+  `pnpm exec jest`, `npx vitest`), `cargo test` and `go test`, behind `timeout`, `env`, an
+  assignment or `python -m`;
+- **while one is already running in the same worktree**: a process whose argv reads as a test run by
+  the same rule, whose working folder (`/proc/<pid>/cwd`) has the same repository top (the nearest
+  folder holding `.git`) as the hook's `cwd`. So a run in a package of a monorepo counts for the
+  whole worktree, and one in a worktree nested inside the checkout counts only for that worktree.
+  The refusal names the earliest such process, its pid and command line, and says to wait.
+
+Outside a repository nothing is refused, and nor is anything where `/proc` cannot be read (a mac),
+or a process whose folder it hides (another user's). A `vitest` left in watch mode holds the
+worktree until it is stopped: it is a test run holding the memory. `pnpm --filter x test` and a
+script of your own running tests are not read as test commands. The `/work-card` skill and the
+review prompt say it too, though workflow-decision-8 moves a rule a check holds out of the text:
+on a mac the guard refuses nothing, and it cannot read those commands.
