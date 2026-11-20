@@ -126,8 +126,9 @@ Neither door holds any of the logic; each only asks.
   on screen to an address, or back, forward or loaded again.
 - **browser.show**, **.hide**, **.focus** (`browser:show`, `browser:hide`,
   `browser:focus`): the tab on screen drawn in a box of the window, or none, and
-  the keyboard into it. **browser.reset** (a project closing): every tab of it
-  gone. All in `src/main/actions/browser/` ([browser](../browser/README.md)).
+  the keyboard into it. **browser.reset** (a project closing, `browser:reset`
+  when its page leaves the screen): every tab of it gone. All in
+  `src/main/actions/browser/` ([browser](../browser/README.md)).
 
 - **processes.install-slices** (launch, on Linux once systemd answers): writes
   `agents.slice` and `panes.slice` into the user's systemd folder where missing,

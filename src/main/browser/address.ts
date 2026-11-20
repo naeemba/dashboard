@@ -10,15 +10,19 @@ export function isBrowsable(url: string): boolean {
   return url === 'about:blank' || url === 'about:srcdoc' || isOpenableLink(url);
 }
 
+// This machine and the network it is on, where a dev server listens: localhost and its subdomains, the
+// loopback and any-address, and the private IPv4 ranges (10/8, 172.16/12, 192.168/16).
+const LOCAL_HOST = /^(localhost|[^/:]+\.localhost|127(\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|10(\.\d{1,3}){3}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}|192\.168(\.\d{1,3}){2})(:\d+)?(\/|$)/i;
+
 // What was typed, as the address to load: as typed when it names its scheme, else https, except for
-// this machine's own servers, which a dev server answers without TLS. Anything that is still not a web
-// page is refused, and so is a search: there is no search engine here to send it to.
+// a server on this machine or its network, which a dev server answers without TLS. Anything that is
+// still not a web page is refused, and so is a search: there is no search engine here to send it to.
 export function addressUrl(typed: string): string | Refused {
   const text = typed.trim();
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) || text.startsWith('about:')) {
     return isBrowsable(text) ? text : { refused: `${text} is not a web page` };
   }
-  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(text);
+  const local = LOCAL_HOST.test(text);
   const url = `${local ? 'http' : 'https'}://${text}`;
   const host = URL.parse(url)?.hostname ?? '';
   return !/\s/.test(text) && (local || host.includes('.')) ? url : { refused: `${text || 'Nothing'} is not a web address` };

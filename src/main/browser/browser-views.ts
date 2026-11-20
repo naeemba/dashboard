@@ -1,5 +1,5 @@
 import { session, WebContentsView, type BrowserWindow, type WebContents } from 'electron';
-import { NO_TABS, type BrowserState, type BrowserTab } from '../../shared/browser/browser';
+import { NO_TABS, type BrowserPlacement, type BrowserState, type BrowserTab } from '../../shared/browser/browser';
 import { leavingKey } from '../../shared/keys/browser-keys';
 import type { Settings } from '../../shared/settings/settings';
 import type { BrowserPorts } from '../actions/browser/browser-ports';
@@ -19,7 +19,7 @@ export type BrowserViewsMain = {
 export function browserViews(main: BrowserViewsMain, opened: (projectPath: string, url: string) => void) {
   const browsers = new Map<string, BrowserState>();
   const views = new Map<number, WebContentsView>();
-  let placed: { projectPath: string; bounds: Electron.Rectangle } | null = null;
+  let placed: BrowserPlacement | null = null;
   let lastId = 0;
   // Each partition's permission rule is set once, by its first tab.
   const ruled = new Set<string>();
@@ -39,12 +39,13 @@ export function browserViews(main: BrowserViewsMain, opened: (projectPath: strin
   }
 
   // What the page did by itself, a link followed or a title set: written down, not asked for, so it
-  // is no action's. A site that sets the same title every second sends nothing.
+  // is no action's. A site that sets the same title every second sends nothing (withTabChange).
   function record(projectPath: string, id: number, change: Partial<Omit<BrowserTab, 'id'>>): void {
     const state = browsers.get(projectPath);
-    const tab = state?.tabs.find((each) => each.id === id);
-    if (state === undefined || tab === undefined || Object.entries(change).every(([field, value]) => tab[field as keyof BrowserTab] === value)) return;
-    browsers.set(projectPath, withTabChange(state, id, change));
+    if (state === undefined) return;
+    const next = withTabChange(state, id, change);
+    if (next === state) return;
+    browsers.set(projectPath, next);
     send(projectPath);
   }
 
@@ -79,8 +80,12 @@ export function browserViews(main: BrowserViewsMain, opened: (projectPath: strin
       const id = ++lastId;
       const partition = partitionOf(projectPath);
       // Electron grants a page every permission it asks for unless told otherwise: the camera, the
-      // microphone, your location, banners.
-      if (!ruled.has(partition)) session.fromPartition(partition).setPermissionRequestHandler((_contents, permission, answer) => answer(mayAsk(permission)));
+      // microphone, your location, banners. A check (`Notification.permission`) answers the same.
+      if (!ruled.has(partition)) {
+        const browserSession = session.fromPartition(partition);
+        browserSession.setPermissionRequestHandler((_contents, permission, answer) => answer(mayAsk(permission)));
+        browserSession.setPermissionCheckHandler((_contents, permission) => mayAsk(permission));
+      }
       ruled.add(partition);
       // No preload, so a page has no bridge to call; sandboxed and isolated like any browser tab.
       const view = new WebContentsView({ webPreferences: { partition, sandbox: true, contextIsolation: true, nodeIntegration: false } });

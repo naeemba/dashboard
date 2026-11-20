@@ -1,6 +1,4 @@
-import type { Refused } from '../../../shared/app/bridge';
-import type { BrowserBounds, BrowserState, BrowserStep } from '../../../shared/browser/browser';
-import { isFilledText } from '../pane/pane-input';
+import type { BrowserPlacement, BrowserState, BrowserStep } from '../../../shared/browser/browser';
 
 // What the browser actions do to the views, handed to them by browser-views.ts, the one module that
 // holds a WebContentsView. Nothing here decides anything: every rule is in the actions and in
@@ -15,10 +13,6 @@ export type BrowserPorts = {
   load(id: number, url: string): void;
   step(id: number, step: BrowserStep): void;
   // The project whose tab on screen is drawn, and where; null draws none.
-  place(placed: { projectPath: string; bounds: BrowserBounds } | null): void;
+  place(placed: BrowserPlacement | null): void;
   focus(id: number): void;
 };
-
-export function projectInput(raw: Record<string, unknown>): { projectPath: string } | Refused {
-  return isFilledText(raw.projectPath) ? { projectPath: raw.projectPath } : { refused: 'no project folder was given' };
-}

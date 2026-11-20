@@ -15,8 +15,9 @@ the top, the address bar sits under it, and the rest of the page is the web page
 of the tab on screen. The manager has no browser.
 
 A project with no tab open lands on the address bar. Type an address and Enter
-opens it in a first tab. An address without a scheme gets https, and this
-machine's own (`localhost`, `127.0.0.1`) gets http, which a dev server answers. A
+opens it in a first tab. An address without a scheme gets https, and one a dev
+server answers gets http: `localhost` and `*.localhost`, `127.0.0.1`, `0.0.0.0`,
+`[::1]` and the private ranges (`10.*`, `172.16.*` to `172.31.*`, `192.168.*`). A
 search, a file and an internal page are refused on the status bar: there is no
 search engine to send a search to, and a tab never shows a file on this disk.
 
@@ -34,15 +35,17 @@ move the highlight along the tabs and the new tab chip at the end, Enter goes to
 the highlighted tab, Down goes back to the address bar and Escape to the page. A
 click on a tab moves the highlight there, then does what Enter does.
 
-A page that opens a window (a link with `target=_blank`, a sign-in popup) opens
+A page that opens a window (a link with `target=_blank`, a `window.open`) opens
 a tab instead. A tab an agent holds names its pane after its title; every tab
 is yours for now.
 
-The tabs close with the project. The sign-ins do not: cookies and storage are
+The tabs close with the project's page: the project closed, or the screen
+joining another host or coming back from one. The sign-ins do not: cookies and storage are
 kept on disk per project folder, apart from every other project and from the
 app's own window, and the next open of the project is still signed in. A page is
-refused the camera, the microphone, the location, notifications and the screen;
-it may write to the clipboard.
+refused the camera, the microphone, the location, notifications and the screen,
+and a page that only checks (`Notification.permission`) is told the same; it may
+write to the clipboard.
 
 While anything floats over the app (a dialog, the which-key strip, the file
 hints) the web page is taken off the window and comes back when it goes: a web
@@ -95,3 +98,9 @@ The keys are in `src/shared/keys/browser-actions.ts` and
 - Tabs do not come back after a restart; the mode does, on the address bar.
 - Google refuses to sign in inside an embedded browser ("disallowed_useragent"),
   so a site behind a Google login never signs in here.
+- A sign-in popup opens as a tab with no `window.opener`, so a site that sends
+  the sign-in back through the opener ("Sign in with GitHub", most SSO buttons)
+  never finishes it. Keeping the opener means building the popup's view from
+  `createWindow` in the same partition.
+- The sign-ins are kept per folder path on this machine, so a host's project at
+  the same path as one of yours shares its sign-ins while you are joined to it.

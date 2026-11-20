@@ -38,6 +38,12 @@ describe('browser.close', () => {
     expect(ports.browsers.get(project)).toEqual({ tabs: [tab(2)], active: 2 });
   });
 
+  it('reads the tab id the command sends as a word', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1), tab(3)], active: 1 } });
+    await expect(bind(browserClose, ports).call({ projectPath: project, tab: '3' })).resolves.toEqual({ output: 'closed tab 3' });
+    await expect(bind(browserClose, ports).call({ projectPath: project, tab: 'three' })).resolves.toEqual({ refused: 'no tab was named' });
+  });
+
   it("refuses another project's tab", async () => {
     const ports = fakePorts({ [project]: { tabs: [tab(1)], active: 1 }, '/work/web': { tabs: [tab(2)], active: 2 } });
     await expect(bind(browserClose, ports).call({ projectPath: project, tab: 2 }))

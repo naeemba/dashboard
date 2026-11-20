@@ -4,7 +4,7 @@
 import {
   ArrowDownWideNarrow, Ban, Bitcoin, Bot, Calendar, Check, ChevronDown, ChevronRight, CircleCheck, CircleDashed, CircleDot, Cloud,
   CloudDrizzle, CloudFog, CloudLightning, CloudRain, CloudSnow, CloudSun, Coins, Columns3, Copy, CornerLeftUp, createElement,
-  DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, Globe, GitPullRequest, Inbox, Keyboard, LayoutDashboard,
+  DollarSign, Droplet, Eye, FilePen, Folder, FolderPlus, Funnel, GitBranch, GitPullRequest, Globe, Inbox, Keyboard, LayoutDashboard,
   MessageSquare, NotebookPen, PanelLeft, Plug, RefreshCw, Rocket, ScrollText, Settings, Square, SquareCheck, SquareTerminal, Sun,
   Terminal, Trees, X,
   type IconNode,

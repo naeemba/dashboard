@@ -6,8 +6,7 @@
 // them, and a saved page naming one would come back on a view its page never built.
 export const PROJECT_MODES = ['terminals', 'nvim', 'board', 'notes', 'browser'] as const;
 // The same five as a type, so page.ts builds its record of views from this list rather than spelling
-// the four names again beside it. A sixth project view is then one row above and nothing else to keep
-// in step.
+// the five names again beside it. The other places a new project view goes are keys-rule-1's.
 export type ProjectMode = typeof PROJECT_MODES[number];
 
 // A page shows one of these at a time. A project opens as terminals and moves between the first five;

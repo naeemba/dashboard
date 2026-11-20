@@ -15,8 +15,11 @@ export const NO_TABS: BrowserState = { tabs: [], active: null };
 // Where on the window the tab on screen is drawn, in the window's own pixels.
 export type BrowserBounds = { x: number; y: number; width: number; height: number };
 
+// The project whose tab on screen is drawn, and where.
+export type BrowserPlacement = { projectPath: string; bounds: BrowserBounds };
+
 export type BrowserStep = 'back' | 'forward' | 'reload';
 
 // The browser actions the screen reaches, each its `browser:<verb>` channel.
-export const BROWSER_VERBS = ['open', 'close', 'switch', 'navigate', 'step', 'show', 'hide', 'focus'] as const;
+export const BROWSER_VERBS = ['open', 'close', 'switch', 'navigate', 'step', 'show', 'hide', 'focus', 'reset'] as const;
 export type BrowserVerb = typeof BROWSER_VERBS[number];

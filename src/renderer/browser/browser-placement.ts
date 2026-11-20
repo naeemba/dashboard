@@ -1,4 +1,4 @@
-import type { BrowserBounds } from '../../shared/browser/browser';
+import type { BrowserBounds, BrowserPlacement } from '../../shared/browser/browser';
 
 // Where the browser's web page is drawn, if anywhere. The page is a native view on top of the whole
 // window: no HTML can be drawn over it, so a dialog opened while it shows would open under the page,
@@ -25,7 +25,7 @@ export type BrowserSpot = { projectPath: string; onScreen: boolean; bounds: Brow
 
 export function browserPlacement(
   spots: readonly BrowserSpot[], layers: readonly BodyLayer[],
-): { projectPath: string; bounds: BrowserBounds } | null {
+): BrowserPlacement | null {
   if (floatsOverApp(layers)) return null;
   const spot = spots.find((each) => each.onScreen && each.bounds.width > 0 && each.bounds.height > 0);
   return spot === undefined ? null : { projectPath: spot.projectPath, bounds: spot.bounds };

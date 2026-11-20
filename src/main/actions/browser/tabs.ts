@@ -1,8 +1,9 @@
 import { stringOrEmpty } from '../../../shared/app/is-record';
 import { isRefused, action } from '../action';
 import { addressUrl } from '../../browser/address';
-import { activeTab, namedTab, steppedTab, withoutTab, withTab } from '../../browser/browser-tabs';
-import { projectInput, type BrowserPorts } from './browser-ports';
+import { activeTab, namedTab, steppedTab, wholeNumber, withoutTab, withTab } from '../../browser/browser-tabs';
+import type { BrowserPorts } from './browser-ports';
+import { projectInput } from '../pane/pane-input';
 
 // browser.open, browser.close and browser.switch: a project's tab list. A tab opens for you; an
 // agent's claim on one is the browser command's (docs/browser/README.md).
@@ -26,11 +27,15 @@ export const browserOpen = action<BrowserPorts, { projectPath: string; url: stri
   },
 });
 
-export const browserClose = action<BrowserPorts, { projectPath: string; tab: unknown }, { output: string }>('browser.close', {
+const NO_TAB_NAMED = { refused: 'no tab was named' };
+
+export const browserClose = action<BrowserPorts, { projectPath: string; tab: number }, { output: string }>('browser.close', {
   words: ['tab'],
   input: (raw) => {
     const project = projectInput(raw);
-    return isRefused(project) ? project : { ...project, tab: raw.tab };
+    if (isRefused(project)) return project;
+    const tab = wholeNumber(raw.tab);
+    return tab === null ? NO_TAB_NAMED : { ...project, tab };
   },
   async run(ports, { projectPath, tab }) {
     const id = namedTab(ports.browserOf(projectPath), tab);
@@ -42,16 +47,18 @@ export const browserClose = action<BrowserPorts, { projectPath: string; tab: unk
 });
 
 // A tab by its id, or `step` places along from the one on screen, round the ends.
-export const browserSwitch = action<BrowserPorts, { projectPath: string; tab: unknown; step: number | null }, { output: string }>('browser.switch', {
+export const browserSwitch = action<BrowserPorts, { projectPath: string; tab: number | null; step: number | null }, { output: string }>('browser.switch', {
   words: ['tab'],
   input(raw) {
     const project = projectInput(raw);
     if (isRefused(project)) return project;
-    return { ...project, tab: raw.tab, step: Number.isInteger(raw.step) ? raw.step as number : null };
+    const tab = wholeNumber(raw.tab);
+    const step = wholeNumber(raw.step);
+    return tab === null && step === null ? NO_TAB_NAMED : { ...project, tab, step };
   },
   async run(ports, { projectPath, tab, step }) {
     const state = ports.browserOf(projectPath);
-    const from = step === null ? namedTab(state, tab) : activeTab(state);
+    const from = step === null && tab !== null ? namedTab(state, tab) : activeTab(state);
     if (isRefused(from)) return from;
     const id = step === null ? from : steppedTab(state, step) ?? from;
     ports.keep(projectPath, { ...state, active: id });

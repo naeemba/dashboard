@@ -32,4 +32,7 @@ No second list of keys to keep in step, and a rebinding reaches both at once.
 A native view cannot be drawn under HTML. The page is hidden, not shrunk, while
 a layer floats over the app (browser-rule-1): a dialog's sheet covers the whole
 window anyway, and the which-key strip is up only while a modifier is held. The
-cost is the page blinking out while you hold Ctrl in the address bar.
+cost is the page blinking out while you hold Ctrl in the address bar, once the
+strip's 400 ms wait is over: the strip counts only once it is visible, so a chord
+typed through it (Ctrl+A, Ctrl+V) never blinks the page. An empty strip still
+counts after its wait, as when you hold Alt on a screen with no Alt keys.

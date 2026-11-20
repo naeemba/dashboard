@@ -109,8 +109,9 @@ const BELL_SETTLE_MS = 1000;
 export type Page = {
   project: Project;
   element: HTMLElement;
-  // Only the views this page actually has. A project has five and the manager five of its own; a dead project has none, and that is what stops the mode keys switching it to a view
-  // that was never built.
+  // Only the views this page actually has. A project has five and the manager five of its own; a dead
+  // project has none, and that is what stops the mode keys switching it to a view that was never
+  // built.
   views: Partial<Record<Mode, HTMLElement>>;
   mode: Mode;
   // The open workers in the order they are drawn, by number. Main is the Claude screen, `chat`, not one

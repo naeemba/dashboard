@@ -25,7 +25,7 @@ export type BrowserView = {
   focus(): void;
   runCommand(command: BrowserCommand): void;
   statusLabel(): string;
-  // The page is gone: its screen is measured and told of nothing more.
+  // The page is gone, and its tabs with it: its screen is measured and told of nothing more.
   close(): void;
 };
 
@@ -99,7 +99,10 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
     }), Object.assign(document.createElement('span'), { className: 'browser-tab browser-tab-new', textContent: '+ New tab' })];
     chips.forEach((chip, index) => {
       chip.classList.toggle('highlighted', index === highlighted);
-      // A click moves the highlight there, then does what Enter does (conventions-rule-1).
+      // A click moves the highlight there, then does what Enter does (conventions-rule-1). The press
+      // keeps the keyboard where it is: focusing the row would redraw it, and a chip rebuilt under the
+      // pointer never gets its click.
+      chip.addEventListener('mousedown', (event) => event.preventDefault());
       chip.addEventListener('click', () => {
         highlighted = index;
         choose();
@@ -199,7 +202,10 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
       const tab = shownTab();
       return tab === undefined ? 'no tab' : tabName(tab);
     },
+    // Main closes a project's tabs when this machine closes it, but a host's project, or one of ours
+    // left behind on joining a host, goes from this screen without main hearing: the page says so.
     close() {
+      void bridge.browser('reset', { projectPath }).catch(() => undefined);
       screens.delete(projectPath);
       resized.unobserve(page);
       queue();
@@ -212,17 +218,19 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
 // shown or hidden, a box resized (the window, the drawer), a layer added to the body or taken off.
 let said = '';
 let queued = false;
-let placing: DashboardBridge | null = null;
+let placementBridge: DashboardBridge | null = null;
 const resized = new ResizeObserver(queue);
 new MutationObserver(queue).observe(document.body, { childList: true });
 new MutationObserver(queue).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
+// The which-key strip's wait ending (which-key.css), when it turns visible.
+document.body.addEventListener('animationend', queue);
 
 export function listenForBrowsers(bridge: DashboardBridge): void {
   bridge.onBrowserChange((projectPath, state) => {
     screens.get(projectPath)?.receive(state);
     queue();
   });
-  placing = bridge;
+  placementBridge = bridge;
 }
 
 function queue(): void {
@@ -237,10 +245,10 @@ function sync(): void {
   const withTabs = [...screens.values()].filter((screen) => screen.hasTabs());
   const placed = withTabs.length === 0 ? null : browserPlacement(
     withTabs.map((screen) => screen.spot()),
-    [...document.body.children].map((layer) => ({ id: layer.id, drawn: layer.checkVisibility() })),
+    [...document.body.children].map((layer) => ({ id: layer.id, drawn: layer.checkVisibility({ visibilityProperty: true }) })),
   );
   const saying = JSON.stringify(placed);
-  if (saying === said || placing === null) return;
+  if (saying === said || placementBridge === null) return;
   said = saying;
-  void (placed === null ? placing.browser('hide', {}) : placing.browser('show', placed)).catch(() => { said = ''; });
+  void (placed === null ? placementBridge.browser('hide', {}) : placementBridge.browser('show', placed)).catch(() => { said = ''; });
 }

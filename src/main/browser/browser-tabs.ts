@@ -26,16 +26,26 @@ export function steppedTab(state: BrowserState, step: number): number | null {
   return state.tabs[(place + step + state.tabs.length) % state.tabs.length].id;
 }
 
+// The same state back when nothing changes, a tab not there or every field already so, so the caller
+// can tell a change from none by identity.
 export function withTabChange(state: BrowserState, id: number, change: Partial<Omit<BrowserTab, 'id'>>): BrowserState {
-  return { ...state, tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, ...change } : tab)) };
+  const tab = state.tabs.find((each) => each.id === id);
+  if (tab === undefined || Object.entries(change).every(([field, value]) => tab[field as keyof BrowserTab] === value)) return state;
+  return { ...state, tabs: state.tabs.map((each) => (each === tab ? { ...tab, ...change } : each)) };
 }
 
 export const NO_TAB_OPEN: Refused = { refused: 'this project has no tab open' };
 
 // The tab a door named, or why it is not one to act on. The actions answer with it.
-export function namedTab(state: BrowserState, id: unknown): number | Refused {
+export function namedTab(state: BrowserState, id: number): number | Refused {
   if (state.tabs.length === 0) return NO_TAB_OPEN;
-  return state.tabs.some((tab) => tab.id === id) ? id as number : { refused: `there is no tab ${String(id)} in this project` };
+  return state.tabs.some((tab) => tab.id === id) ? id : { refused: `there is no tab ${id} in this project` };
+}
+
+// A whole number as a door gave it: a number from the screen, a word from the browser command.
+export function wholeNumber(value: unknown): number | null {
+  const number = typeof value === 'number' || (typeof value === 'string' && value.trim() !== '') ? Number(value) : NaN;
+  return Number.isInteger(number) ? number : null;
 }
 
 // The tab on screen, for an action that acts on it.

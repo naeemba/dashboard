@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NO_TABS, type BrowserState } from '../../shared/browser/browser';
-import { activeTab, mayAsk, namedTab, partitionOf, shownTab, steppedTab, withoutTab, withTab, withTabChange } from './browser-tabs';
+import { activeTab, mayAsk, namedTab, partitionOf, shownTab, steppedTab, wholeNumber, withoutTab, withTab, withTabChange } from './browser-tabs';
 
 const tab = (id: number) => ({ id, url: 'about:blank', title: '', holder: 'user' });
 const three: BrowserState = { tabs: [tab(1), tab(2), tab(3)], active: 2 };
@@ -30,6 +30,17 @@ describe('the tab list', () => {
 
   it('changes only the tab named', () => {
     expect(withTabChange(three, 2, { title: 'Docs' }).tabs.map((each) => each.title)).toEqual(['', 'Docs', '']);
+  });
+
+  it('answers the same state when nothing changes, so a title set again sends nothing', () => {
+    expect(withTabChange(three, 2, { title: '' })).toBe(three);
+    expect(withTabChange(three, 9, { title: 'Docs' })).toBe(three);
+  });
+
+  it('reads a tab id from the screen or the command', () => {
+    expect(wholeNumber(3)).toBe(3);
+    expect(wholeNumber('3')).toBe(3);
+    for (const value of [undefined, null, '', ' ', 'three', 1.5]) expect(wholeNumber(value)).toBeNull();
   });
 
   it('refuses a tab the project does not have', () => {

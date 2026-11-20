@@ -3,7 +3,8 @@ import type { BrowserStep } from '../../../shared/browser/browser';
 import { isRefused, action } from '../action';
 import { addressUrl } from '../../browser/address';
 import { activeTab, withTabChange } from '../../browser/browser-tabs';
-import { projectInput, type BrowserPorts } from './browser-ports';
+import type { BrowserPorts } from './browser-ports';
+import { projectInput } from '../pane/pane-input';
 
 // browser.navigate and browser.step: what the tab on screen shows. Where the page then goes by itself,
 // a link followed or a redirect, is the view's to report (browser-views.ts), not an action's.

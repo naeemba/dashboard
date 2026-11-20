@@ -1,8 +1,9 @@
-import type { BrowserBounds } from '../../../shared/browser/browser';
+import type { BrowserBounds, BrowserPlacement } from '../../../shared/browser/browser';
 import { NO_TABS } from '../../../shared/browser/browser';
 import { isRecord } from '../../../shared/app/is-record';
 import { isRefused, action } from '../action';
-import { projectInput, type BrowserPorts } from './browser-ports';
+import type { BrowserPorts } from './browser-ports';
+import { projectInput } from '../pane/pane-input';
 import { activeTab } from '../../browser/browser-tabs';
 
 // browser.show, browser.hide, browser.focus and browser.reset: the view on the window. A web page is a
@@ -18,7 +19,7 @@ export function boundsOf(value: unknown): BrowserBounds | null {
   return { x, y, width, height };
 }
 
-export const browserShow = action<BrowserPorts, { projectPath: string; bounds: BrowserBounds }, { output: string }>('browser.show', {
+export const browserShow = action<BrowserPorts, BrowserPlacement, { output: string }>('browser.show', {
   words: [],
   input(raw) {
     const project = projectInput(raw);
