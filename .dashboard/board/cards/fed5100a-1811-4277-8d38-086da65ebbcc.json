@@ -5,7 +5,8 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-20T13:19:30.852Z",
-  "updatedAt": "2026-11-20T13:19:30.852Z",
-  "column": "Backlog",
-  "order": 54
+  "updatedAt": "2026-11-20T13:19:48.197Z",
+  "branch": "main-sessions-from-an-earlier-launch-are-st",
+  "column": "Doing",
+  "order": 1
 }
