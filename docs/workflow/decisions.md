@@ -317,6 +317,6 @@ Outside a repository nothing is refused, and nor is anything where `/proc` canno
 or a process whose folder it hides (another user's). A `vitest` left in watch mode holds the
 worktree until it is stopped: it is a test run holding the memory. `pnpm --filter x test` and a
 script of your own running tests are not read as test commands, and `pnpm -C <dir> test` is judged
-in the hook's `cwd`, not `<dir>`. The `/work-card` skill and the
-review prompt say it too, though workflow-decision-8 moves a rule a check holds out of the text:
-on a mac the guard refuses nothing, and it cannot read those commands.
+in the hook's `cwd`, not `<dir>`. The `/work-card` skill and the review prompt say it too, though
+workflow-decision-8 moves a rule a check holds out of the text: on a mac the guard refuses nothing,
+and it cannot read those commands.
