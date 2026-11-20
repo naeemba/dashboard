@@ -2,6 +2,9 @@
 
 One line per merged change: date and why.
 
+- 2026-11-20 — A main session's scope is stopped when the app quits or is
+  killed, and the next launch stops what an earlier one left, so a worker's
+  report never reaches an orphaned main (processes-decision-6)
 - 2026-11-16 #297 — A pane whose scope its close could not stop is a warning in
   the log, as the close key shows nothing (#259)
 - 2026-11-09 #268 — Each pane's and session's memory read from its scope every
