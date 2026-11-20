@@ -5,8 +5,15 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-20T13:19:30.852Z",
-  "updatedAt": "2026-11-20T13:19:48.197Z",
+  "updatedAt": "2026-11-20T13:43:55.987Z",
   "branch": "main-sessions-from-an-earlier-launch-are-st",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 342,
+  "comments": [
+    {
+      "at": "2026-11-20T13:43:55.961Z",
+      "body": "Pull request #342 opened: Main sessions from an earlier launch are stopped, and a launch never starts a second main https://github.com/naeemba/dashboard/pull/342"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }
