@@ -234,7 +234,7 @@ const panes = paneShells({
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
-    releaseAgentPane(id);
+    releaseAgentPane(id); browser.letGo(id);
   },
 });
 const { shells, screenCopies } = panes;
@@ -506,7 +506,7 @@ const workerScreens = screenWorkers({
 // a pane opened, closed, typed into, and each one back after a restart.
 const pane = paneActions({
   platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched, ranAs: sessionIndex.ranAs,
-  forgetAnswers: (id) => workerAnswers.forget(id), mainsWorkers,
+  forgetAnswers: (id) => { workerAnswers.forget(id); browser.letGo(id); }, mainsWorkers,
   commands: terminalCommands, setPaneCommand, shells, spawn: panes.spawn,
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,
   log: (draft) => logStore.log(draft),
@@ -603,7 +603,7 @@ function setPaneCommand(id: string, command: PaneCommand): void {
 function dropPane(id: string): void {
   workerScreens.drop(id);
   mainsWorkers.delete(id);
-  workerAnswers.forget(id);
+  workerAnswers.forget(id); browser.letGo(id);
   panes.drop(id);
   terminalCommands.delete(id);
   paneScreens.drop(id);
@@ -814,7 +814,7 @@ setInterval(() => {
 }, CLOSE_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
-const answerSession = projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers));
+const answerSession = browser.requests({ slotOf: slotOfProject, projectPath: (slot) => projectIn(slot)?.path, paneOpen: (id) => terminalCommands.has(id) || (paneFromId(id).index === MAIN_INDEX && projectIn(paneFromId(id).slot) !== undefined) }, projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));
 // Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
 // kept would get a fresh shell over one it already has. They wait on the scope check too (panesReady),
 // so no pane starts unscoped for being early. project.open waits for the screen host as well.

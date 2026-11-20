@@ -35,7 +35,7 @@ type Saved = {
 };
 
 // What chat-sessions runs it on, beside what is saved of it and whether its last turn has ended.
-type Worker = ScreenSession & { id: string; saved: Saved; done: boolean };
+type Worker = ScreenSession & { saved: Saved; done: boolean };
 
 export type ScreenPorts = {
   file: string;

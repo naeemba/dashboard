@@ -8,7 +8,7 @@ import { runningElsewhere, sessionResume } from './resume';
 import { sessionRewind, type SessionRewindPorts } from './rewind';
 
 const screen = (owner: 'main' | 'you'): ScreenSession => ({
-  session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, owner, carryOnIn: () => undefined,
+  id: '1:2', session: 'abc', name: 'api-terminal-2', hooks: {}, resume: true, owner, carryOnIn: () => undefined,
 });
 
 // Slot 1 is the page's main, 2 a screen opened by hand, 3 main's worker screen, 9 a page with no folder.

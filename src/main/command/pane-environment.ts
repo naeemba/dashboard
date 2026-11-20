@@ -1,8 +1,9 @@
 import path from 'node:path';
 
 // What every pane's shell is handed so an agent in it can reach this app: the command files and the
-// socket. Built once in main.ts; every pane gets the same object, since cloning the whole environment
-// per pane is a clone per pane opened for a value that never changes.
+// socket. Built once in main.ts; every pane gets the same object, and the one value that is each pane's
+// own, DASHBOARD_PANE, is added by paneEnvironment at its spawn (pane-shells.ts, and chat-sessions.ts
+// for a Claude screen).
 //
 // `buildFolder` is the unpacked .vite/build folder: node is what runs these files, and node cannot read
 // one inside an asar, so forge puts them in app.asar.unpacked.
@@ -24,6 +25,11 @@ export function paneCommands(buildFolder: string): PaneCommands {
 
 // `appExecutable` is what `dashboard` starts when no app answers (start-app.ts), or null for a
 // development run, whose executable is Electron's own and opens nothing without the checkout beside it.
+// One pane's environment: the shared one and its own id, which the browser command acts for.
+export function paneEnvironment(shared: Record<string, string>, pane: string): Record<string, string> {
+  return { ...shared, DASHBOARD_PANE: pane };
+}
+
 export function environmentForPanes(
   environment: NodeJS.ProcessEnv, commands: PaneCommands, socket: string, userData: string, appExecutable: string | null,
 ): Record<string, string> {
