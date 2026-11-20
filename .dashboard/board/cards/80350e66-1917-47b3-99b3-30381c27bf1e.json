@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T12:01:37.603Z",
-  "updatedAt": "2026-11-20T12:01:37.604Z",
-  "column": "Backlog",
-  "order": 52
+  "updatedAt": "2026-11-20T12:01:57.846Z",
+  "branch": "browser-mode-a-per-project-browser-with-tab",
+  "column": "Doing",
+  "order": 0
 }
