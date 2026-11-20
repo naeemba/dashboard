@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T13:19:37.668Z",
-  "updatedAt": "2026-11-20T13:40:21.388Z",
+  "updatedAt": "2026-11-20T14:02:07.683Z",
   "branch": "one-test-run-at-a-time-per-worktree",
   "pullRequest": 340,
   "comments": [
     {
       "at": "2026-11-20T13:40:21.358Z",
       "body": "Pull request #340 opened: One test run at a time per worktree https://github.com/naeemba/dashboard/pull/340"
+    },
+    {
+      "at": "2026-11-20T14:02:07.683Z",
+      "body": "PR #340 review loop: converged, ready to merge. 2 rounds, 8 findings all fixed (cd now followed by the test-run guard, Windows-path test, a doc rewrap, resolveWord moved to hook-answer.ts), 0 rejected, none open. CI 5/5 green on head cfc2d6ca. No conflict with main; design unchanged."
     }
   ],
   "column": "Review",
