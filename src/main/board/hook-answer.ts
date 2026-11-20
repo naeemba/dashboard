@@ -2,9 +2,9 @@ import { dirname, join } from 'node:path';
 import { isRecord } from '../../shared/app/is-record';
 
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
-// package-manager-guard.ts, worktree-guard.ts): a field of the tool's input, the file tools, the
-// shell's redirect or tee into a file, a command line cut into its simple commands and the verb each
-// runs, the repository a folder is in, and the refusal they print.
+// package-manager-guard.ts, worktree-guard.ts, test-run-guard.ts): a field of the tool's input, the
+// file tools, the shell's redirect or tee into a file, a command line cut into its simple commands and
+// the verb each runs, the repository a folder is in, and the refusal they print.
 
 export function textField(input: unknown, field: string): string {
   const value = isRecord(input) ? input[field] : undefined;

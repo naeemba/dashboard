@@ -1,9 +1,11 @@
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runningProcess } from './running-app-guard';
-import { runsTests, startsTestRun, testRunGuard } from './test-run-guard';
+import { runsTests, testRunFolders, testRunGuard } from './test-run-guard';
 
-// The guard joins with the platform's separator, so on Windows it asks for `\work\app\.git`.
-const files = (...paths: string[]) => (path: string) => paths.includes(path.replaceAll('\\', '/'));
+// The guard joins with the platform's separator, so on Windows it asks for `\work\app\.git`, and a
+// folder a `cd` resolved carries a drive letter.
+const files = (...paths: string[]) => (path: string) => paths.includes(path.replaceAll('\\', '/').replace(/^[A-Za-z]:/, ''));
 const repositories = files('/work/app/.git', '/work/app.worktrees/card/.git', '/work/app/.adopt-docs/.git');
 type Running = { process: ReturnType<typeof runningProcess>; folder: string | null };
 const running = (pid: number, commandLine: string, folder: string | null): Running => ({ process: runningProcess(pid, 'node', commandLine.split(' ')), folder });
@@ -14,13 +16,16 @@ const machineWith = (...processes: Running[]) => ({
 });
 const reason = (answer: ReturnType<typeof testRunGuard>) => answer?.hookSpecificOutput.permissionDecisionReason;
 
-describe('startsTestRun', () => {
+describe('testRunFolders', () => {
+  const startsTestRun = (command: string) => testRunFolders(command, '/work/app').length > 0;
+
   it.each([
     'pnpm test',
     'pnpm check',
     'npm test',
     'npm t',
     'npm run test:unit',
+    'npm run-script test',
     'yarn test --watch=false',
     'bun test',
     'vitest run --maxWorkers=2',
@@ -53,6 +58,12 @@ describe('startsTestRun', () => {
   ])('reads %s as no test run', (command) => {
     expect(startsTestRun(command)).toBe(false);
   });
+
+  it('follows a cd earlier in the line, into an sh -c body too', () => {
+    const fromCheckout = (command: string) => testRunFolders(command, '/work/app').map((folder) => folder.replaceAll('\\', '/'));
+    expect(fromCheckout('cd ../app.worktrees/card && pnpm test')).toEqual([expect.stringMatching(/\/work\/app\.worktrees\/card$/)]);
+    expect(fromCheckout("cd packages/core && sh -c 'pnpm test'")).toEqual([expect.stringMatching(/\/work\/app\/packages\/core$/)]);
+  });
 });
 
 describe('runsTests on a process argv', () => {
@@ -84,6 +95,17 @@ describe('testRunGuard', () => {
   it('refuses from a subfolder when the run started in another subfolder of the worktree', () => {
     const inPackage = running(5000, 'vitest run', '/work/app/packages/core');
     expect(reason(guard('pnpm check', '/work/app', inPackage))).toContain('pid 5000');
+  });
+
+  it('judges a run where a cd earlier in the line moved to', () => {
+    expect(reason(guard('cd ../app.worktrees/card && pnpm test', '/work/app', running(8000, 'vitest run', resolve('/work/app.worktrees/card'))))).toContain('pid 8000');
+    expect(guard('cd ../app.worktrees/card && pnpm test', '/work/app', vitest)).toBeUndefined();
+  });
+
+  it('cuts a long command line in the refusal', () => {
+    const long = running(9000, `vitest run ${'x'.repeat(200)}`, '/work/app');
+    const answer = reason(guard('pnpm test', '/work/app', long)) ?? '';
+    expect(answer).toContain(`pid 9000: vitest run ${'x'.repeat(149)}…)`);
   });
 
   it('lets a run through while the only one going is in another worktree', () => {

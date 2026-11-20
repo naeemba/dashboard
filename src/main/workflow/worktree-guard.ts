@@ -25,7 +25,7 @@ const EDIT_REASON = 'That file is in another worktree of this repository, where 
   + 'agent, is at work. Change files only in the worktree this session runs in.';
 
 // A word of the command as a path from `base`, with `$PWD` and `~` read.
-function resolveWord(word: string, base: string): string {
+export function resolveWord(word: string, base: string): string {
   const expanded = word.replace(/^(?:\$PWD|\$\{PWD\}|\$\(pwd\))(?=\/|$)/, base).replace(/^~(?=\/|$)/, os.homedir());
   return path.resolve(base, expanded);
 }

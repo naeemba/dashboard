@@ -309,11 +309,14 @@ runs, not to tighten the slice. `board guard` refuses, after the package manager
   the same rule, whose working folder (`/proc/<pid>/cwd`) has the same repository top (the nearest
   folder holding `.git`) as the hook's `cwd`. So a run in a package of a monorepo counts for the
   whole worktree, and one in a worktree nested inside the checkout counts only for that worktree.
-  The refusal names the earliest such process, its pid and command line, and says to wait.
+  The refusal names the earliest such process, its pid and command line, and says to wait. A `cd`
+  earlier in the line is followed, so `cd ../app.worktrees/card && pnpm test` is judged in the
+  card's worktree.
 
 Outside a repository nothing is refused, and nor is anything where `/proc` cannot be read (a mac),
 or a process whose folder it hides (another user's). A `vitest` left in watch mode holds the
 worktree until it is stopped: it is a test run holding the memory. `pnpm --filter x test` and a
-script of your own running tests are not read as test commands. The `/work-card` skill and the
+script of your own running tests are not read as test commands, and `pnpm -C <dir> test` is judged
+in the hook's `cwd`, not `<dir>`. The `/work-card` skill and the
 review prompt say it too, though workflow-decision-8 moves a rule a check holds out of the text:
 on a mac the guard refuses nothing, and it cannot read those commands.

@@ -22,12 +22,12 @@ tested beside it, run by `board guard`; workflow-decision-9), the worktree guard
 (`src/main/workflow/worktree-guard.ts`, tested beside it, run by `board guard`;
 workflow-decision-10), the test-run guard (`src/main/workflow/test-run-guard.ts`, tested beside it,
 run by `board guard`; workflow-decision-12), `scripts/node-pty-built.mjs` and
-`scripts/no-running-app.mjs` (its rule in
-`scripts/running-app.mjs`, tested beside it), written in Node so the same hook runs on a mac, Linux
-and Windows; `pnpm check` (its summary in `scripts/check.mjs`, tested beside it, run by
-`scripts/check-step.mjs`) and the markdown width half of `pnpm lint` (`scripts/markdown-width.mjs`,
-tested beside it, run by `scripts/markdown-width-step.mjs`; workflow-decision-11); `CLAUDE.md`
-carries each rule a check does not hold in one line and points at its id here (workflow-decision-8).
+`scripts/no-running-app.mjs` (its rule in `scripts/running-app.mjs`, tested beside it), written in
+Node so the same hook runs on a mac, Linux and Windows; `pnpm check` (its summary in
+`scripts/check.mjs`, tested beside it, run by `scripts/check-step.mjs`) and the markdown width half
+of `pnpm lint` (`scripts/markdown-width.mjs`, tested beside it, run by
+`scripts/markdown-width-step.mjs`; workflow-decision-11); `CLAUDE.md` carries each rule a check does
+not hold in one line and points at its id here (workflow-decision-8).
 
 `claude-md-audit.md` is the 2026-11-09 audit of every CLAUDE.md rule, global and this repo's: which
 stay, which a tool or hook should carry, and the cards that moved them.

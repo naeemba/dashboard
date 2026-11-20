@@ -12,9 +12,9 @@ import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
 import { holdsWorktree } from '../workers/run-folder';
 import { boardGuard } from './board-guard';
-import { runningAppGuard, runningProcess, type ProcessList, type RunningProcess } from '../workflow/running-app-guard';
+import { runningAppGuard, runningProcess, type RunningProcess } from '../workflow/running-app-guard';
 import { packageManagerGuard } from '../workflow/package-manager-guard';
-import { testRunGuard, type WorkingFolder } from '../workflow/test-run-guard';
+import { testRunGuard, type TestRunMachine } from '../workflow/test-run-guard';
 import { worktreeGuard, type WorktreeList } from '../workflow/worktree-guard';
 import { gitNow } from '../app/git';
 import { parseEveryWorktree } from '../../shared/ship/git-worktrees';
@@ -126,12 +126,12 @@ function answer(result: CommandResult): number {
 // `board guard`, a PreToolUse hook: the board guard (board-guard.ts), the running-app guard
 // (running-app-guard.ts), the package-manager guard (package-manager-guard.ts), which reads the
 // lockfiles of the session's folder, the hook input's `cwd`, the test-run guard (test-run-guard.ts),
-// then the worktree guard (worktree-guard.ts). The hook's input in, the refusal to print or ''. The board's refusal names
-// the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the app opened
-// (`boardVariable` set) and this program's own path outside one. `startFolder` is the session's
-// (`CLAUDE_PROJECT_DIR`), the hook's `cwd` when unset.
+// then the worktree guard (worktree-guard.ts). The hook's input in, the refusal to print or ''. The
+// board's refusal names the command the way the caller can run it, `$DASHBOARD_BOARD` in a pane the
+// app opened (`boardVariable` set) and this program's own path outside one. `startFolder` is the
+// session's (`CLAUDE_PROJECT_DIR`), the hook's `cwd` when unset.
 // What the guards read of the machine, passed in so a test can stand in for it.
-export type GuardMachine = { listProcesses: ProcessList; workingFolder: WorkingFolder; exists: (path: string) => boolean; listWorktrees: WorktreeList };
+export type GuardMachine = TestRunMachine & { listWorktrees: WorktreeList };
 
 export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, machine: GuardMachine, startFolder: string | undefined): string {
   const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };

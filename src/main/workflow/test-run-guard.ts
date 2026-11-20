@@ -5,9 +5,11 @@
 // ponytail: it reads /proc, so on a mac (no /proc) nothing is refused; `ps` and `lsof -d cwd` would
 // cover it if parallel runs show up there.
 
-import { basename, sep } from 'node:path';
-import { hookRefusal, repositoryTop, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
+import { basename } from 'node:path';
+import { hookRefusal, invocation, repositoryTop, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
+import { isInside } from '../panes/shell-directory';
 import type { ProcessList, RunningProcess } from './running-app-guard';
+import { resolveWord } from './worktree-guard';
 
 // What may stand before the program a command line runs, with its flags, assignments and timeout's
 // duration: `timeout 600 pnpm test`, `node --max-old-space-size=4096 vitest.mjs`, `python3 -m pytest`.
@@ -39,12 +41,21 @@ export function runsTests(words: readonly string[]): boolean {
   return TEST_SCRIPT.test(rest[0]) || runsTests(rest);
 }
 
-// Whether a command line starts a test run in any of its simple commands, `sh -c '…'` bodies included.
-export function startsTestRun(command: string): boolean {
-  return simpleCommands(command).some((part) => {
+// The folders the test runs a command line starts run in, `sh -c '…'` bodies included: `folder`, or
+// where a `cd` earlier in the line moved to (`cd ../app.worktrees/card && pnpm test`).
+// ponytail: a `cd` inside a `( … )` subshell is followed past its end, and `pnpm -C <dir>` is not
+// read; worktree-guard.ts counts subshells if a run is ever judged in the wrong worktree that way.
+export function testRunFolders(command: string, folder: string): string[] {
+  const folders: string[] = [];
+  let base = folder;
+  for (const part of simpleCommands(command)) {
     const body = shellBody(part);
-    return body === null ? runsTests(wordsOf(part)) : startsTestRun(body);
-  });
+    if (body !== null) folders.push(...testRunFolders(body, base));
+    else if (runsTests(wordsOf(part))) folders.push(base);
+    const changed = invocation(part, 'cd');
+    if (changed) base = resolveWord(changed.words[0] ?? '~', base);
+  }
+  return folders;
 }
 
 // The folder a process works in, or null where it cannot be read (another user's process).
@@ -59,7 +70,7 @@ export function runningTestRun(folder: string, machine: TestRunMachine): Running
   if (top === null) return undefined;
   const inWorktree = (process: RunningProcess) => {
     const processFolder = machine.workingFolder(process.pid);
-    return processFolder !== null && (processFolder === top || processFolder.startsWith(top + sep))
+    return processFolder !== null && isInside(processFolder, top)
       && repositoryTop(processFolder, machine.exists) === top;
   };
   return (machine.listProcesses() ?? [])
@@ -75,8 +86,9 @@ const LONGEST_SHOWN = 160;
 // The hook's answer, as `board guard` prints it on stdout; undefined lets the call through. The command
 // is read before the process table, so a call that runs no tests reads nothing.
 export function testRunGuard(toolName: string, toolInput: unknown, folder: string | undefined, machine: TestRunMachine) {
-  if (toolName !== 'Bash' || folder === undefined || !startsTestRun(textField(toolInput, 'command'))) return undefined;
-  const running = runningTestRun(folder, machine);
+  if (toolName !== 'Bash' || folder === undefined) return undefined;
+  const folders = [...new Set(testRunFolders(textField(toolInput, 'command'), folder))];
+  const running = folders.map((each) => runningTestRun(each, machine)).find((each) => each !== undefined);
   if (running === undefined) return undefined;
   const shown = running.commandLine.length > LONGEST_SHOWN ? `${running.commandLine.slice(0, LONGEST_SHOWN)}…` : running.commandLine;
   return hookRefusal(
