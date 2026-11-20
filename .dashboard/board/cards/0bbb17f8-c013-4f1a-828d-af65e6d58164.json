@@ -1,0 +1,11 @@
+{
+  "id": "0bbb17f8-c013-4f1a-828d-af65e6d58164",
+  "title": "One test run at a time per worktree",
+  "notes": "Found 2026-11-20: a new-crm worker ran three 'vitest run --maxWorkers=2' at once (~1.7 GB each) in worktree context-the-back-office-ui-ux-review-is-com-1ae9; the machine hit load 83 and 13.6/16 GB swap; the agents.slice caps (install-slices.ts:17-19) did not stop it. User's choice: cap concurrent test runs, not the slice.\nMake it mechanical, like package-manager-guard.ts (workflow-decision-9): a PreToolUse guard the app installs refuses a test command (vitest, jest, pnpm/npm/yarn test, pnpm check, pytest...) when one is already running in the same worktree, saying which one and to wait for it. Decide 'already running' from the process table scoped to that worktree's folder; a decision module with a test. Also one line in the work-card skill and the review prompt: never run tests in parallel or start a second run while one is going. Applies to every project the app installs into. Docs: docs/workflow (hard rule or decision + history).",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-20T13:19:37.668Z",
+  "updatedAt": "2026-11-20T13:19:37.668Z",
+  "column": "Backlog",
+  "order": 55
+}
