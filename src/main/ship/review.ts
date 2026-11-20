@@ -168,6 +168,7 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     `1. Run /pr-loop ${pullRequest} and let it finish.`,
     ...(merge ? land : report),
     '',
+    'Never run tests in parallel, or start a second run while one is going.',
     'Do not quit, kill or rebuild any running app.',
   ].join('\n');
 }

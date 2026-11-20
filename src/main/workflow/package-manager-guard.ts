@@ -4,7 +4,7 @@
 // every project the user's ~/.claude/settings.json does.
 
 import { dirname, join } from 'node:path';
-import { hookRefusal, invocation, simpleCommands, textField } from '../board/hook-answer';
+import { hookRefusal, invocation, repositoryTop, simpleCommands, textField } from '../board/hook-answer';
 
 const LOCKFILES: Record<string, string> = {
   'pnpm-lock.yaml': 'pnpm',
@@ -25,15 +25,15 @@ const INSTALLS = new Set([
 // where no folder up to the root holds `.git` (a stray lockfile in a parent of an un-initialised folder
 // is not the project's), or where one folder holds two that name different managers.
 export function nearestLockfile(folder: string, exists: (path: string) => boolean): { lockfile: string; manager: string } | null {
-  let nearest: { lockfile: string; manager: string } | null | undefined;
+  const top = repositoryTop(folder, exists);
+  if (top === null) return null;
   for (let current = folder; ; current = dirname(current)) {
     const found = Object.keys(LOCKFILES).filter((name) => exists(join(current, name)));
-    if (nearest === undefined && found.length > 0) {
+    if (found.length > 0) {
       const managers = new Set(found.map((name) => LOCKFILES[name]));
-      nearest = managers.size === 1 ? { lockfile: found[0], manager: LOCKFILES[found[0]] } : null;
+      return managers.size === 1 ? { lockfile: found[0], manager: LOCKFILES[found[0]] } : null;
     }
-    if (exists(join(current, '.git'))) return nearest ?? null;
-    if (dirname(current) === current) return null;
+    if (current === top) return null;
   }
 }
 

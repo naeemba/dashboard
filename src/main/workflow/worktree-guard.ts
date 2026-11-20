@@ -9,9 +9,8 @@
 // or carried over into the hook's `cwd`, `$PWD` and `~` are the only expansions read, and a link to a worktree is not resolved;
 // matching more means running the shell, and this is a guard rail.
 
-import os from 'node:os';
 import path from 'node:path';
-import { FILE_FIELDS, hookRefusal, invocation, simpleCommands, textField } from '../board/hook-answer';
+import { FILE_FIELDS, hookRefusal, invocation, resolveWord, simpleCommands, textField } from '../board/hook-answer';
 import { isInside } from '../panes/shell-directory';
 
 // Every worktree of the repository `folder` is in, the main checkout included, or null outside one.
@@ -23,12 +22,6 @@ const REMOVE_REASON = 'This session runs in that worktree, and removing it kills
 
 const EDIT_REASON = 'That file is in another worktree of this repository, where another branch, and often another '
   + 'agent, is at work. Change files only in the worktree this session runs in.';
-
-// A word of the command as a path from `base`, with `$PWD` and `~` read.
-function resolveWord(word: string, base: string): string {
-  const expanded = word.replace(/^(?:\$PWD|\$\{PWD\}|\$\(pwd\))(?=\/|$)/, base).replace(/^~(?=\/|$)/, os.homedir());
-  return path.resolve(base, expanded);
-}
 
 // Whether a `git … worktree remove` in `command` names a folder holding where it runs (`cwd`, then the
 // `cd` before it), where the session's shell is left (`shell`: a `cd` inside a `( … )` subshell does

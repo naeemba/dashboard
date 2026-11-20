@@ -20,17 +20,19 @@
 
 import { hookRefusal, invocation, pipelines, SHELL_REDIRECT, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
 
-// A process as /proc shows it: its names (comm, argv[0] and argv[0]'s basename) and its command line.
+// A process as /proc shows it: its names (comm, argv[0] and argv[0]'s basename), its argv and its
+// command line.
 export type RunningProcess = {
   pid: number;
   names: string[];
+  argv: readonly string[];
   commandLine: string;
 }
 
 // A process from its comm and argv, as /proc gives them.
 export function runningProcess(pid: number, comm: string, argv: readonly string[]): RunningProcess {
   const program = argv[0] ?? '';
-  return { pid, names: [comm, program, program.split('/').at(-1) ?? ''], commandLine: argv.join(' ') };
+  return { pid, names: [comm, program, program.split('/').at(-1) ?? ''], argv, commandLine: argv.join(' ') };
 }
 
 // The processes running, or null where they cannot be read (a mac has no /proc).

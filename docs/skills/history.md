@@ -14,3 +14,5 @@ One line per merged change: date and why.
 - 2026-11-19 — `/work-card` reads subtasks from `board show`, finds code with codegraph, greps docs,
   and writes the history line before the pull request; `/adopt-docs` and the index say a new history
   line names no pull request (skills-decision-2)
+- 2026-11-20 — `/work-card` says never to run tests in parallel or start a second run while one
+  is going (workflow-decision-12)
