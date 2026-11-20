@@ -11,7 +11,11 @@ import { isFilledText, projectInput } from '../pane/pane-input';
 type Opened = { output: string; tab: number };
 
 // An empty address is a new tab with nothing loaded yet, which the screen then asks an address for.
-export const browserOpen = action<BrowserPorts, { projectPath: string; url: string; pane: string | null }, Opened>('browser.open', {
+// `opener` is the tab whose page opened this one as a window: a popup from an agent's tab is that
+// agent's, behind the one on screen, so its work never takes the page from under you.
+type OpenInput = { projectPath: string; url: string; pane: string | null; opener: number | null };
+
+export const browserOpen = action<BrowserPorts, OpenInput, Opened>('browser.open', {
   words: ['url'],
   input(raw) {
     const project = projectInput(raw);
@@ -19,11 +23,12 @@ export const browserOpen = action<BrowserPorts, { projectPath: string; url: stri
     if (raw.pane !== undefined && !isFilledText(raw.pane)) return { refused: 'no pane was given' };
     const typed = stringOrEmpty(raw.url);
     const url = typed.trim() === '' ? 'about:blank' : addressUrl(typed);
-    return isRefused(url) ? url : { ...project, url, pane: raw.pane ?? null };
+    return isRefused(url) ? url : { ...project, url, pane: raw.pane ?? null, opener: wholeNumber(raw.opener) };
   },
-  async run(ports, { projectPath, url, pane }) {
+  async run(ports, { projectPath, url, pane, opener }) {
+    const holder = pane ?? ports.browserOf(projectPath).tabs.find((each) => each.id === opener)?.holder ?? 'user';
     const id = ports.makeView(projectPath, url);
-    ports.keep(projectPath, withTab(ports.browserOf(projectPath), { id, url, title: '', holder: pane ?? 'user' }));
+    ports.keep(projectPath, withTab(ports.browserOf(projectPath), { id, url, title: '', holder }));
     return { output: `opened tab ${id}`, tab: id };
   },
 });

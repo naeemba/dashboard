@@ -1,7 +1,6 @@
 import { app } from 'electron';
-import path from 'node:path';
 import type { Channels } from '../../app/channels';
-import { browserPage } from '../../browser/browser-page';
+import { browserPage, screenshotFolder } from '../../browser/browser-page';
 import { browserRequests, type BrowserRequestPorts } from '../../browser/browser-requests';
 import { browserViews, type BrowserViewsMain } from '../../browser/browser-views';
 import type { SessionReply, SessionRequest } from '../../workers/session-cli';
@@ -18,15 +17,16 @@ import { browserFocus, browserHide, browserReset, browserShow } from './view';
 // browser.open and a page closing itself browser.close; a project closing, or its page leaving the
 // screen, is browser.reset; the browser command reaches them through `requests`, and a pane let go
 // of is browser.release of all its tabs. docs/browser/README.md has the whole of it.
-export function browserActions(table: Channels, main: BrowserViewsMain) {
+// `panes` is what the browser command's door asks main of the panes and pages (browser-requests.ts).
+type PaneLookups = Omit<BrowserRequestPorts, 'actions' | 'reads'>;
+
+export function browserActions(table: Channels, main: BrowserViewsMain, panes: PaneLookups) {
   // A page's window that is no web page is denied before it opens (browser-views.ts).
   const views = browserViews(main, {
-    opened: (projectPath, url) => void open.call({ projectPath, url }),
+    opened: (projectPath, url, opener) => void open.call({ projectPath, url, opener }),
     closed: (projectPath, tab, opener) => void close.call({ projectPath, tab, opener }),
   });
-  // Where `browser screenshot` saves its pictures: the app's own folder, which only this user reads,
-  // rather than a shared /tmp, and out of every checkout.
-  const page = browserPage(views.pages, views.ports.allBrowsers, path.join(app.getPath('userData'), 'browser-screenshots'));
+  const page = browserPage(views.pages, views.ports.allBrowsers, screenshotFolder(app.getPath('userData')));
   const ports: BrowserPorts = { ...views.ports, ...page.ports };
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);
@@ -50,7 +50,6 @@ export function browserActions(table: Channels, main: BrowserViewsMain) {
     // Every tab the pane holds back to the user: the pane released, finished, its agent exited, or
     // another agent started in it.
     letGo: (pane: string): void => void release.call({ pane }),
-    requests: (panes: Omit<BrowserRequestPorts, 'actions' | 'reads'>, otherwise: (request: SessionRequest) => Promise<SessionReply>) =>
-      browserRequests({ ...panes, actions, reads: page.reads }, otherwise),
+    requests: (otherwise: (request: SessionRequest) => Promise<SessionReply>) => browserRequests({ ...panes, actions, reads: page.reads }, otherwise),
   };
 }

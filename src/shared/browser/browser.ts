@@ -6,9 +6,9 @@
 // `dashboard browser` command (docs/browser/README.md).
 export type TabHolder = 'user' | string;
 
-// `takenFrom` is the pane you took the tab back from with the revoke key, so that pane's next call on
-// it is refused saying so, and its claim of it too, until the pane itself is let go.
-export type BrowserTab = { id: number; url: string; title: string; holder: TabHolder; takenFrom?: string };
+// `takenFrom` is every pane you took the tab back from with the revoke key, so each one's next call on
+// it is refused saying so, and its claim of it too, until that pane itself is let go.
+export type BrowserTab = { id: number; url: string; title: string; holder: TabHolder; takenFrom?: readonly string[] };
 
 export type BrowserState = { tabs: BrowserTab[]; active: number | null };
 

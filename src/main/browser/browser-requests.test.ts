@@ -3,7 +3,7 @@ import { MANAGER_SLOT } from '../../shared/manager/manager';
 import type { BoundAction } from '../actions/action';
 import { answered } from '../workers/session-cli';
 import { BROWSER_REQUEST } from './browser-cli';
-import { browserProject, browserRequests, type BrowserRequestPorts } from './browser-requests';
+import { browserProject, browserRequests, livePane, paneIsOpen, type BrowserRequestPorts } from './browser-requests';
 
 // Each action and read as a record of what it was called with.
 function fakeDoor() {
@@ -16,9 +16,9 @@ function fakeDoor() {
     return name === 'screenshot' ? '/tmp/shot.png' : { refused: 'not yours' };
   };
   const ports: BrowserRequestPorts = {
-    paneOpen: (pane) => ['2:1', `${MANAGER_SLOT}:0`].includes(pane),
+    hasCommand: (pane) => ['2:1', `${MANAGER_SLOT}:0`].includes(pane),
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
-    slotOf: (folder) => (folder === '/work/web' ? 3 : -1),
+    slotOf: (folder) => ({ '/work/api': 2, '/work/web': 3 } as Record<string, number>)[folder] ?? -1,
     actions: Object.fromEntries(['open', 'claim', 'release', 'navigate', 'step', 'resize', 'click', 'type', 'press']
       .map((name) => [name, bound(name)])) as BrowserRequestPorts['actions'],
     reads: {
@@ -27,7 +27,10 @@ function fakeDoor() {
     },
   };
   const ask = browserRequests(ports, async () => answered('otherwise'));
-  return { calls, ask: (pane: string, command: object) => ask({ directory: '/', args: [BROWSER_REQUEST, pane, JSON.stringify(command)] }) };
+  return {
+    calls,
+    ask: (pane: string, command: object, paneProject = '/work/api') => ask({ directory: '/', args: [BROWSER_REQUEST, pane, JSON.stringify(command), paneProject] }),
+  };
 }
 
 describe('browserRequests', () => {
@@ -67,13 +70,26 @@ describe('browserRequests', () => {
     expect(door.calls).toEqual([]);
   });
 
+  it('acts for a kept shell\'s pane as this run numbers it, and refuses it once its project is closed', async () => {
+    const door = fakeDoor();
+    await door.ask('0:1', { verb: 'claim', tab: 4 }, '/work/api');
+    expect(door.calls).toEqual(['claim {"pane":"2:1","tab":4}']);
+    await expect(door.ask('2:1', { verb: 'claim', tab: 4 }, '/work/gone'))
+      .resolves.toEqual({ ok: false, output: 'pane 2:1 is of /work/gone, which is not open in this app' });
+  });
+
+  it('refuses a verb it does not know rather than answering nothing', async () => {
+    const door = fakeDoor();
+    await expect(door.ask('2:1', { verb: 'clik', tab: 4 })).resolves.toEqual({ ok: false, output: 'the browser request was not one the app could read' });
+  });
+
   it('says a read that failed, rather than failing the socket', async () => {
     const door = fakeDoor();
     const failing = browserRequests({
-      ...({} as BrowserRequestPorts), paneOpen: () => true,
+      ...({} as BrowserRequestPorts), hasCommand: () => true, slotOf: () => 2,
       reads: { snapshot: async () => { throw new Error('tab 4 is closed'); } } as unknown as BrowserRequestPorts['reads'],
     }, async () => answered('otherwise'));
-    await expect(failing({ directory: '/', args: [BROWSER_REQUEST, '2:1', '{"verb":"snapshot","tab":4}'] }))
+    await expect(failing({ directory: '/', args: [BROWSER_REQUEST, '2:1', '{"verb":"snapshot","tab":4}', '/work/api'] }))
       .resolves.toEqual({ ok: false, output: 'tab 4 is closed' });
     await expect(door.ask('2:1', {})).resolves.toEqual({ ok: false, output: 'the browser request was not one the app could read' });
   });
@@ -91,5 +107,30 @@ describe('browserProject', () => {
     expect(browserProject(ports, `${MANAGER_SLOT}:0`, null)).toEqual({ refused: 'the manager has no browser; name a project with --project' });
     expect(browserProject(ports, `${MANAGER_SLOT}:0`, '/work/web')).toBe('/work/web');
     expect(browserProject(ports, '2:1', '/work/gone')).toEqual({ refused: '/work/gone is not open in the app; `dashboard project open` it first' });
+  });
+});
+
+describe('livePane', () => {
+  const ports = { slotOf: (folder: string) => (folder === '/work/web' ? 0 : -1) };
+
+  it('keeps the manager\'s pane, and refuses what is no pane id', () => {
+    expect(livePane(ports, `${MANAGER_SLOT}:1`, '/home/me')).toBe(`${MANAGER_SLOT}:1`);
+    expect(livePane(ports, 'nobody', '/work/web')).toEqual({ refused: 'pane nobody is not open in this app' });
+    expect(livePane(ports, '1:1', '/work/web')).toBe('0:1');
+  });
+});
+
+describe('paneIsOpen', () => {
+  const ports = { hasCommand: (pane: string) => pane === '2:1', projectPath: (slot: number) => (slot === 2 || slot === MANAGER_SLOT ? '/work' : undefined) };
+
+  it('takes a terminal pane and the main of an open page, the manager\'s included', () => {
+    expect(paneIsOpen(ports, '2:1')).toBe(true);
+    expect(paneIsOpen(ports, '2:0')).toBe(true);
+    expect(paneIsOpen(ports, `${MANAGER_SLOT}:0`)).toBe(true);
+  });
+
+  it('refuses a main whose page is closed, and a pane that is not running', () => {
+    expect(paneIsOpen(ports, '3:0')).toBe(false);
+    expect(paneIsOpen(ports, '2:5')).toBe(false);
   });
 });

@@ -40,13 +40,14 @@ counts after its wait, as when you hold Alt on a screen with no Alt keys.
 ## browser-decision-5: A claim is undone by the revoke key, not asked for
 
 An agent claims a tab of yours without asking you first; the revoke key is how
-you say no, at any time after. A tab you take back remembers the pane
-(`takenFrom`), so its next call is refused saying you took it, rather than
-"not yours", and the same pane cannot simply claim it again; another pane can.
-Letting the pane go forgets it, since pane numbers are reused and the next agent
-there is somebody else. An agent's new tab opens behind yours, so its work never
-takes the page from under you. The command is allowed in every session the app
-starts, claim included, for the same reason.
+you say no, at any time after. A tab you take back remembers every pane you
+took it from (`takenFrom`), so each one's next call is refused saying you took
+it, rather than "not yours", and none can simply claim it again; another pane
+can. Letting a pane go forgets it, since pane numbers are reused and the next
+agent there is somebody else. An agent's new tab opens behind yours, a window its
+page opens included, so its work never takes the page from under you. The
+command is allowed in every session the app starts, claim included, for the
+same reason.
 
 ## browser-decision-6: The tab's own debugger, and a reader made here
 

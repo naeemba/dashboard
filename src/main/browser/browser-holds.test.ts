@@ -3,7 +3,7 @@ import type { BrowserState, BrowserTab } from '../../shared/browser/browser';
 import { claimFound, heldTab, revokeRefusal, tabLines, withoutPane } from './browser-holds';
 
 const tab = (id: number, holder = 'user', takenFrom?: string): BrowserTab => ({
-  id, url: `https://example.com/${id}`, title: '', holder, ...(takenFrom === undefined ? {} : { takenFrom }),
+  id, url: `https://example.com/${id}`, title: '', holder, ...(takenFrom === undefined ? {} : { takenFrom: [takenFrom] }),
 });
 const browsers = (api: BrowserTab[], web: BrowserTab[] = []) => new Map<string, BrowserState>([
   ['/work/api', { tabs: api, active: api[0]?.id ?? null }],

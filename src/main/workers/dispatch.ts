@@ -7,6 +7,8 @@ import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+import { appUserDataFolder } from '../command/app-address';
+import { screenshotReadRule } from '../browser/browser-page';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -48,6 +50,8 @@ const APP_COMMAND_PERMISSIONS = {
     'Bash(node "$DASHBOARD_COMMAND" session *)',
     // Every verb, claim included: a claim of your tab is undone with the revoke key (docs/browser).
     'Bash(node "$DASHBOARD_COMMAND" browser *)',
+    // The pictures `browser screenshot` prints the path of, outside every session's folder.
+    screenshotReadRule(appUserDataFolder()),
     'Bash(node "$DASHBOARD_BOARD" *)',
     // A reading only: `budget --cap` changes the cap, and is asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',

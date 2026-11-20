@@ -99,7 +99,7 @@ guesses one. `board` uses the project of the folder you are in (the nearest
 `pane claim` needs `--project`. `run`, `send` and `release` act on the project
 the pane id names; `list` needs `--all` unless the folder is in an open project.
 `browser` refuses outright: a tab is held by a pane, named by the
-`DASHBOARD_PANE` the app gives each one.
+`DASHBOARD_PANE` and `DASHBOARD_PANE_PROJECT` the app gives each one.
 
 ## Security
 

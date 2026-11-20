@@ -9,7 +9,7 @@ import { runsAnAgent, type PaneCommand } from '../../shared/panes/pane-reading';
 import { projectName } from '../workers/project-names';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import type { Screens } from '../../shared/remote-host/screens';
-import { paneEnvironment } from '../command/pane-environment';
+import { withPaneId } from '../command/pane-environment';
 
 // Every pane's shell as main holds it, the editor's included: spawned through the pane host or taken
 // back from it after a restart, and listened to the one way every way.
@@ -84,7 +84,7 @@ export function paneShells(main: {
       const { cols, rows } = sizeOfPane(main.screens, id);
       shell = main.host.spawn({
         key: paneKey(projectPath, index),
-        file: shellCommand, args: paneArguments, cwd: entry.directory, env: paneEnvironment(main.environment, id), cols, rows,
+        file: shellCommand, args: paneArguments, cwd: entry.directory, env: withPaneId(main.environment, id, projectPath), cols, rows,
         scope: scoped.unit === null ? undefined : scoped,
       });
     } catch {

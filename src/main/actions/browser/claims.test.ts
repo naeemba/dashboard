@@ -5,7 +5,7 @@ import { fakePorts } from './browser-fixture';
 import { browserClaim, browserRelease, browserRevoke } from './claims';
 
 const tab = (id: number, holder = 'user', takenFrom?: string): BrowserTab => ({
-  id, url: 'about:blank', title: '', holder, ...(takenFrom === undefined ? {} : { takenFrom }),
+  id, url: 'about:blank', title: '', holder, ...(takenFrom === undefined ? {} : { takenFrom: [takenFrom] }),
 });
 const project = '/work/api';
 
@@ -59,6 +59,16 @@ describe('browser.revoke', () => {
     expect(ports.browsers.get(project)?.tabs[0]).toEqual(tab(1, 'user', '3:1'));
     await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 }))
       .resolves.toEqual({ refused: 'the user took tab 1 back from this pane; it is theirs now' });
+    await expect(bind(browserClaim, ports).call({ pane: '3:1', tab: 1 })).resolves.toHaveProperty('refused');
+  });
+
+  it('keeps every pane it was taken from refused, whoever claims it between', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1, '3:1')], active: 1 } });
+    await bind(browserRevoke, ports).call({ projectPath: project });
+    await bind(browserClaim, ports).call({ pane: '3:2', tab: 1 });
+    await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ refused: 'tab 1 is held by pane 3:2' });
+    await bind(browserRevoke, ports).call({ projectPath: project });
+    expect(ports.browsers.get(project)?.tabs[0].takenFrom).toEqual(['3:1', '3:2']);
     await expect(bind(browserClaim, ports).call({ pane: '3:1', tab: 1 })).resolves.toHaveProperty('refused');
   });
 

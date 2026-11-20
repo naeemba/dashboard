@@ -21,6 +21,13 @@ describe('browser.open', () => {
     expect(ports.browsers.get(project)).toEqual({ tabs: [tab(1), { ...tab(11, 'https://example.com'), holder: '3:1' }], active: 1 });
   });
 
+  it('gives a popup from an agent\'s tab to that agent, behind the one on screen', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1), { ...tab(2), holder: '3:1' }], active: 1 } });
+    await bind(browserOpen, ports).call({ projectPath: project, url: 'example.com', opener: 2 });
+    expect(ports.browsers.get(project)?.tabs[2]).toEqual({ ...tab(11, 'https://example.com'), holder: '3:1' });
+    expect(ports.browsers.get(project)?.active).toBe(1);
+  });
+
   it('opens an empty tab with no address', async () => {
     const ports = fakePorts();
     await bind(browserOpen, ports).call({ projectPath: project });

@@ -35,14 +35,14 @@ describe('relayed', () => {
 
 describe('workerSessionStart', () => {
   it('starts a new worker under its own id and resumes one whose conversation is written', () => {
-    const worker = { id: '1:2', session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
+    const worker = { id: '1:2', projectPath: '/work/api', session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
     expect(workerSessionStart({ ...worker, resume: false })).toEqual({ sessionId: 'abc' });
     expect(workerSessionStart({ ...worker, resume: true })).toEqual({ resume: 'abc' });
   });
 });
 
 describe('liveConversation', () => {
-  const worker = { id: '1:2', session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
+  const worker = { id: '1:2', projectPath: '/work/api', session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
 
   it('names a worker its own conversation once written, and never main\'s', () => {
     expect(liveConversation({ ...worker, resume: true }, 'main')).toBe('abc');
@@ -126,7 +126,7 @@ describe('conversationReporter', () => {
 });
 
 describe('nextConversation', () => {
-  const screen = { id: '1:2', session: 'abc', resume: true, name: 'api-terminal-2', hooks: {}, owner: 'you' as const, carryOnIn: () => undefined };
+  const screen = { id: '1:2', projectPath: '/work/api', session: 'abc', resume: true, name: 'api-terminal-2', hooks: {}, owner: 'you' as const, carryOnIn: () => undefined };
 
   it('keeps a screen opened by hand off main\'s remembered conversation and its held cut', () => {
     expect(nextConversation(screen, screen, 'picked')).toEqual({ carryOnIn: 'picked' });

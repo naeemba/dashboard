@@ -44,11 +44,13 @@ GitHub", most SSO buttons) hands the sign-in back; a link with `target=_blank`
 gives up its opener, as in any browser, and opens a plain tab at its address. A
 sign-in popup that closes itself takes its tab with it, and the screen goes back
 to the page that opened it while that is open. The tab outlives the page that
-opened it, as any tab does. A tab an agent holds names its pane after its title.
+opened it, as any tab does. A window opened from an agent's tab is that agent's
+tab, behind the one you are on. A tab an agent holds names its pane after its title.
 The revoke key (Ctrl+Shift+E, Cmd+Shift+E on a mac) takes the tab on screen back
 from it: the tab is yours, the agent's next call on it is refused saying you took it back,
 and that pane may not claim it again until the pane itself is let go
-(browser-decision-5).
+(browser-decision-5), even after another pane has claimed it and you took it
+back from that one too.
 
 The tabs close with the project's page: the project closed, or the screen
 joining another host or coming back from one. The sign-ins do not: cookies and storage are
@@ -66,10 +68,12 @@ would otherwise open under it, unseen, holding the keyboard (browser-rule-1).
 ## The browser command
 
 `node "$DASHBOARD_COMMAND" browser <verb>`, run by the agent in a pane, for that
-pane: the app gives every pane its id as `DASHBOARD_PANE` (a terminal at its
-spawn, a Claude screen at its session's start), and outside one the command
-refuses. One call, a short answer, like `pane` and `board`; `browser --help`
-prints the verbs.
+pane: the app gives every pane its id as `DASHBOARD_PANE` and its project as
+`DASHBOARD_PANE_PROJECT` (a terminal at its spawn, a Claude screen at its
+session's start), and outside one the command refuses. The app reads the pane
+off the project and the pane's place in it, so a shell kept through a restart
+that moved its project to another page still acts as its own pane. One call,
+a short answer, like `pane` and `board`; `browser --help` prints the verbs.
 
 - `open <url> [--project <name|aka>]` opens a tab the pane holds and prints its
   id. It opens behind the tab you are on, or on screen in a project with none.
@@ -88,7 +92,9 @@ prints the verbs.
   login never goes to a reading service. Cut at 4000 tokens unless told.
 - `screenshot <tab> [--full] [--element <css>]` saves a PNG in the app's user
   data folder, under `browser-screenshots/` (only you read it), and prints its
-  path. A full page is cut at 4000 by 16000 pixels.
+  path. A full page is cut at 4000 by 16000 pixels. A picture is kept a day:
+  each screenshot clears out those older. A session the app starts may open
+  them without asking.
 - `snapshot <tab>` lists what can be clicked or typed in, from the page's
   accessibility tree, each with a ref (`e3`) good until the next snapshot.
   `click <tab> <ref>`, `type <tab> <ref> "<text>"` (typed at the end of what the

@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Refused } from '../../shared/app/bridge';
 import { isRecord } from '../../shared/app/is-record';
@@ -14,13 +14,34 @@ import { snapshotOf, type AXNode } from './page-snapshot';
 // to a tab: the reads the browser command answers (read, screenshot, snapshot, console, network,
 // tabs), and what the page actions do (browser.resize, click, type, press). A read changes no browser
 // state, so it is no action, but it is held to the same claim: a pane reads only a tab it holds.
-// Electron wiring: what it decides is in page-reader.ts, page-snapshot.ts, page-log.ts and
-// browser-holds.ts.
+// Its own few decisions (what a page's exception reads as, how a picture is cut, how long one is
+// kept) are tested through fake PagePorts in browser-page.test.ts; the rest is page-reader.ts's,
+// page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
 
 // The tallest page a full screenshot takes: past it, the picture is a strip nobody reads.
 const TALLEST_SHOT = 16_000;
 // A page that lays itself out wider than any screen is cut there, so a picture is never gigabytes.
 const WIDEST_SHOT = 4000;
+
+// Where `browser screenshot` saves its pictures: the app's own folder, which only this user reads,
+// rather than a shared /tmp, and out of every checkout.
+export const screenshotFolder = (userData: string): string => path.join(userData, 'browser-screenshots');
+
+// The rule that lets a session the app starts open them without asking (dispatch.ts), in Claude
+// Code's form for an absolute path: `//` before it, and a Windows drive as `/c`.
+export function screenshotReadRule(userData: string): string {
+  const posix = screenshotFolder(userData).replaceAll('\\', '/').replace(/^([A-Za-z]):/, (_drive, letter: string) => `/${letter.toLowerCase()}`);
+  return `Read(/${posix}/**)`;
+}
+
+// How long a screenshot is kept: each one taken clears the folder of those older.
+const SHOT_KEPT_MS = 24 * 60 * 60 * 1000;
+// Where a typed text goes in the field: at the end of what it holds. Focus alone leaves the caret
+// where the field last had it, the start of one filled from its HTML that nobody has clicked.
+const CARET_TO_END = `function () {
+  if (this.isContentEditable) { const range = document.createRange(); range.selectNodeContents(this); range.collapse(false); getSelection().removeAllRanges(); getSelection().addRange(range); return; }
+  try { const end = String(this.value ?? '').length; this.setSelectionRange?.(end, end); } catch {}
+}`;
 
 type ReadOptions = { maxTokens: number | null; selector: string | null };
 type ShotOptions = { full: boolean; element: string | null };
@@ -35,7 +56,16 @@ function evaluated(answer: unknown): { value: unknown } | { thrown: string } {
   return { value: isRecord(answer.result) ? answer.result.value : undefined };
 }
 
-export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<string, BrowserState>, folder: string) {
+// Every picture in the folder taken longer ago than SHOT_KEPT_MS, removed.
+async function dropOldShots(folder: string, now: number): Promise<void> {
+  for (const name of await readdir(folder).catch(() => [])) {
+    const file = path.join(folder, name);
+    const taken = await stat(file).then((found) => found.mtimeMs, () => now);
+    if (now - taken > SHOT_KEPT_MS) await rm(file, { force: true });
+  }
+}
+
+export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<string, BrowserState>, folder: string, now: () => number = Date.now) {
   // Each tab's refs from its last snapshot, to the DOM node each names.
   // ponytail: a closed tab's refs stay, a small map per tab ever snapshotted; drop them on close if it shows.
   const refs = new Map<number, Map<string, number>>();
@@ -58,6 +88,12 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     return { x: (quad[0] + quad[4]) / 2, y: (quad[1] + quad[5]) / 2 };
   }
 
+  async function caretToEnd(id: number, node: number): Promise<void> {
+    const resolved = await pages.send(id, 'DOM.resolveNode', { backendNodeId: node });
+    const objectId = isRecord(resolved) && isRecord(resolved.object) ? resolved.object.objectId : undefined;
+    if (typeof objectId === 'string') await pages.send(id, 'Runtime.callFunctionOn', { objectId, functionDeclaration: CARET_TO_END });
+  }
+
   async function act(id: number, done: PageAct): Promise<void> {
     if (done.kind === 'click') {
       const { x, y } = await middleOf(id, done.node);
@@ -68,6 +104,7 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     }
     if (done.node !== null) await pages.send(id, 'DOM.focus', { backendNodeId: done.node });
     if (done.kind === 'type') {
+      await caretToEnd(id, done.node);
       await pages.send(id, 'Input.insertText', { text: done.text });
       return;
     }
@@ -115,7 +152,8 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     if (isRefused(picture)) return picture;
     if (picture.length === 0) return { refused: `tab ${id} drew nothing to take a picture of` };
     await mkdir(folder, { recursive: true, mode: 0o700 });
-    const file = path.join(folder, `tab-${id}-${new Date().toISOString().replace(/[:.]/g, '-')}.png`);
+    await dropOldShots(folder, now());
+    const file = path.join(folder, `tab-${id}-${new Date(now()).toISOString().replace(/[:.]/g, '-')}.png`);
     await writeFile(file, picture, { mode: 0o600, flag: 'wx' });
     return file;
   }

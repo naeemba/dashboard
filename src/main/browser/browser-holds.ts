@@ -15,18 +15,21 @@ type FoundTab = { projectPath: string; tab: BrowserTab };
 const tookBack = (tab: BrowserTab, then: string): Refused => ({ refused: `the user took tab ${tab.id} back from this pane; ${then}` });
 const heldByOther = (tab: BrowserTab): Refused => ({ refused: `tab ${tab.id} is held by pane ${tab.holder}` });
 
-// Why this pane may not act on the tab, or null when it holds it.
+const wasTakenFrom = (tab: BrowserTab, pane: string): boolean => tab.takenFrom?.includes(pane) === true;
+
+// Why this pane may not act on the tab, or null when it holds it. Another pane's tab is that pane's,
+// whoever it was taken from before.
 function notHeldRefusal(tab: BrowserTab, pane: string): Refused | null {
   if (tab.holder === pane) return null;
-  if (tab.takenFrom === pane) return tookBack(tab, 'it is theirs now');
-  if (tab.holder === 'user') return { refused: `tab ${tab.id} is the user's; \`browser claim ${tab.id}\` it first` };
-  return heldByOther(tab);
+  if (tab.holder !== 'user') return heldByOther(tab);
+  if (wasTakenFrom(tab, pane)) return tookBack(tab, 'it is theirs now');
+  return { refused: `tab ${tab.id} is the user's; \`browser claim ${tab.id}\` it first` };
 }
 
 // Why this pane may not claim the tab, or null when it may: a tab the user took back from it stays
 // theirs, and one another pane holds is that pane's until it lets go or the user takes it.
 function claimRefusal(tab: BrowserTab, pane: string): Refused | null {
-  if (tab.takenFrom === pane) return tookBack(tab, 'open a tab of your own');
+  if (wasTakenFrom(tab, pane)) return tookBack(tab, 'open a tab of your own');
   return tab.holder !== 'user' && tab.holder !== pane ? heldByOther(tab) : null;
 }
 
@@ -53,16 +56,20 @@ export function revokeRefusal(tab: BrowserTab): Refused | null {
 // back to the user and stay open, and what the user took from it is forgotten, since the next agent
 // in that pane is somebody else. The same state back when the pane had nothing here.
 export function withoutPane(state: BrowserState, pane: string): BrowserState {
-  if (!state.tabs.some((tab) => tab.holder === pane || tab.takenFrom === pane)) return state;
+  if (!state.tabs.some((tab) => tab.holder === pane || wasTakenFrom(tab, pane))) return state;
   return {
     ...state,
     tabs: state.tabs.map((tab) => {
       const { takenFrom, ...rest } = tab;
-      const kept = takenFrom === pane ? rest : tab;
+      const others = (takenFrom ?? []).filter((each) => each !== pane);
+      const kept = others.length === 0 ? rest : { ...rest, takenFrom: others };
       return tab.holder === pane ? { ...kept, holder: 'user' } : kept;
     }),
   };
 }
+
+// The revoke key's change: the tab the user's, and the pane it held it remembered among those taken from.
+export const takenBack = (tab: BrowserTab): Partial<BrowserTab> => ({ holder: 'user', takenFrom: [...(tab.takenFrom ?? []), tab.holder] });
 
 // `browser tabs`: a line a tab, with who holds it as the asking pane reads it.
 export function tabLines(state: BrowserState, pane: string): string {

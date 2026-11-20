@@ -36,9 +36,10 @@ const UNPLACED: BrowserBounds = { x: 0, y: 0, width: 1280, height: 800 };
 const PROTOCOL_TIMEOUT = 15_000;
 
 // What a page does to its tabs, each a browser action: a new window opened, which is a tab
-// (browser.open), and itself closed (browser.close), with the tab that opened it, if one did.
+// (browser.open), with the tab that opened it, and itself closed (browser.close), with the tab that
+// opened it, if one did.
 export type BrowserPageDoors = {
-  opened(projectPath: string, url: string): void;
+  opened(projectPath: string, url: string, opener: number): void;
   closed(projectPath: string, tab: number, opener: number | null): void;
 };
 
@@ -98,7 +99,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
           // what is returned then is never read.
           const popup = (options as { webContents?: WebContents }).webContents;
           adopting = popup === undefined ? null : { contents: popup, opener: id };
-          page.opened(projectPath, url);
+          page.opened(projectPath, url, id);
           adopting = null;
           return popup ?? contents;
         },

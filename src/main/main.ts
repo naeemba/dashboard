@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog } from 'electron';
 // First: a launch that is not going to be the app stops inside it, before any line below runs.
 import { whenLaunchedAgain } from './app/launch-gate';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
@@ -34,9 +34,9 @@ import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-te
 import { projectNamedInFile } from './projects/project-named';
 import { listOpenedProject } from './projects/projects-write';
 import { MANAGER_SLOT } from '../shared/manager/manager';
-import { announceSocket, clearSocketPointer } from './command/app-address';
+import { announceSocket } from './command/app-address';
 import { environmentForPanes, paneCommands } from './command/pane-environment';
-import { listenForSessions, sessionSocketFolder, sessionSocketPath } from './workers/session-socket';
+import { closeSessionSocket, listenForSessions, sessionSocketPath } from './workers/session-socket';
 import { worktreeChecks } from './workers/finished-work';
 import { checkRunFolder, holdsWorktree } from './workers/run-folder';
 import { worktreeActions } from './actions/worktree/worktree-actions';
@@ -177,8 +177,6 @@ const settingsDoors = settingsActions(table, {
   tell: (next, shell) => liveWindow()?.webContents.send('settings:change', { settings: next, shellCommand: shell }),
 });
 keepHostToken(settings, (made) => { void settingsDoors.write.call({ settings: made }); });
-// Each project's browser tabs, beside the window: browser-actions.ts.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys });
 // A file an older build wrote spelled out every shipped key and colour as if they had been chosen, and
 // nothing strips those lines until the settings screen is next opened. Tidying it once here drops
 // everything that still matches this build, so the next default to move reaches these people. It cannot
@@ -226,6 +224,8 @@ const boards = boardWatchers((projectPath) => {
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
+// Each project's browser tabs, beside the window: browser-actions.ts.
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
@@ -234,7 +234,7 @@ const panes = paneShells({
   ended(id, exitCode) {
     const { slot, index } = paneFromId(id);
     logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
-    releaseAgentPane(id); browser.letGo(id);
+    releaseAgentPane(id);
   },
 });
 const { shells, screenCopies } = panes;
@@ -308,6 +308,7 @@ function agentWorksIn(slot: number, pane: number | null): boolean {
 // of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
 function releaseAgentPane(id: string): void {
   mainsWorkers.delete(id);
+  browser.letGo(id);
   const command = terminalCommands.get(id);
   if (!runsAnAgent(command)) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
@@ -506,7 +507,7 @@ const workerScreens = screenWorkers({
 // a pane opened, closed, typed into, and each one back after a restart.
 const pane = paneActions({
   platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched, ranAs: sessionIndex.ranAs,
-  forgetAnswers: (id) => { workerAnswers.forget(id); browser.letGo(id); }, mainsWorkers,
+  forgetAnswers: forgetPane, mainsWorkers,
   commands: terminalCommands, setPaneCommand, shells, spawn: panes.spawn,
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,
   log: (draft) => logStore.log(draft),
@@ -599,11 +600,17 @@ function setPaneCommand(id: string, command: PaneCommand): void {
   if (opening) panesChanged();
 }
 
+// A pane that stopped being its worker's: what the session command and the browser hold for it.
+function forgetPane(id: string): void {
+  workerAnswers.forget(id);
+  browser.letGo(id);
+}
+
 // One pane let go of for good.
 function dropPane(id: string): void {
   workerScreens.drop(id);
   mainsWorkers.delete(id);
-  workerAnswers.forget(id); browser.letGo(id);
+  forgetPane(id);
   panes.drop(id);
   terminalCommands.delete(id);
   paneScreens.drop(id);
@@ -814,7 +821,7 @@ setInterval(() => {
 }, CLOSE_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
-const answerSession = browser.requests({ slotOf: slotOfProject, projectPath: (slot) => projectIn(slot)?.path, paneOpen: (id) => terminalCommands.has(id) || (paneFromId(id).index === MAIN_INDEX && projectIn(paneFromId(id).slot) !== undefined) }, projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));
+const answerSession = browser.requests(projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));
 // Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
 // kept would get a fresh shell over one it already has. They wait on the scope check too (panesReady),
 // so no pane starts unscoped for being early. project.open waits for the screen host as well.
@@ -881,11 +888,7 @@ app.on('ready', () => {
 });
 app.on('will-quit', () => {
   remoteHost?.close();
-  sessions.close();
-  clearSocketPointer(app.getPath('userData'), sessionSocket);
-  // The socket's own folder, which session-socket.ts made for this run.
-  const socketFolder = sessionSocketFolder(process.platform, sessionSocket);
-  if (socketFolder !== null) rmSync(socketFolder, { recursive: true, force: true });
+  closeSessionSocket(sessions, process.platform, app.getPath('userData'), sessionSocket);
   logStore.log({ level: 'info', kind: 'app', message: 'quit' });
   // The pane host's shells stay up for the next launch to take back; only one this process runs itself
   // dies with it.

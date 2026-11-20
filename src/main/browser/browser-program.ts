@@ -11,9 +11,10 @@ export async function runBrowserProgram(words: readonly string[]): Promise<numbe
     process.stderr.write(`${parsed.message}\n`);
     return 1;
   }
-  // Every pane the app opens carries both, and nothing else does.
+  // Every pane the app opens carries these, and nothing else does.
   const pane = process.env.DASHBOARD_PANE;
-  if (pane === undefined || pane === '' || process.env.DASHBOARD_SOCKET === undefined) {
+  const paneProject = process.env.DASHBOARD_PANE_PROJECT;
+  if (!pane || !paneProject || process.env.DASHBOARD_SOCKET === undefined) {
     process.stderr.write(`${OUTSIDE_PANE}\n`);
     return 1;
   }
@@ -26,5 +27,5 @@ export async function runBrowserProgram(words: readonly string[]): Promise<numbe
     }
     command = { ...command, project: named.path };
   }
-  return askRunningApp([BROWSER_REQUEST, pane, JSON.stringify(command)]);
+  return askRunningApp([BROWSER_REQUEST, pane, JSON.stringify(command), paneProject]);
 }

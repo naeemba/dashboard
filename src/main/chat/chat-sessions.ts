@@ -29,7 +29,7 @@ import { runningUnits } from '../processes/memory-sweep';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
 import { MAIN_INDEX, terminalId } from '../../shared/panes/terminals';
-import { paneEnvironment } from '../command/pane-environment';
+import { withPaneId } from '../command/pane-environment';
 import { readStringRecord } from '../app/string-record-file';
 import { claudeExecutable, scopedQuery } from './claude-process';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
@@ -58,9 +58,10 @@ import type { ChatActionPorts } from '../actions/session/session-actions';
 // remembers its conversation per project. Main's worker keeps that one conversation: /clear, /resume,
 // /branch and /rewind are refused on it. One opened by hand is yours, and they carry it on in another
 // conversation, or a new one for null, which screen-workers.ts saves for a restart.
-// `id` is the pane the screen is, handed to its Claude as DASHBOARD_PANE like a terminal's.
+// `id` is the pane the screen is and `projectPath` the project it is a pane of, handed to its Claude
+// as a terminal's are (withPaneId).
 export type ScreenSession = {
-  id: string; session: string; resume: boolean; name: string; hooks: Options['hooks'];
+  id: string; projectPath: string; session: string; resume: boolean; name: string; hooks: Options['hooks'];
   owner: ScreenOwner; carryOnIn(session: string | null): void;
 };
 
@@ -277,10 +278,12 @@ export function registerChatSessions(
     // Read while the shell's PATH and the scope are awaited; it never rejects.
     const chrome = chromeArgumentsFor(host.environment, homedir());
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
-    // The pane the session is, as every terminal pane is told: a page's main is its place 0.
-    const environment = paneEnvironment({ ...host.environment, PATH: await shellPath }, host.worker(slot)?.id ?? terminalId(slot, MAIN_INDEX));
-    const executable = claudeExecutable();
     const worker = host.worker(slot);
+    // The pane the session is, as every terminal pane is told: a page's main is its place 0.
+    const environment = withPaneId(
+      { ...host.environment, PATH: await shellPath }, worker?.id ?? terminalId(slot, MAIN_INDEX), worker?.projectPath ?? projectPath,
+    );
+    const executable = claudeExecutable();
     // Main's turns begin and end on its stream, so a worker's stop notice can wait for the end
     // (workers-decision-1).
     if (!worker) environment.CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS = '1';

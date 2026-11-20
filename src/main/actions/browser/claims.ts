@@ -1,5 +1,5 @@
 import { isRefused, action } from '../action';
-import { claimFound, revokeRefusal, withoutPane } from '../../browser/browser-holds';
+import { claimFound, revokeRefusal, takenBack, withoutPane } from '../../browser/browser-holds';
 import { NO_TAB_OPEN, withTabChange } from '../../browser/browser-tabs';
 import type { BrowserPorts } from './browser-ports';
 import { isFilledText, projectInput } from '../pane/pane-input';
@@ -56,7 +56,7 @@ export const browserRevoke = action<BrowserPorts, { projectPath: string }, { out
     if (tab === undefined) return NO_TAB_OPEN;
     const refusal = revokeRefusal(tab);
     if (refusal !== null) return refusal;
-    ports.keep(projectPath, withTabChange(state, tab.id, { holder: 'user', takenFrom: tab.holder }));
+    ports.keep(projectPath, withTabChange(state, tab.id, takenBack(tab)));
     return { output: `took tab ${tab.id} back from ${tab.holder}` };
   },
 });
