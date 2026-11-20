@@ -122,7 +122,8 @@ Neither door holds any of the logic; each only asks.
 - **browser.open**, **.close**, **.switch** (`browser:open`, `browser:close`,
   `browser:switch`, a page's new window for the open and a page closing itself
   for the close): a project's tabs, a new one on screen; a closed one hands the
-  screen to the one after it.
+  screen to the one after it, but a popup that closes itself hands it to the
+  page that opened it while that is open.
 - **browser.navigate**, **.step** (`browser:navigate`, `browser:step`): the tab
   on screen to an address, or back, forward or loaded again.
 - **browser.show**, **.hide**, **.focus** (`browser:show`, `browser:hide`,
