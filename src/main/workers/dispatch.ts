@@ -7,7 +7,6 @@ import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
-import { appUserDataFolder } from '../command/app-address';
 import { screenshotReadRule } from '../browser/browser-page';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
@@ -44,25 +43,27 @@ export const BOARD_INSTRUCTIONS = [
 // permissions.allow rather than autoMode.allow: Claude Code reads the second from a --settings source
 // too, but one there without "$defaults" replaces the classifier's default list on a machine whose own
 // settings name none, and an allow rule is decided before the classifier is asked anyway.
-const APP_COMMAND_PERMISSIONS = {
+// `userData` is the folder the app saves into, app.getPath('userData'): a copy started with
+// --user-data-dir saves its screenshots under its own, which no guess from outside Electron knows.
+const appCommandPermissions = (userData: string) => ({
   allow: [
     'Bash(node "$DASHBOARD_COMMAND" pane *)',
     'Bash(node "$DASHBOARD_COMMAND" session *)',
     // Every verb, claim included: a claim of your tab is undone with the revoke key (docs/browser).
     'Bash(node "$DASHBOARD_COMMAND" browser *)',
     // The pictures `browser screenshot` prints the path of, outside every session's folder.
-    screenshotReadRule(appUserDataFolder()),
+    screenshotReadRule(userData),
     'Bash(node "$DASHBOARD_BOARD" *)',
     // A reading only: `budget --cap` changes the cap, and is asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',
     'Bash(node "$DASHBOARD_COMMAND" --version)',
   ],
-};
+});
 
 // What every session the app starts carries in its settings, whatever else its own adds: the board
 // guard (board-guard.ts) and the app's commands allowed. One object, so a screen and a terminal worker
 // cannot drift apart.
-export const APP_SESSION_SETTINGS = { hooks: BOARD_GUARD_HOOKS, permissions: APP_COMMAND_PERMISSIONS };
+export const appSessionSettings = (userData: string) => ({ hooks: BOARD_GUARD_HOOKS, permissions: appCommandPermissions(userData) });
 
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
@@ -155,19 +156,20 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
 // The prompt hook's input says who put the prompt in, which tells main's turns from yours
 // (prompt-source.ts).
 // None of them reads the pane's screen. PreToolUse is the board guard (board-guard.ts).
-export function workerSettings(id: string): string {
+export function workerSettings(id: string, userData: string): string {
   const notify = (state: string) => ({ type: 'command', command: `node "$DASHBOARD_SESSION" notify ${id} ${state}` });
   // The space after the brace is outside every string, which is what makes Windows PowerShell wrap the
   // word in quotes on its way to claude; every other space here is inside one, and without it the JSON
   // reached claude cut at each of them (windowsPowerShellWraps). JSON does not mind the space.
+  const shared = appSessionSettings(userData);
   return '{ ' + JSON.stringify({
-    ...APP_SESSION_SETTINGS,
+    ...shared,
     hooks: {
       Stop: [{ hooks: [notify('done --stop-input')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
       UserPromptSubmit: [{ hooks: [notify('running --prompt-input')] }],
       PostToolUse: [{ hooks: [notify('running')] }],
-      ...APP_SESSION_SETTINGS.hooks,
+      ...shared.hooks,
     },
   }).slice(1);
 }
@@ -178,8 +180,8 @@ export function workerPrompt(prompt: string, dispatcherPath: string): string {
 }
 
 // What a worker runs under, started or resumed: auto mode, its hooks and the board instructions.
-function workerFlags(id: string): string[] {
-  return ['--permission-mode', 'auto', '--settings', workerSettings(id), '--append-system-prompt', BOARD_INSTRUCTIONS];
+function workerFlags(id: string, userData: string): string[] {
+  return ['--permission-mode', 'auto', '--settings', workerSettings(id, userData), '--append-system-prompt', BOARD_INSTRUCTIONS];
 }
 
 // The prompt is the argument, never typed into a session already running: what a live prompt box
@@ -187,18 +189,18 @@ function workerFlags(id: string): string[] {
 // whose main dispatched it, which is another project's when the pane was claimed with --project: the
 // worker is named for the page it is on and reports to the main that asked.
 export function workerArguments(
-  shellCommand: string, projectPath: string, id: string, index: number, prompt: string, dispatcherPath: string, session: string,
+  shellCommand: string, projectPath: string, id: string, index: number, prompt: string, dispatcherPath: string, session: string, userData: string,
 ): string[] {
   return claudeArguments(shellCommand, [
     '--session-id', session,
     '--name', workerSessionName(projectPath, index),
-    ...workerFlags(id),
+    ...workerFlags(id, userData),
     workerPrompt(prompt, dispatcherPath),
   ]);
 }
 
 // A worker main dispatched, resumed after a restart in pane `id`: the same flags it was started with, so
 // it still works unasked and its hooks report to the pane it is in now rather than the one it was in.
-export function workerResumeArguments(shellCommand: string, id: string, session: string): string[] {
-  return claudeArguments(shellCommand, ['--resume', session, ...workerFlags(id)]);
+export function workerResumeArguments(shellCommand: string, id: string, session: string, userData: string): string[] {
+  return claudeArguments(shellCommand, ['--resume', session, ...workerFlags(id, userData)]);
 }

@@ -13,6 +13,7 @@ function started(platform = 'linux', shell: PaneShell = { directory: '/work/api'
   const ports: PaneDispatchPorts = {
     platform,
     shellCommand: () => '/bin/zsh',
+    userData: '/home/me/.config/Dashboard',
     newSession: (_projectPath, _directory, _cardId, kind) => `new-${kind}-session`,
     ranAs: (session, kind) => { seen.ranAs = `${session} ${kind}`; },
     starting: (_id, _projectPath, dispatcherPath) => { seen.claimed = dispatcherPath; },

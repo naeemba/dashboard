@@ -506,7 +506,7 @@ const workerScreens = screenWorkers({
 // Every change to a pane, from every door: every agent a pane starts, of every kind (workers-decision-8),
 // a pane opened, closed, typed into, and each one back after a restart.
 const pane = paneActions({
-  platform: process.platform, shellCommand: () => shellCommand, newSession: sessionIndex.launched, ranAs: sessionIndex.ranAs,
+  platform: process.platform, shellCommand: () => shellCommand, userData: app.getPath('userData'), newSession: sessionIndex.launched, ranAs: sessionIndex.ranAs,
   forgetAnswers: forgetPane, mainsWorkers,
   commands: terminalCommands, setPaneCommand, shells, spawn: panes.spawn,
   agentStarted: (id) => agentsAtWork.started(id, Date.now()), startScreen: workerScreens.start,

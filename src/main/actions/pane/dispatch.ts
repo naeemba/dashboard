@@ -37,6 +37,8 @@ export type PaneShell = { directory: string | undefined; running: boolean };
 export type PaneDispatchPorts = {
   platform: string;
   shellCommand(): string;
+  // The folder the app saves into, whose screenshots a worker is allowed to read (dispatch.ts).
+  userData: string;
   // A new conversation id, recorded in the session index the drawer lists with what it runs as.
   newSession(projectPath: string, directory: string, cardId: string | null, kind: PaneKind): string;
   // A conversation carried on as `kind`, recorded for the next resume of it.
@@ -117,9 +119,9 @@ export const paneDispatch = action<PaneDispatchPorts, PaneDispatchInput, { outpu
 function terminalArguments(ports: PaneDispatchPorts, input: PaneDispatchInput, index: number): string[] {
   const { id, projectPath, directory, prompt, resume, cardId, dispatcherPath } = input;
   const shell = ports.shellCommand();
-  if (resume !== null) return dispatcherPath === null ? agentResumeArguments(shell, resume) : workerResumeArguments(shell, id, resume);
+  if (resume !== null) return dispatcherPath === null ? agentResumeArguments(shell, resume) : workerResumeArguments(shell, id, resume, ports.userData);
   if (prompt === null) throw new Error(`${id} was to start Claude Code with no prompt`);
   const session = ports.newSession(projectPath, directory, cardId, 'terminal');
   if (dispatcherPath === null) return agentArguments(shell, prompt, session);
-  return workerArguments(shell, projectPath, id, index, prompt, dispatcherPath, session);
+  return workerArguments(shell, projectPath, id, index, prompt, dispatcherPath, session, ports.userData);
 }
