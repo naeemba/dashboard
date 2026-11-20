@@ -46,6 +46,8 @@ const APP_COMMAND_PERMISSIONS = {
   allow: [
     'Bash(node "$DASHBOARD_COMMAND" pane *)',
     'Bash(node "$DASHBOARD_COMMAND" session *)',
+    // Every verb, claim included: a claim of your tab is undone with the revoke key (docs/browser).
+    'Bash(node "$DASHBOARD_COMMAND" browser *)',
     'Bash(node "$DASHBOARD_BOARD" *)',
     // A reading only: `budget --cap` changes the cap, and is asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',
@@ -121,6 +123,9 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' stale. Stop on anything but 0, and never ask me for the cap again; `budget --cap <n>` sets it.',
     '',
     'The installed build is `node "$DASHBOARD_COMMAND" --version`; run it before saying which build I am on.',
+    '',
+    'Look at a web page in this project\'s browser with `node "$DASHBOARD_COMMAND" browser` (open, read, screenshot,'
+      + ' snapshot, click; `browser --help` for the rest): you act only on the tabs you opened or claimed.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so, with the end of its"

@@ -42,8 +42,8 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'arrive. Draw with mouse, pen or touch; the keys pick tool, colour and width.',
   browser: 'The project\'s own browser: tabs, an address bar and the page, signed in apart from '
     + 'every other project and from the app. These keys work from inside the page too; '
-    + 'every other key is the page\'s. Up from the address walks the tabs. A tab an agent holds names '
-    + 'its pane. The tabs close with the project; the sign-ins stay.',
+    + 'every other key is the page\'s. Up from the address walks the tabs. An agent\'s tab names '
+    + 'its pane; revoke takes it back. Tabs close with the project; sign-ins stay.',
   manager: 'The first tab, and no project: no shells, so the terminal and nvim keys do nothing here. '
     + 'Needs you lists what waits on you across the open projects, oldest first; under it, each '
     + 'project with its panes, figures and worktrees. A letter, digit or symbol answers the '
