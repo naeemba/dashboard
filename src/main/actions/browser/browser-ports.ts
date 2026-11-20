@@ -1,10 +1,21 @@
-import type { BrowserPlacement, BrowserState, BrowserStep } from '../../../shared/browser/browser';
+import type { BrowserPlacement, BrowserState, BrowserStep, ViewportSize } from '../../../shared/browser/browser';
+import type { KeyEvent } from '../../browser/page-keys';
 
 // What the browser actions do to the views, handed to them by browser-views.ts, the one module that
-// holds a WebContentsView. Nothing here decides anything: every rule is in the actions and in
-// browser-tabs.ts, so each action is tested against a fake of these (browser-fixture.ts).
+// holds a WebContentsView, and browser-page.ts, the one that drives a page's content. Nothing here
+// decides anything: every rule is in the actions, browser-tabs.ts and browser-holds.ts, so each action
+// is tested against a fake of these (browser-fixture.ts).
+
+// What an agent does in a page, on an element a snapshot named (its DOM node), or a key to the page.
+export type PageAct =
+  | { kind: 'click'; node: number }
+  | { kind: 'type'; node: number; text: string }
+  | { kind: 'press'; key: KeyEvent; node: number | null };
+
 export type BrowserPorts = {
   browserOf(projectPath: string): BrowserState;
+  // Every project's tabs, for a door that names a tab by its id alone: the browser command.
+  allBrowsers(): ReadonlyMap<string, BrowserState>;
   // The project's tabs as they now are: kept, sent to the window, and the view on screen put right.
   keep(projectPath: string, state: BrowserState): void;
   // A new tab's view, loading `url`; answers the tab's id.
@@ -15,4 +26,9 @@ export type BrowserPorts = {
   // The project whose tab on screen is drawn, and where; null draws none.
   place(placed: BrowserPlacement | null): void;
   focus(id: number): void;
+  // The page laid out as if its window were this size, or as the view is again for null.
+  emulate(id: number, size: ViewportSize | null): Promise<void>;
+  // The element refs the tab's last snapshot handed out, each to its DOM node.
+  refsOf(id: number): ReadonlyMap<string, number>;
+  act(id: number, act: PageAct): Promise<void>;
 };

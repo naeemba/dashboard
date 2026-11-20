@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { runBoardProgram } from '../board/board-program';
+import { runBrowserProgram } from '../browser/browser-program';
 import { runProjectProgram } from '../projects/project-program';
 import { runSessionProgram } from '../workers/session-program';
 import { runBudgetProgram } from './budget-program';
@@ -38,6 +39,7 @@ async function run(): Promise<number> {
         case 'project': return runProjectProgram(route.commandArguments);
         case 'pr': return runPullRequestProgram(route.commandArguments);
         case 'budget': return runBudgetProgram(route.commandArguments);
+        case 'browser': return runBrowserProgram(route.commandArguments);
       }
   }
 }

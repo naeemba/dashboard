@@ -36,3 +36,29 @@ cost is the page blinking out while you hold Ctrl in the address bar, once the
 strip's 400 ms wait is over: the strip counts only once it is visible, so a chord
 typed through it (Ctrl+A, Ctrl+V) never blinks the page. An empty strip still
 counts after its wait, as when you hold Alt on a screen with no Alt keys.
+
+## browser-decision-5: A claim is undone by the revoke key, not asked for
+
+An agent claims a tab of yours without asking you first; the revoke key is how
+you say no, at any time after. A tab you take back remembers every pane you
+took it from (`takenFrom`), so each one's next call is refused saying you took
+it, rather than "not yours", and none can simply claim it again; another pane
+can. Letting a pane go forgets it, since pane numbers are reused and the next
+agent there is somebody else. An agent's new tab opens behind yours, a window its
+page opens included, so its work never takes the page from under you. The
+command is allowed in every session the app starts, claim included, for the
+same reason.
+
+## browser-decision-6: The tab's own debugger, and a reader made here
+
+The app drives a page over the DevTools protocol through each tab's
+`webContents.debugger`, attached on first use, and never through
+`--remote-debugging-port`, which serves every webContents of the app, its own
+window and terminals included, to whatever on the machine connects. A plain
+screenshot is Electron's `capturePage` with the view kept hidden, so an agent's
+tab behind yours is drawn without being shown. `read` makes its markdown here
+rather than calling a reader service such as Jina's: a page behind your login
+would otherwise be sent to one. The page hands back a light tree of its content
+and `page-reader.ts` turns it into markdown, so the rules are tested without a
+browser. Console errors and failed requests come from Electron's own events,
+kept from a tab's first load, so they are there before anyone asks.

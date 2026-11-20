@@ -1,5 +1,5 @@
 import type { EffortLevel, ModelInfo, Options, PermissionResult, Query, SDKUserMessage, SlashCommand } from '@anthropic-ai/claude-agent-sdk';
-import { APP_SESSION_SETTINGS, BOARD_INSTRUCTIONS, mainPrompt, mainSessionName } from '../workers/dispatch';
+import { appSessionSettings, BOARD_INSTRUCTIONS, mainPrompt, mainSessionName } from '../workers/dispatch';
 import { measureOf, type ChatMeasure } from '../../shared/chat/chat-status';
 import { rateLimitNotice } from '../../shared/chat/chat-notices';
 import { peerSender, turnUnderWay } from '../../shared/chat/chat-events';
@@ -28,6 +28,8 @@ import { failureText } from '../../shared/errors/failure';
 import { runningUnits } from '../processes/memory-sweep';
 import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
+import { MAIN_INDEX, terminalId } from '../../shared/panes/terminals';
+import { withPaneId } from '../command/pane-environment';
 import { readStringRecord } from '../app/string-record-file';
 import { claudeExecutable, scopedQuery } from './claude-process';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
@@ -56,8 +58,10 @@ import type { ChatActionPorts } from '../actions/session/session-actions';
 // remembers its conversation per project. Main's worker keeps that one conversation: /clear, /resume,
 // /branch and /rewind are refused on it. One opened by hand is yours, and they carry it on in another
 // conversation, or a new one for null, which screen-workers.ts saves for a restart.
+// `id` is the pane the screen is and `projectPath` the project it is a pane of, handed to its Claude
+// as a terminal's are (withPaneId).
 export type ScreenSession = {
-  session: string; resume: boolean; name: string; hooks: Options['hooks'];
+  id: string; projectPath: string; session: string; resume: boolean; name: string; hooks: Options['hooks'];
   owner: ScreenOwner; carryOnIn(session: string | null): void;
 };
 
@@ -274,9 +278,12 @@ export function registerChatSessions(
     // Read while the shell's PATH and the scope are awaited; it never rejects.
     const chrome = chromeArgumentsFor(host.environment, homedir());
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
-    const environment: Record<string, string> = { ...host.environment, PATH: await shellPath };
-    const executable = claudeExecutable();
     const worker = host.worker(slot);
+    // The pane the session is, as every terminal pane is told: a page's main is its place 0.
+    const environment = withPaneId(
+      { ...host.environment, PATH: await shellPath }, worker?.id ?? terminalId(slot, MAIN_INDEX), worker?.projectPath ?? projectPath,
+    );
+    const executable = claudeExecutable();
     // Main's turns begin and end on its stream, so a worker's stop notice can wait for the end
     // (workers-decision-1).
     if (!worker) environment.CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS = '1';
@@ -309,8 +316,8 @@ export function registerChatSessions(
         settingSources: ['user', 'project', 'local'],
         hooks: worker?.hooks,
         // The board guard as a command hook, so a hosted worker's session runs it too, and the app's
-        // commands allowed (APP_SESSION_SETTINGS).
-        settings: APP_SESSION_SETTINGS,
+        // commands allowed (appSessionSettings).
+        settings: appSessionSettings(host.userData),
         env: environment,
         includePartialMessages: true,
         // Every hook's start and answer, not only SessionStart's: the working line names the one

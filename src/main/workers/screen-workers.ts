@@ -35,7 +35,7 @@ type Saved = {
 };
 
 // What chat-sessions runs it on, beside what is saved of it and whether its last turn has ended.
-type Worker = ScreenSession & { id: string; saved: Saved; done: boolean };
+type Worker = ScreenSession & { saved: Saved; done: boolean };
 
 export type ScreenPorts = {
   file: string;
@@ -133,7 +133,7 @@ export function screenWorkers(ports: ScreenPorts) {
     const resume = saved.started ?? back;
     const done = back && ports.host.kept(saved.session)?.busy !== true;
     const worker: Worker = {
-      session: saved.session, name: saved.name, resume, hooks: hooks(id, saved), id, saved, done,
+      session: saved.session, name: saved.name, resume, hooks: hooks(id, saved), id, projectPath: saved.projectPath, saved, done,
       owner: screenOwner(saved.dispatcherPath) ?? 'main',
       // A screen opened by hand going on in another conversation, or a new one, which a restart resumes.
       carryOnIn(session) {

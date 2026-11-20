@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  APP_SESSION_SETTINGS, mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
+  appSessionSettings, mainPrompt, mainSessionName, workerArguments, workerResumeArguments, workerSessionName, workerSettings,
 } from './dispatch';
 import { quoteForShell, windowsPowerShellWraps } from '../../shared/panes/shell';
 import { MANAGER_FOLDER } from '../manager/manager-terminals';
@@ -91,10 +91,12 @@ describe('mainPrompt verbs', () => {
   });
 });
 
+const USER_DATA = '/tmp/dash-copy';
+
 describe('workerSettings', () => {
   // Stop reports done whatever the worker remembered to say; the permission prompt reports blocked.
   it('hooks the end of the turn and the permission prompt to the session command', () => {
-    const settings = JSON.parse(workerSettings('2:3'));
+    const settings = JSON.parse(workerSettings('2:3', USER_DATA));
     expect(settings.hooks.Stop[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 done --stop-input');
     expect(settings.hooks.Notification[0].matcher).toBe('permission_prompt');
     expect(settings.hooks.Notification[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 blocked');
@@ -102,36 +104,41 @@ describe('workerSettings', () => {
 
   // A follow-up typed into a finished worker, or a permission answered, puts it back to work.
   it('reports running when a prompt is submitted or a tool has run', () => {
-    const settings = JSON.parse(workerSettings('2:3'));
+    const settings = JSON.parse(workerSettings('2:3', USER_DATA));
     expect(settings.hooks.UserPromptSubmit[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running --prompt-input');
     expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
   });
 
   // A fresh machine has no rule for them in ~/.claude/settings.json.
   it('allows the pane, session and board commands, and reading the budget and the version', () => {
-    expect(JSON.parse(workerSettings('2:3')).permissions.allow).toEqual(expect.arrayContaining([
+    expect(JSON.parse(workerSettings('2:3', USER_DATA)).permissions.allow).toEqual(expect.arrayContaining([
       'Bash(node "$DASHBOARD_COMMAND" pane *)', 'Bash(node "$DASHBOARD_COMMAND" session *)', 'Bash(node "$DASHBOARD_BOARD" *)',
       'Bash(node "$DASHBOARD_COMMAND" budget)', 'Bash(node "$DASHBOARD_COMMAND" --version)',
     ]));
   });
 
+  // A copy started with --user-data-dir saves its screenshots under its own folder, so that is the one read.
+  it('allows reading the screenshots in the folder the app saves into', () => {
+    expect(JSON.parse(workerSettings('2:3', USER_DATA)).permissions.allow).toContain('Read(//tmp/dash-copy/browser-screenshots/**)');
+  });
+
   // A terminal worker carries everything a screen does, so a key added to the shared settings reaches both.
   it('carries every app session setting', () => {
-    expect(JSON.parse(workerSettings('2:3'))).toMatchObject(APP_SESSION_SETTINGS);
+    expect(JSON.parse(workerSettings('2:3', USER_DATA))).toMatchObject(appSessionSettings(USER_DATA));
   });
 
   // Every other space in it is inside a string, and Windows PowerShell wraps a word for claude only when
   // it finds one outside: without this one the JSON reached claude cut at each space, claude took the
   // first piece for a settings file that was not there, and the worker's pane never started.
   it('has a space outside its strings, so Windows PowerShell hands it over whole', () => {
-    expect(workerSettings('2:3').startsWith('{ "hooks":')).toBe(true);
-    expect(windowsPowerShellWraps(workerSettings('2:3'))).toBe(true);
+    expect(workerSettings('2:3', USER_DATA).startsWith('{ "hooks":')).toBe(true);
+    expect(windowsPowerShellWraps(workerSettings('2:3', USER_DATA))).toBe(true);
   });
 });
 
 describe('workerArguments', () => {
   it('hands the prompt over as the argument, ending with the message to main', () => {
-    const agentArguments = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests', '/work/api', 'ccaaf965-c864-48db-8044-30bf27d93087');
+    const agentArguments = workerArguments('/bin/zsh', '/work/api', '2:3', 3, 'fix the tests', '/work/api', 'ccaaf965-c864-48db-8044-30bf27d93087', USER_DATA);
     expect(agentArguments[1]).toContain('--session-id ccaaf965-c864-48db-8044-30bf27d93087 --name api-terminal-4 --permission-mode auto --settings ');
     expect(agentArguments[1]).toMatch(/'fix the tests\n\nSendMessage to main-api when done, saying what you did\.'$/);
   });
@@ -140,8 +147,8 @@ describe('workerArguments', () => {
 describe('workerResumeArguments', () => {
   // Resumed into another pane after a restart, its hooks must report to that pane.
   it('resumes with the flags a worker starts with, reporting to the pane it is in now', () => {
-    const agentResumeArguments = workerResumeArguments('/bin/zsh', '2:5', 'ccaaf965-c864-48db-8044-30bf27d93087');
+    const agentResumeArguments = workerResumeArguments('/bin/zsh', '2:5', 'ccaaf965-c864-48db-8044-30bf27d93087', USER_DATA);
     expect(agentResumeArguments[1]).toContain('--resume ccaaf965-c864-48db-8044-30bf27d93087 --permission-mode auto --settings ');
-    expect(agentResumeArguments[1]).toContain(quoteForShell(workerSettings('2:5'), '/bin/zsh'));
+    expect(agentResumeArguments[1]).toContain(quoteForShell(workerSettings('2:5', USER_DATA), '/bin/zsh'));
   });
 });

@@ -1,10 +1,10 @@
-import { chmodSync, mkdtempSync } from 'node:fs';
+import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
 import { retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
-import { appUserDataFolder, readSocketPointer } from '../command/app-address';
+import { appUserDataFolder, clearSocketPointer, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
 import { appStarter } from '../command/start-app';
 import { ACCEPTANCE_TIMEOUT, ACCEPTED, awaitAcceptance, unacceptedLine, versionRefusal } from './app-handshake';
@@ -28,6 +28,15 @@ export function sessionSocketPath(platform: string, temporary: string, pid: numb
 // of a folder this file did not make.
 export function sessionSocketFolder(platform: string, socketPath: string): string | null {
   return platform === 'win32' ? null : path.dirname(socketPath);
+}
+
+// The socket gone at quit: no longer listened on, the pointer a terminal outside the panes reads
+// cleared (app-address.ts), and its own folder removed.
+export function closeSessionSocket(server: net.Server, platform: string, userData: string, socketPath: string): void {
+  server.close();
+  clearSocketPointer(userData, socketPath);
+  const folder = sessionSocketFolder(platform, socketPath);
+  if (folder !== null) rmSync(folder, { recursive: true, force: true });
 }
 
 // What ends a request: one line. JSON.stringify writes a newline inside a string as `\n`, so the first

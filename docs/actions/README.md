@@ -129,8 +129,14 @@ Neither door holds any of the logic; each only asks.
 - **browser.show**, **.hide**, **.focus** (`browser:show`, `browser:hide`,
   `browser:focus`): the tab on screen drawn in a box of the window, or none, and
   the keyboard into it. **browser.reset** (a project closing, `browser:reset`
-  when its page leaves the screen): every tab of it gone. All in
-  `src/main/actions/browser/` ([browser](../browser/README.md)).
+  when its page leaves the screen): every tab of it gone.
+- **browser.claim**, **.release** (the browser command; a release of every tab
+  of a pane from the sweeps that let a pane go): who holds a tab.
+  **browser.revoke** (`browser:revoke`, the revoke key): the tab on screen taken
+  back from its agent. **browser.resize**, **.click**, **.type**, **.press** (the
+  browser command): what an agent does to a page it holds; open, navigate and
+  step take the command's pane and tab too. All in `src/main/actions/browser/`
+  ([browser](../browser/README.md)).
 
 - **processes.install-slices** (launch, on Linux once systemd answers): writes
   `agents.slice` and `panes.slice` into the user's systemd folder where missing,

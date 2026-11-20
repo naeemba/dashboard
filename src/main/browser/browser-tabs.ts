@@ -4,9 +4,11 @@ import type { BrowserState, BrowserTab } from '../../shared/browser/browser';
 
 // The tab list's rules, apart from the views that draw it, so each can be tested without Electron.
 
-// A new tab goes at the end and is the one on screen.
+// A new tab goes at the end and is the one on screen. An agent's goes behind the one you are on, so
+// its work never takes the page from under you; into a project with none, it is the one on screen.
 export function withTab(state: BrowserState, tab: BrowserTab): BrowserState {
-  return { tabs: [...state.tabs, tab], active: tab.id };
+  const onScreen = tab.holder === 'user' || state.active === null;
+  return { tabs: [...state.tabs, tab], active: onScreen ? tab.id : state.active };
 }
 
 // A closed tab hands the screen to the one after it, else the one before: where your eye already

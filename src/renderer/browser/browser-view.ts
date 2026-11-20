@@ -206,6 +206,7 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
     back: () => run('step', { step: 'back' }),
     forward: () => run('step', { step: 'forward' }),
     reload: () => run('step', { step: 'reload' }),
+    revoke: () => run('revoke', {}),
   };
 
   return {

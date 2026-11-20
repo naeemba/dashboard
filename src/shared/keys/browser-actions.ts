@@ -5,7 +5,7 @@ import type { ActionEntry } from './actions';
 // address bar or the web page has the keyboard: main asks the same lookup about every key the page
 // gets and hands the window the ones these name (browser-keys.ts). What each one does is
 // browser-view.ts's.
-export type BrowserCommand = 'address' | 'tab-new' | 'tab-close' | 'tab-next' | 'tab-previous' | 'back' | 'forward' | 'reload';
+export type BrowserCommand = 'address' | 'tab-new' | 'tab-close' | 'tab-next' | 'tab-previous' | 'back' | 'forward' | 'reload' | 'revoke';
 
 function browserKey(command: BrowserCommand, description: string, mac: string, other: string): ActionEntry {
   return { name: `browser-${command}`, description, group: 'browser', scope: 'browser', action: { kind: 'browser', command }, mac, other };
@@ -23,4 +23,5 @@ export const BROWSER_ACTIONS: ActionEntry[] = [
   browserKey('back', 'Back a page', 'Ctrl+[', 'Alt+Left'),
   browserKey('forward', 'Forward a page', 'Ctrl+]', 'Alt+Right'),
   browserKey('reload', 'Load this page again', 'Cmd+R', 'Ctrl+R'),
+  browserKey('revoke', 'Take this tab back from the agent holding it', 'Cmd+Shift+E', 'Ctrl+Shift+E'),
 ];

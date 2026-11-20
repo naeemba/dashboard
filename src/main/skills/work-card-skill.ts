@@ -47,6 +47,8 @@ project is held to.
   this worktree's: read a file here before you change it, and never trust it
   for a file you already changed.
 - Before changing a function that already exists, ask what calls it.
+- To look at a page, read it, or screenshot it for the pull request, use the
+  project's browser: \`node "$DASHBOARD_COMMAND" browser --help\`.
 - When the project keeps its docs in \`docs/<feature>/\`, update a feature's
   docs there by grep: \`grep -n\` its
   \`README.md\` for what you changed, and read a rule or decision only by its id

@@ -24,3 +24,14 @@ reached only through the actions' ports in `browser-views.ts`, the one file that
 makes one, and `bypasses.test.ts` holds that. What a page does by itself (a
 title set, a link followed) is written down by `browser-views.ts` and is no
 action: nobody asked for it (browser-decision-2).
+
+## browser-rule-3: A pane acts only on the tabs it holds
+
+Every verb of the browser command but `open` and `tabs` names a tab, and the pane
+must hold it, a read as much as a click: `heldTab` in `browser-holds.ts` decides
+it and words the refusal, and both the actions (`target.ts`) and the reads
+(`browser-page.ts`) answer with it. Without it, a worker reads the page you are
+signed in to in another tab, or clicks in the tab you took back from it a minute
+ago. The command's reads go through `browser-page.ts` only, never a door's own
+code. A pane let go of is `browser.release` of all its tabs, from `dropPane`,
+the pane's shell exiting and a new agent starting in the pane.

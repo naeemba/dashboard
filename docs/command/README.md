@@ -15,6 +15,7 @@ its own verbs; this feature only picks the program.
 | `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
 | `pr` | the `pr` program, here | land [--project] |
 | `budget` | the `budget` program, here | none, or --cap |
+| `browser` | the `browser` program ([browser](../browser/README.md)) | open [--project], tabs, claim, release, go, back, forward, reload, resize, reset, read, screenshot, snapshot, click, type, press, console, network |
 
 `pr land <number|url|branch>` lands a pull request; a review worker with merging
 on runs it to land its own (ship-decision-1). It notes the head commit, waits on
@@ -97,6 +98,8 @@ guesses one. `board` uses the project of the folder you are in (the nearest
 `.dashboard` or git repository above it), else `--project`, else refuses.
 `pane claim` needs `--project`. `run`, `send` and `release` act on the project
 the pane id names; `list` needs `--all` unless the folder is in an open project.
+`browser` refuses outright: a tab is held by a pane, named by the
+`DASHBOARD_PANE` and `DASHBOARD_PANE_PROJECT` the app gives each one.
 
 ## Security
 

@@ -1,8 +1,9 @@
 import path from 'node:path';
 
 // What every pane's shell is handed so an agent in it can reach this app: the command files and the
-// socket. Built once in main.ts; every pane gets the same object, since cloning the whole environment
-// per pane is a clone per pane opened for a value that never changes.
+// socket. Built once in main.ts; every pane gets the same object, and the values that are each pane's
+// own, DASHBOARD_PANE and DASHBOARD_PANE_PROJECT, are added by withPaneId at its spawn (pane-shells.ts,
+// and chat-sessions.ts for a Claude screen).
 //
 // `buildFolder` is the unpacked .vite/build folder: node is what runs these files, and node cannot read
 // one inside an asar, so forge puts them in app.asar.unpacked.
@@ -20,6 +21,14 @@ export function paneCommands(buildFolder: string): PaneCommands {
     // worker hooks call them by name (command-decision-1).
     dashboard: path.join(buildFolder, 'dashboard-cli-entry.js'),
   };
+}
+
+// One pane's environment: the shared one, its own id, which the browser command acts for, and the
+// project it is a pane of. A shell the pane host keeps through a restart keeps both, and its id may
+// name another pane by then (a project closed before the restart moves the ones after it); the door
+// reads the live id off the project and the pane's place in it (browser-requests.ts).
+export function withPaneId(shared: Record<string, string>, pane: string, projectPath: string): Record<string, string> {
+  return { ...shared, DASHBOARD_PANE: pane, DASHBOARD_PANE_PROJECT: projectPath };
 }
 
 // `appExecutable` is what `dashboard` starts when no app answers (start-app.ts), or null for a
