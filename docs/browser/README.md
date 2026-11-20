@@ -45,7 +45,8 @@ gives up its opener, as in any browser, and opens a plain tab at its address. A
 sign-in popup that closes itself takes its tab with it, and the screen goes back
 to the page that opened it while that is open. The tab outlives the page that
 opened it, as any tab does. A window opened from an agent's tab is that agent's
-tab, behind the one you are on. A tab an agent holds names its pane after its title.
+tab, behind the one you are on; opened from the tab on screen, it comes on
+screen, still the agent's. A tab an agent holds names its pane after its title.
 The revoke key (Ctrl+Shift+E, Cmd+Shift+E on a mac) takes the tab on screen back
 from it: the tab is yours, the agent's next call on it is refused saying you took it back,
 and that pane may not claim it again until the pane itself is let go
@@ -94,7 +95,7 @@ a short answer, like `pane` and `board`; `browser --help` prints the verbs.
   data folder, under `browser-screenshots/` (only you read it), and prints its
   path. A full page is cut at 4000 by 16000 pixels. A picture is kept a day:
   each screenshot clears out those older. A session the app starts may open
-  them without asking.
+  them without asking, in the folder that copy of the app saves into.
 - `snapshot <tab>` lists what can be clicked or typed in, from the page's
   accessibility tree, each with a ref (`e3`) good until the next snapshot.
   `click <tab> <ref>`, `type <tab> <ref> "<text>"` (typed at the end of what the
