@@ -5,7 +5,13 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-20T14:26:49.367Z",
-  "updatedAt": "2026-11-20T14:26:49.368Z",
+  "updatedAt": "2026-11-20T14:27:29.769Z",
+  "comments": [
+    {
+      "at": "2026-11-20T14:27:29.769Z",
+      "body": "Runs alongside card fcd6c123 (dashboard browser command), which also changes src/main/actions/browser/ and browser-views.ts. Keep your change to the popup path; merge main in when the other lands."
+    }
+  ],
   "column": "Backlog",
   "order": 54
 }
