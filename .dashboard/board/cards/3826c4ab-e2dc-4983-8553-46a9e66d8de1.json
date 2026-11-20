@@ -1,0 +1,11 @@
+{
+  "id": "3826c4ab-e2dc-4983-8553-46a9e66d8de1",
+  "title": "Research: a built-in browser per project that agents can drive",
+  "notes": "Research only, no code. Design a browser inside Dashboard that Claude sessions and workers can control, and split it into buildable cards.\nGoals, in order: (1) a preview per card worktree (the worker's dev server shown on the project's page), (2) the PR and CI pages beside the review loop, (3) before/after screenshots attached to a UI PR. General browsing behind per-project logins comes after.\nQuestions to answer with evidence (file:line, Electron docs URLs):\n- View: WebContentsView per project/pane; how it fits the page and modes (PROJECT_MODES, ACTIONS, page.ts, focusMode, modeLabel, help.ts; keys-rule-1/2, conventions-rule-1 keyboard first); how window-navigation.ts keeps the main window locked while the view browses; per-project session partitions.\n- Control: an MCP server in main driving only that view through webContents.debugger (CDP), reached through the dashboard command socket; never --remote-debugging-port (it would expose the app window and terminals). Tool set and token cost: navigate, snapshot (accessibility tree or trimmed text), click, type, screenshot, console, network. How screens/workers get it (as chat-chrome.ts adds --chrome).\n- Overlap: what Claude in Chrome and the Playwright MCP plugin already cover; what only the built-in browser can do.\n- Demand: count browser tool use (mcp__claude-in-chrome__*, mcp__plugin_playwright*, WebFetch) in the session logs under ~/.claude/projects/*dashboard* and other projects' dirs over the last 30 days.\n- Risks: a page reaching the app window, sites blocking embedded browsers (Google sign-in), Electron upgrade churn, no DOM test environment.\nDeliver: a comment on this card with the design, the cards to build (each S/M/L, in order, with what each one makes testable), the demand count, and a recommendation (build, build only goal 1, or don't).",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-20T11:47:18.057Z",
+  "updatedAt": "2026-11-20T11:47:18.057Z",
+  "column": "Backlog",
+  "order": 52
+}
