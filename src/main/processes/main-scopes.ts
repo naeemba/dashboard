@@ -12,6 +12,12 @@ export function mainScopeDescription(owner: string, launch: string): string {
   return `${ownerPrefix(owner)}${launch}`;
 }
 
+// What every other agent's scope carries, so that systemd-run's default description, the command line,
+// can only mean a build from before scopes had one (earlierMains).
+export function agentScopeDescription(owner: string): string {
+  return `Dashboard agent for ${owner}`;
+}
+
 function ownerPrefix(owner: string): string {
   return `Dashboard main session for ${owner}, launch `;
 }
@@ -41,19 +47,27 @@ export function listedScopes(shown: string): ListedScope[] {
   });
 }
 
-// A build from before main scopes had a description: systemd-run's default, the command line, which
+// A build from before agent scopes had a description: systemd-run's default, the command line, which
 // names the session.
 const UNDESCRIBED = '[systemd-run] ';
-const MAIN_NAME_FLAG = ' --name main-';
+
+// An older build's main: undescribed, and its unit named for the `--name main-<x>` its command line
+// carries, as this file's own mains are. A pane worker in a project named `main` (`agent-main-3-*`,
+// `--name main-terminal-3`) does not match.
+// ponytail: an older build's worker screen in a project named `main` (`agent-main-terminal-2-*`,
+// `--name main-terminal-2`) has the same shape and is stopped too; delete this once older builds are gone.
+function olderBuildMain(unit: string, description: string): boolean {
+  const name = description.startsWith(UNDESCRIBED) ? / --name (main-\S+)/.exec(description)?.[1] : undefined;
+  return name !== undefined && mainHolder(name, [unit]) !== null;
+}
 
 // The scopes to stop: every live one an earlier launch of this app started for a main, and every one an
 // older build started for a main, whose owner it never wrote down.
-// ponytail: an older build's worker in a project named `main` reads as a main here and is stopped too.
 export function earlierMains(scopes: readonly ListedScope[], owner: string, launch: string): string[] {
   const ours = mainScopeDescription(owner, launch);
   return scopes
-    .filter(({ state, description }) => state !== 'inactive' && state !== 'failed' && description !== ours
-      && (description.startsWith(ownerPrefix(owner)) || (description.startsWith(UNDESCRIBED) && description.includes(MAIN_NAME_FLAG))))
+    .filter(({ unit, state, description }) => state !== 'inactive' && state !== 'failed' && description !== ours
+      && (description.startsWith(ownerPrefix(owner)) || olderBuildMain(unit, description)))
     .map(({ unit }) => unit);
 }
 

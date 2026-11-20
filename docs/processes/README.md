@@ -127,13 +127,17 @@ then `systemctl --user daemon-reload` (processes-decision-2).
 
 Folders: `src/main/processes/`, `src/main/actions/processes/`.
 
-- The decisions: `scope.ts` (the command and its unit name), `scope-support.ts`
-  (whether scopes work here, and every name handed out), `main-scopes.ts` (a
-  main's description and binding, and which earlier mains to stop)
+- The decisions: `scope.ts` (the command, its unit name and description),
+  `scope-support.ts` (whether scopes work here, every name handed out, and a
+  main held until an earlier launch's are stopped), `main-scopes.ts` (a main's
+  and an agent's description, the binding, and which earlier mains to stop)
 - The runner's name: `src/shared/processes/scope-runner.ts`, which
   `pane-shell.ts` also reads (docs/panes)
 - The edge: `launch-scopes.ts` (the probes, the slice files, daemon-reload,
-  stopping a pane's scope), `spawn-scoped.ts` (the one spawn a task and the
+  stopping a pane's scope, listing and stopping an earlier launch's mains for
+  `processes.stop-earlier-mains`, stopping this run's mains at quit
+  (`stopMainsNow`), and reading `/proc/self/cgroup` for the unit a main is
+  bound to), `spawn-scoped.ts` (the one spawn a task and the
   SDK's Claude start through)
 - The stop: `src/main/actions/pane/close.ts` (which unit, and when),
   `src/main/actions/project/close.ts` (every pane's of a closed project),

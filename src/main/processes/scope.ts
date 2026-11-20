@@ -23,12 +23,14 @@ const PREFIXES: Record<ScopeKind, string> = { agent: 'agent', main: 'agent', tas
 
 // What the edge knows: whether scopes work on this machine at all, a fresh random suffix, and
 // whether a unit name is already in use. `main` is what a main's scope carries, once known: its
-// description, and the app's own unit it is bound to, or null for none.
+// description, and the app's own unit it is bound to, or null for none. `agentDescription` is what
+// every other agent's scope carries, so no agent scope this build starts keeps systemd-run's default.
 export type ScopeSupport = {
   available: boolean;
   suffix(): string;
   taken(unit: string): boolean;
   main?: { description: string; boundTo: string | null };
+  agentDescription?: string;
 };
 
 // `id` names the scope in systemd-cgtop and `systemctl --user status 'agent-*'`: a pane's project
@@ -50,6 +52,7 @@ export function scopedCommand(request: ScopeRequest, support: ScopeSupport): Sco
       '--user', '--scope', '--collect', '--quiet', `--slice=${SLICES[request.kind]}`, `--unit=${unit}`,
       ...(request.kind !== 'shell' ? ['-p', `MemoryHigh=${AGENT_MEMORY_HIGH}`, '-p', `MemoryMax=${AGENT_MEMORY_MAX}`] : []),
       ...(request.kind === 'main' ? mainProperties(support.main) : []),
+      ...(request.kind === 'agent' && support.agentDescription !== undefined ? [`--description=${support.agentDescription}`] : []),
       '--', request.file, ...request.args,
     ],
     unit,

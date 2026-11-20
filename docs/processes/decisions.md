@@ -79,8 +79,9 @@ name:
 - At launch, before any main starts, `processes.stop-earlier-mains` lists the
   `agent-main-*` scopes and stops every live one whose description names this
   folder and another launch, and every one an older build started for a main
-  (its description is the command line, with `--name main-`). It waits for the
-  stop, up to ten seconds, and reads back what is left.
+  (its description is the command line, and its unit is named for the
+  `--name main-<x>` in it). It waits for the stop, up to ten seconds, and reads
+  back what is left.
 - A main about to start whose name one of those still holds asks the stop
   again, and refuses with the unit and the `systemctl --user stop` that ends
   it when it is still there.
@@ -97,5 +98,9 @@ hours old; a worker's SendMessage reached one of the orphans, so the main on
 screen never heard its reports, and the CPU sat at 100%.
 
 The folder in the description keeps a copy on its own userData (the
-performance demo) from stopping the installed app's mains. A worker screen's
-scope is the screen host's (workers-decision-6) and none of this touches it.
+performance demo) from stopping the installed app's mains. Every other agent's
+scope this build starts carries `Dashboard agent for <folder>`, so systemd-run's
+default description can only mean an older build: a worker in a project named
+`main` (`agent-main-terminal-2-*`, `--name main-terminal-2`) is never stopped.
+The one exception is an older build's worker screen in such a project, which
+has a main's shape and is stopped once; the fallback goes when older builds do.

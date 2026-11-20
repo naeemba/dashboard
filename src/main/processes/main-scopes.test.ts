@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { boundUnit, earlierMains, heldRefusal, listedScopes, mainHolder, mainScopeDescription, type ListedScope } from './main-scopes';
+import { agentScopeDescription, boundUnit, earlierMains, heldRefusal, listedScopes, mainHolder, mainScopeDescription, type ListedScope } from './main-scopes';
 
 const OWNER = '/home/sharp/.config/Dashboard';
-const OLD_BUILD = '[systemd-run] /opt/claude --output-format stream-json --resume=43c1 --name main-dashboard --chrome';
+const OLD_BUILD = '[systemd-run] /opt/claude --output-format stream-json --resume=43c1 --name main-shop --chrome';
 
 function scope(unit: string, description: string, state = 'active'): ListedScope {
   return { unit, state, description };
@@ -21,7 +21,8 @@ describe('earlierMains', () => {
   it("leaves another app folder's mains, a worker's scope and one already ended", () => {
     const scopes = [
       scope('agent-main-dashboard-otg2.scope', mainScopeDescription('/tmp/demo/Dashboard', 'earlier1')),
-      scope('agent-main-terminal-2-x9q0.scope', '[systemd-run] /opt/claude --name main-terminal-2', 'inactive'),
+      scope('agent-main-terminal-2-x9q0.scope', agentScopeDescription(OWNER)),
+      scope('agent-main-3-ab12.scope', '[systemd-run] /bin/zsh -ilc claude --session-id 43c1 --name main-terminal-3'),
       scope('agent-main-shop-k4f2.scope', mainScopeDescription(OWNER, 'earlier1'), 'failed'),
       scope('agent-main-api-zz11.scope', '[systemd-run] /bin/zsh -ilc claude'),
     ];

@@ -8,7 +8,7 @@ import type { LogDraft } from '../../shared/app/log-entry';
 import { bind, isRefused } from '../actions/action';
 import { processesInstallSlices, systemdUserFolder } from '../actions/processes/install-slices';
 import { processesStopEarlierMains } from '../actions/processes/stop-earlier-mains';
-import { boundUnit, mainScopeDescription } from './main-scopes';
+import { agentScopeDescription, boundUnit, mainScopeDescription } from './main-scopes';
 import { commandOutput } from '../panes/shell-directory-lookup';
 import { processScopes, type ProcessScopes, type Probe } from './scope-support';
 
@@ -92,10 +92,11 @@ export function launchScopes(log: (draft: LogDraft) => void, owner: string): Pro
     },
     warn: (message) => log({ level: 'warn', kind: 'app', action: 'processes.scopes', message }),
     mainScope: { description: mainScopeDescription(owner, launch), boundTo: boundUnit(appCgroup()) },
+    agentDescription: agentScopeDescription(owner),
     async stopEarlierMains() {
       const result = await stopEarlier.call({ owner, launch });
       if (isRefused(result)) throw new Error(result.refused);
-      if (!result.output.startsWith('no ')) log({ level: result.left.length > 0 ? 'warn' : 'info', kind: 'app', action: stopEarlier.name, message: result.output });
+      if (result.stopped.length + result.left.length > 0) log({ level: result.left.length > 0 ? 'warn' : 'info', kind: 'app', action: stopEarlier.name, message: result.output });
       return result.left;
     },
   });

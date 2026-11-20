@@ -78,17 +78,26 @@ describe('processScopes', () => {
       stopEarlierMains: async () => { stops.push('stop'); return ['agent-main-shop-k4f2.scope']; },
     });
     const main = { kind: 'main' as const, id: 'main-shop', file: '/sdk/claude', args: [] };
-    await expect(made.session(main)).rejects.toThrow('main-shop is still running from an earlier launch, in agent-main-shop-k4f2.scope');
+    await expect(made.whenReady(main)).rejects.toThrow('main-shop is still running from an earlier launch, in agent-main-shop-k4f2.scope');
     expect(stops).toEqual(['stop', 'stop']);
-    expect((await made.session({ ...main, id: 'main-web' })).unit).toBe('agent-main-web-aaaa.scope');
+    expect((await made.whenReady({ ...main, id: 'main-web' })).unit).toBe('agent-main-web-aaaa.scope');
     expect(made.mains()).toEqual(['agent-main-web-aaaa.scope']);
-    expect((await made.session({ ...main, kind: 'agent', id: 'shop-terminal-2' })).unit).not.toBeNull();
+    expect((await made.whenReady({ ...main, kind: 'agent', id: 'shop-terminal-2' })).unit).not.toBeNull();
     expect(made.mains()).toHaveLength(1);
   });
 
   it('starts a main whose holder has stopped by the time it asks again', async () => {
     const answers = [['agent-main-shop-k4f2.scope'], []];
     const made = scopes(WORKING, { stopEarlierMains: async () => answers.shift() ?? [] });
-    expect((await made.session({ kind: 'main', id: 'main-shop', file: '/sdk/claude', args: [] })).unit).toBe('agent-main-shop-aaaa.scope');
+    expect((await made.whenReady({ kind: 'main', id: 'main-shop', file: '/sdk/claude', args: [] })).unit).toBe('agent-main-shop-aaaa.scope');
+  });
+
+  it('asks again once between mains that start together, not once each', async () => {
+    const answers = [['agent-main-shop-k4f2.scope', 'agent-main-web-x9q0.scope'], []];
+    let stops = 0;
+    const made = scopes(WORKING, { stopEarlierMains: async () => { stops += 1; return answers.shift() ?? []; } });
+    const main = { kind: 'main' as const, file: '/sdk/claude', args: [] };
+    await Promise.all([made.whenReady({ ...main, id: 'main-shop' }), made.whenReady({ ...main, id: 'main-web' })]);
+    expect(stops).toBe(2);
   });
 });

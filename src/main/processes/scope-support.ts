@@ -36,6 +36,7 @@ export type ProcessScopesPorts = {
   suffix?(): string;
   // What a main's scope carries (main-scopes.ts), used once scopes are known to work.
   mainScope?: ScopeSupport['main'];
+  agentDescription?: string;
   // The scopes an earlier launch's mains run in, stopped; answers the ones still running after.
   stopEarlierMains?(): Promise<readonly string[]>;
 };
@@ -44,10 +45,10 @@ export type ProcessScopes = {
   // Settled once the check (and the slices) are done, whichever way it went. Never rejects.
   ready: Promise<void>;
   scoped(request: ScopeRequest): ScopedCommand;
-  // A Claude session's command, once the check has answered and an earlier launch's mains are stopped.
+  // A command once the check has answered and, for a main, once an earlier launch's mains are stopped.
   // Rejects for a main one of those still holds the name of: two CLIs under one name, and its workers'
   // reports reach the other one (processes-decision-6).
-  session(request: ScopeRequest): Promise<ScopedCommand>;
+  whenReady(request: ScopeRequest): Promise<ScopedCommand>;
   // Every main's unit this run handed out, for the quit to stop.
   mains(): string[];
 };
@@ -64,6 +65,7 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
     suffix: ports.suffix ?? randomSuffix,
     taken: (unit: string) => issued.has(unit),
     main: ports.mainScope,
+    agentDescription: ports.agentDescription,
   };
 
   async function check(): Promise<void> {
@@ -108,7 +110,7 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
   return {
     ready,
     scoped,
-    async session(request) {
+    async whenReady(request) {
       if (request.kind === 'main') {
         // Asked again first: one stopped by hand since, or slow to stop at launch, is not refused on.
         // Mains starting together re-ask once between them, not once each.
