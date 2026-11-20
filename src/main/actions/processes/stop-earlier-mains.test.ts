@@ -26,18 +26,18 @@ function manager(running: Record<string, string>, stuck: string[] = []) {
 describe('processes.stop-earlier-mains', () => {
   it("stops an earlier launch's mains and leaves this launch's", async () => {
     const { stops, call } = manager({ 'agent-main-a-k4f2.scope': 'earlier1', 'agent-main-b-x9q0.scope': 'thisone1' });
-    expect(await call()).toMatchObject({ stopped: ['agent-main-a-k4f2.scope'], left: [] });
+    expect(await call()).toMatchObject({ output: 'stopped the main sessions an earlier launch left running: agent-main-a-k4f2.scope', left: [] });
     expect(stops).toEqual([['agent-main-a-k4f2.scope']]);
   });
 
   it('answers the ones a stop that timed out left running', async () => {
     const { call } = manager({ 'agent-main-a-k4f2.scope': 'earlier1', 'agent-main-b-x9q0.scope': 'earlier1' }, ['agent-main-b-x9q0.scope']);
-    expect(await call()).toMatchObject({ stopped: ['agent-main-a-k4f2.scope'], left: ['agent-main-b-x9q0.scope'] });
+    expect(await call()).toMatchObject({ output: expect.stringContaining('agent-main-a-k4f2.scope; still running: agent-main-b-x9q0.scope'), left: ['agent-main-b-x9q0.scope'] });
   });
 
   it('asks nothing to stop when no earlier main runs', async () => {
     const { stops, call } = manager({});
-    expect(await call()).toMatchObject({ stopped: [], left: [] });
+    expect(await call()).toMatchObject({ left: [] });
     expect(stops).toEqual([]);
   });
 });

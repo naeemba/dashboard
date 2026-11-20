@@ -74,7 +74,7 @@ describe('processScopes', () => {
   it("waits on an earlier launch's mains, and refuses a main one of them still holds after a second stop", async () => {
     const stops: string[] = [];
     const made = scopes(WORKING, {
-      mainScope: () => ({ description: 'Dashboard main session for /x, launch ab12', boundTo: null }),
+      mainScope: { description: 'Dashboard main session for /x, launch ab12', boundTo: null },
       stopEarlierMains: async () => { stops.push('stop'); return ['agent-main-shop-k4f2.scope']; },
     });
     const main = { kind: 'main' as const, id: 'main-shop', file: '/sdk/claude', args: [] };

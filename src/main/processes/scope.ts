@@ -67,10 +67,15 @@ function mainProperties(main: ScopeSupport['main']): string[] {
 // is holding the names, and the process runs unscoped rather than not at all.
 function freeUnit(request: ScopeRequest, support: ScopeSupport): string | null {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const unit = `${PREFIXES[request.kind]}-${scopeSlug(request.id)}-${support.suffix()}.scope`;
+    const unit = `${unitPrefix(request.kind, request.id)}${support.suffix()}.scope`;
     if (!support.taken(unit)) return unit;
   }
   return null;
+}
+
+// What every unit this file names for `kind` and `id` starts with, before its random suffix.
+export function unitPrefix(kind: ScopeKind, id: string): string {
+  return `${PREFIXES[kind]}-${scopeSlug(id)}-`;
 }
 
 // The same scope running another command: systemd-run's own options up to its `--`, then `file` and

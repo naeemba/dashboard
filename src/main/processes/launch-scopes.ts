@@ -91,12 +91,11 @@ export function launchScopes(log: (draft: LogDraft) => void, owner: string): Pro
       if (installed.written.length > 0) log({ level: 'info', kind: 'app', action: install.name, message: installed.output });
     },
     warn: (message) => log({ level: 'warn', kind: 'app', action: 'processes.scopes', message }),
-    mainScope: () => ({ description: mainScopeDescription(owner, launch), boundTo: boundUnit(appCgroup()) }),
+    mainScope: { description: mainScopeDescription(owner, launch), boundTo: boundUnit(appCgroup()) },
     async stopEarlierMains() {
       const result = await stopEarlier.call({ owner, launch });
       if (isRefused(result)) throw new Error(result.refused);
-      if (result.stopped.length > 0) log({ level: 'info', kind: 'app', action: stopEarlier.name, message: result.output });
-      if (result.left.length > 0) log({ level: 'warn', kind: 'app', action: stopEarlier.name, message: `still running after the stop: ${result.left.join(', ')}` });
+      if (!result.output.startsWith('no ')) log({ level: result.left.length > 0 ? 'warn' : 'info', kind: 'app', action: stopEarlier.name, message: result.output });
       return result.left;
     },
   });

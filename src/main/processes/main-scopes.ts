@@ -1,4 +1,4 @@
-import { scopeSlug } from './scope';
+import { unitPrefix } from './scope';
 
 // A project's main session, alone of the app's scopes, never outlives the launch that started it: its
 // workers SendMessage it by name, and a second CLI still holding `main-<project>` from an earlier
@@ -60,7 +60,8 @@ export function earlierMains(scopes: readonly ListedScope[], owner: string, laun
 // The scope among `left` (earlier launches' mains that did not stop) still running the main named
 // `name`, which that main may not start beside, or null.
 export function mainHolder(name: string, left: readonly string[]): string | null {
-  const pattern = new RegExp(`^agent-${scopeSlug(name)}-[a-z0-9]{4}\\.scope$`);
+  // The suffix has no dash, so `main-dashboard` never matches `main-dashboard-two`'s unit.
+  const pattern = new RegExp(`^${unitPrefix('main', name)}[a-z0-9]+\\.scope$`);
   return left.find((unit) => pattern.test(unit)) ?? null;
 }
 

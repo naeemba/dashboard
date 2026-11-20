@@ -34,8 +34,8 @@ export type ProcessScopesPorts = {
   prepare(): Promise<void>;
   warn(message: string): void;
   suffix?(): string;
-  // What a main's scope carries (main-scopes.ts), read once scopes are known to work.
-  mainScope?(): NonNullable<ScopeSupport['main']>;
+  // What a main's scope carries (main-scopes.ts), used once scopes are known to work.
+  mainScope?: ScopeSupport['main'];
   // The scopes an earlier launch's mains run in, stopped; answers the ones still running after.
   stopEarlierMains?(): Promise<readonly string[]>;
 };
@@ -57,14 +57,13 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
   // For collisions only, never a list of the scopes there are: systemd has that, under the two slices.
   // ponytail: only the names this run handed out; a name a previous run's pane host still holds
   // collides one time in 36^4 for the same pane, and that start's systemd-run exits with an error.
-  const issued = new Set<string>();
-  const mains = new Set<string>();
-  let main: ScopeSupport['main'];
+  // Each with its kind, so the quit can stop the mains among them.
+  const issued = new Map<string, ScopeRequest['kind']>();
   const support: ScopeSupport = {
     get available() { return available; },
     suffix: ports.suffix ?? randomSuffix,
     taken: (unit: string) => issued.has(unit),
-    get main() { return main; },
+    main: ports.mainScope,
   };
 
   async function check(): Promise<void> {
@@ -84,7 +83,6 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
     } catch (error: unknown) {
       ports.warn(`The agents and panes slices were not installed, so they run uncapped: ${failureText(error)}`);
     }
-    main = ports.mainScope?.();
     available = true;
   }
 
@@ -100,8 +98,7 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
 
   function scoped(request: ScopeRequest): ScopedCommand {
     const command = scopedCommand(request, support);
-    if (command.unit !== null) issued.add(command.unit);
-    if (command.unit !== null && request.kind === 'main') mains.add(command.unit);
+    if (command.unit !== null) issued.set(command.unit, request.kind);
     return command;
   }
 
@@ -114,14 +111,19 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
     async session(request) {
       if (request.kind === 'main') {
         // Asked again first: one stopped by hand since, or slow to stop at launch, is not refused on.
-        if (mainHolder(request.id, await left) !== null) left = stopEarlierMains();
-        const holder = mainHolder(request.id, await left);
+        // Mains starting together re-ask once between them, not once each.
+        const seen = left;
+        let holder = mainHolder(request.id, await seen);
+        if (holder !== null) {
+          if (left === seen) left = stopEarlierMains();
+          holder = mainHolder(request.id, await left);
+        }
         if (holder !== null) throw new Error(heldRefusal(request.id, holder));
       }
       await ready;
       return scoped(request);
     },
-    mains: () => [...mains],
+    mains: () => [...issued].filter(([, kind]) => kind === 'main').map(([unit]) => unit),
   };
 }
 
