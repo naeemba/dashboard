@@ -70,4 +70,25 @@ describe('processScopes', () => {
     expect(made.scoped(SHELL).unit).toBe('pane-dashboard-0-aaaa.scope');
     expect(made.warnings).toEqual(['The agents and panes slices were not installed, so they run uncapped: read-only file system']);
   });
+
+  it("waits on an earlier launch's mains, and refuses a main one of them still holds after a second stop", async () => {
+    const stops: string[] = [];
+    const made = scopes(WORKING, {
+      mainScope: () => ({ description: 'Dashboard main session for /x, launch ab12', boundTo: null }),
+      stopEarlierMains: async () => { stops.push('stop'); return ['agent-main-shop-k4f2.scope']; },
+    });
+    const main = { kind: 'main' as const, id: 'main-shop', file: '/sdk/claude', args: [] };
+    await expect(made.session(main)).rejects.toThrow('main-shop is still running from an earlier launch, in agent-main-shop-k4f2.scope');
+    expect(stops).toEqual(['stop', 'stop']);
+    expect((await made.session({ ...main, id: 'main-web' })).unit).toBe('agent-main-web-aaaa.scope');
+    expect(made.mains()).toEqual(['agent-main-web-aaaa.scope']);
+    expect((await made.session({ ...main, kind: 'agent', id: 'shop-terminal-2' })).unit).not.toBeNull();
+    expect(made.mains()).toHaveLength(1);
+  });
+
+  it('starts a main whose holder has stopped by the time it asks again', async () => {
+    const answers = [['agent-main-shop-k4f2.scope'], []];
+    const made = scopes(WORKING, { stopEarlierMains: async () => answers.shift() ?? [] });
+    expect((await made.session({ kind: 'main', id: 'main-shop', file: '/sdk/claude', args: [] })).unit).toBe('agent-main-shop-aaaa.scope');
+  });
 });

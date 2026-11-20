@@ -1,7 +1,8 @@
 import { randomInt } from 'node:crypto';
 import { failureText } from '../../shared/errors/failure';
 import { SCOPE_RUNNER } from '../../shared/processes/scope-runner';
-import { scopedCommand, type ScopedCommand, type ScopeRequest } from './scope';
+import { heldRefusal, mainHolder } from './main-scopes';
+import { scopedCommand, type ScopedCommand, type ScopeRequest, type ScopeSupport } from './scope';
 
 // Whether this machine can put a process in a systemd scope, asked once at launch and kept, and the
 // one place the app's scoped commands are made, so every name it hands out is known to it. Nothing
@@ -33,12 +34,22 @@ export type ProcessScopesPorts = {
   prepare(): Promise<void>;
   warn(message: string): void;
   suffix?(): string;
+  // What a main's scope carries (main-scopes.ts), read once scopes are known to work.
+  mainScope?(): NonNullable<ScopeSupport['main']>;
+  // The scopes an earlier launch's mains run in, stopped; answers the ones still running after.
+  stopEarlierMains?(): Promise<readonly string[]>;
 };
 
 export type ProcessScopes = {
   // Settled once the check (and the slices) are done, whichever way it went. Never rejects.
   ready: Promise<void>;
   scoped(request: ScopeRequest): ScopedCommand;
+  // A Claude session's command, once the check has answered and an earlier launch's mains are stopped.
+  // Rejects for a main one of those still holds the name of: two CLIs under one name, and its workers'
+  // reports reach the other one (processes-decision-6).
+  session(request: ScopeRequest): Promise<ScopedCommand>;
+  // Every main's unit this run handed out, for the quit to stop.
+  mains(): string[];
 };
 
 export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
@@ -47,10 +58,13 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
   // ponytail: only the names this run handed out; a name a previous run's pane host still holds
   // collides one time in 36^4 for the same pane, and that start's systemd-run exits with an error.
   const issued = new Set<string>();
-  const support = {
+  const mains = new Set<string>();
+  let main: ScopeSupport['main'];
+  const support: ScopeSupport = {
     get available() { return available; },
     suffix: ports.suffix ?? randomSuffix,
     taken: (unit: string) => issued.has(unit),
+    get main() { return main; },
   };
 
   async function check(): Promise<void> {
@@ -70,16 +84,44 @@ export function processScopes(ports: ProcessScopesPorts): ProcessScopes {
     } catch (error: unknown) {
       ports.warn(`The agents and panes slices were not installed, so they run uncapped: ${failureText(error)}`);
     }
+    main = ports.mainScope?.();
     available = true;
   }
 
+  // Never rejects: a stop that could not even be asked leaves nothing known to refuse on.
+  async function stopEarlierMains(): Promise<readonly string[]> {
+    await ready;
+    if (!available || ports.stopEarlierMains === undefined) return [];
+    return ports.stopEarlierMains().catch((error: unknown) => {
+      ports.warn(`Main sessions from an earlier launch were not stopped: ${failureText(error)}`);
+      return [];
+    });
+  }
+
+  function scoped(request: ScopeRequest): ScopedCommand {
+    const command = scopedCommand(request, support);
+    if (command.unit !== null) issued.add(command.unit);
+    if (command.unit !== null && request.kind === 'main') mains.add(command.unit);
+    return command;
+  }
+
+  const ready = check().catch((error: unknown) => ports.warn(`Panes and agents run without systemd scopes: ${failureText(error)}`));
+  let left = stopEarlierMains();
+
   return {
-    ready: check().catch((error: unknown) => ports.warn(`Panes and agents run without systemd scopes: ${failureText(error)}`)),
-    scoped(request) {
-      const command = scopedCommand(request, support);
-      if (command.unit !== null) issued.add(command.unit);
-      return command;
+    ready,
+    scoped,
+    async session(request) {
+      if (request.kind === 'main') {
+        // Asked again first: one stopped by hand since, or slow to stop at launch, is not refused on.
+        if (mainHolder(request.id, await left) !== null) left = stopEarlierMains();
+        const holder = mainHolder(request.id, await left);
+        if (holder !== null) throw new Error(heldRefusal(request.id, holder));
+      }
+      await ready;
+      return scoped(request);
     },
+    mains: () => [...mains],
   };
 }
 

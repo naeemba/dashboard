@@ -71,7 +71,9 @@ export type ChatHost = {
   // no host and it runs here (screen-host-client.ts).
   hosted(key: string, params: HostedParams): Promise<HostedSession | null>;
   // The command as it starts inside its systemd scope, or as it is (processes/scope-support.ts), once
-  // the launch's check has answered, as a pane waits on it (processes-decision-4).
+  // the launch's check has answered, as a pane waits on it (processes-decision-4). A main's waits on
+  // an earlier launch's mains being stopped too, and rejects while one still runs its name
+  // (processes-decision-6).
   scoped(request: ScopeRequest): Promise<ScopedCommand>;
   // The environment every pane gets, so the agent's own shell can find the board command too.
   environment: Record<string, string>;
@@ -281,7 +283,7 @@ export function registerChatSessions(
     const name = worker?.name ?? mainSessionName(projectPath);
     // Asked here rather than inside the SDK's spawn, so the screen host gets the same answer and the
     // unit is known before the process starts. The SDK's own command takes the executable's place.
-    const scope = await host.scoped({ kind: 'agent', id: name, file: executable, args: [] });
+    const scope = await host.scoped({ kind: worker ? 'agent' : 'main', id: name, file: executable, args: [] });
     const resume = worker ? undefined : remembered[projectPath];
     const input = inputQueue<SDKUserMessage>();
     const asks: Session['asks'] = new Map();

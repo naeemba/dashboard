@@ -42,7 +42,7 @@ import { checkRunFolder, holdsWorktree } from './workers/run-folder';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
-import { launchScopes, stopScope } from './processes/launch-scopes';
+import { launchScopes, stopMainsNow, stopScope } from './processes/launch-scopes';
 import { memorySweep, recordedUnits, userServiceCgroup } from './processes/memory-sweep';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
@@ -207,7 +207,7 @@ const shellHost = paneHost({
 });
 // The systemd scope each pane's shell starts in, once the check at launch has answered: docs/processes.
 // Every pane waits on it with the host (panesReady), so no pane starts unscoped for being early.
-const scopes = launchScopes((draft) => logStore.log(draft));
+const scopes = launchScopes((draft) => logStore.log(draft), app.getPath('userData'));
 const panesReady = Promise.all([shellHost.ready, scopes.ready]);
 // One watcher per open project, on its .dashboard folder. Every decision in it is board-watch.ts's;
 // what main adds is the one thing only it can do, which is tell the renderer.
@@ -522,7 +522,7 @@ registerDrawer(table, {
 });
 const chats = registerChatSessions(table, {
   send: (slot, event) => { sendToRenderer('chat:receive', slot, event); workerScreens.observe(slot, event); },
-  projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'), scoped: async (request) => { await scopes.ready; return scopes.scoped(request); },
+  projectPath: (slot) => workerScreens.directoryOf(slot) ?? projectIn(slot)?.path, worker: workerScreens.session, hosted: workerScreens.host.query, environment: paneEnvironment, userData: app.getPath('userData'), scoped: scopes.session,
   conversation: sessionIndex.mainIs, remembered: sessionIndex.mainRemembers, runningInPane: sessionIndex.inPane,
   // Called only once a session runs, by which time the session command's answers are set up below.
   heard: (slot, sender) => { workerAnswers.heard(slot, sender); followPullRequests(slot); },
@@ -886,6 +886,9 @@ app.on('will-quit', () => {
   // dies with it.
   for (const shellProcess of shells.values()) if (diesAtQuit(shellProcess)) shellProcess.kill();
   chats.stopAll();
+  // What a main ran outside the CLI goes with its scope, here rather than when the close above lands,
+  // which a quit does not wait for (processes-decision-6).
+  stopMainsNow(scopes.mains());
   // The transcripts this run put in the temp folder go with it, rather than sitting there until
   // something else tidies up.
   dropWrittenFiles();
