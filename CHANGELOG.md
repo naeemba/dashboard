@@ -1,5 +1,26 @@
 # Changelog
 
+## v2.53.0 (2026-11-21)
+
+### What's new
+
+- Research: a built-in browser per project that agents can drive
+- One test run at a time per worktree
+- Main sessions from an earlier launch are stopped, and a launch never starts a second main
+- Browser mode: a per-project browser with tabs, beside board and nvim
+- Browser: sign-in popups finish (Sign in with GitHub, SSO)
+- dashboard browser command: agents claim tabs, read, screenshot, act, release
+
+### What's Changed
+* One test run at a time per worktree by @naeemba in https://github.com/naeemba/dashboard/pull/340
+* Main sessions from an earlier launch are stopped, and a launch never starts a second main by @naeemba in https://github.com/naeemba/dashboard/pull/342
+* Browser mode: a per-project browser with tabs by @naeemba in https://github.com/naeemba/dashboard/pull/341
+* Browser: sign-in popups finish (Sign in with GitHub, SSO) by @naeemba in https://github.com/naeemba/dashboard/pull/343
+* dashboard browser: agents claim tabs, read, screenshot, act, release by @naeemba in https://github.com/naeemba/dashboard/pull/344
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.52.0...v2.53.0
+
 ## v2.52.0 (2026-11-19)
 
 ### What's new
