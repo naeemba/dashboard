@@ -36,13 +36,11 @@ async function install(program: string, programArguments: string[], cwd: string)
   return runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS, environment });
 }
 
-// Starts the leftover sweep's timers (leftover-sweep.ts) with the removal made here.
-export function worktreeActions(main: WorktreeRemovePorts & Omit<Parameters<typeof startLeftoverSweep>[0], 'remove'>) {
+export function worktreeActions(main: WorktreeRemovePorts) {
   const make = bind(worktreeMake, {
     git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install,
   });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
-  startLeftoverSweep({ remove, records: main.records, projects: main.projects });
   // What a throwaway's worker is asked before it is let go of, and what letting go of it takes
   // (throwaway.ts), as the session command's ports and the sweep's take them.
   const throwawayPorts = {
@@ -62,6 +60,8 @@ export function worktreeActions(main: WorktreeRemovePorts & Omit<Parameters<type
     // The launch's, once its panes are back.
     sweep: (ports: Pick<WorktreeSweepPorts, 'projects' | 'hold'>) => bind(worktreeSweep, { ...throwawayPorts, throwawaysOf, log: main.log, ...ports }),
     remove,
+    // The leftover sweep's timers (leftover-sweep.ts), started by main with the removal made here.
+    startLeftoverSweep: (sweep: Omit<Parameters<typeof startLeftoverSweep>[0], 'remove'>) => startLeftoverSweep({ remove, ...sweep }),
     // card.ship's, with the project's queue held and origin fetched.
     makeForShip: (request: ShipWorktreeRequest): Promise<ShipWorktree> => made(make.call({ kind: 'card', ...request })),
     // `pane run --worktree`'s.

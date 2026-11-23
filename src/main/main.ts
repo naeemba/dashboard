@@ -679,7 +679,7 @@ async function attachPane(entry: WorktreeEntry, slot: number, prompt: string): P
 const shipInProject = oneAtATime();
 // Every worktree made and removed, from every door: a ship, a review, `pane run --worktree`, `pane
 // release` and the worktree dialog, and the leftover sweep (leftover-worktrees.ts).
-const worktree = worktreeActions({ remove: worktrees.remove, queue: shipInProject, log: (draft) => logStore.log(draft), records: worktrees.entries, projects: openProjectPaths });
+const worktree = worktreeActions({ remove: worktrees.remove, queue: shipInProject, log: (draft) => logStore.log(draft) }); worktree.startLeftoverSweep({ records: worktrees.entries, projects: openProjectPaths });
 
 // A stale /pr-loop install, said on the bar at launch (on load, so the page is listening) and at each review start.
 const sayReviewLoop = (notice: string): void => sendToRenderer('review-loop:notice', notice);
