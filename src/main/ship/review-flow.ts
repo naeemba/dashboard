@@ -214,8 +214,8 @@ export type ReviewSweep = {
 };
 
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
-  // Cards a review has already been started for, tried for and refused, or finished in a run before
-  // this one. Kept for the run rather than on the record, because the record only changes when the swap
+  // Cards a review has already been started for, or tried for and refused. Asked only once a card is
+  // known not to be past Review, so a reviewed card is still seen reaching Done. Kept for the run rather than on the record, because the record only changes when the swap
   // works: one that stopped short leaves the old entry exactly as it was, and without this the sweep
   // would find the same finished card on the next tick and spawn git at it again for as long as the
   // app is open.
@@ -223,13 +223,18 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // The one refusal that comes back off is a worktree with uncommitted files in it. That is the agent
   // still finishing rather than a review that failed, and swapWorktree says why it is the exception.
   const reviewed = new Set<string>();
+  // Cards whose worktree the sweep has nothing more to do with this run: removed or refused once a
+  // card is past Review, or a card deleted from its board. Apart from `reviewed` because a card is
+  // marked that when its review starts, and that card's worktree is the one to remove once it reaches
+  // Done: one set for both kept every reviewed card's folder on disk until the app restarted.
+  const settled = new Set<string>();
 
   // One card, start to finish. Every guard in it runs before the first await, and so does the mark,
   // so the whole list can be walked at once, and a run can start while the last one is still out,
   // without two of them starting the same card.
   // `boardOf` is the run's one read of each project's board, shared by every worktree in it.
   async function sweepOne(entry: WorktreeEntry, boardOf: (projectPath: string) => Board | null): Promise<void> {
-    if (reviewed.has(entry.cardId)) return;
+    if (settled.has(entry.cardId)) return;
     // Panes belong to an open project. A project closed right now is not a refusal: nothing is marked,
     // and the sweep finds the card again the moment it is opened.
     const slot = ports.slotOf(entry.projectPath);
@@ -260,9 +265,9 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       // while a shell still stands in it: the mark comes off again, so the worktree goes on the first
       // tick after the last one is closed. What waiting costs is the two board reads above and one
       // `ps` and one `lsof` every five seconds, shared by every card waiting on that tick.
-      reviewed.add(entry.cardId);
+      settled.add(entry.cardId);
       if (await ports.shellLivesIn(entry.worktreePath)) {
-        reviewed.delete(entry.cardId);
+        settled.delete(entry.cardId);
         return;
       }
       await clearWorktree(ports, entry);
@@ -295,9 +300,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // is already exported and `board:change` already fires in main for every open project's folder.
     if (awaits === null) {
       const deleted = board !== null && allCards(board).length > 0 && !isCardSetAside(boardFolderPath(entry.projectPath), entry.cardId);
-      if (deleted) reviewed.add(entry.cardId);
+      if (deleted) settled.add(entry.cardId);
       return;
     }
+    if (reviewed.has(entry.cardId)) return;
     // A review already running for it. Asked here rather than first, so the card reaching Done is
     // still seen above and its worktree cleared. There is no waiting for a pane: a review that finds
     // every worker busy opens a new one.
@@ -428,6 +434,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
 
   function forget(cardId: string): void {
     reviewed.delete(cardId);
+    settled.delete(cardId);
     byHand.delete(cardId);
   }
 

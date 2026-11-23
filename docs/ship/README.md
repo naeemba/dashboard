@@ -16,7 +16,7 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 - Review: `review.ts`, `review-flow.ts`, `review-finished.ts`, `review-loop-install.ts`
 - Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`,
   `worktree-scan.ts`, `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
-  `worktree-removal.ts`, `worktrees.css`
+  `worktree-removal.ts`, `worktrees.css`, `leftover-worktrees.ts`, `leftover-sweep.ts`
 
 Started by the card.ship and card.review actions (docs/actions), which are what a move into Ship or
 Review, and `dashboard board ship` and `review`, call. The agent itself, and the review's, is
@@ -115,6 +115,13 @@ with merging off, `pr land` with it on.
   opens empty (`worktree-store.test.ts`).
 - Given a worktree with modified files, when you remove it from the list, then the app says so
   instead of git's raw `fatal:`.
+- Given a card whose review the sweep started, when the card reaches Done in the same run, then its
+  worktree is removed without a restart (`review-flow-clearing.test.ts`).
+- Given a worktree under `<project>.worktrees/` that the app has no record of (a throwaway whose
+  pane was closed by hand, or a record lost), when its branch's pull request merged at its HEAD,
+  nothing in it is uncommitted, and no process on the machine stands in it, then the leftover sweep
+  removes it, a minute after launch and every half hour after, with the branch kept. Any other
+  answer, or gh failing, keeps it (`leftover-worktrees.test.ts`).
 
 ## Known limits
 

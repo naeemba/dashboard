@@ -5,13 +5,14 @@ import { action } from '../action';
 import { isFilledText } from '../pane/pane-input';
 
 // Every worktree the app removes: the worktree dialog's and the manager's `d`, pane.release's throwaway,
-// and a reviewed card's, both the swap's and the merged one's. What a removal does — refused once with
+// a reviewed card's, both the swap's and the merged one's, and the leftover sweep's merged one
+// (leftover-worktrees.ts). What a removal does — refused once with
 // changes in it, the shells killed and the screens closed in a recorded one — is the keeper's
 // (worktree-keeper.ts); what each door's removal is, is `removalOf`'s.
 
-export type RemovalFrom = 'dialog' | 'release' | 'review';
+const FROMS = ['dialog', 'release', 'review', 'sweep'] as const;
 
-const FROMS: readonly RemovalFrom[] = ['dialog', 'release', 'review'];
+export type RemovalFrom = (typeof FROMS)[number];
 
 export type WorktreeRemoveInput = { worktreePath: string; projectPath: string | undefined; force: boolean; from: RemovalFrom };
 

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/app/bridge';
 import { baseBranch, git, runProgram } from '../../app/git';
 import { loginShellPath } from '../../app/shell-path';
+import { startLeftoverSweep } from '../../ship/leftover-sweep';
 import { bind, isRefused, type BoundAction } from '../action';
 import { INSTALL_TIMEOUT_MS, worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
 import { worktreeRemove, type WorktreeRemovePorts } from './remove';
@@ -32,11 +33,16 @@ async function install(program: string, programArguments: string[], cwd: string)
   return runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS, environment });
 }
 
-export function worktreeActions(main: WorktreeRemovePorts) {
+// `records` and `projects` are the leftover sweep's, which this starts on its own timer through
+// worktree.remove (leftover-sweep.ts).
+export function worktreeActions(main: WorktreeRemovePorts & {
+  records: () => readonly WorktreeEntry[]; projects: () => readonly string[];
+}) {
   const make = bind(worktreeMake, {
     git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install,
   });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
+  startLeftoverSweep({ remove, records: main.records, projects: main.projects });
   return {
     remove,
     // card.ship's, with the project's queue held and origin fetched.
