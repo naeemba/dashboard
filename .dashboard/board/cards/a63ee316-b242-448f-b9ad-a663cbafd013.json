@@ -5,8 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-23T14:16:53.504Z",
-  "updatedAt": "2026-11-23T14:17:03.323Z",
+  "updatedAt": "2026-11-23T15:20:11.530Z",
   "branch": "throwaway-worktrees-stop-piling-up",
-  "column": "Doing",
+  "pullRequest": 348,
+  "comments": [
+    {
+      "at": "2026-11-23T14:52:04.765Z",
+      "body": "Pull request #348 opened: Throwaway worktrees go with their pane unless they hold work https://github.com/naeemba/dashboard/pull/348"
+    },
+    {
+      "at": "2026-11-23T15:20:11.529Z",
+      "body": "Review loop converged in 2 rounds: 7 findings fixed in dd9767fd (pane matching through real paths, threwAway logs under the throwaway's project, a failed mark is reported instead of failing the run, renames and docs, throwaway tests in their own file). CI then failed on Windows in throwaway-marker.test.ts because git spells paths long with forward slashes; the test now compares real paths (0cf1b4aa). All 5 checks pass on 0cf1b4aa. Converged, ready to merge."
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
