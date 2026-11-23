@@ -64,6 +64,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       'card-3': { worktreePath: '/work/api.worktrees/card-three', working: true },
     })[cardId],
     makeWorktree: async () => '/work/api.worktrees/fix-the-tests',
+    markThrowaway: async () => undefined,
     // api-mr174 is a sibling worktree, x one nested in the checkout, packages/web a folder of it.
     checkRunFolder: async (_projectPath, folder) => (
       { '/work/api-mr174': { worktree: '/work/api-mr174' }, '/work/api.worktrees/card-one': { worktree: '/work/api.worktrees/card-one' }, '/work/api/.claude/worktrees/x': { worktree: '/work/api/.claude/worktrees/x' } }[folder]
@@ -79,6 +80,8 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     finishedCard: (id) => finishedCards.get(id) ?? null,
     closeAfterMs: () => 10 * 60 * 1000,
     released: (id, reason, output) => { released.push(`${id} ${reason}: ${output}`); },
+    threwAway: (id, said, projectPath) => { released.push(`${id} dropped: ${said} (${projectPath})`); },
+    realPath: (folder) => folder,
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });

@@ -171,9 +171,14 @@ with main never told, so the command sends a refused notify again without the gr
 
 **A throwaway worktree is not on the worktree record.** That record is per card, and a throwaway
 worktree has no card. The manager's worktree list finds it through git like any other folder, and
-release removes it only once `unfinishedWork` in finished-work.ts says its work is committed, pushed
-and has a pull request. Kept otherwise, and the reply says why. Which pane held it lives in memory,
-so a restart forgets it and it is left for the manager's list to remove.
+whenever its pane goes (released, closed by hand, closed with its project) it is removed unless
+`unfinishedWork` in finished-work.ts finds uncommitted changes or commits no remote has. Kept
+otherwise, and the reply or the log says why. No pull request is asked for: a research worker that
+changed nothing, or one that merged somebody else's pull request, has no branch of its own to open
+one for, and keeping those piled 32 worktrees, 25 GB, into new-crm until `/home` was full. Which
+pane holds it lives in memory, so a file in git's own folder for the worktree marks it a
+throwaway (`throwaway-marker.ts`), and the launch's worktree.sweep gives each one a restored pane
+stands in back to that pane and lets go of the rest, in one log line.
 
 **Release kills only main's worker, while it is still there.** main.ts keeps one record of the panes
 holding main's worker now: a session run adds the pane, and the agent exiting, anything else started
