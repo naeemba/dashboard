@@ -56,7 +56,7 @@ export function worktreeActions(main: WorktreeRemovePorts) {
       if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
     },
     // The leftover sweep's timers, which main starts (leftover-sweep.ts).
-    startLeftoverSweep: (sweep: { records: () => readonly WorktreeEntry[]; projects: () => readonly string[] }) =>
+    startLeftoverSweep: (sweep: Omit<Parameters<typeof startLeftoverSweep>[0], 'remove'>) =>
       startLeftoverSweep({ remove, ...sweep }),
   };
 }
