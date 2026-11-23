@@ -1,5 +1,22 @@
 # Changelog
 
+## v2.54.0 (2026-11-23)
+
+### What's new
+
+- Browser: an agent's background tab lays out, screenshots and reads like a visible one
+- Dashboard as an MCP server: every command verb as a tool
+- Throwaway worktrees stop piling up
+
+### What's Changed
+* Browser: an agent's background tab screenshots, resets and reads like a visible one by @naeemba in https://github.com/naeemba/dashboard/pull/345
+* Dashboard as an MCP server: every command verb as a tool by @naeemba in https://github.com/naeemba/dashboard/pull/346
+* Throwaway worktrees go with their pane unless they hold work by @naeemba in https://github.com/naeemba/dashboard/pull/348
+* Remove merged worktrees: a reviewed card's in the same run, squash-merged throwaways, and unrecorded leftovers by @naeemba in https://github.com/naeemba/dashboard/pull/347
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.53.0...v2.54.0
+
 ## v2.53.0 (2026-11-21)
 
 ### What's new
