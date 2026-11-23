@@ -8,6 +8,7 @@ import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
 import { screenshotReadRule } from '../browser/browser-page';
+import { allowedToolRules } from '../command/mcp-tools';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -57,6 +58,8 @@ const appCommandPermissions = (userData: string) => ({
     // A reading only: `budget --cap` changes the cap, and is asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',
     'Bash(node "$DASHBOARD_COMMAND" --version)',
+    // The same verbs as the dashboard server's tools (mcp-tools.ts); a project one that changes something is asked.
+    ...allowedToolRules(),
   ],
 });
 
@@ -88,6 +91,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '',
     'Dispatch rule: a pane is for a task I asked for (do X, review X, research X), never for a lookup you'
       + ' need mid-task; those stay inline or in the Agent tool.',
+    '',
+    'Every command below except pr land is also a tool of the dashboard MCP server, named for its words'
+      + ' (mcp__dashboard__pane_claim, board_ship, browser_screenshot) and taking them as parameters: call the'
+      + ' tool where there is one.',
     '',
     'Dispatch with the pane command, `node "$DASHBOARD_COMMAND" pane`:',
     '  claim [--project <name|aka>]',
