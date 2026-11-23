@@ -32,6 +32,18 @@ describe('parseWorktreeList', () => {
   it('finds nothing in a project with no worktrees', () => {
     expect(parseWorktreeList('worktree /code/crm\nHEAD 1\nbranch refs/heads/main', '/code/crm')).toEqual([]);
   });
+
+  // The leftover sweep keeps a locked worktree, with or without a reason after the word.
+  it('marks a locked worktree, and only a locked one', () => {
+    const listed = parseWorktreeList([
+      'worktree /code/crm', 'HEAD 1', 'branch refs/heads/main', '',
+      'worktree /code/crm.worktrees/a', 'HEAD 2', 'branch refs/heads/a', 'locked', '',
+      'worktree /code/crm.worktrees/b', 'HEAD 3', 'branch refs/heads/b', 'locked keep', '',
+      'worktree /code/crm.worktrees/c', 'HEAD 4', 'branch refs/heads/c',
+    ].join('\n'), '/code/crm');
+    expect(listed.map((worktree) => worktree.locked)).toEqual([true, true, undefined]);
+    expect('locked' in listed[2]).toBe(false);
+  });
 });
 
 // A project opened at a linked worktree: git still prints the main checkout first, and --in may name it.
