@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-23T12:29:32.301Z",
-  "updatedAt": "2026-11-23T12:29:32.301Z",
-  "column": "Backlog",
-  "order": 53
+  "updatedAt": "2026-11-23T12:29:50.463Z",
+  "branch": "dashboard-as-an-mcp-server-every-command-ve",
+  "column": "Doing",
+  "order": 1
 }
