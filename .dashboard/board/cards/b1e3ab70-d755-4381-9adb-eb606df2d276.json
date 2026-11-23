@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-23T12:29:28.457Z",
-  "updatedAt": "2026-11-23T12:39:05.651Z",
+  "updatedAt": "2026-11-23T12:49:36.682Z",
   "branch": "browser-an-agent-s-background-tab-lays-out",
   "pullRequest": 345,
   "comments": [
     {
       "at": "2026-11-23T12:39:05.623Z",
       "body": "Pull request #345 opened: Browser: an agent's background tab screenshots, resets and reads like a visible one https://github.com/naeemba/dashboard/pull/345"
+    },
+    {
+      "at": "2026-11-23T12:49:36.681Z",
+      "body": "PR #345 review loop converged in 2 rounds, ready to merge. Round 1 fix (b35ace47): a click on a stale ref to a node the page hid ('Node does not have a layout object') now also says take a new snapshot; protocol messages pinned by tests. 0 threads open, no conflicts, CI 5/5 green on b35ace47."
     }
   ],
   "column": "Review",
