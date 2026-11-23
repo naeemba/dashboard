@@ -46,11 +46,27 @@ describe('the tools against the usages', () => {
     expect(Object.keys(COMMAND_ONLY).filter((verb) => !usageVerbs.includes(verb))).toEqual([]);
   });
 
+  // A verb's usage runs from its `  <noun> <verb>` line to the next `  <noun> ` line, so a
+  // continuation line such as project set's `[--deploy ...]` counts as its own.
+  const verbUsage = (noun: string, verb: string) => {
+    const lines = usages[noun].split('\n');
+    const isVerbLine = (line: string) => line.startsWith(`  ${noun} `);
+    const start = lines.findIndex((line) => isVerbLine(line)
+      && line.slice(noun.length + 3).split(/[ []/)[0].split('|').includes(verb));
+    const end = lines.findIndex((line, index) => index > start && isVerbLine(line));
+    return lines.slice(start, end === -1 ? undefined : end).join('\n');
+  };
+  // Flags a usage states in prose rather than on the verb's line.
+  const statedInProse = new Set(['board --project', 'pane run --screen']);
+
   it('names only verbs and flags the usages have', () => {
     for (const each of DASHBOARD_TOOLS.filter((one) => one.name !== 'version' && one.name !== 'budget')) {
       expect(usageVerbs, each.name).toContain(each.words.join(' '));
-      const usage = usages[each.words[0]];
-      for (const parameter of each.parameters.filter((one) => one.flag)) expect(usage, `${each.name} --${parameter.name}`).toContain(`--${parameter.name}`);
+      const [noun, verb] = each.words;
+      for (const parameter of each.parameters.filter((one) => one.flag)) {
+        if (statedInProse.has(`${noun} --${parameter.name}`) || statedInProse.has(`${noun} ${verb} --${parameter.name}`)) continue;
+        expect(verbUsage(noun, verb), `${each.name} --${parameter.name}`).toContain(`--${parameter.name}`);
+      }
     }
   });
 });
