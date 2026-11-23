@@ -239,7 +239,12 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given throwaway worktrees left on disk at a restart, when the launch's panes
   are back, then each one a pane stands in is that pane's again, each other one
   with nothing to lose is removed, and one log line says what was removed and
-  what was kept, and why.
+  what was kept, and why. A pane counts as standing in one when its folder is
+  inside it in real paths, so a project opened through a symlink still holds
+  its throwaways.
+- Given marking a new throwaway fails (a full disk), when `pane run --worktree`
+  runs, then the worker starts anyway and the reply says a restart will not
+  sweep that folder.
 - Given a throwaway worktree a merge already removed
   (`gh pr merge --delete-branch` takes the branch's worktree with it), when the worker is released,
   then the pane closes and the reply says `released 2:3; <folder> was already removed`, not

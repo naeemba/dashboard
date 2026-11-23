@@ -51,7 +51,7 @@ door is now. Every door's call is a port in `actions/worktree/worktree-actions.t
 | make, a throwaway | worktree.make `throwaway`, `makeWorktree` in `session-requests.ts`, then marked (`throwaway-marker.ts`) | CLI `pane run --worktree` | no |
 | make, /create-task | `create-task-program.ts:71` | the `/create-task` skill's program | outside the app; stays |
 | remove | worktree.remove `dialog`, `actions/worktree/remove.ts`, from `worktree:remove` (`ship/worktree-channels.ts`) | IPC (worktree dialog's `d`, the manager's list) | no |
-| remove, a throwaway | worktree.remove `release`, the `removeWorktree` port of `throwaway.ts`'s `letGoOf` | CLI `pane release`, a pane closed or dropped with its project (`dropped` in `session-requests.ts`), worktree.sweep | no |
+| remove, a throwaway | worktree.remove `throwaway`, the `removeWorktree` port of `throwaway.ts`'s `letGoOf` | CLI `pane release`, a pane closed or dropped with its project (`dropped` in `session-requests.ts`), worktree.sweep | no |
 | sweep the throwaways | worktree.sweep, `actions/worktree/sweep.ts`, bound in `worktree-actions.ts` | launch, after pane.reap | no |
 | remove, a reviewed card's | worktree.remove `review`, the review's `removeWorktree` port, in `review-flow.ts` | sweep, card.review | no |
 | a card's pane on its record | `givePane`, `ship/worktree-keeper.ts` | a ship, a review, a card's `pane run`, pane.restore | a record write under pane.dispatch's callers, not a door |

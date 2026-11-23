@@ -21,7 +21,7 @@ export type WorktreeRemovePorts = {
   log(draft: LogDraft): void;
 };
 
-// Forced only when the dialog asks, after you have said yes to losing what is in it: a throwaway's has
+// Forced only when the dialog asks, after you have said yes to losing what is in it: a throwaway's caller has
 // already found nothing unfinished there, and a review never takes what an agent left uncommitted. Queued on the
 // project, as a ship is, unless the caller holds the queue already: the review runs inside its own, and
 // the queue is not re-entrant. Logged unless it is the review's, which writes its outcome on the card.

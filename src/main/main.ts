@@ -801,7 +801,7 @@ const workerAnswers = sessionRequests({
   makeWorktree: worktree.makeThrowaway,
   checkRunFolder,
   holdsWorktree,
-  ...worktree.throwawayChecks,
+  ...worktree.throwawayPorts,
   hasKeyboard: claudeSessions.hasKeyboard,
   finishedCard(id) {
     const { slot, index } = paneFromId(id);
@@ -812,7 +812,8 @@ const workerAnswers = sessionRequests({
     logStore.log({ level: 'info', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `${output}: ${reason}` });
     sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
   },
-  threwAway: (id, said) => logStore.log({ level: 'info', kind: 'worktree', project: projectIn(paneFromId(id).slot)?.path, message: `pane ${id} closed: ${said}` }),
+  threwAway: (id, said, projectPath) => logStore.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
+  realPath,
 });
 // Finished workers closed by the app itself, through pane.release (auto-release.ts).
 setInterval(() => {

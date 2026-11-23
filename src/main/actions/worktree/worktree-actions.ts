@@ -42,12 +42,12 @@ export function worktreeActions(main: WorktreeRemovePorts) {
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
   // What a throwaway's worker is asked before it is let go of, and what letting go of it takes
   // (throwaway.ts), as the session command's ports and the sweep's take them.
-  const throwawayChecks = {
+  const throwawayPorts = {
     ...worktreeChecks(runProgram),
     exists: existsSync,
     prune: async (projectPath: string) => { await git(['worktree', 'prune'], projectPath); },
-    // Once unfinishedWork has said there is nothing in it to lose. A refusal is a failure the release
-    // reports.
+    // Once unfinishedWork has said there is nothing in it to lose. A refusal is a failure, which
+    // letGoAndSay reports: in the release's answer, or as a kept line in the log.
     async removeWorktree(worktreePath: string, projectPath: string): Promise<void> {
       const removal = await removed(remove.call({ worktreePath, projectPath, from: 'throwaway' }));
       if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
@@ -55,9 +55,9 @@ export function worktreeActions(main: WorktreeRemovePorts) {
     markThrowaway,
   };
   return {
-    throwawayChecks,
+    throwawayPorts,
     // The launch's, once its panes are back.
-    sweep: (ports: Pick<WorktreeSweepPorts, 'projects' | 'hold'>) => bind(worktreeSweep, { ...throwawayChecks, throwawaysOf, log: main.log, ...ports }),
+    sweep: (ports: Pick<WorktreeSweepPorts, 'projects' | 'hold'>) => bind(worktreeSweep, { ...throwawayPorts, throwawaysOf, log: main.log, ...ports }),
     remove,
     // card.ship's, with the project's queue held and origin fetched.
     makeForShip: (request: ShipWorktreeRequest): Promise<ShipWorktree> => made(make.call({ kind: 'card', ...request })),

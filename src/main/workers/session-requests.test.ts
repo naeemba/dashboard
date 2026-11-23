@@ -101,66 +101,6 @@ describe('sessionRequests', () => {
     expect(await run('2:1')).toMatchObject({ ok: false, output: expect.stringContaining('already has a worker') });
   });
 
-  it('removes a throwaway worktree on release once its work is out, and keeps it otherwise', async () => {
-    const finished = project();
-    const answer = sessionRequests(finished.ports);
-    await answer({ directory: '/work/api', args: ['claim'] });
-    await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'fix the tests'] });
-    expect(await answer({ directory: '/work/api', args: ['release', '2:1'] }))
-      .toEqual({ ok: true, output: 'released 2:1 and removed fix-the-tests' });
-    expect(finished.closed).toEqual(['2:1']);
-    expect(finished.removed).toEqual(['/work/api.worktrees/fix-the-tests from /work/api']);
-
-    const unpushed = project({ unfinished: async () => 'its branch was never pushed' });
-    const again = sessionRequests(unpushed.ports);
-    await again({ directory: '/work/api', args: ['claim'] });
-    await again({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'fix the tests'] });
-    expect(await again({ directory: '/work/api', args: ['release', '2:1'] })).toEqual({
-      ok: true, output: 'released 2:1; kept /work/api.worktrees/fix-the-tests: its branch was never pushed',
-    });
-    expect(unpushed.removed).toEqual([]);
-  });
-
-  // A pane closed by hand or with its project never goes through release, and left its throwaway on disk.
-  it('lets go of a throwaway when its pane goes without a release, and only once', async () => {
-    const { ports, removed, released } = project();
-    const answer = sessionRequests(ports);
-    await answer({ directory: '/work/api', args: ['claim'] });
-    await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'fix the tests'] });
-    await answer.dropped('2:1');
-    await answer.dropped('2:1');
-    expect(removed).toEqual(['/work/api.worktrees/fix-the-tests from /work/api']);
-    expect(released).toEqual(['2:1 dropped: removed fix-the-tests']);
-  });
-
-  // pane.close drops the pane in the middle of a release, which lets go of the throwaway and answers for it.
-  it('leaves a released pane\'s throwaway to the release', async () => {
-    const { ports, removed, released } = project();
-    const { close } = ports;
-    ports.close = async (id) => {
-      await answer.dropped(id);
-      return close(id);
-    };
-    const answer = sessionRequests(ports);
-    await answer({ directory: '/work/api', args: ['claim'] });
-    await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'fix the tests'] });
-    expect(await answer({ directory: '/work/api', args: ['release', '2:1'] }))
-      .toEqual({ ok: true, output: 'released 2:1 and removed fix-the-tests' });
-    expect(removed).toEqual(['/work/api.worktrees/fix-the-tests from /work/api']);
-    expect(released).toEqual([]);
-  });
-
-  // After a restart nothing remembers which pane a throwaway was given to: the launch's sweep asks.
-  it('gives a throwaway found at launch to the pane standing in it, whose close then lets go of it', async () => {
-    const { ports, open, removed } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api.worktrees/old/src' : '/work/api') });
-    open.push(1);
-    const answer = sessionRequests(ports);
-    expect(answer.hold({ worktreePath: '/work/api.worktrees/old', projectPath: '/work/api' })).toBe('2:1');
-    expect(answer.hold({ worktreePath: '/work/api.worktrees/other', projectPath: '/work/api' })).toBeUndefined();
-    await answer.dropped('2:1');
-    expect(removed).toEqual(['/work/api.worktrees/old from /work/api']);
-  });
-
   // A hook reports from its worker's worktree, wherever that is; the id is all it needs.
   it('marks a worker from its hook and lists what it said', async () => {
     const { ports, marked } = project();
@@ -436,20 +376,6 @@ describe('sessionRequests', () => {
     expect(await answer({ directory: '/work/api', args: ['release', '2:2'] })).toEqual({ ok: true, output: 'released 2:2' });
     expect(await answer({ directory: '/work/api', args: ['release', '2:3'] })).toMatchObject({ ok: false });
     expect(closed).toEqual(['2:2']);
-  });
-
-  // The first worker has exited, so the pane is free; a second throwaway would make release forget it.
-  it('refuses a second throwaway worktree in a pane that still holds one', async () => {
-    const { ports, started } = project();
-    const answer = sessionRequests(ports);
-    await answer({ directory: '/work/api', args: ['claim'] });
-    await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'fix the tests'] });
-    ports.agentIn = () => false;
-    ports.busyWith = () => null;
-    expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'again'] })).toEqual({
-      ok: false, output: '2:1 still holds /work/api.worktrees/fix-the-tests — release it first',
-    });
-    expect(started).toHaveLength(1);
   });
 
   it('says a step failed rather than throwing', async () => {

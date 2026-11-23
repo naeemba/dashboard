@@ -25,8 +25,8 @@ describe('worktreeActions', () => {
     });
   });
 
-  it('throws a failed release removal, naming the folder when git said nothing', async () => {
-    await expect(actions({ ok: false, message: '', dirty: ['a.ts'] }).throwawayChecks.removeWorktree('/w/fix', '/code/api'))
+  it('throws a failed throwaway removal, naming the folder when git said nothing', async () => {
+    await expect(actions({ ok: false, message: '', dirty: ['a.ts'] }).throwawayPorts.removeWorktree('/w/fix', '/code/api'))
       .rejects.toThrow('/w/fix has changes');
   });
 });

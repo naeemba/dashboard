@@ -80,7 +80,8 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     finishedCard: (id) => finishedCards.get(id) ?? null,
     closeAfterMs: () => 10 * 60 * 1000,
     released: (id, reason, output) => { released.push(`${id} ${reason}: ${output}`); },
-    threwAway: (id, said) => { released.push(`${id} dropped: ${said}`); },
+    threwAway: (id, said, projectPath) => { released.push(`${id} dropped: ${said} (${projectPath})`); },
+    realPath: (folder) => folder,
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });

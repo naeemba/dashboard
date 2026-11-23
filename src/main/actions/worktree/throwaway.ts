@@ -18,7 +18,7 @@ export type ThrowawayPorts = {
   prune(projectPath: string): Promise<void>;
   // Why the worktree is kept, or null when nothing in it would be lost (finished-work.ts).
   unfinished(worktreePath: string): Promise<string | null>;
-  // worktree.remove, from release.
+  // worktree.remove `throwaway`, from release, a dropped pane and the sweep.
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
 };
 

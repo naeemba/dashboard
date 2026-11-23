@@ -26,7 +26,6 @@ export async function git(gitArguments: string[], cwd: string, options: GitOptio
   return runProgram('git', gitArguments, cwd, options);
 }
 
-// The same for another program, which so far is gh asking about a branch's pull requests.
 // The same, blocking: for the few local calls whose caller must not be interleaved with another write
 // in this process (the board sync's fast-forward). Never for anything that touches the network.
 export function gitNow(gitArguments: string[], cwd: string): string {
@@ -42,6 +41,7 @@ export function gitNowOrNull(gitArguments: string[], cwd: string): string | null
   }
 }
 
+// The same for another program, which so far is gh asking about a branch's pull requests.
 export async function runProgram(program: string, programArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {
   const { stdout } = await runCommand(program, programArguments, {
     cwd,
