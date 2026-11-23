@@ -6,7 +6,7 @@ import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
 import { holdProjectName, readProjectNames } from './workers/project-names';
-import { git, runProgram } from './app/git';
+import { runProgram } from './app/git';
 import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
 import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
@@ -37,7 +37,6 @@ import { MANAGER_SLOT } from '../shared/manager/manager';
 import { announceSocket } from './command/app-address';
 import { environmentForPanes, paneCommands } from './command/pane-environment';
 import { closeSessionSocket, listenForSessions, sessionSocketPath } from './workers/session-socket';
-import { worktreeChecks } from './workers/finished-work';
 import { checkRunFolder, holdsWorktree } from './workers/run-folder';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
@@ -454,11 +453,12 @@ function closeProjectSlot(slot: number): void {
   worktrees.set(withoutPanes(worktrees.entries(), closing.path));
   sendToRenderer('projects:change', openProjects());
 }
+const openProjectPaths = (): string[] => projects.flatMap((project) => (project === undefined ? [] : [project.path]));
 // Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
 // when is usage-sweep.ts's; what is handed over here is the four things only main can answer.
 const tokenUsage = usageSweep({
   panePids: () => new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id])),
-  openProjects: () => projects.flatMap((project) => (project === undefined ? [] : [project.path])),
+  openProjects: openProjectPaths,
   processTree,
   publish: (snapshot) => sendToRenderer('usage:change', snapshot),
   placed: (placement) => [claudeSessions, sessionIndex].forEach((store) => store.placed(placement)),
@@ -614,6 +614,7 @@ function dropPane(id: string): void {
   panes.drop(id);
   terminalCommands.delete(id);
   paneScreens.drop(id);
+  void workerAnswers.dropped(id);
 }
 
 registerWorkerChannels(table, { ...pane, openProjects });
@@ -800,10 +801,7 @@ const workerAnswers = sessionRequests({
   makeWorktree: worktree.makeThrowaway,
   checkRunFolder,
   holdsWorktree,
-  exists: existsSync,
-  prune: async (projectPath) => { await git(['worktree', 'prune'], projectPath); },
-  ...worktreeChecks(runProgram),
-  removeWorktree: worktree.removeForRelease,
+  ...worktree.throwawayChecks,
   hasKeyboard: claudeSessions.hasKeyboard,
   finishedCard(id) {
     const { slot, index } = paneFromId(id);
@@ -814,6 +812,7 @@ const workerAnswers = sessionRequests({
     logStore.log({ level: 'info', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `${output}: ${reason}` });
     sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
   },
+  threwAway: (id, said) => logStore.log({ level: 'info', kind: 'worktree', project: projectIn(paneFromId(id).slot)?.path, message: `pane ${id} closed: ${said}` }),
 });
 // Finished workers closed by the app itself, through pane.release (auto-release.ts).
 setInterval(() => {
@@ -869,7 +868,9 @@ const remote = registerRemote(held, {
 // Once the window has reopened its projects, and after the manager's restore (registered on managerBack
 // first), the kept shells no page took back are ended: pane.reap.
 table.on('session:restored', () => void managerBack.then(() => pane.reap.call({}))
-  .then((result) => { if ('output' in result && result.output !== '') sendToRenderer('pane:released', result.output); }));
+  .then((result) => { if ('output' in result && result.output !== '') sendToRenderer('pane:released', result.output); })
+  // Then the throwaways a restart left on disk: worktree.sweep.
+  .then(() => worktree.sweep({ projects: openProjectPaths, hold: workerAnswers.hold }).call({})));
 whenLaunchedAgain(liveWindow, connectAtLaunch(process.argv, () => settings, table, failures.hold, remote.joinedTo));
 registerWithIpc(table, remote.current);
 const remoteHost = startHost(held);

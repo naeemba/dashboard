@@ -1,16 +1,13 @@
 import type { Refused } from '../../../shared/app/bridge';
-import { baseName } from '../../../shared/app/base-name';
-import { failureText } from '../../../shared/errors/failure';
 import { action, isRefused } from '../action';
 import { isFilledText } from './pane-input';
+import { letGoOf, letGoText, type Throwaway, type ThrowawayPorts } from '../worktree/throwaway';
 
 // `pane release`: the worker closed, unless what runs in it is somebody else's, and the throwaway
-// worktree it was given removed once nothing in it is left unfinished. The asker's right to the pane
-// is the command's to check first (session-requests.ts).
+// worktree it was given removed once nothing in it would be lost (throwaway.ts). The asker's right to
+// the pane is the command's to check first (session-requests.ts).
 
-export type Throwaway = { worktreePath: string; projectPath: string };
-
-export type PaneReleasePorts = {
+export type PaneReleasePorts = ThrowawayPorts & {
   // What is running in the pane when something is, or null.
   busyWith(id: string): string | null;
   // Whether what runs there is main's worker, which release may kill. Anything else is somebody else's:
@@ -23,17 +20,6 @@ export type PaneReleasePorts = {
   // waiting in main's queue is taken back, since main hears a report only once the turn that read it
   // ends, and that turn is the one releasing the worker (workers-decision-1).
   forget(id: string): Throwaway | undefined;
-  // Whether the folder is still on disk. A merge can take it first: `gh pr merge --delete-branch`
-  // removes the branch's worktree, and git spawned into a folder that is gone fails as `spawn git
-  // ENOENT`, which read as the release failing when it had worked.
-  exists(worktreePath: string): boolean;
-  // `git worktree prune` from the project: a folder deleted by hand leaves git's registration behind,
-  // which keeps its branch checked out nowhere. Only registrations whose folder is gone are touched, so
-  // after a merge's own removal it does nothing.
-  prune(projectPath: string): Promise<void>;
-  // Why the worktree is kept, or null when nothing in it would be lost (finished-work.ts).
-  unfinished(worktreePath: string): Promise<string | null>;
-  removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
 };
 
 export const paneRelease = action<PaneReleasePorts, { id: string }, { output: string }>('pane.release', {
@@ -48,19 +34,9 @@ export const paneRelease = action<PaneReleasePorts, { id: string }, { output: st
     const closeNote = closed.output.slice(`closed ${id}`.length);
     const throwaway = ports.forget(id);
     if (throwaway === undefined) return { output: `released ${id}${closeNote}` };
-    const folder = baseName(throwaway.worktreePath);
-    if (!ports.exists(throwaway.worktreePath)) {
-      // The pane is closed and the throwaway forgotten by now: a prune that fails, say because the
-      // project folder is gone too, is said in the reply rather than failing a release that worked.
-      const pruneNote = await ports.prune(throwaway.projectPath).then(
-        () => '',
-        (error: unknown) => ` (git worktree prune failed: ${failureText(error)})`,
-      );
-      return { output: `released ${id}; ${folder} was already removed${pruneNote}${closeNote}` };
-    }
-    const reason = await ports.unfinished(throwaway.worktreePath);
-    if (reason !== null) return { output: `released ${id}${closeNote}; kept ${throwaway.worktreePath}: ${reason}` };
-    await ports.removeWorktree(throwaway.worktreePath, throwaway.projectPath);
-    return { output: `released ${id} and removed ${folder}${closeNote}` };
+    const outcome = await letGoOf(ports, throwaway);
+    if ('removed' in outcome) return { output: `released ${id} and removed ${outcome.removed}${closeNote}` };
+    if ('gone' in outcome) return { output: `released ${id}; ${letGoText(outcome)}${closeNote}` };
+    return { output: `released ${id}${closeNote}; ${letGoText(outcome)}` };
   },
 });

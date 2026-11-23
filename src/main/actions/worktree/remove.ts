@@ -4,14 +4,14 @@ import { removalEntry } from '../../../shared/app/log-entry';
 import { action } from '../action';
 import { isFilledText } from '../pane/pane-input';
 
-// Every worktree the app removes: the worktree dialog's and the manager's `d`, pane.release's throwaway,
+// Every worktree the app removes: the worktree dialog's and the manager's `d`, a throwaway (throwaway.ts),
 // and a reviewed card's, both the swap's and the merged one's. What a removal does — refused once with
 // changes in it, the shells killed and the screens closed in a recorded one — is the keeper's
 // (worktree-keeper.ts); what each door's removal is, is `removalOf`'s.
 
-export type RemovalFrom = 'dialog' | 'release' | 'review';
+export type RemovalFrom = 'dialog' | 'throwaway' | 'review';
 
-const FROMS: readonly RemovalFrom[] = ['dialog', 'release', 'review'];
+const FROMS: readonly RemovalFrom[] = ['dialog', 'throwaway', 'review'];
 
 export type WorktreeRemoveInput = { worktreePath: string; projectPath: string | undefined; force: boolean; from: RemovalFrom };
 
@@ -21,8 +21,8 @@ export type WorktreeRemovePorts = {
   log(draft: LogDraft): void;
 };
 
-// Forced only when the dialog asks, after you have said yes to losing what is in it: release has already
-// found nothing unfinished there, and a review never takes what an agent left uncommitted. Queued on the
+// Forced only when the dialog asks, after you have said yes to losing what is in it: a throwaway's has
+// already found nothing unfinished there, and a review never takes what an agent left uncommitted. Queued on the
 // project, as a ship is, unless the caller holds the queue already: the review runs inside its own, and
 // the queue is not re-entrant. Logged unless it is the review's, which writes its outcome on the card.
 export function removalOf(from: RemovalFrom, force: boolean): { force: boolean; queued: boolean; logged: boolean } {
