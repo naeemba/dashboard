@@ -60,10 +60,12 @@ async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, bran
   return !(await ports.processIn(worktreePath));
 }
 
-// Which rule a folder answers to, by where it is; null for one that is neither's.
+// Which rule a folder answers to, by where it is; null for one that is neither's. A `.claude/worktrees`
+// that resolves outside the project, a symlink to somewhere else, is not taken for the agents' folder.
 function kindOf(path: string, projectPath: string): Kind | null {
   for (const [root, kind] of [[worktreesRoot(projectPath), 'card'], [join(projectPath, '.claude', 'worktrees'), 'agent']] as const) {
     const real = realPath(root);
+    if (kind === 'agent' && !isInside(real, realPath(projectPath))) continue;
     if (path !== real && isInside(path, real)) return kind;
   }
   return null;
