@@ -125,8 +125,8 @@ tools, one per `<noun> <verb>`, with typed parameters (`mcp-tools.ts`).
 
 Stdio through the command, not HTTP on the app's socket: Claude Code starts the
 server per session in that session's environment, so a tool knows its pane the
-way the command in its Bash does (command-decision-9), and board, project, pr
-and budget work with no app running, as the command does. The socket would
+way the command in its Bash does (command-decision-9), and board, project and
+budget work with no app running, as the command does. The socket would
 need a second protocol in main and a way to tell which pane is calling.
 
 Each call runs the command file again as a child with the tool's words, rather
@@ -159,8 +159,8 @@ are already there.
 A worker run with `--terminal` (Windows' default) does not get it: its flags go
 through PowerShell's quoting, which already needs the settings JSON bent to
 survive (`workerSettings`), and it keeps the command. A session outside the app
-can add it with `claude mcp add dashboard -- dashboard mcp`; board, project, pr
-and budget work there, and pane and browser refuse as the command does with no
+can add it with `claude mcp add dashboard -- dashboard mcp`; board, project and
+budget work there, and pane and browser refuse as the command does with no
 pane. The app does not register it in the user's own config.
 
 Claude Code defers MCP tools behind its tool search (this machine's sessions

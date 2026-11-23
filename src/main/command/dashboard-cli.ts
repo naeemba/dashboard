@@ -90,7 +90,7 @@ ${BROWSER_USAGE}`,
 
 Every Claude screen the app starts has it as the dashboard server. Each tool runs this command with
 its words, so it answers and refuses as the command does; a screenshot answers with the picture.
-Outside the app: claude mcp add dashboard -- dashboard mcp. board, project, pr and budget work there;
+Outside the app: claude mcp add dashboard -- dashboard mcp. board, project and budget work there;
 pane and browser need a pane's environment.`,
 };
 

@@ -92,7 +92,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     'Dispatch rule: a pane is for a task I asked for (do X, review X, research X), never for a lookup you'
       + ' need mid-task; those stay inline or in the Agent tool.',
     '',
-    'Every command below except pr land is also a tool of the dashboard MCP server, named for its words'
+    'Every command below except pr land and budget --cap is also a tool of the dashboard MCP server, named for its words'
       + ' (mcp__dashboard__pane_claim, board_ship, browser_screenshot) and taking them as parameters: call the'
       + ' tool where there is one.',
     '',
