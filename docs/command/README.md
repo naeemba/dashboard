@@ -108,6 +108,23 @@ prompt. It lives in a fresh `mkdtemp` folder (0700) and is chmod 0600 once
 listening; the pointer file holds only its path and is written 0600. No TCP
 and no world-readable path. On Windows it is the named pipe, as before.
 
+## MCP tools
+
+`dashboard mcp` serves the command as MCP tools over stdio, one per verb, named
+for its words: `board_show`, `pane_claim`, `browser_screenshot`, `version`
+(command-decision-8). A call runs the command with those words, so it answers
+and refuses exactly as the command line does; a refusal comes back as a tool
+error with the command's text. `browser_screenshot` answers with the picture.
+The hooks' verbs, `project init` and `remove`, and `pr land` have no tool;
+`pr land` stays a background Bash run.
+
+Every Claude screen the app starts has the server as `dashboard`, and knows its
+pane the way the command does, from the environment it was started in
+(command-decision-9). A terminal worker (`pane run --terminal`) does not. Main's
+prompt and `/work-card` point at the tools; the tools the command's Bash rules
+allow are allowed unasked, and `project add`, `set`, `open`, `close` and `focus`
+are asked. Outside the app: `claude mcp add dashboard -- dashboard mcp`.
+
 ## Teaching Claude
 
 The app does not edit your files. Copy this into your global `CLAUDE.md`:
@@ -181,6 +198,9 @@ Folders: `src/main/command/`.
 - The `pr` noun: `pull-request-cli.ts`, `pull-request-cli.test.ts`,
   `pull-request-program.ts`; the fast-forward after a land:
   `fast-forward-checkout.ts`, `fast-forward-checkout.test.ts`
+- The `mcp` noun: the tool table `mcp-tools.ts`, `mcp-tools.test.ts` (every usage's verbs against
+  it); the protocol `mcp-server.ts`, `mcp-server.test.ts`; stdin, stdout and the child each call
+  runs, `mcp-program.ts`. Given to every screen in `src/main/chat/chat-sessions.ts`
 - The `budget` noun: `budget-cli.ts`, `budget-cli.test.ts`, `budget-program.ts`;
   the cap is written through settings.cap (`src/main/actions/settings/cap.ts`),
   its port `writeWeeklyCap` in `src/main/settings/settings-store.ts`
@@ -245,10 +265,19 @@ Folders: `src/main/command/`.
 - Given the app running, when `dashboard budget --cap 60` runs, then the
   settings screen shows 60 and the next save there keeps it.
 
+- Given a Claude screen, when it calls `mcp__dashboard__board_show` with `{ "id": "ab12" }`, then
+  it gets what `board show ab12` prints; with an id no card has, a tool error saying so.
+- Given a screen holding tab 3, when it calls `browser_screenshot` with `{ "tab": 3 }`, then the
+  answer is the PNG and its path.
+- Given a session outside the app with the server added, when it calls `browser_tabs`, then the
+  tool error is the command's: browser runs only in a Dashboard pane.
+
 ## Adding to it
 
 - A new verb belongs to its noun's parser (`board-cli.ts`, `session-cli.ts`,
   `project-cli.ts`), never to `dashboard-cli.ts`.
+- A new verb is a row in `DASHBOARD_TOOLS` in `mcp-tools.ts` too, or a line in `COMMAND_ONLY`
+  saying why it has no tool; `mcp-tools.test.ts` fails on one in neither.
 - A new noun is a row in `NOUNS` and a line in `DASHBOARD_USAGE` in `dashboard-cli.ts`, a branch in
   `dashboard-cli-entry.ts`, and a program module beside its feature, like `board-program.ts`. The
   built file needs no packaging change: every `*-cli-entry.js` is unpacked.

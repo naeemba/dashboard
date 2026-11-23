@@ -17,3 +17,6 @@ One line per merged change: date and why.
   requests reported checks, and fast-forwards the base checkout after; bare `dashboard` prints the
   usage, `--version` the installed stamp; `pane list --reports`; `pane --help` says pane
   (command-decision-7)
+- 2026-11-23 — `dashboard mcp` serves every command verb but the hooks', `project init`/`remove`
+  and `pr land` as MCP tools, and every Claude screen the app starts has it: agents read the command
+  from prompts and never ran `dashboard browser` (command-decision-8, command-decision-9)

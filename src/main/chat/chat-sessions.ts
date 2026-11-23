@@ -30,6 +30,7 @@ import { projectFiles } from '../app/git';
 import { isRecord } from '../../shared/app/is-record';
 import { MAIN_INDEX, terminalId } from '../../shared/panes/terminals';
 import { withPaneId } from '../command/pane-environment';
+import { MCP_SERVER_NAME, mcpServerConfiguration } from '../command/mcp-tools';
 import { readStringRecord } from '../app/string-record-file';
 import { claudeExecutable, scopedQuery } from './claude-process';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
@@ -319,6 +320,9 @@ export function registerChatSessions(
         // commands allowed (appSessionSettings).
         settings: appSessionSettings(host.userData),
         env: environment,
+        // The dashboard command as tools; its process inherits this environment, so it knows the pane
+        // (command-decision-9).
+        mcpServers: { [MCP_SERVER_NAME]: mcpServerConfiguration(environment.DASHBOARD_COMMAND) },
         includePartialMessages: true,
         // Every hook's start and answer, not only SessionStart's: the working line names the one
         // running and a failed one goes in the conversation (chat-hooks.ts).
