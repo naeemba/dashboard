@@ -1,46 +1,33 @@
-import { failureText } from '../../shared/errors/failure';
 import type { runProgram } from '../app/git';
 import { latestPullRequest, pullRequestListArguments } from '../board/pull-request-column';
 import { changedFiles } from '../ship/ship';
 import { FETCH_TIMEOUT } from '../board/board-sync';
 
-// Whether a throwaway worktree's work has left it: committed, pushed, and a pull request open, or
-// merged at its HEAD. Only then is the folder thrown away when its worker is released — before that,
-// removing it would take the work with it. changedFiles rather than blockingChanges, because git
-// counts .dashboard/ like any other folder and so does this: an uncommitted board move is work not
-// yet on the branch.
+// Whether removing a throwaway worktree would lose anything: changes nobody committed, or commits no
+// remote has. Only then is the folder kept when its worker goes. A pull request is not asked for: a
+// research worker that changed nothing, or one that merged somebody else's pull request, leaves a branch
+// with no commits of its own and nothing to open one for, and keeping those piled up 32 folders, 25 GB,
+// in one project. changedFiles rather than blockingChanges, because git counts .dashboard/ like any other
+// folder and so does this: an uncommitted board move is work not yet on the branch. Ignored files (build
+// output, node_modules) are not work, and git status does not list them.
 //
-// Null when it is all done, otherwise the reason the folder stays, written to follow "kept <folder>:".
+// Null when nothing would be lost, otherwise the reason the folder stays, written to follow "kept <folder>:".
 export type RunProgram = typeof runProgram;
 
 export async function unfinishedWork(run: RunProgram, worktreePath: string): Promise<string | null> {
   if (changedFiles(await run('git', ['status', '--porcelain'], worktreePath)).length > 0) {
     return 'it has uncommitted changes';
   }
-  let ahead: string;
-  try {
-    ahead = await run('git', ['rev-list', '--count', '@{upstream}..HEAD'], worktreePath);
-  } catch {
-    // A merge that deleted the branch takes the upstream with it: HEAD at the merged commit is done.
-    return await mergedAtHead(run, worktreePath).catch(() => false) ? null : 'its branch was never pushed';
-  }
-  if (ahead !== '0') return `${ahead} of its commits are not pushed`;
-  const branch = await branchOf(run, worktreePath);
-  try {
-    return await hasPullRequest(run, worktreePath, branch) ? null : `${branch} has no pull request`;
-  } catch (error: unknown) {
-    return `gh could not say whether ${branch} has a pull request: ${failureText(error)}`;
-  }
+  // Against every remote-tracking branch, not the upstream: a branch never pushed that is still where
+  // origin/main was has nothing to lose, and a worker that checked out a pull request's branch has none.
+  const missing = await run('git', ['rev-list', '--count', 'HEAD', '--not', '--remotes'], worktreePath);
+  if (missing === '0') return null;
+  // A squash or rebase merge leaves the branch's own commits on no remote once --delete-branch and a
+  // prune take the branch: HEAD at the commit its pull request merged at has nothing the merge did not take.
+  return await mergedAtHead(run, worktreePath).catch(() => false) ? null : `${missing} of its commits are on no remote`;
 }
 
 const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
-
-// Whether gh lists a pull request from the branch in any state. Bounded like pullRequestMerged: the
-// sweep waits on a release, and a gh that never answers would stop it; a timeout keeps the worktree.
-async function hasPullRequest(run: RunProgram, worktreePath: string, branch: string): Promise<boolean> {
-  const pulls: unknown = JSON.parse(await run('gh', ['pr', 'list', '--head', branch, '--state', 'all', '--json', 'number'], worktreePath, { timeout: FETCH_TIMEOUT }));
-  return Array.isArray(pulls) && pulls.length > 0;
-}
 
 // Whether the pull request the worktree's branch stands for merged: what `pane finish` releases a
 // worker on when its card is not Done yet (the follow that moves it runs on a timer) or it has none.

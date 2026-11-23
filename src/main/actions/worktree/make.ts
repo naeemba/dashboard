@@ -13,8 +13,8 @@ import { isFilledText } from '../pane/pane-input';
 //   tie. The ship has fetched and holds the project's git queue already.
 // - throwaway: `pane run --worktree`'s, named after its prompt with a fresh id. Not recorded with the
 //   cards' worktrees, since there is no card to show it on; the manager's list finds it through git, and
-//   pane.release removes it once its work is out. Nothing holds the queue for it, so it takes the queue
-//   and fetches itself.
+//   it goes with its pane unless it holds work (throwaway.ts). Nothing holds the queue for it, so it
+//   takes the queue and fetches itself.
 // - again: a reviewed card's branch checked out at the same path once more. No new branch and no base:
 //   the branch is there with the pull request on it. The review holds the queue already.
 //

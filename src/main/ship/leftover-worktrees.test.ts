@@ -25,6 +25,7 @@ async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPort
   const run = leftoverSweep({
     projectPaths: () => [PROJECT],
     recorded: () => [],
+    throwaways: async () => [],
     list: async (projectPath) => Object.entries(folders).map(([worktreePath, { locked }]) =>
       ({ projectPath, worktreePath, branch: 'b', ...(locked ? { locked } : {}) })),
     dirty: async (path) => at(path).dirty ?? false,
@@ -78,6 +79,11 @@ describe('leftoverSweep', () => {
   // The review sweep's to remove, or a cancelled card's to keep (board-decision-4).
   it('leaves a recorded worktree alone', async () => {
     expect(await sweep({ [`${ROOT}/card`]: {} }, { recorded: () => [`${ROOT}/card`] })).toEqual([]);
+  });
+
+  // A marked throwaway is worktree.sweep's and its pane's: one mechanism for it, not two.
+  it('leaves a marked throwaway alone', async () => {
+    expect(await sweep({ [`${ROOT}/research`]: {} }, { throwaways: async () => [`${ROOT}/research`] })).toEqual([]);
   });
 
   it('leaves a worktree outside the project\'s worktrees folder alone', async () => {

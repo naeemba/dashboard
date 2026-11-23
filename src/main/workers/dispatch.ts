@@ -8,6 +8,7 @@ import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
 import { screenshotReadRule } from '../browser/browser-page';
+import { allowedToolRules } from '../command/mcp-tools';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
 // prompt main is given about dispatching, and the hooks that make a worker report back whether or not
@@ -57,6 +58,8 @@ const appCommandPermissions = (userData: string) => ({
     // A reading only: `budget --cap` changes the cap, and is asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',
     'Bash(node "$DASHBOARD_COMMAND" --version)',
+    // The same verbs as the dashboard server's tools (mcp-tools.ts); a project one that changes something is asked.
+    ...allowedToolRules(),
   ],
 });
 
@@ -89,6 +92,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     'Dispatch rule: a pane is for a task I asked for (do X, review X, research X), never for a lookup you'
       + ' need mid-task; those stay inline or in the Agent tool.',
     '',
+    'Every command below except pr land and budget --cap is also a tool of the dashboard MCP server, named for its words'
+      + ' (mcp__dashboard__pane_claim, board_ship, browser_screenshot) and taking them as parameters: call the'
+      + ' tool where there is one.',
+    '',
     'Dispatch with the pane command, `node "$DASHBOARD_COMMAND" pane`:',
     '  claim [--project <name|aka>]',
     '                         open a worker pane; prints its id. --project opens it on the page of',
@@ -108,8 +115,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '',
     `A card is dispatched with \`node "$DASHBOARD_BOARD" ship <id>${projectFlag}\`: it makes the card's worktree, a worker`
       + ' pane and its agent. run --card is for a shipped card whose agent has stopped. Any'
-      + ' other change takes --worktree: a throwaway worktree, removed on release once the worker has'
-      + ' committed, pushed and opened its pull request, and kept otherwise. run --worktree, like ship (see the'
+      + ' other change takes --worktree: a throwaway worktree, removed when its pane goes unless it holds'
+      + ' uncommitted changes or commits no remote has. run --worktree, like ship (see the'
       + ' board\'s usage), answers only once the new worktree\'s packages are installed: give it the same'
       + ' ten-minute timeout (600000 ms). A worktree that is already'
       + ' there, one of this repository\'s on a branch you keep, takes --in <folder>: nothing makes or'

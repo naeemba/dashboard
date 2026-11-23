@@ -23,6 +23,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))
 - The folder `pane run --in` may start a worker in: `run-folder.ts`
+- Throwaway worktrees: `throwaway-marker.ts`, `finished-work.ts`, and
+  `../actions/worktree/throwaway.ts` and `sweep.ts`
 - What the command and the app agree on before an answer, the build stamp and
   the acceptance timeout: `app-handshake.ts`
 - When main hears a worker stopped: `stop-notices.ts`, `done-report.ts`, and
@@ -228,11 +230,24 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a worker's session has used the prompt cache, when the workers popup
   (Alt+W) is drawn, then the worker's row says `warm 42m` or `cold` for its own
   session, from the usage sweep (chat-decision-12).
-- Given a throwaway worktree with uncommitted work, when the worker is released,
-  then the worktree is kept and the reply says why.
-- Given a throwaway worktree whose pull request merged at its HEAD and whose remote branch is gone,
-  when the worker is released, then the worktree is removed, not kept as `never pushed`
-  (`finished-work.test.ts`).
+- Given a throwaway worktree with uncommitted work or commits no remote has,
+  when the worker is released, then the worktree is kept and the reply says why;
+  one with neither is removed, pull request or not, never pushed or not.
+- Given a throwaway worktree whose pull request squash-merged at its HEAD and whose remote branch
+  is gone, when the worker is released, then the worktree is removed, not kept for commits on no
+  remote (`finished-work.test.ts`).
+- Given a throwaway worktree, when its pane is closed by hand or with its
+  project instead of released, then it is let go of as release would, and the
+  log says `pane 2:3 closed: removed <folder>` or why it was kept.
+- Given throwaway worktrees left on disk at a restart, when the launch's panes
+  are back, then each one a pane stands in is that pane's again, each other one
+  with nothing to lose is removed, and one log line says what was removed and
+  what was kept, and why. A pane counts as standing in one when its folder is
+  inside it in real paths, so a project opened through a symlink still holds
+  its throwaways.
+- Given marking a new throwaway fails (a full disk), when `pane run --worktree`
+  runs, then the worker starts anyway and the reply says a restart will not
+  sweep that folder.
 - Given a throwaway worktree a merge already removed
   (`gh pr merge --delete-branch` takes the branch's worktree with it), when the worker is released,
   then the pane closes and the reply says `released 2:3; <folder> was already removed`, not

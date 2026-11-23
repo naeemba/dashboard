@@ -7,6 +7,7 @@ import { directoriesOf } from '../panes/shell-directory-lookup';
 import { isInside } from '../panes/shell-directory';
 import { parentProcesses } from '../workers/pane-sessions';
 import { mergedHead } from '../workers/finished-work';
+import { throwawaysOf } from '../workers/throwaway-marker';
 import { isRefused, type BoundAction } from '../actions/action';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 import { leftoverSweep } from './leftover-worktrees';
@@ -47,6 +48,7 @@ export function startLeftoverSweep(main: {
   const sweep = leftoverSweep({
     projectPaths: main.projects,
     recorded: () => main.records().map((entry) => entry.worktreePath),
+    throwaways: throwawaysOf,
     list: listWorktrees,
     // Untracked files named outright, whatever status.showUntrackedFiles says. A git that cannot
     // answer throws, which keeps the worktree.

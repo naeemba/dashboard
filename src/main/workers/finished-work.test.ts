@@ -11,20 +11,14 @@ function answering(answers: Record<string, string>): RunProgram {
   };
 }
 
-// The same answers with one program failing.
-function without(answers: Record<string, string>, failing: string): Record<string, string> {
-  return Object.fromEntries(Object.entries(answers).filter(([start]) => start !== failing));
-}
-
 const done = {
   'git status': '',
-  'git rev-list': '0',
-  'git rev-parse': 'rename-it',
-  'gh pr list': '[{"number":14}]',
+  'git rev-list --count HEAD --not --remotes': '0',
 };
 
 describe('unfinishedWork', () => {
-  it('lets the folder go once the work is committed, pushed and has a pull request', async () => {
+  // A research worker that changed nothing, its branch never pushed: nothing in it would be lost.
+  it('lets the folder go when it has no changes and every commit is on a remote', async () => {
     expect(await unfinishedWork(answering(done), '/work/api.worktrees/rename-it')).toBeNull();
   });
 
@@ -32,26 +26,22 @@ describe('unfinishedWork', () => {
     expect(await unfinishedWork(answering({ ...done, 'git status': ' M src/a.ts' }), '/w')).toBe('it has uncommitted changes');
   });
 
-  it('keeps a branch that was never pushed, or has commits that were not', async () => {
-    expect(await unfinishedWork(answering(without(done, 'git rev-list')), '/w')).toBe('its branch was never pushed');
-    expect(await unfinishedWork(answering({ ...done, 'git rev-list': '2' }), '/w')).toBe('2 of its commits are not pushed');
+  it('keeps commits no remote has', async () => {
+    expect(await unfinishedWork(answering({ ...done, 'git rev-list --count HEAD --not --remotes': '2' }), '/w')).toBe('2 of its commits are on no remote');
   });
 
-  // Merged with --delete-branch and the remote branch pruned: no upstream, and nothing left to push.
-  it('lets the folder go when the upstream is gone because its pull request merged at HEAD', async () => {
+  // Squash-merged with --delete-branch and the remote branch pruned: its commits are on no remote, yet
+  // the merge took them.
+  it('lets the folder go when its pull request merged at HEAD and the branch is gone', async () => {
     const merged = {
-      'git status': '',
+      ...done,
+      'git rev-list --count HEAD --not --remotes': '3',
       'git rev-parse --abbrev-ref HEAD': 'rename-it',
       'git rev-parse HEAD': 'a1b2c3\n',
       'gh pr list': '[{"number":14,"state":"MERGED","title":"t","url":"https://github.com/o/r/pull/14","headRefOid":"a1b2c3"}]',
     };
     expect(await unfinishedWork(answering(merged), '/w')).toBeNull();
-    expect(await unfinishedWork(answering({ ...merged, 'git rev-parse HEAD': 'ffffff' }), '/w')).toBe('its branch was never pushed');
-  });
-
-  it('keeps pushed work with no pull request, and says so when gh cannot be asked', async () => {
-    expect(await unfinishedWork(answering({ ...done, 'gh pr list': '[]' }), '/w')).toBe('rename-it has no pull request');
-    expect(await unfinishedWork(answering(without(done, 'gh pr list')), '/w')).toMatch(/^gh could not say whether rename-it has a pull request/);
+    expect(await unfinishedWork(answering({ ...merged, 'git rev-parse HEAD': 'ffffff' }), '/w')).toBe('3 of its commits are on no remote');
   });
 });
 

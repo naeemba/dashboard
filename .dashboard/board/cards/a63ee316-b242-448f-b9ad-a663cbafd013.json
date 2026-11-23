@@ -1,0 +1,27 @@
+{
+  "id": "a63ee316-b242-448f-b9ad-a663cbafd013",
+  "title": "Throwaway worktrees stop piling up",
+  "notes": "Found 2026-11-23: new-crm had 32 throwaway worktrees (pane run --worktree, named after the prompt: context-the-back-office-ui-ux-review-is-com-1ae9, context-the-armytech-shop-storefront-audit-6d95, ...), 2-3 GB each, 25 GB in all; /home hit 99% and a worker's Electron download and git writes failed. They were removed by hand since.\npane.release (src/main/actions/pane/release.ts:49-64) already removes a throwaway once ports.unfinished finds nothing unfinished. So find from the code and new-crm's history (its main session logs under ~/.claude/projects/-home-sharp-Workspace-personal-new-crm*, and the app log) why these were kept. Candidates: the app closing a finished worker's pane itself (sweep after a report, a card Done, a merged PR) without going through pane.release's removal; unfinished counting ignored files, build output or a branch with no upstream as unfinished in a research worktree that changed nothing; a pane closed by the user or by a project close; an app restart forgetting the throwaway record.\nFix the cause so that every way a worker's pane goes away removes its throwaway worktree when nothing in it would be lost, through the worktree remove action (actions-rule-1). Also, at launch, sweep throwaway worktrees no pane holds that have no changes and no commits missing from the remote, and say what it removed and what it kept (and why) in one log line. Tests for the decision (keep or remove, from status, commits and pane). Docs: docs/workers or docs/actions, history.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-23T14:16:53.504Z",
+  "updatedAt": "2026-11-23T15:22:21.889Z",
+  "branch": "throwaway-worktrees-stop-piling-up",
+  "pullRequest": 348,
+  "comments": [
+    {
+      "at": "2026-11-23T14:52:04.765Z",
+      "body": "Pull request #348 opened: Throwaway worktrees go with their pane unless they hold work https://github.com/naeemba/dashboard/pull/348"
+    },
+    {
+      "at": "2026-11-23T15:20:11.529Z",
+      "body": "Review loop converged in 2 rounds: 7 findings fixed in dd9767fd (pane matching through real paths, threwAway logs under the throwaway's project, a failed mark is reported instead of failing the run, renames and docs, throwaway tests in their own file). CI then failed on Windows in throwaway-marker.test.ts because git spells paths long with forward slashes; the test now compares real paths (0cf1b4aa). All 5 checks pass on 0cf1b4aa. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-23T15:22:21.835Z",
+      "body": "Pull request #348 merged: Throwaway worktrees go with their pane unless they hold work https://github.com/naeemba/dashboard/pull/348"
+    }
+  ],
+  "column": "Done",
+  "order": 283
+}

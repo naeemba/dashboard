@@ -4,10 +4,10 @@ import { isInside } from '../panes/shell-directory';
 import type { GitWorktree } from '../../shared/ship/git-worktrees';
 import { worktreesRoot } from './ship';
 
-// Worktrees beside an open project that nothing in the app will ever remove: a `pane run --worktree`
-// throwaway whose pane was closed by hand, released while its pull request was still open, or lost to
-// a restart (the release's list of them lives in memory), and a card's whose record went. Each is a
-// full checkout with its node_modules; eight of them filled /home in two days in new-crm (2026-11-23).
+// Worktrees beside an open project that nothing in the app will ever remove: a card's whose record
+// went, or a throwaway made before throwaways were marked. Each is a full checkout with its
+// node_modules; eight of them filled /home in two days in new-crm (2026-11-23). A marked throwaway
+// (throwaway-marker.ts) is worktree.sweep's and its pane's, never this sweep's.
 //
 // One is removed only when nothing in it can be lost: no uncommitted change, HEAD the very commit its
 // branch's pull request merged at (so no commit of it is anywhere the merge did not take), and no
@@ -30,6 +30,8 @@ export type LeftoverPorts = {
   projectPaths: () => readonly string[];
   // The worktree paths the app records (worktrees.json).
   recorded: () => readonly string[];
+  // The project's marked throwaways (throwawaysOf).
+  throwaways: (projectPath: string) => Promise<string[]>;
   list: (projectPath: string) => Promise<GitWorktree[]>;
   // True when git cannot say: silence is not no changes.
   dirty: (worktreePath: string) => Promise<boolean>;
@@ -84,6 +86,7 @@ export function leftoverSweep(ports: LeftoverPorts): () => Promise<void> {
     const open = ports.projectPaths();
     const passed = new Set([...ports.recorded(), ...open].map(realPath));
     for (const projectPath of open) {
+      for (const throwaway of await ports.throwaways(projectPath)) passed.add(realPath(throwaway));
       for (const worktree of await ports.list(projectPath)) {
         const path = realPath(worktree.worktreePath);
         const kind = kindOf(path, projectPath);

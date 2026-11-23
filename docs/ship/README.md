@@ -117,14 +117,16 @@ with merging off, `pr land` with it on.
   instead of git's raw `fatal:`.
 - Given a card whose review the sweep started, when the card reaches Done in the same run, then its
   worktree is removed without a restart (`review-flow-clearing.test.ts`).
-- Given a worktree under `<project>.worktrees/` that the app has no record of (a throwaway whose
-  pane was closed by hand, or a record lost), when its branch's pull request merged at its HEAD,
-  nothing in it is uncommitted, and no process on the machine stands in it, then the leftover sweep
-  removes it, a minute after launch and every half hour after, with the branch kept. Any other
-  answer, or gh failing, keeps it (`leftover-worktrees.test.ts`).
+- Given a worktree under `<project>.worktrees/` that the app has no record of and no throwaway
+  marker (a record lost, or a throwaway older than the marker), when its branch's pull request
+  merged at its HEAD, nothing in it is uncommitted, and no process on the machine stands in it,
+  then the leftover sweep removes it, a minute after launch and every half hour after, with the
+  branch kept. Any other answer, or gh failing, keeps it (`leftover-worktrees.test.ts`).
 - Given a leftover worktree that is locked (`git worktree lock`), then the sweep keeps it; given one
   git refuses to remove unforced (submodules), then the sweep does not ask again until the app
   restarts (`leftover-worktrees.test.ts`).
+- Given a marked throwaway, then the leftover sweep leaves it to worktree.sweep and its pane
+  (`leftover-worktrees.test.ts`).
 - Given a workflow agent's worktree under `<project>/.claude/worktrees/wf_*`, when nothing in it is
   uncommitted or untracked, every commit HEAD reaches is on a remote, no process stands in it, and
   neither the folder nor git's index or HEAD for it changed in 24 hours, then the same sweep removes

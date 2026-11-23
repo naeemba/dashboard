@@ -76,7 +76,11 @@ Neither door holds any of the logic; each only asks.
   there. Only the throwaway takes the project's queue and fetches; the ship and the review hold the
   queue already, and it is not re-entrant. Each then gets the frozen install its lockfile names; a
   failed one is logged, not undone.
-- **worktree.remove** (`worktree:remove`, `pane release`, the review, the leftover sweep):
+- **worktree.sweep** (launch, after pane.reap): every throwaway worktree on disk, found by its
+  marker, given back to a pane standing in it, otherwise removed unless it holds work no remote
+  has; one log line says each.
+- **worktree.remove** (`worktree:remove`, `pane release`, a throwaway's pane closed, the sweep, the
+  review, the leftover sweep):
   `removalOf` says, per door, whether it is forced (only the dialog's, after
   you said yes), queued on the project (all but the review's, which holds it)
   and logged (all but the review's, which writes on the card). The keeper does

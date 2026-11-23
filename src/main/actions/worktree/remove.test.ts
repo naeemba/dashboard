@@ -7,7 +7,7 @@ describe('removalOf', () => {
   it.each([
     ['dialog', true, { force: true, queued: true, logged: true }],
     ['dialog', false, { force: false, queued: true, logged: true }],
-    ['release', true, { force: false, queued: true, logged: true }],
+    ['throwaway', true, { force: false, queued: true, logged: true }],
     ['review', true, { force: false, queued: false, logged: false }],
   ] as const)('%s asking force %s', (from, force, expected) => {
     expect(removalOf(from, force)).toEqual(expected);

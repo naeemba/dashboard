@@ -48,10 +48,11 @@ door is now. Every door's call is a port in `actions/worktree/worktree-actions.t
 |---|---|---|---|
 | make, a card's | worktree.make `card`, `actions/worktree/make.ts`, the ship's `makeWorktree` port | IPC, CLI (card.ship) | no |
 | make again, a reviewed card's | worktree.make `again`, the review's `addWorktree` port | sweep, card.review | no |
-| make, a throwaway | worktree.make `throwaway`, `makeWorktree` in `session-requests.ts` | CLI `pane run --worktree` | no |
+| make, a throwaway | worktree.make `throwaway`, `makeWorktree` in `session-requests.ts`, then marked (`throwaway-marker.ts`) | CLI `pane run --worktree` | no |
 | make, /create-task | `create-task-program.ts:71` | the `/create-task` skill's program | outside the app; stays |
 | remove | worktree.remove `dialog`, `actions/worktree/remove.ts`, from `worktree:remove` (`ship/worktree-channels.ts`) | IPC (worktree dialog's `d`, the manager's list) | no |
-| remove, a throwaway | worktree.remove `release`, pane.release's `removeWorktree` port | CLI `pane release` | no |
+| remove, a throwaway | worktree.remove `throwaway`, the `removeWorktree` port of `throwaway.ts`'s `letGoOf` | CLI `pane release`, a pane closed or dropped with its project (`dropped` in `session-requests.ts`), worktree.sweep | no |
+| sweep the throwaways | worktree.sweep, `actions/worktree/sweep.ts`, bound in `worktree-actions.ts` | launch, after pane.reap | no |
 | remove, a reviewed card's | worktree.remove `review`, the review's `removeWorktree` port, in `review-flow.ts` | sweep, card.review | no |
 | a card's pane on its record | `givePane`, `ship/worktree-keeper.ts` | a ship, a review, a card's `pane run`, pane.restore | a record write under pane.dispatch's callers, not a door |
 | drop dead records | `worktrees.dropDead`, `main.ts` and `worktree:list` | sweep, IPC | a read that tidies; stays |
@@ -146,6 +147,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | pane.restore | what each saved pane comes back as after a restart: shell, adopted shell, screen or dispatch; a kept shell not taken back has its scope stopped |
 | pane.restart | refused while a shell runs; the old shell's scope stopped once the new one has its own |
 | worktree.make | card, throwaway or again; the branch it names; whether it fetches and takes the project's queue itself (only a throwaway) |
+| worktree.sweep | which throwaway a pane stands in (given back to it), which is removed, which kept and why |
 | worktree.remove | per door, forced or not, queued or not, logged or not (`removalOf`); the keeper refuses with changes and kills the shells and closes the screens in it |
 | project.open | a missing folder refused, a dead page opened over, its main started only for the command; the dialog stays the picker's door's |
 | project.close | `closeRefusal`, once, for the key and the command; only a check before the key's question; every pane's scope stopped after the close |

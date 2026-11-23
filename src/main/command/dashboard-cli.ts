@@ -18,7 +18,7 @@ import { PULL_REQUEST_USAGE } from './pull-request-cli';
 // `session` is the old name of `pane`, kept so a skill written against the session command reads
 // the same with `dashboard` in front of it.
 
-export type Noun = 'board' | 'pane' | 'project' | 'pr' | 'budget' | 'browser';
+export type Noun = 'board' | 'pane' | 'project' | 'pr' | 'budget' | 'browser' | 'mcp';
 
 const NOUNS = new Map<string, Noun>([
   ['board', 'board'],
@@ -28,6 +28,7 @@ const NOUNS = new Map<string, Noun>([
   ['pr', 'pr'],
   ['budget', 'budget'],
   ['browser', 'browser'],
+  ['mcp', 'mcp'],
 ]);
 
 export const DASHBOARD_USAGE = `dashboard — drive the Dashboard app from any terminal
@@ -42,6 +43,7 @@ dispatches into, an editor and a kanban board kept in the project's .dashboard/b
   dashboard pr land <n>         wait for a pull request's checks, then merge the commit they passed on
   dashboard budget [--cap <n>]  the 7-day usage against the cap you set once; exits 1 at the cap
   dashboard browser <command>   open, read, screenshot and click in the project's browser tabs, from a pane
+  dashboard mcp                 serve these commands as MCP tools on stdin and stdout
   dashboard <noun> --help       what a noun takes
   dashboard --<app flag>        start the app with that flag (--remote), or hand it to the running one
 
@@ -84,6 +86,12 @@ ${PULL_REQUEST_USAGE}`,
 Only in a pane: a tab is held by the pane that opened or claimed it. The words after \`browser\` are these:
 
 ${BROWSER_USAGE}`,
+  mcp: `dashboard mcp — the commands above as MCP tools, over stdio
+
+Every Claude screen the app starts has it as the dashboard server. Each tool runs this command with
+its words, so it answers and refuses as the command does; a screenshot answers with the picture.
+Outside the app: claude mcp add dashboard -- dashboard mcp. board, project and budget work there;
+pane and browser need a pane's environment.`,
 };
 
 const HELP = new Set(['--help', '-h', 'help']);

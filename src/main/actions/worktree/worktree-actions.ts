@@ -7,6 +7,9 @@ import { startLeftoverSweep } from '../../ship/leftover-sweep';
 import { bind, isRefused, type BoundAction } from '../action';
 import { INSTALL_TIMEOUT_MS, worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
 import { worktreeRemove, type WorktreeRemovePorts } from './remove';
+import { worktreeSweep, type WorktreeSweepPorts } from './sweep';
+import { worktreeChecks } from '../../workers/finished-work';
+import { markThrowaway, throwawaysOf } from '../../workers/throwaway-marker';
 
 // Main's wiring for the worktree actions, and each door's call into them as its port takes it. Out of
 // main.ts, which is over its 600-line ceiling. Every decision is in make.ts and remove.ts; a refusal here
@@ -33,12 +36,31 @@ async function install(program: string, programArguments: string[], cwd: string)
   return runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS, environment });
 }
 
-export function worktreeActions(main: WorktreeRemovePorts) {
+// Starts the leftover sweep's timers (leftover-sweep.ts) with the removal made here.
+export function worktreeActions(main: WorktreeRemovePorts & Omit<Parameters<typeof startLeftoverSweep>[0], 'remove'>) {
   const make = bind(worktreeMake, {
     git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install,
   });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
+  startLeftoverSweep({ remove, records: main.records, projects: main.projects });
+  // What a throwaway's worker is asked before it is let go of, and what letting go of it takes
+  // (throwaway.ts), as the session command's ports and the sweep's take them.
+  const throwawayPorts = {
+    ...worktreeChecks(runProgram),
+    exists: existsSync,
+    prune: async (projectPath: string) => { await git(['worktree', 'prune'], projectPath); },
+    // Once unfinishedWork has said there is nothing in it to lose. A refusal is a failure, which
+    // letGoAndSay reports: in the release's answer, or as a kept line in the log.
+    async removeWorktree(worktreePath: string, projectPath: string): Promise<void> {
+      const removal = await removed(remove.call({ worktreePath, projectPath, from: 'throwaway' }));
+      if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
+    },
+    markThrowaway,
+  };
   return {
+    throwawayPorts,
+    // The launch's, once its panes are back.
+    sweep: (ports: Pick<WorktreeSweepPorts, 'projects' | 'hold'>) => bind(worktreeSweep, { ...throwawayPorts, throwawaysOf, log: main.log, ...ports }),
     remove,
     // card.ship's, with the project's queue held and origin fetched.
     makeForShip: (request: ShipWorktreeRequest): Promise<ShipWorktree> => made(make.call({ kind: 'card', ...request })),
@@ -49,14 +71,5 @@ export function worktreeActions(main: WorktreeRemovePorts) {
     // card.review's, with the queue held: the branch checked out again, and the old folder removed.
     makeAgain: ({ projectPath, worktreePath, branch }: WorktreeEntry) => made(make.call({ kind: 'again', projectPath, worktreePath, branch })),
     removeForReview: (worktreePath: string) => removed(remove.call({ worktreePath, from: 'review' })),
-    // pane.release's, once unfinishedWork has said there is nothing in it to lose. A refusal is a failure
-    // the release reports.
-    async removeForRelease(worktreePath: string, projectPath: string): Promise<void> {
-      const removal = await removed(remove.call({ worktreePath, projectPath, from: 'release' }));
-      if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
-    },
-    // The leftover sweep's timers, which main starts (leftover-sweep.ts).
-    startLeftoverSweep: (sweep: Omit<Parameters<typeof startLeftoverSweep>[0], 'remove'>) =>
-      startLeftoverSweep({ remove, ...sweep }),
   };
 }

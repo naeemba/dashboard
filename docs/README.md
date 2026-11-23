@@ -27,7 +27,7 @@ lint or CI step that holds it.
 | [nvim](nvim/README.md) | The editor view, scrollback and file paths opened in it |
 | [board](board/README.md) | The kanban board and the `board` command |
 | [skills](skills/README.md) | The Claude Code skills the app installs: `/create-task`, `/adopt-docs` and `/work-card` |
-| [command](command/README.md) | The `dashboard` command from any terminal: `board`, `pane` and `project` behind one entry |
+| [command](command/README.md) | The `dashboard` command from any terminal: `board`, `pane` and `project` behind one entry, and the same verbs as MCP tools |
 | [projects](projects/README.md) | `~/.dashboard/projects.yaml` and `dashboard project find`, `list`, `init`, `open`, `close` and `focus` |
 | [actions](actions/README.md) | What the app does on request — card, pane, worktree, project, session and settings — defined once in main for the screen and the command, and the plan for the rest |
 | [ship](ship/README.md) | A card into a worktree with an agent, the review, the worktree list |

@@ -19,6 +19,7 @@ import { paneClaim } from '../actions/pane/claim';
 import { paneRelease } from '../actions/pane/release';
 import { releaseVerdict, type WorkerLook } from './auto-release';
 import { worktreeWithin } from './run-folder';
+import { letGoAndSay, type Throwaway } from '../actions/worktree/throwaway';
 
 // What main does with a `session` command: who is asking and what they may touch, against what main.ts
 // hands over. Every change to a pane is a pane action (actions/pane/): claim and release are bound here,
@@ -69,6 +70,8 @@ export type SessionPorts = {
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
   makeWorktree(projectPath: string, title: string): Promise<string>;
+  // Marks the worktree a throwaway on disk, for the launch's sweep to find (throwaway-marker.ts).
+  markThrowaway(worktreePath: string): Promise<void>;
   // Why `run --in` may not start a worker in the folder, or the worktree of the repository it is in,
   // undefined for a folder of the project's own checkout (run-folder.ts).
   checkRunFolder(projectPath: string, folder: string): Promise<{ worktree: string | undefined } | Refused>;
@@ -90,6 +93,11 @@ export type SessionPorts = {
   closeAfterMs(): number;
   // A worker closed by closeFinished, why, and what pane.release answered: logged and shown.
   released(id: string, reason: string, output: string): void;
+  // What became of the throwaway of a pane that went without a release: logged under its project.
+  threwAway(id: string, said: string, projectPath: string): void;
+  // Where a path really is (real-path.ts): git lists a throwaway by it, a pane's folder keeps the
+  // spelling its project was opened by.
+  realPath(path: string): string;
 };
 
 // Which open project a folder belongs to: its checkout, or anywhere in the folder its worktrees go,
@@ -134,6 +142,12 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   notify(id: string, state: WorkerState, waiting?: StopWaiting, told?: HookTold): SessionReply;
   // Every finished worker pane released, each for the reason auto-release.ts gives. Run on a timer.
   closeFinished(): Promise<void>;
+  // The pane is gone, closed by hand or with its project rather than released: its throwaway is let
+  // go of as release would (throwaway.ts).
+  dropped(id: string): Promise<void>;
+  // The open pane standing in a throwaway found on disk at launch, which holds it from now on, or
+  // undefined (worktree.sweep).
+  hold(throwaway: Throwaway): string | undefined;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -141,8 +155,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // because a worker run a second time has not finished the second task, with what a done's Stop hook
   // said the session still waits on.
   const states = new Map<string, { state: WorkerState; waiting?: StopWaiting }>();
-  // The throwaway worktree each worker was given, which release removes once its work is out.
-  const throwaways = new Map<string, { worktreePath: string; projectPath: string }>();
+  // The throwaway worktree each pane was given, let go of whenever the pane goes (throwaway.ts).
+  const throwaways = new Map<string, Throwaway>();
+  // The panes a release is closing, whose throwaway the release lets go of, not `dropped`.
+  const releasing = new Set<string>();
   // Whether what is running in a busy pane is main's worker, so release may kill it. Anything else
   // running there is somebody else's — a dev server, a card a ship gave an agent — and release would
   // kill it. Main's worker always runs as the pane's agent, so a pane that is not running one is not it.
@@ -248,6 +264,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const held = throwaways.get(id);
     if (worktree && held !== undefined) return refused(`${id} still holds ${held.worktreePath} — release it first`);
     let directory = projectPath;
+    let unmarked = '';
     if (card !== null) {
       const found = ports.cardWorktree(projectPath, card);
       if (found === undefined) return refused(`card ${card} has no worktree — moving it to Ship makes one`);
@@ -259,6 +276,12 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     } else if (worktree) {
       directory = await ports.makeWorktree(projectPath, prompt);
       throwaways.set(id, { worktreePath: directory, projectPath });
+      // Marked only once held here, so the sweep never takes one still being made for a pane. A mark
+      // that fails costs only the sweep finding it after a restart, so the worker starts anyway.
+      unmarked = await ports.markThrowaway(directory).then(
+        () => '',
+        (error: unknown) => ` (not marked a throwaway, so a restart will not sweep it: ${failureText(error)})`,
+      );
     } else if (folder !== null) {
       // The caller's folder: never a throwaway, so release leaves it on disk.
       const checked = await ports.checkRunFolder(projectPath, folder);
@@ -281,12 +304,21 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     quietFrom(id, false);
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
-    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory} ${paneLink(id)}`);
+    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}${unmarked} ${paneLink(id)}`);
   }
 
   const release = bind(paneRelease, {
     ...ports,
     mainsWorker,
+    // The pane drops as it closes, and a dropped throwaway is the release's to let go of and answer for.
+    async close(id) {
+      releasing.add(id);
+      try {
+        return await ports.close(id);
+      } finally {
+        releasing.delete(id);
+      }
+    },
     forget(id) {
       states.delete(id);
       forgetWorker(id);
@@ -519,6 +551,23 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     workers,
     notify,
     closeFinished,
+    async dropped(id: string) {
+      const throwaway = throwaways.get(id);
+      if (throwaway === undefined || releasing.has(id)) return;
+      throwaways.delete(id);
+      ports.threwAway(id, await letGoAndSay(ports, throwaway), throwaway.projectPath);
+    },
+    hold(throwaway: Throwaway) {
+      const real = ports.realPath(throwaway.worktreePath);
+      const held = [...throwaways].find(([, each]) => ports.realPath(each.worktreePath) === real);
+      if (held !== undefined) return held[0];
+      const id = openPaneIds().find((each) => {
+        const there = ports.directoryOf(each);
+        return there !== undefined && isInside(ports.realPath(there), real);
+      });
+      if (id !== undefined && !throwaways.has(id)) throwaways.set(id, throwaway);
+      return id;
+    },
     forget: (id: string) => { dispatched.delete(id); quiet.delete(id); forgetWorker(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two

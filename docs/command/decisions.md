@@ -114,3 +114,55 @@ every land in a repository with no CI on pull requests, and counting
 merging unchecked there again. The fast-forward after a merge is `--ff-only` in
 a checkout with nothing uncommitted, so it never merges or overwrites anything
 of the user's: 19 git pulls and 7 `gh pr view`s followed lands in the retro.
+
+## command-decision-8: The tools are the command, run once a call over stdio
+
+Agents learned the command from prompt lines and `--help`, and in the three days
+after v2.53.0 none ran `dashboard browser` once while other projects' workers
+kept using Claude in Chrome: a tool in the session's list is found where a
+command in a prompt is not. So `dashboard mcp` serves the command's verbs as MCP
+tools, one per `<noun> <verb>`, with typed parameters (`mcp-tools.ts`).
+
+Stdio through the command, not HTTP on the app's socket: Claude Code starts the
+server per session in that session's environment, so a tool knows its pane the
+way the command in its Bash does (command-decision-9), and board, project and
+budget work with no app running, as the command does. The socket would
+need a second protocol in main and a way to tell which pane is calling.
+
+Each call runs the command file again as a child with the tool's words, rather
+than the program in the server's process: every program writes to stdout, which
+is the protocol's there, and sets the exit code. A refusal is the command's own
+line as a tool error; the server decides nothing about any verb. A child is a
+node start a call.
+
+The usage texts stay hand-written. `mcp-tools.test.ts` reads every noun's usage
+and fails on a verb with no tool and no line in `COMMAND_ONLY`, and on a tool
+naming a verb or flag the usage lacks: one table, held against the usages,
+instead of generating usage prose from it. `COMMAND_ONLY` is the two hooks
+(`board guard`, `pane notify`), `project init` and `remove`, and `pr land`, which
+waits on CI as long as it takes and is run in Bash in the background; the
+server's instructions say so.
+
+`browser screenshot` answers with the PNG itself as well as its path. The tools
+allowed unasked are the verbs the command's Bash rules allow, plus `project list`
+and `find`, which only read.
+
+## command-decision-9: Every Claude screen gets the server, from its own environment
+
+The app adds the server to every session it starts through the Agent SDK (main's
+screen, a worker's, a card's agent) as `mcpServers.dashboard`, beside the user's
+own servers. Claude Code hands a stdio server its own environment (checked with
+a probe server that dumped it), and a screen's environment is `withPaneId`'s, so
+the server needs nothing passed: `DASHBOARD_PANE`, the project and the socket
+are already there.
+
+A worker run with `--terminal` (Windows' default) does not get it: its flags go
+through PowerShell's quoting, which already needs the settings JSON bent to
+survive (`workerSettings`), and it keeps the command. A session outside the app
+can add it with `claude mcp add dashboard -- dashboard mcp`; board, project and
+budget work there, and pane and browser refuse as the command does with no
+pane. The app does not register it in the user's own config.
+
+Claude Code defers MCP tools behind its tool search (this machine's sessions
+list them as deferred), so 42 tools cost their names in the list, not their
+schemas. Descriptions are kept to a line.
