@@ -72,7 +72,7 @@ describe('leftoverSweep', () => {
   // The same repository open twice, and one of its worktrees open as a project of its own.
   it('asks about a worktree once however many open projects list it, and never about an open one', async () => {
     const projectPaths = () => [PROJECT, PROJECT, `${ROOT}/opened`];
-    expect(await sweep({ [`${ROOT}/fix`]: { refused: true }, [`${ROOT}/opened`]: {} }, { projectPaths })).toEqual([`${ROOT}/fix`]);
+    expect(await sweep({ [`${ROOT}/fix`]: {}, [`${ROOT}/opened`]: {} }, { projectPaths })).toEqual([`${ROOT}/fix`]);
   });
 
   // The review sweep's to remove, or a cancelled card's to keep (board-decision-4).
