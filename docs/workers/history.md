@@ -68,3 +68,6 @@ One line per merged change: date and why.
   rule for its own heuristic and main landed it, relaying the change
 - 2026-11-19 — Main's prompt names `project add` for work in a repository that is not a project yet:
   main ran such a change in a pane on its own page, working in another repository
+- 2026-11-23 — A throwaway worktree is removed whenever its pane goes, unless it holds
+  uncommitted changes or commits no remote has, and the launch sweeps the ones a restart left:
+  new-crm kept 32 research worktrees, 25 GB, as never pushed or with no pull request
