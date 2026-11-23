@@ -62,4 +62,10 @@ describe('callTool', () => {
     expect(read).toEqual(['/shots/tab-1.png']);
     expect(answer.content).toEqual([{ type: 'image', data: 'BASE64', mimeType: 'image/png' }, { type: 'text', text: '/shots/tab-1.png' }]);
   });
+
+  it('answers a refused screenshot with its reason, never reading the reason as a file', async () => {
+    expect(await callTool(tool('browser_screenshot'), [],
+      async () => ({ code: 1, output: 'tab 4 drew nothing to take a picture of\n' }), unread))
+      .toEqual({ content: [{ type: 'text', text: 'tab 4 drew nothing to take a picture of' }], isError: true });
+  });
 });
