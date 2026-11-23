@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-23T12:29:32.301Z",
-  "updatedAt": "2026-11-23T13:15:59.980Z",
+  "updatedAt": "2026-11-23T13:16:57.304Z",
   "branch": "dashboard-as-an-mcp-server-every-command-ve",
   "pullRequest": 346,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-23T13:15:59.979Z",
       "body": "Review loop on PR #346: converged, ready to merge. 1 round (floor-addressed): 3 low findings posted and fixed in 1ce51f25, 6f4f4b9e, 15fc7e1e (command lists in main's prompt/mcp help/decisions corrected for pr land and budget --cap; test for a refused image tool; per-verb flag check in mcp-tools.test.ts). Final check accepted all 3. No conflicts, nothing waiting on a person. CI: 5/5 passed on head 15fc7e1e."
+    },
+    {
+      "at": "2026-11-23T13:16:57.273Z",
+      "body": "Pull request #346 merged: Dashboard as an MCP server: every command verb as a tool https://github.com/naeemba/dashboard/pull/346"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 282
 }
