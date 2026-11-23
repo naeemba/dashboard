@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-23T12:29:28.457Z",
-  "updatedAt": "2026-11-23T12:29:46.052Z",
+  "updatedAt": "2026-11-23T12:39:05.651Z",
   "branch": "browser-an-agent-s-background-tab-lays-out",
-  "column": "Doing",
+  "pullRequest": 345,
+  "comments": [
+    {
+      "at": "2026-11-23T12:39:05.623Z",
+      "body": "Pull request #345 opened: Browser: an agent's background tab screenshots, resets and reads like a visible one https://github.com/naeemba/dashboard/pull/345"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
