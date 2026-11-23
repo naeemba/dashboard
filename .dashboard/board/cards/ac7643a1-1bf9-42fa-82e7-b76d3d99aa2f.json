@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-23T12:29:32.301Z",
-  "updatedAt": "2026-11-23T12:29:50.463Z",
+  "updatedAt": "2026-11-23T12:48:20.905Z",
   "branch": "dashboard-as-an-mcp-server-every-command-ve",
-  "column": "Doing",
+  "pullRequest": 346,
+  "comments": [
+    {
+      "at": "2026-11-23T12:48:20.884Z",
+      "body": "Pull request #346 opened: Dashboard as an MCP server: every command verb as a tool https://github.com/naeemba/dashboard/pull/346"
+    }
+  ],
+  "column": "Review",
   "order": 1
 }
