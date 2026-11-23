@@ -34,6 +34,8 @@ same way, one the SDK starts reads only the `--chrome` flag, so every screen,
 main's, a worker's and the screen host's, is started with it then and without
 it otherwise. A `CLAUDE_CODE_ENABLE_CFC` set only in a settings file's `env`
 block is not in the app's environment, so the screen goes by the config.
+Every screen also gets the `dashboard` MCP server, the `dashboard` command's
+verbs as tools (docs/command, command-decision-9).
 On Linux its Claude runs in a systemd scope of its own under agents.slice,
 `agent-main-<project>-<random>.scope` (docs/processes).
 

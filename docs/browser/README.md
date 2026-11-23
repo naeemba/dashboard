@@ -76,6 +76,8 @@ session's start), and outside one the command refuses. The app reads the pane
 off the project and the pane's place in it, so a shell kept through a restart
 that moved its project to another page still acts as its own pane. One call,
 a short answer, like `pane` and `board`; `browser --help` prints the verbs.
+Each verb is also a `browser_<verb>` tool on every Claude screen, and
+`browser_screenshot` answers with the picture (docs/command, command-decision-8).
 
 - `open <url> [--project <name|aka>]` opens a tab the pane holds and prints its
   id. It opens behind the tab you are on, or on screen in a project with none.
