@@ -1,3 +1,5 @@
+import { stat } from 'node:fs/promises';
+import { join } from 'node:path';
 import { git, runProgram } from '../app/git';
 import { realPath } from '../app/real-path';
 import { processTree } from '../panes/process-tree';
@@ -8,7 +10,8 @@ import { mergedHead } from '../workers/finished-work';
 import type { BoundAction } from '../actions/action';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 import { sweepLeftovers } from './leftover-worktrees';
-import { listWorktrees, worktreeState } from './worktree-scan';
+import { changedFiles } from './ship';
+import { listWorktrees } from './worktree-scan';
 
 // Main's wiring for the leftover sweep (leftover-worktrees.ts): a minute after launch, once the
 // projects have opened, then every half hour. Spawning only; every decision is next door.
@@ -27,6 +30,15 @@ async function processIn(worktreePath: string): Promise<boolean> {
   return [...directories.values()].some((directory) => isInside(directory, worktreePath) || isInside(directory, real));
 }
 
+// The newest of the folder's own mtime and git's index and HEAD for it: a commit, a checkout or a
+// staged change touches one of those even when it leaves the folder's own entry alone.
+async function modifiedAt(worktreePath: string): Promise<number> {
+  const gitFolder = (await git(['rev-parse', '--absolute-git-dir'], worktreePath)).trim();
+  const times = await Promise.all([worktreePath, join(gitFolder, 'index'), join(gitFolder, 'HEAD')]
+    .map((path) => stat(path).then((found) => found.mtimeMs, () => 0)));
+  return Math.max(...times);
+}
+
 export function startLeftoverSweep(main: {
   remove: BoundAction;
   records: () => readonly WorktreeEntry[];
@@ -36,12 +48,14 @@ export function startLeftoverSweep(main: {
     projectPaths: main.projects,
     recorded: () => main.records().map((entry) => entry.worktreePath),
     list: listWorktrees,
-    dirty: async (worktreePath) => {
-      const state = await worktreeState(worktreePath);
-      return state.dirty || state.unreadable;
-    },
+    // Untracked files named outright, whatever status.showUntrackedFiles says. A git that cannot
+    // answer throws, which keeps the worktree.
+    dirty: async (worktreePath) => changedFiles(await git(['status', '--porcelain', '--untracked-files=normal'], worktreePath)).length > 0,
     head: (worktreePath) => git(['rev-parse', 'HEAD'], worktreePath),
     mergedHead: (worktreePath, branch) => mergedHead(runProgram, worktreePath, branch),
+    pushed: async (worktreePath) => (await git(['rev-list', 'HEAD', '--not', '--remotes'], worktreePath)).trim() === '',
+    modifiedAt,
+    now: Date.now,
     processIn,
     remove: (worktreePath, projectPath) => main.remove.call({ worktreePath, projectPath, from: 'sweep' }),
   }).catch(() => undefined);

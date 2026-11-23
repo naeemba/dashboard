@@ -122,6 +122,10 @@ with merging off, `pr land` with it on.
   nothing in it is uncommitted, and no process on the machine stands in it, then the leftover sweep
   removes it, a minute after launch and every half hour after, with the branch kept. Any other
   answer, or gh failing, keeps it (`leftover-worktrees.test.ts`).
+- Given a workflow agent's worktree under `<project>/.claude/worktrees/`, when nothing in it is
+  uncommitted or untracked, every commit HEAD reaches is on a remote, no process stands in it, and
+  neither the folder nor git's index or HEAD for it changed in 24 hours, then the same sweep removes
+  it. Anything else keeps it (`leftover-worktrees.test.ts`).
 
 ## Known limits
 

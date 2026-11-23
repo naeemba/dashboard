@@ -39,3 +39,5 @@ One line per merged change: date and why.
   is going (workflow-decision-12)
 - 2026-11-23 — A card reviewed in this run has its worktree removed once it reaches Done, not after
   a restart; a sweep removes merged, clean, unused worktrees the app has no record of
+- 2026-11-23 — The leftover sweep also removes a workflow agent's worktree in `.claude/worktrees/`
+  once it is clean, pushed, unused and a day quiet
