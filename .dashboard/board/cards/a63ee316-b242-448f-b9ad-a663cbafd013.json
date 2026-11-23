@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-23T14:16:53.504Z",
-  "updatedAt": "2026-11-23T14:16:53.504Z",
-  "column": "Backlog",
-  "order": 52
+  "updatedAt": "2026-11-23T14:17:03.323Z",
+  "branch": "throwaway-worktrees-stop-piling-up",
+  "column": "Doing",
+  "order": 0
 }
