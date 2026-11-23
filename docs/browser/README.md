@@ -89,16 +89,19 @@ a short answer, like `pane` and `board`; `browser --help` prints the verbs.
 - `read <tab> [--max-tokens <n>] [--selector <css>]` prints the page's main
   content as markdown with its token estimate first: the page's `<main>` or
   `<article>`, else the body, without scripts, styles, navigation, the page's
-  header and footer, forms or anything hidden; links on the page's own site are
-  their path, and a long query string is cut. Made in the app, so a page behind a
-  login never goes to a reading service. Cut at 4000 tokens unless told.
+  header and footer, forms or anything hidden (a `display: contents` wrapper,
+  which GitHub keeps a pull request's conversation in, is not); links on the
+  page's own site are their path, and a long query string is cut. Made in the
+  app, so a page behind a login never goes to a reading service. Cut at 4000
+  tokens unless told.
 - `screenshot <tab> [--full] [--element <css>]` saves a PNG in the app's user
   data folder, under `browser-screenshots/` (only you read it), and prints its
   path. A full page is cut at 4000 by 16000 pixels. A picture is kept a day:
   each screenshot clears out those older. A session the app starts may open
   them without asking, in the folder that copy of the app saves into.
 - `snapshot <tab>` lists what can be clicked or typed in, from the page's
-  accessibility tree, each with a ref (`e3`) good until the next snapshot.
+  accessibility tree, each with a ref (`e3`) good until the next snapshot. A ref
+  whose element the page has since dropped or hidden says to take a new one.
   `click <tab> <ref>`, `type <tab> <ref> "<text>"` (typed at the end of what the
   field holds) and `press <tab> <key> [<ref>]` act on it.
 - `console <tab>` and `network <tab>` print the last 50 errors the page logged
@@ -174,10 +177,8 @@ The keys are in `src/shared/keys/browser-actions.ts` and
 
 ## Open questions
 
-- A full-page screenshot is drawn by the page past its viewport, and a tab that
-  is not on screen may draw nothing until it is; it then fails after 15 seconds
-  saying so. A plain or `--element` screenshot is drawn even while hidden. Not
-  yet checked by hand in the app.
+- Every screenshot, plain, `--full` or `--element`, of a tab not on screen was
+  drawn in a bare Electron 45 window; not yet checked by hand in the app.
 - A pane's shell kept by the pane host from a build before the command has no
   `DASHBOARD_PANE`, so the command refuses there until the pane starts again.
 
