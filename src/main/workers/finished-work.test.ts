@@ -37,6 +37,18 @@ describe('unfinishedWork', () => {
     expect(await unfinishedWork(answering({ ...done, 'git rev-list': '2' }), '/w')).toBe('2 of its commits are not pushed');
   });
 
+  // Merged with --delete-branch and the remote branch pruned: no upstream, and nothing left to push.
+  it('lets the folder go when the upstream is gone because its pull request merged at HEAD', async () => {
+    const merged = {
+      'git status': '',
+      'git rev-parse --abbrev-ref HEAD': 'rename-it',
+      'git rev-parse HEAD': 'a1b2c3\n',
+      'gh pr list': '[{"number":14,"state":"MERGED","title":"t","url":"https://github.com/o/r/pull/14","headRefOid":"a1b2c3"}]',
+    };
+    expect(await unfinishedWork(answering(merged), '/w')).toBeNull();
+    expect(await unfinishedWork(answering({ ...merged, 'git rev-parse HEAD': 'ffffff' }), '/w')).toBe('its branch was never pushed');
+  });
+
   it('keeps pushed work with no pull request, and says so when gh cannot be asked', async () => {
     expect(await unfinishedWork(answering({ ...done, 'gh pr list': '[]' }), '/w')).toBe('rename-it has no pull request');
     expect(await unfinishedWork(answering(without(done, 'gh pr list')), '/w')).toMatch(/^gh could not say whether rename-it has a pull request/);

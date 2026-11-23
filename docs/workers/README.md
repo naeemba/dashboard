@@ -230,6 +230,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   session, from the usage sweep (chat-decision-12).
 - Given a throwaway worktree with uncommitted work, when the worker is released,
   then the worktree is kept and the reply says why.
+- Given a throwaway worktree whose pull request merged at its HEAD and whose remote branch is gone,
+  when the worker is released, then the worktree is removed, not kept as `never pushed`
+  (`finished-work.test.ts`).
 - Given a throwaway worktree a merge already removed
   (`gh pr merge --delete-branch` takes the branch's worktree with it), when the worker is released,
   then the pane closes and the reply says `released 2:3; <folder> was already removed`, not

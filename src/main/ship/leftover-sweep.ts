@@ -7,9 +7,9 @@ import { directoriesOf } from '../panes/shell-directory-lookup';
 import { isInside } from '../panes/shell-directory';
 import { parentProcesses } from '../workers/pane-sessions';
 import { mergedHead } from '../workers/finished-work';
-import type { BoundAction } from '../actions/action';
+import { isRefused, type BoundAction } from '../actions/action';
 import type { WorktreeEntry } from '../../shared/app/bridge';
-import { sweepLeftovers } from './leftover-worktrees';
+import { leftoverSweep } from './leftover-worktrees';
 import { changedFiles } from './ship';
 import { listWorktrees } from './worktree-scan';
 
@@ -40,11 +40,11 @@ async function modifiedAt(worktreePath: string): Promise<number> {
 }
 
 export function startLeftoverSweep(main: {
-  remove: BoundAction;
+  remove: BoundAction<{ ok: boolean; output: string }>;
   records: () => readonly WorktreeEntry[];
   projects: () => readonly string[];
 }): void {
-  const run = () => sweepLeftovers({
+  const sweep = leftoverSweep({
     projectPaths: main.projects,
     recorded: () => main.records().map((entry) => entry.worktreePath),
     list: listWorktrees,
@@ -57,8 +57,12 @@ export function startLeftoverSweep(main: {
     modifiedAt,
     now: Date.now,
     processIn,
-    remove: (worktreePath, projectPath) => main.remove.call({ worktreePath, projectPath, from: 'sweep' }),
-  }).catch(() => undefined);
+    remove: async (worktreePath, projectPath) => {
+      const removal = await main.remove.call({ worktreePath, projectPath, from: 'sweep' });
+      return !isRefused(removal) && removal.ok;
+    },
+  });
+  const run = () => sweep().catch(() => undefined);
   setTimeout(run, FIRST_MS).unref();
   setInterval(run, EVERY_MS).unref();
 }

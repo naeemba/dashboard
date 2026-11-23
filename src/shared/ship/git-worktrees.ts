@@ -6,7 +6,9 @@
 // every file in the folder and a size that is five minutes old still says which worktree is the big one.
 export const SIZE_STALE_MS = 300_000;
 
-export type GitWorktree ={ projectPath: string; worktreePath: string; branch: string };
+// `locked` only when `git worktree lock` was run on it: someone said keep it, and git refuses an
+// unforced remove of it anyway.
+export type GitWorktree = { projectPath: string; worktreePath: string; branch: string; locked?: true };
 
 // A folder's size: null until it has been measured — a size is a walk of every file in it, so it
 // arrives later than the rest — and `unmeasurable` when the walk gave no number, most often because
@@ -41,7 +43,7 @@ function worktreeBlocks(blocks: readonly string[], projectPath: string): GitWork
     if (!worktreePath || fields.has('bare')) return [];
     const branch = fields.get('branch')?.replace(/^refs\/heads\//, '')
       ?? `detached ${(fields.get('HEAD') ?? '').slice(0, 7)}`;
-    return [{ projectPath, worktreePath, branch }];
+    return [{ projectPath, worktreePath, branch, ...(fields.has('locked') ? { locked: true as const } : {}) }];
   });
 }
 

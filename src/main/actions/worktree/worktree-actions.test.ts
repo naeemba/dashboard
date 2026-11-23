@@ -8,8 +8,6 @@ function actions(removal: WorktreeRemoval = { ok: true, message: '', dirty: [] }
     remove: async () => removal,
     queue: async (_projectPath, run) => run(),
     log: () => {},
-    records: () => [],
-    projects: () => [],
   });
 }
 

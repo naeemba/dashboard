@@ -33,16 +33,11 @@ async function install(program: string, programArguments: string[], cwd: string)
   return runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS, environment });
 }
 
-// `records` and `projects` are the leftover sweep's, which this starts on its own timer through
-// worktree.remove (leftover-sweep.ts).
-export function worktreeActions(main: WorktreeRemovePorts & {
-  records: () => readonly WorktreeEntry[]; projects: () => readonly string[];
-}) {
+export function worktreeActions(main: WorktreeRemovePorts) {
   const make = bind(worktreeMake, {
     git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install,
   });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
-  startLeftoverSweep({ remove, records: main.records, projects: main.projects });
   return {
     remove,
     // card.ship's, with the project's queue held and origin fetched.
@@ -60,5 +55,8 @@ export function worktreeActions(main: WorktreeRemovePorts & {
       const removal = await removed(remove.call({ worktreePath, projectPath, from: 'release' }));
       if (!removal.ok) throw new Error(removal.message || `${worktreePath} has changes`);
     },
+    // The leftover sweep's timers, which main starts (leftover-sweep.ts).
+    startLeftoverSweep: (sweep: { records: () => readonly WorktreeEntry[]; projects: () => readonly string[] }) =>
+      startLeftoverSweep({ remove, ...sweep }),
   };
 }

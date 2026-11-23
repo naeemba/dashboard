@@ -1,5 +1,8 @@
+import { mkdirSync, symlinkSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { AGENT_IDLE_MS, sweepLeftovers, type LeftoverPorts } from './leftover-worktrees';
+import { temporaryFolder } from '../testing/temporary-folder';
+import { AGENT_IDLE_MS, leftoverSweep, type LeftoverPorts } from './leftover-worktrees';
 
 const PROJECT = '/code/new-crm';
 const ROOT = '/code/new-crm.worktrees';
@@ -10,17 +13,20 @@ const TWO_DAYS_AGO = NOW - 2 * AGENT_IDLE_MS;
 
 type Folder = {
   dirty?: boolean; head?: string; merged?: string | null; process?: boolean; gh?: 'fails'; pushed?: boolean; modifiedAt?: number;
+  locked?: true; refused?: boolean;
 };
 
 // A project whose worktrees are these, every one clean, merged at its HEAD, pushed, untouched for two
-// days and empty of processes unless it says otherwise. Answers what was removed.
-async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPorts> = {}): Promise<string[]> {
+// days and empty of processes unless it says otherwise, swept `times` times. Answers every removal
+// asked for, refused or not.
+async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPorts> = {}, times = 1): Promise<string[]> {
   const removed: string[] = [];
   const at = (path: string): Folder => folders[path] ?? {};
-  await sweepLeftovers({
+  const run = leftoverSweep({
     projectPaths: () => [PROJECT],
     recorded: () => [],
-    list: async () => Object.keys(folders).map((worktreePath) => ({ projectPath: PROJECT, worktreePath, branch: 'b' })),
+    list: async (projectPath) => Object.entries(folders).map(([worktreePath, { locked }]) =>
+      ({ projectPath, worktreePath, branch: 'b', ...(locked ? { locked } : {}) })),
     dirty: async (path) => at(path).dirty ?? false,
     head: async (path) => `${at(path).head ?? MERGED}\n`,
     mergedHead: async (path) => {
@@ -32,13 +38,17 @@ async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPort
     modifiedAt: async (path) => at(path).modifiedAt ?? TWO_DAYS_AGO,
     now: () => NOW,
     processIn: async (path) => at(path).process ?? false,
-    remove: async (path) => { removed.push(path); },
+    remove: async (path) => {
+      removed.push(path);
+      return !at(path).refused;
+    },
     ...over,
   });
+  for (let sweeps = 0; sweeps < times; sweeps += 1) await run();
   return removed;
 }
 
-describe('sweepLeftovers', () => {
+describe('leftoverSweep', () => {
   it('removes a merged, clean worktree with nobody in it', async () => {
     expect(await sweep({ [`${ROOT}/fix-stories-migration`]: {} })).toEqual([`${ROOT}/fix-stories-migration`]);
   });
@@ -50,7 +60,19 @@ describe('sweepLeftovers', () => {
       [`${ROOT}/open`]: { merged: null },
       [`${ROOT}/running`]: { process: true },
       [`${ROOT}/offline`]: { gh: 'fails' },
+      [`${ROOT}/locked`]: { locked: true },
     })).toEqual([]);
+  });
+
+  // A worktree with submodules: git refuses every unforced remove, and the log would say so each sweep.
+  it('does not ask again this run to remove a worktree git refused', async () => {
+    expect(await sweep({ [`${ROOT}/submodules`]: { refused: true } }, {}, 2)).toEqual([`${ROOT}/submodules`]);
+  });
+
+  // The same repository open twice, and one of its worktrees open as a project of its own.
+  it('asks about a worktree once however many open projects list it, and never about an open one', async () => {
+    const projectPaths = () => [PROJECT, PROJECT, `${ROOT}/opened`];
+    expect(await sweep({ [`${ROOT}/fix`]: { refused: true }, [`${ROOT}/opened`]: {} }, { projectPaths })).toEqual([`${ROOT}/fix`]);
   });
 
   // The review sweep's to remove, or a cancelled card's to keep (board-decision-4).
@@ -74,5 +96,22 @@ describe('sweepLeftovers', () => {
       [`${AGENTS}/wf_a-3`]: { modifiedAt: NOW - 60_000 },
       [`${AGENTS}/wf_a-4`]: { process: true },
     })).toEqual([]);
+  });
+
+  // `claude --worktree <name>` puts a session's worktree there too, and asks whether to keep it.
+  it('leaves a worktree under .claude/worktrees alone unless a workflow made it', async () => {
+    expect(await sweep({ [`${AGENTS}/phase-6-portfolio`]: {} })).toEqual([]);
+  });
+
+  // A .claude/worktrees symlinked to a shared folder would make every worktree there a candidate.
+  it('leaves a .claude/worktrees that resolves outside the project alone', async () => {
+    const folder = temporaryFolder('dashboard-leftovers-');
+    const project = join(folder, 'new-crm');
+    const shared = join(folder, 'shared');
+    mkdirSync(join(project, '.claude'), { recursive: true });
+    mkdirSync(join(shared, 'wf_a-1'), { recursive: true });
+    symlinkSync(shared, join(project, '.claude', 'worktrees'));
+    const worktree = join(project, '.claude', 'worktrees', 'wf_a-1');
+    expect(await sweep({ [worktree]: {} }, { projectPaths: () => [project] })).toEqual([]);
   });
 });

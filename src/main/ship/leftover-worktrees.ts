@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { realPath } from '../app/real-path';
 import { isInside } from '../panes/shell-directory';
 import type { GitWorktree } from '../../shared/ship/git-worktrees';
@@ -16,10 +16,15 @@ import { worktreesRoot } from './ship';
 // Only folders under `<project>.worktrees/`, where the app makes them: a worktree made by hand
 // anywhere else is yours.
 //
-// And `<project>/.claude/worktrees/`, where a workflow's agents get theirs (`wf_<run>-<n>`): 27 of
+// And `<project>/.claude/worktrees/wf_*`, where a workflow's agents get theirs (`wf_<run>-<n>`): 27 of
 // them, 135 MB to 2.2 GB each, in three days in new-crm. They have no pull request, so one goes when
 // it is clean, its HEAD is on a remote (`rev-list HEAD --not --remotes` is empty), nobody stands in
-// it, and nothing in it has changed for a day, which is how long a run gets to come back for it.
+// it, and nothing in it has changed for a day, which is how long a run gets to come back for it. Any
+// other name there is an interactive session's (`claude --worktree <name>`), kept when it ended.
+//
+// A locked worktree (`git worktree lock`) is kept: the lock is somebody saying keep it. One whose
+// removal git refuses anyway, a worktree with submodules, is not asked about again for the rest of
+// the run, or every sweep would log the same refusal.
 
 export type LeftoverPorts = {
   projectPaths: () => readonly string[];
@@ -38,8 +43,8 @@ export type LeftoverPorts = {
   now: () => number;
   // True when any process stands in the folder, or when that cannot be asked.
   processIn: (worktreePath: string) => Promise<boolean>;
-  // worktree.remove, unforced.
-  remove: (worktreePath: string, projectPath: string) => Promise<unknown>;
+  // worktree.remove, unforced: whether the folder went.
+  remove: (worktreePath: string, projectPath: string) => Promise<boolean>;
 };
 
 export const AGENT_IDLE_MS = 24 * 60 * 60 * 1000;
@@ -48,8 +53,8 @@ type Kind = 'card' | 'agent';
 
 // Cheapest question first: git status, then git or gh, then the process table. One that throws keeps
 // the worktree, and the next sweep asks again.
-async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, branch }: GitWorktree): Promise<boolean> {
-  if (await ports.dirty(worktreePath)) return false;
+async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, branch, locked }: GitWorktree): Promise<boolean> {
+  if (locked || await ports.dirty(worktreePath)) return false;
   if (kind === 'card') {
     const merged = await ports.mergedHead(worktreePath, branch);
     if (merged === null || merged !== (await ports.head(worktreePath)).trim()) return false;
@@ -65,24 +70,29 @@ async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, bran
 function kindOf(path: string, projectPath: string): Kind | null {
   for (const [root, kind] of [[worktreesRoot(projectPath), 'card'], [join(projectPath, '.claude', 'worktrees'), 'agent']] as const) {
     const real = realPath(root);
-    if (kind === 'agent' && !isInside(real, realPath(projectPath))) continue;
+    if (kind === 'agent' && (!isInside(real, realPath(projectPath)) || !basename(path).startsWith('wf_'))) continue;
     if (path !== real && isInside(path, real)) return kind;
   }
   return null;
 }
 
-// One worktree at a time: every one of them is a gh call, and nothing is waiting on the answer.
-export async function sweepLeftovers(ports: LeftoverPorts): Promise<void> {
-  const open = ports.projectPaths();
-  const passed = new Set([...ports.recorded(), ...open].map(realPath));
-  for (const projectPath of open) {
-    for (const worktree of await ports.list(projectPath)) {
-      const path = realPath(worktree.worktreePath);
-      const kind = kindOf(path, projectPath);
-      // Also how two open projects of one repository each listing it ask about it once.
-      if (passed.has(path) || kind === null) continue;
-      passed.add(path);
-      if (await isLeftover(ports, kind, worktree).catch(() => false)) await ports.remove(worktree.worktreePath, projectPath);
+// One sweep per call, remembering across calls the worktrees git refused to remove. One worktree at
+// a time: every one of them is a gh call, and nothing is waiting on the answer.
+export function leftoverSweep(ports: LeftoverPorts): () => Promise<void> {
+  const refused = new Set<string>();
+  return async () => {
+    const open = ports.projectPaths();
+    const passed = new Set([...ports.recorded(), ...open].map(realPath));
+    for (const projectPath of open) {
+      for (const worktree of await ports.list(projectPath)) {
+        const path = realPath(worktree.worktreePath);
+        const kind = kindOf(path, projectPath);
+        // Also how two open projects of one repository each listing it ask about it once.
+        if (passed.has(path) || refused.has(path) || kind === null) continue;
+        passed.add(path);
+        if (!(await isLeftover(ports, kind, worktree).catch(() => false))) continue;
+        if (!(await ports.remove(worktree.worktreePath, projectPath))) refused.add(path);
+      }
     }
-  }
+  };
 }

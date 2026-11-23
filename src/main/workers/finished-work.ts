@@ -4,10 +4,11 @@ import { latestPullRequest, pullRequestListArguments } from '../board/pull-reque
 import { changedFiles } from '../ship/ship';
 import { FETCH_TIMEOUT } from '../board/board-sync';
 
-// Whether a throwaway worktree's work has left it: committed, pushed, and a pull request open. Only
-// then is the folder thrown away when its worker is released — before that, removing it would take the
-// work with it. changedFiles rather than blockingChanges, because git counts .dashboard/ like any other
-// folder and so does this: an uncommitted board move is work not yet on the branch.
+// Whether a throwaway worktree's work has left it: committed, pushed, and a pull request open, or
+// merged at its HEAD. Only then is the folder thrown away when its worker is released — before that,
+// removing it would take the work with it. changedFiles rather than blockingChanges, because git
+// counts .dashboard/ like any other folder and so does this: an uncommitted board move is work not
+// yet on the branch.
 //
 // Null when it is all done, otherwise the reason the folder stays, written to follow "kept <folder>:".
 export type RunProgram = typeof runProgram;
@@ -20,7 +21,8 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
   try {
     ahead = await run('git', ['rev-list', '--count', '@{upstream}..HEAD'], worktreePath);
   } catch {
-    return 'its branch was never pushed';
+    // A merge that deleted the branch takes the upstream with it: HEAD at the merged commit is done.
+    return await mergedAtHead(run, worktreePath).catch(() => false) ? null : 'its branch was never pushed';
   }
   if (ahead !== '0') return `${ahead} of its commits are not pushed`;
   const branch = await branchOf(run, worktreePath);
@@ -59,6 +61,11 @@ const pullRequestOf = async (run: RunProgram, worktreePath: string, branch: stri
 export async function mergedHead(run: RunProgram, worktreePath: string, branch: string): Promise<string | null> {
   const pull = await pullRequestOf(run, worktreePath, branch);
   return pull?.state === 'MERGED' && typeof pull.headRefOid === 'string' ? pull.headRefOid : null;
+}
+
+async function mergedAtHead(run: RunProgram, worktreePath: string): Promise<boolean> {
+  const merged = await mergedHead(run, worktreePath, await branchOf(run, worktreePath));
+  return merged !== null && merged === (await run('git', ['rev-parse', 'HEAD'], worktreePath)).trim();
 }
 
 // What a worktree's worker is asked before it is let go of, as session-requests.ts's ports take them.

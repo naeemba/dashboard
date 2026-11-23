@@ -215,10 +215,10 @@ export type ReviewSweep = {
 
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // Cards a review has already been started for, or tried for and refused. Asked only once a card is
-  // known not to be past Review, so a reviewed card is still seen reaching Done. Kept for the run rather than on the record, because the record only changes when the swap
-  // works: one that stopped short leaves the old entry exactly as it was, and without this the sweep
-  // would find the same finished card on the next tick and spawn git at it again for as long as the
-  // app is open.
+  // known not to be past Review, so a reviewed card is still seen reaching Done. Kept for the run
+  // rather than on the record, because the record only changes when the swap works: one that stopped
+  // short leaves the old entry exactly as it was, and without this the sweep would find the same
+  // finished card on the next tick and spawn git at it again for as long as the app is open.
   //
   // The one refusal that comes back off is a worktree with uncommitted files in it. That is the agent
   // still finishing rather than a review that failed, and swapWorktree says why it is the exception.
