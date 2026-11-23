@@ -25,7 +25,9 @@ export const READ_SCRIPT = `(selector) => {
       if (SKIP.has(node.tagName) || ROLES.test(node.getAttribute('role') || '')) return null;
       if (node.tagName === 'HEADER' && node.parentElement === document.body) return null;
       if (node.hidden || node.getAttribute('aria-hidden') === 'true') return null;
-      if (node.checkVisibility && !node.checkVisibility()) return null;
+      // A display: contents element draws no box of its own, so checkVisibility calls it hidden; its
+      // children, which GitHub puts a pull request's whole conversation in, are checked one by one.
+      if (node.checkVisibility && !node.checkVisibility() && getComputedStyle(node).display !== 'contents') return null;
     }
     const children = [];
     for (const child of node.childNodes) {

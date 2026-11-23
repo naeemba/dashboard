@@ -1,5 +1,5 @@
-import { session, WebContentsView, type BrowserWindow, type Rectangle, type WebContents } from 'electron';
-import { NO_TABS, type BrowserBounds, type BrowserPlacement, type BrowserState, type BrowserTab } from '../../shared/browser/browser';
+import { session, WebContentsView, type BrowserWindow, type WebContents } from 'electron';
+import { NO_TABS, type BrowserBounds, type BrowserPlacement, type BrowserState, type BrowserTab, type ViewportSize } from '../../shared/browser/browser';
 import { leavingKey } from '../../shared/keys/browser-keys';
 import type { Settings } from '../../shared/settings/settings';
 import type { BrowserPorts } from '../actions/browser/browser-ports';
@@ -17,13 +17,13 @@ export type BrowserViewsMain = {
   keys(): Settings['keys'];
 };
 
-// What browser-page.ts drives a page's content with: the DevTools protocol, a picture of what the
-// view draws, and what the page logged. The protocol goes through the tab's own webContents.debugger,
-// never a --remote-debugging-port, which would hand the app's window and terminals to anyone who asks.
+// What browser-page.ts drives a page's content with: the DevTools protocol, the view's own size, and
+// what the page logged. The protocol goes through the tab's own webContents.debugger, never a
+// --remote-debugging-port, which would hand the app's window and terminals to anyone who asks.
 export type PagePorts = {
   send(id: number, method: string, parameters?: Record<string, unknown>): Promise<unknown>;
-  // Drawn even while the view is hidden, as an agent's tab is.
-  capture(id: number, rect?: Rectangle): Promise<Buffer>;
+  // The view's size, hidden as an agent's tab is too: where it was last drawn, else what it was made at.
+  size(id: number): ViewportSize;
   logOf(id: number): PageLog | undefined;
 };
 
@@ -208,10 +208,9 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
         clearTimeout(timer);
       }
     },
-    async capture(id, rect) {
-      const contents = views.get(id)?.webContents;
-      if (contents === undefined) throw new Error(`tab ${id} is closed`);
-      return (await contents.capturePage(rect, { stayHidden: true })).toPNG();
+    size(id) {
+      const { width, height } = views.get(id)?.getBounds() ?? UNPLACED;
+      return { width, height };
     },
     logOf: (id) => logs.get(id),
   };

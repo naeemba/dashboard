@@ -9,3 +9,6 @@ One line per merged change: date and why.
   take any tab back with a key
 - 2026-11-20 — A sign-in popup finishes: a page's new window becomes its tab with
   its opener kept, and goes when the page closes itself
+- 2026-11-23 — An agent's tab behind yours screenshots, and lays out at its
+  view's size again after a `reset`, as one on screen does; `read` keeps
+  GitHub's conversation, and a stale ref says to take a new snapshot

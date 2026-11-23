@@ -55,8 +55,12 @@ The app drives a page over the DevTools protocol through each tab's
 `webContents.debugger`, attached on first use, and never through
 `--remote-debugging-port`, which serves every webContents of the app, its own
 window and terminals included, to whatever on the machine connects. A plain
-screenshot is Electron's `capturePage` with the view kept hidden, so an agent's
-tab behind yours is drawn without being shown. `read` makes its markdown here
+screenshot is the protocol's `Page.captureScreenshot`, which draws an agent's
+tab behind yours without showing it; Electron's `capturePage` refuses a hidden
+view ("Current display surface not available for capture"). A hidden view keeps
+whatever size its page was last laid out at, so `reset` lays the page out at the
+view's own size before clearing the override; cleared straight from 390 wide, a
+hidden tab stays 390 wide until it is shown. `read` makes its markdown here
 rather than calling a reader service such as Jina's: a page behind your login
 would otherwise be sent to one. The page hands back a light tree of its content
 and `page-reader.ts` turns it into markdown, so the rules are tested without a

@@ -2,6 +2,7 @@ import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Refused } from '../../shared/app/bridge';
 import { isRecord } from '../../shared/app/is-record';
+import { failureText } from '../../shared/errors/failure';
 import { NO_TABS, type BrowserState, type ViewportSize } from '../../shared/browser/browser';
 import type { PageAct } from '../actions/browser/browser-ports';
 import { isRefused } from '../actions/action';
@@ -15,8 +16,9 @@ import { snapshotOf, type AXNode } from './page-snapshot';
 // tabs), and what the page actions do (browser.resize, click, type, press). A read changes no browser
 // state, so it is no action, but it is held to the same claim: a pane reads only a tab it holds.
 // Its own few decisions (what a page's exception reads as, how a picture is cut, how long one is
-// kept) are tested through fake PagePorts in browser-page.test.ts; the rest is page-reader.ts's,
-// page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
+// kept, a stale ref's protocol error said as "take a new snapshot", a reset laying the page out at
+// the view's own size before it clears) are tested through fake PagePorts in browser-page.test.ts;
+// the rest is page-reader.ts's, page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
 
 // The tallest page a full screenshot takes: past it, the picture is a strip nobody reads.
 const TALLEST_SHOT = 16_000;
@@ -36,6 +38,9 @@ export function screenshotReadRule(userData: string): string {
 
 // How long a screenshot is kept: each one taken clears the folder of those older.
 const SHOT_KEPT_MS = 24 * 60 * 60 * 1000;
+// What the protocol says of a node the page dropped or hid since the snapshot, said as the ref being
+// stale. Any other failure, a closed tab or a hung page, is said as itself.
+const STALE_NODE = /not focusable|box model|layout object|no node|detached|could not find node/i;
 // Where a typed text goes in the field: at the end of what it holds. Focus alone leaves the caret
 // where the field last had it, the start of one filled from its HTML that nobody has clicked.
 const CARET_TO_END = `function () {
@@ -74,22 +79,40 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     return evaluated(await pages.send(id, 'Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }));
   }
 
+  // Laid out at the view's own size before clearing, or a hidden tab stays a phone's width (browser-decision-6).
   async function emulate(id: number, size: ViewportSize | null): Promise<void> {
+    await pages.send(id, 'Emulation.setDeviceMetricsOverride', { ...(size ?? pages.size(id)), deviceScaleFactor: 0, mobile: false });
     if (size === null) await pages.send(id, 'Emulation.clearDeviceMetricsOverride');
-    else await pages.send(id, 'Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 0, mobile: false });
+  }
+
+  // A picture through the protocol, which draws a hidden view (browser-decision-6). A clip is in the
+  // page's own coordinates, past the viewport's top when the page is scrolled.
+  async function shot(id: number, options: { captureBeyondViewport?: boolean; clip?: Record<string, number> } = {}): Promise<Buffer> {
+    const answer = await pages.send(id, 'Page.captureScreenshot', { format: 'png', ...options });
+    return Buffer.from(isRecord(answer) && typeof answer.data === 'string' ? answer.data : '', 'base64');
+  }
+
+  async function sendToNode(id: number, method: string, node: number): Promise<unknown> {
+    try {
+      return await pages.send(id, method, { backendNodeId: node });
+    } catch (error) {
+      const text = failureText(error);
+      if (!STALE_NODE.test(text)) throw error;
+      throw new Error(`the element is not on the page as the last snapshot saw it (${text}); take a new snapshot`, { cause: error });
+    }
   }
 
   // The middle of the element on the page, scrolled into view first.
   async function middleOf(id: number, node: number): Promise<{ x: number; y: number }> {
-    await pages.send(id, 'DOM.scrollIntoViewIfNeeded', { backendNodeId: node });
-    const box = await pages.send(id, 'DOM.getBoxModel', { backendNodeId: node });
+    await sendToNode(id, 'DOM.scrollIntoViewIfNeeded', node);
+    const box = await sendToNode(id, 'DOM.getBoxModel', node);
     const quad = isRecord(box) && isRecord(box.model) && Array.isArray(box.model.content) ? box.model.content as number[] : [];
     if (quad.length < 8) throw new Error('the element has no box on the page; take a new snapshot');
     return { x: (quad[0] + quad[4]) / 2, y: (quad[1] + quad[5]) / 2 };
   }
 
   async function caretToEnd(id: number, node: number): Promise<void> {
-    const resolved = await pages.send(id, 'DOM.resolveNode', { backendNodeId: node });
+    const resolved = await sendToNode(id, 'DOM.resolveNode', node);
     const objectId = isRecord(resolved) && isRecord(resolved.object) ? resolved.object.objectId : undefined;
     if (typeof objectId === 'string') await pages.send(id, 'Runtime.callFunctionOn', { objectId, functionDeclaration: CARET_TO_END });
   }
@@ -102,7 +125,7 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
       }
       return;
     }
-    if (done.node !== null) await pages.send(id, 'DOM.focus', { backendNodeId: done.node });
+    if (done.node !== null) await sendToNode(id, 'DOM.focus', done.node);
     if (done.kind === 'type') {
       await caretToEnd(id, done.node);
       await pages.send(id, 'Input.insertText', { text: done.text });
@@ -129,26 +152,23 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     const content = isRecord(metrics) && isRecord(metrics.cssContentSize) ? metrics.cssContentSize : {};
     const width = Math.min(Math.ceil(Number(content.width) || 0), WIDEST_SHOT);
     const height = Math.min(Math.ceil(Number(content.height) || 0), TALLEST_SHOT);
-    if (width === 0 || height === 0) return pages.capture(id);
-    const shot = await pages.send(id, 'Page.captureScreenshot', {
-      format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale: 1 },
-    });
-    return Buffer.from(isRecord(shot) && typeof shot.data === 'string' ? shot.data : '', 'base64');
+    if (width === 0 || height === 0) return shot(id);
+    return shot(id, { captureBeyondViewport: true, clip: { x: 0, y: 0, width, height, scale: 1 } });
   }
 
   async function elementShot(id: number, selector: string): Promise<Buffer | Refused> {
     const box = await evaluate(id, `(() => { const element = document.querySelector(${JSON.stringify(selector)}); if (!element) return null;`
       + ` element.scrollIntoView({ block: 'center' }); const box = element.getBoundingClientRect();`
-      + ' return { x: box.x, y: box.y, width: box.width, height: box.height }; })()');
+      + ' return { x: box.x + scrollX, y: box.y + scrollY, width: box.width, height: box.height }; })()');
     if ('thrown' in box) return { refused: `${selector} is not a selector the page takes: ${box.thrown}` };
     if (!isRecord(box.value)) return { refused: `nothing in tab ${id} matches ${selector}` };
     const [x, y, width, height] = [box.value.x, box.value.y, box.value.width, box.value.height].map((side) => Math.max(0, Math.round(Number(side) || 0)));
     if (width === 0 || height === 0) return { refused: `${selector} in tab ${id} has no size on screen` };
-    return pages.capture(id, { x, y, width, height });
+    return shot(id, { clip: { x, y, width, height, scale: 1 } });
   }
 
   async function screenshot(id: number, { full, element }: ShotOptions): Promise<string | Refused> {
-    const picture = element !== null ? await elementShot(id, element) : full ? await fullShot(id) : await pages.capture(id);
+    const picture = element !== null ? await elementShot(id, element) : full ? await fullShot(id) : await shot(id);
     if (isRefused(picture)) return picture;
     if (picture.length === 0) return { refused: `tab ${id} drew nothing to take a picture of` };
     await mkdir(folder, { recursive: true, mode: 0o700 });

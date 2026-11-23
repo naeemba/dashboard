@@ -9,18 +9,18 @@ import type { PagePorts } from './browser-views';
 const NOW = Date.parse('2026-11-20T12:00:00Z');
 const browsers = new Map<string, BrowserState>([['/work/api', { tabs: [{ id: 4, url: 'about:blank', title: '', holder: '3:1' }], active: 4 }]]);
 
-// A page answering each protocol method from `answers`, and recording what it was sent and captured.
+// A page answering each protocol method from `answers`, a picture unless told otherwise, and recording
+// what it was sent. A method answered with an Error throws it, as the protocol does.
 function fakePage(answers: Record<string, unknown>, folder = temporaryFolder('browser-page-')) {
   const sent: string[] = [];
   const pages: PagePorts = {
     async send(_id, method, parameters) {
       sent.push(`${method} ${JSON.stringify(parameters ?? {})}`);
-      return answers[method];
+      const answer = { 'Page.captureScreenshot': { data: 'cG5n' }, ...answers }[method];
+      if (answer instanceof Error) throw answer;
+      return answer;
     },
-    async capture(_id, rect) {
-      sent.push(`capture ${JSON.stringify(rect ?? null)}`);
-      return Buffer.from(answers.capture === undefined ? 'png' : String(answers.capture));
-    },
+    size: () => ({ width: 1280, height: 800 }),
     logOf: () => undefined,
   };
   return { sent, folder, page: browserPage(pages, () => browsers, folder, () => NOW) };
@@ -58,13 +58,13 @@ describe('screenshot', () => {
     expect(wide.sent).toContain('Page.captureScreenshot {"format":"png","captureBeyondViewport":true,"clip":{"x":0,"y":0,"width":4000,"height":500,"scale":1}}');
     const flat = fakePage({ 'Page.getLayoutMetrics': { cssContentSize: { width: 0, height: 0 } } });
     await flat.page.reads.screenshot('3:1', 4, { full: true, element: null });
-    expect(flat.sent).toEqual(['Page.getLayoutMetrics {}', 'capture null']);
+    expect(flat.sent).toEqual(['Page.getLayoutMetrics {}', 'Page.captureScreenshot {"format":"png"}']);
   });
 
   it('refuses an element with no height, and a picture with nothing in it', async () => {
     const flat = fakePage({ 'Runtime.evaluate': { result: { value: { x: 1.4, y: 2, width: 30, height: 0 } } } });
     await expect(flat.page.reads.screenshot('3:1', 4, { full: false, element: 'hr' })).resolves.toEqual({ refused: 'hr in tab 4 has no size on screen' });
-    const blank = fakePage({ capture: '' });
+    const blank = fakePage({ 'Page.captureScreenshot': { data: '' } });
     await expect(blank.page.reads.screenshot('3:1', 4, { full: false, element: null })).resolves.toEqual({ refused: 'tab 4 drew nothing to take a picture of' });
   });
 
@@ -87,6 +87,50 @@ describe('type', () => {
     const { page, sent } = fakePage({ 'DOM.resolveNode': { object: { objectId: 'field-1' } } });
     await page.ports.act(4, { kind: 'type', node: 7, text: ' red' });
     expect(sent.map((line) => line.split(' ')[0])).toEqual(['DOM.focus', 'DOM.resolveNode', 'Runtime.callFunctionOn', 'Input.insertText']);
+  });
+
+  it('says a node the page hid since the snapshot is stale, not the protocol\'s "not focusable"', async () => {
+    const { page, sent } = fakePage({ 'DOM.focus': new Error('Element is not focusable') });
+    await expect(page.ports.act(4, { kind: 'type', node: 7, text: 'red' }))
+      .rejects.toThrow('the element is not on the page as the last snapshot saw it (Element is not focusable); take a new snapshot');
+    expect(sent.map((line) => line.split(' ')[0])).toEqual(['DOM.focus']);
+  });
+
+  it('says a closed tab as itself, not as a stale ref', async () => {
+    const { page } = fakePage({ 'DOM.focus': new Error('tab 4 is closed') });
+    await expect(page.ports.act(4, { kind: 'type', node: 7, text: 'red' })).rejects.toThrow(/^tab 4 is closed$/);
+  });
+});
+
+describe('click', () => {
+  it('says a node the page hid since the snapshot is stale when scrolling to it fails', async () => {
+    const { page, sent } = fakePage({ 'DOM.scrollIntoViewIfNeeded': new Error('Node does not have a layout object') });
+    await expect(page.ports.act(4, { kind: 'click', node: 7 }))
+      .rejects.toThrow('the element is not on the page as the last snapshot saw it (Node does not have a layout object); take a new snapshot');
+    expect(sent.map((line) => line.split(' ')[0])).toEqual(['DOM.scrollIntoViewIfNeeded']);
+  });
+
+  it.each(['Element is not focusable', 'Could not compute box model.', 'Node does not have a layout object', 'No node with given id found', 'Node is detached from document', 'Could not find node with given id'])(
+    'says the protocol\'s "%s" as a stale ref', async (message) => {
+      const { page } = fakePage({ 'DOM.scrollIntoViewIfNeeded': new Error(message) });
+      await expect(page.ports.act(4, { kind: 'click', node: 7 })).rejects.toThrow(/take a new snapshot$/);
+    });
+});
+
+describe('emulate', () => {
+  it('lays a page back out at its view\'s own size before clearing, so a hidden tab is not left a phone\'s width', async () => {
+    const { page, sent } = fakePage({});
+    await page.ports.emulate(4, null);
+    expect(sent).toEqual([
+      'Emulation.setDeviceMetricsOverride {"width":1280,"height":800,"deviceScaleFactor":0,"mobile":false}',
+      'Emulation.clearDeviceMetricsOverride {}',
+    ]);
+  });
+
+  it('lays a page out at the size asked for, and leaves it there', async () => {
+    const { page, sent } = fakePage({});
+    await page.ports.emulate(4, { width: 390, height: 844 });
+    expect(sent).toEqual(['Emulation.setDeviceMetricsOverride {"width":390,"height":844,"deviceScaleFactor":0,"mobile":false}']);
   });
 });
 
