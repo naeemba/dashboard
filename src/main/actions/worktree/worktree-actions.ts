@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/app/bridge';
 import { baseBranch, git, runProgram } from '../../app/git';
 import { loginShellPath } from '../../app/shell-path';
+import { startLeftoverSweep } from '../../ship/leftover-sweep';
 import { bind, isRefused, type BoundAction } from '../action';
 import { INSTALL_TIMEOUT_MS, worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
 import { worktreeRemove, type WorktreeRemovePorts } from './remove';
@@ -59,6 +60,8 @@ export function worktreeActions(main: WorktreeRemovePorts) {
     // The launch's, once its panes are back.
     sweep: (ports: Pick<WorktreeSweepPorts, 'projects' | 'hold'>) => bind(worktreeSweep, { ...throwawayPorts, throwawaysOf, log: main.log, ...ports }),
     remove,
+    // The leftover sweep's timers (leftover-sweep.ts), started by main with the removal made here.
+    startLeftoverSweep: (sweep: Omit<Parameters<typeof startLeftoverSweep>[0], 'remove'>) => startLeftoverSweep({ remove, ...sweep }),
     // card.ship's, with the project's queue held and origin fetched.
     makeForShip: (request: ShipWorktreeRequest): Promise<ShipWorktree> => made(make.call({ kind: 'card', ...request })),
     // `pane run --worktree`'s.

@@ -12,7 +12,7 @@ export type PullRequestState = 'OPEN' | 'MERGED' | 'CLOSED';
 // only that file reads them, and it checks each.
 export type PullRequest = {
   number: number; state: PullRequestState; title: string; url: string;
-  statusCheckRollup?: unknown; reviewDecision?: unknown; mergeable?: unknown;
+  statusCheckRollup?: unknown; reviewDecision?: unknown; mergeable?: unknown; headRefOid?: unknown;
 };
 
 // A Done card is asked about for this long after it last changed, then never again. Long enough to
@@ -25,9 +25,10 @@ export const DONE_FOLLOWED_MS = 24 * 60 * 60 * 1000;
 const SAID = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed without merging' } as const;
 
 // `gh pr list` for one branch, every state, newest first, with what the comments name and what the
-// card's glyph is read from (pull-request-status.ts).
+// card's glyph is read from (pull-request-status.ts), and the head commit a merged one ended on
+// (mergedHead in finished-work.ts).
 export function pullRequestListArguments(branch: string): string[] {
-  const fields = 'number,state,title,url,statusCheckRollup,reviewDecision,mergeable';
+  const fields = 'number,state,title,url,statusCheckRollup,reviewDecision,mergeable,headRefOid';
   return ['pr', 'list', '--head', branch, '--state', 'all', '--json', fields, '--limit', '20'];
 }
 

@@ -80,7 +80,7 @@ Neither door holds any of the logic; each only asks.
   marker, given back to a pane standing in it, otherwise removed unless it holds work no remote
   has; one log line says each.
 - **worktree.remove** (`worktree:remove`, `pane release`, a throwaway's pane closed, the sweep, the
-  review):
+  review, the leftover sweep):
   `removalOf` says, per door, whether it is forced (only the dialog's, after
   you said yes), queued on the project (all but the review's, which holds it)
   and logged (all but the review's, which writes on the card). The keeper does

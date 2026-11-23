@@ -233,6 +233,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a throwaway worktree with uncommitted work or commits no remote has,
   when the worker is released, then the worktree is kept and the reply says why;
   one with neither is removed, pull request or not, never pushed or not.
+- Given a throwaway worktree whose pull request squash-merged at its HEAD and whose remote branch
+  is gone, when the worker is released, then the worktree is removed, not kept for commits on no
+  remote (`finished-work.test.ts`).
 - Given a throwaway worktree, when its pane is closed by hand or with its
   project instead of released, then it is let go of as release would, and the
   log says `pane 2:3 closed: removed <folder>` or why it was kept.

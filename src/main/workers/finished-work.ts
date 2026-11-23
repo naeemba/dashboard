@@ -21,7 +21,10 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
   // Against every remote-tracking branch, not the upstream: a branch never pushed that is still where
   // origin/main was has nothing to lose, and a worker that checked out a pull request's branch has none.
   const missing = await run('git', ['rev-list', '--count', 'HEAD', '--not', '--remotes'], worktreePath);
-  return missing === '0' ? null : `${missing} of its commits are on no remote`;
+  if (missing === '0') return null;
+  // A squash or rebase merge leaves the branch's own commits on no remote once --delete-branch and a
+  // prune take the branch: HEAD at the commit its pull request merged at has nothing the merge did not take.
+  return await mergedAtHead(run, worktreePath).catch(() => false) ? null : `${missing} of its commits are on no remote`;
 }
 
 const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
@@ -33,8 +36,23 @@ const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-par
 // Bounded, because the sweep waits on it before it looks at any other worker: a gh that never answers
 // rejects here instead, which keeps the pane until the next sweep asks again.
 export async function pullRequestMerged(run: RunProgram, worktreePath: string): Promise<boolean> {
-  const branch = await branchOf(run, worktreePath);
-  return latestPullRequest(await run('gh', pullRequestListArguments(branch), worktreePath, { timeout: FETCH_TIMEOUT }))?.state === 'MERGED';
+  return (await pullRequestOf(run, worktreePath, await branchOf(run, worktreePath)))?.state === 'MERGED';
+}
+
+const pullRequestOf = async (run: RunProgram, worktreePath: string, branch: string) =>
+  latestPullRequest(await run('gh', pullRequestListArguments(branch), worktreePath, { timeout: FETCH_TIMEOUT }));
+
+// The commit the branch's pull request was merged at, or null while the one it stands for is not
+// merged. A worktree whose HEAD is that commit has nothing on it the merge did not take; its
+// `@{upstream}` cannot say so, because a merge that deletes the branch takes the upstream with it.
+export async function mergedHead(run: RunProgram, worktreePath: string, branch: string): Promise<string | null> {
+  const pull = await pullRequestOf(run, worktreePath, branch);
+  return pull?.state === 'MERGED' && typeof pull.headRefOid === 'string' ? pull.headRefOid : null;
+}
+
+async function mergedAtHead(run: RunProgram, worktreePath: string): Promise<boolean> {
+  const merged = await mergedHead(run, worktreePath, await branchOf(run, worktreePath));
+  return merged !== null && merged === (await run('git', ['rev-parse', 'HEAD'], worktreePath)).trim();
 }
 
 // What a worktree's worker is asked before it is let go of, as session-requests.ts's ports take them.

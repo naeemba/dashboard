@@ -43,7 +43,7 @@ describe('worktree.remove', () => {
 
   it('refuses a door it does not know', async () => {
     const { remove, asked } = remover();
-    expect(await remove.call({ worktreePath: '/w/fix', from: 'sweep' })).toHaveProperty('refused');
+    expect(await remove.call({ worktreePath: '/w/fix', from: 'cron' })).toHaveProperty('refused');
     expect(asked).toEqual([]);
   });
 });

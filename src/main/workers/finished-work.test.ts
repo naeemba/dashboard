@@ -29,6 +29,20 @@ describe('unfinishedWork', () => {
   it('keeps commits no remote has', async () => {
     expect(await unfinishedWork(answering({ ...done, 'git rev-list --count HEAD --not --remotes': '2' }), '/w')).toBe('2 of its commits are on no remote');
   });
+
+  // Squash-merged with --delete-branch and the remote branch pruned: its commits are on no remote, yet
+  // the merge took them.
+  it('lets the folder go when its pull request merged at HEAD and the branch is gone', async () => {
+    const merged = {
+      ...done,
+      'git rev-list --count HEAD --not --remotes': '3',
+      'git rev-parse --abbrev-ref HEAD': 'rename-it',
+      'git rev-parse HEAD': 'a1b2c3\n',
+      'gh pr list': '[{"number":14,"state":"MERGED","title":"t","url":"https://github.com/o/r/pull/14","headRefOid":"a1b2c3"}]',
+    };
+    expect(await unfinishedWork(answering(merged), '/w')).toBeNull();
+    expect(await unfinishedWork(answering({ ...merged, 'git rev-parse HEAD': 'ffffff' }), '/w')).toBe('3 of its commits are on no remote');
+  });
 });
 
 describe('pullRequestMerged', () => {

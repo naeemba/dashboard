@@ -16,7 +16,7 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 - Review: `review.ts`, `review-flow.ts`, `review-finished.ts`, `review-loop-install.ts`
 - Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`,
   `worktree-scan.ts`, `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
-  `worktree-removal.ts`, `worktrees.css`
+  `worktree-removal.ts`, `worktrees.css`, `leftover-worktrees.ts`, `leftover-sweep.ts`
 
 Started by the card.ship and card.review actions (docs/actions), which are what a move into Ship or
 Review, and `dashboard board ship` and `review`, call. The agent itself, and the review's, is
@@ -115,6 +115,23 @@ with merging off, `pr land` with it on.
   opens empty (`worktree-store.test.ts`).
 - Given a worktree with modified files, when you remove it from the list, then the app says so
   instead of git's raw `fatal:`.
+- Given a card whose review the sweep started, when the card reaches Done in the same run, then its
+  worktree is removed without a restart (`review-flow-clearing.test.ts`).
+- Given a worktree under `<project>.worktrees/` that the app has no record of and no throwaway
+  marker (a record lost, or a throwaway older than the marker), when its branch's pull request
+  merged at its HEAD, nothing in it is uncommitted, and no process on the machine stands in it,
+  then the leftover sweep removes it, a minute after launch and every half hour after, with the
+  branch kept. Any other answer, or gh failing, keeps it (`leftover-worktrees.test.ts`).
+- Given a leftover worktree that is locked (`git worktree lock`), then the sweep keeps it; given one
+  git refuses to remove unforced (submodules), then the sweep does not ask again until the app
+  restarts (`leftover-worktrees.test.ts`).
+- Given a marked throwaway, then the leftover sweep leaves it to worktree.sweep and its pane
+  (`leftover-worktrees.test.ts`).
+- Given a workflow agent's worktree under `<project>/.claude/worktrees/wf_*`, when nothing in it is
+  uncommitted or untracked, every commit HEAD reaches is on a remote, no process stands in it, and
+  neither the folder nor git's index or HEAD for it changed in 24 hours, then the same sweep removes
+  it. Anything else keeps it, and so does any other name there, such as a `claude --worktree`
+  session's (`leftover-worktrees.test.ts`).
 
 ## Known limits
 
