@@ -16,8 +16,9 @@ import { snapshotOf, type AXNode } from './page-snapshot';
 // tabs), and what the page actions do (browser.resize, click, type, press). A read changes no browser
 // state, so it is no action, but it is held to the same claim: a pane reads only a tab it holds.
 // Its own few decisions (what a page's exception reads as, how a picture is cut, how long one is
-// kept) are tested through fake PagePorts in browser-page.test.ts; the rest is page-reader.ts's,
-// page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
+// kept, a stale ref's protocol error said as "take a new snapshot", a reset laying the page out at
+// the view's own size before it clears) are tested through fake PagePorts in browser-page.test.ts;
+// the rest is page-reader.ts's, page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
 
 // The tallest page a full screenshot takes: past it, the picture is a strip nobody reads.
 const TALLEST_SHOT = 16_000;
@@ -37,6 +38,9 @@ export function screenshotReadRule(userData: string): string {
 
 // How long a screenshot is kept: each one taken clears the folder of those older.
 const SHOT_KEPT_MS = 24 * 60 * 60 * 1000;
+// What the protocol says of a node the page dropped or hid since the snapshot, said as the ref being
+// stale. Any other failure, a closed tab or a hung page, is said as itself.
+const STALE_NODE = /not focusable|box model|layout object|no node|detached|could not find node/i;
 // Where a typed text goes in the field: at the end of what it holds. Focus alone leaves the caret
 // where the field last had it, the start of one filled from its HTML that nobody has clicked.
 const CARET_TO_END = `function () {
@@ -88,9 +92,6 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     return Buffer.from(isRecord(answer) && typeof answer.data === 'string' ? answer.data : '', 'base64');
   }
 
-  // What the protocol says of a node the page dropped or hid since the snapshot, said as the ref being
-  // stale. Any other failure, a closed tab or a hung page, is said as itself.
-  const STALE_NODE = /not focusable|box model|no node|detached|could not find node/i;
   async function sendToNode(id: number, method: string, node: number): Promise<unknown> {
     try {
       return await pages.send(id, method, { backendNodeId: node });

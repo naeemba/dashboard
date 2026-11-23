@@ -102,6 +102,21 @@ describe('type', () => {
   });
 });
 
+describe('click', () => {
+  it('says a node the page hid since the snapshot is stale when scrolling to it fails', async () => {
+    const { page, sent } = fakePage({ 'DOM.scrollIntoViewIfNeeded': new Error('Node does not have a layout object') });
+    await expect(page.ports.act(4, { kind: 'click', node: 7 }))
+      .rejects.toThrow('the element is not on the page as the last snapshot saw it (Node does not have a layout object); take a new snapshot');
+    expect(sent.map((line) => line.split(' ')[0])).toEqual(['DOM.scrollIntoViewIfNeeded']);
+  });
+
+  it.each(['Element is not focusable', 'Could not compute box model.', 'Node does not have a layout object', 'No node with given id found', 'Node is detached from document', 'Could not find node with given id'])(
+    'says the protocol\'s "%s" as a stale ref', async (message) => {
+      const { page } = fakePage({ 'DOM.scrollIntoViewIfNeeded': new Error(message) });
+      await expect(page.ports.act(4, { kind: 'click', node: 7 })).rejects.toThrow(/take a new snapshot$/);
+    });
+});
+
 describe('emulate', () => {
   it('lays a page back out at its view\'s own size before clearing, so a hidden tab is not left a phone\'s width', async () => {
     const { page, sent } = fakePage({});
