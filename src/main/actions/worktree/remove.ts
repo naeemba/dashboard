@@ -10,9 +10,9 @@ import { isFilledText } from '../pane/pane-input';
 // changes in it, the shells killed and the screens closed in a recorded one — is the keeper's
 // (worktree-keeper.ts); what each door's removal is, is `removalOf`'s.
 
-export type RemovalFrom = 'dialog' | 'throwaway' | 'review' | 'sweep';
+export type RemovalFrom = 'dialog' | 'throwaway' | 'review' | 'leftover';
 
-const FROMS: readonly RemovalFrom[] = ['dialog', 'throwaway', 'review', 'sweep'];
+const FROMS: readonly RemovalFrom[] = ['dialog', 'throwaway', 'review', 'leftover'];
 
 export type WorktreeRemoveInput = { worktreePath: string; projectPath: string | undefined; force: boolean; from: RemovalFrom };
 

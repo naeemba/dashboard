@@ -60,7 +60,7 @@ export function startLeftoverSweep(main: {
     now: Date.now,
     processIn,
     remove: async (worktreePath, projectPath) => {
-      const removal = await main.remove.call({ worktreePath, projectPath, from: 'sweep' });
+      const removal = await main.remove.call({ worktreePath, projectPath, from: 'leftover' });
       return !isRefused(removal) && removal.ok;
     },
   });
