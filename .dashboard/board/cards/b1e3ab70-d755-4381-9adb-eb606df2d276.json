@@ -1,0 +1,11 @@
+{
+  "id": "b1e3ab70-d755-4381-9adb-eb606df2d276",
+  "title": "Browser: an agent's background tab lays out, screenshots and reads like a visible one",
+  "notes": "Found by main trying the command on v2.53.0 (2026-11-23), tab opened by pane 0:0 behind the user's view:\n1. browser screenshot <tab> (no --full) on a background tab fails: 'Current display surface not available for capture', later 'UnknownVizError'. --full works.\n2. After browser resize 1 390x844 then browser reset 1 ('tab 1 is as its view is'), the page stays laid out at 375 px wide (a --full PNG is 375x15050), so Wikipedia drops its desktop searchbox; the first --full before any resize was 1265 wide. A hidden view's own size is apparently zero, so reset falls back to a phone width.\n3. browser type 1 e23 (a searchbox ref from a snapshot taken before the resize) gave 'Element is not focusable'; after reset no searchbox exists. Likely 2's consequence, but a stale ref should say the ref is stale (take a new snapshot), not 'not focusable'.\n4. browser read on https://github.com/naeemba/dashboard/pull/344 returned ~131 tokens: the title and branch line, then cut at '## Conversation'; the PR body, commits and review threads (all on the page, as the --full screenshot shows) are missing. Wikipedia reads fine (~5k tokens).\nFix: a background (agent) tab renders offscreen at the view's real size (or a fixed desktop default such as 1280x800 when the mode was never shown), so screenshot, layout and input behave as on screen; reset restores that size. Make read keep GitHub-style main content (e.g. fall back to <main>/article bodies when the readability pick is tiny compared with the page text). Tests for the decision parts; a hand check list in the PR.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-23T12:29:28.457Z",
+  "updatedAt": "2026-11-23T12:29:28.457Z",
+  "column": "Backlog",
+  "order": 52
+}

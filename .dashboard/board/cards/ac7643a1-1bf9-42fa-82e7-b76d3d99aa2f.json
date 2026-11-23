@@ -1,0 +1,11 @@
+{
+  "id": "ac7643a1-1bf9-42fa-82e7-b76d3d99aa2f",
+  "title": "Dashboard as an MCP server: every command verb as a tool",
+  "notes": "User decision 2026-11-23: Claude should use all of Dashboard through MCP tools, not only the browser. Today agents learn the dashboard command from prompt lines and --help; in the 3 days after v2.53.0 no agent used dashboard browser (0 calls), while other projects' workers kept using Claude in Chrome.\nBuild: the app serves one MCP server whose tools are the existing command verbs: board (list, show, add, move, ship, review, set, comment), pane (claim, run, send, list, report, release, finish), project (list, find, add, set, open, close, focus), pr land, budget, browser (open, tabs, claim, release, go, back, forward, reload, resize, reset, read, screenshot, snapshot, click, type, press, console, network), --version. Each tool is a new door that calls the same command handlers/actions (actions-rule-1; no second copy of any rule; refusals come back as tool errors with the same text, errors-rule-1). Typed parameters instead of strings. browser screenshot returns the image in the tool result, not only a path. Long-running ones (pr land) run as background-friendly tools or say to use the command.\nWho gets it: every Claude screen and worker the app starts (as chat-chrome.ts adds --chrome), knowing its pane the way the command does; consider exposing it to sessions outside the app too, only if pane identity can be had. Keep tool descriptions short (the tool list costs context every session; Claude Code defers MCP tools behind tool search, check that it does here). Keep the command too: scripts and the app's own skills use it; the usage and the tools come from one table so they cannot drift. Docs: a docs/mcp (or docs/command) section, decisions on transport (stdio through the command vs HTTP on the app socket) and identity. Prompts: main's prompt and /work-card point at the tools.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-23T12:29:32.301Z",
+  "updatedAt": "2026-11-23T12:29:32.301Z",
+  "column": "Backlog",
+  "order": 53
+}
