@@ -5,6 +5,7 @@ import { runProjectProgram } from '../projects/project-program';
 import { runSessionProgram } from '../workers/session-program';
 import { runBudgetProgram } from './budget-program';
 import { endQuietlyWhenOutputCloses } from './closed-output';
+import { serveMcp } from './mcp-program';
 import { routeDashboardCommand } from './dashboard-cli';
 import { runPullRequestProgram } from './pull-request-program';
 import { appStarter, appStartRefusal } from './start-app';
@@ -40,6 +41,7 @@ async function run(): Promise<number> {
         case 'pr': return runPullRequestProgram(route.commandArguments);
         case 'budget': return runBudgetProgram(route.commandArguments);
         case 'browser': return runBrowserProgram(route.commandArguments);
+        case 'mcp': return serveMcp();
       }
   }
 }

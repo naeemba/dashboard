@@ -30,6 +30,9 @@ const STARTS_PROCESSES = [
   'src/main/panes/shell-directory-lookup.ts',
   'src/main/update/install.ts',
   'src/main/app/shell-path.ts',
+  // `dashboard mcp`'s tool calls, each the dashboard command run once with the tool's words; one ends
+  // when the command does, as the same command in the session's Bash would.
+  'src/main/command/mcp-program.ts',
 ];
 
 // Any quoted mention, so a dynamic import, a require or double quotes cannot slip past.
