@@ -1,0 +1,11 @@
+{
+  "id": "1759003a-19c4-4243-80ad-cf3c8d4012c0",
+  "title": "Sessions get the SSH agent even when the app was launched without SSH_AUTH_SOCK",
+  "notes": "2026-11-25: the running app (started 21:13) has no SSH_AUTH_SOCK, so every Claude session and pane shell it starts has none: a worker's board comment was saved locally but its push failed with 'git@github.com: Permission denied (publickey)', and so does any agent git push over SSH (gh over HTTPS still works). The agent is running and loaded: systemctl --user show-environment has SSH_AUTH_SOCK=/run/user/1000/gcr/ssh (gcr-ssh-agent). Fix: at launch on Linux, when the app's own environment has no SSH_AUTH_SOCK (or it points at a socket that is gone), take it from the systemd user environment (systemctl --user show-environment), else from the login shell environment, and put it in the environment every session, pane shell and pane host child gets. Look first for where the app already builds a session's environment or reads the login shell's (chat-sessions.ts's shellPath, the pane host spawn) and extend that, rather than a second reader. A pane host that outlived the launch keeps its own environment: say in the PR whether its shells get the value. Decision module with a test (present, missing, stale socket, systemd without it); docs.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-24T22:45:18.521Z",
+  "updatedAt": "2026-11-24T22:45:18.521Z",
+  "column": "Backlog",
+  "order": 67
+}
