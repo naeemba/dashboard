@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:19.151Z",
-  "updatedAt": "2026-11-24T10:58:19.152Z",
-  "column": "Backlog",
-  "order": 54
+  "updatedAt": "2026-11-24T11:44:45.063Z",
+  "branch": "agents-reach-for-the-dashboard-browser-and",
+  "column": "Doing",
+  "order": 1
 }
