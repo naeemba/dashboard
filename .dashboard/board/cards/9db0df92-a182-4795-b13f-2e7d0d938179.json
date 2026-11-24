@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T19:01:40.636Z",
-  "updatedAt": "2026-11-24T20:22:19.103Z",
+  "updatedAt": "2026-11-24T20:23:43.075Z",
   "branch": "a-browser-release-leaves-an-agent-s-page-si",
   "pullRequest": 362,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-24T20:22:19.102Z",
       "body": "PR #362 review loop converged in 2 rounds, ready to merge. Round 1 fix (8af4efcd): a tab is marked sized before its resize is sent, so a resize that times out is still cleared on release; tests added. Re-review left no open threads. No conflict with main. CI passed on 8af4efcd."
+    },
+    {
+      "at": "2026-11-24T20:23:43.047Z",
+      "body": "Pull request #362 merged: A browser release clears the page size an agent set https://github.com/naeemba/dashboard/pull/362"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 295
 }
