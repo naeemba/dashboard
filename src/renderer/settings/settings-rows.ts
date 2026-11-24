@@ -1,11 +1,19 @@
 import { ACTIONS, type ActionGroup } from '../../shared/keys/actions';
-import { isOn, TOGGLES, type Settings, type ToggleName } from '../../shared/settings/settings';
+import { BUDGET_LIMITS, isOn, TOGGLES, type BudgetLimit, type Settings, type ToggleName } from '../../shared/settings/settings';
 
 // The settings with one toggle turned over. The section is spread so a field beside the toggle survives.
 export function toggled(settings: Settings, name: ToggleName): Settings {
   const [section, field] = TOGGLES[name];
   return { ...settings, [section]: { ...settings[section], [field]: !isOn(settings, name) } };
 }
+
+// The budget limit after this one, so Enter on its row walks the cap, the pace and none in turn.
+export function nextBudgetLimit(settings: Settings): Settings {
+  const limit = BUDGET_LIMITS[(BUDGET_LIMITS.indexOf(settings.budget.limit) + 1) % BUDGET_LIMITS.length];
+  return { ...settings, budget: { ...settings.budget, limit } };
+}
+
+const LIMIT_NAMES: Record<BudgetLimit, string> = { cap: 'the weekly cap', pace: 'the daily pace', none: 'nothing' };
 
 function toggleRow(settings: Settings, name: ToggleName, label: string): SettingsRow {
   return { kind: 'toggle', name, label, value: isOn(settings, name) ? 'on' : 'off' };
@@ -23,7 +31,9 @@ export type SettingsRow =
   | { kind: 'weather-place'; label: string; value: string }
   | { kind: 'host-port'; label: string; value: string }
   | { kind: 'host-token'; label: string; value: string }
-  | { kind: 'weekly-cap'; label: string; value: string }
+  | { kind: 'budget-limit'; label: string; value: string }
+  // The weekly cap and the daily pace: a percentage, or empty for what `empty` names.
+  | { kind: 'budget-percentage'; field: 'weeklyCap' | 'dailyShare'; noun: string; empty: string; label: string; value: string }
   | { kind: 'toggle'; name: ToggleName; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
@@ -83,8 +93,15 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   rows.push(toggleRow(settings, 'autoLoop', 'Start the review loop when a pull request opens'));
   rows.push(toggleRow(settings, 'autoMerge', 'Merge the pull request once the loop and CI are green'));
   rows.push({ kind: 'heading', label: 'Budget' });
+  const { limit, weeklyCap, dailyShare } = settings.budget;
+  rows.push({ kind: 'budget-limit', label: 'Hold the 7-day usage to', value: LIMIT_NAMES[limit] });
   rows.push({
-    kind: 'weekly-cap', label: 'Weekly cap, % of the 7-day usage', value: settings.budget.weeklyCap === null ? '' : String(settings.budget.weeklyCap),
+    kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'none',
+    label: 'Weekly cap, % of the 7-day usage', value: String(weeklyCap ?? ''),
+  });
+  rows.push({
+    kind: 'budget-percentage', field: 'dailyShare', noun: 'daily share', empty: 'a seventh of the week',
+    label: 'Daily pace, % a day since the weekly reset', value: String(dailyShare ?? ''),
   });
   rows.push({ kind: 'heading', label: 'Updates' });
   rows.push(toggleRow(settings, 'updates', 'Check for a newer release on launch and every six hours'));

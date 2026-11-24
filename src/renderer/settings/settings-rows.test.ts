@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { settingsRows, stepSelection, toggled } from './settings-rows';
+import { nextBudgetLimit, settingsRows, stepSelection, toggled } from './settings-rows';
 import { ACTIONS } from '../../shared/keys/actions';
 import { bindKey, defaultSettings, isOn, parseSettings } from '../../shared/settings/settings';
 
@@ -39,8 +39,22 @@ describe('settingsRows', () => {
 
   it('lists the weekly cap under a Budget heading, empty when none is set', () => {
     const label = 'Weekly cap, % of the 7-day usage';
-    expect(settingsRows(parseSettings({}, false))).toContainEqual({ kind: 'weekly-cap', label, value: '' });
-    expect(settingsRows(parseSettings({ budget: { weeklyCap: 74 } }, false))).toContainEqual({ kind: 'weekly-cap', label, value: '74' });
+    const row = { kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'none', label };
+    expect(settingsRows(parseSettings({}, false))).toContainEqual({ ...row, value: '' });
+    expect(settingsRows(parseSettings({ budget: { weeklyCap: 74 } }, false))).toContainEqual({ ...row, value: '74' });
+  });
+
+  it('names the limit that applies, and Enter walks the cap, the pace and none in turn', () => {
+    const limitRow = (settings: ReturnType<typeof parseSettings>) => settingsRows(settings).find((row) => row.kind === 'budget-limit');
+    let settings = parseSettings({ budget: { weeklyCap: 74 } }, false);
+    expect(limitRow(settings)).toEqual({ kind: 'budget-limit', label: 'Hold the 7-day usage to', value: 'the weekly cap' });
+    const walked = [];
+    for (let step = 0; step < 3; step += 1) {
+      settings = nextBudgetLimit(settings);
+      walked.push(settings.budget.limit);
+    }
+    expect(walked).toEqual(['pace', 'none', 'cap']);
+    expect(settings.budget.weeklyCap).toBe(74);
   });
 
   it('opens with a heading, and headings are not selectable', () => {
