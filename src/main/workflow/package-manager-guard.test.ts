@@ -1,8 +1,10 @@
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { installsRun, nearestLockfile, packageManagerGuard } from './package-manager-guard';
 
-// The guard joins with the platform's separator, so on Windows it asks for `\work\app\.git`.
-const files = (...paths: string[]) => (path: string) => paths.includes(path.replaceAll('\\', '/'));
+// Both sides go through `resolve`: on Windows the guard asks for `\work\app\.git` after a join and
+// `D:\work\app\.git` after a `cd` it resolved.
+const files = (...paths: string[]) => (path: string) => paths.map((entry) => resolve(entry)).includes(resolve(path));
 
 describe('nearestLockfile', () => {
   it('finds the root lockfile from a package inside the repository', () => {
