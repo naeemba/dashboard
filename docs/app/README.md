@@ -116,8 +116,8 @@ its own side. `eslint.config.test.ts` pins each of those.
   finding the app): `can-connect.ts`
 - Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`,
   `default-branch.ts` (which branch on a remote is its default, for the ship and
-  `/create-task` alike, and which remote a project's is: the current branch's
-  upstream, else the only remote, else origin), `base-branch.ts` (the two asked of
+  `/create-task` alike, and which remote a project's is: origin, else the
+  only remote, else the one the local main tracks), `base-branch.ts` (the two asked of
   a folder, for the ship, a dispatched worktree, the board's sync and seeded docs)
 - Log: `log-entry.ts`, `log-error.ts`, `log-ipc.ts`, `log-store.ts`
 - Shared helpers: `overlay.ts`, `carried-edit.ts`, `newest-read.ts`,

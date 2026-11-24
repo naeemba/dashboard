@@ -14,7 +14,7 @@ describe('parseCreateTaskArguments', () => {
     });
   });
 
-  it('defaults to medium, no notes and origin', () => {
+  it('defaults to medium, no notes and no remote', () => {
     expect(options(['--title', 'x'])).toMatchObject({ priority: 'medium', notes: '', remote: undefined });
   });
 

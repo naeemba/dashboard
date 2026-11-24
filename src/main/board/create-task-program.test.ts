@@ -112,6 +112,16 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(boardOnBranch(bare)).toBeNull();
   });
 
+  it('files on the only remote with no --remote when it is not called origin', () => {
+    const bare = remote();
+    const checkout = clone(bare, true);
+    git(checkout, 'remote', 'rename', 'origin', 'gitlab');
+
+    expect(run(checkout, '--title', 'On GitLab').code).toBe(0);
+
+    expect(boardOn(bare).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['On GitLab']);
+  });
+
   it('refuses, naming --seed, when the default branch has no board', () => {
     const bare = remote();
     const checkout = clone(bare, false);

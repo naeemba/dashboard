@@ -24,6 +24,10 @@ effort: high
 
 Work the card whose id is $0, in this worktree, start to finish.
 
+The base branch is \`$2\` and the remote it is on \`$3\`. Run by hand with
+fewer words, a missing remote is the one \`git config branch.<base>.remote\`
+prints, else \`origin\`: read every \`$3\` below as that.
+
 You are already on the right branch and in the right folder. The app made
 this worktree for this card, moved the card into it, and started you in a
 pane here — none of that is yours to redo.

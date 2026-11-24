@@ -42,5 +42,6 @@ One line per merged change: date and why.
 - 2026-11-23 — The leftover sweep also removes a workflow agent's worktree in `.claude/worktrees/`
   once it is clean, pushed, unused and a day quiet
 - 2026-11-24 — A ship, `pane run --worktree`, the board's sync and `pr land`'s fast-forward use the
-  project's own remote (its branch's upstream, else the only one, else origin): a GitLab project
-  on a remote called `gitlab` was refused as having no base, and its worktrees were made by hand
+  project's own remote (origin, else the only one, else the one the local main tracks): a GitLab
+  project on a remote called `gitlab` was refused as having no base, and its worktrees were made by
+  hand

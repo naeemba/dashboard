@@ -41,3 +41,5 @@ One line per merged change: date and why.
   Review once it does
 - 2026-11-19 — `board show` lists the card's subtasks, since `list` prints no parent
 - 2026-11-19 — A review start asks gh for the card's pull request before refusing that it has none
+- 2026-11-24 — The board's sync and `create-task` use the project's own remote, not always origin,
+  and the seeded docs (version 3) say so

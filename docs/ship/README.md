@@ -40,8 +40,10 @@ ship, `keep-version` unless it says `true` (projects-decision-1). The third is t
 branch the worktree was cut from, which a bump merges in first, and the fourth the
 remote it is on.
 
-The remote is not always origin: it is the project checkout's branch's upstream,
-else the only remote, else origin (`chosenRemote`), and the base is that remote's
+The remote is not always origin: it is origin when there is one, else the only
+remote, else the one the local main (then master) tracks (`chosenRemote`). Never
+the checked-out branch's upstream, so trying a branch from another remote does not
+move the board and the base there. The base is that remote's
 `HEAD`, else main, else master (`baseBranch`). A project whose base is none of
 those names it with `dashboard project set <name> --base <branch>`, which sets
 `<remote>/HEAD`. The worktree is cut from `<remote>/<base>`, and the board's sync

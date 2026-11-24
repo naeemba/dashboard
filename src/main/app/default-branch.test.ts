@@ -17,17 +17,21 @@ describe('defaultBranch', () => {
 });
 
 describe('chosenRemote', () => {
-  it('takes the current branch\'s upstream when it is a remote', () => {
-    expect(chosenRemote('gitlab', ['origin', 'gitlab'])).toBe('gitlab');
+  it('takes origin whenever there is one, whatever the local main tracks', () => {
+    expect(chosenRemote(['upstream', 'origin'], ['upstream', null])).toBe('origin');
   });
 
-  it('takes the only remote when the upstream is none, or a local branch', () => {
-    expect(chosenRemote(null, ['gitlab'])).toBe('gitlab');
-    expect(chosenRemote('.', ['gitlab'])).toBe('gitlab');
+  it('takes the only remote', () => {
+    expect(chosenRemote(['gitlab'], [null, null])).toBe('gitlab');
   });
 
-  it('falls back to origin among several, or none', () => {
-    expect(chosenRemote(null, ['origin', 'gitlab'])).toBe('origin');
-    expect(chosenRemote(null, [])).toBe('origin');
+  it('takes the remote the local main, then master, tracks among several without origin', () => {
+    expect(chosenRemote(['gitlab', 'mirror'], ['.', 'mirror'])).toBe('mirror');
+    expect(chosenRemote(['gitlab', 'mirror'], ['gitlab', 'mirror'])).toBe('gitlab');
+  });
+
+  it('falls back to origin among several with no tracked default, or none', () => {
+    expect(chosenRemote(['gitlab', 'mirror'], [null, null])).toBe('origin');
+    expect(chosenRemote([], [null, null])).toBe('origin');
   });
 });

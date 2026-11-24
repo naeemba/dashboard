@@ -11,16 +11,16 @@ export type BaseBranch = { remote: string; branch: string };
 
 const lines = (text: string | null): string[] => (text ?? '').split('\n').filter((line) => line !== '');
 
-const upstreamQuestion = (current: string): string[] => ['config', '--get', `branch.${current}.remote`];
+const upstreamQuestion = (branch: string): string[] => ['config', '--get', `branch.${branch}.remote`];
+const DEFAULT_NAMES = ['main', 'master'];
 const headQuestion = (remote: string): string[] => ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`];
 const branchQuestion = (remote: string, name: string): string[] => ['rev-parse', '--verify', '--quiet', `refs/remotes/${remote}/${name}`];
 const REMOTES = ['remote'];
-const CURRENT = ['symbolic-ref', '--short', '-q', 'HEAD'];
 
 export async function projectRemote(folder: string): Promise<string> {
   const answer = (gitArguments: string[]) => git(gitArguments, folder).catch(() => null);
-  const [remotes, current] = await Promise.all([answer(REMOTES), answer(CURRENT)]);
-  return chosenRemote(current === null ? null : await answer(upstreamQuestion(current)), lines(remotes));
+  const [remotes, ...upstreams] = await Promise.all([answer(REMOTES), ...DEFAULT_NAMES.map((name) => answer(upstreamQuestion(name)))]);
+  return chosenRemote(lines(remotes), upstreams);
 }
 
 export async function baseBranch(folder: string): Promise<BaseBranch> {
@@ -39,8 +39,7 @@ export async function baseBranch(folder: string): Promise<BaseBranch> {
 // told which one (create-task's --remote) asks of that one.
 export function projectRemoteNow(folder: string): string {
   const answer = (gitArguments: string[]) => gitNowOrNull(gitArguments, folder);
-  const current = answer(CURRENT);
-  return chosenRemote(current === null ? null : answer(upstreamQuestion(current)), lines(answer(REMOTES)));
+  return chosenRemote(lines(answer(REMOTES)), DEFAULT_NAMES.map((name) => answer(upstreamQuestion(name))));
 }
 
 export function defaultBranchNow(folder: string, remote: string): string | null {
