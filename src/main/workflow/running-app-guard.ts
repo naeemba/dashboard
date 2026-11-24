@@ -42,7 +42,7 @@ export type ProcessList = () => readonly RunningProcess[] | null;
 // Linux, a mac or Windows (the app, its pane and screen hosts, its Claude), a pane or screen host anywhere, or
 // electron run out of a checkout whose folder is named dashboard (the shape running-app.mjs looks for).
 // ponytail: a checkout cloned under another name is not recognised; the installed build always is.
-const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|[\\/]AppData[\\/]Local[\\/]Programs[\\/]Dashboard[\\/]|\b(?:pane|screen)-host-entry\.|\/dashboard[^/\s]*\/(?:[^/\s]+\/)?node_modules\/electron\//i;
+const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|[\\/]AppData[\\/]Local[\\/](?:Programs[\\/])?Dashboard[\\/]|\b(?:pane|screen)-host-entry\.|\/dashboard[^/\s]*\/(?:[^/\s]+\/)?node_modules\/electron\//i;
 
 // Where the process list cannot be read: the names a pattern must carry to be taken for the app's.
 const NAMES_APP = /dashboard|electron|claude|\bnode\b|(?:pane|screen)-host/i;
@@ -52,8 +52,11 @@ const anyCase = (word: string) => [...word].map((letter) => `[${letter.toLowerCa
 
 // The installed build named in a command, by its tail, so any spelling of home (on Windows, of
 // %LOCALAPPDATA%, quoted or through cygpath) is caught. The Start menu's own Programs folder, where
-// rebuild.sh puts its "Dashboard (rebuild)" shortcut, is not the build.
-const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|(?<!${anyCase('Start Menu')})[\\/]${anyCase('Programs')}[\\/]+${anyCase('Dashboard')})(?![\w.-])`);
+// rebuild.sh puts its "Dashboard (rebuild)" shortcut, is not the build. The Squirrel install,
+// %LOCALAPPDATA%\Dashboard, is matched behind AppData\Local or the variable's name, never a bare
+// /Dashboard tail, which a checkout named dashboard has too.
+const SQUIRREL = String.raw`(?:${anyCase('LOCALAPPDATA')}[%}"')]*|${anyCase('AppData')}[\\/]+${anyCase('Local')})[\\/]+${anyCase('Dashboard')}`;
+const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|(?<!${anyCase('Start Menu')})[\\/]${anyCase('Programs')}[\\/]+${anyCase('Dashboard')}|${SQUIRREL})(?![\w.-])`);
 const WRITES_INTO = new RegExp(String.raw`${SHELL_REDIRECT}\s*["']?[^\s"']*${INSTALLED.source}`);
 
 // The flags of each process finder that take a value, so the value is not read as a name.
@@ -67,6 +70,40 @@ const VALUE_FLAGS: Record<string, readonly string[]> = {
 const RUNNING_APP_REASON = 'This would quit, kill, restart or replace the Dashboard running on this machine, '
   + 'which stops every Claude screen mid-turn. Say the installed app needs a rebuild and restart, and stop; '
   + 'scripts/rebuild.sh installs a new build beside the running one without touching it.';
+
+// What moves or deletes files: the POSIX verbs, then PowerShell's (and their aliases) and cmd's, which
+// Windows reads in any case.
+const WINDOWS_FILE_VERBS = ['Remove-Item', 'Move-Item', 'Copy-Item', 'Rename-Item', 'ri', 'mi', 'cpi', 'rni', 'del', 'erase', 'rd',
+  'rmdir', 'move', 'copy', 'xcopy', 'robocopy', 'ren'].map(anyCase).join('|');
+const FILE_VERBS = `cp|mv|rm|rsync|ditto|ln|tar|unzip|install|unlink|${WINDOWS_FILE_VERBS}`;
+
+// What kills a Windows process by its image name: taskkill (/IM, /FI "IMAGENAME eq …") and
+// PowerShell's Stop-Process (-Name, or fed by Get-Process). Windows has no /proc to read, and from WSL
+// /proc shows the wrong machine, so these are judged by the names they carry: a word of the pipeline
+// that, as a wildcard, names one of the app's images (the app and its hosts run as Dashboard.exe or
+// node.exe, its Claude as claude.exe). A pid (`/PID`, `-Id`) is not known and goes through.
+// ponytail: wmic, PowerShell's `kill` alias and Git Bash's `kill -f` are not read.
+const WINDOWS_KILLERS = [String.raw`${anyCase('taskkill')}(?:\.exe)?`, anyCase('Stop-Process'), anyCase('spps')].join('|');
+const WINDOWS_APP = ['Dashboard', 'electron', 'node', 'claude'];
+
+function namesWindowsApp(word: string): boolean {
+  const glob = word.replace(/\.exe$/i, '').replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  const pattern = new RegExp(`^${glob}$`, 'i');
+  return WINDOWS_APP.some((name) => pattern.test(name));
+}
+
+function killsWindowsApp(pipeline: string): boolean {
+  return simpleCommands(pipeline).some((part) => invocation(part, WINDOWS_KILLERS) !== null)
+    && wordsOf(pipeline).flatMap((word) => word.split(',')).some(namesWindowsApp);
+}
+
+// The command a `powershell -Command`, `pwsh -c` or `cmd /c` (`//c` from Git Bash) runs, unquoted.
+// ponytail: a PowerShell command given with no -Command is not read.
+function windowsShellBody(part: string): string | null {
+  if (!invocation(part, String.raw`(?:${['powershell', 'pwsh', 'cmd'].map(anyCase).join('|')})(?:\.exe)?`)) return null;
+  const body = /\s(?:-c(?:ommand)?|\/\/?[ck])\s+(.*)$/i.exec(part)?.[1];
+  return body === undefined ? null : body.replace(/^(["'])(.*)\1$/, '$2');
+}
 
 type Selector = { pattern: string; full: boolean; regex: boolean }
 
@@ -132,9 +169,9 @@ export function stopsRunningApp(command: string, listProcesses: ProcessList): bo
     return app === null ? NAMES_APP.test(selector.pattern) : app.some((process) => picks(selector, process));
   };
 
-  if (pipelines(command).some((pipeline) => foundAndKilled(pipeline).some(hitsApp))) return true;
+  if (pipelines(command).some((pipeline) => foundAndKilled(pipeline).some(hitsApp) || killsWindowsApp(pipeline))) return true;
   return simpleCommands(command).some((part) => {
-    const body = shellBody(part);
+    const body = shellBody(part) ?? windowsShellBody(part);
     if (body !== null && stopsRunningApp(body, listProcesses)) return true;
     const finder = invocation(part, 'pkill|killall');
     if (finder) return selectors(finder.verb, finder.words).some(hitsApp);
@@ -145,7 +182,7 @@ export function stopsRunningApp(command: string, listProcesses: ProcessList): bo
     }
     return (invocation(part, 'osascript') !== null && /\bquit\b/.test(part) && /dashboard/i.test(part))
       || (invocation(part, 'open') !== null && /-a\s+["']?Dashboard\b|Dashboard\.app/.test(part))
-      || (invocation(part, 'cp|mv|rm|rsync|ditto|ln|tar|unzip|install|unlink') !== null && INSTALLED.test(part))
+      || (invocation(part, FILE_VERBS) !== null && INSTALLED.test(part))
       || (invocation(part, 'find') !== null && /\s-(?:delete|exec(?:dir)?)\b/.test(part) && INSTALLED.test(part))
       || (invocation(part, 'systemctl') !== null && /\b(?:stop|kill|restart)\b/.test(part) && /\b(?:agents|panes)\.slice\b/.test(part))
       || WRITES_INTO.test(part);
