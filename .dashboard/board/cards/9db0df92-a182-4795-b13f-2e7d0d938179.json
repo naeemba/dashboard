@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T19:01:40.636Z",
-  "updatedAt": "2026-11-24T19:59:13.338Z",
-  "column": "Backlog",
-  "order": 65
+  "updatedAt": "2026-11-24T20:00:04.913Z",
+  "branch": "a-browser-release-leaves-an-agent-s-page-si",
+  "column": "Doing",
+  "order": 3
 }
