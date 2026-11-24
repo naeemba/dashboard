@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T22:45:18.521Z",
-  "updatedAt": "2026-11-24T23:20:16.759Z",
+  "updatedAt": "2026-11-24T23:21:43.356Z",
   "branch": "sessions-get-the-ssh-agent-even-when-the-ap",
   "pullRequest": 369,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-24T23:20:16.759Z",
       "body": "PR #369 review loop: converged, ready to merge. 2 rounds (floor-addressed), 3 fix commits (24234531, 04eebb69, a068d649): login shell started without the rejected SSH agent, a timed-out shell's output kept, parseEnv used; a note that a # in a systemd agent path cuts it short; a shell-path test for the environment handed to the login shell. Final check accepted both last-round commits. No conflicts, nothing waiting on a person. CI passed on a068d649."
+    },
+    {
+      "at": "2026-11-24T23:21:43.325Z",
+      "body": "Pull request #369 merged: Sessions get the SSH agent even when the app was launched without SSH_AUTH_SOCK https://github.com/naeemba/dashboard/pull/369"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 300
 }
