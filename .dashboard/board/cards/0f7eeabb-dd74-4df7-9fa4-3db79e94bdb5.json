@@ -5,7 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T19:59:20.324Z",
-  "updatedAt": "2026-11-24T19:59:20.324Z",
-  "column": "Backlog",
-  "order": 66
+  "updatedAt": "2026-11-24T20:08:33.146Z",
+  "branch": "tidy-ups-the-dashboard-folder-name-one-read",
+  "pullRequest": 363,
+  "comments": [
+    {
+      "at": "2026-11-24T20:08:33.113Z",
+      "body": "Pull request #363 opened: Tidy-ups: the .dashboard folder name, one read-or-null helper, Promise.withResolvers in tests https://github.com/naeemba/dashboard/pull/363"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }

@@ -5,14 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-18T10:55:04.232Z",
-  "updatedAt": "2026-11-24T19:59:51.882Z",
+  "updatedAt": "2026-11-24T20:08:13.416Z",
   "branch": "running-app-guard-cover-the-windows-squirre",
+  "pullRequest": 364,
   "comments": [
     {
       "at": "2026-11-24T19:59:27.168Z",
       "body": "This card is GitHub issue #326; the PR says Closes #326."
+    },
+    {
+      "at": "2026-11-24T20:08:13.395Z",
+      "body": "Pull request #364 opened: Running-app guard: cover the Windows Squirrel install and Windows process killers https://github.com/naeemba/dashboard/pull/364"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 1
 }
