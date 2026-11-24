@@ -5,7 +5,13 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T11:27:37.339Z",
-  "updatedAt": "2026-11-24T11:27:37.339Z",
+  "updatedAt": "2026-11-24T19:59:39.819Z",
+  "comments": [
+    {
+      "at": "2026-11-24T19:59:39.819Z",
+      "body": "This card is GitHub issue #354; the PR says Closes #354. #353 added the remote-not-origin work: build on its chosen remote; /mr-loop is in the claude-pr-loop repo, installed in ~/.claude."
+    }
+  ],
   "column": "Backlog",
   "order": 63
 }
