@@ -2,7 +2,10 @@
 // (`## board-decision-3: ...`) heads one entry only, and no id is left as `<feature>-<kind>-next`,
 // the name a worker writes for a new entry until it numbers it at the last merge of main. Two
 // cards that each numbered their entry from the same main both say `board-decision-7`, and a
-// `-next` that merged is an id nothing can cite. The entry is scripts/markdown-step.mjs.
+// `-next` that merged is an id nothing can cite. A code block only quotes an id, so it is skipped.
+// The entry is scripts/markdown-step.mjs.
+
+import { codeLines } from './markdown-width.mjs';
 
 const ID = String.raw`[a-z]+(?:-[a-z]+)*-(?:rule|decision)-`;
 const NEXT = new RegExp(String.raw`\b${ID}next\b`, 'g');
@@ -12,7 +15,10 @@ const HEADING = new RegExp(String.raw`^#{2,}\s+(${ID}\d+)\b`);
 export function idProblems(text) {
   const headed = new Map();
   const found = [];
-  text.split(/\r?\n/).forEach((line, index) => {
+  const lines = text.split(/\r?\n/);
+  const code = codeLines(lines);
+  lines.forEach((line, index) => {
+    if (code[index]) return;
     for (const [id] of line.matchAll(NEXT)) found.push({ line: index + 1, problem: `${id} is not numbered yet` });
     const id = line.match(HEADING)?.[1];
     if (!id) return;

@@ -15,10 +15,10 @@ export function checkedFile(file) {
   return file.endsWith('.md') && !file.startsWith('.dashboard/') && file !== 'CHANGELOG.md';
 }
 
-// The lines of `text` wider than `width`, each as its 1-based number and its width in characters.
-export function longLines(text, width = WIDTH) {
-  const lines = text.split(/\r?\n/);
-  const found = [];
+// Which of `lines` are code, by index: a fence and what it holds, an indented code block, front
+// matter. Every markdown check skips them, since a code block quotes text rather than saying it.
+export function codeLines(lines) {
+  const code = [];
   let fence = null;
   // An indented code block starts after a blank line; a list item's indented second line is prose.
   let indentedCode = false;
@@ -26,19 +26,30 @@ export function longLines(text, width = WIDTH) {
   lines.forEach((line, index) => {
     if (frontMatter) {
       frontMatter = index === 0 || line !== '---';
+      code.push(true);
       return;
     }
     // A blank line keeps the block as it was.
     if (line.trim() !== '') {
       indentedCode = !fence && INDENTED.test(line) && (indentedCode || lines[index - 1]?.trim() === '');
     }
-    const length = [...line].length;
     const marker = line.match(FENCE)?.[1];
+    const inFence = Boolean(fence || marker);
     if (marker && !fence) fence = marker;
     else if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = null;
-    else if (!fence && !indentedCode && !EXEMPT.test(line) && length > width) {
-      found.push({ line: index + 1, length });
-    }
+    code.push(inFence || indentedCode);
+  });
+  return code;
+}
+
+// The lines of `text` wider than `width`, each as its 1-based number and its width in characters.
+export function longLines(text, width = WIDTH) {
+  const lines = text.split(/\r?\n/);
+  const code = codeLines(lines);
+  const found = [];
+  lines.forEach((line, index) => {
+    const length = [...line].length;
+    if (!code[index] && !EXEMPT.test(line) && length > width) found.push({ line: index + 1, length });
   });
   return found;
 }
