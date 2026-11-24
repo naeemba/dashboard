@@ -19,3 +19,7 @@ One line per merged change: date and why.
 - 2026-11-24 — The server's instructions get a WHEN TO USE block and the app installs a
   `dashboard-browser` skill, because workers holding the `browser_` tools still browsed in Claude
   in Chrome; Chrome stays for a page that needs the person's own profile (browser-decision-8)
+- 2026-11-24 — A tab handed back, by a release, a pane let go or the revoke key, has the size an
+  agent's resize gave it cleared, because the person was handed the tab drawn 390 wide; the
+  work-card skill, review prompt and main's prompt have their tool names checked against the
+  server's

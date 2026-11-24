@@ -33,6 +33,13 @@ describe('browser.release', () => {
     const ports = fakePorts({ [project]: { tabs: [tab(1, '3:1')], active: 1 } });
     await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ output: 'tab 1 is the user\'s again' });
     expect(ports.browsers.get(project)?.tabs[0].holder).toBe('user');
+    expect(ports.done).toEqual(['unsize 1']);
+  });
+
+  it('hands a tab back even when its size will not clear', async () => {
+    const ports = { ...fakePorts({ [project]: { tabs: [tab(1, '3:1')], active: 1 } }), emulate: () => Promise.reject(new Error('tab 1 is closed')) };
+    await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ output: 'tab 1 is the user\'s again' });
+    expect(ports.browsers.get(project)?.tabs[0].holder).toBe('user');
   });
 
   it('refuses a tab the pane does not hold', async () => {
@@ -48,7 +55,7 @@ describe('browser.release', () => {
     await expect(bind(browserRelease, ports).call({ pane: '3:1' })).resolves.toEqual({ output: 'released 2 tabs of 3:1' });
     expect(ports.browsers.get(project)?.tabs).toEqual([tab(1), tab(2, '3:2'), tab(3)]);
     expect(ports.browsers.get('/work/web')?.tabs).toEqual([tab(4)]);
-    expect(ports.done).toEqual([]);
+    expect(ports.done).toEqual(['unsize 1', 'unsize 4']);
   });
 });
 
@@ -57,6 +64,7 @@ describe('browser.revoke', () => {
     const ports = fakePorts({ [project]: { tabs: [tab(1, '3:1')], active: 1 } });
     await expect(bind(browserRevoke, ports).call({ projectPath: project })).resolves.toEqual({ output: 'took tab 1 back from 3:1' });
     expect(ports.browsers.get(project)?.tabs[0]).toEqual(tab(1, 'user', '3:1'));
+    expect(ports.done).toEqual(['unsize 1']);
     await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 }))
       .resolves.toEqual({ refused: 'the user took tab 1 back from this pane; it is theirs now' });
     await expect(bind(browserClaim, ports).call({ pane: '3:1', tab: 1 })).resolves.toHaveProperty('refused');
