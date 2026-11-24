@@ -14,4 +14,5 @@ One line per merged change: date and why.
   GitHub's conversation, and a stale ref says to take a new snapshot
 - 2026-11-24 — Agents are sent to this browser for any page instead of
   Playwright or Claude in Chrome, and `eval` runs a script file in a page, after
-  `--wait-for` when given
+  `--wait-for` when given; pictures move to `browser-files/`, and the old
+  `browser-screenshots/` folder is removed when the app starts

@@ -113,7 +113,7 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('browser press', 'Press Enter, Tab, Escape, an arrow or one character, in a ref or the page', [
     TAB, word('key', 'the key'), optionalWord('ref', 'the ref to press it in')]),
   tool('browser eval', 'Run a JavaScript file in the page; saves its last expression\'s value to a file and prints the path', [
-    TAB, word('script', 'path of the .js file to run'), flag('wait-for', 'run once this CSS selector matches, 10 seconds at most')]),
+    TAB, word('file', 'path of the .js file to run'), flag('wait-for', 'run once this CSS selector matches, 10 seconds at most')]),
   tool('browser console', 'The last errors the page logged', [TAB]),
   tool('browser network', 'The last requests that failed', [TAB]),
 ];

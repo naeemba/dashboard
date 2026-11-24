@@ -109,9 +109,10 @@ Claude in Chrome (browser-decision-7).
   `--wait-for` matches (10 seconds at most, else refused). Its last
   expression's value is saved under `browser-files/`, a string as it is and
   anything else as JSON, and the command prints its length and path; an
-  exception, or a script still running after 15 seconds, is refused. It is
-  the `browser.eval` action, not a read: a script can change the page
-  (browser-decision-7).
+  exception is refused, and a script still running after 15 seconds is stopped
+  and refused, though a timer or promise it left behind can still run. NaN,
+  Infinity and a BigInt are saved as their text. It is the `browser.eval`
+  action, not a read: a script can change the page (browser-decision-7).
 - `snapshot <tab>` lists what can be clicked or typed in, from the page's
   accessibility tree, each with a ref (`e3`) good until the next snapshot. A ref
   whose element the page has since dropped or hidden says to take a new one.

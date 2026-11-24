@@ -15,8 +15,8 @@ import { snapshotOf, type AXNode } from './page-snapshot';
 // to a tab: the reads the browser command answers (read, screenshot, snapshot, console, network,
 // tabs), and what the page actions do (browser.resize, click, type, press, eval). A read changes no browser
 // state, so it is no action, but it is held to the same claim: a pane reads only a tab it holds.
-// Its own few decisions (what a page's exception reads as, how a picture is cut, how long one is
-// kept, a stale ref's protocol error said as "take a new snapshot", a reset laying the page out at
+// Its own few decisions (what a page's exception reads as, how a picture is cut, how long a saved
+// file is kept, a script past the protocol's wait stopped, a stale ref's protocol error said as "take a new snapshot", a reset laying the page out at
 // the view's own size before it clears) are tested through fake PagePorts in browser-page.test.ts;
 // the rest is page-reader.ts's, page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
 
@@ -34,6 +34,14 @@ export const browserFileFolder = (userData: string): string => path.join(userDat
 export function browserFileReadRule(userData: string): string {
   const posix = browserFileFolder(userData).replaceAll('\\', '/').replace(/^([A-Za-z]):/, (_drive, letter: string) => `/${letter.toLowerCase()}`);
   return `Read(/${posix}/**)`;
+}
+
+// What browser-views.ts's send throws for a page that has not answered in its wait, so a script
+// still running then is stopped, not left to run on beside the next one.
+export class PageTimeout extends Error {
+  constructor(id: number, method: string, readonly seconds: number) {
+    super(`tab ${id} did not answer ${method} in ${seconds} seconds`);
+  }
 }
 
 // How long a file is kept: each one saved clears the folder of those older.
@@ -60,14 +68,15 @@ type ShotOptions = { full: boolean; element: string | null };
 
 const notASelector = (selector: string, reason: string): string => `${selector} is not a selector the page takes: ${reason}`;
 
-// What Runtime.evaluate answers: the value, or the exception the expression threw.
+// What Runtime.evaluate answers: the value, or the exception the expression threw. NaN, Infinity,
+// -0 and a BigInt, which JSON cannot carry, come as unserializableValue, a string.
 function evaluated(answer: unknown): { value: unknown } | { thrown: string } {
   if (!isRecord(answer)) return { thrown: 'the page answered nothing' };
   if (isRecord(answer.exceptionDetails)) {
     const exception = isRecord(answer.exceptionDetails.exception) ? answer.exceptionDetails.exception.description : undefined;
     return { thrown: typeof exception === 'string' ? exception.split('\n')[0] : String(answer.exceptionDetails.text) };
   }
-  return { value: isRecord(answer.result) ? answer.result.value : undefined };
+  return { value: isRecord(answer.result) ? answer.result.value ?? answer.result.unserializableValue : undefined };
 }
 
 // Every file in the folder saved longer ago than FILE_KEPT_MS, removed.
@@ -192,7 +201,15 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
       if ('thrown' in found) return { refused: notASelector(waitFor, found.thrown) };
       if (found.value !== true) return { refused: `nothing in tab ${id} matched ${waitFor} in ${WAIT_FOR_MS / 1000} seconds` };
     }
-    const answer = await evaluate(id, script, { replMode: true });
+    let answer: Awaited<ReturnType<typeof evaluate>>;
+    try {
+      answer = await evaluate(id, script, { replMode: true });
+    } catch (error) {
+      if (!(error instanceof PageTimeout)) throw error;
+      // Answered off the page's thread, so it reaches a busy loop too.
+      await pages.send(id, 'Runtime.terminateExecution').catch(() => undefined);
+      return { refused: `tab ${id}'s script was stopped after ${error.seconds} seconds; a timer or promise it left behind can still run` };
+    }
     if ('thrown' in answer) return { refused: `tab ${id}'s script threw: ${answer.thrown}` };
     if (answer.value === undefined) return `tab ${id}'s script answered nothing`;
     const isText = typeof answer.value === 'string';

@@ -1,3 +1,5 @@
+import { rm } from 'node:fs/promises';
+import path from 'node:path';
 import { app } from 'electron';
 import type { Channels } from '../../app/channels';
 import { browserFileFolder, browserPage } from '../../browser/browser-page';
@@ -27,6 +29,8 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
     closed: (projectPath, tab, opener) => void close.call({ projectPath, tab, opener }),
   });
   const page = browserPage(views.pages, views.ports.allBrowsers, browserFileFolder(app.getPath('userData')));
+  // The folder screenshots were saved in before browser-files/, which nothing clears any more.
+  void rm(path.join(app.getPath('userData'), 'browser-screenshots'), { recursive: true, force: true }).catch(() => undefined);
   const ports: BrowserPorts = { ...views.ports, ...page.ports };
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);

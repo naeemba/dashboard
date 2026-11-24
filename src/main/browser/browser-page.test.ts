@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { BrowserState } from '../../shared/browser/browser';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { browserPage, browserFileReadRule } from './browser-page';
+import { browserPage, browserFileReadRule, PageTimeout } from './browser-page';
 import type { PagePorts } from './browser-views';
 
 const NOW = Date.parse('2026-11-20T12:00:00Z');
@@ -163,6 +163,19 @@ describe('runScript', () => {
     expect(waited.sent).toHaveLength(1);
     const thrown = fakePage({ 'Runtime.evaluate': { exceptionDetails: { text: 'Uncaught', exception: { description: 'ReferenceError: jobs is not defined\n    at <anonymous>' } } } });
     await expect(thrown.page.ports.runScript(4, 'jobs()', null)).resolves.toEqual({ refused: 'tab 4\'s script threw: ReferenceError: jobs is not defined' });
+  });
+
+  it('saves a value JSON cannot carry as its text', async () => {
+    const { page, folder } = fakePage({ 'Runtime.evaluate': { result: { type: 'number', unserializableValue: 'NaN' } } });
+    await expect(page.ports.runScript(4, '0 / 0', null))
+      .resolves.toBe(`tab 4's script answered 3 characters: ${path.join(folder, 'tab-4-2026-11-20T12-00-00-000Z.txt')}`);
+  });
+
+  it('stops a script still running when the protocol gives up waiting', async () => {
+    const { page, sent } = fakePage({ 'Runtime.evaluate': new PageTimeout(4, 'Runtime.evaluate', 15) });
+    await expect(page.ports.runScript(4, 'for (;;) {}', null))
+      .resolves.toEqual({ refused: 'tab 4\'s script was stopped after 15 seconds; a timer or promise it left behind can still run' });
+    expect(sent[1]).toBe('Runtime.terminateExecution {}');
   });
 });
 
