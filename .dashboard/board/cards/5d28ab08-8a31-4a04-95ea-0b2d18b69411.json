@@ -1,0 +1,11 @@
+{
+  "id": "5d28ab08-8a31-4a04-95ea-0b2d18b69411",
+  "title": "Agents pick the Dashboard browser on their own: a skill and a when-to-use block",
+  "notes": "2026-11-24: on 2.55 the job-search workers had every mcp__dashboard__browser_* tool and still browsed in Claude in Chrome (audit briefs 1-3: 28 Chrome calls, 0 Dashboard). Figma's MCP wins its tasks because a session carries a long WHEN TO USE block and skills whose descriptions name the tasks; Chrome has a system-prompt section, an IMPORTANT block and two skills; Dashboard has one sentence in SERVER_INSTRUCTIONS (src/main/command/mcp-tools.ts). Deferred tools are picked by matching the task to a skill description or a when-to-use block. (1) A dashboard-browser skill the app installs for every session it starts (the way it ships its other skills, src/main/skills/), description along the lines of: read before reading, checking or screenshotting any web page in a Dashboard session (job boards, LinkedIn, docs, a frontend), instead of Claude in Chrome or Playwright. Body: open/claim, read, snapshot, eval for scripted extraction, screenshot, release; sign-ins are per project and kept, so a site not signed in yet is signed in once in the browser mode (Ctrl+Shift+B) rather than switched to Chrome. (2) SERVER_INSTRUCTIONS gets a WHEN TO USE block listing those tasks and naming the two tools it stands in for. Claude in Chrome stays available, not disabled: say when it is the right one (a page that needs the person's own Chrome profile or extension, or the person asks for Chrome). Docs in docs/browser/.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-24T18:46:52.537Z",
+  "updatedAt": "2026-11-24T18:46:52.537Z",
+  "column": "Backlog",
+  "order": 65
+}
