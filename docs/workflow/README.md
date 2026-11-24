@@ -25,10 +25,12 @@ run by `board guard`; workflow-decision-12), `scripts/node-pty-built.mjs` and
 `scripts/no-running-app.mjs` (its rule in `scripts/running-app.mjs`, tested beside it), written in
 Node so the same hook runs on a mac, Linux and Windows; `pnpm check` (its summary and reasons in
 `scripts/check.mjs` and its coverage line in `scripts/coverage.mjs`, each tested beside it, run by
-`scripts/check-step.mjs`; workflow-decision-13) and the markdown width half
-of `pnpm lint` (`scripts/markdown-width.mjs`, tested beside it, run by
-`scripts/markdown-width-step.mjs`; workflow-decision-11); `CLAUDE.md` carries each rule a check does
-not hold in one line and points at its id here (workflow-decision-8).
+`scripts/check-step.mjs`; workflow-decision-13) and the markdown half of `pnpm lint`, run by
+`scripts/markdown-step.mjs`: the width (`scripts/markdown-width.mjs`, tested beside it;
+workflow-decision-11) and the docs ids (`scripts/docs-ids.mjs`, tested beside it), which refuses a
+heading id that heads a second entry in its file and an id left as `<feature>-<kind>-next`;
+`CLAUDE.md` carries each rule a check does not hold in one line and points at its id here
+(workflow-decision-8).
 
 `claude-md-audit.md` is the 2026-11-09 audit of every CLAUDE.md rule, global and this repo's: which
 stay, which a tool or hook should carry, and the cards that moved them.

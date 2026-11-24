@@ -127,7 +127,8 @@ conflict after review, and one of them is thrown away.
   their own worktrees at the same time, and two that both took the next one
   early both say \`-decision-9\`, or \`1.5.0\`. If the pull request later
   conflicts on one, merge \`$3/$2\` again the same way and take the next
-  free one.
+  free one. Then check none is left:
+  \`grep -rnsE '[a-z0-9]-(decision|rule)-next' docs CLAUDE.md\` prints nothing.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
   type-check and lint scripts. A project with a \`check\` script that runs them
   all and prints a summary (\`pnpm check\`) is checked with that, once: read the

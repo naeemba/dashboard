@@ -20,7 +20,7 @@ project `/adopt-docs` reaches afterwards gets the old pattern. (skills-decision-
     pnpm check               # all three below: a line each, output in check.log
     pnpm test                # vitest, node environment only
     pnpm typecheck           # tsc --noEmit
-    pnpm lint                # eslint ., then markdown lines at most 100 wide
+    pnpm lint                # eslint ., then markdown: 100 wide, docs ids unique, no -next
 
 Run `pnpm check` and read its summary: the first reasons a check failed are
 under its line and the rest in the log it names, so never run a check again to
@@ -28,7 +28,7 @@ see the end of it. Its coverage line lists the changed files a test leaves
 partly unrun.
 
 `pnpm install` turns on a pre-commit hook that runs eslint on the staged code,
-the typecheck, and the markdown width on the staged markdown (workflow-rule-5).
+the typecheck, and the markdown checks on the staged markdown (workflow-rule-5).
 
 There is no DOM test environment: jsdom is not installed and nothing in `src/`
 declares one. A `*.test.ts` can test a decision module, never a view. DOM

@@ -78,10 +78,11 @@ stopped every worker. `pnpm exec eslint .` refuses `mkdtemp` and `mkdtempSync`
 imported into a `*.test.ts` or `*-fixture.ts` under `src/`, and
 `eslint.config.test.ts` pins it.
 
-## workflow-rule-5: A commit runs eslint, the typecheck and the markdown width first
+## workflow-rule-5: A commit runs eslint, the typecheck and the markdown checks first
 
 `.githooks/pre-commit` runs eslint on the staged `.ts`/`.js` files, `tsc --noEmit` on the whole
-project and the markdown width on the staged markdown (workflow-decision-11), and refuses the commit
+project and the markdown checks on the staged markdown (the width, workflow-decision-11, and the
+docs ids, `scripts/docs-ids.mjs`), and refuses the commit
 on any failure. `pnpm install` points `core.hooksPath` at
 `.githooks` (the `prepare` script), so every worktree of the checkout gets it. Before it,
 `tsc --noEmit` ran only in CI and a worker found "'wholePath' is defined but never used" mid-edit, a

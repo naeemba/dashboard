@@ -47,6 +47,9 @@ One line per merged change: date and why.
 - 2026-11-24 — the package-manager guard follows a `cd` earlier in the line, after new-crm's
   `cd storefront && pnpm install` was refused by the root's npm lockfile four times
   (workflow-decision-9)
+- 2026-11-24 — `pnpm lint` refuses a duplicate docs heading id and a leftover `-next` id, since a
+  worker writes a new id as `-next` and numbers it at the last merge of main, and nothing stopped
+  one that skipped that, or two cards that numbered from the same main, from merging
 - 2026-11-24 — the worktree and test-run guards walk a line's `cd`s through the package-manager
   guard's walk, so a test run after `( cd x && … )` is judged where the line's shell is and
   `cd -P <dir>` moves to `<dir>`, not `-P`; and a Git Bash `cd /c/work` is read as `C:\work` on

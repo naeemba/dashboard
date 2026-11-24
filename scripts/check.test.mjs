@@ -62,12 +62,14 @@ describe('reasonLines', () => {
     expect(reasonLines('typecheck', output)).toEqual(["src/a.ts(1,7): error TS2322: Type 'string'"]);
   });
 
-  it("puts eslint's file in front of each problem, then the long markdown lines", () => {
+  it("puts eslint's file in front of each problem, then the markdown ones", () => {
     const output = "/repo/src/a.ts\n  1:7  error  'x' is assigned a value but never used       no-unused-vars\n"
-      + '\n✖ 1 problem (1 error, 0 warnings)\ndocs/a.md:3  120 columns, over 100\n';
+      + '\n✖ 1 problem (1 error, 0 warnings)\ndocs/a.md:3  120 columns, over 100\n'
+      + 'docs/a.md:9  a-rule-next is not numbered yet\n';
     expect(reasonLines('lint', output, '/repo')).toEqual([
       "src/a.ts:1:7  error  'x' is assigned a value but never used  no-unused-vars",
       'docs/a.md:3  120 columns, over 100',
+      'docs/a.md:9  a-rule-next is not numbered yet',
     ]);
   });
 
