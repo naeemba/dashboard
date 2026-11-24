@@ -23,5 +23,5 @@ const files = filesToCheck(staged);
 const linted = files.length === 0 || run(ESLINT, ['--no-warn-ignored', ...files]);
 const typed = !runsTypecheck(staged) || run(TSC, ['--noEmit']);
 const markdown = markdownToCheck(staged);
-const wrapped = markdown.length === 0 || run('scripts/markdown-width-step.mjs', markdown);
-process.exit(linted && typed && wrapped ? 0 : 1);
+const markdownPassed = markdown.length === 0 || run('scripts/markdown-step.mjs', markdown);
+process.exit(linted && typed && markdownPassed ? 0 : 1);

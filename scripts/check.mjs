@@ -14,7 +14,7 @@ export const plural = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'
 const counted = (count, noun, passed) => (count === 0 && !passed ? `no ${noun} count` : plural(count, noun));
 
 // The counts in a check's output. Vitest says them on its `Tests` line; tsc's errors are one
-// `error TS` line each; eslint and scripts/markdown-width-step.mjs each end on a `✖ N problems` line,
+// `error TS` line each; eslint and scripts/markdown-step.mjs each end on a `✖ N problems` line,
 // the markdown one followed by `(markdown`. scripts/lint-step.mjs prints ESLINT_FAILED when eslint
 // failed, so an eslint that died without its count is named even when the markdown half counted some.
 export const ESLINT_FAILED = 'eslint failed';
@@ -46,8 +46,9 @@ export function summaryLine(check, output, passed) {
 
 // Why a check failed, printed under its FAIL line so nobody opens check.log to find out: vitest's
 // `FAIL  file > test` lines with the error under each, tsc's `error TS` lines, eslint's problems as
-// `file:line:column` and the markdown check's long lines. A check that died before any of those
-// prints its error lines instead (`TypeError`, `[PARSE_ERROR]` too), less stack frames and banners.
+// `file:line:column` and the markdown check's long lines and bad docs ids. A check that died before
+// any of those prints its error lines instead (`TypeError`, `[PARSE_ERROR]` too), less stack frames
+// and banners.
 const errorLines = (lines) => lines.filter((line) => /error\b/i.test(line) && !/^\s*(at\s|⎯)/.test(line))
   .map((line) => line.trim());
 
@@ -72,7 +73,7 @@ const REASONS = {
       }
       return [`${relativePath(root, file)}:${problem[1]}  ${problem[2].replace(/\s{2,}/g, '  ')}`];
     });
-    const markdown = lines.filter((line) => /^\S+:\d+ {2}\d+ columns/.test(line));
+    const markdown = lines.filter((line) => /^\S+\.md:\d+ {2}/.test(line));
     const died = eslint.length === 0 && lines.includes(ESLINT_FAILED);
     return [...(died ? errorLines(lines) : eslint), ...markdown];
   },

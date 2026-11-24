@@ -1,5 +1,5 @@
 // What `pnpm lint` holds a markdown file to: no line wider than WIDTH columns. A review round spent
-// rewrapping by hand is a round a machine could have saved. The entry is scripts/markdown-width-step.mjs.
+// rewrapping by hand is a round a machine could have saved. The entry is scripts/markdown-step.mjs.
 
 export const WIDTH = 100;
 
