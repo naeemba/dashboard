@@ -23,8 +23,9 @@ tested beside it, run by `board guard`; workflow-decision-9), the worktree guard
 workflow-decision-10), the test-run guard (`src/main/workflow/test-run-guard.ts`, tested beside it,
 run by `board guard`; workflow-decision-12), `scripts/node-pty-built.mjs` and
 `scripts/no-running-app.mjs` (its rule in `scripts/running-app.mjs`, tested beside it), written in
-Node so the same hook runs on a mac, Linux and Windows; `pnpm check` (its summary in
-`scripts/check.mjs`, tested beside it, run by `scripts/check-step.mjs`) and the markdown width half
+Node so the same hook runs on a mac, Linux and Windows; `pnpm check` (its summary and reasons in
+`scripts/check.mjs` and its coverage line in `scripts/coverage.mjs`, each tested beside it, run by
+`scripts/check-step.mjs`; workflow-decision-13) and the markdown width half
 of `pnpm lint` (`scripts/markdown-width.mjs`, tested beside it, run by
 `scripts/markdown-width-step.mjs`; workflow-decision-11); `CLAUDE.md` carries each rule a check does
 not hold in one line and points at its id here (workflow-decision-8).
@@ -36,15 +37,29 @@ stay, which a tool or hook should carry, and the cards that moved them.
 
 The three in `CLAUDE.md`, or all three at once with `pnpm check`. It runs `pnpm test`,
 `pnpm typecheck` and `pnpm lint` in turn, writes everything they print to `check.log` at the
-checkout's top (ignored as `*.log`), and prints one line each and the log's path:
+checkout's top (ignored as `*.log`), and prints one line each, the first five reasons under a
+failed one, a coverage line and the log's path:
 
-    test       pass  3565 passed | 1 skipped (3566)
+    test       FAIL  1 failed | 3831 passed | 1 skipped (3833)
+        src/a.test.ts > outer > adds: AssertionError: expected 1 to be 2 // Object.is equality
     typecheck  pass  0 errors
-    lint       FAIL  3 problems
+    lint       FAIL  1 problem
+        src/a.ts:1:7  error  'unused' is assigned a value but never used  no-unused-vars
+    coverage   3 changed files, 1 not fully tested
+        src/a.ts  2 of 4 branches, 9 of 10 lines
     Full output: /…/dashboard/check.log
 
-It exits non-zero when one failed, and the reason is in the log: there is no need to run a check
-again to see the end of it. A check that died before counting anything (a missing module, a broken
+It exits non-zero when one failed. The reasons are vitest's `FAIL` lines with the error under each,
+tsc's `error TS` lines, and eslint's and the markdown check's problems as `file:line`; a check that
+died before printing any of them shows its `Error` lines. Past five it says how many more are in
+the log: there is no need to run a check again to see the end of it.
+
+The coverage line counts the code under `src/` and `scripts/` that the branch changed against
+main (its merge base with `origin/main`, else `main`, plus untracked files), tests aside, and lists
+each one a test leaves partly unrun, or that no test runs. It rides on the check's own `pnpm test`
+(`vitest.config.ts` turns coverage on when `CHECK_COVERAGE` names the files) and never fails the
+check: a view has no test environment, so a view always reads `no test runs it`
+(workflow-decision-13). A check that died before counting anything (a missing module, a broken
 config) says `no test count`, `no error count` or `no problem count` instead of a count of 0, and
 an eslint that died while the markdown check counted lines says `no eslint count, 3 markdown
 problems`.
