@@ -1,0 +1,11 @@
+{
+  "id": "19e55a61-8a05-460d-8cf4-d4b47a403811",
+  "title": "pnpm check shows why a check failed, and changed branches get a coverage line",
+  "notes": "Retro 2026-11-24: after a FAIL, workers grepped check.log 7 times and one re-ran pnpm lint. scripts/check.mjs's summary prints the first few failure lines under each FAIL (the failing test names, the tsc errors, the eslint lines). Also 4 of 21 pr-loop findings were new branches with no test (workflow-rule-2): add a coverage report of the files changed against main, in CI or as a fourth check, if it stays cheap; say in the PR if it is not.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-24T10:58:39.431Z",
+  "updatedAt": "2026-11-24T10:58:39.431Z",
+  "column": "Backlog",
+  "order": 57
+}
