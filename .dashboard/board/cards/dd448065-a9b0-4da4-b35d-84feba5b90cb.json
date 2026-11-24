@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T20:08:16.245Z",
-  "updatedAt": "2026-11-24T20:50:21.463Z",
+  "updatedAt": "2026-11-24T20:51:44.359Z",
   "branch": "shellbody-reads-powershell-command-pwsh-c-a",
   "pullRequest": 367,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-24T20:50:21.463Z",
       "body": "Review loop: converged, ready to merge. 1 round; the one finding (nit: stale comments in test-run-guard.ts and send.ts still said only sh -c bodies are read) fixed in 87e56633, final check accepted it. No conflicts. CI passed on 87e56633."
+    },
+    {
+      "at": "2026-11-24T20:51:44.299Z",
+      "body": "Pull request #367 merged: shellBody reads powershell -Command, pwsh -c and cmd /c bodies for every guard https://github.com/naeemba/dashboard/pull/367"
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 297
 }
