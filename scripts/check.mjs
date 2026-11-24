@@ -1,6 +1,5 @@
 // What `pnpm check` prints: one line a check, saying whether it passed and its counts, read from the
 // check's own output. The entry is scripts/check-step.mjs, which keeps the full output in a log file.
-/* global process */
 import { relative } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 
@@ -52,12 +51,13 @@ const REASONS = {
     const name = line.match(/^\s*FAIL\s+(.+)$/)?.[1];
     if (!name) return [];
     let next = index + 1;
-    while (next < lines.length && lines[next].trim() === '') next += 1;
+    // Vitest prints one error under all the FAIL lines whose errors are identical, so it skips them too.
+    while (next < lines.length && (lines[next].trim() === '' || /^\s*FAIL\s/.test(lines[next]))) next += 1;
     const error = lines[next]?.trim();
     return [error && !error.startsWith('⎯') ? `${name}: ${error}` : name];
   }),
   typecheck: (lines) => lines.filter((line) => /error TS\d+:/.test(line)),
-  lint: (lines) => {
+  lint: (lines, root) => {
     let file = '';
     const eslint = lines.flatMap((line) => {
       const problem = line.match(/^\s+(\d+:\d+)\s+(.+)$/);
@@ -65,7 +65,7 @@ const REASONS = {
         if (/^[^\s✖]/.test(line)) file = line.trim();
         return [];
       }
-      return [`${relative(process.cwd(), file)}:${problem[1]}  ${problem[2].replace(/\s{2,}/g, '  ')}`];
+      return [`${relative(root, file)}:${problem[1]}  ${problem[2].replace(/\s{2,}/g, '  ')}`];
     });
     const markdown = lines.filter((line) => /^\S+:\d+ {2}\d+ columns/.test(line));
     const died = eslint.length === 0 && lines.includes(ESLINT_FAILED);
@@ -80,8 +80,9 @@ export const capped = (lines) => (lines.length <= SHOWN
   ? lines
   : [...lines.slice(0, SHOWN), `… ${lines.length - SHOWN} more in check.log`]).map((line) => `    ${line}`);
 
-export function reasonLines(check, output) {
+// `root` is the checkout's top, which eslint's absolute paths are made relative to.
+export function reasonLines(check, output, root) {
   const lines = stripVTControlCharacters(output).split(/\r?\n/);
-  const reasons = REASONS[check](lines);
+  const reasons = REASONS[check](lines, root);
   return reasons.length > 0 ? reasons : errorLines(lines);
 }
