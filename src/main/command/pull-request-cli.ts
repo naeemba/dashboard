@@ -75,7 +75,13 @@ async function patiently(ports: LandPorts, words: string[]): Promise<ProgramAnsw
 // The pull request's state, head commit, base branch, mergeability and url, as
 // `OPEN <sha> main MERGEABLE https://...`.
 const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName,mergeable,url', '-q', '.state + " " + .headRefOid + " " + .baseRefName + " " + .mergeable + " " + .url'];
-const conflicting = (answer: ProgramAnswer) => answer.ok && answer.output.trim().split(' ')[3] === 'CONFLICTING';
+const readHead = (answer: ProgramAnswer) => {
+  const [state = '', sha = '', base = '', mergeable = '', url = ''] = answer.output.trim().split(' ');
+  return { state, sha, base, mergeable, url };
+};
+const conflicting = (answer: ProgramAnswer) => answer.ok && readHead(answer).mergeable === 'CONFLICTING';
+// The program prints the files in place of the output (conflictLine), so the output is only a fallback.
+const conflictAnswer = (target: string, base: string, sha: string): LandAnswer => ({ ok: false, output: `${target} conflicts with ${base}`, conflicts: { base, sha } });
 
 // How many checks the last few merged pull requests of the pull request's own repository reported (read
 // from its url, since a url target may name another repository than the folder's): none is a repository
@@ -94,11 +100,10 @@ type Checked = { ok: true; sha: string; base: string; noChecks: boolean } | Land
 async function checksPassed(ports: LandPorts, target: string): Promise<Checked> {
   const head = await patiently(ports, stateAndHead(target));
   if (!head.ok) return head;
-  const [state, sha, base, , url = ''] = head.output.trim().split(' ');
+  const { state, sha, base, url } = readHead(head);
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
-  const conflicts = { ok: false, output: `${target} conflicts with ${base}`, conflicts: { base, sha } };
   // CI does not run on a pull request that conflicts: waiting on it would end in "no checks reported".
-  if (conflicting(head)) return conflicts;
+  if (conflicting(head)) return conflictAnswer(target, base, sha);
   const watch = () => patiently(ports, ['pr', 'checks', target, '--watch']);
   let checks = await watch();
   // Right after a push CI may not have started: ask once more a minute on.
@@ -112,7 +117,7 @@ async function checksPassed(ports: LandPorts, target: string): Promise<Checked> 
   // Still none a minute on is a repository without CI on pull requests, CI that never started on this
   // commit, or a pull request that came to conflict after the first look.
   if (noChecks) {
-    if (conflicting(await patiently(ports, stateAndHead(target)))) return conflicts;
+    if (conflicting(await patiently(ports, stateAndHead(target)))) return conflictAnswer(target, base, sha);
     const checkCount = recentCheckCount(url);
     if (checkCount === undefined) return { ok: false, output: `no checks reported on ${sha}, and gh gave no repository for ${target} to ask whether it has CI; ${target} is not merged` };
     const checksBefore = await patiently(ports, checkCount);
@@ -133,7 +138,7 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
   if (!('sha' in checked)) return checked;
   const { sha, base, noChecks } = checked;
   const merged = await mergeAt(ports, target, sha);
-  if ('conflicts' in merged) return { ok: false, output: `${target} conflicts with ${base}`, conflicts: { base, sha } };
+  if (merged.conflicting === true) return conflictAnswer(target, base, sha);
   if (isNetworkError(merged)) return { ok: false, output: `${merged.output}\n\nlost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again` };
   if (!merged.ok) return { ok: false, output: `${merged.output}\n\ngh refused to merge ${target} at ${sha}` };
   return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', a repository with no CI' : ''}`, base };
@@ -142,13 +147,14 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
 // A merge whose answer was lost may have gone through: a failed call is read back from the
 // pull request, merged at the noted commit is merged, conflicting is said as that, and a network
 // error is tried again as long as RETRY_WAITS_MS lasts.
-async function mergeAt(ports: LandPorts, target: string, sha: string, tries = 0): Promise<ProgramAnswer & { conflicts?: true }> {
+async function mergeAt(ports: LandPorts, target: string, sha: string, tries = 0): Promise<ProgramAnswer & { conflicting?: true }> {
   const merged = await ports.gh(['pr', 'merge', target, '--merge', '--match-head-commit', sha]);
   if (merged.ok) return merged;
-  const state = await patiently(ports, stateAndHead(target));
-  const [mergedState, mergedHead] = state.output.trim().split(' ');
-  if (state.ok && mergedState === 'MERGED' && mergedHead === sha) return state;
-  if (conflicting(state)) return { ...merged, conflicts: true };
+  // One read per try: the tries around it are the retry, and nesting patiently here would make an
+  // outage of four minutes one of half an hour.
+  const state = await ports.gh(stateAndHead(target));
+  if (state.ok && readHead(state).state === 'MERGED' && readHead(state).sha === sha) return state;
+  if (conflicting(state)) return { ...merged, conflicting: true };
   if (tries === RETRY_WAITS_MS.length || !isNetworkError(merged)) return merged;
   await ports.wait(RETRY_WAITS_MS[tries]);
   return mergeAt(ports, target, sha, tries + 1);
