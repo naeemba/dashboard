@@ -96,7 +96,7 @@ importers:
         specifier: npm:typescript@^7.0.2
         version: typescript@7.0.2
       '@vitest/coverage-v8':
-        specifier: 5.0.5
+        specifier: ^5.0.5
         version: 5.0.5(vitest@5.0.5)
       electron:
         specifier: 45.2.1

@@ -73,9 +73,10 @@ describe('reasonLines', () => {
 });
 
 describe('capped', () => {
-  it('shows five and says where the rest are', () => {
+  it('shows five, indented, and says the rest are in the log', () => {
     const lines = ['1', '2', '3', '4', '5', '6', '7'];
-    expect(capped(lines.slice(0, 5), 'check.log')).toEqual(['1', '2', '3', '4', '5']);
-    expect(capped(lines, 'check.log')).toEqual(['1', '2', '3', '4', '5', '… 2 more in check.log']);
+    const indented = (list) => list.map((line) => `    ${line}`);
+    expect(capped(lines.slice(0, 5))).toEqual(indented(['1', '2', '3', '4', '5']));
+    expect(capped(lines)).toEqual(indented(['1', '2', '3', '4', '5', '… 2 more in check.log']));
   });
 });

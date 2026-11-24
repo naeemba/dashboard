@@ -34,21 +34,26 @@ const COUNTS = {
 
 export const CHECKS = Object.keys(COUNTS);
 
+// A check's name in the summary's first column.
+export const label = (name) => `${name.padEnd(9)}  `;
+
 export function summaryLine(check, output, passed) {
-  return `${check.padEnd(9)}  ${passed ? 'pass' : 'FAIL'}  ${COUNTS[check](stripVTControlCharacters(output), passed)}`;
+  return `${label(check)}${passed ? 'pass' : 'FAIL'}  ${COUNTS[check](stripVTControlCharacters(output), passed)}`;
 }
 
 // Why a check failed, printed under its FAIL line so nobody opens check.log to find out: vitest's
 // `FAIL  file > test` lines with the error under each, tsc's `error TS` lines, eslint's problems as
 // `file:line:column` and the markdown check's long lines. A check that died before any of those
 // prints its `Error` lines instead.
-const errorLines = (lines) => lines.filter((line) => /\berror\b/i.test(line));
+const errorLines = (lines) => lines.filter((line) => /\berror\b/i.test(line)).map((line) => line.trim());
 
 const REASONS = {
   test: (lines) => lines.flatMap((line, index) => {
     const name = line.match(/^\s*FAIL\s+(.+)$/)?.[1];
     if (!name) return [];
-    const error = lines.slice(index + 1).find((next) => next.trim() !== '')?.trim();
+    let next = index + 1;
+    while (next < lines.length && lines[next].trim() === '') next += 1;
+    const error = lines[next]?.trim();
     return [error && !error.startsWith('⎯') ? `${name}: ${error}` : name];
   }),
   typecheck: (lines) => lines.filter((line) => /error TS\d+:/.test(line)),
@@ -57,10 +62,10 @@ const REASONS = {
     const eslint = lines.flatMap((line) => {
       const problem = line.match(/^\s+(\d+:\d+)\s+(.+)$/);
       if (!problem) {
-        if (/^[^\s✖]/.test(line)) file = relative(process.cwd(), line.trim());
+        if (/^[^\s✖]/.test(line)) file = line.trim();
         return [];
       }
-      return [`${file}:${problem[1]}  ${problem[2].replace(/\s{2,}/g, '  ')}`];
+      return [`${relative(process.cwd(), file)}:${problem[1]}  ${problem[2].replace(/\s{2,}/g, '  ')}`];
     });
     const markdown = lines.filter((line) => /^\S+:\d+ {2}\d+ columns/.test(line));
     const died = eslint.length === 0 && lines.includes(ESLINT_FAILED);
@@ -68,15 +73,15 @@ const REASONS = {
   },
 };
 
-export const SHOWN = 5;
+const SHOWN = 5;
 
-// The first SHOWN lines, and how many more the reader would find where `rest` says.
-export const capped = (lines, rest) => lines.length <= SHOWN
+// The first SHOWN of a list, indented under its summary line, and how many more are in the log.
+export const capped = (lines) => (lines.length <= SHOWN
   ? lines
-  : [...lines.slice(0, SHOWN), `… ${lines.length - SHOWN} more in ${rest}`];
+  : [...lines.slice(0, SHOWN), `… ${lines.length - SHOWN} more in check.log`]).map((line) => `    ${line}`);
 
 export function reasonLines(check, output) {
   const lines = stripVTControlCharacters(output).split(/\r?\n/);
   const reasons = REASONS[check](lines);
-  return reasons.length > 0 ? reasons : errorLines(lines).map((line) => line.trim());
+  return reasons.length > 0 ? reasons : errorLines(lines);
 }

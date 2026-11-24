@@ -333,7 +333,8 @@ ran `pnpm lint` again, and 4 of 21 findings in a pr-loop were new branches with 
 - **Coverage rides on the check's `pnpm test`, limited to the changed files.** Measured on
   2026-11-24, the whole suite took 13.5s with v8 coverage of two files, no slower than the 19s of
   the run without it just before, so a second run or a CI job would only cost more.
-  `@vitest/coverage-v8` is pinned to vitest's own version, which it requires exactly.
+  `@vitest/coverage-v8` carries vitest's own range, `^5.0.5`: it requires vitest's exact version,
+  so the two move together.
 - **It counts whole files, not the changed lines**: a file the branch touched shows every branch it
   holds. Reading the diff's line ranges against the coverage map is more code for a line the
   reader already has to judge.

@@ -3,7 +3,7 @@
 // check's own `pnpm test`, which vitest.config.ts turns coverage on for when CHECK_COVERAGE names the
 // files, so it costs no second run. It never fails the check: a view has no test environment.
 import { relative } from 'node:path';
-import { plural } from './check.mjs';
+import { label, plural } from './check.mjs';
 
 // The code a test could cover: the TypeScript and Node scripts under src/ and scripts/, not a test or
 // a declaration.
@@ -19,6 +19,6 @@ export function coverageLines(summary, root) {
     .map(([file, { lines, branches }]) => `${relative(root, file)}  ${lines.covered === 0
       ? 'no test runs it'
       : `${branches.covered} of ${branches.total} branches, ${lines.covered} of ${lines.total} lines`}`);
-  const head = `${'coverage'.padEnd(9)}  ${plural(files.length, 'changed file')}, ${untested.length} not fully tested`;
+  const head = `${label('coverage')}${plural(files.length, 'changed file')}, ${untested.length} not fully tested`;
   return [head, ...untested];
 }
