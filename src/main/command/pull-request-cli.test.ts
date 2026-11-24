@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, RETRY_WAIT_MS } from './pull-request-cli';
+import { conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
 
 // A gh that answers each command's first two words from the table, in order when a row has several.
 function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
@@ -18,17 +18,21 @@ function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
   };
 }
 
-const open = { ok: true, output: 'OPEN abc123 main https://github.com/acme/api/pull/12' };
+const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12' };
+const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
 const RECENT_CHECKS = 'pr list --repo github.com/acme/api --state merged --limit 20 --json statusCheckRollup -q [.[].statusCheckRollup | length] | add // 0';
 const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
 const lostAnswer = 'Post https://api.github.com/graphql: unexpected EOF';
+// Every try a patient gh call makes, each answer lost.
+const lostEveryTry = () => Array.from({ length: RETRY_WAITS_MS.length + 1 }, () => ({ ok: false, output: lostAnswer }));
 const MERGE = 'pr merge 12 --merge --match-head-commit abc123';
 const merges = (github: { asked: string[] }) => github.asked.filter((each) => each === MERGE).length;
 
 describe('parsePullRequestCommand', () => {
   // --project is taken out before, by boardTarget, as for `board`.
   it('reads land and its pull request', () => {
-    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, target: '12' });
+    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, verb: 'land', target: '12' });
+    expect(parsePullRequestCommand(['wait', '12'])).toEqual({ ok: true, verb: 'wait', target: '12' });
   });
 
   it('answers no verb with the usage and refuses anything else', () => {
@@ -49,12 +53,12 @@ describe('landPullRequest', () => {
 
   it('merges nothing when a check fails', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: 'test\tfail' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'a check failed on abc123; 12 is not merged\n\ntest\tfail' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'test\tfail\n\na check failed on abc123; 12 is not merged' });
     expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
   });
 
   it('asks again a minute on when no checks are reported, and merges a repository whose pull requests never reported a check', async () => {
-    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '0' }], 'pr merge': [{ ok: true, output: '' }] });
+    const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '0' }], 'pr merge': [{ ok: true, output: '' }] });
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123, a repository with no CI', base: 'main' });
     expect(github.waited).toEqual([NO_CHECKS_WAIT_MS]);
     expect(github.asked).toContain(RECENT_CHECKS);
@@ -63,7 +67,7 @@ describe('landPullRequest', () => {
   // Seen: CI that never started on the head commit, and the land merged it unchecked. CI on a push
   // trigger runs no pull_request event, and still reports its checks on the merged pull requests.
   it('merges nothing when no checks start in a repository whose pull requests run CI, whatever triggers it', async () => {
-    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '2' }] });
+    const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '2' }] });
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'no checks reported on abc123 a minute on, in a repository whose pull requests run CI; 12 is not merged' });
     expect(merges(github)).toBe(0);
   });
@@ -71,21 +75,22 @@ describe('landPullRequest', () => {
   // A url target may name another repository than the folder's: its CI is the one asked about.
   it('asks the pull request\'s own repository, on its own host, whether it runs CI', async () => {
     const url = 'https://git.example.com/other/web/pull/5';
-    const github = fakeGitHub({ 'pr view': [{ ok: true, output: `OPEN abc123 main ${url}` }], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '7' }] });
+    const view = { ok: true, output: `OPEN abc123 main MERGEABLE ${url}` };
+    const github = fakeGitHub({ 'pr view': [view, view], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '7' }] });
     expect(await landPullRequest(github.ports, url)).toMatchObject({ ok: false });
     expect(github.asked).toContain(RECENT_CHECKS.replace('github.com/acme/api', 'git.example.com/other/web'));
     expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
   });
 
   it('merges nothing when gh cannot say whether the repository\'s pull requests report checks', async () => {
-    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [none, none], 'pr list': [{ ok: false, output: 'HTTP 403' }] });
+    const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': [{ ok: false, output: 'HTTP 403' }] });
     expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('12 is not merged: HTTP 403') });
     expect(merges(github)).toBe(0);
   });
 
   // Never the folder's repository in its place: a url target may name another.
   it('merges nothing when gh gives no url for the pull request', async () => {
-    const github = fakeGitHub({ 'pr view': [{ ok: true, output: 'OPEN abc123 main' }], 'pr checks': [none, none] });
+    const github = fakeGitHub({ 'pr view': [{ ok: true, output: 'OPEN abc123 main MERGEABLE' }, open], 'pr checks': [none, none] });
     expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('gh gave no repository for 12') });
     expect(github.asked.some((each) => each.startsWith('pr list') || each.startsWith('pr merge'))).toBe(false);
   });
@@ -100,17 +105,25 @@ describe('landPullRequest', () => {
     expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
   });
 
-  it('says the answer was lost, not that a check failed, after a second lost wait', async () => {
-    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: lostAnswer }, { ok: false, output: lostAnswer }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `lost gh's answer twice waiting on the checks of 12; nothing is merged, run it again\n\n${lostAnswer}` });
+  it('says the answer was lost, not that a check failed, once every try lost it', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': lostEveryTry() });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `${lostAnswer}\n\nlost gh's answer for 4 minutes waiting on the checks of 12; nothing is merged, run it again` });
     expect(merges(github)).toBe(0);
-    expect(github.waited).toEqual([RETRY_WAIT_MS]);
+    expect(github.waited).toEqual(RETRY_WAITS_MS);
+  });
+
+  // Seen: a land that gave up on gh's first question, with the network down for a minute.
+  it('asks again, waiting longer each time, when gh cannot reach GitHub', async () => {
+    const offline = { ok: false, output: 'error connecting to api.github.com\ncheck your internet connection or https://githubstatus.com' };
+    const github = fakeGitHub({ 'pr view': [offline, offline, offline, open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
+    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: true });
+    expect(github.waited).toEqual(RETRY_WAITS_MS.slice(0, 3));
   });
 
   // A push during the wait moves the head off the noted commit, and GitHub refuses the merge.
   it('says the merge gh refused', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: 'Head branch was modified' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'gh refused to merge 12 at abc123: Head branch was modified' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'Head branch was modified\n\ngh refused to merge 12 at abc123' });
     expect(merges(github)).toBe(1);
   });
 
@@ -127,11 +140,31 @@ describe('landPullRequest', () => {
     expect(merges(github)).toBe(2);
   });
 
-  it('stops after the second network error', async () => {
-    const github = fakeGitHub({ 'pr view': [open, open, open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }, { ok: false, output: lostAnswer }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `lost gh's answer merging 12 at abc123; it may have merged, check before running it again: ${lostAnswer}` });
-    expect(merges(github)).toBe(2);
-    expect(github.waited).toEqual([RETRY_WAIT_MS]);
+  it('stops once every try lost the merge\'s answer', async () => {
+    const tries = RETRY_WAITS_MS.length + 1;
+    const github = fakeGitHub({ 'pr view': Array.from({ length: tries + 1 }, () => open), 'pr checks': [{ ok: true, output: '' }], 'pr merge': lostEveryTry() });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `${lostAnswer}\n\nlost gh's answer merging 12 at abc123; it may have merged, check before running it again` });
+    expect(merges(github)).toBe(tries);
+    expect(github.waited).toEqual(RETRY_WAITS_MS);
+  });
+
+  // CI does not run on a pull request that conflicts: the land says so instead of "no checks reported".
+  it('says a pull request conflicts before waiting on it', async () => {
+    const github = fakeGitHub({ 'pr view': [conflicting] });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: '12 conflicts with main', conflicts: { base: 'main', sha: 'abc123' } });
+    expect(github.asked).toHaveLength(1);
+  });
+
+  it('says a pull request conflicts when it came to after the first look', async () => {
+    const github = fakeGitHub({ 'pr view': [open, conflicting], 'pr checks': [none, none] });
+    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, conflicts: { base: 'main', sha: 'abc123' } });
+  });
+
+  it('says a merge refused for a conflict is one', async () => {
+    const refused = { ok: false, output: 'Pull request acme/api#12 is not mergeable: the merge commit cannot be cleanly created.' };
+    const github = fakeGitHub({ 'pr view': [open, conflicting], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [refused] });
+    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, conflicts: { base: 'main', sha: 'abc123' } });
+    expect(merges(github)).toBe(1);
   });
 
   // Merged at another commit is not the commit whose checks passed.
@@ -147,6 +180,37 @@ describe('landPullRequest', () => {
   });
 });
 
+describe('waitOnPullRequest', () => {
+  it('waits on the head commit\'s checks and merges nothing', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: 'all green' }] });
+    expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'checks passed on abc123' });
+    expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
+  });
+
+  it('says what failed, as land does', async () => {
+    const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: 'test\tfail' }] });
+    expect(await waitOnPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('a check failed on abc123') });
+  });
+
+  it('passes a repository with no CI', async () => {
+    const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '0' }] });
+    expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'no checks to wait on at abc123, a repository with no CI' });
+  });
+});
+
+describe('conflictLine', () => {
+  it('names the files merge-tree found conflicted, and what the worker does', () => {
+    const tree = { ok: false, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec\nsrc/a.ts\ndocs/b.md\n' };
+    expect(conflictLine('main', tree)).toBe('conflicts with main: src/a.ts, docs/b.md — merge origin/main into the branch, resolve, push, and run it again');
+  });
+
+  // A fetch that failed, or a git before merge-tree --write-tree: still a conflict, said without the files.
+  it('says so when git could not name them', () => {
+    expect(conflictLine('main', { ok: false, output: 'fatal: couldn\'t find remote ref main' })).toContain('conflicts with main: git could not name the files (fatal');
+    expect(conflictLine('main', { ok: true, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec' })).toContain('git could not name the files');
+  });
+});
+
 describe('isNetworkError', () => {
   // Real gh lines: a lost request or answer is tried again, a refusal never.
   it.each([
@@ -156,6 +220,7 @@ describe('isNetworkError', () => {
     ['dial tcp 140.82.112.6:443: connect: connection refused', true],
     ['dial tcp 140.82.112.6:443: i/o timeout', true],
     ['net/http: TLS handshake timeout', true],
+    ['error connecting to api.github.com', true],
     ['HTTP 502: Bad Gateway (https://api.github.com/graphql)', true],
     ['GraphQL: Head branch was modified. Review and try the merge again. (mergePullRequest)', false],
     ['HTTP 422: Validation Failed (https://api.github.com/repos/o/r/pulls/12/merge)', false],

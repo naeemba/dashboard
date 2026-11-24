@@ -6,7 +6,7 @@ import { boardTarget } from '../board/board-target';
 import { projectNamedInFile } from '../projects/project-named';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
-import { type ProgramAnswer, landPullRequest, parsePullRequestCommand } from './pull-request-cli';
+import { conflictLine, type LandAnswer, landPullRequest, mergeTreeWords, parsePullRequestCommand, type ProgramAnswer, waitOnPullRequest } from './pull-request-cli';
 
 // gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
 // failure. One that could not start (none installed) has no exit code, and still throws. gh runs as
@@ -32,17 +32,29 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
     return 1;
   }
   try {
-    const answer = await landPullRequest({ gh: (words) => answering('gh')(project.project, words), wait: delay }, parsed.target);
-    (answer.ok ? process.stdout : process.stderr).write(`${answer.output}\n`);
-    if (answer.ok && answer.base !== undefined) {
-      // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
-      const forwarded = await fastForwardCheckout(answering('git'), project.project, answer.base)
-        .catch((error: unknown) => `${answer.base} is not fast-forwarded: ${failureLine(error)}`);
-      process.stdout.write(`${forwarded}\n`);
-    }
+    const verb = parsed.verb === 'land' ? landPullRequest : waitOnPullRequest;
+    const answer = await verb({ gh: (words) => answering('gh')(project.project, words), wait: delay }, parsed.target);
+    // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
+    const verdict = answer.conflicts === undefined ? answer.output : await conflictedFiles(project.project, answer.conflicts);
+    const { base } = answer;
+    // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
+    const forwarded = answer.ok && base !== undefined
+      ? `${await fastForwardCheckout(answering('git'), project.project, base).catch((error: unknown) => `${base} is not fast-forwarded: ${failureLine(error)}`)}\n`
+      : '';
+    (answer.ok ? process.stdout : process.stderr).write(`${forwarded}${verdict}\n`);
     return answer.ok ? 0 : 1;
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);
     return 1;
   }
+}
+
+// The files a conflicting pull request conflicts on, merged in git's own memory (merge-tree), so no
+// checkout is touched: the base and the head commit fetched from origin, then the line conflictLine says.
+async function conflictedFiles(folder: string, { base, sha }: NonNullable<LandAnswer['conflicts']>): Promise<string> {
+  const git = answering('git');
+  const tree = await git(folder, ['fetch', 'origin', base, sha])
+    .then((fetched) => fetched.ok ? git(folder, mergeTreeWords(base, sha)) : fetched)
+    .catch((error: unknown): ProgramAnswer => ({ ok: false, output: failureLine(error) }));
+  return conflictLine(base, tree);
 }

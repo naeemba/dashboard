@@ -20,3 +20,7 @@ One line per merged change: date and why.
 - 2026-11-23 — `dashboard mcp` serves every command verb but the hooks', `project init`/`remove`
   and `pr land` as MCP tools, and every Claude screen the app starts has it: agents read the command
   from prompts and never ran `dashboard browser` (command-decision-8, command-decision-9)
+- 2026-11-24 — `pr wait` waits on a pull request's CI without merging; every gh call in `pr land`
+  and `pr wait` is tried again for about four minutes on a network error; a conflicting pull request
+  names its files; the verdict is the last line: workers hand-rolled sleep and `gh run view` loops,
+  a land gave up on a TLS handshake timeout, and main ran `gh pr view` after every land
