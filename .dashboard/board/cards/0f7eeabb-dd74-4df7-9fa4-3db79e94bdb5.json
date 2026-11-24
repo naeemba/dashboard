@@ -1,0 +1,11 @@
+{
+  "id": "0f7eeabb-dd74-4df7-9fa4-3db79e94bdb5",
+  "title": "Tidy-ups: the .dashboard folder name, one read-or-null helper, Promise.withResolvers in tests",
+  "notes": "GitHub issues #217, #207 and #192; the PR says Closes #217, Closes #207, Closes #192. (#217) BOARD_DIRECTORY ('.dashboard') is imported from board/board-store.ts by stores that are not the board (notes-store, ink-store, ship.ts, manager-terminals, projects-file, and tests): move it beside dashboardFolder (src/main/app/dashboard-folder.ts, or src/shared/ if the renderer needs it), name it DASHBOARD_FOLDER_NAME, point every importer at it; ship.ts's comment about the renderer not importing it can then go if true. (#207) the try/ENOENT/rethrow read is hand-rolled in notes-store.ts, ink-store.ts, worktree-store.ts, projects-file.ts, log-store.ts and pane-host-protocol.ts: one readText-or-null helper in src/main/app/ they all call. #207's other item, a second salvage overwriting board.json.broken, looks fixed by setAsidePath in board-store.ts: confirm and say so in the PR. (#192) replace the hand-written deferred() in ship.test.ts, newest-read.test.ts and manager-reads.test.ts with Promise.withResolvers().",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-24T19:59:20.324Z",
+  "updatedAt": "2026-11-24T19:59:20.324Z",
+  "column": "Backlog",
+  "order": 66
+}
