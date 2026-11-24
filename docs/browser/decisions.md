@@ -79,3 +79,16 @@ the command line, so a script is not cut or quoted away, and saves the answer to
 a file with a one-line reply, so a long answer does not fill the session.
 `--wait-for` replaces the `sleep` a script took to let a page render. It is an
 action because a script can click, type and navigate like the actions do.
+
+## browser-decision-8: A skill and a when-to-use block send agents here, and Chrome stays
+
+On 2.55 the job-search workers held every `browser_` tool and still made 28 Claude in Chrome
+calls to none here. A session picks a deferred tool by matching its task to a skill's description
+or a when-to-use block, and Chrome had a system-prompt section and two skills naming its tasks
+while this browser had one sentence in the server's instructions. So the server's instructions
+carry a WHEN TO USE block listing the tasks (a job board, LinkedIn, docs, a frontend check, a
+screenshot, scripted extraction), and the app installs a `dashboard-browser` skill whose
+description names them. A sign-in page is answered by asking the person to sign in once in this
+browser, since its sign-ins are kept per project, not by switching to Chrome. Claude in Chrome is
+not disabled: a page that needs the person's own Chrome profile or an extension, or a person who
+asks for Chrome, still goes there. (2026-11-24)

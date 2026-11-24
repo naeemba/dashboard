@@ -134,12 +134,25 @@ export const COMMAND_ONLY: Record<string, string> = {
 };
 
 // What the server tells every session about itself, once, and when its browser is the one to reach
-// for: the retro that asked for this found every page check done in Playwright or Claude in Chrome.
+// for: the retro that asked for this found every page check done in Playwright or Claude in Chrome,
+// and one sentence did not change that, so the browser has a when-to-use block of its own
+// (browser-decision-8).
 export const SERVER_INSTRUCTIONS = 'The Dashboard app this session runs in: its board, its worker panes, its projects and its'
   + ' browser. For any web page to read or check, a frontend or layout check included, use the browser_ tools'
   + ' rather than Playwright or Claude in Chrome: each project\'s browser keeps its own sign-ins, browser_eval'
   + ' runs a script file of any length and saves its answer to a file, and browser_screenshot answers with the'
-  + ` picture. To land a pull request, ${LAND_IN_BASH}; to wait on its CI without merging, ${WAIT_IN_BASH}.`;
+  + ` picture. To land a pull request, ${LAND_IN_BASH}; to wait on its CI without merging, ${WAIT_IN_BASH}.`
+  + '\n\nWHEN TO USE the browser_ tools, instead of Claude in Chrome (mcp__claude-in-chrome__*) or Playwright'
+  + ' (mcp__plugin_playwright_*):'
+  + '\n- reading any web page: a job board, LinkedIn, a company\'s site, docs, an issue or pull request'
+  + '\n- scraping or extracting from a page: write the script to a file and browser_eval it'
+  + '\n- checking a frontend or layout change, at a phone\'s width with browser_resize'
+  + '\n- a screenshot of a page, for a pull request or to look at it'
+  + '\n- filling in or clicking through a page: browser_snapshot, then browser_click and browser_type'
+  + '\nRead the dashboard-browser skill first. A page that asks for a sign-in is signed in once, by the person,'
+  + ' in the project\'s browser (Ctrl+Shift+B by default), and stays signed in: ask for that rather than'
+  + ' switching to Chrome. Claude in Chrome stays the right one when the page needs the person\'s own Chrome'
+  + ' profile or one of its extensions, or the person asks for Chrome.';
 
 export const MCP_SERVER_NAME = 'dashboard';
 

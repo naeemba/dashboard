@@ -4,11 +4,16 @@ import { installCreateTask } from '../board/create-task-install';
 import { installBoardGuard } from '../board/board-guard-install';
 import { failureLine } from '../command/failure-line';
 import { ADOPT_DOCS_SKILL } from './adopt-docs-skill';
+import { DASHBOARD_BROWSER_SKILL } from './dashboard-browser-skill';
 import { skillFile } from './skill-folder';
 import { WORK_CARD_SKILL } from './work-card-skill';
 
 // The skills that are one SKILL.md and nothing else, by the name of their slash command.
-const TEXT_SKILLS: Record<string, string> = { 'adopt-docs': ADOPT_DOCS_SKILL, 'work-card': WORK_CARD_SKILL };
+const TEXT_SKILLS: Record<string, string> = {
+  'adopt-docs': ADOPT_DOCS_SKILL,
+  'dashboard-browser': DASHBOARD_BROWSER_SKILL,
+  'work-card': WORK_CARD_SKILL,
+};
 
 // Every skill the app puts under ~/.claude/skills, refreshed from this build at each launch. Answers
 // a line to log for each one it could not write: a failure costs that skill, never the launch or
