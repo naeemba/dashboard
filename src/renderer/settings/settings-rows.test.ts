@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextBudgetLimit, settingsRows, stepSelection, toggled } from './settings-rows';
+import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage } from './settings-rows';
 import { ACTIONS } from '../../shared/keys/actions';
 import { bindKey, defaultSettings, isOn, parseSettings } from '../../shared/settings/settings';
 
@@ -55,6 +55,13 @@ describe('settingsRows', () => {
     }
     expect(walked).toEqual(['pace', 'none', 'cap']);
     expect(settings.budget.weeklyCap).toBe(74);
+  });
+
+  it('picks the limit a typed figure belongs to, and leaves it when the row is emptied', () => {
+    const settings = parseSettings({ budget: { limit: 'none', weeklyCap: 74 } }, false);
+    expect(withBudgetPercentage(settings, 'weeklyCap', 60).budget).toMatchObject({ limit: 'cap', weeklyCap: 60 });
+    expect(withBudgetPercentage(settings, 'dailyShare', 15).budget).toMatchObject({ limit: 'pace', dailyShare: 15 });
+    expect(withBudgetPercentage(settings, 'weeklyCap', null).budget).toMatchObject({ limit: 'none', weeklyCap: null });
   });
 
   it('opens with a heading, and headings are not selectable', () => {

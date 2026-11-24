@@ -7,7 +7,7 @@ import {
   bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, BUDGET_PERCENTAGE_RANGE, isBudgetPercentage, isPort, resetAll, resetKeys,
   type Settings,
 } from '../../shared/settings/settings';
-import { nextBudgetLimit, settingsRows, stepSelection, toggled, type SettingsRow } from './settings-rows';
+import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage, type SettingsRow } from './settings-rows';
 import { chatShadowPartner, isModified } from '../keys/shortcuts';
 
 // Modifier keys pressed on their own are not a binding — you are still on your way to one. Without
@@ -187,7 +187,7 @@ export function openSettings(
           // Empty means no cap, and `dashboard budget` then says it cannot tell; or, for the pace, a
           // seventh of the week a day, 5/7 of 100 on the fifth day since the reset.
           if (text !== '' && !isBudgetPercentage(text)) say(`"${text}" is not a ${row.noun}: ${BUDGET_PERCENTAGE_RANGE}, or empty for ${row.empty}.`);
-          else commit({ ...settings, budget: { ...settings.budget, [row.field]: text === '' ? null : Number(text) } });
+          else commit(withBudgetPercentage(settings, row.field, text === '' ? null : Number(text)));
         } else {
           // The shell. Empty is the file saying "work it out from the environment", which is a real
           // answer rather than a blank, so there is nothing to refuse.

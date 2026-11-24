@@ -178,7 +178,9 @@ seventh of 100 when unset) for each day begun since the reset, at most 100.
 None is for a user who wants no limit, and exits 0 rather than 2: 2 tells a
 loop to stop, and stopping is not what no limit means. An unset limit is the
 cap, so a file written before this reads as it did, and an unset cap still
-exits 2.
+exits 2. Setting a figure picks its limit, from either door: `budget --cap 60`
+or 60 typed into the settings screen's cap row makes the limit the cap, and the
+same for the pace. Emptying a row on the screen leaves the limit alone.
 
 Days are local calendar days, not 24-hour blocks from the reset: the user's 71%
 was a Tuesday after a Friday afternoon reset, the fifth day begun, where 24-hour

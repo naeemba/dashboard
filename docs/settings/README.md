@@ -57,7 +57,8 @@ and no limit on Enter. The weekly cap (`budget.weeklyCap`, default not set) is
 the share, in percent, it calls over: above 0 and at most 100, or empty for not
 set, which under the weekly cap makes `budget` exit 2. The
 daily pace (`budget.dailyShare`, default a seventh of the week) is the share
-added for each day begun since the weekly reset, in the same range.
+added for each day begun since the weekly reset, in the same range. A figure
+typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 

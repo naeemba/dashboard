@@ -13,6 +13,13 @@ export function nextBudgetLimit(settings: Settings): Settings {
   return { ...settings, budget: { ...settings.budget, limit } };
 }
 
+// A figure typed into the weekly cap or the daily pace row. A figure also picks its limit, as
+// `budget --cap <n>` and `--pace <n>` do; emptying the row leaves the limit as it was (command-decision-10).
+export function withBudgetPercentage(settings: Settings, field: 'weeklyCap' | 'dailyShare', value: number | null): Settings {
+  const limit = value === null ? settings.budget.limit : field === 'weeklyCap' ? 'cap' : 'pace';
+  return { ...settings, budget: { ...settings.budget, [field]: value, limit } };
+}
+
 const LIMIT_NAMES: Record<BudgetLimit, string> = { cap: 'the weekly cap', pace: 'the daily pace', none: 'no limit' };
 
 function toggleRow(settings: Settings, name: ToggleName, label: string): SettingsRow {
