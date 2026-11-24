@@ -29,3 +29,6 @@ One line per merged change: date and why.
   on 127.0.0.1, its reload let through, the PDF viewer's rule kept off the window's main frame
 - 2026-11-16 #298 — Every sheet holds the focus in `openOverlay`; the per-dialog holds in the
   viewers, updates, what's new and anchored popups are gone (keys-rule-1)
+- 2026-11-24 — The `.dashboard` name is `DASHBOARD_FOLDER_NAME` beside `dashboardPath`, which
+  every store joins its file onto; every missing-or-throw read goes through `missing-file.ts`;
+  tests use `Promise.withResolvers`

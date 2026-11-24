@@ -4,17 +4,6 @@ import type { ScannedWorktree } from '../../shared/ship/git-worktrees';
 import { BOARD_STALE_MS, DIRTY_STALE_MS, createManagerReads, sameDirtiness } from './manager-reads';
 import { isStale } from '../../shared/app/stale';
 
-// A read that settles only when the test says so, so the order things land in is the test's to pick.
-function deferred<Value>() {
-  let resolve!: (value: Value) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<Value>((yes, no) => {
-    resolve = yes;
-    reject = no;
-  });
-  return { promise, resolve, reject };
-}
-
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const named = (name: string): Board => ({ columns: [{ name, cards: [] }] });
@@ -29,17 +18,17 @@ const scan = (dirty: string[], clean: string[] = [], unreadable: string[] = []):
 
 function harness() {
   let now = 1_000;
-  const boardReads: { path: string; answer: ReturnType<typeof deferred<Board | null>> }[] = [];
-  const dirtyChecks: ReturnType<typeof deferred<ScannedWorktree[]>>[] = [];
+  const boardReads: { path: string; answer: PromiseWithResolvers<Board | null> }[] = [];
+  const dirtyChecks: PromiseWithResolvers<ScannedWorktree[]>[] = [];
   const onRead = vi.fn();
   const reads = createManagerReads({
     peekBoard(path) {
-      const answer = deferred<Board | null>();
+      const answer = Promise.withResolvers<Board | null>();
       boardReads.push({ path, answer });
       return answer.promise;
     },
     scanWorktrees() {
-      const answer = deferred<ScannedWorktree[]>();
+      const answer = Promise.withResolvers<ScannedWorktree[]>();
       dirtyChecks.push(answer);
       return answer.promise;
     },

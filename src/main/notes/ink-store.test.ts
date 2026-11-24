@@ -2,7 +2,7 @@ import { chmodSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY } from '../board/board-store';
+import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
 import { INK_FILE, inkPath, readInk, writeInk } from './ink-store';
 import { temporaryFolder } from '../testing/temporary-folder';
 
@@ -26,8 +26,8 @@ describe('the ink file', () => {
     expect(readInk(projectPath)).toBe('');
   });
 
-  it('follows dashboardFolder for a page with no project folder behind it', () => {
-    expect(inkPath('')).toBe(join(homedir(), BOARD_DIRECTORY, INK_FILE));
+  it('follows dashboardPath for a page with no project folder behind it', () => {
+    expect(inkPath('')).toBe(join(homedir(), DASHBOARD_FOLDER_NAME, INK_FILE));
   });
 
   it('makes .dashboard on the way, so the first stroke is what creates it', () => {

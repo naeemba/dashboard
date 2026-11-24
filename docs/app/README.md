@@ -112,9 +112,11 @@ its own side. `eslint.config.test.ts` pins each of those.
 - Restore: `session.ts`, `session-store.ts`
 - Atomic write, and a write skipped when the bytes match (`replaceFileIfChanged`): `replace-file.ts`
 - A JSON file of string values read as empty when broken: `string-record-file.ts`
+- A read that answers null for a missing file and throws every other failure: `missing-file.ts`
 - Whether a socket is listening (the nvim server, the `dashboard` command
   finding the app): `can-connect.ts`
-- Project files: `dashboard-folder.ts`, `project-files-ipc.ts`, `git.ts`,
+- Project files: `dashboard-folder.ts` (the `.dashboard` name and which folder holds it),
+  `project-files-ipc.ts`, `git.ts`,
   `default-branch.ts` (which branch on a remote is its default, for the ship and
   `/create-task` alike, and which remote a project's is: origin, else the
   only remote, else the one the local main tracks), `base-branch.ts` (the two asked of

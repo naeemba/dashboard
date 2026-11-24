@@ -1,9 +1,8 @@
 import { isMap, isScalar, isSeq, LineCounter, parseDocument, type Node } from 'yaml';
-import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { ranked } from '../../shared/app/fuzzy';
-import { BOARD_DIRECTORY } from '../board/board-store';
+import { dashboardPath } from '../app/dashboard-folder';
+import { MANAGER_PROJECT } from '../../shared/manager/manager';
+import { readText } from '../app/missing-file';
 import { wholePath } from '../nvim/file-open';
 
 // ~/.dashboard/projects.yaml: every project the manager can be asked about, one entry each, written
@@ -229,11 +228,6 @@ export function projectsListed(text: string | null, filePath: string): { ok: tru
 // ~/.dashboard/projects.yaml's text, or null when there is none. The `project` command and
 // projectNamedInFile both read it here. A file that cannot be read for any other reason throws.
 export function readProjectsFile(): { text: string | null; filePath: string } {
-  const filePath = join(homedir(), BOARD_DIRECTORY, 'projects.yaml');
-  try {
-    return { text: readFileSync(filePath, 'utf8'), filePath };
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    return { text: null, filePath };
-  }
+  const filePath = dashboardPath(MANAGER_PROJECT.path, 'projects.yaml');
+  return { text: readText(filePath), filePath };
 }

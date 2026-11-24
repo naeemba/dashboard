@@ -1,8 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { replaceFile } from '../app/replace-file';
-import { BOARD_DIRECTORY } from '../board/board-store';
-import { dashboardFolder } from '../app/dashboard-folder';
+import { readText } from '../app/missing-file';
+import { dashboardPath } from '../app/dashboard-folder';
 
 // A page of free text per project, beside the board in the project's own .dashboard folder, so it
 // commits or is ignored with everything else the dashboard keeps about a project. Markdown by
@@ -14,7 +12,7 @@ export const NOTES_FILE = 'notes.md';
 // project folder to keep it in, and dashboard-folder.ts is where that is answered for every file the
 // dashboard keeps about a page.
 export function notesPath(projectPath: string): string {
-  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, NOTES_FILE);
+  return dashboardPath(projectPath, NOTES_FILE);
 }
 
 // A project that has never had notes has no file, which is not a failure — it is an empty page, and
@@ -24,12 +22,7 @@ export function notesPath(projectPath: string): string {
 // the placeholder says this project has never had notes, and the next character you type is written
 // whole over three months of them. The caller keeps what it was showing instead.
 export function readNotes(projectPath: string): string {
-  try {
-    return readFileSync(notesPath(projectPath), 'utf8');
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    return '';
-  }
+  return readText(notesPath(projectPath)) ?? '';
 }
 
 // Unlike reading, a failed write is reported: the screen would otherwise show a page of notes that is

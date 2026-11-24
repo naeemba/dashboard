@@ -26,8 +26,8 @@ vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:os')>();
   return { ...actual, homedir: () => homedirOverride ?? actual.homedir() };
 });
+import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
 import {
-  BOARD_DIRECTORY,
   BOARD_FILE_PATH,
   BOARD_FOLDER_PATH,
   EXPLANATION_FOR_AGENTS,
@@ -65,8 +65,8 @@ function project(): string {
 }
 
 function writeRaw(projectPath: string, text: string): void {
-  mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
-  writeFileSync(join(projectPath, BOARD_DIRECTORY, 'board.json'), text);
+  mkdirSync(join(projectPath, DASHBOARD_FOLDER_NAME), { recursive: true });
+  writeFileSync(join(projectPath, DASHBOARD_FOLDER_NAME, 'board.json'), text);
 }
 
 const columnNames = (board: { columns: { name: string }[] }) => board.columns.map((column) => column.name);
@@ -80,7 +80,7 @@ describe('BOARD_FILE_PATH', () => {
 describe('projectRoot', () => {
   it('walks up to the folder that holds the board', () => {
     const root = project();
-    mkdirSync(join(root, BOARD_DIRECTORY));
+    mkdirSync(join(root, DASHBOARD_FOLDER_NAME));
     const deep = join(root, 'src', 'views');
     mkdirSync(deep, { recursive: true });
     expect(projectRoot(deep)).toBe(root);
@@ -103,7 +103,7 @@ describe('projectRoot', () => {
   // climb all the way there and be handed the manager's folder as if it were its project.
   it('never climbs into the home directory itself', () => {
     inFakeHome((home) => {
-      mkdirSync(join(home, BOARD_DIRECTORY));
+      mkdirSync(join(home, DASHBOARD_FOLDER_NAME));
       const deep = join(home, 'Downloads', 'stray');
       mkdirSync(deep, { recursive: true });
       expect(projectRoot(deep)).toBeNull();
@@ -342,18 +342,18 @@ describe('peekBoard', () => {
   it('reads a board without making anything beside it', () => {
     const root = project();
     expect(peekBoard(root)).toBeNull();
-    expect(existsSync(join(root, BOARD_DIRECTORY))).toBe(false);
+    expect(existsSync(join(root, DASHBOARD_FOLDER_NAME))).toBe(false);
   });
 
   // readBoard moves a damaged file aside so the board screen can say so. A background look doing it
   // first would leave that screen opening empty with nothing said.
   it('leaves a damaged file where it is', () => {
     const root = project();
-    mkdirSync(join(root, BOARD_DIRECTORY));
+    mkdirSync(join(root, DASHBOARD_FOLDER_NAME));
     writeFileSync(boardPath(root), '{ not json');
     expect(peekBoard(root)).toBeNull();
     expect(readFileSync(boardPath(root), 'utf8')).toBe('{ not json');
-    expect(existsSync(join(root, BOARD_DIRECTORY, 'board.json.broken'))).toBe(false);
+    expect(existsSync(join(root, DASHBOARD_FOLDER_NAME, 'board.json.broken'))).toBe(false);
   });
 
   it('answers with the same board readBoard would', () => {
@@ -386,7 +386,7 @@ describe('readBoard', () => {
   it('does not treat a missing file as broken', () => {
     const path = project();
     expect(readBoard(path).brokenFiles).toEqual([]);
-    expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json.broken'))).toBe(false);
+    expect(existsSync(join(path, DASHBOARD_FOLDER_NAME, 'board.json.broken'))).toBe(false);
   });
 
   // A folder stands in for every errno that is not ENOENT — EMFILE, EIO, EACCES — because it is the
@@ -400,7 +400,7 @@ describe('readBoard', () => {
   it('moves a damaged file aside and says where it went', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
-    const brokenPath = join(path, BOARD_DIRECTORY, 'board.json.broken');
+    const brokenPath = join(path, DASHBOARD_FOLDER_NAME, 'board.json.broken');
     const result = readBoard(path);
     expect(result.brokenFiles).toEqual([brokenPath]);
     expect(readFileSync(brokenPath, 'utf8')).toBe('{"columns": [');
@@ -421,9 +421,9 @@ describe('readBoard', () => {
     writeRaw(path, '{ first');
     readBoard(path);
     writeRaw(path, '{ second');
-    const secondPath = join(path, BOARD_DIRECTORY, 'board.json.2.broken');
+    const secondPath = join(path, DASHBOARD_FOLDER_NAME, 'board.json.2.broken');
     expect(readBoard(path).brokenFiles).toEqual([secondPath]);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'board.json.broken'), 'utf8')).toBe('{ first');
+    expect(readFileSync(join(path, DASHBOARD_FOLDER_NAME, 'board.json.broken'), 'utf8')).toBe('{ first');
     expect(readFileSync(secondPath, 'utf8')).toBe('{ second');
   });
 
@@ -431,7 +431,7 @@ describe('readBoard', () => {
     const path = project();
     writeRaw(path, '{"columns": [');
     readBoard(path);
-    expect(existsSync(join(path, BOARD_DIRECTORY, 'board.json'))).toBe(false);
+    expect(existsSync(join(path, DASHBOARD_FOLDER_NAME, 'board.json'))).toBe(false);
     const second = readBoard(path);
     expect(second.brokenFiles).toEqual([]);
     expect(columnNames(second.board)).toEqual(['Backlog', 'Todo', 'Ship', 'Doing', 'Review', 'Done', 'Cancelled']);
@@ -459,7 +459,7 @@ describe('writeBoard', () => {
     // A file where the folder should be: the write cannot succeed, and must say so rather than
     // pretend the cards were saved.
     const path = project();
-    writeFileSync(join(path, BOARD_DIRECTORY), 'in the way');
+    writeFileSync(join(path, DASHBOARD_FOLDER_NAME), 'in the way');
     expect(() => writeBoard(path, { columns: [] })).toThrow();
   });
 
@@ -477,23 +477,23 @@ describe('seedBoardDirectory', () => {
   it('writes the two explanation files', () => {
     const path = project();
     seedBoardDirectory(path);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('node "$DASHBOARD_BOARD"');
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'README.md'), 'utf8')).toContain('.dashboard');
+    expect(readFileSync(join(path, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'), 'utf8')).toContain('node "$DASHBOARD_BOARD"');
+    expect(readFileSync(join(path, DASHBOARD_FOLDER_NAME, 'README.md'), 'utf8')).toContain('.dashboard');
   });
 
   it('writes a doc missing from a folder that is already there', () => {
     const path = project();
-    mkdirSync(join(path, BOARD_DIRECTORY), { recursive: true });
+    mkdirSync(join(path, DASHBOARD_FOLDER_NAME), { recursive: true });
     seedBoardDirectory(path);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toContain('board.json');
+    expect(readFileSync(join(path, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'), 'utf8')).toContain('board.json');
   });
 
   it('never writes through a symbolic link in place of a seeded file', () => {
     const path = project();
-    mkdirSync(join(path, BOARD_DIRECTORY), { recursive: true });
+    mkdirSync(join(path, DASHBOARD_FOLDER_NAME), { recursive: true });
     const elsewhere = join(path, 'elsewhere.txt');
     writeFileSync(elsewhere, 'keep me');
-    symlinkSync(elsewhere, join(path, BOARD_DIRECTORY, 'CLAUDE.md'));
+    symlinkSync(elsewhere, join(path, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'));
     seedBoardDirectory(path);
     expect(readFileSync(elsewhere, 'utf8')).toBe('keep me');
   });
@@ -503,7 +503,7 @@ describe('seedBoardDirectory', () => {
     const elsewhere = join(path, 'elsewhere');
     mkdirSync(elsewhere);
     writeFileSync(join(elsewhere, 'CLAUDE.md'), 'keep me');
-    symlinkSync(elsewhere, join(path, BOARD_DIRECTORY));
+    symlinkSync(elsewhere, join(path, DASHBOARD_FOLDER_NAME));
     expect(seedBoardDirectory(path)).toBe(false);
     expect(readFileSync(join(elsewhere, 'CLAUDE.md'), 'utf8')).toBe('keep me');
   });
@@ -511,9 +511,9 @@ describe('seedBoardDirectory', () => {
   it('rewrites a text with no version, once', () => {
     const path = project();
     seedBoardDirectory(path);
-    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'Edit board.json directly.');
+    writeFileSync(join(path, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'), 'Edit board.json directly.');
     expect(seedBoardDirectory(path)).toBe(true);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
+    expect(readFileSync(join(path, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
     expect(seedBoardDirectory(path)).toBe(false);
   });
 
@@ -522,11 +522,11 @@ describe('seedBoardDirectory', () => {
     seedBoardDirectory(path);
     const edited = `${EXPLANATION_FOR_AGENTS}An edit.\n`;
     const newer = EXPLANATION_FOR_PEOPLE.replace(`version ${SEEDED_DOCS_VERSION}`, `version ${SEEDED_DOCS_VERSION + 1}`);
-    writeFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), edited);
-    writeFileSync(join(path, BOARD_DIRECTORY, 'README.md'), newer);
+    writeFileSync(join(path, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'), edited);
+    writeFileSync(join(path, DASHBOARD_FOLDER_NAME, 'README.md'), newer);
     expect(seedBoardDirectory(path)).toBe(false);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(edited);
-    expect(readFileSync(join(path, BOARD_DIRECTORY, 'README.md'), 'utf8')).toBe(newer);
+    expect(readFileSync(join(path, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'), 'utf8')).toBe(edited);
+    expect(readFileSync(join(path, DASHBOARD_FOLDER_NAME, 'README.md'), 'utf8')).toBe(newer);
   });
 
   // A change to either text without a higher version reaches no project that has the old one. Raise
@@ -569,9 +569,9 @@ describe('the manager\'s own board', () => {
   it('is opened without seeding the explanation files, but with a folder to watch', () => {
     inFakeHome((home) => {
       openBoard(manager);
-      expect(existsSync(join(home, BOARD_DIRECTORY))).toBe(true);
-      expect(existsSync(join(home, BOARD_DIRECTORY, 'CLAUDE.md'))).toBe(false);
-      expect(existsSync(join(home, BOARD_DIRECTORY, 'README.md'))).toBe(false);
+      expect(existsSync(join(home, DASHBOARD_FOLDER_NAME))).toBe(true);
+      expect(existsSync(join(home, DASHBOARD_FOLDER_NAME, 'CLAUDE.md'))).toBe(false);
+      expect(existsSync(join(home, DASHBOARD_FOLDER_NAME, 'README.md'))).toBe(false);
     });
   });
 });
@@ -581,7 +581,7 @@ describe('the manager\'s own board', () => {
 // moment the two drift apart, so the new text is committed with the change that made it.
 describe('the .dashboard docs checked into this repository', () => {
   it('still say what a freshly seeded project would be told', () => {
-    expect(readFileSync(join(BOARD_DIRECTORY, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
-    expect(readFileSync(join(BOARD_DIRECTORY, 'README.md'), 'utf8')).toBe(EXPLANATION_FOR_PEOPLE);
+    expect(readFileSync(join(DASHBOARD_FOLDER_NAME, 'CLAUDE.md'), 'utf8')).toBe(EXPLANATION_FOR_AGENTS);
+    expect(readFileSync(join(DASHBOARD_FOLDER_NAME, 'README.md'), 'utf8')).toBe(EXPLANATION_FOR_PEOPLE);
   });
 });

@@ -1,6 +1,4 @@
-import path from 'node:path';
-import { dashboardFolder } from '../app/dashboard-folder';
-import { BOARD_DIRECTORY } from '../board/board-store';
+import { dashboardPath } from '../app/dashboard-folder';
 import { isInside } from '../panes/shell-directory';
 import { MANAGER_PROJECT, MANAGER_SLOT, isManagerPath } from '../../shared/manager/manager';
 import type { Project } from '../../shared/app/bridge';
@@ -9,7 +7,7 @@ import type { Project } from '../../shared/app/bridge';
 // manager's board and notes already live in, so projects.yaml there is in reach of every one of them.
 // The renderer's page keeps the empty path MANAGER_PROJECT gives it; this is main's half, the folder a
 // shell or a session is started in.
-export const MANAGER_FOLDER = path.join(dashboardFolder(MANAGER_PROJECT.path), BOARD_DIRECTORY);
+export const MANAGER_FOLDER = dashboardPath(MANAGER_PROJECT.path);
 
 const MANAGER_TERMINALS: Project = { name: MANAGER_PROJECT.name, path: MANAGER_FOLDER, missing: false };
 

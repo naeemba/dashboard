@@ -1,5 +1,5 @@
 import { basename, dirname, join } from 'node:path';
-import { BOARD_DIRECTORY } from '../board/board-store';
+import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
 import { slug } from '../../shared/app/slug';
 import { BUMP_VERSION, KEEP_VERSION } from '../skills/work-card-skill';
 import type { BaseBranch } from '../app/base-branch';
@@ -8,8 +8,8 @@ import type { BaseBranch } from '../app/base-branch';
 // commands; what to call things and what counts as being in the way is here, where a test can pin it.
 //
 // Which pane to take is next door, in pane-reading.ts, with the rest of what a pane can be asked. The
-// command screen and the close ask the same questions of a pane now, and they run in the renderer —
-// which cannot import this file, because BOARD_DIRECTORY drags board-store.ts and node:fs in with it.
+// command screen and the close ask the same questions of a pane now, and they run in the renderer,
+// which imports only src/shared/.
 
 // How long a branch name may get. Past this the card id on the end pushes it out of what a shell
 // prompt shows, and a branch you cannot read is a branch you check out by mistake.
@@ -116,7 +116,7 @@ export function changedFiles(porcelain: string): string[] {
 // explanation files. Nothing in the flow touches the project's checkout: the worktree is cut from
 // origin, and the ship writes no board in it.
 export function blockingChanges(porcelain: string): string[] {
-  return changedFiles(porcelain).filter((path) => !path.startsWith(`${BOARD_DIRECTORY}/`));
+  return changedFiles(porcelain).filter((path) => !path.startsWith(`${DASHBOARD_FOLDER_NAME}/`));
 }
 
 // How many of them there are, for the ship's refusal — the one place a count is worth printing,
