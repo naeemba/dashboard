@@ -158,6 +158,26 @@ describe('reviewPrompt', () => {
     expect(prompt).not.toMatch(/gh pr merge 12|--match-head-commit|gh pr checks 12 --watch/);
   });
 
+  // On #329 a round swapped the card's rule for a heuristic of its own; with merging on, the land ran
+  // with nobody asked (#339).
+  it('stops before landing a round that changed the card\'s ask or design, and tells main', () => {
+    for (const landing of [prompt, reviewPrompt(CARD, 7, '/work/insta', true, 'gitlab')]) {
+      expect(landing).toContain('no round that changed what the card asked for or its design');
+      expect(landing).toContain('a round changed what the card asked for or its design');
+      expect(landing).toContain('report to main, so main asks the user whether it lands');
+    }
+  });
+
+  // The pane wakes in the worktree knowing only the card's id, and a round's summary of a swapped rule
+  // reads like a fix: without the card it has nothing to judge "what the card asked for" by.
+  it('reads the card before judging whether a round changed it', () => {
+    for (const forge of ['github', 'gitlab'] as const) {
+      for (const merge of [true, false]) {
+        expect(reviewPrompt(CARD, 12, '/work/api', merge, forge)).toContain(`node "$DASHBOARD_BOARD" show ${CARD}`);
+      }
+    }
+  });
+
   // One session polled `gh pr checks` 166 times by hand, and `sleep N; gh pr checks` in the foreground
   // is refused: the wait is one background pr wait that wakes the agent when it exits. A hand-rolled
   // watch died on a TLS timeout pr wait tries again past.

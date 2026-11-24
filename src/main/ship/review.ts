@@ -143,8 +143,9 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     `Review ${words.noun} ${words.sigil}${pullRequest}${merge ? ' and land it' : ''}. It came from card ${cardId} on the board of ${projectPath}.`,
     ...(merge ? [] : [`Merging is off for this project: the user lands the ${words.noun}, not you.`]),
     '',
-    `1. Run ${words.loop} ${pullRequest} and let it finish.`,
-    ...(merge ? steps.land : report),
+    `1. Run ${words.loop} ${pullRequest} and let it finish. Then read the card, \`${board} show ${cardId}\`,`,
+    '   and judge every round by what it asked for, not by the round\'s own summary.',
+    ...(merge ? [...LAND_WHEN, ...steps.land] : report),
     '',
     'A layout check on the running app is done in the project\'s browser, the dashboard server\'s browser_ tools,'
       + ' never Playwright or Claude in Chrome.',
@@ -158,8 +159,18 @@ const FORGE_WORDS: Record<Forge, { noun: string; sigil: string; loop: string; ch
   gitlab: { noun: 'merge request', sigil: '!', loop: '/mr-loop', checks: 'pipeline' },
 };
 
+// A loop's change to what the card asked for is the user's call, not the loop's: on #329 a round
+// swapped the card's rule for a heuristic of its own, and with merging on nothing stood between that
+// and main. The pane stops before the merge and hands it to main, which asks the user (dispatch.ts).
+// Each forge's step 4 says so, and step 1 has the pane read the card: a round's summary never names
+// its own swap of the card's rule.
+const LAND_WHEN = [
+  '2. If it ended converged or floor-addressed, with nothing above low left unresolved, no conflict',
+  '   with the base branch, and no round that changed what the card asked for or its design,',
+];
+
 // What differs by forge: how the wait is done, and the land steps 2 to 4. `wait` follows step 2's
-// first line.
+// first line; `land` follows LAND_WHEN's.
 type ForgeSteps = { wait: string[]; land: string[] };
 
 function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
@@ -174,8 +185,7 @@ function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
       '   check, or the files the pull request conflicts on.',
     ],
     land: [
-      '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
-      `   conflict with the base branch, land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, run in the`,
+      `   land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, run in the`,
       `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it exits.`,
       '   It notes the head commit, waits for every check on it and merges that commit only, so a push',
       '   during the wait is refused rather than merged. A land stopped at that time limit has not failed:',
@@ -187,9 +197,10 @@ function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
       '   author, and GitHub refuses an approval from the author. The pull request does not need one to',
       '   merge. Do not move the card: the app moves it to Done once the merge is in.',
       '',
-      '4. Any other ending — the loop stopped short, the land exited non-zero, the pull request conflicts —',
-      '   is where you stop, and the card stays in Review. Say what happened on the card, with what the land',
-      '   printed:',
+      '4. Any other ending — the loop stopped short, a round changed what the card asked for or its design',
+      '   (name the change, on the card and in your report to main, so main asks the user whether it lands),',
+      '   the land exited non-zero, the pull request conflicts — is where you stop, and the card stays in',
+      '   Review. Say what happened on the card, with what the land printed:',
       `   ${sayOnCard}.`,
     ],
   };
@@ -209,17 +220,17 @@ function mergeRequestSteps(mergeRequest: number, sayOnCard: string): ForgeSteps 
   return {
     wait,
     land: [
-      '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
-      '   conflict with the base branch, first note the head it ended on:',
+      '   first note the head it ended on:',
       `   \`glab mr view ${mergeRequest} --output json --jq .sha\`. Then`,
       ...wait,
       `3. When the pipeline passed, merge the sha you noted before the wait:`,
       `   \`glab mr merge ${mergeRequest} --sha <that sha> --auto-merge=false --yes\`. Do not`,
       '   approve it: you are the author. Do not move the card: the app moves it to Done once GitLab says merged.',
       '',
-      '4. Any other ending — the loop stopped short, the pipeline failed, the merge was refused, the merge',
-      '   request conflicts — is where you stop, and the card stays in Review. Say what happened on the card,',
-      `   with what glab printed: ${sayOnCard}.`,
+      '4. Any other ending — the loop stopped short, a round changed what the card asked for or its design',
+      '   (name the change, on the card and in your report to main, so main asks the user whether it lands),',
+      '   the pipeline failed, the merge was refused, the merge request conflicts — is where you stop, and',
+      `   the card stays in Review. Say what happened on the card, with what glab printed: ${sayOnCard}.`,
     ],
   };
 }

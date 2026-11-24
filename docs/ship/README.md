@@ -118,6 +118,9 @@ Whether its loop already finished is read off the merge request's notes through 
 - Given merging is on and a fix was pushed after the last review round, when the loop ends, then the
   review runs `pr land`, which waits for CI on that commit and merges it with `--match-head-commit`;
   a failed check stops it with a comment on the card.
+- Given merging is on and a round of the loop changed what the card asked for or its design, when
+  the loop ends, then the review, having read the card, lands nothing, names the change on the card
+  and to the project's main, and main asks the user (#339).
 - Given merging is on and `gh pr merge` loses its answer to a network error after the merge went
   through, when `pr land` reads the pull request back, then the review reports it merged, not failed
   (#301).

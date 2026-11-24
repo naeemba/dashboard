@@ -47,3 +47,6 @@ One line per merged change: date and why.
   hand
 - 2026-11-24 — A card on a GitLab project is opened, followed and reviewed through glab and
   `/mr-loop`: `gh pr create` refused its remote and the card sat in Doing with nothing to review
+- 2026-11-25 — With merging on, a review whose loop changed what the card asked for or its design
+  stops before the merge and reports it to main: a #329-style swap of the card's rule would have
+  landed with nobody asked, the gap #338 closed only where main lands
