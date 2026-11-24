@@ -140,6 +140,16 @@ describe('emulate', () => {
     expect(sent).toEqual([]);
   });
 
+  it('clears a size whose resize failed, since a timed-out resize still lands', async () => {
+    const answers: Record<string, unknown> = { 'Emulation.setDeviceMetricsOverride': new Error('timed out') };
+    const { page, sent } = fakePage(answers);
+    await expect(page.ports.emulate(4, { width: 390, height: 844 })).rejects.toThrow('timed out');
+    delete answers['Emulation.setDeviceMetricsOverride'];
+    sent.length = 0;
+    await page.ports.emulate(4, null);
+    expect(sent.at(-1)).toBe('Emulation.clearDeviceMetricsOverride {}');
+  });
+
   it('lays a page out at the size asked for, and leaves it there', async () => {
     const { page, sent } = fakePage({});
     await page.ports.emulate(4, { width: 390, height: 844 });

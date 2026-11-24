@@ -100,13 +100,13 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
   // Laid out at the view's own size before clearing, or a hidden tab stays a phone's width (browser-decision-6).
   async function emulate(id: number, size: ViewportSize | null): Promise<void> {
     if (size === null && !sized.has(id)) return;
+    // Marked before the send: a resize that times out still lands, and the protocol runs one tab's
+    // commands in order, so the worst a failed resize costs is one clear on release.
+    if (size !== null) sized.add(id);
     await pages.send(id, 'Emulation.setDeviceMetricsOverride', { ...(size ?? pages.size(id)), deviceScaleFactor: 0, mobile: false });
-    if (size !== null) {
-      sized.add(id);
-    } else {
-      await pages.send(id, 'Emulation.clearDeviceMetricsOverride');
-      sized.delete(id);
-    }
+    if (size !== null) return;
+    await pages.send(id, 'Emulation.clearDeviceMetricsOverride');
+    sized.delete(id);
   }
 
   // A picture through the protocol, which draws a hidden view (browser-decision-6). A clip is in the

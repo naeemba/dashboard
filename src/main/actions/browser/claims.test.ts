@@ -39,6 +39,7 @@ describe('browser.release', () => {
   it('hands a tab back even when its size will not clear', async () => {
     const ports = { ...fakePorts({ [project]: { tabs: [tab(1, '3:1')], active: 1 } }), emulate: () => Promise.reject(new Error('tab 1 is closed')) };
     await expect(bind(browserRelease, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ output: 'tab 1 is the user\'s again' });
+    expect(ports.browsers.get(project)?.tabs[0].holder).toBe('user');
   });
 
   it('refuses a tab the pane does not hold', async () => {
