@@ -46,7 +46,7 @@ export function reportsTurns(ports: Pick<PaneSendPorts, 'agentIn' | 'screenIn' |
 }
 
 // Whether text typed into a shell starts Claude Code: `claude` as the first word of any of its commands,
-// by name or by path, read the way the running-app guard reads a command line, `sh -c '…'` bodies too.
+// by name or by path, read the way the running-app guard reads a command line, the bodies `shellBody` reads too.
 // Only asked of a shell at its prompt, since an agent or a program takes the same text as input.
 // ponytail: it reads the text. `npx @anthropic-ai/claude-code`, a `$(…)` or a script of your own that
 // runs claude still gets through; matching those means running the shell. A program that does not read
