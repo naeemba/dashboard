@@ -7,7 +7,7 @@ import { wholeNumber } from '../../browser/browser-tabs';
 import type { BrowserPorts } from './browser-ports';
 import { agentInput, targetTab, type AgentTarget } from './target';
 
-// browser.resize, browser.click, browser.type and browser.press: what an agent does to a page it
+// browser.resize, browser.click, browser.type, browser.press and browser.eval: what an agent does to a page it
 // holds, through the browser command. An element is named by a ref from the tab's last snapshot
 // (browser-page.ts), the accessibility tree trimmed to what can be clicked or typed in.
 
@@ -96,5 +96,24 @@ export const browserPress = action<BrowserPorts, AgentTarget & { key: KeyEvent; 
     if (isRefused(held)) return held;
     await ports.act(input.tab, { kind: 'press', key: input.key, node: typeof held === 'number' ? held : null });
     return { output: `pressed ${input.key.key === ' ' ? 'Space' : input.key.key} in tab ${input.tab}` };
+  },
+});
+
+// A script the agent wrote, run in the page it holds: anything a page's own code may do, which is
+// why it is an action and not a read.
+export const browserEval = action<BrowserPorts, AgentTarget & { script: string; waitFor: string | null }, { output: string }>('browser.eval', {
+  words: ['tab', 'script'],
+  input(raw) {
+    const target = agentInput(raw);
+    if (isRefused(target)) return target;
+    if (typeof raw.script !== 'string' || raw.script.trim() === '') return { refused: 'the script is empty' };
+    const waitFor = stringOrEmpty(raw.waitFor).trim();
+    return { ...target, script: raw.script, waitFor: waitFor === '' ? null : waitFor };
+  },
+  async run(ports, { pane, tab, script, waitFor }) {
+    const found = targetTab(ports, { pane, tab });
+    if (isRefused(found)) return found;
+    const said = await ports.runScript(tab, script, waitFor);
+    return isRefused(said) ? said : { output: said };
   },
 });

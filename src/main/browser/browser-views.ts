@@ -28,7 +28,7 @@ export type PagePorts = {
 };
 
 // The ports the views give the actions; the page's own (emulate, refsOf, act) are browser-page.ts's.
-type ViewPorts = Omit<BrowserPorts, 'emulate' | 'refsOf' | 'act'>;
+type ViewPorts = Omit<BrowserPorts, 'emulate' | 'refsOf' | 'act' | 'runScript'>;
 
 // The size a tab is laid out at before it was ever on screen, an agent's tab: a laptop's window.
 const UNPLACED: BrowserBounds = { x: 0, y: 0, width: 1280, height: 800 };

@@ -7,7 +7,7 @@ import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
-import { screenshotReadRule } from '../browser/browser-page';
+import { browserFileReadRule } from '../browser/browser-page';
 import { allowedToolRules } from '../command/mcp-tools';
 
 // How a project's main session and the workers it dispatches into are started: their names, the
@@ -52,8 +52,8 @@ const appCommandPermissions = (userData: string) => ({
     'Bash(node "$DASHBOARD_COMMAND" session *)',
     // Every verb, claim included: a claim of your tab is undone with the revoke key (docs/browser).
     'Bash(node "$DASHBOARD_COMMAND" browser *)',
-    // The pictures `browser screenshot` prints the path of, outside every session's folder.
-    screenshotReadRule(userData),
+    // The files `browser screenshot` and `browser eval` print the path of, outside every session's folder.
+    browserFileReadRule(userData),
     'Bash(node "$DASHBOARD_BOARD" *)',
     // A reading only: `budget --cap` changes the cap, and is asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',
@@ -136,8 +136,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '',
     'The installed build is `node "$DASHBOARD_COMMAND" --version`; run it before saying which build I am on.',
     '',
-    'Look at a web page in this project\'s browser with `node "$DASHBOARD_COMMAND" browser` (open, read, screenshot,'
-      + ' snapshot, click; `browser --help` for the rest): you act only on the tabs you opened or claimed.',
+    'Any web page, to read or to check a frontend on, is looked at in this project\'s browser with'
+      + ' `node "$DASHBOARD_COMMAND" browser` (open, read, screenshot, snapshot, click, eval; `browser --help` for the'
+      + ' rest), signed in as this project is, never Playwright or Claude in Chrome; a worker you brief on a page is'
+      + ' told the same. You act only on the tabs you opened or claimed.',
     '',
     `Each worker is told to SendMessage you, as ${mainSessionName(projectPath)}, when it is done. When a`
       + " worker stops with nothing left running and has not written, the app tells you so, with the end of its"

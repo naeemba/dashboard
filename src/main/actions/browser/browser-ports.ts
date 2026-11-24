@@ -1,4 +1,5 @@
 import type { BrowserPlacement, BrowserState, BrowserStep, ViewportSize } from '../../../shared/browser/browser';
+import type { Refused } from '../../../shared/app/bridge';
 import type { KeyEvent } from '../../browser/page-keys';
 
 // What the browser actions do to the views, handed to them by browser-views.ts, the one module that
@@ -31,4 +32,7 @@ export type BrowserPorts = {
   // The element refs the tab's last snapshot handed out, each to its DOM node.
   refsOf(id: number): ReadonlyMap<string, number>;
   act(id: number, act: PageAct): Promise<void>;
+  // The script run in the page once `waitFor` matches, if one is given: the line saying where its
+  // answer was saved, or why it was not.
+  runScript(id: number, script: string, waitFor: string | null): Promise<string | Refused>;
 };

@@ -1,6 +1,6 @@
 import { app } from 'electron';
 import type { Channels } from '../../app/channels';
-import { browserPage, screenshotFolder } from '../../browser/browser-page';
+import { browserFileFolder, browserPage } from '../../browser/browser-page';
 import { browserRequests, type BrowserRequestPorts } from '../../browser/browser-requests';
 import { browserViews, type BrowserViewsMain } from '../../browser/browser-views';
 import type { SessionReply, SessionRequest } from '../../workers/session-cli';
@@ -8,7 +8,7 @@ import { bind, registerActions } from '../action';
 import type { BrowserPorts } from './browser-ports';
 import { browserClaim, browserRelease, browserRevoke } from './claims';
 import { browserNavigate, browserStep } from './navigate';
-import { browserClick, browserPress, browserResize, browserType } from './page';
+import { browserClick, browserEval, browserPress, browserResize, browserType } from './page';
 import { browserClose, browserOpen, browserSwitch } from './tabs';
 import { browserFocus, browserHide, browserReset, browserShow } from './view';
 
@@ -26,7 +26,7 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
     opened: (projectPath, url, opener) => void open.call({ projectPath, url, opener }),
     closed: (projectPath, tab, opener) => void close.call({ projectPath, tab, opener }),
   });
-  const page = browserPage(views.pages, views.ports.allBrowsers, screenshotFolder(app.getPath('userData')));
+  const page = browserPage(views.pages, views.ports.allBrowsers, browserFileFolder(app.getPath('userData')));
   const ports: BrowserPorts = { ...views.ports, ...page.ports };
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);
@@ -42,7 +42,7 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
   table.handle('browser:read', (_screen, projectPath: unknown) => views.ports.browserOf(String(projectPath)));
   const actions: BrowserRequestPorts['actions'] = {
     open, release, navigate, step, claim: bind(browserClaim, ports), resize: bind(browserResize, ports),
-    click: bind(browserClick, ports), type: bind(browserType, ports), press: bind(browserPress, ports),
+    click: bind(browserClick, ports), type: bind(browserType, ports), press: bind(browserPress, ports), eval: bind(browserEval, ports),
   };
   return {
     owns: views.owns,

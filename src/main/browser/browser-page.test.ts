@@ -1,9 +1,9 @@
-import { existsSync, readdirSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, utimesSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { BrowserState } from '../../shared/browser/browser';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { browserPage, screenshotReadRule } from './browser-page';
+import { browserPage, browserFileReadRule } from './browser-page';
 import type { PagePorts } from './browser-views';
 
 const NOW = Date.parse('2026-11-20T12:00:00Z');
@@ -134,9 +134,41 @@ describe('emulate', () => {
   });
 });
 
-describe('screenshotReadRule', () => {
+describe('runScript', () => {
+  it('waits for the selector, then saves the answer and prints where', async () => {
+    const { page, sent, folder } = fakePage({ 'Runtime.evaluate': { result: { value: true } } });
+    const said = await page.ports.runScript(4, 'await 1; document.title', '.job');
+    const file = path.join(folder, 'tab-4-2026-11-20T12-00-00-000Z.json');
+    expect(said).toBe(`tab 4's script answered 4 characters: ${file}`);
+    expect(readFileSync(file, 'utf8')).toBe('true');
+    expect(sent[0]).toMatch(/^Runtime\.evaluate .*\(\\".job\\", 10000\)/);
+    expect(sent[1]).toBe('Runtime.evaluate {"expression":"await 1; document.title","returnByValue":true,"awaitPromise":true,"replMode":true}');
+  });
+
+  it('saves a string as it is, anything else as JSON, and answers nothing for undefined', async () => {
+    const titled = fakePage({ 'Runtime.evaluate': { result: { value: 'Engineer' } } });
+    await expect(titled.page.ports.runScript(4, 'document.title', null))
+      .resolves.toBe(`tab 4's script answered 8 characters: ${path.join(titled.folder, 'tab-4-2026-11-20T12-00-00-000Z.txt')}`);
+    const listed = fakePage({ 'Runtime.evaluate': { result: { value: [{ title: 'Engineer' }] } } });
+    const said = await listed.page.ports.runScript(4, 'jobs()', null);
+    expect(readFileSync(String(said).split(': ')[1], 'utf8')).toBe('[\n  {\n    "title": "Engineer"\n  }\n]');
+    const quiet = fakePage({ 'Runtime.evaluate': { result: { type: 'undefined' } } });
+    await expect(quiet.page.ports.runScript(4, 'void 0', null)).resolves.toBe('tab 4\'s script answered nothing');
+    expect(existsSync(quiet.folder) && readdirSync(quiet.folder).length > 0).toBe(false);
+  });
+
+  it('refuses a selector that never matched, and says what the script threw', async () => {
+    const waited = fakePage({ 'Runtime.evaluate': { result: { value: false } } });
+    await expect(waited.page.ports.runScript(4, '1', '.job')).resolves.toEqual({ refused: 'nothing in tab 4 matched .job in 10 seconds' });
+    expect(waited.sent).toHaveLength(1);
+    const thrown = fakePage({ 'Runtime.evaluate': { exceptionDetails: { text: 'Uncaught', exception: { description: 'ReferenceError: jobs is not defined\n    at <anonymous>' } } } });
+    await expect(thrown.page.ports.runScript(4, 'jobs()', null)).resolves.toEqual({ refused: 'tab 4\'s script threw: ReferenceError: jobs is not defined' });
+  });
+});
+
+describe('browserFileReadRule', () => {
   it('names the folder as an absolute path, a Windows drive included', () => {
-    expect(screenshotReadRule('/home/me/.config/Dashboard')).toBe('Read(//home/me/.config/Dashboard/browser-screenshots/**)');
-    expect(screenshotReadRule('C:\\Users\\me\\AppData\\Roaming\\Dashboard')).toBe('Read(//c/Users/me/AppData/Roaming/Dashboard/browser-screenshots/**)');
+    expect(browserFileReadRule('/home/me/.config/Dashboard')).toBe('Read(//home/me/.config/Dashboard/browser-files/**)');
+    expect(browserFileReadRule('C:\\Users\\me\\AppData\\Roaming\\Dashboard')).toBe('Read(//c/Users/me/AppData/Roaming/Dashboard/browser-files/**)');
   });
 });
