@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T11:27:37.339Z",
-  "updatedAt": "2026-11-24T20:17:16.414Z",
+  "updatedAt": "2026-11-24T21:01:42.936Z",
   "branch": "ship-and-review-on-a-gitlab-project-work-ca",
   "pullRequest": 366,
   "comments": [
@@ -16,8 +16,16 @@
     {
       "at": "2026-11-24T20:17:16.385Z",
       "body": "Pull request #366 opened: Ship and review a GitLab project's card through glab and /mr-loop https://github.com/naeemba/dashboard/pull/366"
+    },
+    {
+      "at": "2026-11-24T21:00:14.638Z",
+      "body": "PR #366 review loop: converged, ready to merge. 2 rounds, 7 findings addressed, 0 rejected, nothing open. Round 1: the forge is now read from the remote's host, the merge request's head is noted before the wait, main was merged in and a test fixed. Round 2: comments now say forge instead of gh, and an unused export was dropped. Final check accepted both last commits. CI passed on c42f75f1. No change to the card's scope or design."
+    },
+    {
+      "at": "2026-11-24T21:01:42.908Z",
+      "body": "Pull request #366 merged: Ship and review a GitLab project's card through glab and /mr-loop https://github.com/naeemba/dashboard/pull/366"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 298
 }
