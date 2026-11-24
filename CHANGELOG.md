@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.56.0 (2026-11-24)
+
+### What's new
+
+- Agents pick the Dashboard browser on their own: a skill and a when-to-use block
+- Tidy-ups: the .dashboard folder name, one read-or-null helper, Promise.withResolvers in tests
+- A browser release leaves an agent's page size on the person's tab
+- Running-app guard: cover the Windows Squirrel install and Windows process killers
+- shellBody reads powershell -Command, pwsh -c and cmd /c bodies for every guard
+- Ship and review on a GitLab project: /work-card ends in gh pr create
+- Review worker asks before landing a loop's design change when merging is on
+- Sessions get the SSH agent even when the app was launched without SSH_AUTH_SOCK
+
+### What's Changed
+* Agents pick the Dashboard browser on their own: a skill and a when-to-use block by @naeemba in https://github.com/naeemba/dashboard/pull/360
+* Tidy-ups: the .dashboard folder name, one read-or-null helper, Promise.withResolvers in tests by @naeemba in https://github.com/naeemba/dashboard/pull/363
+* A browser release clears the page size an agent set by @naeemba in https://github.com/naeemba/dashboard/pull/362
+* Running-app guard: cover the Windows Squirrel install and Windows process killers by @naeemba in https://github.com/naeemba/dashboard/pull/364
+* shellBody reads powershell -Command, pwsh -c and cmd /c bodies for every guard by @naeemba in https://github.com/naeemba/dashboard/pull/367
+* Ship and review a GitLab project's card through glab and /mr-loop by @naeemba in https://github.com/naeemba/dashboard/pull/366
+* Review pane asks before landing a loop's design change when merging is on by @naeemba in https://github.com/naeemba/dashboard/pull/368
+* Sessions get the SSH agent even when the app was launched without SSH_AUTH_SOCK by @naeemba in https://github.com/naeemba/dashboard/pull/369
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.55.0...v2.56.0
+
 ## v2.55.0 (2026-11-24)
 
 ### What's new
