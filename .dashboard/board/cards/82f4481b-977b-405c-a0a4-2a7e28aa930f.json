@@ -1,0 +1,11 @@
+{
+  "id": "82f4481b-977b-405c-a0a4-2a7e28aa930f",
+  "title": "pane run --worktree and ship work on a project whose remote is not origin",
+  "notes": "Retro 2026-11-24. src/main/app/git.ts:67-90 (baseBranch, baseBranchNow) hardcode 'origin' and defaultBranch tries only main/master. insta-experiences has remote 'gitlab' and branch 'develop': 'pane run 1:1 --worktree' answered 'cannot work out which branch on origin is the main one', so its main made 138 worktrees by hand with symlinked node_modules (one hid a broken lockfile merge). Work out the remote (the current branch's upstream, else the only remote, else origin), accept <remote>/HEAD, and let 'project set' name a base branch for a project where neither guess holds. Every other 'origin' assumption on the same path (board on the default branch, pr land, worktree sweep's 'commits no remote has') gets the same remote.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-24T10:58:05.980Z",
+  "updatedAt": "2026-11-24T10:58:05.980Z",
+  "column": "Backlog",
+  "order": 52
+}
