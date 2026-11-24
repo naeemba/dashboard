@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T11:04:19.314Z",
-  "updatedAt": "2026-11-24T11:30:23.032Z",
+  "updatedAt": "2026-11-24T12:01:46.784Z",
+  "branch": "one-cd-following-helper-for-the-three-bash",
   "comments": [
     {
       "at": "2026-11-24T11:23:10.725Z",
@@ -16,6 +17,6 @@
       "body": "Also: an msys-style 'cd /c/work' resolves to C:\\c\\work on Windows, so the guard finds no lockfile and fails open."
     }
   ],
-  "column": "Backlog",
-  "order": 59
+  "column": "Doing",
+  "order": 1
 }
