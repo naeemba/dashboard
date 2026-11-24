@@ -15,3 +15,5 @@ One line per merged change: date and why.
   off by default (projects-decision-1)
 - 2026-11-16 — `autoMerge` on an entry says whether a review merges there, over settings
   `review.autoMerge` (ship-decision-1)
+- 2026-11-24 — `project set --base <branch>` sets the project's `<remote>/HEAD`, for a base that is
+  none of the remote's HEAD, main or master

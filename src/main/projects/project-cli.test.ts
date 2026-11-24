@@ -95,8 +95,16 @@ describe('project add, set and remove', () => {
     expect(written(['set', 'screensaver', '--clear', 'aka', '--clear', 'site'], '- name: screensaver\n  aka: [m]\n  path: /s\n  site: x\n')).toMatchObject({ aka: [], site: '' });
   });
 
+  // A GitLab project cut from develop, whose remote has no HEAD set, main or master.
+  it('hands --base to the program as the project\'s folder and branch, beside any file change', () => {
+    expect(edit(['set', 'mandala', '--base', 'develop'])).toEqual({ ok: true, output: '', base: { folder: '/screensaver', branch: 'develop' } });
+    expect(edit(['set', 'crm', '--site', 'x', '--base', 'develop'])).toMatchObject({ ok: true, output: 'changed new-crm in projects.yaml', file: expect.stringContaining('site: x'), base: { folder: '/crm', branch: 'develop' } });
+    expect(edit(['set', 'crm', '--base', ' '])).toEqual({ ok: false, message: '--base needs a branch name' });
+    expect(edit(['set', 'nobody', '--base', 'develop'])).toMatchObject({ ok: false, message: expect.stringContaining('no project is called nobody') });
+  });
+
   it('refuses a set with nothing to set and flags it does not take', () => {
-    expect(edit(['set', 'crm'])).toEqual({ ok: false, message: `set takes at least one of --aka, --site, --about, --deploy, --clear\n\n${PROJECT_USAGE}` });
+    expect(edit(['set', 'crm'])).toEqual({ ok: false, message: `set takes at least one of --aka, --site, --about, --base, --deploy, --clear\n\n${PROJECT_USAGE}` });
     expect(edit(['set', 'crm', '--clear', 'path'])).toEqual({ ok: false, message: '--clear takes aka, site, about, deploy; name and path are required' });
     expect(edit(['set', 'crm', '--deploy', 'role=test'])).toEqual({ ok: false, message: '--deploy needs name=<n>, the deploy to add or change' });
     expect(edit(['set', 'crm', '--deploy', 'name=a,where=b'])).toEqual({ ok: false, message: '--deploy takes name=<n>,role=<r>,address=<a>, not where=b' });

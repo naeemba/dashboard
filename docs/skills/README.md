@@ -50,7 +50,8 @@ aside).
 ## /work-card
 
 What a shipped card's agent is started on:
-`/work-card <card id> bump-version|keep-version <base branch>` ([ship](../ship/README.md)). It reads
+`/work-card <card id> bump-version|keep-version <base branch> <remote>`
+([ship](../ship/README.md)). It reads
 the card and its subtasks (the `Subtasks` block `board show` prints) and the project's `CLAUDE.md`,
 does the work, runs the project's checks and opens the pull request. It finds code with codegraph
 from the project's checkout (whose source can lag the worktree, so it reads a file before changing
