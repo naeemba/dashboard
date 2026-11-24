@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DASHBOARD_TOOLS, SERVER_INSTRUCTIONS } from '../command/mcp-tools';
+import { DASHBOARD_TOOLS, SERVER_INSTRUCTIONS, toolNamed } from '../command/mcp-tools';
 import { DASHBOARD_BROWSER_SKILL } from './dashboard-browser-skill';
 
 const toolNames = (text: string): string[] => [...text.matchAll(/\bbrowser_[a-z]+/g)].map((match) => match[0]);
 const parametersOf = (name: string): string[] =>
-  DASHBOARD_TOOLS.find((each) => each.name === name)?.parameters.map((parameter) => parameter.name) ?? [];
+  toolNamed(name)?.parameters.map((parameter) => parameter.name) ?? [];
 
 describe('the dashboard-browser skill', () => {
   it('loads every browser tool by its full name in one ToolSearch call', () => {
