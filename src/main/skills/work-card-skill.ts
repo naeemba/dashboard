@@ -37,15 +37,41 @@ Read \`CLAUDE.md\` at the top of the repository before you write anything. It
 is not optional and it is not a summary of the code; it is the rules this
 project is held to.
 
+## Find the code
+
+Your first look at the code is this command, with the card's nouns (the
+files, symbols and features its title and description name) in the quotes:
+
+    codegraph explore "<the card's nouns>" -p "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+
+It runs from the project's checkout, because this worktree has no index of
+its own. It shows the checkout's code, not this worktree's: read a file here
+before you change it, and never trust it for a file you already changed.
+Read only the lines it points you to; never \`cat\` or \`sed\` a whole file to
+find something in it. Grep only when the checkout has no \`.codegraph/\`, or
+for a string, a config value or a log line.
+
+## Check nobody else is on it
+
+Before you write any code, list what else is in flight, in one call:
+
+    node "$DASHBOARD_BOARD" list --column Doing; node "$DASHBOARD_BOARD" list --column Review; gh pr list --json number,title,headRefName
+
+For a card or pull request whose title looks near this card, read its files:
+\`gh pr view <n> --json files\` for a pull request; for a card, its branch
+from the brackets in \`list\`, \`git diff --stat origin/$2...<branch>\`. If
+one covers the same files or the same area, say so in a comment on the card,
+naming the card or pull request and the files you both touch.
+
+When your prompt names a main to report to (\`SendMessage to main-... when
+done\`), stop there: send main that report now, naming the cards or pull
+requests and the files, and end your turn. Main answers in your pane with go
+on or stop; do as it says. When your prompt names no main, nobody would answer:
+go on after the comment. Two cards built side by side on the same files
+conflict after review, and one of them is thrown away.
+
 ## Then do the work
 
-- Find code with codegraph when the project has an index. This worktree has
-  none of its own; the project's checkout is
-  \`"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"\`.
-  When it has a \`.codegraph/\`, run \`codegraph explore "<symbols or question>"
-  -p <that folder>\` to find what to read. It shows the checkout's code, not
-  this worktree's: read a file here before you change it, and never trust it
-  for a file you already changed.
 - Before changing a function that already exists, ask what calls it.
 - The board, pane, project and browser commands are also tools of the
   \`dashboard\` MCP server (\`mcp__dashboard__board_show\`, \`board_comment\`,
@@ -53,15 +79,17 @@ project is held to.
 - To look at a page, read it, or screenshot it for the pull request, use the
   project's browser: the \`browser_\` tools, whose screenshot answers with the
   picture, or \`node "$DASHBOARD_COMMAND" browser --help\`.
-- When the project keeps its docs in \`docs/<feature>/\`, update a feature's
-  docs there by grep: \`grep -n\` its
-  \`README.md\` for what you changed, and read a rule or decision only by its id
-  (\`grep -n -A15 '<feature>-decision-3' docs/<feature>/decisions.md\`). Never
-  read a whole \`README.md\` or \`decisions.md\`.
-- When the project keeps its docs in \`docs/<feature>/\`, a \`history.md\`
-  line for the card goes in the card's commit, before the
-  pull request is opened: the date and why, with no pull request number. A
-  second commit to add the number is a second push and a second CI run.
+- When the project keeps its docs in \`docs/<feature>/\`:
+  - update a feature's docs there by grep: \`grep -n\` its \`README.md\` for
+    what you changed, and read a rule or decision only by its id
+    (\`grep -n -A15 '<feature>-decision-3' docs/<feature>/decisions.md\`).
+    Never read a whole \`README.md\` or \`decisions.md\`.
+  - a \`history.md\` line for the card goes in the card's commit, before the
+    pull request is opened: the date and why, with no pull request number. A
+    second commit to add the number is a second push and a second CI run.
+  - write a new numbered id as \`<feature>-decision-next\` (or \`-rule-next\`)
+    and give it its number last, below, and name the ids you took in your
+    report to main.
 - Build what the card asks for, following the project's own rules.
 - The version: $1.
   \`${KEEP_VERSION}\`, or anything but \`${BUMP_VERSION}\`, means this project
@@ -77,21 +105,21 @@ project is held to.
   release. The version is how anybody tells an installed copy from what has
   been merged.
 
-  Bump last, right before you open the pull request, and bump from what the
-  base branch, \`$2\`, says then. Other cards run in their own worktrees at the
-  same time, and two that both bumped from \`1.4.0\` early both say \`1.5.0\`.
-  So first run \`git fetch origin && git merge origin/$2\` — the local \`$2\`
-  here is as old as the worktree — then bump. If the merge conflicts, resolve it the way
-  \`/pr-conflicts\` does, commit the merge, then bump.
-
   Bump with \`npm version <patch|minor|major> --no-git-tag-version\`, whatever
   the package manager: it rewrites \`package.json\` and a \`package-lock.json\`
   if there is one, and makes no commit and no tag. A tag is shared by every
   worktree, so the next card to reach the same number would fail on it. A
   project with no \`package.json\` is bumped wherever it keeps its version.
-  Commit the bump on its own. If the pull request later conflicts on the
-  version, merge \`origin/$2\` the same way, keep its number and bump again
-  from it.
+  Commit the bump on its own.
+- When the work is done and before the checks, when the card adds a docs id
+  or bumps the version: run \`git fetch origin && git merge origin/$2\` once
+  (the local \`$2\` here is as old as the worktree; resolve a conflict the way
+  \`/pr-conflicts\` does and commit the merge). Then give each new id the next
+  number free there, and bump from the version there. Other cards run in
+  their own worktrees at the same time, and two that both took the next one
+  early both say \`-decision-9\`, or \`1.5.0\`. If the pull request later
+  conflicts on one, merge \`origin/$2\` again the same way and take the next
+  free one.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
   type-check and lint scripts. A project with a \`check\` script that runs them
   all and prints a summary (\`pnpm check\`) is checked with that, once: read the

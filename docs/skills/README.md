@@ -52,13 +52,18 @@ aside).
 What a shipped card's agent is started on:
 `/work-card <card id> bump-version|keep-version <base branch>` ([ship](../ship/README.md)). It reads
 the card and its subtasks (the `Subtasks` block `board show` prints) and the project's `CLAUDE.md`,
-does the work, runs the project's checks and opens the pull request. It finds code with codegraph
-from the project's checkout (whose source can lag the worktree, so it reads a file before changing
-it) and, in a project with `docs/<feature>/`, updates docs by grep and writes the card's
-`history.md` line in the card's commit, with no pull request number. The checks are the ones
-`CLAUDE.md` names, else the project's test, type-check and lint scripts; a `check` script that runs
-them all and prints a summary is run once, its log read for a failure. The second word is the
-project's `bumpVersion` in `projects.yaml`
+does the work, runs the project's checks and opens the pull request. Its first look at the code is
+a literal `codegraph explore` command run from the project's checkout (whose source can lag the
+worktree, so it reads a file before changing it). Before writing code it lists the Doing and Review
+cards and the open pull requests (a card's files from its branch's diff), and when one covers the
+same files or area it comments on the card. With a main named in its prompt it then ends its turn
+with a report naming the overlap (the cards or pull requests and the files) and waits for main to
+answer go on or stop in its pane; with none it goes on. In a project with `docs/<feature>/`
+it updates docs by grep, writes the card's `history.md` line in the card's commit, with no pull
+request number, and takes a new docs id last (skills-decision-3).
+The checks are the ones `CLAUDE.md` names, else the project's test, type-check and lint scripts;
+a `check` script that runs them all and prints a summary is run once, its log read for a failure.
+The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
 `bump-version` tells it to bump last, from `origin/<base branch>` (the third word, the branch the
 worktree was cut from), with `npm version --no-git-tag-version`.

@@ -16,3 +16,7 @@ One line per merged change: date and why.
   line names no pull request (skills-decision-2)
 - 2026-11-20 — `/work-card` says never to run tests in parallel or start a second run while one
   is going (workflow-decision-12)
+- 2026-11-24 — `/work-card` starts from a literal `codegraph explore` command, checks the Doing and
+  Review cards and open pull requests for overlap, comments on the card, reports an overlap to
+  main and waits for go on or stop (goes on with no main), and takes a new docs id last
+  (skills-decision-3)
