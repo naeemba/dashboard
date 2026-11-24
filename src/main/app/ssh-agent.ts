@@ -31,7 +31,8 @@ export function sshAgentSocket(own: string | undefined, sources: AgentSources): 
 const VARIABLE = 'SSH_AUTH_SOCK';
 const SYSTEMCTL_TIMEOUT_MS = 2000;
 
-// SSH_AUTH_SOCK out of `systemctl --user show-environment`, one NAME=value a line.
+// SSH_AUTH_SOCK out of `systemctl --user show-environment`, one NAME=value a line, quoted when the
+// value has whitespace. systemd prints a `#` bare, so a `#` in the path cuts it short here.
 export function fromShowEnvironment(output: string): string | undefined {
   return parseEnv(output)[VARIABLE] || undefined;
 }
