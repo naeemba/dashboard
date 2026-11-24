@@ -323,3 +323,25 @@ script of your own running tests are not read as test commands, and `pnpm -C <di
 in the hook's `cwd`, not `<dir>`. The `/work-card` skill and the review prompt say it too, though
 workflow-decision-8 moves a rule a check holds out of the text: on a mac the guard refuses nothing,
 and it cannot read those commands.
+
+## workflow-decision-13: `pnpm check` says why a check failed, and how much of the change is tested
+
+Agreed on 2026-11-24, from a retro: after a FAIL, workers grepped `check.log` seven times and one
+ran `pnpm lint` again, and 4 of 21 findings in a pr-loop were new branches with no test
+(workflow-rule-2).
+
+- **The first five reasons go under a FAIL line**, read from the check's own output the way its
+  count is, with how many more are in the log. Five keeps a broken branch's summary on one screen;
+  the first failure is usually the one to fix.
+- **Coverage rides on the check's `pnpm test`, limited to the changed files.** Measured on
+  2026-11-24, the whole suite took 13.5s with v8 coverage of two files, no slower than the 19s of
+  the run without it just before, so a second run or a CI job would only cost more.
+  `@vitest/coverage-v8` carries vitest's own range, `^5.0.5`: it requires vitest's exact version,
+  so the two move together.
+- **It counts whole files, not the changed lines**: a file the branch touched shows every branch it
+  holds. Reading the diff's line ranges against the coverage map is more code for a line the
+  reader already has to judge.
+- **It never fails the check**: a view (workflow-rule-2 exempts it from a test, and there is no DOM
+  environment) and a `*-step.mjs` entry always read `no test runs it`, and the line cannot tell
+  those from a decision module that owes a test.
+
