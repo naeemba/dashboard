@@ -1,0 +1,11 @@
+{
+  "id": "961e53ca-c766-4c6a-9b78-5eb479aaf4f6",
+  "title": "browser upload: set a file input's files, so a form with a CV upload is filled in a Dashboard tab",
+  "notes": "2026-11-25: job-search's apply workers open one headed Playwright window each (modes/apply.md, apply-scope.mjs launch-options {headless:false}) because an application needs its CV uploaded and the Dashboard browser cannot set a file input. Add 'browser upload <tab> <ref> <file>...' and the browser_upload MCP tool, through an action in src/main/actions/browser/, using CDP DOM.setFileInputFiles on the node a snapshot ref names (the same ref resolution click and type use). Refuse a ref that is not an <input type=file>, a missing file, and more than one file on an input without 'multiple'. A path is taken as given (absolute, or relative to the session's folder). Name it in the dashboard-browser skill (a form that needs a file: upload, and leave the filled form in its tab for the person to review and submit; never press Submit unless told) and the server instructions; docs/browser; tests for the decisions.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-24T23:39:58.399Z",
+  "updatedAt": "2026-11-24T23:39:58.399Z",
+  "column": "Backlog",
+  "order": 67
+}
