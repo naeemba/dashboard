@@ -1,5 +1,5 @@
 import os from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import path, { dirname, join } from 'node:path';
 import { isRecord } from '../../shared/app/is-record';
 
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
@@ -27,10 +27,12 @@ export function repositoryTop(folder: string, exists: (path: string) => boolean)
   }
 }
 
-// A word of the command as a path from `base`, with `$PWD` and `~` read.
-export function resolveWord(word: string, base: string): string {
+// A word of the command as a path from `base`, with `$PWD` and `~` read. On Windows the shell is Git
+// Bash, whose `/c/work` is `C:\work`, where node would read `C:\c\work`.
+export function resolveWord(word: string, base: string, platform = process.platform): string {
   const expanded = word.replace(/^(?:\$PWD|\$\{PWD\}|\$\(pwd\))(?=\/|$)/, base).replace(/^~(?=\/|$)/, os.homedir());
-  return resolve(base, expanded);
+  if (platform !== 'win32') return path.posix.resolve(base, expanded);
+  return path.win32.resolve(base, expanded.replace(/^\/([A-Za-z])(?=\/|$)/, (_, drive: string) => `${drive.toUpperCase()}:/`));
 }
 
 // A refusal as a PreToolUse hook prints it on stdout.
@@ -97,11 +99,12 @@ export function invocation(part: string, verbs: string): { verb: string; words: 
 
 // Each simple command of `command` with the folder it runs in: `folder`, or where a `cd` earlier in
 // the line moved to. A `cd` inside a `( … )` subshell holds until the subshell closes, which puts the
-// folder back where the line's own shell is. A `cd`'s flags (`-P`, `-L`) are skipped; a bare `-`,
-// the previous folder, is read as a path since that folder is not known.
+// folder back where the line's own shell is: `shell`, which only a `cd` outside a subshell moves.
+// A `cd`'s flags (`-P`, `-L`) are skipped; a bare `-`, the previous folder, is read as a path since
+// that folder is not known. The package-manager, worktree and test-run guards all walk a line here.
 // ponytail: parentheses are counted without reading quotes; `$( … )` balances itself.
-export function partsWithFolders(command: string, folder: string): { part: string; folder: string }[] {
-  const parts: { part: string; folder: string }[] = [];
+export function partsWithFolders(command: string, folder: string): { part: string; folder: string; shell: string }[] {
+  const parts: { part: string; folder: string; shell: string }[] = [];
   let base = folder;
   let shell = folder;
   let depth = 0;
@@ -109,7 +112,7 @@ export function partsWithFolders(command: string, folder: string): { part: strin
   for (const part of simpleCommands(command)) {
     const opening = /^[(\s]*/.exec(part)?.[0] ?? '';
     depth += count(opening, '(');
-    parts.push({ part, folder: base });
+    parts.push({ part, folder: base, shell });
     const changed = invocation(part, 'cd');
     if (changed) base = resolveWord(changed.words.find((word) => word === '-' || !word.startsWith('-')) ?? '~', base);
     if (changed && depth === 0) shell = base;
