@@ -237,10 +237,13 @@ the skill.
   `npx` or `npm view` touch neither. Nor do a global install (`-g`, `--global`, `--location=global`,
   `yarn global`) or a one-off run (`pnpm dlx`, `npm exec`, `yarn dlx`), so those go through in any
   project.
-- **It reads the command's text**, as the other two guards do: a `cd` earlier in the command, an
-  `sh -c` body and a flag's value read as the subcommand (`npm --prefix . install`) get through. The
-  refusal names the lockfile and the manager and leaves the translation to the agent: `npm ci` has
-  no `pnpm ci`, and `yarn` has no `i`.
+- **It reads the command's text**, as the other two guards do. A `cd` earlier in the line is
+  followed, so `cd storefront && pnpm install` is judged by `storefront/pnpm-lock.yaml`, not the
+  root's `package-lock.json` (2026-11-24: new-crm refused it four times); a `cd` inside a `( … )`
+  subshell holds only until it closes, and a `cd` flag (`cd -P dir`) is skipped. An `sh -c` body and
+  a flag's value read as the subcommand (`npm --prefix . install`, `pnpm -C dir install`) are not
+  read correctly. The refusal names the lockfile and the manager and leaves the translation to the
+  agent: `npm ci` has no `pnpm ci`, and `yarn` has no `i`.
 
 ## workflow-decision-10: An agent stays in its own worktree, held by a hook
 
