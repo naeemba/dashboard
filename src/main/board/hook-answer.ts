@@ -5,7 +5,7 @@ import { isRecord } from '../../shared/app/is-record';
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
 // package-manager-guard.ts, worktree-guard.ts, test-run-guard.ts): a field of the tool's input, the
 // file tools, the shell's redirect or tee into a file, a command line cut into its simple commands, the
-// body of a `sh -c` or a Windows `cmd /c` or `powershell -Command`, the
+// body of a `sh -c` or a Windows `cmd /c` or `powershell -Command`, a word matched in any case, the
 // folder each runs in and the verb each runs, a word of the command as a path, the repository a folder
 // is in, and the refusal they print.
 
