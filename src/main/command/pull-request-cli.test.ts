@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
 
 // A gh that answers each command's first two words from the table, in order when a row has several.
 function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
@@ -112,6 +112,12 @@ describe('landPullRequest', () => {
     expect(github.waited).toEqual(RETRY_WAITS_MS);
   });
 
+  it('says the answer was lost when reading the pull request lost it every try', async () => {
+    const github = fakeGitHub({ 'pr view': lostEveryTry() });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `${lostAnswer}\n\nlost gh's answer for 4 minutes reading 12; nothing is merged, run it again` });
+    expect(github.asked.some((each) => each.startsWith('pr checks'))).toBe(false);
+  });
+
   // Seen: a land that gave up on gh's first question, with the network down for a minute.
   it('asks again, waiting longer each time, when gh cannot reach GitHub', async () => {
     const offline = { ok: false, output: 'error connecting to api.github.com\ncheck your internet connection or https://githubstatus.com' };
@@ -201,13 +207,38 @@ describe('waitOnPullRequest', () => {
 describe('conflictLine', () => {
   it('names the files merge-tree found conflicted, and what the worker does', () => {
     const tree = { ok: false, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec\nsrc/a.ts\ndocs/b.md\n' };
-    expect(conflictLine('main', tree)).toBe('conflicts with main: src/a.ts, docs/b.md — merge origin/main into the branch, resolve, push, and run it again');
+    expect(conflictLine('github', 'main', tree)).toBe('conflicts with main: src/a.ts, docs/b.md — merge github/main into the branch, resolve, push, and run it again');
   });
 
   // A fetch that failed, or a git before merge-tree --write-tree: still a conflict, said without the files.
   it('says so when git could not name them', () => {
-    expect(conflictLine('main', { ok: false, output: 'fatal: couldn\'t find remote ref main' })).toContain('conflicts with main: git could not name the files (fatal');
-    expect(conflictLine('main', { ok: true, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec' })).toContain('git could not name the files');
+    expect(conflictLine('origin', 'main', { ok: false, output: 'fatal: couldn\'t find remote ref main' })).toContain('conflicts with main: git could not name the files (fatal');
+    expect(conflictLine('origin', 'main', { ok: true, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec' })).toContain('git could not name the files');
+  });
+});
+
+describe('conflictedFiles', () => {
+  const conflicts = { base: 'main', sha: 'abc123' };
+  const tree = { ok: false, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec\nsrc/a.ts\n' };
+
+  it('fetches from the project\'s remote, then merges the fetched base with the head', async () => {
+    const asked: string[] = [];
+    const answers = [{ ok: true, output: '' }, tree];
+    const git = async (words: string[]) => { asked.push(words.join(' ')); return answers.shift() ?? { ok: false, output: 'asked too often' }; };
+    expect(await conflictedFiles(git, 'github', conflicts)).toBe('conflicts with main: src/a.ts — merge github/main into the branch, resolve, push, and run it again');
+    expect(asked).toEqual(['fetch github main abc123', 'merge-tree --write-tree --name-only --no-messages github/main abc123']);
+  });
+
+  it('passes a failed fetch on without merging', async () => {
+    const asked: string[] = [];
+    const git = async (words: string[]) => { asked.push(words[0]); return { ok: false, output: 'fatal: couldn\'t find remote ref main' }; };
+    expect(await conflictedFiles(git, 'origin', conflicts)).toContain('git could not name the files (fatal: couldn\'t find remote ref main)');
+    expect(asked).toEqual(['fetch']);
+  });
+
+  it('says a git that throws as the line without the files', async () => {
+    const git = async () => { throw Object.assign(new Error('spawn git ENOENT'), { code: 'ENOENT' }); };
+    expect(await conflictedFiles(git, 'origin', conflicts)).toContain('git could not name the files (spawn git ENOENT)');
   });
 });
 
@@ -226,6 +257,7 @@ describe('isNetworkError', () => {
     ['HTTP 422: Validation Failed (https://api.github.com/repos/o/r/pulls/12/merge)', false],
     ['Pull request o/r#12 is not mergeable: the merge commit cannot be cleanly created.', false],
     ['test\tfail', false],
+    ['integration\tfail\t1m\thttps://ci.example/1\terror connecting to postgres', false],
   ])('%s → %s', (output, expected) => {
     expect(isNetworkError({ ok: false, output })).toBe(expected);
   });

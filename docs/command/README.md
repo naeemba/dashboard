@@ -30,12 +30,12 @@ the commit is not a pass (command-decision-7). A merge call that fails is read b
 request: merged at the noted commit is reported merged (the merge went through and only gh's answer
 was lost). A network error on any gh call, `error connecting to api.github.com` and a TLS handshake
 timeout among them, is tried again for about four minutes, each wait longer (`RETRY_WAITS_MS`), and
-is never read as a failed check; one that outlasts them says gh's answer was lost, never that a
-check failed or the merge was refused. A pull request GitHub calls `CONFLICTING`, at the first
-look, when no checks start, or when the merge is refused, is not waited on, since CI does not run on
-it: the files come from `git merge-tree` on origin's base and the head commit, touching no checkout.
-A failed
-check, a conflict or a refused merge exits 1 and merges nothing. The last line is always the
+is never read as a failed check (only gh's own lines are read, never a check row's description); one
+that outlasts them says gh's answer was lost, never that a check failed or the merge was refused. A
+pull request GitHub calls `CONFLICTING`, at the first look, when no checks start, or when the merge
+is refused, is not waited on, since CI does not run on it: the files come from `git merge-tree` on
+the project's remote's base and the head commit, touching no checkout. A failed check, a conflict or
+a refused merge exits 1 and merges nothing. The last line is always the
 verdict, a failure's detail above it: `merged 12 at <sha>`, or `conflicts with main: <files> — merge
 origin/main into the branch, …`, the line main sends the worker. `pr wait <n>` is the same wait,
 retries and conflict check without the merge, ending `checks passed on <sha>`; a worker waiting on

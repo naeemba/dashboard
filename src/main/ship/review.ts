@@ -110,8 +110,8 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // no review after them. Off, the pane stops once the loop and CI are done and reports to the project's
 // main and on the card, so the board says "ready to merge" or what is open after main's session is gone;
 // the card waits in Review until the user merges it. On, it runs `pr land` (pull-request-cli.ts), not
-// steps copied out of this prompt, so it gets the command's second try on a network error and its
-// reading back of a merge call that failed: #301 was reported failed by a review that had merged it.
+// steps copied out of this prompt, so it rides out a network error on any gh call (RETRY_WAITS_MS) and
+// reads back a merge call that failed: #301 was reported failed by a review that had merged it.
 //
 // The card is not moved: the app's follow (card.follow) moves it into Done once gh says merged, and
 // writes it on origin's main through the same sync the `board` command uses (board-sync-git.ts). A move

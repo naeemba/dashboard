@@ -7,7 +7,7 @@ import { projectNamedInFile } from '../projects/project-named';
 import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
-import { conflictLine, type LandAnswer, landPullRequest, mergeTreeWords, parsePullRequestCommand, type ProgramAnswer, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, landPullRequest, parsePullRequestCommand, type ProgramAnswer, waitOnPullRequest } from './pull-request-cli';
 
 // gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
 // failure. One that could not start (none installed) has no exit code, and still throws. gh runs as
@@ -36,7 +36,10 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
     const verb = parsed.verb === 'land' ? landPullRequest : waitOnPullRequest;
     const answer = await verb({ gh: (words) => answering('gh')(project.project, words), wait: delay }, parsed.target);
     // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
-    const verdict = answer.conflicts === undefined ? answer.output : await conflictedFiles(project.project, answer.conflicts);
+    const { conflicts } = answer;
+    const verdict = conflicts === undefined
+      ? answer.output
+      : await projectRemote(project.project).then((remote) => conflictedFiles((words) => answering('git')(project.project, words), remote, conflicts));
     const { base } = answer;
     // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
     const forwarded = answer.ok && base !== undefined
@@ -52,12 +55,3 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
   }
 }
 
-// The files a conflicting pull request conflicts on, merged in git's own memory (merge-tree), so no
-// checkout is touched: the base and the head commit fetched from origin, then the line conflictLine says.
-async function conflictedFiles(folder: string, { base, sha }: NonNullable<LandAnswer['conflicts']>): Promise<string> {
-  const git = answering('git');
-  const tree = await git(folder, ['fetch', 'origin', base, sha])
-    .then((fetched) => fetched.ok ? git(folder, mergeTreeWords(base, sha)) : fetched)
-    .catch((error: unknown): ProgramAnswer => ({ ok: false, output: failureLine(error) }));
-  return conflictLine(base, tree);
-}

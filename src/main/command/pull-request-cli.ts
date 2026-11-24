@@ -4,6 +4,8 @@
 // so review.autoMerge, which gates only what a review worker does unasked, does not gate it. `pr wait`
 // is the same wait without the merge, so nobody hand-rolls a sleep and gh loop around CI.
 
+import { failureLine } from './failure-line';
+
 export const PULL_REQUEST_USAGE = `pr — wait on or land a pull request of the project you are in
 
   pr wait <number|url|branch> [--project <name|aka>]
@@ -53,13 +55,15 @@ const reportsNoChecks = (answer: ProgramAnswer) => !answer.ok && answer.output.i
 
 // gh's words when the request or its answer was lost on the way, not refused by GitHub: Go's
 // `Post "https://...": unexpected EOF`, a reset or timed-out connection, gh's own line when it cannot
-// reach the API at all, a 5xx from the API.
+// reach the API at all, a 5xx from the API. Only gh's own lines are read: a check row of `gh pr checks`
+// is tab-separated and carries the check's description, which may well say `error connecting to postgres`.
 const NETWORK_ERROR = /\b(?:Get|Post) "?https?:\/\/|unexpected EOF|connection (?:reset|refused)|i\/o timeout|TLS handshake timeout|error connecting to|HTTP 5\d\d/;
-export const isNetworkError = (answer: ProgramAnswer) => !answer.ok && NETWORK_ERROR.test(answer.output);
+export const isNetworkError = (answer: ProgramAnswer) => !answer.ok && answer.output.split('\n').some((line) => !line.includes('\t') && NETWORK_ERROR.test(line));
 // The waits before each try again, about four minutes in all: a Wi-Fi rejoin, a VPN reconnect or a
 // minute of GitHub trouble is outlasted, where one try five seconds on was not.
 export const RETRY_WAITS_MS = [5_000, 10_000, 20_000, 40_000, 60_000, 60_000, 60_000];
 const RETRY_MINUTES = Math.round(RETRY_WAITS_MS.reduce((sum, each) => sum + each, 0) / 60_000);
+const lost = (answer: ProgramAnswer, doing: string): ProgramAnswer => ({ ok: false, output: `${answer.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes ${doing}; nothing is merged, run it again` });
 
 // A gh call tried again on a network error, as long as RETRY_WAITS_MS lasts.
 async function patiently(ports: LandPorts, words: string[]): Promise<ProgramAnswer> {
@@ -99,6 +103,7 @@ type Checked = { ok: true; sha: string; base: string; noChecks: boolean } | Land
 
 async function checksPassed(ports: LandPorts, target: string): Promise<Checked> {
   const head = await patiently(ports, stateAndHead(target));
+  if (isNetworkError(head)) return lost(head, `reading ${target}`);
   if (!head.ok) return head;
   const { state, sha, base, url } = readHead(head);
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
@@ -112,7 +117,7 @@ async function checksPassed(ports: LandPorts, target: string): Promise<Checked> 
     checks = await watch();
   }
   const noChecks = reportsNoChecks(checks);
-  if (isNetworkError(checks)) return { ok: false, output: `${checks.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes waiting on the checks of ${target}; nothing is merged, run it again` };
+  if (isNetworkError(checks)) return lost(checks, `waiting on the checks of ${target}`);
   if (!checks.ok && !noChecks) return { ok: false, output: `${checks.output}\n\na check failed on ${sha}; ${target} is not merged` };
   // Still none a minute on is a repository without CI on pull requests, CI that never started on this
   // commit, or a pull request that came to conflict after the first look.
@@ -160,16 +165,29 @@ async function mergeAt(ports: LandPorts, target: string, sha: string, tries = 0)
   return mergeAt(ports, target, sha, tries + 1);
 }
 
+// git in the project's folder, as gh is in LandPorts.
+export type GitPort = (words: string[]) => Promise<ProgramAnswer>;
+
+// The files a conflicting pull request conflicts on, merged in git's own memory (merge-tree), so no
+// checkout is touched: the base and the head commit fetched from the project's remote first, then the
+// line conflictLine says. A failed fetch, or a git that throws, is the line without the files.
+export async function conflictedFiles(git: GitPort, remote: string, { base, sha }: NonNullable<LandAnswer['conflicts']>): Promise<string> {
+  const tree = await git(['fetch', remote, base, sha])
+    .then((fetched) => fetched.ok ? git(mergeTreeWords(remote, base, sha)) : fetched)
+    .catch((error: unknown): ProgramAnswer => ({ ok: false, output: failureLine(error) }));
+  return conflictLine(remote, base, tree);
+}
+
 // The words for git to merge the head into the base without touching any checkout: exit 1 and the
 // conflicted files after the tree's id when they conflict (git 2.38 on).
-export const mergeTreeWords = (base: string, sha: string) => ['merge-tree', '--write-tree', '--name-only', '--no-messages', `origin/${base}`, sha];
+const mergeTreeWords = (remote: string, base: string, sha: string) => ['merge-tree', '--write-tree', '--name-only', '--no-messages', `${remote}/${base}`, sha];
 
 // The line main relays to the worker whose branch conflicts: the files, from what merge-tree answered,
 // and what to do about them.
-export function conflictLine(base: string, mergeTree: ProgramAnswer): string {
+export function conflictLine(remote: string, base: string, mergeTree: ProgramAnswer): string {
   const [treeId = '', ...files] = mergeTree.output.trim().split('\n');
   const named = !mergeTree.ok && /^[0-9a-f]{40,64}$/.test(treeId) && files.length > 0
     ? files.join(', ')
     : `git could not name the files (${mergeTree.output.trim() || 'no answer'})`;
-  return `conflicts with ${base}: ${named} — merge origin/${base} into the branch, resolve, push, and run it again`;
+  return `conflicts with ${base}: ${named} — merge ${remote}/${base} into the branch, resolve, push, and run it again`;
 }
