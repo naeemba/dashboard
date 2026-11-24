@@ -55,3 +55,7 @@ One line per merged change: date and why.
   `cd -P <dir>` moves to `<dir>`, not `-P`; and a Git Bash `cd /c/work` is read as `C:\work` on
   Windows, where it had found no lockfile and refused nothing (workflow-decision-10,
   workflow-decision-12)
+- 2026-11-24 — the running-app guard covers Windows: it refuses an `rm`, `Remove-Item` or `rd`
+  over the Squirrel install `%LOCALAPPDATA%\Dashboard`, and a `taskkill /IM` or `Stop-Process`
+  naming the app's images, judged inside `powershell -Command` and `cmd /c` too; before, each went
+  through and deleted or killed the installed app mid-turn (workflow-decision-7, issue #326)

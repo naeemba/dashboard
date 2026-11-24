@@ -184,10 +184,12 @@ started (workflow-decision-5).
   runs, then it stops before deleting the files that app is executing.
 - Given an agent in any Claude session the board guard reaches, when it runs `pkill -f Dashboard`,
   `killall node` while the app's pane host runs, `kill` of the running app's pid or group,
-  `osascript -e 'quit app "Dashboard"'`, `open -a Dashboard` or an `rm`/`cp` over
-  `~/.local/opt/dashboard`, then the call is refused with a message saying to report that a rebuild
-  is needed; `scripts/rebuild.sh`, `scripts/release.sh`, `rm -rf out .vite`, `pkill -f vitest` and a
-  commit message naming any of these go through (`running-app-guard.test.ts`).
+  `osascript -e 'quit app "Dashboard"'`, `open -a Dashboard`, an `rm`/`cp` over
+  `~/.local/opt/dashboard` or the Squirrel install `%LOCALAPPDATA%\Dashboard`, or on Windows
+  `taskkill /IM Dashboard.exe` or `Stop-Process -Name Dashboard`, then the call is refused with a
+  message saying to report that a rebuild is needed; `scripts/rebuild.sh`, `scripts/release.sh`,
+  `rm -rf out .vite`, `pkill -f vitest` and a commit message naming any of these go
+  through (`running-app-guard.test.ts`).
 - Given an agent in any Claude session the board guard reaches, in a project whose lockfile is
   `pnpm-lock.yaml`, when it runs `npm install`, `npm ci` or `yarn add`, then the call is refused
   naming the lockfile and saying to install with pnpm; `pnpm install`, `npm test`, `bun test`,
