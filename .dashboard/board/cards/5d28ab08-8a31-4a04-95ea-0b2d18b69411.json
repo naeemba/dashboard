@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T18:46:52.537Z",
-  "updatedAt": "2026-11-24T18:47:00.510Z",
+  "updatedAt": "2026-11-24T18:54:42.935Z",
   "branch": "agents-pick-the-dashboard-browser-on-their",
-  "column": "Doing",
+  "pullRequest": 360,
+  "comments": [
+    {
+      "at": "2026-11-24T18:54:42.890Z",
+      "body": "Pull request #360 opened: Agents pick the Dashboard browser on their own: a skill and a when-to-use block https://github.com/naeemba/dashboard/pull/360"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
