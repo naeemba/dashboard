@@ -22,6 +22,8 @@ describe('toolArguments', () => {
     expect(toolArguments(named('project_set'), { name: 'x', deploy: ['name=a,role=b,address=c', 'name=d'], clear: ['site'] }))
       .toEqual(['project', 'set', 'x', '--deploy', 'name=a,role=b,address=c', '--deploy', 'name=d', '--clear', 'site']);
     expect(toolArguments(named('browser_read'), { tab: 3, 'max-tokens': 500 })).toEqual(['browser', 'read', '3', '--max-tokens', '500']);
+    expect(toolArguments(named('browser_upload'), { tab: 3, ref: 'e4', files: ['cv.pdf', 'letter.pdf'] }))
+      .toEqual(['browser', 'upload', '3', 'e4', 'cv.pdf', 'letter.pdf']);
     expect(toolArguments(named('version'), {})).toEqual(['--version']);
   });
 

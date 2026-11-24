@@ -10,8 +10,9 @@ import { actionByName, defaultBinding } from '../../shared/keys/actions';
 
 type ParameterType = 'string' | 'number' | 'boolean' | 'strings';
 
-// A positional parameter is a word after the verb, in the order listed; a flag is `--<name>`, a
-// boolean one a switch, `strings` the flag given once for each item.
+// A positional parameter is a word after the verb, in the order listed, `strings` a word for each
+// item and so the last; a flag is `--<name>`, a boolean one a switch, `strings` the flag given once
+// for each item.
 export type ToolParameter = {
   name: string;
   type: ParameterType;
@@ -114,6 +115,8 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('browser type', 'Type at the end of what a field holds', [TAB, REF, word('text', 'what to type')]),
   tool('browser press', 'Press Enter, Tab, Escape, an arrow or one character, in a ref or the page', [
     TAB, word('key', 'the key'), optionalWord('ref', 'the ref to press it in')]),
+  tool('browser upload', 'Set an <input type=file>\'s files, as the file dialog would: a form\'s CV', [
+    TAB, REF, word('files', 'each file\'s path, whole or from the session\'s folder; more than one only when the input takes many', 'strings')]),
   tool('browser eval', 'Run a JavaScript file in the page; saves its last expression\'s value to a file and prints the path', [
     TAB, word('file', 'path of the .js file to run'), flag('wait-for', 'run once this CSS selector matches, 10 seconds at most')]),
   tool('browser console', 'The last errors the page logged', [TAB]),
@@ -160,7 +163,9 @@ export const SERVER_INSTRUCTIONS = 'The Dashboard app this session runs in: its 
   + '\n- scraping or extracting from a page: write the script to a file and browser_eval it'
   + '\n- checking a frontend or layout change, at a phone\'s width with browser_resize'
   + '\n- a screenshot of a page, for a pull request or to look at it'
-  + '\n- filling in or clicking through a page: browser_snapshot, then browser_click and browser_type'
+  + '\n- filling in or clicking through a page: browser_snapshot, then browser_click and browser_type, and'
+  + ' browser_upload for a file such as a CV; leave the filled form in its tab for the person to review and'
+  + ' submit, and never press Submit unless told'
   + `\nRead the dashboard-browser skill first. ${BROWSER_SIGN_IN} ${CHROME_STAYS}`;
 
 export const MCP_SERVER_NAME = 'dashboard';
@@ -177,7 +182,7 @@ export function toolArguments(chosen: DashboardTool, input: Record<string, unkno
   for (const parameter of chosen.parameters) {
     const value = input[parameter.name];
     if (value === undefined || value === null || value === false) continue;
-    if (!parameter.flag) words.push(String(value));
+    if (!parameter.flag) words.push(...(Array.isArray(value) ? value : [value]).map(String));
     else if (parameter.type === 'boolean') flags.push(`--${parameter.name}`);
     else if (Array.isArray(value)) flags.push(...value.flatMap((item) => [`--${parameter.name}`, String(item)]));
     else flags.push(`--${parameter.name}`, String(value));
