@@ -93,10 +93,12 @@ function todaysCap(budget: Settings['budget'], resetsAt: unknown, now: number): 
   return { cap, named: `today's cap ${Number(cap.toFixed(1))}% (pace, day ${day} of 7 since the reset)` };
 }
 
-// Under, over, or unknown. `reading` is the file's text, null when there is none. A reading dated a
-// little ahead is a clock out of step and counts as fresh; one dated further ahead is unknown.
-export function budgetVerdict(reading: string | null, budget: Settings['budget'], now: number): BudgetVerdict {
+// Under, over, or unknown. `readReading` gives the file's text, null when there is none, and is not
+// called under no limit, so a reading that cannot be read never stops a loop with none set. A reading
+// dated a little ahead is a clock out of step and counts as fresh; one dated further ahead is unknown.
+export function budgetVerdict(readReading: () => string | null, budget: Settings['budget'], now: number): BudgetVerdict {
   if (budget.limit === 'none') return { exitCode: 0, line: 'no limit set: budget answers under; set one with `budget --cap <n>`, `budget --pace even` or on the settings screen' };
+  const reading = readReading();
   if (reading === null) return { exitCode: 2, line: 'no reading: ~/.claude/usage-7d.json is missing; the statusline or a Claude screen in the app writes it' };
   const stored = parsedRecord(reading);
   const used = stored.usedPercentage;

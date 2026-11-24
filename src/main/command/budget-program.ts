@@ -38,7 +38,7 @@ export async function runBudgetProgram(commandArguments: readonly string[]): Pro
   // A reading that is there but cannot be read (a folder by that name, no permission) throws, and says so.
   let verdict;
   try {
-    verdict = budgetVerdict(readText(WEEKLY_USAGE_FILE), budget, Date.now());
+    verdict = budgetVerdict(() => readText(WEEKLY_USAGE_FILE), budget, Date.now());
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);
     return 2;
