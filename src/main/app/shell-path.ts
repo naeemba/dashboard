@@ -34,16 +34,18 @@ export function loginShellPath(fallback: string): Promise<string> {
 }
 
 // One variable as the login shell sets it, waited for: for a value every spawn needs that is read once
-// at launch, before anything is spawned (ssh-agent.ts). Nothing when there is no shell or it fails.
-export function loginShellValue(variable: string): string | undefined {
+// at launch, before anything is spawned (ssh-agent.ts), by a shell started with `environment`. Nothing
+// when there is no shell or it prints nothing. A shell whose rc leaves a background job holding stdout
+// times out though it printed the value, so what it printed is still read; the caller checks it.
+export function loginShellValue(variable: string, environment: NodeJS.ProcessEnv): string | undefined {
   const shell = loginShell();
   if (shell === undefined) return undefined;
   try {
     const output = execFileSync(shell, printArguments(variable), {
-      timeout: LOGIN_SHELL_TIMEOUT_MS, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: LOGIN_SHELL_TIMEOUT_MS, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], env: environment,
     });
     return lastLine(output) || undefined;
-  } catch {
-    return undefined;
+  } catch (error) {
+    return lastLine((error as { stdout?: string }).stdout ?? '') || undefined;
   }
 }

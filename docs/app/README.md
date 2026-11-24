@@ -112,8 +112,8 @@ its own side. `eslint.config.test.ts` pins each of those.
 - Restore: `session.ts`, `session-store.ts`
 - What `process.env` holds before main builds on it: `launch-environment.ts` (the `.env`, then the
   SSH agent), `ssh-agent.ts` and its test (on Linux, an `SSH_AUTH_SOCK` missing or naming a gone
-  socket is taken from `systemctl --user show-environment`, else the login shell), `shell-path.ts`
-  (what the login shell sets)
+  socket is taken from `systemctl --user show-environment`, else a login shell started without the
+  app's own), `shell-path.ts` (what the login shell sets)
 - Atomic write, and a write skipped when the bytes match (`replaceFileIfChanged`): `replace-file.ts`
 - A JSON file of string values read as empty when broken: `string-record-file.ts`
 - A read that answers null for a missing file and throws every other failure: `missing-file.ts`

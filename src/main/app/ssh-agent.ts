@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
+import { parseEnv } from 'node:util';
 import { loginShellValue } from './shell-path';
 
 // The SSH agent every session, pane shell and pane host child reaches git over. An app started from a
@@ -32,8 +33,7 @@ const SYSTEMCTL_TIMEOUT_MS = 2000;
 
 // SSH_AUTH_SOCK out of `systemctl --user show-environment`, one NAME=value a line.
 export function fromShowEnvironment(output: string): string | undefined {
-  const line = output.split('\n').find((each) => each.startsWith(`${VARIABLE}=`));
-  return line?.slice(VARIABLE.length + 1).trim() || undefined;
+  return parseEnv(output)[VARIABLE] || undefined;
 }
 
 function systemdValue(): string | undefined {
@@ -53,10 +53,14 @@ function isSocket(path: string): boolean {
 
 // Sets process.env.SSH_AUTH_SOCK as sshAgentSocket says, on Linux; with none live it stays as it was.
 // A launch with no agent anywhere waits on both reads, the login shell's about 0.1 s on a plain zshrc.
+// The login shell starts without the app's own value, which by then was rejected: an rc that sets the
+// variable only when it is empty would otherwise hand the dead socket back. An rc that runs
+// `eval $(ssh-agent)` when it is empty starts a new agent, with no keys, on such a launch.
 export function adoptSshAgent(): void {
   if (process.platform !== 'linux') return;
+  const withoutOwn = { ...process.env, [VARIABLE]: undefined };
   const socket = sshAgentSocket(process.env[VARIABLE], {
-    systemd: systemdValue, loginShell: () => loginShellValue(VARIABLE), isSocket,
+    systemd: systemdValue, loginShell: () => loginShellValue(VARIABLE, withoutOwn), isSocket,
   });
   if (socket !== undefined) process.env[VARIABLE] = socket;
 }
