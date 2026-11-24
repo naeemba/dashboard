@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-19T11:14:57.760Z",
-  "updatedAt": "2026-11-24T21:20:22.928Z",
+  "updatedAt": "2026-11-24T21:21:43.109Z",
   "branch": "review-worker-asks-before-landing-a-loop-s",
   "pullRequest": 368,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-24T21:20:22.928Z",
       "body": "Review loop on #368 converged in 2 rounds, ready to merge. Round 1 posted 2 findings, and fix commit 5431f058 addressed both: the review pane now reads the card (board show) before it judges a round, and step 4 on both forges says to name a design change on the card and to main. Round 2's re-review was clean. There was no conflict with main, and nothing is open or waiting on a person. CI passed on 5431f058. No round changed what the card asked for or its design."
+    },
+    {
+      "at": "2026-11-24T21:21:43.079Z",
+      "body": "Pull request #368 merged: Review pane asks before landing a loop's design change when merging is on https://github.com/naeemba/dashboard/pull/368"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 299
 }
