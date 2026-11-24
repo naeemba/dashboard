@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T10:58:25.916Z",
-  "updatedAt": "2026-11-24T11:22:44.053Z",
+  "updatedAt": "2026-11-24T11:30:37.183Z",
   "branch": "the-package-manager-guard-follows-cd",
   "pullRequest": 349,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-24T11:22:44.053Z",
       "body": "PR #349 review loop: floor-addressed after 2 rounds, 4 findings addressed, 0 rejected. Commits c63faab1, 828c455a kept. 5ed72c31 (share the cd/subshell walk between partsWithFolders and removesOwnWorktree, which also fixes cd -P in worktree-guard) was rejected by the final check over a 152-wide comment line and reverted in c5460bb8, so that [low] thread at hook-answer.ts:103 is still open. NOT ready to merge: CI fails on windows. In package-manager-guard.test.ts, 'judges an install in the folder a cd earlier in the line moved to' gets 'expected undefined to be defined'. Probable cause: resolveWord uses path.resolve, which returns D:\\work\\crm\\storefront on Windows, so the POSIX fixture paths never match. The other 4 checks pass. No conflict with main."
+    },
+    {
+      "at": "2026-11-24T11:30:37.144Z",
+      "body": "Pull request #349 merged: Follow a cd in the package-manager guard https://github.com/naeemba/dashboard/pull/349"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 284
 }
