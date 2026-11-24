@@ -1,19 +1,49 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 
 // The PATH a pane's shell builds from its startup files, which the app itself never read when it was
 // started from a launcher: without it a hook running `node`, an MCP server started with `npx` or a
 // worktree's `pnpm install` works typed in a pane and not from the app. An interactive shell may print
 // a banner first, so the PATH is the last line; anything that goes wrong leaves the app's own.
 export function pathFromShell(output: string, fallback: string): string {
-  return output.split('\n').pop()?.trim() || fallback;
+  return lastLine(output) || fallback;
+}
+
+function lastLine(output: string): string {
+  return output.split('\n').pop()?.trim() ?? '';
+}
+
+// The shell whose startup files are read, or none: Windows has no POSIX shell to ask.
+function loginShell(): string | undefined {
+  return process.platform === 'win32' ? undefined : process.env.SHELL || undefined;
+}
+
+const LOGIN_SHELL_TIMEOUT_MS = 5000;
+
+function printArguments(variable: string): string[] {
+  return ['-ilc', `printf %s "$${variable}"`];
 }
 
 export function loginShellPath(fallback: string): Promise<string> {
-  const shell = process.env.SHELL;
-  if (!shell || process.platform === 'win32') return Promise.resolve(fallback);
+  const shell = loginShell();
+  if (shell === undefined) return Promise.resolve(fallback);
   return new Promise((resolve) => {
-    execFile(shell, ['-ilc', 'printf %s "$PATH"'], { timeout: 5000, encoding: 'utf8' }, (error, output) => {
+    execFile(shell, printArguments('PATH'), { timeout: LOGIN_SHELL_TIMEOUT_MS, encoding: 'utf8' }, (error, output) => {
       resolve(error ? fallback : pathFromShell(output, fallback));
     });
   });
+}
+
+// One variable as the login shell sets it, waited for: for a value every spawn needs that is read once
+// at launch, before anything is spawned (ssh-agent.ts). Nothing when there is no shell or it fails.
+export function loginShellValue(variable: string): string | undefined {
+  const shell = loginShell();
+  if (shell === undefined) return undefined;
+  try {
+    const output = execFileSync(shell, printArguments(variable), {
+      timeout: LOGIN_SHELL_TIMEOUT_MS, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return lastLine(output) || undefined;
+  } catch {
+    return undefined;
+  }
 }
