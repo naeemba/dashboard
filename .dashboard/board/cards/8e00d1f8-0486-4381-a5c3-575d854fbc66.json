@@ -1,0 +1,21 @@
+{
+  "id": "8e00d1f8-0486-4381-a5c3-575d854fbc66",
+  "title": "One cd-following helper for the three Bash guards, ending a cd at a subshell's close",
+  "notes": "Follow-up from #349. package-manager-guard.ts, test-run-guard.ts and the worktree guard each walk a command's cd; only the worktree guard ends a cd when a ( … ) subshell closes. So '(cd storefront && pnpm i) && npm install' in new-crm is judged in storefront and the root npm install is refused. Move the walk to one helper in hook-answer.ts that all three call, with that case as its test.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-24T11:04:19.314Z",
+  "updatedAt": "2026-11-24T11:30:23.032Z",
+  "comments": [
+    {
+      "at": "2026-11-24T11:23:10.725Z",
+      "body": "Also from #349's loop: worktree-guard reads 'cd -P <dir>' as cd into '-P'; the shared walk should skip cd's flags. 5ed72c31 on #349's branch (reverted only for a 152-wide comment) already had a correct shared walk to start from."
+    },
+    {
+      "at": "2026-11-24T11:30:23.032Z",
+      "body": "Also: an msys-style 'cd /c/work' resolves to C:\\c\\work on Windows, so the guard finds no lockfile and fails open."
+    }
+  ],
+  "column": "Backlog",
+  "order": 59
+}

@@ -1,0 +1,11 @@
+{
+  "id": "0e3c6a34-b193-4b64-8add-4d1a79d7106f",
+  "title": "testRunFolders follows a cd inside a subshell past its end",
+  "notes": "src/main/workflow/test-run-guard.ts:47-58: (cd packages/a && pnpm test) && pnpm test judges the second run in packages/a, but it runs in the folder the line started in. The guard can then refuse a test run because of one going in another worktree, or miss the one going in its own. removesOwnWorktree in worktree-guard.ts already counts subshell depth; move that walk into hook-answer.ts and use it in all three guards. Issue: https://github.com/naeemba/dashboard/issues/350 Review: https://github.com/naeemba/dashboard/pull/349#discussion_r4679074145",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-24T11:08:10.076Z",
+  "updatedAt": "2026-11-24T11:08:10.076Z",
+  "column": "Backlog",
+  "order": 60
+}

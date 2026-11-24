@@ -22,8 +22,10 @@ project `/adopt-docs` reaches afterwards gets the old pattern. (skills-decision-
     pnpm typecheck           # tsc --noEmit
     pnpm lint                # eslint ., then markdown lines at most 100 wide
 
-Run `pnpm check` and read its summary; the reason a check failed is in the log
-it names, so never run a check again to see the end of it.
+Run `pnpm check` and read its summary: the first reasons a check failed are
+under its line and the rest in the log it names, so never run a check again to
+see the end of it. Its coverage line lists the changed files a test leaves
+partly unrun.
 
 `pnpm install` turns on a pre-commit hook that runs eslint on the staged code,
 the typecheck, and the markdown width on the staged markdown (workflow-rule-5).
