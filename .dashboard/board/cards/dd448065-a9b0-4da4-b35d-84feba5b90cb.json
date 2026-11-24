@@ -5,12 +5,16 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T20:08:16.245Z",
-  "updatedAt": "2026-11-24T20:33:48.841Z",
+  "updatedAt": "2026-11-24T20:39:04.716Z",
   "branch": "shellbody-reads-powershell-command-pwsh-c-a",
   "comments": [
     {
       "at": "2026-11-24T20:22:07.668Z",
       "body": "This card is GitHub issue #365; the PR says Closes #365. Build on #364's windowsShellBody once #364 is merged."
+    },
+    {
+      "at": "2026-11-24T20:39:04.716Z",
+      "body": "PR #367. Left for later: package-manager-guard.ts and worktree-guard.ts never call shellBody, so sh -c 'npm install' or pwsh -c \"git worktree remove …\" still gets past them. The deeper fix is partsWithFolders/simpleCommands expanding a body into its inner commands, so every guard gets it without its own recursion."
     }
   ],
   "column": "Doing",
