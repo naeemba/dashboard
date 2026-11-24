@@ -16,3 +16,12 @@ person before they land. (2026-11-06, #225)
 towards. A change to either, or to the id scheme, changes the skill's text in the same pull request;
 `CLAUDE.md` carries that rule beside the docs rule, where someone rewording it will see it.
 (2026-11-06, #225)
+
+## skills-decision-3: A worker takes a docs id at merge time, not from a range main reserves
+
+Parallel pull requests that each took the next docs id when they wrote it collided four times in
+one week. Main reserving a range per card would hold only if main is the one starting every card,
+and a card shipped from the board starts with no main in the loop. So `/work-card` writes a
+placeholder, merges `origin/<base branch>` right before the pull request opens, takes the next id
+free there, and names it in its report; a later conflict on the id is the same step again.
+(2026-11-24)
