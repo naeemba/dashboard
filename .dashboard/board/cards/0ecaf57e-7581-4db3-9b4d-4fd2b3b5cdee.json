@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T10:58:45.600Z",
-  "updatedAt": "2026-11-24T11:30:30.252Z",
+  "updatedAt": "2026-11-24T11:45:36.155Z",
   "branch": "budget-an-optional-daily-pace-toward-the-we",
-  "column": "Doing",
-  "order": 0
+  "pullRequest": 355,
+  "comments": [
+    {
+      "at": "2026-11-24T11:45:36.129Z",
+      "body": "Pull request #355 opened: Budget: a weekly cap, a daily pace since the weekly reset, or none https://github.com/naeemba/dashboard/pull/355"
+    }
+  ],
+  "column": "Review",
+  "order": 4
 }
