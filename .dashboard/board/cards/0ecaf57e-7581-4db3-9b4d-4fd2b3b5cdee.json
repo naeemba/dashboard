@@ -1,0 +1,11 @@
+{
+  "id": "0ecaf57e-7581-4db3-9b4d-4fd2b3b5cdee",
+  "title": "Budget: an optional daily pace toward the weekly reset",
+  "notes": "Retro 2026-11-24. Today budget has one weekly cap (budget.weeklyCap). The user's 7-day usage resets Friday 15:30 and they spread it at about 14.2% a day (100/7), so the cap they want moves every day: 'the cap is daily, it is 71 percent today'; a new-crm main held work twice against a stale 25% cap. Add an optional pace: with the reset time set (weekday and time, local; read it from the usage reading instead if the statusline input carries the reset time, check), today's cap is the share for the days begun since the reset (day k after the reset: k/7 of 100, or a set daily share). Other users reset at other times and may want no cap at all: keep the fixed cap, the pace and none as choices on the settings screen and in budget --cap/--pace, with none meaning budget exits 0 rather than 2. budget prints which applies and today's figure. Decisions and test in budget-cli.ts; docs.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-24T10:58:45.600Z",
+  "updatedAt": "2026-11-24T10:58:45.600Z",
+  "column": "Backlog",
+  "order": 58
+}
