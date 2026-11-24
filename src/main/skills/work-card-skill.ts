@@ -76,9 +76,11 @@ conflict after review, and one of them is thrown away.
 - The board, pane, project and browser commands are also tools of the
   \`dashboard\` MCP server (\`mcp__dashboard__board_show\`, \`board_comment\`,
   \`browser_screenshot\`): call the tool where there is one.
-- To look at a page, read it, or screenshot it for the pull request, use the
-  project's browser: the \`browser_\` tools, whose screenshot answers with the
-  picture, or \`node "$DASHBOARD_COMMAND" browser --help\`.
+- To look at any page, read it, check a frontend change on it, or screenshot
+  it for the pull request, use the project's browser, never Playwright or
+  Claude in Chrome: the \`browser_\` tools, whose screenshot answers with the
+  picture and whose \`browser_eval\` runs a script file in the page, or
+  \`node "$DASHBOARD_COMMAND" browser --help\`.
 - When the project keeps its docs in \`docs/<feature>/\`:
   - update a feature's docs there by grep: \`grep -n\` its \`README.md\` for
     what you changed, and read a rule or decision only by its id
