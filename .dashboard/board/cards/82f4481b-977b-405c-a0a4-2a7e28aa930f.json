@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:05.980Z",
-  "updatedAt": "2026-11-24T10:59:14.378Z",
+  "updatedAt": "2026-11-24T11:21:22.974Z",
   "branch": "pane-run-worktree-and-ship-work-on-a-projec",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 353,
+  "comments": [
+    {
+      "at": "2026-11-24T11:21:22.936Z",
+      "body": "Pull request #353 opened: Ship and pane run --worktree on a project whose remote is not origin https://github.com/naeemba/dashboard/pull/353"
+    }
+  ],
+  "column": "Review",
+  "order": 3
 }
