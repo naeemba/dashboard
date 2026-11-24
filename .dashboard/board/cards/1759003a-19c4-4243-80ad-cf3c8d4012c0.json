@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T22:45:18.521Z",
-  "updatedAt": "2026-11-24T22:45:18.521Z",
-  "column": "Backlog",
-  "order": 67
+  "updatedAt": "2026-11-24T22:45:26.816Z",
+  "branch": "sessions-get-the-ssh-agent-even-when-the-ap",
+  "column": "Doing",
+  "order": 0
 }
