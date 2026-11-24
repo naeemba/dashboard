@@ -312,7 +312,8 @@ the `agents.slice` caps (`install-slices.ts`) did not stop it. The user chose to
 runs, not to tighten the slice. `board guard` refuses, after the package manager's question
 (`src/main/workflow/test-run-guard.ts`):
 
-- **A test command** in any simple command of the line, `sh -c '…'` bodies included: a runner
+- **A test command** in any simple command of the line, `sh -c '…'`, `powershell -Command`,
+  `pwsh -c` and `cmd /c` bodies included: a runner
   (`vitest`, `jest`, `pytest`), a package manager's `test`, `t`, `check` or `test:*` script
   (`pnpm test`, `npm run test:unit`, `bun test`), a runner through one (`pnpm vitest`,
   `pnpm exec jest`, `npx vitest`), `cargo test` and `go test`, behind `timeout`, `env`, an

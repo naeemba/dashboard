@@ -59,3 +59,6 @@ One line per merged change: date and why.
   over the Squirrel install `%LOCALAPPDATA%\Dashboard`, and a `taskkill /IM` or `Stop-Process`
   naming the app's images, judged inside `powershell -Command` and `cmd /c` too; before, each went
   through and deleted or killed the installed app mid-turn (workflow-decision-7, issue #326)
+- 2026-11-25 — The test-run guard and `pane send` read a `powershell -Command`, `pwsh -c` or
+  `cmd /c` body as the running-app guard does: `pwsh -c "pnpm test"` started a second test run, and
+  `powershell -Command claude` started a worker with none of the app's settings (issue #365)
