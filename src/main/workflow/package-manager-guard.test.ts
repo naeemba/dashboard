@@ -111,6 +111,13 @@ describe('packageManagerGuard', () => {
     expect(packageManagerGuard('Bash', { command: 'cd storefront && npm install' }, '/work/crm', mixed)).toBeDefined();
     expect(packageManagerGuard('Bash', { command: 'cd /work/crm/storefront; cd .. && pnpm install' }, '/work/crm', mixed)).toBeDefined();
     expect(packageManagerGuard('Bash', { command: 'pnpm install && cd storefront' }, '/work/crm', mixed)).toBeDefined();
+    expect(packageManagerGuard('Bash', { command: 'cd -P storefront && npm install' }, '/work/crm', mixed)).toBeDefined();
+  });
+
+  it('puts the folder back when a subshell holding a cd closes', () => {
+    const mixed = files('/work/crm/.git', '/work/crm/package-lock.json', '/work/crm/storefront/pnpm-lock.yaml');
+    expect(packageManagerGuard('Bash', { command: '(cd storefront && pnpm install) && pnpm install' }, '/work/crm', mixed)).toBeDefined();
+    expect(packageManagerGuard('Bash', { command: '(cd storefront && pnpm install) && npm ci' }, '/work/crm', mixed)).toBeUndefined();
   });
 
   it('lets anything through in a folder with no lockfile', () => {

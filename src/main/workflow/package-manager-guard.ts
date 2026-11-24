@@ -4,7 +4,7 @@
 // every project the user's ~/.claude/settings.json does.
 
 import { dirname, join } from 'node:path';
-import { hookRefusal, invocation, repositoryTop, resolveWord, simpleCommands, textField } from '../board/hook-answer';
+import { hookRefusal, invocation, partsWithFolders, repositoryTop, textField } from '../board/hook-answer';
 
 const LOCKFILES: Record<string, string> = {
   'pnpm-lock.yaml': 'pnpm',
@@ -42,14 +42,10 @@ const GLOBAL_FLAGS = new Set(['-g', '--global', '--location=global']);
 
 // The installs a command line runs, each with its manager and the folder it runs in: `folder`, or where
 // a `cd` earlier in the line moved to (`cd storefront && pnpm install`). A bare `yarn` installs.
-// ponytail: a `cd` inside a `( … )` subshell is followed past its end and `pnpm -C <dir>` is not read,
-// as in test-run-guard.ts.
+// ponytail: `pnpm -C <dir>` is not read, as in test-run-guard.ts.
 export function installsRun(command: string, folder: string) {
   const installs: { manager: string; folder: string }[] = [];
-  let base = folder;
-  for (const part of simpleCommands(command)) {
-    const changed = invocation(part, 'cd');
-    if (changed) base = resolveWord(changed.words[0] ?? '~', base);
+  for (const { part, folder: base } of partsWithFolders(command, folder)) {
     const call = invocation(part, 'npm|pnpm|yarn|bun');
     if (call === null || call.words.some((word) => GLOBAL_FLAGS.has(word))) continue;
     const subcommand = call.words.find((word) => !word.startsWith('-'));
