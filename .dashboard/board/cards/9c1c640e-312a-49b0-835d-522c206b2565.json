@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:19.151Z",
-  "updatedAt": "2026-11-24T11:44:45.063Z",
+  "updatedAt": "2026-11-24T11:55:36.443Z",
   "branch": "agents-reach-for-the-dashboard-browser-and",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 356,
+  "comments": [
+    {
+      "at": "2026-11-24T11:55:36.412Z",
+      "body": "Pull request #356 opened: Agents reach for the Dashboard browser, and it can run a page script https://github.com/naeemba/dashboard/pull/356"
+    }
+  ],
+  "column": "Review",
+  "order": 5
 }
