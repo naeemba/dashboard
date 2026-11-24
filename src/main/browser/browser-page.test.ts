@@ -117,6 +117,27 @@ describe('click', () => {
     });
 });
 
+describe('upload', () => {
+  it('sets the files on the node, and says a node gone since the snapshot is stale', async () => {
+    const { page, sent } = fakePage({});
+    await page.ports.act(4, { kind: 'upload', node: 7, files: ['/home/me/cv.pdf'] });
+    expect(sent).toEqual(['DOM.setFileInputFiles {"files":["/home/me/cv.pdf"],"backendNodeId":7}']);
+    const gone = fakePage({ 'DOM.setFileInputFiles': new Error('No node with given id found') });
+    await expect(gone.page.ports.act(4, { kind: 'upload', node: 7, files: ['/cv.pdf'] })).rejects.toThrow(/take a new snapshot$/);
+  });
+
+  it.each([
+    ['a file input', { nodeName: 'INPUT', attributes: ['id', 'cv', 'TYPE', ' File '] }, { multiple: false }],
+    ['one that takes many', { nodeName: 'INPUT', attributes: ['type', 'file', 'multiple', ''] }, { multiple: true }],
+    ['a text input', { nodeName: 'INPUT', attributes: ['type', 'text'] }, null],
+    ['an input with no type', { nodeName: 'INPUT', attributes: ['name', 'file'] }, null],
+    ['a button', { nodeName: 'BUTTON', attributes: ['type', 'file'] }, null],
+  ])('reads %s', async (_name, node, expected) => {
+    const { page } = fakePage({ 'DOM.describeNode': { node } });
+    await expect(page.ports.fileInputOf(4, 7)).resolves.toEqual(expected);
+  });
+});
+
 describe('emulate', () => {
   it('lays a page back out at its view\'s own size before clearing, so a hidden tab is not left a phone\'s width', async () => {
     const { page, sent } = fakePage({});

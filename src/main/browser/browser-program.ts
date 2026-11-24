@@ -1,5 +1,8 @@
 import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
+import { wholePath } from '../nvim/file-open';
 import { projectNamedInFile } from '../projects/project-named';
 import { askRunningApp } from '../workers/session-socket';
 import { BROWSER_REQUEST, OUTSIDE_PANE, parseBrowserCommand, type BrowserRequest } from './browser-cli';
@@ -29,6 +32,9 @@ export async function runBrowserProgram(words: readonly string[]): Promise<numbe
       return 1;
     }
     command = { ...rest, script };
+  } else if (parsed.command.verb === 'upload') {
+    // A file to upload is named as the agent meant it: `~`, whole, or from the folder the command runs in.
+    command = { ...parsed.command, files: parsed.command.files.map((file) => wholePath(file, homedir()) ?? path.resolve(file)) };
   } else command = parsed.command;
   if ('project' in command && command.project !== null) {
     const named = projectNamedInFile(command.project);

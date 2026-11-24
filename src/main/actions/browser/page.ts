@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { Refused } from '../../../shared/app/bridge';
 import { stringOrEmpty } from '../../../shared/app/is-record';
 import type { ViewportSize } from '../../../shared/browser/browser';
@@ -7,7 +8,7 @@ import { wholeNumber } from '../../browser/browser-tabs';
 import type { BrowserPorts } from './browser-ports';
 import { agentInput, targetTab, type AgentTarget } from './target';
 
-// browser.resize, browser.click, browser.type, browser.press and browser.eval: what an agent does to a page it
+// browser.resize, browser.click, browser.type, browser.press, browser.upload and browser.eval: what an agent does to a page it
 // holds, through the browser command. An element is named by a ref from the tab's last snapshot
 // (browser-page.ts), the accessibility tree trimmed to what can be clicked or typed in.
 
@@ -96,6 +97,33 @@ export const browserPress = action<BrowserPorts, AgentTarget & { key: KeyEvent; 
     if (isRefused(held)) return held;
     await ports.act(input.tab, { kind: 'press', key: input.key, node: typeof held === 'number' ? held : null });
     return { output: `pressed ${input.key.key === ' ' ? 'Space' : input.key.key} in tab ${input.tab}` };
+  },
+});
+
+// Files set on an <input type=file>, as a person's pick in the file dialog would: a form's CV. A
+// path is made whole by the command, against the folder it runs in (browser-program.ts).
+export const browserUpload = action<BrowserPorts, AgentTarget & { ref: string; files: string[] }, { output: string }>('browser.upload', {
+  words: ['tab', 'ref', 'files'],
+  input(raw) {
+    const target = refTarget(raw);
+    if (isRefused(target)) return target;
+    const files = Array.isArray(raw.files) ? raw.files.map(stringOrEmpty) : [];
+    if (files.length === 0 || files.includes('')) return { refused: 'no file was named to upload' };
+    const partial = files.find((file) => !path.isAbsolute(file));
+    return partial === undefined ? { ...target, files } : { refused: `${partial} is not a whole path` };
+  },
+  async run(ports, input) {
+    const node = heldNode(ports, input, input.ref);
+    if (isRefused(node)) return node;
+    const fileInput = await ports.fileInputOf(input.tab, node);
+    if (fileInput === null) return { refused: `${input.ref} is not a file input; take a snapshot and name the one that is` };
+    if (input.files.length > 1 && !fileInput.multiple) return { refused: `${input.ref} takes one file, and ${input.files.length} were named` };
+    for (const file of input.files) {
+      if (!await ports.isFile(file)) return { refused: `there is no file at ${file}` };
+    }
+    await ports.act(input.tab, { kind: 'upload', node, files: input.files });
+    const count = input.files.length === 1 ? path.basename(input.files[0]) : `${input.files.length} files`;
+    return { output: `put ${count} in ${input.ref} in tab ${input.tab}` };
   },
 });
 
