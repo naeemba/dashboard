@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BOARD_DIRECTORY, BOARD_FILE_PATH } from '../board/board-store';
+import { BOARD_FILE_PATH } from '../board/board-store';
+import { DASHBOARD_FOLDER_NAME } from './dashboard-folder';
 import { git } from './git';
 import { blockingChanges } from '../ship/ship';
 import { temporaryFolder } from '../testing/temporary-folder';
@@ -22,7 +23,7 @@ function repositoryWithAnEditedBoard(): string {
     });
   };
   run('init', '-q');
-  mkdirSync(join(repository, BOARD_DIRECTORY), { recursive: true });
+  mkdirSync(join(repository, DASHBOARD_FOLDER_NAME), { recursive: true });
   const board = join(repository, BOARD_FILE_PATH);
   writeFileSync(board, 'committed\n');
   run('add', '.');

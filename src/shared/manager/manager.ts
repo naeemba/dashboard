@@ -37,7 +37,7 @@ export function openPanesOf(open: OpenProjects, slot: number): readonly number[]
 // from, and no `board` command that reaches it. dashboard-folder asks it to put the manager's
 // .dashboard in the home directory.
 //
-// Here rather than beside dashboardFolder because the renderer asks it too, and dashboard-folder
+// Here rather than beside dashboardPath because the renderer asks it too, and dashboard-folder
 // imports node:os, which the renderer has no way to load. Written as MANAGER_PROJECT's own path, so
 // the empty path is read in one place: give the manager a real path one day and this follows.
 export function isManagerPath(projectPath: string): boolean {
