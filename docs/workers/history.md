@@ -71,3 +71,5 @@ One line per merged change: date and why.
 - 2026-11-23 — A throwaway worktree is removed whenever its pane goes, unless it holds
   uncommitted changes or commits no remote has, and the launch sweeps the ones a restart left:
   new-crm kept 32 research worktrees, 25 GB, as never pushed or with no pull request
+- 2026-11-24 — `pane list`, `report` and `release` work across builds of one major version: after an
+  install main lost its panes to "restart the app" until a restart (workers-decision-4)
