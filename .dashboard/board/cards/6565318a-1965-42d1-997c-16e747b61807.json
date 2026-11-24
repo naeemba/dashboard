@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:12.520Z",
-  "updatedAt": "2026-11-24T10:59:10.364Z",
+  "updatedAt": "2026-11-24T11:11:24.007Z",
   "branch": "workers-check-for-overlapping-cards-and-prs",
-  "column": "Doing",
+  "pullRequest": 352,
+  "comments": [
+    {
+      "at": "2026-11-24T11:11:23.981Z",
+      "body": "Pull request #352 opened: /work-card: start from codegraph, check for overlapping cards and PRs, take docs ids last https://github.com/naeemba/dashboard/pull/352"
+    }
+  ],
+  "column": "Review",
   "order": 1
 }
