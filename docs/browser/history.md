@@ -16,3 +16,6 @@ One line per merged change: date and why.
   Playwright or Claude in Chrome, and `eval` runs a script file in a page, after
   `--wait-for` when given; pictures move to `browser-files/`, and the old
   `browser-screenshots/` folder is removed when the app starts
+- 2026-11-24 — The server's instructions get a WHEN TO USE block and the app installs a
+  `dashboard-browser` skill, because workers holding the `browser_` tools still browsed in Claude
+  in Chrome; Chrome stays for a page that needs the person's own profile (browser-decision-8)

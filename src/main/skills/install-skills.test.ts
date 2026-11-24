@@ -18,11 +18,12 @@ function build(): string {
 }
 
 describe('installSkills', () => {
-  it('writes /adopt-docs and /work-card beside /create-task', () => {
+  it('writes /adopt-docs, dashboard-browser and /work-card beside /create-task', () => {
     const home = folder();
     expect(installSkills(home, build())).toEqual([]);
     expect(readFileSync(skillFile(home, 'adopt-docs'), 'utf8')).toMatch(/^---\nname: adopt-docs\n/);
     expect(readFileSync(skillFile(home, 'work-card'), 'utf8')).toMatch(/^---\nname: work-card\n/);
+    expect(readFileSync(skillFile(home, 'dashboard-browser'), 'utf8')).toMatch(/^---\nname: dashboard-browser\n/);
     expect(existsSync(createTaskScript(home))).toBe(true);
   });
 

@@ -1,4 +1,5 @@
 import { PRIORITIES } from '../../shared/board/board';
+import { actionByName, defaultBinding } from '../../shared/keys/actions';
 
 // The `dashboard` command's verbs as MCP tools, served by `dashboard mcp` (mcp-server.ts). A tool is
 // the command's words and its typed parameters turned back into them: a call runs the same program
@@ -133,13 +134,34 @@ export const COMMAND_ONLY: Record<string, string> = {
   'pr wait': WAIT_IN_BASH,
 };
 
+// The key that shows the project's browser, as the keys table binds it before any settings file.
+const browserMode = actionByName('mode-browser');
+const BROWSER_KEY = browserMode === undefined ? null : defaultBinding(browserMode, process.platform === 'darwin');
+const IN_BROWSER = BROWSER_KEY === null ? 'in the project\'s browser' : `in the project's browser (${BROWSER_KEY} by default)`;
+
+// Said by both the server's instructions and the dashboard-browser skill, so the two never disagree.
+export const BROWSER_SIGN_IN = 'A page that asks for a sign-in is signed in once, by the person,'
+  + ` ${IN_BROWSER}, and stays signed in for that project: ask them for that rather than switching to`
+  + ' Claude in Chrome, and never type a password yourself.';
+export const CHROME_STAYS = 'Claude in Chrome stays the right one when the page needs the person\'s own Chrome'
+  + ' profile or one of its extensions, or the person asks for Chrome; Playwright when the person asks for it'
+  + ' or the project\'s own tests run on it.';
+
 // What the server tells every session about itself, once, and when its browser is the one to reach
-// for: the retro that asked for this found every page check done in Playwright or Claude in Chrome.
+// for: the retro that asked for this found every page check done in Playwright or Claude in Chrome,
+// and one sentence did not change that, so the browser has a when-to-use block of its own and the
+// skill holds the steps (browser-decision-8).
 export const SERVER_INSTRUCTIONS = 'The Dashboard app this session runs in: its board, its worker panes, its projects and its'
-  + ' browser. For any web page to read or check, a frontend or layout check included, use the browser_ tools'
-  + ' rather than Playwright or Claude in Chrome: each project\'s browser keeps its own sign-ins, browser_eval'
-  + ' runs a script file of any length and saves its answer to a file, and browser_screenshot answers with the'
-  + ` picture. To land a pull request, ${LAND_IN_BASH}; to wait on its CI without merging, ${WAIT_IN_BASH}.`;
+  + ` browser. To land a pull request, ${LAND_IN_BASH}; to wait on its CI without merging, ${WAIT_IN_BASH}.`
+  + '\n\nWHEN TO USE the browser_ tools, instead of Claude in Chrome (mcp__claude-in-chrome__*) or Playwright'
+  + ' (mcp__plugin_playwright_*): each project\'s browser keeps its own sign-ins, browser_eval runs a script file'
+  + ' of any length and saves its answer to a file, and browser_screenshot answers with the picture.'
+  + '\n- reading any web page: a job board, LinkedIn, a company\'s site, docs, an issue or pull request'
+  + '\n- scraping or extracting from a page: write the script to a file and browser_eval it'
+  + '\n- checking a frontend or layout change, at a phone\'s width with browser_resize'
+  + '\n- a screenshot of a page, for a pull request or to look at it'
+  + '\n- filling in or clicking through a page: browser_snapshot, then browser_click and browser_type'
+  + `\nRead the dashboard-browser skill first. ${BROWSER_SIGN_IN} ${CHROME_STAYS}`;
 
 export const MCP_SERVER_NAME = 'dashboard';
 

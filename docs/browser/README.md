@@ -80,7 +80,13 @@ Each verb is also a `browser_<verb>` tool on every Claude screen, and
 `browser_screenshot` answers with the picture (docs/command, command-decision-8).
 The server's instructions, main's prompt, the work-card skill and the review
 prompt send every page read or frontend check here rather than to Playwright or
-Claude in Chrome (browser-decision-7).
+Claude in Chrome (browser-decision-7). The server's instructions carry a WHEN TO
+USE block naming those tasks, and the app installs a `dashboard-browser` skill
+whose description names them too, with the steps from open to release (a
+resized tab is reset before it goes back) and what to do on a sign-in page:
+ask the person to sign in once in this browser. Claude in Chrome stays for a
+page that needs the person's own Chrome profile or an extension in it, or when
+the person asks for it (browser-decision-8).
 
 - `open <url> [--project <name|aka>]` opens a tab the pane holds and prints its
   id. It opens behind the tab you are on, or on screen in a project with none.

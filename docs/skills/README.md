@@ -10,6 +10,7 @@ logs one warning line and costs only that skill. A dev run (`pnpm start`) instal
 | `/create-task` | Files one card on the project's board, on its default branch | [board](../board/README.md#create-task) |
 | `/adopt-docs` | Moves a repository's docs into the `docs/<feature>/` pattern and opens one pull request | below |
 | `/work-card` | Works a shipped card start to finish in its worktree and opens its pull request | below |
+| `dashboard-browser` | Sends any page read, check or screenshot to the project's browser | [browser](../browser/README.md#the-browser-command) |
 
 The same launch puts the board guard under `~/.claude/dashboard/` and adds its hook to
 `~/.claude/settings.json` when it is missing, touching nothing else there
@@ -103,13 +104,17 @@ Folders: `src/main/skills/`.
   preamble: `adopt-docs-skill.ts`, `adopt-docs-skill.test.ts`
 - The text of `/work-card` and the words a ship passes it: `work-card-skill.ts`; `ship-flow.test.ts`
   pins that a ship asks about the project's path and passes its base
+- The text of `dashboard-browser`, built from the browser tools, the read limit and the browser
+  key it names: `dashboard-browser-skill.ts`; `dashboard-browser-skill.test.ts` fails on a tool
+  or parameter name in it the server does not have
 - Where a skill's folder and its SKILL.md are: `skill-folder.ts`
 - Wired in `main.ts` at `ready`, after the window opens, in the packaged app only
 
 ## Scenarios
 
 - Given an installed app, when it launches, then `~/.claude/skills/adopt-docs/SKILL.md`,
-  `~/.claude/skills/work-card/SKILL.md` and the three `/create-task` files are written.
+  `~/.claude/skills/dashboard-browser/SKILL.md`, `~/.claude/skills/work-card/SKILL.md` and the
+  three `/create-task` files are written.
 - Given a `~/.claude/commands/work-card.md`, when a ship starts `/work-card`, then the app's skill
   runs, not that file.
 - Given a launch whose skill files already match this build, when it runs, then no file is

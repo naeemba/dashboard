@@ -20,3 +20,5 @@ One line per merged change: date and why.
   Review cards and open pull requests for overlap, comments on the card, reports an overlap to
   main and waits for go on or stop (goes on with no main), and takes a new docs id last
   (skills-decision-3)
+- 2026-11-24 — The app installs a `dashboard-browser` skill, so a session matching a page task to
+  a skill finds this browser rather than Claude in Chrome (browser-decision-8)
