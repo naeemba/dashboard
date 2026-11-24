@@ -13,7 +13,8 @@ then its pull request moves it (board-decision-6).
 Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 
 - Ship: `ship.ts`, `ship-flow.ts`, `ships-away.ts`
-- Review: `review.ts`, `review-flow.ts`, `review-finished.ts`, `review-loop-install.ts`
+- Review: `review.ts`, `review-flow.ts`, `review-finished.ts`, `review-loop-install.ts`;
+  the forge, GitHub or GitLab: `src/main/app/forge.ts`
 - Worktrees: `worktree-store.ts`, `worktree-keeper.ts`, `worktree-channels.ts`, `git-worktrees.ts`,
   `worktree-scan.ts`, `worktree-sizes.ts`, `worktree-rows.ts`, `worktree-view.ts`,
   `worktree-removal.ts`, `worktrees.css`, `leftover-worktrees.ts`, `leftover-sweep.ts`
@@ -75,6 +76,11 @@ The CI wait is one command the agent runs in the background, woken when it exits
 never a poll by hand or a foreground `sleep` (ship-decision-2): `gh pr checks <n> --watch`
 with merging off, `pr land` with it on.
 
+On a project whose remote's URL does not name github the review is GitLab's (ship-decision-5,
+`forge.ts`): `/mr-loop` on the merge request, `glab ci status --wait` for its pipeline, and with
+merging on `glab mr merge <iid> --sha <head> --auto-merge=false` on the head noted before the wait.
+Whether its loop already finished is read off the merge request's notes through `glab api`.
+
 ## Scenarios
 
 - Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree
@@ -90,6 +96,9 @@ with merging off, `pr land` with it on.
 - Given a project whose only remote is `gitlab`, when a card ships or `pane run --worktree` runs,
   then the worktree is cut from `gitlab/<base>` rather than refused for having no origin
   (`ship-flow.test.ts`, `make.test.ts`).
+- Given a project whose remote is a GitLab host, when its card's merge request opens, then the
+  review runs `/mr-loop` on it and waits and merges through glab, never `pr wait`, `pr land` or gh
+  (`review.test.ts`, `review-finished.test.ts`).
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it
   tries again instead of giving up.
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it

@@ -11,7 +11,7 @@ export type CardFollowPorts = {
   read(projectPath: string): { board: Board; brokenFiles: string[] };
   // The branch on the card's worktree record, for a card shipped before a ship wrote it on the card.
   worktreeBranch(projectPath: string, id: string): string | undefined;
-  // `gh pr list` for the branch, run in the project. Throws when gh cannot answer.
+  // The branch's pull request, asked of the project's forge (branchPullRequest). Throws when it cannot answer.
   pullRequestOf(projectPath: string, branch: string): Promise<PullRequest | null>;
   // The card's number, branch and line, written and sent to origin behind it.
   write(projectPath: string, board: Board): void;

@@ -45,3 +45,5 @@ One line per merged change: date and why.
   project's own remote (origin, else the only one, else the one the local main tracks): a GitLab
   project on a remote called `gitlab` was refused as having no base, and its worktrees were made by
   hand
+- 2026-11-24 — A card on a GitLab project is opened, followed and reviewed through glab and
+  `/mr-loop`: `gh pr create` refused its remote and the card sat in Doing with nothing to review

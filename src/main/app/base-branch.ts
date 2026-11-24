@@ -1,5 +1,5 @@
 import { chosenRemote, defaultBranch, noDefaultBranchMessage } from './default-branch';
-import { git, gitNowOrNull } from './git';
+import { git, gitNowOrNull, runProgram } from './git';
 
 // Where a project's work is cut from and its board is written: a remote (chosenRemote's rule) and a
 // branch on it (defaultBranch's rule: `<remote>/HEAD`, else main, else master, since `<remote>/HEAD`
@@ -17,8 +17,9 @@ const headQuestion = (remote: string): string[] => ['symbolic-ref', '--short', `
 const branchQuestion = (remote: string, name: string): string[] => ['rev-parse', '--verify', '--quiet', `refs/remotes/${remote}/${name}`];
 const REMOTES = ['remote'];
 
-export async function projectRemote(folder: string): Promise<string> {
-  const answer = (gitArguments: string[]) => git(gitArguments, folder).catch(() => null);
+// `run` is runProgram, handed in by a caller whose test fakes its programs (forge.ts).
+export async function projectRemote(folder: string, run: typeof runProgram = runProgram): Promise<string> {
+  const answer = (gitArguments: string[]) => run('git', gitArguments, folder).catch(() => null);
   const [remotes, ...upstreams] = await Promise.all([answer(REMOTES), ...DEFAULT_NAMES.map((name) => answer(upstreamQuestion(name)))]);
   return chosenRemote(lines(remotes), upstreams);
 }

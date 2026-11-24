@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { reviewFinishedAtHead } from './review-finished';
+import type { runProgram } from '../app/git';
+import { mergeRequestFinishedAtHead, reviewFinished, reviewFinishedAtHead } from './review-finished';
 
 const view = (comments: { body: string; createdAt: string }[], commits: string[]) =>
   JSON.stringify({ comments, commits: commits.map((committedDate) => ({ committedDate })) });
@@ -27,5 +28,40 @@ describe('reviewFinishedAtHead', () => {
 
   it.each([['not json'], ['{}'], ['{"comments":"x"}'], ['{"comments":[null],"commits":[null]}']])('is false for what it cannot read: %s', (text) => {
     expect(reviewFinishedAtHead(text)).toBe(false);
+  });
+});
+
+// GitLab's notes and commits, as its API names their dates.
+const notes = (...said: { body: string; createdAt: string }[]) => JSON.stringify(said.map(({ body, createdAt }) => ({ body, created_at: createdAt })));
+const commits = (...dates: string[]) => JSON.stringify(dates.map((committed_date) => ({ committed_date })));
+
+describe('mergeRequestFinishedAtHead', () => {
+  it('reads the loop\'s note the way it reads a comment', () => {
+    expect(mergeRequestFinishedAtHead(notes(finished, started), commits('2026-11-16T15:00:00Z'))).toBe(true);
+    expect(mergeRequestFinishedAtHead(notes(finished), commits('2026-11-16T15:10:00Z'))).toBe(false);
+  });
+
+  it('is false for what it cannot read', () => {
+    expect(mergeRequestFinishedAtHead('not json', '[]')).toBe(false);
+  });
+});
+
+describe('reviewFinished', () => {
+  const run = (url: string): typeof runProgram => async (program, programArguments) => {
+    const words = `${program} ${programArguments.join(' ')}`;
+    if (words === 'git remote') return 'origin';
+    if (words === 'git remote get-url origin') return url;
+    if (words.includes('/notes?')) return notes(finished);
+    if (words.includes('/commits?')) return commits('2026-11-16T15:00:00Z');
+    throw new Error(`${program} failed`);
+  };
+
+  it('asks glab on a GitLab project', async () => {
+    expect(await reviewFinished(run('git@git.arr.lan:fe/app.git'), '/w', 12, 1000)).toBe(true);
+  });
+
+  // gh is not answering here: not knowing starts the review.
+  it('is false when the forge cannot answer', async () => {
+    expect(await reviewFinished(run('git@github.com:me/app.git'), '/w', 12, 1000)).toBe(false);
   });
 });

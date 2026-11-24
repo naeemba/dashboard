@@ -1,5 +1,5 @@
 import type { runProgram } from '../app/git';
-import { latestPullRequest, pullRequestListArguments } from '../board/pull-request-column';
+import { branchPullRequest } from '../board/merge-request';
 import { changedFiles } from '../ship/ship';
 import { FETCH_TIMEOUT } from '../board/board-sync';
 
@@ -39,8 +39,8 @@ export async function pullRequestMerged(run: RunProgram, worktreePath: string): 
   return (await pullRequestOf(run, worktreePath, await branchOf(run, worktreePath)))?.state === 'MERGED';
 }
 
-const pullRequestOf = async (run: RunProgram, worktreePath: string, branch: string) =>
-  latestPullRequest(await run('gh', pullRequestListArguments(branch), worktreePath, { timeout: FETCH_TIMEOUT }));
+const pullRequestOf = (run: RunProgram, worktreePath: string, branch: string) =>
+  branchPullRequest(run, worktreePath, branch, FETCH_TIMEOUT);
 
 // The commit the branch's pull request was merged at, or null while the one it stands for is not
 // merged. A worktree whose HEAD is that commit has nothing on it the merge did not take; its

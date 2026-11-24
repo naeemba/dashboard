@@ -7,7 +7,7 @@ import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, remem
 import { baseName } from '../shared/app/base-name';
 import { holdProjectName, readProjectNames } from './workers/project-names';
 import { runProgram } from './app/git';
-import { latestPullRequest, pullRequestListArguments } from './board/pull-request-column';
+import { branchPullRequest } from './board/merge-request';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
 import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
 import { realPath } from './app/real-path';
@@ -709,7 +709,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList } = car
   autoMerge: () => settings.review.autoMerge,
   log: (draft) => logStore.log(draft),
   pullRequestOf: async (projectPath, branch) => {
-    const pull = latestPullRequest(await runProgram('gh', pullRequestListArguments(branch), projectPath, { timeout: 20_000 }));
+    const pull = await branchPullRequest(runProgram, projectPath, branch, 20_000);
     if (knownPullRequestStatuses.record(projectPath, branch, pull === null ? null : pullRequestStatus(pull))) sendToRenderer('board:change', projectPath);
     return pull;
   },

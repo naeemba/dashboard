@@ -36,7 +36,11 @@ export function pullRequestListArguments(branch: string): string[] {
 // whose first pull request was closed may have opened a second; otherwise the newest. Null when the
 // branch has none yet. Throws on what is not JSON, which the sweep logs as gh failing.
 export function latestPullRequest(json: string): PullRequest | null {
-  const listed: unknown = JSON.parse(json);
+  return latestListed(JSON.parse(json));
+}
+
+// The same pick from a list already parsed, which merge-request.ts hands over in gh's shape.
+export function latestListed(listed: unknown): PullRequest | null {
   const pulls = (Array.isArray(listed) ? listed : []).filter(isPullRequest);
   return pulls.find((pull) => pull.state === 'OPEN') ?? pulls[0] ?? null;
 }

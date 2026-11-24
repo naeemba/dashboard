@@ -8,6 +8,7 @@ import { isRefused } from '../actions/action';
 import type { CardFollowAnswer } from '../actions/card/follow';
 import { entryForCard } from './worktree-store';
 import { notOpenRefusal } from './ship';
+import type { Forge } from '../app/forge';
 
 // The second half of a ship, in the order it happens. An agent that has put a pull request number on
 // its card is finished, so the card lands in Review, the worktree the work was written in is thrown
@@ -59,6 +60,8 @@ export type ReviewPorts = {
   // Whether this pull request's review loop already finished at its head commit, asked of gh before
   // the sweep's own start. False when gh cannot say.
   reviewFinished: (projectPath: string, pullRequest: number) => Promise<boolean>;
+  // GitHub or GitLab (forge.ts), for which loop the prompt runs and how it waits and lands.
+  forgeOf: (projectPath: string) => Promise<Forge>;
   // Why `/pr-loop` cannot run, or null when it is installed (reviewLoopMissing). Asked at each start, so
   // installing it lets the next start through without a restart.
   loopMissing: () => string | null;
@@ -184,7 +187,7 @@ async function swapWorktree(
   const started = await ports.startReview(
     { ...entry, pane: null, reviewing: true },
     slot,
-    reviewPrompt(entry.cardId, pullRequest, entry.projectPath, ports.landsPullRequest(entry.projectPath)),
+    reviewPrompt(entry.cardId, pullRequest, entry.projectPath, ports.landsPullRequest(entry.projectPath), await ports.forgeOf(entry.projectPath)),
   );
   return { message: started.ok ? '' : started.message, again: false };
 }
