@@ -1,5 +1,33 @@
 # Changelog
 
+## v2.55.0 (2026-11-24)
+
+### What's new
+
+- The package-manager guard follows cd
+- Workers check for overlapping cards and PRs, and start from codegraph
+- pnpm check shows why a check failed, and changed branches get a coverage line
+- pane run --worktree and ship work on a project whose remote is not origin
+- Budget: an optional daily pace toward the weekly reset
+- Agents reach for the Dashboard browser, and it can run a page script
+- One cd-following helper for the three Bash guards, ending a cd at a subshell's close
+- pr wait, a land that survives network blips, and commands across a version gap
+- A docs check refuses a duplicate docs id or a leftover -next id
+
+### What's Changed
+* Follow a cd in the package-manager guard by @naeemba in https://github.com/naeemba/dashboard/pull/349
+* /work-card: start from codegraph, check for overlapping cards and PRs, take docs ids last by @naeemba in https://github.com/naeemba/dashboard/pull/352
+* pnpm check shows why a check failed, and a coverage line for the change by @naeemba in https://github.com/naeemba/dashboard/pull/351
+* Ship and pane run --worktree on a project whose remote is not origin by @naeemba in https://github.com/naeemba/dashboard/pull/353
+* Budget: a weekly cap, a daily pace since the weekly reset, or none by @naeemba in https://github.com/naeemba/dashboard/pull/355
+* Agents reach for the Dashboard browser, and it can run a page script by @naeemba in https://github.com/naeemba/dashboard/pull/356
+* One cd walk for the three Bash guards, and Git Bash drive paths on Windows by @naeemba in https://github.com/naeemba/dashboard/pull/359
+* pr wait, a land that survives network blips, and commands across a version gap by @naeemba in https://github.com/naeemba/dashboard/pull/357
+* Lint refuses a duplicate docs heading id and a leftover -next id by @naeemba in https://github.com/naeemba/dashboard/pull/358
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.54.0...v2.55.0
+
 ## v2.54.0 (2026-11-23)
 
 ### What's new
