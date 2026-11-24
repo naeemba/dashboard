@@ -1,11 +1,11 @@
 {
   "id": "9db0df92-a182-4795-b13f-2e7d0d938179",
   "title": "A browser release leaves an agent's page size on the person's tab",
-  "notes": "browserRelease (src/main/actions/browser/claims.ts) and letGo (browser-actions.ts) hand a tab back without clearing the Emulation.setDeviceMetricsOverride that browser resize set. An agent resizes a tab to 390x844 and then releases it, and the person's tab stays drawn 390 wide in the full view. Nothing on screen clears it. Fix: release and letGo clear a size an agent set (emulate(tab, null)). Issue: https://github.com/naeemba/dashboard/issues/361 Review: https://github.com/naeemba/dashboard/pull/360#discussion_r4685057302",
+  "notes": "GitHub issue #361 (review follow-ups from #360); the PR says Closes #361. (1) medium: browserRelease in src/main/actions/browser/claims.ts and letGo in src/main/actions/browser/browser-actions.ts hand a tab back but keep the Emulation.setDeviceMetricsOverride an agent's browser resize set, so the person gets the tab drawn 390 wide. A release, and a pane let go, clear a size an agent set (emulate(tab, null)), with a test. (2) low: the hand-written browser_ tool names in src/main/skills/work-card-skill.ts:84-88, src/main/ship/review.ts:170 and src/main/workers/dispatch.ts:96 are not checked against DASHBOARD_TOOLS; #360 added that check for the browser skill and the server instructions (dashboard-browser-skill.test.ts): extend the same check to these three texts.",
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T19:01:40.636Z",
-  "updatedAt": "2026-11-24T19:01:40.637Z",
+  "updatedAt": "2026-11-24T19:59:13.338Z",
   "column": "Backlog",
   "order": 65
 }
