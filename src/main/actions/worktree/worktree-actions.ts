@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/app/bridge';
-import { baseBranch, git, runProgram } from '../../app/git';
+import { git, runProgram } from '../../app/git';
+import { baseBranch } from '../../app/base-branch';
 import { loginShellPath } from '../../app/shell-path';
 import { startLeftoverSweep } from '../../ship/leftover-sweep';
 import { bind, isRefused, type BoundAction } from '../action';
@@ -62,7 +63,7 @@ export function worktreeActions(main: WorktreeRemovePorts) {
     remove,
     // The leftover sweep's timers (leftover-sweep.ts), started by main with the removal made here.
     startLeftoverSweep: (sweep: Omit<Parameters<typeof startLeftoverSweep>[0], 'remove'>) => startLeftoverSweep({ remove, ...sweep }),
-    // card.ship's, with the project's queue held and origin fetched.
+    // card.ship's, with the project's queue held and the base fetched.
     makeForShip: (request: ShipWorktreeRequest): Promise<ShipWorktree> => made(make.call({ kind: 'card', ...request })),
     // `pane run --worktree`'s.
     async makeThrowaway(projectPath: string, title: string): Promise<string> {

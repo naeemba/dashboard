@@ -112,6 +112,16 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(boardOnBranch(bare)).toBeNull();
   });
 
+  it('files on the only remote with no --remote when it is not called origin', () => {
+    const bare = remote();
+    const checkout = clone(bare, true);
+    git(checkout, 'remote', 'rename', 'origin', 'gitlab');
+
+    expect(run(checkout, '--title', 'On GitLab').code).toBe(0);
+
+    expect(boardOn(bare).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['On GitLab']);
+  });
+
   it('refuses, naming --seed, when the default branch has no board', () => {
     const bare = remote();
     const checkout = clone(bare, false);
@@ -143,7 +153,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
   it('names a remote it cannot find a default branch on', () => {
     const checkout = clone(remote(), true);
     expect(run(checkout, '--title', 'x', '--remote', 'nope')).toEqual({
-      code: 1, stdout: '', stderr: 'create-task: cannot work out which branch on nope is the main one\n',
+      code: 1, stdout: '', stderr: 'create-task: cannot work out which branch on nope is the main one; name it with `dashboard project set <project> --base <branch>`\n',
     });
   });
 

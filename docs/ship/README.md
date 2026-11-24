@@ -32,11 +32,22 @@ straight away. An install that fails, or runs past five minutes (logged as
 stdout and stderr from the first that names an error (pnpm says why on stdout, npm at the top of
 stderr above its help); the worktree stays.
 
-The agent is started on `/work-card <card id> bump-version|keep-version <base branch>`
+The agent is started on
+`/work-card <card id> bump-version|keep-version <base branch> <remote>`
 (`workPrompt`), the skill the app installs ([skills](../skills/README.md#work-card)).
 The second word is the project's `bumpVersion` in `projects.yaml`, read at each
 ship, `keep-version` unless it says `true` (projects-decision-1). The third is the
-branch the worktree was cut from, which a bump merges in first.
+branch the worktree was cut from, which a bump merges in first, and the fourth the
+remote it is on.
+
+The remote is not always origin: it is origin when there is one, else the only
+remote, else the one the local main (then master) tracks (`chosenRemote`). Never
+the checked-out branch's upstream, so trying a branch from another remote does not
+move the board and the base there. The base is that remote's
+`HEAD`, else main, else master (`baseBranch`). A project whose base is none of
+those names it with `dashboard project set <name> --base <branch>`, which sets
+`<remote>/HEAD`. The worktree is cut from `<remote>/<base>`, and the board's sync
+and `pr land`'s fast-forward use the same remote.
 
 The review agent is started on `reviewPrompt`. Whether it may merge is
 `landsPullRequest`, read at each review start: the project's `autoMerge` in
@@ -75,7 +86,10 @@ with merging off, `pr land` with it on.
   own and its card file is origin's, so the merge never moves the card (ship-decision-3;
   `ship-flow.test.ts`).
 - Given a project whose `projects.yaml` entry has no `bumpVersion`, when a card ships, then its
-  agent is started on `/work-card <id> keep-version <base>` and leaves the version alone.
+  agent is started on `/work-card <id> keep-version <base> <remote>` and leaves the version alone.
+- Given a project whose only remote is `gitlab`, when a card ships or `pane run --worktree` runs,
+  then the worktree is cut from `gitlab/<base>` rather than refused for having no origin
+  (`ship-flow.test.ts`, `make.test.ts`).
 - Given an agent set a pull request number, when the review cannot take the worktree yet, then it
   tries again instead of giving up.
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it

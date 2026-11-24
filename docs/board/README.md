@@ -217,26 +217,28 @@ that no git pull, commit or push is needed. Its first line carries a version, an
 whenever the board is read and the file is missing or older than the app's (no version line counts
 as older), so a project seeded with an older text that spelled out the card format gets the new one.
 A file of the app's version or a later one is left alone, edited or not, and a checkout the sync
-brings up keeps an edit to it. Where git tracks the file, the rewrite is committed to origin's
-default branch by the sync below, as a card write is. Only a checkout on origin's default branch, a
-folder outside git, or a repository with no origin default branch has an older file rewritten; a
+brings up keeps an edit to it. Where git tracks the file, the rewrite is committed to the remote's
+default branch by the sync below, as a card write is. Only a checkout on that default branch, a
+folder outside git, or a repository with no remote default branch has an older file rewritten; a
 feature branch's worktree keeps its copy until it merges main, so that merge has nothing in its way
 (board-decision-8).
 
 ## Kept in step with git
 
 A board git tracks is the default branch's, wherever it is written from
-(board-decision-5). Every write, from the screen, card.move, the review sweep
+(board-decision-5). The remote is the project's own, the one its work is cut
+from: origin when there is one, else the only remote, else the one the local
+main tracks (`chosenRemote`, ship README). Every write, from the screen, card.move, the review sweep
 or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
 
-1. fetch origin's default branch (10 seconds at most);
-2. read origin's board there, with the checkout's own uncommitted board edits
+1. fetch the remote's default branch (10 seconds at most);
+2. read the remote's board there, with the checkout's own uncommitted board edits
    replayed onto it (`rebaseBoardChange`), then the command's edit on top;
-3. commit that, and only the board's files, onto origin's tip with a plain
+3. commit that, and only the board's files, onto the remote's tip with a plain
    message (`board: "Fix login" Doing → Review`), and push it; a push that lost
    a race fetches and tries again at once, and a fetch or push whose connection
    dropped (`Connection closed`, `early EOF`) a second later, three tries in
-   all (`retryAfter`); a try that finds the commit it pushed already on origin
+   all (`retryAfter`); a try that finds the commit it pushed already on the remote
    stops there, so an edit whose push landed unanswered is not made twice. A
    seeded explanation file git tracks there and that is older than the app's is
    rewritten in the same commit, and is reason enough for a commit when no card
@@ -256,7 +258,7 @@ branch with a board file that does not parse, in place or set aside as
 as a deletion. The sync says why, and the board is written where it is.
 
 The commit is made in a scratch folder in the system temp folder holding only
-origin's board files and an index of its own, so the checkout's branch, HEAD,
+the remote's board files and an index of its own, so the checkout's branch, HEAD,
 index and working tree are never touched by it and nothing is left registered
 with `git worktree`. Run in a card's worktree or a throwaway one, the command
 works on main the same way and leaves the worktree's board, which is its
@@ -269,8 +271,8 @@ included, goes to the side whose card has the newer `updatedAt`.
 
 The screen never waits on the network: the save is on disk at once, and
 `board-sync-queue.ts` runs one sync per project behind it, a burst of saves
-folded into one more. card.move waits for its write to be on origin before a
-ship cuts a branch. Offline, with no `origin`, or with a push refused for any
+folded into one more. card.move waits for its write to be on the remote before a
+ship cuts a branch. Offline, with no remote, or with a push refused for any
 other reason, or with a sync that fails any other way, the board is written
 where it is as before, and the app logs one
 warning per project (`board` kind) until a sync goes through; the command prints
@@ -356,7 +358,8 @@ build's copy differs. A dev run (`pnpm start`) installs nothing; run a branch's 
 
 The program's path is fixed: `claude-pr-loop` runs it as an executable through `PR_LOOP_CARD_SCRIPT`
 with `--title`, `--notes` and `--priority`, and `--remote <name>` on a repo whose board lives on a
-remote other than `origin`. `--column <name>` picks the column (Backlog otherwise), `--seed` creates
+remote other than the project's own (`chosenRemote`).
+`--column <name>` picks the column (Backlog otherwise), `--seed` creates
 a board missing from the default branch, from this checkout's copy when it has one, and `--dry-run`
 prints the files it would commit instead of pushing them.
 

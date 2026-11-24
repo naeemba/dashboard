@@ -1,4 +1,4 @@
-<!-- .dashboard docs version 2, written by the Dashboard app -->
+<!-- .dashboard docs version 3, written by the Dashboard app -->
 # .dashboard
 
 This folder holds the project's kanban board, shown in the Dashboard app under Ctrl+B: `board/`, one
@@ -10,5 +10,5 @@ the `board guard` hook the app installs. Every pane the app opens carries `DASHB
     node "$DASHBOARD_BOARD"          prints what it takes
     node "$DASHBOARD_BOARD" list     every card but Done and Cancelled, with the id the others want
 
-No git pull, commit or push is needed before or after a board command: it syncs the board with origin
-itself.
+No git pull, commit or push is needed before or after a board command: it syncs the board with
+the project's remote itself.

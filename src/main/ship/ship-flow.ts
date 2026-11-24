@@ -1,6 +1,7 @@
 import type { ShipRequest, ShipResult, WorktreeEntry } from '../../shared/app/bridge';
 import { failureText } from '../../shared/errors/failure';
-import { baseBranch, git } from '../app/git';
+import { git } from '../app/git';
+import { baseBranch, type BaseBranch } from '../app/base-branch';
 import { isManagerPath } from '../../shared/manager/manager';
 import { blockingChanges, uncommittedCount, workPrompt } from './ship';
 import { entryForCard } from './worktree-store';
@@ -13,7 +14,7 @@ import type { ShipWorktree, ShipWorktreeRequest } from '../actions/worktree/make
 export type ShipPorts = {
   worktrees(): readonly WorktreeEntry[];
   recordWorktree(entry: WorktreeEntry): WorktreeEntry;
-  // worktree.make's card kind: a new branch off origin/<base>, in the folder every worktree goes in.
+  // worktree.make's card kind: a new branch off <remote>/<base>, in the folder every worktree goes in.
   makeWorktree(request: ShipWorktreeRequest): Promise<ShipWorktree>;
   // A free worker for the card's agent, or a new one; main.ts says how it picks.
   attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult>;
@@ -33,7 +34,7 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
   // the app.
   const shippingCards = new Set<string>();
   // Read at each ship, so a hand edit of projects.yaml holds from the next one.
-  const prompt = (projectPath: string, cardId: string, base: string) => workPrompt(cardId, ports.bumpsVersion(projectPath), base);
+  const prompt = (projectPath: string, cardId: string, base: BaseBranch) => workPrompt(cardId, ports.bumpsVersion(projectPath), base);
 
   // The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
   // back as a message the board's status bar prints; everything before it is left as it was. Every git
@@ -46,13 +47,13 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
     }
 
     const base = await baseBranch(projectPath);
-    await git(['fetch', 'origin', base], projectPath);
+    await git(['fetch', base.remote, base.branch], projectPath);
     // The checkout itself is only fast-forwarded when it is sitting on the base branch and can be.
-    // A checkout on some other branch is left alone — the worktree comes off origin/<base> either
+    // A checkout on some other branch is left alone — the worktree comes off <remote>/<base> either
     // way, so it does not need the local branch to have caught up.
     try {
       const head = await git(['rev-parse', '--abbrev-ref', 'HEAD'], projectPath);
-      if (head === base) await git(['merge', '--ff-only', `origin/${base}`], projectPath);
+      if (head === base.branch) await git(['merge', '--ff-only', `${base.remote}/${base.branch}`], projectPath);
     } catch {
       // Diverged, or mid-rebase. The worktree is what matters and it comes off the remote.
     }
@@ -63,7 +64,7 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
     // one the worktree list can show you and remove. An orphan worktree nothing knows about is the thing
     // that piles up unseen.
     //
-    // The branch gets no board commit. The card's columns are origin's main's, moved by the app (Doing
+    // The branch gets no board commit. The card's columns are the remote's default branch's, moved by the app (Doing
     // when the agent starts, then from the pull request); a card file on the branch rides the merge into
     // main and puts the card back in whatever column the branch said (ship-decision-3).
     const entry = ports.recordWorktree({
