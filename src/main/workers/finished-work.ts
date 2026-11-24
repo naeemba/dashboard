@@ -12,7 +12,7 @@ import { FETCH_TIMEOUT } from '../board/board-sync';
 // output, node_modules) are not work, and git status does not list them.
 //
 // Null when nothing would be lost, otherwise the reason the folder stays, written to follow "kept <folder>:".
-export type RunProgram = typeof runProgram;
+type RunProgram = typeof runProgram;
 
 export async function unfinishedWork(run: RunProgram, worktreePath: string): Promise<string | null> {
   if (changedFiles(await run('git', ['status', '--porcelain'], worktreePath)).length > 0) {
