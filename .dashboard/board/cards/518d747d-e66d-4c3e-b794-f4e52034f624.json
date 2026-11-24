@@ -1,0 +1,11 @@
+{
+  "id": "518d747d-e66d-4c3e-b794-f4e52034f624",
+  "title": "Test the hand-written browser_ tool names in prompts against DASHBOARD_TOOLS",
+  "notes": "work-card-skill.ts:84-88, ship/review.ts:170 and workers/dispatch.ts:96 name browser_ tools by hand, and no test checks those names against DASHBOARD_TOOLS. If a tool is renamed, the tests still pass and sessions call a tool that no longer exists. Fix: one test that checks every browser_<verb> in those texts is a DASHBOARD_TOOLS name. Issue: https://github.com/naeemba/dashboard/issues/361 Review: https://github.com/naeemba/dashboard/pull/360#discussion_r4685057629",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-24T19:01:47.324Z",
+  "updatedAt": "2026-11-24T19:01:47.325Z",
+  "column": "Backlog",
+  "order": 66
+}
