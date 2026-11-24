@@ -166,15 +166,15 @@ async function mergeAt(ports: LandPorts, target: string, sha: string, tries = 0)
   return mergeAt(ports, target, sha, tries + 1);
 }
 
-// git in the project's folder, as gh is in LandPorts.
-export type GitPort = (words: string[]) => Promise<ProgramAnswer>;
+// git in a folder, as gh is in LandPorts: the conflicts here and the fast-forward after (fast-forward-checkout.ts).
+export type GitPort = (folder: string, words: string[]) => Promise<ProgramAnswer>;
 
 // The files a conflicting pull request conflicts on, merged in git's own memory (merge-tree), so no
 // checkout is touched: the base and the head commit fetched from the project's remote first, then the
 // line conflictLine says. A failed fetch, or a git that throws, is the line without the files.
-export async function conflictedFiles(git: GitPort, remote: string, { base, sha }: NonNullable<LandAnswer['conflicts']>): Promise<string> {
-  const tree = await git(['fetch', remote, base, sha])
-    .then((fetched) => fetched.ok ? git(mergeTreeWords(remote, base, sha)) : fetched)
+export async function conflictedFiles(git: GitPort, folder: string, remote: string, { base, sha }: NonNullable<LandAnswer['conflicts']>): Promise<string> {
+  const tree = await git(folder, ['fetch', remote, base, sha])
+    .then((fetched) => fetched.ok ? git(folder, mergeTreeWords(remote, base, sha)) : fetched)
     .catch((error: unknown): ProgramAnswer => ({ ok: false, output: failureLine(error) }));
   return conflictLine(remote, base, tree);
 }

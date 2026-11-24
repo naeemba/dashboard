@@ -230,21 +230,21 @@ describe('conflictedFiles', () => {
   it('fetches from the project\'s remote, then merges the fetched base with the head', async () => {
     const asked: string[] = [];
     const answers = [{ ok: true, output: '' }, tree];
-    const git = async (words: string[]) => { asked.push(words.join(' ')); return answers.shift() ?? { ok: false, output: 'asked too often' }; };
-    expect(await conflictedFiles(git, 'github', conflicts)).toBe('conflicts with main: src/a.ts — merge github/main into the branch, resolve, push, and run it again');
+    const git = async (_folder: string, words: string[]) => { asked.push(words.join(' ')); return answers.shift() ?? { ok: false, output: 'asked too often' }; };
+    expect(await conflictedFiles(git, '/project', 'github', conflicts)).toBe('conflicts with main: src/a.ts — merge github/main into the branch, resolve, push, and run it again');
     expect(asked).toEqual(['fetch github main abc123', 'merge-tree --write-tree --name-only --no-messages github/main abc123']);
   });
 
   it('passes a failed fetch on without merging', async () => {
     const asked: string[] = [];
-    const git = async (words: string[]) => { asked.push(words[0]); return { ok: false, output: 'fatal: couldn\'t find remote ref main' }; };
-    expect(await conflictedFiles(git, 'origin', conflicts)).toContain('git could not name the files (fatal: couldn\'t find remote ref main)');
+    const git = async (_folder: string, words: string[]) => { asked.push(words[0]); return { ok: false, output: 'fatal: couldn\'t find remote ref main' }; };
+    expect(await conflictedFiles(git, '/project', 'origin', conflicts)).toContain('git could not name the files (fatal: couldn\'t find remote ref main)');
     expect(asked).toEqual(['fetch']);
   });
 
   it('says a git that throws as the line without the files', async () => {
     const git = async () => { throw Object.assign(new Error('spawn git ENOENT'), { code: 'ENOENT' }); };
-    expect(await conflictedFiles(git, 'origin', conflicts)).toContain('git could not name the files (spawn git ENOENT)');
+    expect(await conflictedFiles(git, '/project', 'origin', conflicts)).toContain('git could not name the files (spawn git ENOENT)');
   });
 });
 

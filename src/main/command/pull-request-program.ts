@@ -39,7 +39,7 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
     const { conflicts } = answer;
     const verdict = conflicts === undefined
       ? answer.output
-      : await projectRemote(project.project).then((remote) => conflictedFiles((words) => answering('git')(project.project, words), remote, conflicts));
+      : await projectRemote(project.project).then((remote) => conflictedFiles(answering('git'), project.project, remote, conflicts));
     const { base } = answer;
     // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
     const forwarded = answer.ok && base !== undefined
