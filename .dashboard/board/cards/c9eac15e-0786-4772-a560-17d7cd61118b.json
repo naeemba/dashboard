@@ -1,0 +1,11 @@
+{
+  "id": "c9eac15e-0786-4772-a560-17d7cd61118b",
+  "title": "pr wait, a land that survives network blips, and commands across a version gap",
+  "notes": "Retro 2026-11-24, src/main/command/pull-request-cli.ts and the command's version check. (1) pr wait <n>: land's watch of the head's checks without the merge; 8 of 9 new-crm workers and the openwrt ones hand-rolled sleep + gh run view loops, one died on a TLS timeout. Name it in the work-card skill and the pr-loop finish. (2) land gave up on 'lost gh's answer twice … TLS handshake timeout' and 'error connecting to api.github.com': retry with backoff for minutes. (3) land's last line is 'merged <sha>' or 'conflicts with main: <files>' so main needn't run gh pr view after every land (4 times in openwrt); on conflicts, say so in a form main can relay to the worker. (4) After an install, 'pane list' and 'pane release' refused with 'this command is v2.54.0… running Dashboard is v2.53.0 — restart'; main lost its panes until a restart. Let reads and release work across a minor-version gap, refuse only what really changed.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-24T10:58:32.647Z",
+  "updatedAt": "2026-11-24T10:58:32.647Z",
+  "column": "Backlog",
+  "order": 56
+}
