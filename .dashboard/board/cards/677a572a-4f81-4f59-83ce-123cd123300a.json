@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T10:58:25.916Z",
-  "updatedAt": "2026-11-24T10:59:05.997Z",
+  "updatedAt": "2026-11-24T11:03:36.160Z",
   "branch": "the-package-manager-guard-follows-cd",
-  "column": "Doing",
+  "pullRequest": 349,
+  "comments": [
+    {
+      "at": "2026-11-24T11:03:36.128Z",
+      "body": "Pull request #349 opened: Follow a cd in the package-manager guard https://github.com/naeemba/dashboard/pull/349"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
