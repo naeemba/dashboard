@@ -1,0 +1,11 @@
+{
+  "id": "78b90d80-3f96-4aa8-95da-93e28cf88b36",
+  "title": "Guards read a cd flag as its folder (cd -P dir)",
+  "notes": "src/main/workflow/test-run-guard.ts:55 and src/main/workflow/worktree-guard.ts:41 take changed.words[0] as cd's folder, so cd -P <dir> && ... is judged at <base>/-P and not at <dir>. A removal or test run in <dir> is then judged in the wrong folder. Fix: take the first word that does not start with '-' (keeping cd -). Issue: https://github.com/naeemba/dashboard/issues/350 Review: https://github.com/naeemba/dashboard/pull/349#discussion_r4679074374",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-24T11:08:16.817Z",
+  "updatedAt": "2026-11-24T11:08:16.818Z",
+  "column": "Backlog",
+  "order": 61
+}
