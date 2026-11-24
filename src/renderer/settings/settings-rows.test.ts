@@ -39,7 +39,7 @@ describe('settingsRows', () => {
 
   it('lists the weekly cap under a Budget heading, empty when none is set', () => {
     const label = 'Weekly cap, % of the 7-day usage';
-    const row = { kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'none', label };
+    const row = { kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'not set', label };
     expect(settingsRows(parseSettings({}, false))).toContainEqual({ ...row, value: '' });
     expect(settingsRows(parseSettings({ budget: { weeklyCap: 74 } }, false))).toContainEqual({ ...row, value: '74' });
   });

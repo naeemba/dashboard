@@ -13,7 +13,7 @@ export function nextBudgetLimit(settings: Settings): Settings {
   return { ...settings, budget: { ...settings.budget, limit } };
 }
 
-const LIMIT_NAMES: Record<BudgetLimit, string> = { cap: 'the weekly cap', pace: 'the daily pace', none: 'nothing' };
+const LIMIT_NAMES: Record<BudgetLimit, string> = { cap: 'the weekly cap', pace: 'the daily pace', none: 'no limit' };
 
 function toggleRow(settings: Settings, name: ToggleName, label: string): SettingsRow {
   return { kind: 'toggle', name, label, value: isOn(settings, name) ? 'on' : 'off' };
@@ -96,7 +96,7 @@ export function settingsRows(settings: Settings): SettingsRow[] {
   const { limit, weeklyCap, dailyShare } = settings.budget;
   rows.push({ kind: 'budget-limit', label: 'Hold the 7-day usage to', value: LIMIT_NAMES[limit] });
   rows.push({
-    kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'none',
+    kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'not set',
     label: 'Weekly cap, % of the 7-day usage', value: String(weeklyCap ?? ''),
   });
   rows.push({

@@ -53,8 +53,9 @@ it over (docs/errors).
 
 The Budget rows say what `dashboard budget` holds the 7-day usage to. The limit
 row (`budget.limit`, default the weekly cap) walks the weekly cap, the daily pace
-and nothing on Enter. The weekly cap (`budget.weeklyCap`, default none) is the
-share, in percent, it calls over: above 0 and at most 100, empty for none. The
+and no limit on Enter. The weekly cap (`budget.weeklyCap`, default not set) is
+the share, in percent, it calls over: above 0 and at most 100, or empty for not
+set, which under the weekly cap makes `budget` exit 2. The
 daily pace (`budget.dailyShare`, default a seventh of the week) is the share
 added for each day begun since the weekly reset, in the same range.
 `dashboard budget --cap` and `--pace` set the same lines
