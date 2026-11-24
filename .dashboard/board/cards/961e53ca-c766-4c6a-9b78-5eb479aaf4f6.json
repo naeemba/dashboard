@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T23:39:58.399Z",
-  "updatedAt": "2026-11-24T23:40:07.172Z",
+  "updatedAt": "2026-11-24T23:48:20.361Z",
   "branch": "browser-upload-set-a-file-input-s-files-so",
-  "column": "Doing",
+  "pullRequest": 370,
+  "comments": [
+    {
+      "at": "2026-11-24T23:48:20.339Z",
+      "body": "Pull request #370 opened: browser upload: set a file input's files, so a form with a CV upload is filled in a Dashboard tab https://github.com/naeemba/dashboard/pull/370"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
