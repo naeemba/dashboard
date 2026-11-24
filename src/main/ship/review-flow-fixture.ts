@@ -80,6 +80,7 @@ export function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { 
       arrived: async () => undefined,
       landsPullRequest: () => false,
       reviewFinished: async () => false,
+      forgeOf: async () => 'github',
       loopMissing: () => null,
       loopChecked: () => undefined,
       follow: async () => ({ output: 'ship-it has no pull request' }),

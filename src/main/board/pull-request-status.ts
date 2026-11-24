@@ -2,8 +2,9 @@ import { allCards, type Board } from '../../shared/board/board';
 import type { PullRequestStatus } from '../../shared/board/pull-request-status';
 import { merged, type PullRequest } from './pull-request-column';
 
-// A pull request's glyph (board-decision-9), from the same `gh pr list` answer card.follow reads its
-// column from: pullRequestListArguments asks for these fields too, so the glyph costs no second call.
+// A pull request's glyph (board-decision-9), from the same list answer card.follow reads its column
+// from: `gh pr list` with pullRequestListArguments asking for these fields too, or on GitLab
+// `glab mr list` read into that shape (merge-request.ts). The glyph costs no second call.
 // Held in memory, never written on the card: it changes every minute a check runs, and each write
 // would be a commit pushed to origin.
 

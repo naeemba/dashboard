@@ -1,5 +1,6 @@
 import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
+import type { Forge } from '../app/forge';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps
@@ -113,63 +114,112 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // steps copied out of this prompt, so it rides out a network error on any gh call (RETRY_WAITS_MS) and
 // reads back a merge call that failed: #301 was reported failed by a review that had merged it.
 //
-// The card is not moved: the app's follow (card.follow) moves it into Done once gh says merged, and
-// writes it on origin's main through the same sync the `board` command uses (board-sync-git.ts). A move
-// asked of the agent was one more chance of Done before the merge, which is how kamandsystem #19 sat in
-// Done unmerged, and BOARD_INSTRUCTIONS tells every session the app starts not to move a branch card.
+// The card is not moved: the app's follow (card.follow) moves it into Done once the project's forge
+// (forge.ts) says merged, and writes it on origin's main through the same sync the `board` command
+// uses (board-sync-git.ts). A move asked of the agent was one more chance of Done before the merge,
+// which is how kamandsystem #19 sat in Done unmerged, and BOARD_INSTRUCTIONS tells every session the
+// app starts not to move a branch card.
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in.
 // The longest background run a session may ask for, shared by every prompt that waits on CI.
 export const LONGEST_BACKGROUND_RUN = 'run_in_background, timeout 7200000, the longest allowed';
 
-export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean): string {
+export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean, forge: Forge): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
   const sayOnCard = `\`${board} comment ${cardId} "<what happened>"\``;
+  const words = FORGE_WORDS[forge];
+  const steps = (forge === 'gitlab' ? mergeRequestSteps : pullRequestSteps)(pullRequest, sayOnCard);
   const report = [
-    '2. Then, unless the loop stopped short or the pull request conflicts with the base branch,',
-    `   wait for CI on the pull request's head commit: \`node "$DASHBOARD_COMMAND" pr wait ${pullRequest}\`, run in the`,
-    `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it`,
-    '   exits. A wait stopped at that time limit has not failed: run it once more. That is the whole wait: no',
-    '   `gh pr view`, `gh pr checks` or `gh run view` in between, and no foreground `sleep`, which is refused.',
-    '   It waits on the commit the pull request ends on, asks again a minute on when CI has not started,',
-    '   and rides out a network error; its last line is the verdict: `checks passed on <sha>`, a failed',
-    '   check, or the files the pull request conflicts on.',
+    `2. Then, unless the loop stopped short or the ${words.noun} conflicts with the base branch,`,
+    ...steps.wait,
     '3. Do not merge it, and do not move the card: it stays in Review until the user merges.',
     '4. Whatever the ending, say it on the card, "converged, ready to merge" or what is still open:',
     `   ${sayOnCard}. Your report to main (the SendMessage asked for below) says how many rounds`,
-    '   the loop ran, what each one fixed, what is still open, the CI state of the head commit, and',
+    `   the loop ran, what each one fixed, what is still open, the ${words.checks} state of the head commit, and`,
     '   whether any round changed what the card asked for or its design, naming the change.',
   ];
-  const land = [
-    '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
-    `   conflict with the base branch, land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, run in the`,
-    `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it exits.`,
-    '   It notes the head commit, waits for every check on it and merges that commit only, so a push',
-    '   during the wait is refused rather than merged. A land stopped at that time limit has not failed:',
-    '   run it once more, and so is a land that prints `nothing is merged, run it again`. That is the whole',
-    '   wait and the whole merge: no `gh pr view`, `gh pr checks` or',
-    '   `gh pr merge` by hand, and no foreground `sleep`, which is refused.',
-    `3. A land that exits 0, printing \`merged ${pullRequest} at <sha>\`, is merged: that line is gh's merge itself,`,
-    '   so do not run `gh pr view` afterwards to confirm it. Do not approve it: you are the',
-    '   author, and GitHub refuses an approval from the author. The pull request does not need one to',
-    '   merge. Do not move the card: the app moves it to Done once the merge is in.',
-    '',
-    '4. Any other ending — the loop stopped short, the land exited non-zero, the pull request conflicts —',
-    '   is where you stop, and the card stays in Review. Say what happened on the card, with what the land',
-    '   printed:',
-    `   ${sayOnCard}.`,
-  ];
   return [
-    `Review pull request #${pullRequest}${merge ? ' and land it' : ''}. It came from card ${cardId} on the board of ${projectPath}.`,
-    ...(merge ? [] : ['Merging is off for this project: the user lands the pull request, not you.']),
+    `Review ${words.noun} ${words.sigil}${pullRequest}${merge ? ' and land it' : ''}. It came from card ${cardId} on the board of ${projectPath}.`,
+    ...(merge ? [] : [`Merging is off for this project: the user lands the ${words.noun}, not you.`]),
     '',
-    `1. Run /pr-loop ${pullRequest} and let it finish.`,
-    ...(merge ? land : report),
+    `1. Run ${words.loop} ${pullRequest} and let it finish.`,
+    ...(merge ? steps.land : report),
     '',
     'A layout check on the running app is done in the project\'s browser, the dashboard server\'s browser_ tools,'
       + ' never Playwright or Claude in Chrome.',
     'Never run tests in parallel, or start a second run while one is going.',
     'Do not quit, kill or rebuild any running app.',
   ].join('\n');
+}
+
+const FORGE_WORDS: Record<Forge, { noun: string; sigil: string; loop: string; checks: string }> = {
+  github: { noun: 'pull request', sigil: '#', loop: '/pr-loop', checks: 'CI' },
+  gitlab: { noun: 'merge request', sigil: '!', loop: '/mr-loop', checks: 'pipeline' },
+};
+
+// What differs by forge: how the wait is done, and the land steps 2 to 4. `wait` follows step 2's
+// first line.
+type ForgeSteps = { wait: string[]; land: string[] };
+
+function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
+  return {
+    wait: [
+      `   wait for CI on the pull request's head commit: \`node "$DASHBOARD_COMMAND" pr wait ${pullRequest}\`, run in the`,
+      `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it`,
+      '   exits. A wait stopped at that time limit has not failed: run it once more. That is the whole wait: no',
+      '   `gh pr view`, `gh pr checks` or `gh run view` in between, and no foreground `sleep`, which is refused.',
+      '   It waits on the commit the pull request ends on, asks again a minute on when CI has not started,',
+      '   and rides out a network error; its last line is the verdict: `checks passed on <sha>`, a failed',
+      '   check, or the files the pull request conflicts on.',
+    ],
+    land: [
+      '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
+      `   conflict with the base branch, land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, run in the`,
+      `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it exits.`,
+      '   It notes the head commit, waits for every check on it and merges that commit only, so a push',
+      '   during the wait is refused rather than merged. A land stopped at that time limit has not failed:',
+      '   run it once more, and so is a land that prints `nothing is merged, run it again`. That is the whole',
+      '   wait and the whole merge: no `gh pr view`, `gh pr checks` or',
+      '   `gh pr merge` by hand, and no foreground `sleep`, which is refused.',
+      `3. A land that exits 0, printing \`merged ${pullRequest} at <sha>\`, is merged: that line is gh's merge itself,`,
+      '   so do not run `gh pr view` afterwards to confirm it. Do not approve it: you are the',
+      '   author, and GitHub refuses an approval from the author. The pull request does not need one to',
+      '   merge. Do not move the card: the app moves it to Done once the merge is in.',
+      '',
+      '4. Any other ending — the loop stopped short, the land exited non-zero, the pull request conflicts —',
+      '   is where you stop, and the card stays in Review. Say what happened on the card, with what the land',
+      '   printed:',
+      `   ${sayOnCard}.`,
+    ],
+  };
+}
+
+// A GitLab merge request (forge.ts), through /mr-loop and glab. `pr wait` and `pr land` ask gh, so
+// the wait is glab's own and the merge is one glab call after it, pinned to the head noted before the
+// wait: a push during the wait is refused by `--sha` rather than merged. Making those two verbs
+// forge-aware is what would fold this into the gh steps.
+function mergeRequestSteps(mergeRequest: number, sayOnCard: string): ForgeSteps {
+  const wait = [
+    `   wait for its pipeline: \`glab ci status --wait\`, run in the background (${LONGEST_BACKGROUND_RUN}),`,
+    '   so you are woken when it exits. A wait stopped at that time limit has not failed: run it once more.',
+    '   That is the whole wait: no `glab ci status` by hand in between, and no foreground `sleep`, which is',
+    '   refused. A branch with no pipeline has no CI to wait for.',
+  ];
+  return {
+    wait,
+    land: [
+      '2. If it ended converged or floor-addressed, with nothing above low left unresolved and no',
+      '   conflict with the base branch, first note the head it ended on:',
+      `   \`glab mr view ${mergeRequest} --output json --jq .sha\`. Then`,
+      ...wait,
+      `3. When the pipeline passed, merge the sha you noted before the wait:`,
+      `   \`glab mr merge ${mergeRequest} --sha <that sha> --auto-merge=false --yes\`. Do not`,
+      '   approve it: you are the author. Do not move the card: the app moves it to Done once GitLab says merged.',
+      '',
+      '4. Any other ending — the loop stopped short, the pipeline failed, the merge was refused, the merge',
+      '   request conflicts — is where you stop, and the card stays in Review. Say what happened on the card,',
+      `   with what glab printed: ${sayOnCard}.`,
+    ],
+  };
 }

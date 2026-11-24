@@ -22,3 +22,4 @@ One line per merged change: date and why.
   (skills-decision-3)
 - 2026-11-24 — The app installs a `dashboard-browser` skill, so a session matching a page task to
   a skill finds this browser rather than Claude in Chrome (browser-decision-8)
+- 2026-11-24 — `/work-card` opens a merge request with `glab mr create` on a GitLab project

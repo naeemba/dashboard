@@ -134,7 +134,10 @@ launch, writes its branch on it and moves it into Doing, unless it is in Doing
 or past it already. From then on the
 app asks `gh pr list --head <branch>` about it, one call per card, when a worker
 reports, when the board is shown, and every minute, and records the number
-it finds:
+it finds. On a project whose remote's host does not name github it asks `glab mr list
+--source-branch <branch>` instead, and records the merge request the same way, its iid
+as the number (ship-decision-5, `merge-request.ts`); its glyph is read from the merge
+status alone, which says running and mergeable but not a failed pipeline:
 
 - open: the card goes into Review, as the app's own move, so the review loop
   starts the way it does when the sweep moves it (autoLoop decides). A card in
@@ -311,7 +314,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   onto the file as it is now), `src/main/app/set-aside.ts` (the name a damaged file is moved to,
   shared with `worktrees.json`)
 - The column from the pull request: `pull-request-column.ts` (its decisions),
-  `pull-request-sweep.ts` (when), the card.follow and card.start actions in
+  `merge-request.ts` (gh or glab, by `src/main/app/forge.ts`), `pull-request-sweep.ts` (when),
+  the card.follow and card.start actions in
   `src/main/actions/card/`, each beside its `.test.ts`
 - The glyph from the pull request: `src/main/board/pull-request-status.ts` (what
   gh's answer says, and the store main holds), `src/shared/board/pull-request-status.ts`
@@ -415,6 +419,8 @@ board there does not parse, and when it cannot tell which branch on the remote i
   Review with the number and one line naming the pull request; merged, it is in Done with a second
   line; closed unmerged from Review, it is back in Doing (`pull-request-column.test.ts`,
   `follow.test.ts`).
+- Given a shipped card on a GitLab project, when glab says its branch's merge request is open, then
+  it is in Review with the iid as its number, as a pull request would be (`merge-request.test.ts`).
 - Given a card moved to Done while its pull request is still open, when the app next checks, then it
   is back in Review.
 - Given a card whose pull request has a check running, when it fails, then the card's glyph turns

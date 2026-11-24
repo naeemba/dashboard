@@ -128,17 +128,17 @@ describe('reviewRefused', () => {
 });
 
 describe('reviewPrompt', () => {
-  const prompt = reviewPrompt(CARD, 12, '/work/api', true);
+  const prompt = reviewPrompt(CARD, 12, '/work/api', true, 'github');
 
   it('quotes the project path, which is allowed a space in it', () => {
-    expect(reviewPrompt(CARD, 12, '/work/my api', true)).toContain("cd '/work/my api' &&");
+    expect(reviewPrompt(CARD, 12, '/work/my api', true, 'github')).toContain("cd '/work/my api' &&");
   });
 
   // A folder is allowed an apostrophe too, and one left raw ends the quotes early: the agent is handed
   // `cd '/work/Bob's api'`, which is not the command anyone meant — and the fallback that tells the
   // card what went wrong is built from the same string, so the card sits in Review saying nothing.
   it('escapes an apostrophe in the project path', () => {
-    const prompt = reviewPrompt(CARD, 12, "/work/Bob's api", true);
+    const prompt = reviewPrompt(CARD, 12, "/work/Bob's api", true, 'github');
     expect(prompt).toContain(String.raw`cd '/work/Bob'\''s api' &&`);
   });
 
@@ -162,7 +162,7 @@ describe('reviewPrompt', () => {
   // is refused: the wait is one background pr wait that wakes the agent when it exits. A hand-rolled
   // watch died on a TLS timeout pr wait tries again past.
   it('waits on CI with a background watch, not a poll, when merging is off', () => {
-    const waiting = reviewPrompt(CARD, 12, '/work/api', false);
+    const waiting = reviewPrompt(CARD, 12, '/work/api', false, 'github');
     expect(waiting).toContain('run_in_background, timeout 7200000');
     expect(waiting).toContain('stopped at that time limit has not failed');
     expect(waiting).toContain('`node "$DASHBOARD_COMMAND" pr wait 12`');
@@ -171,7 +171,7 @@ describe('reviewPrompt', () => {
 
   // #290 was merged by this prompt with nobody's go-ahead.
   describe('with merging off', () => {
-    const reporting = reviewPrompt(CARD, 12, '/work/api', false);
+    const reporting = reviewPrompt(CARD, 12, '/work/api', false, 'github');
 
     it('runs the loop and waits for CI, and never merges', () => {
       expect(reporting).toContain('/pr-loop 12');
@@ -212,5 +212,32 @@ describe('reviewPrompt', () => {
 
   it('tells the agent where to say what happened when it cannot land the pull request', () => {
     expect(prompt).toContain(`cd '/work/api' && node "$DASHBOARD_BOARD" comment ${CARD} "<what happened>"`);
+  });
+});
+
+// A GitLab project's merge request: gh answers nothing there, so neither does `pr wait` or `pr land`.
+describe('reviewPrompt on GitLab', () => {
+  const landing = reviewPrompt(CARD, 7, '/work/insta', true, 'gitlab');
+  const reporting = reviewPrompt(CARD, 7, '/work/insta', false, 'gitlab');
+
+  it('runs /mr-loop and waits on the pipeline through glab, in the background', () => {
+    for (const prompt of [landing, reporting]) {
+      expect(prompt).toContain('/mr-loop 7');
+      expect(prompt).toContain('`glab ci status --wait`, run in the background (run_in_background, timeout 7200000');
+      expect(prompt).not.toMatch(/\/pr-loop|pr wait|pr land|\bgh /);
+    }
+  });
+
+  it('merges only the head it noted, and only when merging is on', () => {
+    expect(landing).toContain('`glab mr merge 7 --sha <that sha> --auto-merge=false --yes`');
+    expect(landing.indexOf('glab mr view 7')).toBeGreaterThan(-1);
+    expect(landing.indexOf('glab mr view 7')).toBeLessThan(landing.indexOf('glab ci status --wait'));
+    expect(reporting).not.toContain('glab mr merge');
+    expect(reporting).toContain('Merging is off for this project');
+  });
+
+  it('says the ending on the card and leaves the move to the app', () => {
+    expect(landing).toContain(`cd '/work/insta' && node "$DASHBOARD_BOARD" comment ${CARD} "<what happened>"`);
+    expect(landing).not.toContain(`move ${CARD}`);
   });
 });

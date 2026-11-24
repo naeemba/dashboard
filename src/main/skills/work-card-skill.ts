@@ -29,6 +29,10 @@ fewer words, a missing remote is \`origin\` when \`git remote\` lists it, else
 the only remote, else the one the local main (then master) tracks: read every
 \`$3\` below as that.
 
+When the host in \`git remote get-url $3\` does not name github, the project is on GitLab:
+there a pull request is a merge request, its number the iid (\`!12\`), and
+each \`gh pr\` below is its \`glab mr\` twin, named where they differ.
+
 You are already on the right branch and in the right folder. The app made
 this worktree for this card, moved the card into it, and started you in a
 pane here — none of that is yours to redo.
@@ -63,8 +67,9 @@ Before you write any code, list what else is in flight, in one call:
 
     node "$DASHBOARD_BOARD" list --column Doing; node "$DASHBOARD_BOARD" list --column Review; gh pr list --json number,title,headRefName
 
-For a card or pull request whose title looks near this card, read its files:
-\`gh pr view <n> --json files\` for a pull request; for a card, its branch
+(on GitLab, \`glab mr list\` in place of \`gh pr list\`.) For a card or pull
+request whose title looks near this card, read its files: \`gh pr view <n>
+--json files\` for a pull request (\`glab mr diff <n>\` on GitLab); for a card, its branch
 from the brackets in \`list\`, \`git diff --stat $3/$2...<branch>\`. If
 one covers the same files or the same area, say so in a comment on the card,
 naming the card or pull request and the files you both touch.
@@ -137,11 +142,14 @@ conflict after review, and one of them is thrown away.
   must pass. If one fails and you cannot fix it, stop: do not open the pull
   request, and say what failed and why in a comment on the card.
 - Commit in small pieces with messages that say what changed and why.
-- Push the branch to \`$3\` and open the pull request with \`gh pr create\`.
+- Push the branch to \`$3\` and open the pull request with \`gh pr create\`; on
+  GitLab, \`glab mr create --target-branch $2 --title "<title>" --description
+  "<body>" --push=false --yes\`, which the board records the same way.
 - To wait for the pull request's CI, run \`node "$DASHBOARD_COMMAND" pr wait <n>\`
   in the background with the longest timeout allowed: it waits on the head
   commit, outlasts a network error, and its last line is the verdict. Never a
-  \`sleep\` and \`gh run view\` loop.
+  \`sleep\` and \`gh run view\` loop. It asks gh, so on GitLab the wait is
+  \`glab ci status --wait\`, run the same way.
 
 ## What not to do
 

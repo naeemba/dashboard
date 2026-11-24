@@ -54,7 +54,10 @@ What a shipped card's agent is started on:
 `/work-card <card id> bump-version|keep-version <base branch> <remote>`
 ([ship](../ship/README.md)). It reads
 the card and its subtasks (the `Subtasks` block `board show` prints) and the project's `CLAUDE.md`,
-does the work, runs the project's checks and opens the pull request. Its first look at the code is
+does the work, runs the project's checks and opens the pull request: with `glab mr create` when
+`<remote>`'s host does not name github (ship-decision-5), where it lists open work with `glab mr
+list` and waits on CI with `glab ci status --wait`, since `pr wait` asks gh. Its first look at
+the code is
 a literal `codegraph explore` command run from the project's checkout (whose source can lag the
 worktree, so it reads a file before changing it). Before writing code it lists the Doing and Review
 cards and the open pull requests (a card's files from its branch's diff), and when one covers the

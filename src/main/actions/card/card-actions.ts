@@ -12,7 +12,8 @@ import { bumpsVersion, landsPullRequest, readProjectsFile } from '../../projects
 import { isProjectBoard } from './project-board';
 import { isLinkedWorktree } from '../../board/linked-worktree';
 import { runProgram } from '../../app/git';
-import { reviewFinishedAtHead, reviewViewArguments } from '../../ship/review-finished';
+import { projectForge } from '../../app/forge';
+import { reviewFinished } from '../../ship/review-finished';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { CLAUDE_FOLDER, reviewLoopMissing } from '../../ship/review-loop-install';
 import { entryForCard } from '../../ship/worktree-store';
@@ -29,7 +30,7 @@ import { cardStart } from './start';
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
 export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
-  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished' | 'loopMissing' | 'follow'> & {
+  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished' | 'forgeOf' | 'loopMissing' | 'follow'> & {
     table: Channels;
     boardLog: BoardChanges;
     // Every board write here goes to origin behind it (board-sync-queue.ts).
@@ -39,7 +40,7 @@ export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
     // settings.review.autoMerge, the same way; a project's entry in projects.yaml wins over it.
     autoMerge(): boolean;
     log(draft: LogDraft): void;
-    // `gh pr list` for a branch, in the project (pull-request-column.ts reads its answer).
+    // The branch's pull request, asked of the project's forge (branchPullRequest in merge-request.ts).
     pullRequestOf(projectPath: string, branch: string): Promise<PullRequest | null>;
   };
 
@@ -75,9 +76,8 @@ export function cardActions(main: CardActionsMain): CardActions {
     writeBoard: writeShown,
     arrived: (entry: WorktreeEntry) => move.call({ projectPath: entry.projectPath, id: entry.cardId, column: REVIEW_COLUMN, source: 'automatic' }),
     landsPullRequest: (projectPath) => landsPullRequest(() => readProjectsFile().text, projectPath, homedir(), realPath, main.autoMerge()),
-    // gh failing (offline, signed out) is not knowing, which starts the review as before.
-    reviewFinished: (projectPath, pullRequest) => runProgram('gh', reviewViewArguments(pullRequest), projectPath, { timeout: 20_000 })
-      .then(reviewFinishedAtHead, () => false),
+    reviewFinished: (projectPath, pullRequest) => reviewFinished(runProgram, projectPath, pullRequest, 20_000),
+    forgeOf: (projectPath) => projectForge(projectPath, runProgram),
     loopMissing: () => reviewLoopMissing(CLAUDE_FOLDER),
     follow: (projectPath, id) => follow.call({ projectPath, id }),
   });
@@ -130,7 +130,7 @@ export function cardActions(main: CardActionsMain): CardActions {
         .map((card) => card.id));
     },
     // A refusal is a card the board no longer has, or a file that does not parse: the card is left
-    // alone and the next check asks again. Only gh's failure throws.
+    // alone and the next check asks again. Only the forge's failure throws.
     follow: (projectPath, id) => follow.call({ projectPath, id }),
     warn: (project, message) => main.log({ level: 'warn', kind: 'board', project, message }),
     now: Date.now,

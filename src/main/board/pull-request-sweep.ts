@@ -1,15 +1,15 @@
 import { failureText } from '../../shared/errors/failure';
 
-// When the app asks gh about a project's cards (board-decision-6): when a worker reports, when the
-// board is shown, and on a slow timer, all through `check`. pull-request-column.ts says which cards and
-// what an answer does; card.follow does it.
+// When the app asks the project's forge (forge.ts) about its cards (board-decision-6): when a worker
+// reports, when the board is shown, and on a slow timer, all through `check`. pull-request-column.ts
+// says which cards and what an answer does; card.follow does it.
 
 // The slow timer, for a pull request merged or closed while nobody reported and nobody looked, and
 // for the card's glyph to follow a check that finished (pull-request-status.ts).
 export const FOLLOW_TIMER_MS = 60 * 1000;
 // A check asked for within this long of the last one is skipped. Showing the board re-reads it after
-// every write, the app's own included, and each read asking gh again would be a gh call per card per
-// keystroke. What is skipped is caught by the timer.
+// every write, the app's own included, and each read asking the forge again would be a forge call
+// per card per keystroke. What is skipped is caught by the timer.
 export const FOLLOW_GAP_MS = 30 * 1000;
 
 export type PullRequestSweepPorts = {
@@ -18,7 +18,8 @@ export type PullRequestSweepPorts = {
   projectBoard(projectPath: string): boolean;
   // The cards of the project worth asking about now (followedBranch), by id.
   followed(projectPath: string): string[];
-  // card.follow for one card. Throws when gh cannot answer: missing, logged out or offline.
+  // card.follow for one card. Throws when the project's forge (forge.ts) cannot answer: its CLI
+  // missing, logged out or offline.
   follow(projectPath: string, id: string): Promise<unknown>;
   // One warning in the log, `board` kind.
   warn(projectPath: string, message: string): void;
@@ -31,7 +32,7 @@ export function pullRequestSweep(ports: PullRequestSweepPorts): PullRequestSweep
   // When each project was last checked, from the moment the check began, and the ones still running.
   const checked = new Map<string, number>();
   const running = new Set<string>();
-  // Projects told gh failed and not told since: one warning until a check goes through.
+  // Projects told the forge failed and not told since: one warning until a check goes through.
   const warned = new Set<string>();
 
   async function check(projectPath: string): Promise<void> {
@@ -41,7 +42,7 @@ export function pullRequestSweep(ports: PullRequestSweepPorts): PullRequestSweep
     checked.set(projectPath, now);
     running.add(projectPath);
     try {
-      // One card at a time, and the first gh failure ends the check: offline, every card would fail
+      // One card at a time, and the first forge failure ends the check: offline, every card would fail
       // the same way.
       for (const id of ports.followed(projectPath)) await ports.follow(projectPath, id);
       warned.delete(projectPath);
