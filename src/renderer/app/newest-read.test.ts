@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createNewestRead } from './newest-read';
 
-// A read whose result is handed in by the test, so the order reads land in is the test's to choose.
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((settle) => {
-    resolve = settle;
-  });
-  return { promise, resolve };
-}
-
 describe('createNewestRead', () => {
   it('lands a lone read and answers with what land returns', async () => {
     const reads = createNewestRead<string, boolean>();
@@ -26,8 +17,8 @@ describe('createNewestRead', () => {
 
   it('gives an overtaken read the newer read’s answer and never lands it', async () => {
     const reads = createNewestRead<string, boolean>();
-    const first = deferred<string>();
-    const second = deferred<string>();
+    const first = Promise.withResolvers<string>();
+    const second = Promise.withResolvers<string>();
     const landed: string[] = [];
     const land = (outcome: string) => {
       landed.push(outcome);
@@ -47,8 +38,8 @@ describe('createNewestRead', () => {
 
   it('gives an overtaken read the newer read’s failure too', async () => {
     const reads = createNewestRead<boolean, boolean>();
-    const first = deferred<boolean>();
-    const second = deferred<boolean>();
+    const first = Promise.withResolvers<boolean>();
+    const second = Promise.withResolvers<boolean>();
     const land = (worked: boolean) => worked;
     const firstAnswer = reads.run(() => first.promise, land);
     reads.run(() => second.promise, land);
@@ -59,8 +50,8 @@ describe('createNewestRead', () => {
 
   it('drops an older read that lands after the newer one', async () => {
     const reads = createNewestRead<string, string>();
-    const first = deferred<string>();
-    const second = deferred<string>();
+    const first = Promise.withResolvers<string>();
+    const second = Promise.withResolvers<string>();
     const landed: string[] = [];
     const land = (outcome: string) => {
       landed.push(outcome);
