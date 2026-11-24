@@ -32,3 +32,6 @@ One line per merged change: date and why.
 - 2026-11-24 — The `.dashboard` name is `DASHBOARD_FOLDER_NAME` beside `dashboardPath`, which
   every store joins its file onto; every missing-or-throw read goes through `missing-file.ts`;
   tests use `Promise.withResolvers`
+- 2026-11-25 — An app launched without `SSH_AUTH_SOCK`, or with a stale one, takes the agent's
+  socket from the systemd user environment, else the login shell, so agents' pushes over SSH work;
+  the `.env` read moved with it into `launch-environment.ts`

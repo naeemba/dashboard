@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog } from 'electron';
 // First: a launch that is not going to be the app stops inside it, before any line below runs.
 import { whenLaunchedAgain } from './app/launch-gate';
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
@@ -94,6 +94,7 @@ import { cardActions } from './actions/card/card-actions';
 import { worktreeKeeper } from './ship/worktree-keeper';
 import type { OpenProjects, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
+import { readLaunchEnvironment } from './app/launch-environment';
 import { worktreeRecordAtLaunch } from './ship/worktree-record-at-launch';
 
 // Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
@@ -129,20 +130,8 @@ registerWhatsNew(table, app.getPath('userData'));
 const boardLog = boardChanges((draft) => logStore.log(draft), peekBoard);
 const boardSync = boardSyncQueue((projectPath) => syncBoard(projectPath), (project, message) => logStore.log({ level: 'warn', kind: 'board', project, message }));
 
-// The app opens without it. What is in this file is a shell command and a list of project folders, so a
-// launch that cannot read it opens on the shipped defaults with nothing you set applied — worth a line
-// on the status bar, not worth the window.
-//
-// It has to be a try, not a check: existsSync says yes for a directory and for a file whose permissions
-// have gone, and loadEnvFile throws on both. Before this, a .env that was a folder meant double-clicking
-// Dashboard and having nothing happen at all — no window, no message, the icon bouncing once.
-if (existsSync(environmentFile)) {
-  try {
-    process.loadEnvFile(environmentFile);
-  } catch (error: unknown) {
-    failures.hold(`${environmentFile} was not read: ${failureText(error)}`);
-  }
-}
+// The .env, then the SSH agent every pane and session reaches git over: launch-environment.ts.
+readLaunchEnvironment(environmentFile, failures.hold);
 
 // Empty at launch: every project comes from the picker, and the recents list remembers them across runs.
 // One per slot, and a slot is what every pane of that project is named by — so a project that is

@@ -110,6 +110,10 @@ its own side. `eslint.config.test.ts` pins each of those.
   `projects.ts`, `picker.ts`, `close-project.ts` (asks main's project.close),
   `close-refusal.ts` (in `src/shared/panes/`), `chrome-bars.ts`, `status.ts`
 - Restore: `session.ts`, `session-store.ts`
+- What `process.env` holds before main builds on it: `launch-environment.ts` (the `.env`, then the
+  SSH agent), `ssh-agent.ts` and its test (on Linux, an `SSH_AUTH_SOCK` missing or naming a gone
+  socket is taken from `systemctl --user show-environment`, else a login shell started without the
+  app's own), `shell-path.ts` (what the login shell sets)
 - Atomic write, and a write skipped when the bytes match (`replaceFileIfChanged`): `replace-file.ts`
 - A JSON file of string values read as empty when broken: `string-record-file.ts`
 - A read that answers null for a missing file and throws every other failure: `missing-file.ts`
@@ -265,6 +269,10 @@ on Windows `localhost` bound to `::1` alone while the window asked
   the project is not opened and the status bar says `No folder at` the path.
 - Given a pane in a project is running a program, when you close the project,
   then it refuses and the status bar names the pane.
+- Given the app is launched from a launcher on Linux with no `SSH_AUTH_SOCK`, and the systemd user
+  environment names a live agent, when an agent in a pane or a Claude screen runs `git push` over
+  SSH, then it reaches that agent. A shell a pane host kept from before the launch keeps the
+  environment it started with; a shell that host starts afterwards gets the app's.
 - Given the app is running, when it is launched again, then no second window
   opens and the running window comes to the front.
 - Given the app is running, when it is launched again with `--user-data-dir` on
@@ -283,7 +291,7 @@ on Windows `localhost` bound to `::1` alone while the window asked
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling, at 599 code lines, and `renderer.ts` is
+- `main.ts` is at the 600-line ceiling, at 595 code lines, and `renderer.ts` is
   at 583, after the pane listeners moved into `pane-output-wiring.ts`, the
   board's file listener into `board-wiring.ts` and the notes' into
   `notes-wiring.ts`. A feature that adds code to `main.ts` or `renderer.ts`

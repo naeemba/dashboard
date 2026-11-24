@@ -20,8 +20,8 @@ const STARTS_PROCESSES = [
   'src/main/processes/spawn-scoped.ts',
   // The app started from the `dashboard` command, which is the app, not an agent.
   'src/main/command/start-app.ts',
-  // Git, nvim's remote calls, ps and lsof, an update's unpacking, the login shell's PATH: each ends in
-  // seconds.
+  // Git, nvim's remote calls, ps and lsof, an update's unpacking, the login shell's PATH, the systemd
+  // user environment's SSH agent: each ends in seconds.
   'src/main/app/git.ts',
   'src/main/board/create-task-program.ts',
   'src/main/board/create-task-git-fixture.ts',
@@ -30,6 +30,7 @@ const STARTS_PROCESSES = [
   'src/main/panes/shell-directory-lookup.ts',
   'src/main/update/install.ts',
   'src/main/app/shell-path.ts',
+  'src/main/app/ssh-agent.ts',
   // `dashboard mcp`'s tool calls, each the dashboard command run once with the tool's words; one ends
   // when the command does, as the same command in the session's Bash would.
   'src/main/command/mcp-program.ts',
