@@ -6,7 +6,7 @@ import { MAIN_INDEX, paneFromId, terminalId } from '../../shared/panes/terminals
 import { isRefused, sessionReply, type BoundAction } from '../actions/action';
 import { answered, PANE_ID, refused, type SessionReply, type SessionRequest } from '../workers/session-cli';
 import type { BrowserReads } from './browser-page';
-import { BROWSER_REQUEST, type BrowserCommand } from './browser-cli';
+import { BROWSER_REQUEST, type BrowserRequest } from './browser-cli';
 
 // The browser command's door: [BROWSER_REQUEST, pane, command as JSON, the pane's project] on the
 // session socket, for the agent in that pane. A change is the browser action's, a read
@@ -19,7 +19,7 @@ export type BrowserRequestPorts = {
   projectPath(slot: number): string | undefined;
   // The page a project folder is open on, or -1.
   slotOf(projectPath: string): number;
-  actions: Record<'open' | 'claim' | 'release' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press', BoundAction>;
+  actions: Record<'open' | 'claim' | 'release' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'eval', BoundAction>;
   reads: BrowserReads;
 };
 
@@ -54,7 +54,7 @@ export function browserProject(ports: Pick<BrowserRequestPorts, 'projectPath' | 
   return ports.projectPath(slot) ?? { refused: `pane ${pane} is in no open project` };
 }
 
-async function answer(ports: BrowserRequestPorts, pane: string, command: BrowserCommand): Promise<SessionReply> {
+async function answer(ports: BrowserRequestPorts, pane: string, command: BrowserRequest): Promise<SessionReply> {
   const reply = (result: string | Refused): SessionReply => (isRefused(result) ? refused(result.refused) : answered(result));
   const { actions, reads } = ports;
   if (command.verb === 'open' || command.verb === 'tabs') {
@@ -74,6 +74,7 @@ async function answer(ports: BrowserRequestPorts, pane: string, command: Browser
     case 'click': return sessionReply(await actions.click.call({ ...onTab, ref: command.ref }));
     case 'type': return sessionReply(await actions.type.call({ ...onTab, ref: command.ref, text: command.text }));
     case 'press': return sessionReply(await actions.press.call({ ...onTab, key: command.key, ref: command.ref }));
+    case 'eval': return sessionReply(await actions.eval.call({ ...onTab, script: command.script, waitFor: command.waitFor }));
     case 'read': return reply(await reads.read(pane, command.tab, command));
     case 'screenshot': return reply(await reads.screenshot(pane, command.tab, command));
     case 'snapshot': return reply(await reads.snapshot(pane, command.tab, null));
@@ -104,6 +105,6 @@ export function browserRequests(
     if (isRefused(pane)) return refused(pane.refused);
     if (!paneIsOpen(ports, pane)) return refused(notOpen(sent).refused);
     // A page that stopped answering, or a tab closed mid-call, is said as what it is.
-    return answer(ports, pane, command as BrowserCommand).catch((error: unknown) => refused(failureText(error)));
+    return answer(ports, pane, command as BrowserRequest).catch((error: unknown) => refused(failureText(error)));
   };
 }

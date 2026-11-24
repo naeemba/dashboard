@@ -19,7 +19,7 @@ function fakeDoor() {
     hasCommand: (pane) => ['2:1', `${MANAGER_SLOT}:0`].includes(pane),
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
     slotOf: (folder) => ({ '/work/api': 2, '/work/web': 3 } as Record<string, number>)[folder] ?? -1,
-    actions: Object.fromEntries(['open', 'claim', 'release', 'navigate', 'step', 'resize', 'click', 'type', 'press']
+    actions: Object.fromEntries(['open', 'claim', 'release', 'navigate', 'step', 'resize', 'click', 'type', 'press', 'eval']
       .map((name) => [name, bound(name)])) as BrowserRequestPorts['actions'],
     reads: {
       tabs: (pane, projectPath) => `tabs of ${projectPath} for ${pane}`,
@@ -49,10 +49,12 @@ describe('browserRequests', () => {
     await door.ask('2:1', { verb: 'back', tab: 4 });
     await door.ask('2:1', { verb: 'reset', tab: 4 });
     await door.ask('2:1', { verb: 'press', tab: 4, key: 'Enter', ref: null });
+    await door.ask('2:1', { verb: 'eval', tab: 4, script: 'document.title', waitFor: 'main' });
     expect(door.calls).toEqual([
       'step {"pane":"2:1","tab":4,"step":"back"}',
       'resize {"pane":"2:1","tab":4}',
       'press {"pane":"2:1","tab":4,"key":"Enter","ref":null}',
+      'eval {"pane":"2:1","tab":4,"script":"document.title","waitFor":"main"}',
     ]);
   });
 

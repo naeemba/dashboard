@@ -66,3 +66,16 @@ would otherwise be sent to one. The page hands back a light tree of its content
 and `page-reader.ts` turns it into markdown, so the rules are tested without a
 browser. Console errors and failed requests come from Electron's own events,
 kept from a tab's first load, so they are there before anyone asks.
+
+## browser-decision-7: Pages go to this browser, and a script is a file
+
+A retro on 2026-11-24 counted no `browser_` call against 140 to Playwright and
+Claude in Chrome: their page scripts were capped at 1 KB, Playwright refused
+files outside its roots, the extension disconnected, and zoomed screenshots of
+one site came to 1.6 MB. Main's own brief had sent the worker to Chrome. So
+every prompt the app writes names this browser for any page: it is signed in
+per project and takes a script of any length. `eval` takes a file, not text on
+the command line, so a script is not cut or quoted away, and saves the answer to
+a file with a one-line reply, so a long answer does not fill the session.
+`--wait-for` replaces the `sleep` a script took to let a page render. It is an
+action because a script can click, type and navigate like the actions do.
