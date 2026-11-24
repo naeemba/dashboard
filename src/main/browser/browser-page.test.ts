@@ -3,8 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { BrowserState } from '../../shared/browser/browser';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { browserPage, browserFileReadRule, PageTimeout } from './browser-page';
-import type { PagePorts } from './browser-views';
+import { browserPage, browserFileReadRule } from './browser-page';
+import { PageTimeout, type PagePorts } from './browser-views';
 
 const NOW = Date.parse('2026-11-20T12:00:00Z');
 const browsers = new Map<string, BrowserState>([['/work/api', { tabs: [{ id: 4, url: 'about:blank', title: '', holder: '3:1' }], active: 4 }]]);
@@ -171,11 +171,20 @@ describe('runScript', () => {
       .resolves.toBe(`tab 4's script answered 3 characters: ${path.join(folder, 'tab-4-2026-11-20T12-00-00-000Z.txt')}`);
   });
 
-  it('stops a script still running when the protocol gives up waiting', async () => {
+  it('saves a null as JSON, not as no answer', async () => {
+    const { page, folder } = fakePage({ 'Runtime.evaluate': { result: { type: 'object', subtype: 'null', value: null } } });
+    const file = path.join(folder, 'tab-4-2026-11-20T12-00-00-000Z.json');
+    await expect(page.ports.runScript(4, 'localStorage.getItem("theme")', null)).resolves.toBe(`tab 4's script answered 4 characters: ${file}`);
+    expect(readFileSync(file, 'utf8')).toBe('null');
+  });
+
+  it('stops a script still running when the protocol gives up waiting, a throwaway script after it', async () => {
     const { page, sent } = fakePage({ 'Runtime.evaluate': new PageTimeout(4, 'Runtime.evaluate', 15) });
-    await expect(page.ports.runScript(4, 'for (;;) {}', null))
-      .resolves.toEqual({ refused: 'tab 4\'s script was stopped after 15 seconds; a timer or promise it left behind can still run' });
-    expect(sent[1]).toBe('Runtime.terminateExecution {}');
+    await expect(page.ports.runScript(4, 'for (;;) {}', null)).resolves.toEqual({
+      refused: 'tab 4\'s script did not answer in 15 seconds: one still running was stopped,'
+        + ' but one awaiting a timer or promise was not, and `browser reload` ends it',
+    });
+    expect(sent.slice(1)).toEqual(['Runtime.terminateExecution {}', 'Runtime.evaluate {"expression":"0"}']);
   });
 });
 

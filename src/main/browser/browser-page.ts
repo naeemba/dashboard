@@ -7,18 +7,19 @@ import { NO_TABS, type BrowserState, type ViewportSize } from '../../shared/brow
 import type { PageAct } from '../actions/browser/browser-ports';
 import { isRefused } from '../actions/action';
 import { heldTab, tabLines } from './browser-holds';
-import type { PagePorts } from './browser-views';
+import { PageTimeout, type PagePorts } from './browser-views';
 import { DEFAULT_READ_TOKENS, READ_SCRIPT, readingText, readPage, type ReaderPage } from './page-reader';
 import { snapshotOf, type AXNode } from './page-snapshot';
 
 // The one module that drives a page's content, over the DevTools protocol browser-views.ts attaches
 // to a tab: the reads the browser command answers (read, screenshot, snapshot, console, network,
-// tabs), and what the page actions do (browser.resize, click, type, press, eval). A read changes no browser
-// state, so it is no action, but it is held to the same claim: a pane reads only a tab it holds.
-// Its own few decisions (what a page's exception reads as, how a picture is cut, how long a saved
-// file is kept, a script past the protocol's wait stopped, a stale ref's protocol error said as "take a new snapshot", a reset laying the page out at
-// the view's own size before it clears) are tested through fake PagePorts in browser-page.test.ts;
-// the rest is page-reader.ts's, page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
+// tabs), and what the page actions do (browser.resize, click, type, press, eval). A read changes no
+// browser state, so it is no action, but it is held to the same claim: a pane reads only a tab it
+// holds. Its own few decisions (what a page's exception reads as, how a picture is cut, how long a
+// saved file is kept, a script past the protocol's wait stopped, a stale ref's protocol error said
+// as "take a new snapshot", a reset laying the page out at the view's own size before it clears)
+// are tested through fake PagePorts in browser-page.test.ts; the rest is page-reader.ts's,
+// page-snapshot.ts's, page-log.ts's and browser-holds.ts's.
 
 // The tallest page a full screenshot takes: past it, the picture is a strip nobody reads.
 const TALLEST_SHOT = 16_000;
@@ -34,14 +35,6 @@ export const browserFileFolder = (userData: string): string => path.join(userDat
 export function browserFileReadRule(userData: string): string {
   const posix = browserFileFolder(userData).replaceAll('\\', '/').replace(/^([A-Za-z]):/, (_drive, letter: string) => `/${letter.toLowerCase()}`);
   return `Read(/${posix}/**)`;
-}
-
-// What browser-views.ts's send throws for a page that has not answered in its wait, so a script
-// still running then is stopped, not left to run on beside the next one.
-export class PageTimeout extends Error {
-  constructor(id: number, method: string, readonly seconds: number) {
-    super(`tab ${id} did not answer ${method} in ${seconds} seconds`);
-  }
 }
 
 // How long a file is kept: each one saved clears the folder of those older.
@@ -69,14 +62,16 @@ type ShotOptions = { full: boolean; element: string | null };
 const notASelector = (selector: string, reason: string): string => `${selector} is not a selector the page takes: ${reason}`;
 
 // What Runtime.evaluate answers: the value, or the exception the expression threw. NaN, Infinity,
-// -0 and a BigInt, which JSON cannot carry, come as unserializableValue, a string.
+// -0 and a BigInt, which JSON cannot carry, come as unserializableValue, a string. A null comes as
+// a value of null; only undefined leaves value out.
 function evaluated(answer: unknown): { value: unknown } | { thrown: string } {
   if (!isRecord(answer)) return { thrown: 'the page answered nothing' };
   if (isRecord(answer.exceptionDetails)) {
     const exception = isRecord(answer.exceptionDetails.exception) ? answer.exceptionDetails.exception.description : undefined;
     return { thrown: typeof exception === 'string' ? exception.split('\n')[0] : String(answer.exceptionDetails.text) };
   }
-  return { value: isRecord(answer.result) ? answer.result.value ?? answer.result.unserializableValue : undefined };
+  if (!isRecord(answer.result)) return { value: undefined };
+  return { value: 'value' in answer.result ? answer.result.value : answer.result.unserializableValue };
 }
 
 // Every file in the folder saved longer ago than FILE_KEPT_MS, removed.
@@ -206,9 +201,15 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
       answer = await evaluate(id, script, { replMode: true });
     } catch (error) {
       if (!(error instanceof PageTimeout)) throw error;
-      // Answered off the page's thread, so it reaches a busy loop too.
-      await pages.send(id, 'Runtime.terminateExecution').catch(() => undefined);
-      return { refused: `tab ${id}'s script was stopped after ${error.seconds} seconds; a timer or promise it left behind can still run` };
+      // Handled off the page's thread, so it stops a busy loop. It ends the current or else the next
+      // execution, and answers only when one ends: the throwaway `0` is that next one, so a
+      // termination meant for a script that is awaiting never reaches page code, and neither waits.
+      await Promise.all([
+        pages.send(id, 'Runtime.terminateExecution').catch(() => undefined),
+        pages.send(id, 'Runtime.evaluate', { expression: '0' }).catch(() => undefined),
+      ]);
+      return { refused: `tab ${id}'s script did not answer in ${error.seconds} seconds: one still running was stopped,`
+        + ' but one awaiting a timer or promise was not, and `browser reload` ends it' };
     }
     if ('thrown' in answer) return { refused: `tab ${id}'s script threw: ${answer.thrown}` };
     if (answer.value === undefined) return `tab ${id}'s script answered nothing`;

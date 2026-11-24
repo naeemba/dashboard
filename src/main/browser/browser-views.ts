@@ -4,7 +4,6 @@ import { leavingKey } from '../../shared/keys/browser-keys';
 import type { Settings } from '../../shared/settings/settings';
 import type { BrowserPorts } from '../actions/browser/browser-ports';
 import { isBrowsable } from './address';
-import { PageTimeout } from './browser-page';
 import { mayAsk, partitionOf, shownTab, withTabChange } from './browser-tabs';
 import { pageLog, requestFailure, type PageLog } from './page-log';
 
@@ -28,7 +27,16 @@ export type PagePorts = {
   logOf(id: number): PageLog | undefined;
 };
 
-// The ports the views give the actions; the page's own (emulate, refsOf, act, runScript) are browser-page.ts's.
+// What send throws for a page that has not answered in its wait, so browser-page.ts stops a script
+// still running then, not left to run on beside the next one.
+export class PageTimeout extends Error {
+  constructor(id: number, method: string, readonly seconds: number) {
+    super(`tab ${id} did not answer ${method} in ${seconds} seconds`);
+  }
+}
+
+// The ports the views give the actions; the page's own (emulate, refsOf, act, runScript) are
+// browser-page.ts's.
 type ViewPorts = Omit<BrowserPorts, 'emulate' | 'refsOf' | 'act' | 'runScript'>;
 
 // The size a tab is laid out at before it was ever on screen, an agent's tab: a laptop's window.
