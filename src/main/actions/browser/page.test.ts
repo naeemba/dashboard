@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bind } from '../action';
 import { fakePorts } from './browser-fixture';
-import { browserClick, browserPress, browserResize, browserType } from './page';
+import { browserClick, browserEval, browserPress, browserResize, browserType } from './page';
 
 const project = '/work/api';
 const held = () => fakePorts({ [project]: { tabs: [{ id: 4, url: 'about:blank', title: '', holder: '3:1' }], active: 4 } }, { e1: 101 });
@@ -54,5 +54,21 @@ describe('browser.press', () => {
 
   it('refuses a key it does not know', async () => {
     await expect(bind(browserPress, held()).call({ pane: '3:1', tab: 4, key: 'Hyper' })).resolves.toHaveProperty('refused');
+  });
+});
+
+describe('browser.eval', () => {
+  it('runs the script in a tab the pane holds, with no wait when no selector is given', async () => {
+    const ports = held();
+    await expect(bind(browserEval, ports).call({ pane: '3:1', tab: 4, script: 'document.title', waitFor: '  ' }))
+      .resolves.toEqual({ output: 'tab 4\'s script answered nothing' });
+    expect(ports.done).toEqual(['eval 4 {"script":"document.title","waitFor":null}']);
+  });
+
+  it('refuses an empty script, and a tab another pane holds', async () => {
+    const ports = held();
+    await expect(bind(browserEval, ports).call({ pane: '3:1', tab: 4, script: '\n' })).resolves.toEqual({ refused: 'the script is empty' });
+    await expect(bind(browserEval, ports).call({ pane: '3:2', tab: 4, script: '1' })).resolves.toEqual({ refused: 'tab 4 is held by pane 3:1' });
+    expect(ports.done).toEqual([]);
   });
 });

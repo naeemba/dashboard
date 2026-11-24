@@ -116,9 +116,9 @@ Neither door holds any of the logic; each only asks.
   live copy with the shell it picks, then writes the file; a pane already
   running keeps its shell. The launch tidy (`tidySettingsFile`,
   `settings-store.ts`) still rewrites the file's own lines outside it.
-- **settings.cap** (`dashboard budget --cap`): the weekly cap written into
-  settings.json from outside the app, every other line left as it was
-  (`writeWeeklyCap`, its port); a running app adopts it.
+- **settings.cap** and **settings.pace** (`dashboard budget --cap`, `--pace`):
+  the budget limit written into settings.json from outside the app, every other
+  line left as it was (`writeBudget`, their port); a running app adopts it.
 - **settings.adopt** (main's watch on the settings folder): a file that changed
   on disk to something main does not hold becomes main's live copy with its
   shell, and the window's; nothing is written back.
@@ -223,7 +223,7 @@ Folder: `src/main/actions/`.
 - `session/conversation-ports.ts` — what reset, resume, branch and rewind ask of
   the session, and `keepsItsConversation`
 - `settings/settings-actions.ts` — main's wiring: settings.write and the screen's `settings:write`
-- `settings/write.ts`, `settings/adopt.ts`, `settings/cap.ts`
+- `settings/write.ts`, `settings/adopt.ts`, `settings/budget.ts`
 - `src/shared/board/column-entry.ts` — the transition table
 
 ## Scenarios

@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T11:11:34.553Z",
-  "updatedAt": "2026-11-24T11:11:34.553Z",
-  "column": "Backlog",
-  "order": 62
+  "updatedAt": "2026-11-24T12:07:36.365Z",
+  "branch": "a-docs-check-refuses-a-duplicate-docs-id-or",
+  "pullRequest": 358,
+  "comments": [
+    {
+      "at": "2026-11-24T12:07:36.308Z",
+      "body": "Pull request #358 opened: Lint refuses a duplicate docs heading id and a leftover -next id https://github.com/naeemba/dashboard/pull/358"
+    }
+  ],
+  "column": "Review",
+  "order": 7
 }

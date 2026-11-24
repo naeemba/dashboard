@@ -27,8 +27,17 @@ export type PagePorts = {
   logOf(id: number): PageLog | undefined;
 };
 
-// The ports the views give the actions; the page's own (emulate, refsOf, act) are browser-page.ts's.
-type ViewPorts = Omit<BrowserPorts, 'emulate' | 'refsOf' | 'act'>;
+// What send throws for a page that has not answered in its wait, so browser-page.ts stops a script
+// still running then, not left to run on beside the next one.
+export class PageTimeout extends Error {
+  constructor(id: number, method: string, readonly seconds: number) {
+    super(`tab ${id} did not answer ${method} in ${seconds} seconds`);
+  }
+}
+
+// The ports the views give the actions; the page's own (emulate, refsOf, act, runScript) are
+// browser-page.ts's.
+type ViewPorts = Omit<BrowserPorts, 'emulate' | 'refsOf' | 'act' | 'runScript'>;
 
 // The size a tab is laid out at before it was ever on screen, an agent's tab: a laptop's window.
 const UNPLACED: BrowserBounds = { x: 0, y: 0, width: 1280, height: 800 };
@@ -200,7 +209,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       if (!contents.debugger.isAttached()) contents.debugger.attach('1.3');
       let timer: NodeJS.Timeout | undefined;
       const late = new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error(`tab ${id} did not answer ${method} in ${PROTOCOL_TIMEOUT / 1000} seconds`)), PROTOCOL_TIMEOUT);
+        timer = setTimeout(() => reject(new PageTimeout(id, method, PROTOCOL_TIMEOUT / 1000)), PROTOCOL_TIMEOUT);
       });
       try {
         return await Promise.race([contents.debugger.sendCommand(method, parameters), late]);

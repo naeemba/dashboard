@@ -120,8 +120,8 @@ describe('workerSettings', () => {
   });
 
   // A copy started with --user-data-dir saves its screenshots under its own folder, so that is the one read.
-  it('allows reading the screenshots in the folder the app saves into', () => {
-    expect(JSON.parse(workerSettings('2:3', USER_DATA)).permissions.allow).toContain('Read(//tmp/dash-copy/browser-screenshots/**)');
+  it('allows reading the screenshots and script answers in the folder the app saves into', () => {
+    expect(JSON.parse(workerSettings('2:3', USER_DATA)).permissions.allow).toContain('Read(//tmp/dash-copy/browser-files/**)');
   });
 
   // A terminal worker carries everything a screen does, so a key added to the shared settings reaches both.

@@ -42,7 +42,7 @@ dispatches into, an editor and a kanban board kept in the project's .dashboard/b
   dashboard project <command>   list, add, change, open, close and switch to the projects in ~/.dashboard/projects.yaml
   dashboard pr wait <n>         wait for a pull request's checks on its head commit
   dashboard pr land <n>         wait for a pull request's checks, then merge the commit they passed on
-  dashboard budget [--cap <n>]  the 7-day usage against the cap you set once; exits 1 at the cap
+  dashboard budget [<flags>]    the 7-day usage against the cap or daily pace you set once; exits 1 at it
   dashboard browser <command>   open, read, screenshot and click in the project's browser tabs, from a pane
   dashboard mcp                 serve these commands as MCP tools on stdin and stdout
   dashboard <noun> --help       what a noun takes

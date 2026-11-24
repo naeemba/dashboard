@@ -70,22 +70,23 @@ export function tidySettingsFile(file: string, isMac: boolean): void {
   }
 }
 
-// settings.cap's port (`budget --cap`), the file's second writer beside settings.write: the app need
-// not be running, and a running one adopts the change when the file does (adoptedSettings). Only
-// budget.weeklyCap changes; every other line is written back as it was. A file that does not read as
-// an object is refused rather than replaced: the cap is not worth the rest of somebody's settings.
-export function writeWeeklyCap(file: string, cap: number): void {
+// The port of settings.cap and settings.pace (`budget --cap`, `budget --pace`), the file's second
+// writer beside settings.write: the app need not be running, and a running one adopts the change when
+// the file does (adoptedSettings). Only the given budget fields change; every other line is written
+// back as it was. A file that does not read as an object is refused rather than replaced: the budget
+// is not worth the rest of somebody's settings.
+export function writeBudget(file: string, fields: Partial<Settings['budget']>): void {
   const text = readText(file);
   let stored: unknown;
   try {
     stored = JSON.parse(text ?? '{}');
   } catch {
-    throw new ExpectedFailure(`${file} does not read as JSON; fix it, then set the cap again`);
+    throw new ExpectedFailure(`${file} does not read as JSON; fix it, then set the budget again`);
   }
-  if (!isRecord(stored)) throw new ExpectedFailure(`${file} does not hold an object; fix it, then set the cap again`);
+  if (!isRecord(stored)) throw new ExpectedFailure(`${file} does not hold an object; fix it, then set the budget again`);
   const budget = isRecord(stored.budget) ? stored.budget : {};
   // Whole or not at all: the app reads this file while the command writes it.
-  replaceFile(linkTarget(file), serialize({ ...stored, budget: { ...budget, weeklyCap: cap } }), 0o600);
+  replaceFile(linkTarget(file), serialize({ ...stored, budget: { ...budget, ...fields } }), 0o600);
 }
 
 // Renamed over the link's target, not the link, so a settings.json symlinked from a dotfiles repo

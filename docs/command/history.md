@@ -24,3 +24,6 @@ One line per merged change: date and why.
   and `pr wait` is tried again for about four minutes on a network error; a conflicting pull request
   names its files; the verdict is the last line: workers hand-rolled sleep and `gh run view` loops,
   a land gave up on a TLS handshake timeout, and main ran `gh pr view` after every land
+- 2026-11-24 — `budget` holds the usage to a weekly cap, a daily pace since the weekly reset, or
+  none (`--cap none` exits 0); the app writes the reset time into the reading: a fixed cap went
+  stale every day for a user spreading the week evenly (command-decision-10)

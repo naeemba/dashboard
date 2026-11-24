@@ -91,7 +91,7 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('project close', 'Close a project; refused while any of its panes runs something', [word('name', 'name or aka')], false),
   tool('project focus', 'Bring the app to the front on a project\'s page', [word('name', 'name or aka')], false),
 
-  tool('budget', 'The 7-day usage against the cap; an error at or over it, or when the reading is stale', []),
+  tool('budget', 'The 7-day usage against the weekly cap or today\'s pace; an error at or over it, or when the reading is stale', []),
   { name: 'version', words: ['--version'], description: 'The installed Dashboard build, version+commit', parameters: [], allowed: true },
 
   tool('browser open', 'Open a tab you hold in the project\'s browser; prints its id', [word('url', 'address'), PROJECT]),
@@ -113,6 +113,8 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('browser type', 'Type at the end of what a field holds', [TAB, REF, word('text', 'what to type')]),
   tool('browser press', 'Press Enter, Tab, Escape, an arrow or one character, in a ref or the page', [
     TAB, word('key', 'the key'), optionalWord('ref', 'the ref to press it in')]),
+  tool('browser eval', 'Run a JavaScript file in the page; saves its last expression\'s value to a file and prints the path', [
+    TAB, word('file', 'path of the .js file to run'), flag('wait-for', 'run once this CSS selector matches, 10 seconds at most')]),
   tool('browser console', 'The last errors the page logged', [TAB]),
   tool('browser network', 'The last requests that failed', [TAB]),
 ];
@@ -131,9 +133,13 @@ export const COMMAND_ONLY: Record<string, string> = {
   'pr wait': WAIT_IN_BASH,
 };
 
-// What the server tells every session about itself, once.
+// What the server tells every session about itself, once, and when its browser is the one to reach
+// for: the retro that asked for this found every page check done in Playwright or Claude in Chrome.
 export const SERVER_INSTRUCTIONS = 'The Dashboard app this session runs in: its board, its worker panes, its projects and its'
-  + ` browser. To land a pull request, ${LAND_IN_BASH}; to wait on its CI without merging, ${WAIT_IN_BASH}.`;
+  + ' browser. For any web page to read or check, a frontend or layout check included, use the browser_ tools'
+  + ' rather than Playwright or Claude in Chrome: each project\'s browser keeps its own sign-ins, browser_eval'
+  + ' runs a script file of any length and saves its answer to a file, and browser_screenshot answers with the'
+  + ` picture. To land a pull request, ${LAND_IN_BASH}; to wait on its CI without merging, ${WAIT_IN_BASH}.`;
 
 export const MCP_SERVER_NAME = 'dashboard';
 

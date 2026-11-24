@@ -51,10 +51,16 @@ The Errors row (`errors.notify`, default on) says whether an error on the status
 bar raises a desktop notification while the window is not in front. Enter turns
 it over (docs/errors).
 
-The Budget row (`budget.weeklyCap`, default none) is the share of the 7-day
-usage, in percent, that `dashboard budget` calls over: above 0 and at most 100,
-empty for none. `dashboard budget --cap <n>` sets the same line
-([command](../command/README.md), command-decision-6).
+The Budget rows say what `dashboard budget` holds the 7-day usage to. The limit
+row (`budget.limit`, default the weekly cap) walks the weekly cap, the daily pace
+and no limit on Enter. The weekly cap (`budget.weeklyCap`, default not set) is
+the share, in percent, it calls over: above 0 and at most 100, or empty for not
+set, which under the weekly cap makes `budget` exit 2. The
+daily pace (`budget.dailyShare`, default a seventh of the week) is the share
+added for each day begun since the weekly reset, in the same range. A figure
+typed into either row also makes its row the limit; emptying a row does not.
+`dashboard budget --cap` and `--pace` set the same lines
+([command](../command/README.md), command-decision-6, command-decision-10).
 
 `workers.closeAfterMinutes` (default 10, in the file by hand only, no row) is how
 long a worker whose report main has read sits with nothing sent to it before the
@@ -91,8 +97,9 @@ the pull request it came from may still be open.
 Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
 
 - `settings.ts`, `settings-store.ts`, `settings-rows.ts`, `settings-view.ts`
-- the app's writes go through settings.write and `budget --cap`'s through
-  settings.cap, `src/main/actions/settings/` (docs/actions); a change on disk
+- the app's writes go through settings.write and `budget --cap`'s and `--pace`'s
+  through settings.cap and settings.pace, `src/main/actions/settings/`
+  (docs/actions); a change on disk
   comes in through settings.adopt
 
 ## Scenarios

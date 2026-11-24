@@ -14,7 +14,7 @@ its own verbs; this feature only picks the program.
 | `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run [--card \| --worktree \| --in <folder>], list [--all] [--reports], send, release, finish, report, notify |
 | `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
 | `pr` | the `pr` program, here | land [--project] |
-| `budget` | the `budget` program, here | none, or --cap |
+| `budget` | the `budget` program, here | none, --cap or --pace |
 | `browser` | the `browser` program ([browser](../browser/README.md)) | open [--project], tabs, claim, release, go, back, forward, reload, resize, reset, read, screenshot, snapshot, click, type, press, console, network |
 
 `pr land <number|url|branch>` lands a pull request; a review worker with merging
@@ -53,17 +53,25 @@ in the rules the app allows every session (command-decision-5). It needs gh, nev
 `budget` reads the 7-day usage of the Claude account from
 `~/.claude/usage-7d.json`, which the user's statusline writes each time it draws
 and the app at most once a minute when a Claude screen is measured
-(`{"usedPercentage": <number>, "at": "<ISO time>"}`), against `budget.weeklyCap`
-in settings.json. It prints the share used, the cap and how old the reading is,
-and exits 0 under the cap, 1 at or over it, and 2 when it cannot say: no cap
-set, no file, a file that does not read, a reading older than 30 minutes, or one
-dated more than 5 minutes ahead (a clock that was wrong when it wrote). The file
-is written only while some session is on screen, so a loop left overnight reads
-a stale figure, and stale is never under. `budget --cap <n>` sets the cap (above
-0, at most 100), the settings screen's Budget row too; a running app takes the
+(`{"usedPercentage": <number>, "at": "<ISO time>", "resetsAt": "<ISO time>"}`,
+`resetsAt` the end of the 7-day window, when the writer has it), against the
+limit in settings.json's `budget`. The limit is one of three
+(command-decision-10): a fixed weekly cap (`budget.weeklyCap`); a pace, today's
+cap being `budget.dailyShare` (a seventh of 100 when unset) for each local
+calendar day begun since the weekly reset, so with a reset on Friday at 15:30
+Tuesday is day 5 and its cap 71.4%; or none. It prints the share used, which
+limit applies with today's figure, and how old the reading is, and exits 0
+under, 1 at or over, and 2 when it cannot say: no cap set, no file, a file that
+does not read, a pace with no `resetsAt`, a reading older than 30 minutes, or
+one dated more than 5 minutes ahead (a clock that was wrong when it wrote).
+With none it exits 0 without reading. The file is written only while some
+session is on screen, so a loop left overnight reads a stale figure, and stale
+is never under. `budget --cap <n>` sets the cap (above 0, at most 100) and
+`--cap none` turns the limit off; `budget --pace even` or `--pace <n>` sets the
+pace; the settings screen's Budget rows set the same; a running app takes the
 change at once. Main's prompt tells it to run `budget` before each round of a
 long loop and stop on anything but 0, and reading it is allowed in every session
-the app starts; `--cap` is asked (command-decision-6). It needs no app and no
+the app starts; `--cap` and `--pace` are asked (command-decision-6). It needs no app and no
 gh.
 
 `session` is another name for `pane`. `dashboard` with no words prints the usage, as
@@ -211,8 +219,10 @@ Folders: `src/main/command/`.
   it); the protocol `mcp-server.ts`, `mcp-server.test.ts`; stdin, stdout and the child each call
   runs, `mcp-program.ts`. Given to every screen in `src/main/chat/chat-sessions.ts`
 - The `budget` noun: `budget-cli.ts`, `budget-cli.test.ts`, `budget-program.ts`;
-  the cap is written through settings.cap (`src/main/actions/settings/cap.ts`),
-  its port `writeWeeklyCap` in `src/main/settings/settings-store.ts`
+  the limit is written through settings.cap and settings.pace
+  (`src/main/actions/settings/budget.ts`), their port `writeBudget` in
+  `src/main/settings/settings-store.ts`; the app writes `resetsAt` in
+  `src/main/usage/weekly-usage-file.ts`
 
 ## Scenarios
 
@@ -284,6 +294,11 @@ Folders: `src/main/command/`.
   then it reads that screen's 7-day figure from under a minute ago.
 - Given the app running, when `dashboard budget --cap 60` runs, then the
   settings screen shows 60 and the next save there keeps it.
+- Given `budget --pace even`, a reset on Friday at 15:30 and a reading of 64% on
+  Tuesday, when `dashboard budget` runs, then it prints today's cap 71.4% on day
+  5 of 7 and exits 0; at 72% it exits 1.
+- Given `budget --cap none`, when `dashboard budget` runs with no reading at all,
+  then it says no limit is set and exits 0.
 
 - Given a Claude screen, when it calls `mcp__dashboard__board_show` with `{ "id": "ab12" }`, then
   it gets what `board show ab12` prints; with an id no card has, a tool error saying so.

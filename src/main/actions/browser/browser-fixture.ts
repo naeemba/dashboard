@@ -24,6 +24,10 @@ export function fakePorts(start: Record<string, BrowserState> = {}, refs: Record
     focus: (tab) => { done.push(`focus ${tab}`); },
     emulate: async (tab, size) => { done.push(size === null ? `unsize ${tab}` : `size ${tab} ${size.width}x${size.height}`); },
     refsOf: () => new Map(Object.entries(refs)),
+    runScript: async (tab, script, waitFor) => {
+      done.push(`eval ${tab} ${JSON.stringify({ script, waitFor })}`);
+      return `tab ${tab}'s script answered nothing`;
+    },
     act: async (tab, act) => { done.push(`${act.kind} ${tab} ${JSON.stringify({ ...act, kind: undefined })}`); },
   };
 }

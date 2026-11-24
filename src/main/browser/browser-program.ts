@@ -1,6 +1,8 @@
+import { readFile } from 'node:fs/promises';
+import { failureText } from '../../shared/errors/failure';
 import { projectNamedInFile } from '../projects/project-named';
 import { askRunningApp } from '../workers/session-socket';
-import { BROWSER_REQUEST, OUTSIDE_PANE, parseBrowserCommand } from './browser-cli';
+import { BROWSER_REQUEST, OUTSIDE_PANE, parseBrowserCommand, type BrowserRequest } from './browser-cli';
 
 // The whole of the `browser` program outside browser-cli.ts and the app: the words parsed, a project
 // name found in ~/.dashboard/projects.yaml, and the command sent for the pane it runs in. `dashboard
@@ -18,7 +20,16 @@ export async function runBrowserProgram(words: readonly string[]): Promise<numbe
     process.stderr.write(`${OUTSIDE_PANE}\n`);
     return 1;
   }
-  let { command } = parsed;
+  let command: BrowserRequest;
+  if (parsed.command.verb === 'eval') {
+    const { file, ...rest } = parsed.command;
+    const script = await readFile(file, 'utf8').catch((error: unknown) => ({ failed: failureText(error) }));
+    if (typeof script !== 'string') {
+      process.stderr.write(`the script file could not be read: ${script.failed}\n`);
+      return 1;
+    }
+    command = { ...rest, script };
+  } else command = parsed.command;
   if ('project' in command && command.project !== null) {
     const named = projectNamedInFile(command.project);
     if (!named.ok) {
