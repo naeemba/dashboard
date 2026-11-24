@@ -92,10 +92,21 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     return evaluated(await pages.send(id, 'Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, ...extra }));
   }
 
+  // The tabs an agent laid out at a size of its own, so a release clears only those and a tab never
+  // sized is not attached to for nothing.
+  // ponytail: a closed tab's id stays, like refs above.
+  const sized = new Set<number>();
+
   // Laid out at the view's own size before clearing, or a hidden tab stays a phone's width (browser-decision-6).
   async function emulate(id: number, size: ViewportSize | null): Promise<void> {
+    if (size === null && !sized.has(id)) return;
     await pages.send(id, 'Emulation.setDeviceMetricsOverride', { ...(size ?? pages.size(id)), deviceScaleFactor: 0, mobile: false });
-    if (size === null) await pages.send(id, 'Emulation.clearDeviceMetricsOverride');
+    if (size !== null) {
+      sized.add(id);
+    } else {
+      await pages.send(id, 'Emulation.clearDeviceMetricsOverride');
+      sized.delete(id);
+    }
   }
 
   // A picture through the protocol, which draws a hidden view (browser-decision-6). A clip is in the

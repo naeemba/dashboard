@@ -82,8 +82,8 @@ The server's instructions, main's prompt, the work-card skill and the review
 prompt send every page read or frontend check here rather than to Playwright or
 Claude in Chrome (browser-decision-7). The server's instructions carry a WHEN TO
 USE block naming those tasks, and the app installs a `dashboard-browser` skill
-whose description names them too, with the steps from open to release (a
-resized tab is reset before it goes back) and what to do on a sign-in page:
+whose description names them too, with the steps from open to release and
+what to do on a sign-in page:
 ask the person to sign in once in this browser. Claude in Chrome stays for a
 page that needs the person's own Chrome profile or an extension in it, or when
 the person asks for it (browser-decision-8).
@@ -131,9 +131,11 @@ the person asks for it (browser-decision-8).
 
 A pane acts only on the tabs it holds, reads included (browser-rule-3). Its tabs
 go back to you, still open, when its pane is released, finished or closed, its
-agent exits, or another agent starts in it. The protocol is each tab's own
-`webContents.debugger`; the app never opens a remote debugging port, which would
-hand its window and terminals to anything on the machine (browser-decision-6).
+agent exits, or another agent starts in it. A tab handed back, those and the one
+you take back, is laid out at its own size again, whatever size an agent gave
+it. The protocol is each tab's own `webContents.debugger`; the app never opens a
+remote debugging port, which would hand its window and terminals to anything on
+the machine (browser-decision-6).
 
 ## Files
 
@@ -191,8 +193,8 @@ The keys are in `src/shared/keys/browser-actions.ts` and
   opens behind yours, and `browser tabs` lists it as the worker's.
 - Given the worker's tab on screen, when you press Ctrl+Shift+E, then its pane
   name goes, and the worker's next `browser read` on it says you took it back.
-- Given a worker holds two tabs, when its pane is released, then both stay open
-  and are yours.
+- Given a worker holds two tabs, one it resized to 390x844, when its pane is
+  released, then both stay open, are yours, and fill the page's box.
 - Given `browser read 3 --max-tokens 500` on a long article, then the first line
   says ~500 of the whole estimate and that it was cut.
 

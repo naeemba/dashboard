@@ -20,6 +20,12 @@ export const browserClaim = action<BrowserPorts, AgentTarget, { output: string }
   },
 });
 
+// A tab handed back is laid out at its view's own size again, or the person gets it at the 390 an
+// agent's resize left. A tab that will not clear, say one closed meanwhile, is still handed back.
+async function unsize(ports: BrowserPorts, tabs: number[]): Promise<void> {
+  await Promise.all(tabs.map((tab) => ports.emulate(tab, null).catch(() => undefined)));
+}
+
 // One tab back to the user, or with no tab named every tab the pane holds, in every project: a pane
 // released, finished, its agent exited or another started in it.
 export const browserRelease = action<BrowserPorts, { pane: string; tab: number | null }, { output: string }>('browser.release', {
@@ -33,16 +39,18 @@ export const browserRelease = action<BrowserPorts, { pane: string; tab: number |
       const found = targetTab(ports, { pane, tab });
       if (isRefused(found)) return found;
       ports.keep(found.projectPath, withTabChange(ports.browserOf(found.projectPath), tab, { holder: 'user' }));
+      await unsize(ports, [tab]);
       return { output: `tab ${tab} is the user's again` };
     }
-    let released = 0;
+    const released: number[] = [];
     for (const [projectPath, state] of [...ports.allBrowsers()]) {
       const next = withoutPane(state, pane);
       if (next === state) continue;
-      released += state.tabs.filter((each) => each.holder === pane).length;
+      released.push(...state.tabs.filter((each) => each.holder === pane).map((each) => each.id));
       ports.keep(projectPath, next);
     }
-    return { output: `released ${released} tabs of ${pane}` };
+    await unsize(ports, released);
+    return { output: `released ${released.length} tabs of ${pane}` };
   },
 });
 
@@ -57,6 +65,7 @@ export const browserRevoke = action<BrowserPorts, { projectPath: string }, { out
     const refusal = revokeRefusal(tab);
     if (refusal !== null) return refusal;
     ports.keep(projectPath, withTabChange(state, tab.id, takenBack(tab)));
+    await unsize(ports, [tab.id]);
     return { output: `took tab ${tab.id} back from ${tab.holder}` };
   },
 });

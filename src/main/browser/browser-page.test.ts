@@ -120,11 +120,24 @@ describe('click', () => {
 describe('emulate', () => {
   it('lays a page back out at its view\'s own size before clearing, so a hidden tab is not left a phone\'s width', async () => {
     const { page, sent } = fakePage({});
+    await page.ports.emulate(4, { width: 390, height: 844 });
+    sent.length = 0;
     await page.ports.emulate(4, null);
     expect(sent).toEqual([
       'Emulation.setDeviceMetricsOverride {"width":1280,"height":800,"deviceScaleFactor":0,"mobile":false}',
       'Emulation.clearDeviceMetricsOverride {}',
     ]);
+  });
+
+  it('leaves a tab nobody sized alone, and clears a size once', async () => {
+    const { page, sent } = fakePage({});
+    await page.ports.emulate(4, null);
+    expect(sent).toEqual([]);
+    await page.ports.emulate(4, { width: 390, height: 844 });
+    await page.ports.emulate(4, null);
+    sent.length = 0;
+    await page.ports.emulate(4, null);
+    expect(sent).toEqual([]);
   });
 
   it('lays a page out at the size asked for, and leaves it there', async () => {
