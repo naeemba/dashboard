@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:19.151Z",
-  "updatedAt": "2026-11-24T12:18:32.728Z",
+  "updatedAt": "2026-11-24T12:19:36.386Z",
   "branch": "agents-reach-for-the-dashboard-browser-and",
   "pullRequest": 356,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-24T12:18:32.728Z",
       "body": "PR #356 review loop converged, ready to merge. 3 rounds, 9 findings fixed, 0 rejected (commits 74dabf68, 01040db5: eval stops a script past the protocol's wait, saves NaN/BigInt as text and null as JSON, spends a stray termination on a throwaway script; PageTimeout moved beside send; docs updated). No conflicts. CI on head 01040db5: 5/5 passed."
+    },
+    {
+      "at": "2026-11-24T12:19:36.357Z",
+      "body": "Pull request #356 merged: Agents reach for the Dashboard browser, and it can run a page script https://github.com/naeemba/dashboard/pull/356"
     }
   ],
-  "column": "Review",
-  "order": 5
+  "column": "Done",
+  "order": 289
 }
