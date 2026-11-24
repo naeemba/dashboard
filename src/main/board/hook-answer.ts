@@ -5,6 +5,7 @@ import { isRecord } from '../../shared/app/is-record';
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
 // package-manager-guard.ts, worktree-guard.ts, test-run-guard.ts): a field of the tool's input, the
 // file tools, the shell's redirect or tee into a file, a command line cut into its simple commands, the
+// body of a `sh -c` or a Windows `cmd /c` or `powershell -Command`, the
 // folder each runs in and the verb each runs, a word of the command as a path, the repository a folder
 // is in, and the refusal they print.
 
@@ -83,6 +84,17 @@ export const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((
 // The quoted body of `sh -c '…'` (bash, zsh, dash too), which runs as a command line of its own.
 export function shellBody(part: string): string | null {
   return invocation(part, 'sh|bash|zsh|dash') ? /\s-\w*c\s+(["'])(.*)\1/.exec(part)?.[2] ?? null : null;
+}
+
+// A word matched in any case, for a Windows name: its filesystem and shells ignore case, Linux's do not.
+export const anyCase = (word: string) => [...word].map((letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`).join('');
+
+// The command a `powershell -Command`, `pwsh -c` or `cmd /c` (`//c` from Git Bash) runs, unquoted.
+// ponytail: a PowerShell command given with no -Command is not read.
+export function windowsShellBody(part: string): string | null {
+  if (!invocation(part, String.raw`(?:${['powershell', 'pwsh', 'cmd'].map(anyCase).join('|')})(?:\.exe)?`)) return null;
+  const body = /\s(?:-c(?:ommand)?|\/\/?[ck])\s+(.*)$/i.exec(part)?.[1];
+  return body === undefined ? null : body.replace(/^(["'])(.*)\1$/, '$2');
 }
 
 // What may stand before a verb: a subshell or group opening, then sudo (with its flags), command,

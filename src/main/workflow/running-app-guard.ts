@@ -18,7 +18,7 @@
 // with a verb is refused, and a lone `'` in a heredoc body (`Don't`) hides every command after it;
 // matching those means running the shell, and this is a guard rail.
 
-import { hookRefusal, invocation, pipelines, SHELL_REDIRECT, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
+import { anyCase, hookRefusal, invocation, pipelines, SHELL_REDIRECT, shellBody, simpleCommands, textField, windowsShellBody, wordsOf } from '../board/hook-answer';
 
 // A process as /proc shows it: its names (comm, argv[0] and argv[0]'s basename), its argv and its
 // command line.
@@ -46,9 +46,6 @@ const RUNNING_APP = /\/\.local\/opt\/dashboard\/|\/Dashboard\.app\/|[\\/]AppData
 
 // Where the process list cannot be read: the names a pattern must carry to be taken for the app's.
 const NAMES_APP = /dashboard|electron|claude|\bnode\b|(?:pane|screen)-host/i;
-
-// A word matched in any case, for the Windows path: its filesystem ignores case, Linux's does not.
-const anyCase = (word: string) => [...word].map((letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`).join('');
 
 // The installed build named in a command, by its tail, so any spelling of home (on Windows, of
 // %LOCALAPPDATA%, quoted or through cygpath) is caught. The Start menu's own Programs folder, where
@@ -94,15 +91,7 @@ function namesWindowsApp(word: string): boolean {
 
 function killsWindowsApp(pipeline: string): boolean {
   return simpleCommands(pipeline).some((part) => invocation(part, WINDOWS_KILLERS) !== null)
-    && wordsOf(pipeline).flatMap((word) => word.split(',')).some(namesWindowsApp);
-}
-
-// The command a `powershell -Command`, `pwsh -c` or `cmd /c` (`//c` from Git Bash) runs, unquoted.
-// ponytail: a PowerShell command given with no -Command is not read.
-function windowsShellBody(part: string): string | null {
-  if (!invocation(part, String.raw`(?:${['powershell', 'pwsh', 'cmd'].map(anyCase).join('|')})(?:\.exe)?`)) return null;
-  const body = /\s(?:-c(?:ommand)?|\/\/?[ck])\s+(.*)$/i.exec(part)?.[1];
-  return body === undefined ? null : body.replace(/^(["'])(.*)\1$/, '$2');
+    && wordsOf(pipeline).flatMap((word) => word.split(/[,:'"]+/)).some(namesWindowsApp);
 }
 
 type Selector = { pattern: string; full: boolean; regex: boolean }
