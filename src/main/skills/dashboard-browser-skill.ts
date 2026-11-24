@@ -53,7 +53,8 @@ time:
    for one part); \`browser_resize\` to 390x844 first for a phone's layout.
    \`browser_console\` and \`browser_network\` show what the page got wrong.
 6. \`browser_release\` hands a tab back when you are done with it. Your tabs go
-   back on their own when your pane is released or your agent exits.
+   back on their own when your pane is released or your agent exits. A size
+   stays when a tab goes back: \`browser_reset\` a tab you resized first.
 
 ## A page that asks you to sign in
 

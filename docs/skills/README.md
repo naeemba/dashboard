@@ -105,7 +105,8 @@ Folders: `src/main/skills/`.
 - The text of `/work-card` and the words a ship passes it: `work-card-skill.ts`; `ship-flow.test.ts`
   pins that a ship asks about the project's path and passes its base
 - The text of `dashboard-browser`, built from the browser tools, the read limit and the browser
-  key it names: `dashboard-browser-skill.ts`, `dashboard-browser-skill.test.ts`
+  key it names: `dashboard-browser-skill.ts`; `dashboard-browser-skill.test.ts` fails on a tool
+  or parameter name in it the server does not have
 - Where a skill's folder and its SKILL.md are: `skill-folder.ts`
 - Wired in `main.ts` at `ready`, after the window opens, in the packaged app only
 
