@@ -97,11 +97,11 @@ export function invocation(part: string, verbs: string): { verb: string; words: 
 
 // Each simple command of `command` with the folder it runs in: `folder`, or where a `cd` earlier in
 // the line moved to. A `cd` inside a `( … )` subshell holds until the subshell closes, which puts the
-// folder back where the line's own shell is (`shell`, which only a `cd` outside a subshell moves). A `cd`'s flags (`-P`, `-L`) are skipped; a bare `-`,
+// folder back where the line's own shell is. A `cd`'s flags (`-P`, `-L`) are skipped; a bare `-`,
 // the previous folder, is read as a path since that folder is not known.
 // ponytail: parentheses are counted without reading quotes; `$( … )` balances itself.
-export function partsWithFolders(command: string, folder: string): { part: string; folder: string; shell: string }[] {
-  const parts: { part: string; folder: string; shell: string }[] = [];
+export function partsWithFolders(command: string, folder: string): { part: string; folder: string }[] {
+  const parts: { part: string; folder: string }[] = [];
   let base = folder;
   let shell = folder;
   let depth = 0;
@@ -109,7 +109,7 @@ export function partsWithFolders(command: string, folder: string): { part: strin
   for (const part of simpleCommands(command)) {
     const opening = /^[(\s]*/.exec(part)?.[0] ?? '';
     depth += count(opening, '(');
-    parts.push({ part, folder: base, shell });
+    parts.push({ part, folder: base });
     const changed = invocation(part, 'cd');
     if (changed) base = resolveWord(changed.words.find((word) => word === '-' || !word.startsWith('-')) ?? '~', base);
     if (changed && depth === 0) shell = base;
