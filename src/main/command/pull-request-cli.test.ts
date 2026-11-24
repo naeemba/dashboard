@@ -84,7 +84,13 @@ describe('landPullRequest', () => {
 
   it('merges nothing when gh cannot say whether the repository\'s pull requests report checks', async () => {
     const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': [{ ok: false, output: 'HTTP 403' }] });
-    expect(await landPullRequest(github.ports, '12')).toMatchObject({ ok: false, output: expect.stringContaining('12 is not merged: HTTP 403') });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: 'HTTP 403\n\nno checks reported on abc123, and gh could not say whether the repository has CI; 12 is not merged' });
+    expect(merges(github)).toBe(0);
+  });
+
+  it('says the answer was lost when asking whether the repository has CI lost it every try', async () => {
+    const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': lostEveryTry() });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: `${lostAnswer}\n\nlost gh's answer for 4 minutes asking whether 12's repository has CI; nothing is merged, run it again` });
     expect(merges(github)).toBe(0);
   });
 

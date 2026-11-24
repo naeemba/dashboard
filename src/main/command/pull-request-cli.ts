@@ -126,7 +126,8 @@ async function checksPassed(ports: LandPorts, target: string): Promise<Checked> 
     const checkCount = recentCheckCount(url);
     if (checkCount === undefined) return { ok: false, output: `no checks reported on ${sha}, and gh gave no repository for ${target} to ask whether it has CI; ${target} is not merged` };
     const checksBefore = await patiently(ports, checkCount);
-    if (!checksBefore.ok) return { ok: false, output: `no checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged: ${checksBefore.output}` };
+    if (isNetworkError(checksBefore)) return lost(checksBefore, `asking whether ${target}'s repository has CI`);
+    if (!checksBefore.ok) return { ok: false, output: `${checksBefore.output}\n\nno checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged` };
     if (checksBefore.output.trim() !== '0') return { ok: false, output: `no checks reported on ${sha} a minute on, in a repository whose pull requests run CI; ${target} is not merged` };
   }
   return { ok: true, sha, base, noChecks };
