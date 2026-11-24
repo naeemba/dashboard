@@ -5,15 +5,23 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T19:59:20.324Z",
-  "updatedAt": "2026-11-24T20:08:33.146Z",
+  "updatedAt": "2026-11-24T20:21:38.027Z",
   "branch": "tidy-ups-the-dashboard-folder-name-one-read",
   "pullRequest": 363,
   "comments": [
     {
       "at": "2026-11-24T20:08:33.113Z",
       "body": "Pull request #363 opened: Tidy-ups: the .dashboard folder name, one read-or-null helper, Promise.withResolvers in tests https://github.com/naeemba/dashboard/pull/363"
+    },
+    {
+      "at": "2026-11-24T20:20:59.626Z",
+      "body": "PR #363: converged, ready to merge. Review loop: 1 round, 0 findings, no conflict with main. CI then failed on Windows: dashboard-folder.test.ts expected a hard-coded POSIX path; fixed in 0ed986f5 (expected value built with join). Checks passed on 0ed986f5."
+    },
+    {
+      "at": "2026-11-24T20:21:37.991Z",
+      "body": "Pull request #363 merged: Tidy-ups: the .dashboard folder name, one read-or-null helper, Promise.withResolvers in tests https://github.com/naeemba/dashboard/pull/363"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 294
 }

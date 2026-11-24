@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-18T10:55:04.232Z",
-  "updatedAt": "2026-11-24T20:08:13.416Z",
+  "updatedAt": "2026-11-24T20:34:44.176Z",
   "branch": "running-app-guard-cover-the-windows-squirre",
   "pullRequest": 364,
   "comments": [
@@ -16,8 +16,16 @@
     {
       "at": "2026-11-24T20:08:13.395Z",
       "body": "Pull request #364 opened: Running-app guard: cover the Windows Squirrel install and Windows process killers https://github.com/naeemba/dashboard/pull/364"
+    },
+    {
+      "at": "2026-11-24T20:32:20.518Z",
+      "body": "PR #364: converged, ready to merge. Review loop ran 2 rounds (floor-addressed). Round 1 fixed 3 findings in ab99917f: quoted and -Name: Stop-Process names are read, the Squirrel process is pinned, windowsShellBody is shared. Round 2 fixed one header-comment nit in a22fbf49. The final check accepted it. Nothing open, no conflict, CI passed on a22fbf49."
+    },
+    {
+      "at": "2026-11-24T20:34:44.148Z",
+      "body": "Pull request #364 merged: Running-app guard: cover the Windows Squirrel install and Windows process killers https://github.com/naeemba/dashboard/pull/364"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 296
 }

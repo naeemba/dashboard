@@ -5,14 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T11:27:37.339Z",
-  "updatedAt": "2026-11-24T20:00:00.531Z",
+  "updatedAt": "2026-11-24T20:17:16.414Z",
   "branch": "ship-and-review-on-a-gitlab-project-work-ca",
+  "pullRequest": 366,
   "comments": [
     {
       "at": "2026-11-24T19:59:39.819Z",
       "body": "This card is GitHub issue #354; the PR says Closes #354. #353 added the remote-not-origin work: build on its chosen remote; /mr-loop is in the claude-pr-loop repo, installed in ~/.claude."
+    },
+    {
+      "at": "2026-11-24T20:17:16.385Z",
+      "body": "Pull request #366 opened: Ship and review a GitLab project's card through glab and /mr-loop https://github.com/naeemba/dashboard/pull/366"
     }
   ],
-  "column": "Doing",
-  "order": 2
+  "column": "Review",
+  "order": 3
 }

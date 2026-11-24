@@ -1,0 +1,11 @@
+{
+  "id": "6019f757-a0c5-4f4c-af7b-512acf05fffc",
+  "title": "startsClaude and the test-run guard don't read Windows shell bodies (cmd /c, powershell -Command)",
+  "notes": "startsClaude (src/main/actions/pane/send.ts) and testRunFolders (src/main/workflow/test-run-guard.ts) unwrap only sh -c bodies. Typing `cmd /c claude` into a Windows pane's shell starts a worker with none of the app's settings, which startsClaude exists to refuse. Once windowsShellBody from #364 moves to hook-answer.ts, use it in both. Issue: https://github.com/naeemba/dashboard/issues/365 Review: https://github.com/naeemba/dashboard/pull/364#discussion_r4685923306",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-24T20:14:02.968Z",
+  "updatedAt": "2026-11-24T20:14:02.969Z",
+  "column": "Backlog",
+  "order": 66
+}

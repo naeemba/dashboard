@@ -167,21 +167,30 @@ line an agent had to remember; now a PreToolUse Bash hook refuses the call. It r
   with no `/proc`, the pattern is refused when it names Dashboard, electron, node or claude;
 - a `kill` of a literal pid or process group (`-<pid>`) that is the app's, and a `-1` in a pid's
   place (`kill -9 -1`; `kill -1 <pid>` is a SIGHUP and is judged by its pid);
+- a `taskkill` or PowerShell `Stop-Process` (`spps`) whose pipeline has a word that, as a
+  wildcard, names one of the app's Windows images (`Dashboard.exe`, `electron.exe`, `node.exe`,
+  `claude.exe`): `/IM`, `/FI "IMAGENAME eq …"`, `-Name`, or `Get-Process` feeding it. Windows has
+  no `/proc` to read, and from WSL `/proc` is the wrong machine, so these go by name; a `/PID` or
+  `-Id` goes through;
 - `systemctl stop`, `kill` or `restart` of `agents.slice` or `panes.slice`;
 - `osascript ... quit` naming Dashboard, and `open -a Dashboard` or `open ...Dashboard.app`;
-- a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, or `find` with
-  `-delete` or `-exec`, naming the installed build (on Windows `%LOCALAPPDATA%\Programs\Dashboard`,
-  matched by its `Programs/Dashboard` tail in any case so any spelling of `%LOCALAPPDATA%`, quoted
-  or through `cygpath`, and either slash, but not the Start menu's `Programs` folder), or a `>` or
-  `tee` into it.
+- a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, PowerShell's
+  `Remove-Item`, `Move-Item`, `Copy-Item`, `Rename-Item` and their aliases, cmd's `del`, `rd`,
+  `move`, `copy`, `xcopy`, `robocopy`, `ren`, or `find` with `-delete` or `-exec`, naming the
+  installed build (on Windows `%LOCALAPPDATA%\Programs\Dashboard`, matched by its
+  `Programs/Dashboard` tail in any case so any spelling of `%LOCALAPPDATA%`, quoted or through
+  `cygpath`, and either slash, but not the Start menu's `Programs` folder; and the Squirrel install
+  `%LOCALAPPDATA%\Dashboard`, matched behind `AppData/Local` or the variable's name, since a bare
+  `/Dashboard` tail is a checkout's too), or a `>` or `tee` into it.
 
 Each verb counts only at the start of a simple command (behind a `(` or `{`, `sudo` with its flags,
 `command`, `exec`, `nohup`, `nice` or `timeout <duration>` with their flags, `env` with its
 assignments, or a path), so a commit message, a PR body or a grep that names one goes through.
 Commands split at `;`, `&`, `|` and newlines outside quotes only, so `pkill -f "vite|node"` is
 judged by its whole pattern; a `\` escape and a `#` comment open no quote, so `# it's stuck` on one
-line does not hide the `pkill` on the next; the quoted body of `sh -c` or `bash -c` is judged as a
-command line of its own.
+line does not hide the `pkill` on the next; the quoted body of `sh -c` or `bash -c`,
+`powershell -Command`, `pwsh -c` or `cmd /c` (`//c` from Git Bash) is judged as a command line of
+its own.
 
 `scripts/rebuild.sh`, `scripts/release.sh`, `pnpm run package` and anything into `out/` or `.vite/`
 go through: the hook reads the agent's command, not what a script runs, and the scripts swap a build

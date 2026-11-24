@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { BOARD_DIRECTORY, readBoard, writeBoard } from '../board/board-store';
+import { readBoard, writeBoard } from '../board/board-store';
+import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
 import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from './review-flow';
 import type { WorktreeEntry } from '../../shared/app/bridge';
@@ -37,7 +38,7 @@ export function flight(pullRequest: number | null): { entry: WorktreeEntry; proj
   const projectPath = folder();
   const worktreePath = folder();
   writeBoard(projectPath, boardWithCard(null));
-  mkdirSync(join(worktreePath, BOARD_DIRECTORY), { recursive: true });
+  mkdirSync(join(worktreePath, DASHBOARD_FOLDER_NAME), { recursive: true });
   writeBoard(worktreePath, boardWithCard(pullRequest));
   return {
     projectPath,

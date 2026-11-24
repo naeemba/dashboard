@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { BOARD_FOLDER, boardFolderSnapshot, readBoardFolder, writeBoardFolder, type StoredBoard } from './board-files';
 import { byPlace, storedOrder } from './card-order';
-import { dashboardFolder } from '../app/dashboard-folder';
+import { DASHBOARD_FOLDER_NAME, dashboardPath } from '../app/dashboard-folder';
 import { readText } from '../app/missing-file';
 import { BROKEN_SUFFIX, setAsidePath } from '../app/set-aside';
 import { TEMPORARY_SUFFIX } from '../app/replace-file';
@@ -31,9 +31,6 @@ import {
 import { isManagerPath } from '../../shared/manager/manager';
 import type { BoardRead } from '../../shared/app/bridge';
 
-// The project's own corner of its repository. Everything the dashboard keeps about a project lives
-// here, so there is one thing to commit or to ignore.
-export const BOARD_DIRECTORY = '.dashboard';
 // The board as it was kept until each card got a file of its own: the whole board in one file. Still
 // read, forever — every project the app has ever opened has one until its board is next written, and
 // that write is what moves it into the folder below (writeBoard says how). Never written again.
@@ -41,17 +38,17 @@ export const BOARD_FILE = 'board.json';
 // Both, relative to the project — the shape git reports and git compares, as opposed to the absolute
 // paths boardPath and boardFolderPath join. One spelling, so a second copy in another module cannot
 // drift from this one the day .dashboard is renamed.
-export const BOARD_FILE_PATH = `${BOARD_DIRECTORY}/${BOARD_FILE}`;
-export const BOARD_FOLDER_PATH = `${BOARD_DIRECTORY}/${BOARD_FOLDER}`;
+export const BOARD_FILE_PATH = `${DASHBOARD_FOLDER_NAME}/${BOARD_FILE}`;
+export const BOARD_FOLDER_PATH = `${DASHBOARD_FOLDER_NAME}/${BOARD_FOLDER}`;
 // What `git add -A --`, `git diff --cached --` and `git commit --` are handed to take in a board change
 // and nothing else: the old file (its removal, the first time a board is written) and every file in the
 // folder, but not a `.broken` file set aside or a write's temporary file. Naming the two paths outright
 // does not work — git refuses a path that matches nothing, and after the first write board.json is gone.
 // A git pathspec's `*` crosses `/`, so the one pattern covers both.
 export const BOARD_PATHSPECS = [
-  `${BOARD_DIRECTORY}/board*`,
-  `:(exclude)${BOARD_DIRECTORY}/board*${BROKEN_SUFFIX}`,
-  `:(exclude)${BOARD_DIRECTORY}/board*${TEMPORARY_SUFFIX}`,
+  `${DASHBOARD_FOLDER_NAME}/board*`,
+  `:(exclude)${DASHBOARD_FOLDER_NAME}/board*${BROKEN_SUFFIX}`,
+  `:(exclude)${DASHBOARD_FOLDER_NAME}/board*${TEMPORARY_SUFFIX}`,
 ] as const;
 
 // The first line of both seeded files. A file is rewritten only when its version is lower than this one
@@ -100,8 +97,8 @@ Commit it if the board belongs to the team; add \`.dashboard/\` to \`.gitignore\
 // Each explanation file the app seeds, by its path in the project, with the text it is to hold. The
 // paths are git's, relative and with `/`, so the sync can hand them to git as they are.
 export const SEEDED_FILES: Readonly<Record<string, string>> = {
-  [`${BOARD_DIRECTORY}/CLAUDE.md`]: EXPLANATION_FOR_AGENTS,
-  [`${BOARD_DIRECTORY}/README.md`]: EXPLANATION_FOR_PEOPLE,
+  [`${DASHBOARD_FOLDER_NAME}/CLAUDE.md`]: EXPLANATION_FOR_AGENTS,
+  [`${DASHBOARD_FOLDER_NAME}/README.md`]: EXPLANATION_FOR_PEOPLE,
 };
 
 // Which project a directory belongs to. The command line is pointed at a project by the directory you
@@ -122,7 +119,7 @@ export const SEEDED_FILES: Readonly<Record<string, string>> = {
 export function projectRoot(directory: string): string | null {
   const home = homedir();
   for (let at = resolve(directory); at !== dirname(at) && at !== home; at = dirname(at)) {
-    if (existsSync(join(at, BOARD_DIRECTORY)) || existsSync(join(at, '.git'))) return at;
+    if (existsSync(join(at, DASHBOARD_FOLDER_NAME)) || existsSync(join(at, '.git'))) return at;
   }
   return null;
 }
@@ -138,11 +135,11 @@ export function isManagerHomeDirectory(directory: string): boolean {
 // Which folder is dashboard-folder.ts's to decide, the same as the notes: the manager's board has no
 // project to sit in and goes in the home directory.
 export function boardPath(projectPath: string): string {
-  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, BOARD_FILE);
+  return dashboardPath(projectPath, BOARD_FILE);
 }
 
 export function boardFolderPath(projectPath: string): string {
-  return join(dashboardFolder(projectPath), BOARD_DIRECTORY, BOARD_FOLDER);
+  return dashboardPath(projectPath, BOARD_FOLDER);
 }
 
 // Whether a project has a board of either kind on disk, read or not.
@@ -460,7 +457,7 @@ export function openBoard(projectPath: string, salvage = true): BoardRead & { re
 // A doc that is there and stale is rewritten only when the folder is on origin's default branch
 // (seeded-docs-checkout.ts says why), or when `force` says the caller knows it is; a missing one always is.
 export function seedBoardDirectory(projectPath: string, force = false): boolean {
-  mkdirSync(join(projectPath, BOARD_DIRECTORY), { recursive: true });
+  mkdirSync(join(projectPath, DASHBOARD_FOLDER_NAME), { recursive: true });
   const stale = staleSeededFiles(projectPath, Object.keys(SEEDED_FILES));
   const missing = stale.filter((file) => !existsSync(join(projectPath, file)));
   const rewrites = missing.length < stale.length && (force || rewritesStaleSeededDocsAt(projectPath));
@@ -474,7 +471,7 @@ export function seedBoardDirectory(projectPath: string, force = false): boolean 
 // would have the write follow it and overwrite the file it points at, anywhere on the machine.
 export function staleSeededFiles(projectPath: string, files: readonly string[]): string[] {
   const isLink = (path: string) => lstatSync(path, { throwIfNoEntry: false })?.isSymbolicLink() === true;
-  if (isLink(join(projectPath, BOARD_DIRECTORY))) return [];
+  if (isLink(join(projectPath, DASHBOARD_FOLDER_NAME))) return [];
   return files.filter((file) => {
     const path = join(projectPath, file);
     if (isLink(path)) return false;

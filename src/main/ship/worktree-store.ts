@@ -1,4 +1,5 @@
-import { readFileSync, renameSync } from 'node:fs';
+import { renameSync } from 'node:fs';
+import { readText } from '../app/missing-file';
 import { replaceFile } from '../app/replace-file';
 import { setAsidePath } from '../app/set-aside';
 import type { WorktreeEntry } from '../../shared/app/bridge';
@@ -53,13 +54,8 @@ export function parseWorktrees(stored: unknown): WorktreeEntry[] {
 // sitting on disk drop off the worktree list, and shipping one of those cards again makes a second
 // branch and a second folder beside the first — the orphan this file exists to prevent.
 export function readWorktrees(file: string): WorktreeEntry[] {
-  let text: string;
-  try {
-    text = readFileSync(file, 'utf8');
-  } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    return [];
-  }
+  const text = readText(file);
+  if (text === null) return [];
   try {
     return parseWorktrees(JSON.parse(text));
   } catch {

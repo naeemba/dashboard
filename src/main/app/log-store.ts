@@ -4,6 +4,7 @@ import {
   LOG_FILE, LOG_FILE_COUNT, LOG_FILE_LIMIT, logFileNames, needsRotation, parseLogLine,
   type LogDraft, type LogEntry,
 } from '../../shared/app/log-entry';
+import { orMissing } from './missing-file';
 
 // The log on disk: LOG_FILE_COUNT files of LOG_FILE_LIMIT, the live one first. Main-process only,
 // and no electron in it, so rotation is tested on a real folder. Synchronous on purpose: main is one
@@ -46,11 +47,7 @@ export function logStore(
   function rotate(): void {
     rmSync(files[files.length - 1], { force: true });
     for (let index = files.length - 2; index >= 0; index--) {
-      try {
-        renameSync(files[index], files[index + 1]);
-      } catch (error: unknown) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
+      orMissing(() => renameSync(files[index], files[index + 1]));
     }
   }
 

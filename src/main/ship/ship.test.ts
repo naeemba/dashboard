@@ -126,34 +126,28 @@ describe('blockingChanges', () => {
 });
 
 describe('oneAtATime', () => {
-  function deferred(): { promise: Promise<string>; settle: (value: string) => void } {
-    let settle: (value: string) => void = () => undefined;
-    const promise = new Promise<string>((resolve) => { settle = resolve; });
-    return { promise, settle };
-  }
-
   it('holds a second run on the same key until the first has finished', async () => {
     const queue = oneAtATime();
-    const first = deferred();
+    const first = Promise.withResolvers<string>();
     const order: string[] = [];
     const one = queue('api', async () => { order.push('one started'); return first.promise; });
     const two = queue('api', async () => { order.push('two started'); return 'two'; });
     await Promise.resolve();
     expect(order).toEqual(['one started']);
-    first.settle('one');
+    first.resolve('one');
     await Promise.all([one, two]);
     expect(order).toEqual(['one started', 'two started']);
   });
 
   it('lets two projects ship at once', async () => {
     const queue = oneAtATime();
-    const held = deferred();
+    const held = Promise.withResolvers<string>();
     const order: string[] = [];
     const one = queue('api', async () => { order.push('api'); return held.promise; });
     const two = queue('web', async () => { order.push('web'); return 'web'; });
     await two;
     expect(order).toEqual(['api', 'web']);
-    held.settle('api');
+    held.resolve('api');
     await one;
   });
 
