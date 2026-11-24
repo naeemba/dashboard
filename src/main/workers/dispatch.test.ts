@@ -70,6 +70,8 @@ describe('mainPrompt verbs', () => {
     expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id>`');
     expect(prompt).toContain('finish <id>');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n>`');
+    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr wait <n>`');
+    expect(prompt).toContain('`conflicts with <base>: <files>` is the line to send the worker');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" budget`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" --version`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" project add <path> --name <name>`');

@@ -40,6 +40,7 @@ dispatches into, an editor and a kanban board kept in the project's .dashboard/b
   dashboard board <command>     read and change a project's board
   dashboard pane <command>      claim a worker pane, start Claude in it, type into it, release it
   dashboard project <command>   list, add, change, open, close and switch to the projects in ~/.dashboard/projects.yaml
+  dashboard pr wait <n>         wait for a pull request's checks on its head commit
   dashboard pr land <n>         wait for a pull request's checks, then merge the commit they passed on
   dashboard budget [--cap <n>]  the 7-day usage against the cap you set once; exits 1 at the cap
   dashboard browser <command>   open, read, screenshot and click in the project's browser tabs, from a pane
