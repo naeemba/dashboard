@@ -53,17 +53,17 @@ for a string, a config value or a log line.
 
 ## Check nobody else is on it
 
-Before you write any code, list what else is in flight:
+Before you write any code, list what else is in flight, in one call:
 
-    node "$DASHBOARD_BOARD" list --column Doing
-    node "$DASHBOARD_BOARD" list --column Review
-    gh pr list --json number,title,headRefName,files
+    node "$DASHBOARD_BOARD" list --column Doing; node "$DASHBOARD_BOARD" list --column Review; gh pr list --json number,title,headRefName
 
-If another card or open pull request covers the same files or the same area
-as this card, SendMessage main (\`main-<the project's folder name>\`): name
-the card or pull request and the files you both touch, then stop and wait
-for its answer before going on. Two cards built side by side on the same
-files conflict after review, and one of them is thrown away.
+For a card or pull request whose title looks near this card, read its files
+(\`gh pr view <n> --json files\`). If one covers the same files or the same
+area, SendMessage the main session your prompt names: name the card or pull
+request and the files you both touch, then stop and wait for its answer
+before going on. When your prompt names no main, say it in a comment on the
+card and go on. Two cards built side by side on the same files conflict
+after review, and one of them is thrown away.
 
 ## Then do the work
 
@@ -74,23 +74,17 @@ files conflict after review, and one of them is thrown away.
 - To look at a page, read it, or screenshot it for the pull request, use the
   project's browser: the \`browser_\` tools, whose screenshot answers with the
   picture, or \`node "$DASHBOARD_COMMAND" browser --help\`.
-- When the project keeps its docs in \`docs/<feature>/\`, update a feature's
-  docs there by grep: \`grep -n\` its
-  \`README.md\` for what you changed, and read a rule or decision only by its id
-  (\`grep -n -A15 '<feature>-decision-3' docs/<feature>/decisions.md\`). Never
-  read a whole \`README.md\` or \`decisions.md\`.
-- When the project keeps its docs in \`docs/<feature>/\`, a \`history.md\`
-  line for the card goes in the card's commit, before the
-  pull request is opened: the date and why, with no pull request number. A
-  second commit to add the number is a second push and a second CI run.
-- A new numbered docs id (\`<feature>-rule-N\`, \`<feature>-decision-N\`) is
-  taken last, right before you open the pull request (write
-  \`<feature>-decision-next\` until then): first
-  \`git fetch origin && git merge origin/$2\`, then take the next number free
-  there, and name the ids you took in your report to main. Cards in other
-  worktrees add ids at the same time, and two that both took the next one
-  early both say \`-decision-9\`. If the pull request later conflicts on an id,
-  merge \`origin/$2\` again and take the next free one.
+- When the project keeps its docs in \`docs/<feature>/\`:
+  - update a feature's docs there by grep: \`grep -n\` its \`README.md\` for
+    what you changed, and read a rule or decision only by its id
+    (\`grep -n -A15 '<feature>-decision-3' docs/<feature>/decisions.md\`).
+    Never read a whole \`README.md\` or \`decisions.md\`.
+  - a \`history.md\` line for the card goes in the card's commit, before the
+    pull request is opened: the date and why, with no pull request number. A
+    second commit to add the number is a second push and a second CI run.
+  - write a new numbered id as \`<feature>-decision-next\` (or \`-rule-next\`)
+    and give it its number last, below, and name the ids you took in your
+    report to main.
 - Build what the card asks for, following the project's own rules.
 - The version: $1.
   \`${KEEP_VERSION}\`, or anything but \`${BUMP_VERSION}\`, means this project
@@ -106,21 +100,21 @@ files conflict after review, and one of them is thrown away.
   release. The version is how anybody tells an installed copy from what has
   been merged.
 
-  Bump last, right before you open the pull request, and bump from what the
-  base branch, \`$2\`, says then. Other cards run in their own worktrees at the
-  same time, and two that both bumped from \`1.4.0\` early both say \`1.5.0\`.
-  So first run \`git fetch origin && git merge origin/$2\` — the local \`$2\`
-  here is as old as the worktree — then bump. If the merge conflicts, resolve it the way
-  \`/pr-conflicts\` does, commit the merge, then bump.
-
   Bump with \`npm version <patch|minor|major> --no-git-tag-version\`, whatever
   the package manager: it rewrites \`package.json\` and a \`package-lock.json\`
   if there is one, and makes no commit and no tag. A tag is shared by every
   worktree, so the next card to reach the same number would fail on it. A
   project with no \`package.json\` is bumped wherever it keeps its version.
-  Commit the bump on its own. If the pull request later conflicts on the
-  version, merge \`origin/$2\` the same way, keep its number and bump again
-  from it.
+  Commit the bump on its own.
+- Last, right before you open the pull request, when the card adds a docs id
+  or bumps the version: run \`git fetch origin && git merge origin/$2\` once
+  (the local \`$2\` here is as old as the worktree; resolve a conflict the way
+  \`/pr-conflicts\` does and commit the merge). Then give each new id the next
+  number free there, and bump from the version there. Other cards run in
+  their own worktrees at the same time, and two that both took the next one
+  early both say \`-decision-9\`, or \`1.5.0\`. If the pull request later
+  conflicts on one, merge \`origin/$2\` again the same way and take the next
+  free one.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
   type-check and lint scripts. A project with a \`check\` script that runs them
   all and prints a summary (\`pnpm check\`) is checked with that, once: read the
