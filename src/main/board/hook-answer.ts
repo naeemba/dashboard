@@ -4,9 +4,9 @@ import { isRecord } from '../../shared/app/is-record';
 
 // What the PreToolUse guards that `board guard` runs share (board-guard.ts, running-app-guard.ts,
 // package-manager-guard.ts, worktree-guard.ts, test-run-guard.ts): a field of the tool's input, the
-// file tools, the shell's redirect or tee into a file, a command line cut into its simple commands and
-// the verb each runs, a word of the command as a path, the repository a folder is in, and the refusal
-// they print.
+// file tools, the shell's redirect or tee into a file, a command line cut into its simple commands, the
+// folder each runs in and the verb each runs, a word of the command as a path, the repository a folder
+// is in, and the refusal they print.
 
 export function textField(input: unknown, field: string): string {
   const value = isRecord(input) ? input[field] : undefined;
@@ -93,4 +93,28 @@ const PREFIX = String.raw`(?:[({]\s*)?(?:(?:sudo${FLAGS}|command|exec|nohup|nice
 export function invocation(part: string, verbs: string): { verb: string; words: string[] } | null {
   const match = new RegExp(String.raw`^${PREFIX}(?:\S*/)?(${verbs})(?:\s+(.*))?$`).exec(part);
   return match ? { verb: match[1], words: wordsOf(match[2] ?? '') } : null;
+}
+
+// Each simple command of `command` with the folder it runs in: `folder`, or where a `cd` earlier in
+// the line moved to. A `cd` inside a `( … )` subshell holds until the subshell closes, which puts the
+// folder back where the line's own shell is. A `cd`'s flags (`-P`, `-L`) are skipped; a bare `-`,
+// the previous folder, is read as a path since that folder is not known.
+// ponytail: parentheses are counted without reading quotes; `$( … )` balances itself.
+export function partsWithFolders(command: string, folder: string): { part: string; folder: string }[] {
+  const parts: { part: string; folder: string }[] = [];
+  let base = folder;
+  let shell = folder;
+  let depth = 0;
+  const count = (text: string, character: string) => text.split(character).length - 1;
+  for (const part of simpleCommands(command)) {
+    const opening = /^[(\s]*/.exec(part)?.[0] ?? '';
+    depth += count(opening, '(');
+    parts.push({ part, folder: base });
+    const changed = invocation(part, 'cd');
+    if (changed) base = resolveWord(changed.words.find((word) => word === '-' || !word.startsWith('-')) ?? '~', base);
+    if (changed && depth === 0) shell = base;
+    depth += count(part.slice(opening.length), '(') - count(part, ')');
+    if (depth <= 0) [depth, base] = [0, shell];
+  }
+  return parts;
 }

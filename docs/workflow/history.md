@@ -44,3 +44,6 @@ One line per merged change: date and why.
 - 2026-11-24 — `pnpm check` prints the first reasons under a failed check and a coverage line for
   the code changed against main, after workers grepped `check.log` for why and four review findings
   were new branches with no test (workflow-decision-13)
+- 2026-11-24 — the package-manager guard follows a `cd` earlier in the line, after new-crm's
+  `cd storefront && pnpm install` was refused by the root's npm lockfile four times
+  (workflow-decision-9)

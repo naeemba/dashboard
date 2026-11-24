@@ -190,8 +190,9 @@ started (workflow-decision-5).
   `pnpm-lock.yaml`, when it runs `npm install`, `npm ci` or `yarn add`, then the call is refused
   naming the lockfile and saying to install with pnpm; `pnpm install`, `npm test`, `bun test`,
   `npm version --no-git-tag-version`, `npx`, `npm i -g x`, `pnpm dlx x`, and a commit message naming
-  `npm install` go through; in a monorepo package with its own lockfile, that one names the manager;
-  outside a repository nothing is refused (`package-manager-guard.test.ts`).
+  `npm install` go through; in a monorepo package with its own lockfile, that one names the manager,
+  also when a `cd` earlier in the line moved there (`cd storefront && pnpm install`); outside a
+  repository nothing is refused (`package-manager-guard.test.ts`).
 - Given an agent in any Claude session the board guard reaches, when it runs `git worktree remove`
   of the folder it runs in (`.`, `"$PWD"`, its path, `cd .. && git worktree remove <name>`), or an
   Edit or Write of a file in another worktree of its repository, the main checkout included, then

@@ -5,7 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:12.520Z",
-  "updatedAt": "2026-11-24T10:58:12.521Z",
-  "column": "Backlog",
-  "order": 53
+  "updatedAt": "2026-11-24T11:32:45.911Z",
+  "branch": "workers-check-for-overlapping-cards-and-prs",
+  "pullRequest": 352,
+  "comments": [
+    {
+      "at": "2026-11-24T11:11:23.981Z",
+      "body": "Pull request #352 opened: /work-card: start from codegraph, check for overlapping cards and PRs, take docs ids last https://github.com/naeemba/dashboard/pull/352"
+    },
+    {
+      "at": "2026-11-24T11:32:45.911Z",
+      "body": "PR #352 review loop converged in 3 rounds, ready to merge. Round 1 fixed 4 findings (51c0801f: comment and tell main about an overlap instead of waiting, read a card's files from its branch, merge before the PR); round 2 fixed 1 (3ee5903b: name an overlap in the report to main, not mid-work). Nothing open, no conflict with main, CI 5/5 green on the head commit."
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }

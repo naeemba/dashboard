@@ -1,8 +1,10 @@
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { managersUsed, nearestLockfile, packageManagerGuard } from './package-manager-guard';
+import { installsRun, nearestLockfile, packageManagerGuard } from './package-manager-guard';
 
-// The guard joins with the platform's separator, so on Windows it asks for `\work\app\.git`.
-const files = (...paths: string[]) => (path: string) => paths.includes(path.replaceAll('\\', '/'));
+// Both sides go through `resolve`: on Windows the guard asks for `\work\app\.git` after a join and
+// `D:\work\app\.git` after a `cd` it resolved.
+const files = (...paths: string[]) => (path: string) => paths.map((entry) => resolve(entry)).includes(resolve(path));
 
 describe('nearestLockfile', () => {
   it('finds the root lockfile from a package inside the repository', () => {
@@ -32,7 +34,7 @@ describe('nearestLockfile', () => {
   });
 });
 
-describe('managersUsed', () => {
+describe('installsRun', () => {
   it.each([
     ['npm install', 'npm'],
     ['npm i -D vitest', 'npm'],
@@ -47,7 +49,7 @@ describe('managersUsed', () => {
     ['pnpm install', 'pnpm'],
     ['sudo /usr/bin/npm install --save-dev x', 'npm'],
   ])('reads %s as installing through %s', (command, used) => {
-    expect(managersUsed(command)).toContain(used);
+    expect(installsRun(command, '/work/app').map((install) => install.manager)).toContain(used);
   });
 
   it.each([
@@ -72,7 +74,7 @@ describe('managersUsed', () => {
     'git commit -m "npm install broke"',
     'grep -rn "npm install" docs',
   ])('reads %s as neither', (command) => {
-    expect(managersUsed(command)).toEqual([]);
+    expect(installsRun(command, '/work/app')).toEqual([]);
   });
 });
 
@@ -103,6 +105,21 @@ describe('packageManagerGuard', () => {
     expect(packageManagerGuard('Bash', { command: 'npm install' }, '/work/app/tools/cli', monorepo)).toBeUndefined();
     expect(packageManagerGuard('Bash', { command: 'pnpm install' }, '/work/app/tools/cli', monorepo)).toBeDefined();
     expect(packageManagerGuard('Bash', { command: 'npm install' }, '/work/app/packages/core', monorepo)).toBeDefined();
+  });
+
+  it('judges an install in the folder a cd earlier in the line moved to', () => {
+    const mixed = files('/work/crm/.git', '/work/crm/package-lock.json', '/work/crm/storefront/pnpm-lock.yaml');
+    expect(packageManagerGuard('Bash', { command: 'cd storefront && pnpm install' }, '/work/crm', mixed)).toBeUndefined();
+    expect(packageManagerGuard('Bash', { command: 'cd storefront && npm install' }, '/work/crm', mixed)).toBeDefined();
+    expect(packageManagerGuard('Bash', { command: 'cd /work/crm/storefront; cd .. && pnpm install' }, '/work/crm', mixed)).toBeDefined();
+    expect(packageManagerGuard('Bash', { command: 'pnpm install && cd storefront' }, '/work/crm', mixed)).toBeDefined();
+    expect(packageManagerGuard('Bash', { command: 'cd -P storefront && npm install' }, '/work/crm', mixed)).toBeDefined();
+  });
+
+  it('puts the folder back when a subshell holding a cd closes', () => {
+    const mixed = files('/work/crm/.git', '/work/crm/package-lock.json', '/work/crm/storefront/pnpm-lock.yaml');
+    expect(packageManagerGuard('Bash', { command: '(cd storefront && pnpm install) && pnpm install' }, '/work/crm', mixed)).toBeDefined();
+    expect(packageManagerGuard('Bash', { command: '(cd storefront && pnpm install) && npm ci' }, '/work/crm', mixed)).toBeUndefined();
   });
 
   it('lets anything through in a folder with no lockfile', () => {

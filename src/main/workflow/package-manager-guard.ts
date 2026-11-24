@@ -4,7 +4,7 @@
 // every project the user's ~/.claude/settings.json does.
 
 import { dirname, join } from 'node:path';
-import { hookRefusal, invocation, repositoryTop, simpleCommands, textField } from '../board/hook-answer';
+import { hookRefusal, invocation, partsWithFolders, repositoryTop, textField } from '../board/hook-answer';
 
 const LOCKFILES: Record<string, string> = {
   'pnpm-lock.yaml': 'pnpm',
@@ -40,25 +40,29 @@ export function nearestLockfile(folder: string, exists: (path: string) => boolea
 // A global install (`npm i -g x`, `pnpm add --global x`) writes no project's tree or lockfile.
 const GLOBAL_FLAGS = new Set(['-g', '--global', '--location=global']);
 
-// The managers a command installs through in the project; a bare `yarn` installs.
-export function managersUsed(command: string): string[] {
-  return simpleCommands(command).flatMap((part) => {
+// The installs a command line runs, each with its manager and the folder it runs in: `folder`, or where
+// a `cd` earlier in the line moved to (`cd storefront && pnpm install`). A bare `yarn` installs.
+// ponytail: `pnpm -C <dir>` is not read, as in test-run-guard.ts.
+export function installsRun(command: string, folder: string) {
+  const installs: { manager: string; folder: string }[] = [];
+  for (const { part, folder: base } of partsWithFolders(command, folder)) {
     const call = invocation(part, 'npm|pnpm|yarn|bun');
-    if (call === null || call.words.some((word) => GLOBAL_FLAGS.has(word))) return [];
+    if (call === null || call.words.some((word) => GLOBAL_FLAGS.has(word))) continue;
     const subcommand = call.words.find((word) => !word.startsWith('-'));
-    return (subcommand === undefined ? call.verb === 'yarn' : INSTALLS.has(subcommand)) ? [call.verb] : [];
-  });
+    if (subcommand === undefined ? call.verb === 'yarn' : INSTALLS.has(subcommand)) installs.push({ manager: call.verb, folder: base });
+  }
+  return installs;
 }
 
 // The hook's answer, as `board guard` prints it on stdout; undefined lets the call through. The command
 // is read before the disk, so a call naming no manager costs no file check.
 export function packageManagerGuard(toolName: string, toolInput: unknown, folder: string | undefined, exists: (path: string) => boolean) {
   if (toolName !== 'Bash' || folder === undefined) return undefined;
-  const used = managersUsed(textField(toolInput, 'command'));
-  if (used.length === 0) return undefined;
-  const project = nearestLockfile(folder, exists);
-  const wrong = project && used.find((verb) => verb !== project.manager);
-  return project && wrong ? hookRefusal(
-    `This project's lockfile is ${project.lockfile}: install with ${project.manager}, not ${wrong}.`,
-  ) : undefined;
+  for (const install of installsRun(textField(toolInput, 'command'), folder)) {
+    const project = nearestLockfile(install.folder, exists);
+    if (project && install.manager !== project.manager) {
+      return hookRefusal(`This project's lockfile is ${project.lockfile}: install with ${project.manager}, not ${install.manager}.`);
+    }
+  }
+  return undefined;
 }
