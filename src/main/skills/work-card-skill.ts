@@ -61,12 +61,14 @@ For a card or pull request whose title looks near this card, read its files:
 \`gh pr view <n> --json files\` for a pull request; for a card, its branch
 from the brackets in \`list\`, \`git diff --stat origin/$2...<branch>\`. If
 one covers the same files or the same area, say so in a comment on the card,
-naming the card or pull request and the files you both touch, and name it
-again in your report to main at the end. Then go on: never stop to wait for
-an answer, because a worker that stops and hears nothing has its pane closed.
-Do not message main about it now: the app takes any message from you as your
-report. Two cards built side by side on the same files conflict after
-review, and one of them is thrown away.
+naming the card or pull request and the files you both touch.
+
+When your prompt names a main to report to (\`SendMessage to main-... when
+done\`), stop there: send main that report now, naming the cards or pull
+requests and the files, and end your turn. Main answers in your pane with go
+on or stop; do as it says. When your prompt names no main, nobody would answer:
+go on after the comment. Two cards built side by side on the same files
+conflict after review, and one of them is thrown away.
 
 ## Then do the work
 
