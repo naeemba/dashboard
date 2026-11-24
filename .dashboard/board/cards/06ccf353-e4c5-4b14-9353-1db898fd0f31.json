@@ -5,14 +5,19 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-19T11:14:57.760Z",
-  "updatedAt": "2026-11-24T21:01:53.438Z",
+  "updatedAt": "2026-11-24T21:06:39.604Z",
   "branch": "review-worker-asks-before-landing-a-loop-s",
+  "pullRequest": 368,
   "comments": [
     {
       "at": "2026-11-24T19:59:33.305Z",
       "body": "This card is GitHub issue #339; the PR says Closes #339."
+    },
+    {
+      "at": "2026-11-24T21:06:39.542Z",
+      "body": "Pull request #368 opened: Review pane asks before landing a loop's design change when merging is on https://github.com/naeemba/dashboard/pull/368"
     }
   ],
-  "column": "Doing",
+  "column": "Review",
   "order": 0
 }
