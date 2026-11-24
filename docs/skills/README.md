@@ -55,8 +55,9 @@ the card and its subtasks (the `Subtasks` block `board show` prints) and the pro
 does the work, runs the project's checks and opens the pull request. Its first look at the code is
 a literal `codegraph explore` command run from the project's checkout (whose source can lag the
 worktree, so it reads a file before changing it). Before writing code it lists the Doing and Review
-cards and the open pull requests, and SendMessages main and waits when one covers the same files or
-area, or comments on the card when its prompt names no main. In a project with `docs/<feature>/`
+cards and the open pull requests (a card's files from its branch's diff), and when one covers the
+same files or area it comments on the card, tells main if its prompt names one, and goes on unless
+main stops it: a worker that stops to wait has its pane closed. In a project with `docs/<feature>/`
 it updates docs by grep, writes the card's `history.md` line in the card's commit, with no pull
 request number, and takes a new docs id last (skills-decision-3).
 The checks are the ones `CLAUDE.md` names, else the project's test, type-check and lint scripts;

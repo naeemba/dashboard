@@ -17,5 +17,5 @@ One line per merged change: date and why.
 - 2026-11-20 — `/work-card` says never to run tests in parallel or start a second run while one
   is going (workflow-decision-12)
 - 2026-11-24 — `/work-card` starts from a literal `codegraph explore` command, checks the Doing and
-  Review cards and open pull requests for overlap and asks main first, and takes a new docs id last
-  (skills-decision-3)
+  Review cards and open pull requests for overlap, comments on the card and tells main, and takes a
+  new docs id last (skills-decision-3)

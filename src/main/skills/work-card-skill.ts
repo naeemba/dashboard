@@ -57,13 +57,15 @@ Before you write any code, list what else is in flight, in one call:
 
     node "$DASHBOARD_BOARD" list --column Doing; node "$DASHBOARD_BOARD" list --column Review; gh pr list --json number,title,headRefName
 
-For a card or pull request whose title looks near this card, read its files
-(\`gh pr view <n> --json files\`). If one covers the same files or the same
-area, SendMessage the main session your prompt names: name the card or pull
-request and the files you both touch, then stop and wait for its answer
-before going on. When your prompt names no main, say it in a comment on the
-card and go on. Two cards built side by side on the same files conflict
-after review, and one of them is thrown away.
+For a card or pull request whose title looks near this card, read its files:
+\`gh pr view <n> --json files\` for a pull request; for a card, its branch
+from the brackets in \`list\`, \`git diff --stat origin/$2...<branch>\`. If
+one covers the same files or the same area, say so in a comment on the card,
+naming the card or pull request and the files you both touch, and tell the
+main session your prompt names, if any, by SendMessage. Then go on, unless
+main tells you to stop: never stop to wait for an answer, because a worker
+that stops and hears nothing has its pane closed. Two cards built side by
+side on the same files conflict after review, and one of them is thrown away.
 
 ## Then do the work
 
@@ -106,7 +108,7 @@ after review, and one of them is thrown away.
   worktree, so the next card to reach the same number would fail on it. A
   project with no \`package.json\` is bumped wherever it keeps its version.
   Commit the bump on its own.
-- Last, right before you open the pull request, when the card adds a docs id
+- When the work is done and before the checks, when the card adds a docs id
   or bumps the version: run \`git fetch origin && git merge origin/$2\` once
   (the local \`$2\` here is as old as the worktree; resolve a conflict the way
   \`/pr-conflicts\` does and commit the merge). Then give each new id the next
