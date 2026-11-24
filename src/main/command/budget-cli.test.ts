@@ -65,6 +65,7 @@ describe('the pace', () => {
       exitCode: 0, line: "64% of the 7-day usage used, today's cap 71.4% (pace, day 5 of 7 since the reset), read just now: under the cap",
     });
     expect(budgetVerdict(() => reading(72, TUESDAY, RESET), pace(), TUESDAY).exitCode).toBe(1);
+    expect(budgetVerdict(() => reading(71.4, TUESDAY, RESET), pace(), TUESDAY).exitCode).toBe(1);
     expect(budgetVerdict(() => reading(40, TUESDAY, RESET), pace(8), TUESDAY).exitCode).toBe(1);
     expect(budgetVerdict(() => reading(99, RESET - 60_000, RESET), pace(), RESET - 60_000).exitCode).toBe(0);
     expect(budgetVerdict(() => reading(99, RESET - 60_000, RESET), pace(30), RESET - 60_000).line).toContain("today's cap 100%");

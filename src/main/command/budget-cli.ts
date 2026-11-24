@@ -89,8 +89,9 @@ function todaysCap(budget: Settings['budget'], resetsAt: unknown, now: number): 
     return { line: 'no reset time: the pace counts days since the weekly reset, and ~/.claude/usage-7d.json has no "resetsAt"; a Claude screen in the app writes it, the statusline when it writes rate_limits.seven_day.resets_at' };
   }
   const day = paceDay(reset, now);
-  const cap = Math.min(100, day * (budget.dailyShare ?? 100 / 7));
-  return { cap, named: `today's cap ${Number(cap.toFixed(1))}% (pace, day ${day} of 7 since the reset)` };
+  // Rounded before the comparison as well as the line, so the figures printed and the verdict agree.
+  const cap = Number(Math.min(100, day * (budget.dailyShare ?? 100 / 7)).toFixed(1));
+  return { cap, named: `today's cap ${cap}% (pace, day ${day} of 7 since the reset)` };
 }
 
 // Under, over, or unknown. `readReading` gives the file's text, null when there is none, and is not
