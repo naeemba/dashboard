@@ -29,8 +29,8 @@ take minutes: give those Bash calls a ten-minute timeout (600000 ms). On a workt
 only a move. Everything else edits the board's files alone.
 
 A board git tracks is read and written on the default branch of the project's remote (origin when
-there is one, else the only remote), from the project or any worktree, and the project's checkout is
-brought up to it. Offline, it is written here, with a warning. So no git pull, commit or push is
+there is one, else the only remote, else the one the local main, then master, tracks), from the
+project or any worktree, and the project's checkout is brought up to it. Offline, it is written here, with a warning. So no git pull, commit or push is
 needed before or after a board command: it does its own.
 
 A card that will not be done is kept, not deleted: \`board move <id> Cancelled\` puts it in the

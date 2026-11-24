@@ -55,7 +55,8 @@ Run exactly one command:
   it; \`medium\` when I gave no signal. It colours the card and sorts the column.
 - Add \`--column '<name>'\` only if I named a column. The default is Backlog.
 - Add \`--remote <name>\` only where the board lives on a remote other than the
-  project's own (its branch's upstream, else its only remote, else \`origin\`).
+  project's own (\`origin\`, else its only remote, else the one its local
+  main, then master, tracks).
 
 If it says the branch has no board, stop and tell me. Do not
 re-run it with \`--seed\` unless I say so — a board missing from main is usually a
