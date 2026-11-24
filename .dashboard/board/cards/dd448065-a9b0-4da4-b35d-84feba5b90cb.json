@@ -1,0 +1,11 @@
+{
+  "id": "dd448065-a9b0-4da4-b35d-84feba5b90cb",
+  "title": "shellBody reads powershell -Command, pwsh -c and cmd /c bodies for every guard",
+  "notes": "Follow-up from #364: running-app-guard.ts now judges the body of powershell -Command / pwsh -c / cmd /c (//c from Git Bash) on its own; the shared shellBody in hook-answer.ts does not, so test-run-guard misses pwsh -c \"pnpm test\" and startsClaude in src/main/actions/pane/send.ts misses powershell -Command claude. Move the unwrapping into shellBody so every guard gets it, with a test per caller.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-24T20:08:16.245Z",
+  "updatedAt": "2026-11-24T20:08:16.245Z",
+  "column": "Backlog",
+  "order": 65
+}
