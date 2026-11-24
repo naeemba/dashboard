@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-18T11:22:44.823Z",
-  "updatedAt": "2026-11-18T11:22:44.824Z",
-  "column": "Backlog",
-  "order": 49
+  "updatedAt": "2026-11-24T19:58:14.028Z",
+  "column": "Cancelled",
+  "order": 19
 }
