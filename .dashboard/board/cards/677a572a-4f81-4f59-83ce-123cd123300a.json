@@ -1,0 +1,11 @@
+{
+  "id": "677a572a-4f81-4f59-83ce-123cd123300a",
+  "title": "The package-manager guard follows cd",
+  "notes": "Retro 2026-11-24: new-crm has package-lock.json at its root and pnpm-lock.yaml in backoffice/ and storefront/. 'cd storefront && pnpm install' was refused 4 times ('lockfile is package-lock.json: install with npm'), so #1279 went to CI unchecked. src/main/workflow/package-manager-guard.ts judges the session's folder; follow the command's cd the way test-run-guard.ts does since 92f7e4ad, with a test for 'cd storefront && pnpm install'.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-24T10:58:25.916Z",
+  "updatedAt": "2026-11-24T10:58:25.917Z",
+  "column": "Backlog",
+  "order": 55
+}
