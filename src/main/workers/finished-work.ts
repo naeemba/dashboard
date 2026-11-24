@@ -33,8 +33,8 @@ const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-par
 // worker on when its card is not Done yet (the follow that moves it runs on a timer) or it has none.
 // The one the card follows (latestPullRequest), so a branch that merged one and opened another since
 // is not finished while the second is open.
-// Bounded, because the sweep waits on it before it looks at any other worker: a gh that never answers
-// rejects here instead, which keeps the pane until the next sweep asks again.
+// Bounded, because the sweep waits on it before it looks at any other worker: a forge CLI that never
+// answers rejects here instead, which keeps the pane until the next sweep asks again.
 export async function pullRequestMerged(run: RunProgram, worktreePath: string): Promise<boolean> {
   return (await pullRequestOf(run, worktreePath, await branchOf(run, worktreePath)))?.state === 'MERGED';
 }

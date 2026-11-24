@@ -53,8 +53,8 @@ export const AGENT_IDLE_MS = 24 * 60 * 60 * 1000;
 
 type Kind = 'card' | 'agent';
 
-// Cheapest question first: git status, then git or gh, then the process table. One that throws keeps
-// the worktree, and the next sweep asks again.
+// Cheapest question first: git status, then git or the forge (forge.ts), then the process table.
+// One that throws keeps the worktree, and the next sweep asks again.
 async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, branch, locked }: GitWorktree): Promise<boolean> {
   if (locked || await ports.dirty(worktreePath)) return false;
   if (kind === 'card') {
@@ -79,7 +79,7 @@ function kindOf(path: string, projectPath: string): Kind | null {
 }
 
 // One sweep per call, remembering across calls the worktrees git refused to remove. One worktree at
-// a time: every one of them is a gh call, and nothing is waiting on the answer.
+// a time: every one of them is a forge call, and nothing is waiting on the answer.
 export function leftoverSweep(ports: LeftoverPorts): () => Promise<void> {
   const refused = new Set<string>();
   return async () => {

@@ -130,7 +130,7 @@ export function cardActions(main: CardActionsMain): CardActions {
         .map((card) => card.id));
     },
     // A refusal is a card the board no longer has, or a file that does not parse: the card is left
-    // alone and the next check asks again. Only gh's failure throws.
+    // alone and the next check asks again. Only the forge's failure throws.
     follow: (projectPath, id) => follow.call({ projectPath, id }),
     warn: (project, message) => main.log({ level: 'warn', kind: 'board', project, message }),
     now: Date.now,

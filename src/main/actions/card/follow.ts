@@ -24,9 +24,9 @@ export type CardFollowPorts = {
 // follow knows from it when the move already started the review.
 export type CardFollowAnswer = { output: string } & Partial<Pick<CardMoveResult, 'ran'>>;
 
-// A card's column set from its pull request (board-decision-6): found from its branch through gh, the
-// number recorded, a line said when the state differs from the last one about that pull request,
-// and the move made through card.move as the app's own.
+// A card's column set from its pull request (board-decision-6): found from its branch through the
+// project's forge (forge.ts), the number recorded, a line said when the state differs from the last
+// one about that pull request, and the move made through card.move as the app's own.
 // pull-request-column.ts holds every decision; this reads, asks and writes.
 export const cardFollow = action<CardFollowPorts, CardInput, CardFollowAnswer>('card.follow', {
   words: ['id'],
@@ -42,7 +42,7 @@ export const cardFollow = action<CardFollowPorts, CardInput, CardFollowAnswer>('
       return { output: `"${card.title}" is not followed` };
     }
     const pull = await ports.pullRequestOf(projectPath, branch);
-    // Read again: gh takes seconds, and a move made meanwhile is the board this step lands on.
+    // Read again: the forge takes seconds, and a move made meanwhile is the board this step lands on.
     const { board } = ports.read(projectPath);
     const step = followStep(board, id, branch, pull);
     if (step.board !== null) ports.write(projectPath, step.board);

@@ -114,10 +114,11 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // steps copied out of this prompt, so it rides out a network error on any gh call (RETRY_WAITS_MS) and
 // reads back a merge call that failed: #301 was reported failed by a review that had merged it.
 //
-// The card is not moved: the app's follow (card.follow) moves it into Done once gh says merged, and
-// writes it on origin's main through the same sync the `board` command uses (board-sync-git.ts). A move
-// asked of the agent was one more chance of Done before the merge, which is how kamandsystem #19 sat in
-// Done unmerged, and BOARD_INSTRUCTIONS tells every session the app starts not to move a branch card.
+// The card is not moved: the app's follow (card.follow) moves it into Done once the project's forge
+// (forge.ts) says merged, and writes it on origin's main through the same sync the `board` command
+// uses (board-sync-git.ts). A move asked of the agent was one more chance of Done before the merge,
+// which is how kamandsystem #19 sat in Done unmerged, and BOARD_INSTRUCTIONS tells every session the
+// app starts not to move a branch card.
 //
 // The project is named by path and the card by id, since neither is anything the agent can work out
 // from the folder it wakes up in.
