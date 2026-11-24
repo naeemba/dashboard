@@ -51,8 +51,9 @@ failed one, a coverage line and the log's path:
 
 It exits non-zero when one failed. The reasons are vitest's `FAIL` lines with the error under each,
 tsc's `error TS` lines, and eslint's and the markdown check's problems as `file:line`; a check that
-died before printing any of them shows its `Error` lines. Past five it says how many more are in
-the log: there is no need to run a check again to see the end of it.
+died before printing any of them shows its error lines (`TypeError` too), without stack frames.
+Past five it says how many more are in the log: there is no need to run a check again to see the
+end of it.
 
 The coverage line counts the code under `src/` and `scripts/` that the branch changed against
 main (its merge base with `origin/main`, else `main`, plus untracked files), tests aside, and lists

@@ -73,6 +73,8 @@ describe('reasonLines', () => {
 
   it('prints the error lines of a check that died before saying what failed', () => {
     expect(reasonLines('test', 'Error: config failed to load\n    at x.js:1\n')).toEqual(['Error: config failed to load']);
+    const startup = '⎯⎯ Startup Error ⎯⎯\nTypeError: x is undefined\n    at load (/n/error-1.mjs:1:1)\n';
+    expect(reasonLines('test', startup)).toEqual(['TypeError: x is undefined']);
     const lint = "Error: Cannot find module 'x'\neslint failed\ndocs/a.md:3  120 columns, over 100\n";
     expect(reasonLines('lint', lint)).toEqual(["Error: Cannot find module 'x'", 'docs/a.md:3  120 columns, over 100']);
   });

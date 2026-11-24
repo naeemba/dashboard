@@ -43,8 +43,9 @@ export function summaryLine(check, output, passed) {
 // Why a check failed, printed under its FAIL line so nobody opens check.log to find out: vitest's
 // `FAIL  file > test` lines with the error under each, tsc's `error TS` lines, eslint's problems as
 // `file:line:column` and the markdown check's long lines. A check that died before any of those
-// prints its `Error` lines instead.
-const errorLines = (lines) => lines.filter((line) => /\berror\b/i.test(line)).map((line) => line.trim());
+// prints its error lines instead (`TypeError`, `[PARSE_ERROR]` too), less stack frames and banners.
+const errorLines = (lines) => lines.filter((line) => /error\b/i.test(line) && !/^\s*(at\s|⎯)/.test(line))
+  .map((line) => line.trim());
 
 const REASONS = {
   test: (lines) => lines.flatMap((line, index) => {
