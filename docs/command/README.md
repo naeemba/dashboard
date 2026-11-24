@@ -251,7 +251,10 @@ Folders: `src/main/command/`.
   runs, then it merges the head commit it noted before the wait and prints
   `merged 12 at <sha>`; a push during the wait makes gh refuse the merge, and it
   says so and exits 1.
-- Given `gh pr merge` fails with `Post https://api.github.com/graphql: unexpected EOF` and the pull request is merged at the noted commit, when `pr land` reads it back, then it prints `merged 12 at <sha>`; still open, it tries the merge once more.
+- Given `gh pr merge` fails with `Post https://api.github.com/graphql: unexpected EOF` and the
+  pull request is merged at the noted commit, when `pr land` reads it back, then it prints
+  `merged 12 at <sha>`; still open, it tries the merge again, waiting longer each time, as long as
+  `RETRY_WAITS_MS` lasts.
 - Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print, the
   verdict last.
 - Given gh answers `error connecting to api.github.com` for a minute, when `pr land` asks, then it
