@@ -1,0 +1,11 @@
+{
+  "id": "c1e93ad7-1cf2-46d2-bc1f-d18aa0d211f4",
+  "title": "browser-program.ts eval branch has no test",
+  "notes": "The eval branch in src/main/browser/browser-program.ts (read the script file, refuse when it cannot be read) has no test; pnpm check lists the file as 'no test runs it', against workflow-rule-2. If the read or its refusal breaks, an agent's browser eval fails and no test catches it. Fix: move the decision into a pure function in browser-cli.ts with a test. Issue: https://github.com/naeemba/dashboard/issues/371 Review: https://github.com/naeemba/dashboard/pull/370#discussion_r4688228513",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-24T23:54:32.170Z",
+  "updatedAt": "2026-11-24T23:54:32.171Z",
+  "column": "Backlog",
+  "order": 67
+}
