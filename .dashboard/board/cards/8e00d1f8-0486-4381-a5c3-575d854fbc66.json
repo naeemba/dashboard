@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T11:04:19.314Z",
-  "updatedAt": "2026-11-24T11:04:19.315Z",
+  "updatedAt": "2026-11-24T11:23:10.725Z",
+  "comments": [
+    {
+      "at": "2026-11-24T11:23:10.725Z",
+      "body": "Also from #349's loop: worktree-guard reads 'cd -P <dir>' as cd into '-P'; the shared walk should skip cd's flags. 5ed72c31 on #349's branch (reverted only for a 152-wide comment) already had a correct shared walk to start from."
+    }
+  ],
   "column": "Backlog",
   "order": 59
 }
