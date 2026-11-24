@@ -1,0 +1,11 @@
+{
+  "id": "f8c6dabb-05ce-40e8-b2dc-fed568eb05f7",
+  "title": "Worktree sweeps treat board-only leftovers as nothing to keep",
+  "notes": "2026-11-24: 5 worktrees sat in dashboard.worktrees/ since Nov 16 and no sweep took them. Two held only an uncommitted edit of their own .dashboard/board/cards/<id>.json (PRs #282, #285 merged); two held only an unpushed 'board: ship \"…\"' commit touching only .dashboard/board/; one was a detached HEAD already on origin/main. worktree.sweep (throwaways) and the leftover sweep (#347) keep anything with uncommitted changes or commits no remote has. Count a change or commit that touches only .dashboard/board/ as nothing to keep (the board lives on the default branch, so the card file in a worktree is a stale copy), in the one predicate both sweeps use, with a test for each of the three cases. Keep refusing a locked worktree or one a pane still uses.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-24T13:03:26.403Z",
+  "updatedAt": "2026-11-24T13:03:26.403Z",
+  "column": "Backlog",
+  "order": 64
+}
