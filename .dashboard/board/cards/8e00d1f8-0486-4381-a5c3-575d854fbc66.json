@@ -5,11 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T11:04:19.314Z",
-  "updatedAt": "2026-11-24T11:23:10.725Z",
+  "updatedAt": "2026-11-24T11:30:23.032Z",
   "comments": [
     {
       "at": "2026-11-24T11:23:10.725Z",
       "body": "Also from #349's loop: worktree-guard reads 'cd -P <dir>' as cd into '-P'; the shared walk should skip cd's flags. 5ed72c31 on #349's branch (reverted only for a 152-wide comment) already had a correct shared walk to start from."
+    },
+    {
+      "at": "2026-11-24T11:30:23.032Z",
+      "body": "Also: an msys-style 'cd /c/work' resolves to C:\\c\\work on Windows, so the guard finds no lockfile and fails open."
     }
   ],
   "column": "Backlog",
