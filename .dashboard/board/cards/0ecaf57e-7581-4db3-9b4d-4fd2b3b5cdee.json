@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T10:58:45.600Z",
-  "updatedAt": "2026-11-24T10:58:45.600Z",
-  "column": "Backlog",
-  "order": 58
+  "updatedAt": "2026-11-24T11:30:30.252Z",
+  "branch": "budget-an-optional-daily-pace-toward-the-we",
+  "column": "Doing",
+  "order": 0
 }
