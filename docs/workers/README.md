@@ -279,7 +279,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   manager, only in its pane's own figure.
 - Given a pane with a shell and no agent, when main runs `pane send` with text
   whose command starts Claude Code (`claude ...`, by name or path, also after
-  `&&`, `;` or `|`, or inside `sh -c`), then the send is refused, nothing is
+  `&&`, `;` or `|`, or inside `sh -c`, `powershell -Command`, `pwsh -c` or
+  `cmd /c`), then the send is refused, nothing is
   typed, and the refusal points at `pane run` with `--card`, `--worktree` or
   `--in`, since Claude typed into a pane gets none of the worker settings and
   never reports to main. The same text sent to a pane with an agent in it, or

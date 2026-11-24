@@ -40,7 +40,7 @@ export function runsTests(words: readonly string[]): boolean {
   return TEST_SCRIPT.test(rest[0]) || runsTests(rest);
 }
 
-// The folders the test runs a command line starts run in, `sh -c '…'` bodies included: `folder`, or
+// The folders the test runs a command line starts run in, the bodies `shellBody` reads included: `folder`, or
 // where a `cd` earlier in the line moved to (`cd ../app.worktrees/card && pnpm test`), as
 // partsWithFolders reads it. ponytail: `pnpm -C <dir>` is not read.
 export function testRunFolders(command: string, folder: string): string[] {

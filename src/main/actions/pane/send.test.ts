@@ -58,7 +58,7 @@ describe('pane.send', () => {
 
 describe('startsClaude', () => {
   it('finds claude as the first word of any command, by name or path', () => {
-    for (const text of ['claude', '  claude --resume', 'cd ../web && claude "go"', '/opt/claude-code/bin/claude -p x', 'true; claude', 'env FOO=1 claude', 'exec claude', `bash -lc 'claude -p "fix it"'`, 'sh -c "claude"']) {
+    for (const text of ['claude', '  claude --resume', 'cd ../web && claude "go"', '/opt/claude-code/bin/claude -p x', 'true; claude', 'env FOO=1 claude', 'exec claude', `bash -lc 'claude -p "fix it"'`, 'sh -c "claude"', 'powershell -Command claude', "pwsh -c 'claude -p x'", 'cmd /c claude']) {
       expect(startsClaude(text), text).toBe(true);
     }
   });

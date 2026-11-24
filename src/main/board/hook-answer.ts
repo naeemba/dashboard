@@ -81,18 +81,17 @@ export const simpleCommands = (command: string) => split(command, true);
 // A command's words, without their quotes or the `)` or `}` closing a subshell or group.
 export const wordsOf = (text: string) => text.split(/\s+/).filter(Boolean).map((word) => word.replace(/^["']|["']?[)}]*$/g, ''));
 
-// The quoted body of `sh -c '…'` (bash, zsh, dash too), which runs as a command line of its own.
-export function shellBody(part: string): string | null {
-  return invocation(part, 'sh|bash|zsh|dash') ? /\s-\w*c\s+(["'])(.*)\1/.exec(part)?.[2] ?? null : null;
-}
-
 // A word matched in any case, for a Windows name: its filesystem and shells ignore case, Linux's do not.
 export const anyCase = (word: string) => [...word].map((letter) => `[${letter.toLowerCase()}${letter.toUpperCase()}]`).join('');
 
-// The command a `powershell -Command`, `pwsh -c` or `cmd /c` (`//c` from Git Bash) runs, unquoted.
+const WINDOWS_SHELLS = String.raw`(?:${['powershell', 'pwsh', 'cmd'].map(anyCase).join('|')})(?:\.exe)?`;
+
+// The command line a shell is handed to run, unquoted: the quoted body of `sh -c '…'` (bash, zsh,
+// dash too), or what a `powershell -Command`, `pwsh -c` or `cmd /c` (`//c` from Git Bash) runs.
 // ponytail: a PowerShell command given with no -Command is not read.
-export function windowsShellBody(part: string): string | null {
-  if (!invocation(part, String.raw`(?:${['powershell', 'pwsh', 'cmd'].map(anyCase).join('|')})(?:\.exe)?`)) return null;
+export function shellBody(part: string): string | null {
+  if (invocation(part, 'sh|bash|zsh|dash')) return /\s-\w*c\s+(["'])(.*)\1/.exec(part)?.[2] ?? null;
+  if (!invocation(part, WINDOWS_SHELLS)) return null;
   const body = /\s(?:-c(?:ommand)?|\/\/?[ck])\s+(.*)$/i.exec(part)?.[1];
   return body === undefined ? null : body.replace(/^(["'])(.*)\1$/, '$2');
 }

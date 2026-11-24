@@ -41,12 +41,16 @@ describe('testRunFolders', () => {
     'timeout 600 pnpm test 2>&1 | tail -20',
     'cd packages/core && pnpm test',
     "sh -c 'pnpm test'",
+    'pwsh -c "pnpm test"',
+    'powershell.exe -NoProfile -Command npx vitest run',
+    'cmd //c "npm test"',
   ])('reads %s as a test run', (command) => {
     expect(startsTestRun(command)).toBe(true);
   });
 
   it.each([
     'pnpm typecheck',
+    'pwsh -File test.ps1',
     'pnpm lint',
     'pnpm add -D vitest',
     'npm install jest',
