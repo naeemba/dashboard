@@ -110,8 +110,8 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // no review after them. Off, the pane stops once the loop and CI are done and reports to the project's
 // main and on the card, so the board says "ready to merge" or what is open after main's session is gone;
 // the card waits in Review until the user merges it. On, it runs `pr land` (pull-request-cli.ts), not
-// steps copied out of this prompt, so it gets the command's second try on a network error and its
-// reading back of a merge call that failed: #301 was reported failed by a review that had merged it.
+// steps copied out of this prompt, so it rides out a network error on any gh call (RETRY_WAITS_MS) and
+// reads back a merge call that failed: #301 was reported failed by a review that had merged it.
 //
 // The card is not moved: the app's follow (card.follow) moves it into Done once gh says merged, and
 // writes it on origin's main through the same sync the `board` command uses (board-sync-git.ts). A move
@@ -128,14 +128,13 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
   const sayOnCard = `\`${board} comment ${cardId} "<what happened>"\``;
   const report = [
     '2. Then, unless the loop stopped short or the pull request conflicts with the base branch,',
-    `   wait for CI on the pull request's head commit: \`gh pr checks ${pullRequest} --watch\`, run in the`,
+    `   wait for CI on the pull request's head commit: \`node "$DASHBOARD_COMMAND" pr wait ${pullRequest}\`, run in the`,
     `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it`,
-    '   exits. A watch stopped at that time limit has not failed: run it once more. That is the whole wait: no',
-    '   `gh pr view` or `gh pr checks` in between, and no foreground `sleep`, which is refused. Every check',
-    '   must pass on the commit the pull request ends on, a commit pushed after the last review round',
-    '   included. "No checks reported" right after a push means CI has not started: run',
-    `   \`sleep 60 && gh pr checks ${pullRequest} --watch\` in the background once more, and only if there`,
-    '   are still none does the repository run no CI.',
+    '   exits. A wait stopped at that time limit has not failed: run it once more. That is the whole wait: no',
+    '   `gh pr view`, `gh pr checks` or `gh run view` in between, and no foreground `sleep`, which is refused.',
+    '   It waits on the commit the pull request ends on, asks again a minute on when CI has not started,',
+    '   and rides out a network error; its last line is the verdict: `checks passed on <sha>`, a failed',
+    '   check, or the files the pull request conflicts on.',
     '3. Do not merge it, and do not move the card: it stays in Review until the user merges.',
     '4. Whatever the ending, say it on the card, "converged, ready to merge" or what is still open:',
     `   ${sayOnCard}. Your report to main (the SendMessage asked for below) says how many rounds`,

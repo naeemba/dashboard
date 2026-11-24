@@ -137,6 +137,10 @@ conflict after review, and one of them is thrown away.
   request, and say what failed and why in a comment on the card.
 - Commit in small pieces with messages that say what changed and why.
 - Push the branch to \`$3\` and open the pull request with \`gh pr create\`.
+- To wait for the pull request's CI, run \`node "$DASHBOARD_COMMAND" pr wait <n>\`
+  in the background with the longest timeout allowed: it waits on the head
+  commit, outlasts a network error, and its last line is the verdict. Never a
+  \`sleep\` and \`gh run view\` loop.
 
 ## What not to do
 

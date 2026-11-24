@@ -159,12 +159,14 @@ describe('reviewPrompt', () => {
   });
 
   // One session polled `gh pr checks` 166 times by hand, and `sleep N; gh pr checks` in the foreground
-  // is refused: the wait is one background watch that wakes the agent when it exits.
+  // is refused: the wait is one background pr wait that wakes the agent when it exits. A hand-rolled
+  // watch died on a TLS timeout pr wait tries again past.
   it('waits on CI with a background watch, not a poll, when merging is off', () => {
     const waiting = reviewPrompt(CARD, 12, '/work/api', false);
     expect(waiting).toContain('run_in_background, timeout 7200000');
     expect(waiting).toContain('stopped at that time limit has not failed');
-    expect(waiting).toContain('sleep 60 && gh pr checks 12 --watch');
+    expect(waiting).toContain('`node "$DASHBOARD_COMMAND" pr wait 12`');
+    expect(waiting).not.toMatch(/sleep 60|gh pr checks 12 --watch/);
   });
 
   // #290 was merged by this prompt with nobody's go-ahead.
@@ -173,7 +175,7 @@ describe('reviewPrompt', () => {
 
     it('runs the loop and waits for CI, and never merges', () => {
       expect(reporting).toContain('/pr-loop 12');
-      expect(reporting).toContain('gh pr checks 12 --watch');
+      expect(reporting).toContain('pr wait 12');
       expect(reporting).not.toContain('gh pr merge');
       expect(reporting).not.toContain('pr land');
     });

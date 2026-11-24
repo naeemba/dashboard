@@ -119,8 +119,9 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('browser network', 'The last requests that failed', [TAB]),
 ];
 
-// pr land waits on CI for as long as it takes, longer than a tool call should hold a session.
+// pr land and pr wait wait on CI for as long as it takes, longer than a tool call should hold a session.
 const LAND_IN_BASH = 'run `node "$DASHBOARD_COMMAND" pr land <n>` in Bash in the background';
+const WAIT_IN_BASH = 'run `node "$DASHBOARD_COMMAND" pr wait <n>` in Bash in the background';
 
 // The verbs that stay the command's alone, by `<noun> <verb>` as the usage spells them, and why.
 export const COMMAND_ONLY: Record<string, string> = {
@@ -129,6 +130,7 @@ export const COMMAND_ONLY: Record<string, string> = {
   'project init': 'written once, on a machine with no projects.yaml',
   'project remove': 'rare, and asked for by a person',
   'pr land': LAND_IN_BASH,
+  'pr wait': WAIT_IN_BASH,
 };
 
 // What the server tells every session about itself, once, and when its browser is the one to reach
@@ -137,7 +139,7 @@ export const SERVER_INSTRUCTIONS = 'The Dashboard app this session runs in: its 
   + ' browser. For any web page to read or check, a frontend or layout check included, use the browser_ tools'
   + ' rather than Playwright or Claude in Chrome: each project\'s browser keeps its own sign-ins, browser_eval'
   + ' runs a script file of any length and saves its answer to a file, and browser_screenshot answers with the'
-  + ` picture. To land a pull request, ${LAND_IN_BASH}.`;
+  + ` picture. To land a pull request, ${LAND_IN_BASH}; to wait on its CI without merging, ${WAIT_IN_BASH}.`;
 
 export const MCP_SERVER_NAME = 'dashboard';
 
