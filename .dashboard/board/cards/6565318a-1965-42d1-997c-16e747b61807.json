@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:12.520Z",
-  "updatedAt": "2026-11-24T10:58:12.521Z",
-  "column": "Backlog",
-  "order": 53
+  "updatedAt": "2026-11-24T10:59:10.364Z",
+  "branch": "workers-check-for-overlapping-cards-and-prs",
+  "column": "Doing",
+  "order": 1
 }
