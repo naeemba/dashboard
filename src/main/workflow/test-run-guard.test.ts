@@ -63,6 +63,7 @@ describe('testRunFolders', () => {
     const fromCheckout = (command: string) => testRunFolders(command, '/work/app').map((folder) => folder.replaceAll('\\', '/'));
     expect(fromCheckout('cd ../app.worktrees/card && pnpm test')).toEqual([expect.stringMatching(/\/work\/app\.worktrees\/card$/)]);
     expect(fromCheckout("cd packages/core && sh -c 'pnpm test'")).toEqual([expect.stringMatching(/\/work\/app\/packages\/core$/)]);
+    expect(fromCheckout('(cd ../app.worktrees/card && pnpm i) && pnpm test')).toEqual([expect.stringMatching(/\/work\/app$/)]);
   });
 });
 
