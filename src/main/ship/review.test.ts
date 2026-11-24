@@ -163,8 +163,18 @@ describe('reviewPrompt', () => {
   it('stops before landing a round that changed the card\'s ask or design, and tells main', () => {
     for (const landing of [prompt, reviewPrompt(CARD, 7, '/work/insta', true, 'gitlab')]) {
       expect(landing).toContain('no round that changed what the card asked for or its design');
-      expect(landing).toContain('a round changed what the card asked for or its design,');
-      expect(landing).toContain('report to main, so main asks the user whether');
+      expect(landing).toContain('a round changed what the card asked for or its design');
+      expect(landing).toContain('report to main, so main asks the user whether it lands');
+    }
+  });
+
+  // The pane wakes in the worktree knowing only the card's id, and a round's summary of a swapped rule
+  // reads like a fix: without the card it has nothing to judge "what the card asked for" by.
+  it('reads the card before judging whether a round changed it', () => {
+    for (const forge of ['github', 'gitlab'] as const) {
+      for (const merge of [true, false]) {
+        expect(reviewPrompt(CARD, 12, '/work/api', merge, forge)).toContain(`node "$DASHBOARD_BOARD" show ${CARD}`);
+      }
     }
   });
 
