@@ -10,7 +10,7 @@
 // matching more means running the shell, and this is a guard rail.
 
 import path from 'node:path';
-import { FILE_FIELDS, hookRefusal, invocation, resolveWord, simpleCommands, textField } from '../board/hook-answer';
+import { FILE_FIELDS, hookRefusal, invocation, partsWithFolders, resolveWord, textField } from '../board/hook-answer';
 import { isInside } from '../panes/shell-directory';
 
 // Every worktree of the repository `folder` is in, the main checkout included, or null outside one.
@@ -29,22 +29,7 @@ const EDIT_REASON = 'That file is in another worktree of this repository, where 
 // the session started in, where its shell goes back to. The target is read from where it runs and
 // its `git -C`.
 export function removesOwnWorktree(command: string, cwd: string, startFolder = cwd): boolean {
-  let base = cwd;
-  let shell = cwd;
-  let depth = 0;
-  const count = (text: string, character: string) => text.split(character).length - 1;
-  for (const part of simpleCommands(command)) {
-    const opening = /^[(\s]*/.exec(part)?.[0] ?? '';
-    depth += count(opening, '(');
-    if (removes(part, base, shell, startFolder)) return true;
-    const changed = invocation(part, 'cd');
-    if (changed) base = resolveWord(changed.words[0] ?? '~', base);
-    if (changed && depth === 0) shell = base;
-    // ponytail: parentheses are counted without reading quotes; `$( … )` balances itself.
-    depth += count(part.slice(opening.length), '(') - count(part, ')');
-    if (depth <= 0) [depth, base] = [0, shell];
-  }
-  return false;
+  return partsWithFolders(command, cwd).some(({ part, folder, shell }) => removes(part, folder, shell, startFolder));
 }
 
 function removes(part: string, base: string, shell: string, startFolder: string): boolean {

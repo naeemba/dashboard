@@ -54,6 +54,10 @@ describe('removesOwnWorktree', () => {
     expect(removesOwnWorktree('(cd /x) && git worktree remove .', own)).toBe(true);
     expect(removesOwnWorktree('(cd /p/.adopt-docs) && git worktree remove /p/.adopt-docs', '/p')).toBe(false);
   });
+
+  it('skips a cd flag to read the folder it moves to', () => {
+    expect(removesOwnWorktree('cd -P /p && git worktree remove .adopt-docs', '/p/.adopt-docs')).toBe(true);
+  });
 });
 
 describe('editsOtherWorktree', () => {

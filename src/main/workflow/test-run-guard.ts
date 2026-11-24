@@ -43,7 +43,8 @@ export function runsTests(words: readonly string[]): boolean {
 // The folders the test runs a command line starts run in, `sh -c '…'` bodies included: `folder`, or
 // where a `cd` earlier in the line moved to (`cd ../app.worktrees/card && pnpm test`).
 // ponytail: a `cd` inside a `( … )` subshell is followed past its end, and `pnpm -C <dir>` is not
-// read; worktree-guard.ts counts subshells if a run is ever judged in the wrong worktree that way.
+// read; partsWithFolders in hook-answer.ts counts subshells if a run is ever judged in the wrong
+// worktree that way.
 export function testRunFolders(command: string, folder: string): string[] {
   const folders: string[] = [];
   let base = folder;
