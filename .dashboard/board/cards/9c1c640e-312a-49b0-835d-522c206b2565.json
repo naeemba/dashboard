@@ -1,0 +1,11 @@
+{
+  "id": "9c1c640e-312a-49b0-835d-522c206b2565",
+  "title": "Agents reach for the Dashboard browser, and it can run a page script",
+  "notes": "Retro 2026-11-24: 0 mcp__dashboard__browser_* calls against 140+ Playwright / Claude in Chrome calls (1 KB javascript_tool cap, 'outside allowed roots', extension disconnects, 1.6 MB of zoom screenshots on LinkedIn). Main's own brief sent the job-search worker to Chrome. (1) The MCP server instruction (src/main/command/mcp-tools.ts) says when to choose the Dashboard browser: a page to read or check, signed-in per project, no 1 KB cap. Main's prompt (src/main/workers/dispatch.ts) and the work-card skill name it for any page or frontend check; the review prompt (src/main/ship/review.ts) for a layout check on the running app. (2) A 'browser eval <tab> <script file>' verb (and MCP tool) through an action, Runtime.evaluate already used in browser-page.ts, its result written to a file and a short line printed; plus a --wait-for <selector> option so page scripts stop sleeping. Docs in docs/browser/.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-24T10:58:19.151Z",
+  "updatedAt": "2026-11-24T10:58:19.152Z",
+  "column": "Backlog",
+  "order": 54
+}
