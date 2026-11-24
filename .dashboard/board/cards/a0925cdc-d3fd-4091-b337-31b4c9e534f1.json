@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T11:11:34.553Z",
-  "updatedAt": "2026-11-24T11:11:34.553Z",
-  "column": "Backlog",
-  "order": 62
+  "updatedAt": "2026-11-24T12:01:42.666Z",
+  "branch": "a-docs-check-refuses-a-duplicate-docs-id-or",
+  "column": "Doing",
+  "order": 0
 }
