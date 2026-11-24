@@ -56,8 +56,9 @@ does the work, runs the project's checks and opens the pull request. Its first l
 a literal `codegraph explore` command run from the project's checkout (whose source can lag the
 worktree, so it reads a file before changing it). Before writing code it lists the Doing and Review
 cards and the open pull requests (a card's files from its branch's diff), and when one covers the
-same files or area it comments on the card, tells main if its prompt names one, and goes on unless
-main stops it: a worker that stops to wait has its pane closed. In a project with `docs/<feature>/`
+same files or area it comments on the card, names it in its report to main at the end, and goes
+on: a worker that stops to wait has its pane closed, and any message it sends main is taken as its
+report. In a project with `docs/<feature>/`
 it updates docs by grep, writes the card's `history.md` line in the card's commit, with no pull
 request number, and takes a new docs id last (skills-decision-3).
 The checks are the ones `CLAUDE.md` names, else the project's test, type-check and lint scripts;
