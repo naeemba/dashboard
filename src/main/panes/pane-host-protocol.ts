@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { chmodSync, linkSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { readText } from '../app/missing-file';
 import type { ScopedCommand } from '../processes/scope';
 
 // What the app and the pane host say to each other: one JSON message per line over a unix socket,
@@ -83,12 +84,8 @@ export function pipeTokenFile(userData: string): string {
 // first's whole file and keeps it.
 function pipeToken(userData: string): string {
   const file = pipeTokenFile(userData);
-  try {
-    const kept = readFileSync(file, 'utf8');
-    return PIPE_TOKEN.test(kept) ? kept : writeToken(file, 'replace');
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-  }
+  const kept = readText(file);
+  if (kept !== null) return PIPE_TOKEN.test(kept) ? kept : writeToken(file, 'replace');
   try {
     return writeToken(file, 'create');
   } catch (error) {
