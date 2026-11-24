@@ -3,6 +3,10 @@
 import { relative } from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 
+// A file's path from the checkout's top, with / between its folders on Windows too, as git and the
+// docs write it.
+export const relativePath = (root, file) => relative(root, file).replaceAll('\\', '/');
+
 export const plural = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
 // A failed check that printed none of what is counted died before it ran (a missing module, a broken
@@ -66,7 +70,7 @@ const REASONS = {
         if (/^[^\s✖]/.test(line)) file = line.trim();
         return [];
       }
-      return [`${relative(root, file)}:${problem[1]}  ${problem[2].replace(/\s{2,}/g, '  ')}`];
+      return [`${relativePath(root, file)}:${problem[1]}  ${problem[2].replace(/\s{2,}/g, '  ')}`];
     });
     const markdown = lines.filter((line) => /^\S+:\d+ {2}\d+ columns/.test(line));
     const died = eslint.length === 0 && lines.includes(ESLINT_FAILED);
