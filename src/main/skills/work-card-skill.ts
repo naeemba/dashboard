@@ -37,15 +37,36 @@ Read \`CLAUDE.md\` at the top of the repository before you write anything. It
 is not optional and it is not a summary of the code; it is the rules this
 project is held to.
 
+## Find the code
+
+Your first look at the code is this command, with the card's nouns (the
+files, symbols and features its title and description name) in the quotes:
+
+    codegraph explore "<the card's nouns>" -p "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+
+It runs from the project's checkout, because this worktree has no index of
+its own. It shows the checkout's code, not this worktree's: read a file here
+before you change it, and never trust it for a file you already changed.
+Read only the lines it points you to; never \`cat\` or \`sed\` a whole file to
+find something in it. Grep only when the checkout has no \`.codegraph/\`, or
+for a string, a config value or a log line.
+
+## Check nobody else is on it
+
+Before you write any code, list what else is in flight:
+
+    node "$DASHBOARD_BOARD" list --column Doing
+    node "$DASHBOARD_BOARD" list --column Review
+    gh pr list --json number,title,headRefName,files
+
+If another card or open pull request covers the same files or the same area
+as this card, SendMessage main (\`main-<the project's folder name>\`): name
+the card or pull request and the files you both touch, then stop and wait
+for its answer before going on. Two cards built side by side on the same
+files conflict after review, and one of them is thrown away.
+
 ## Then do the work
 
-- Find code with codegraph when the project has an index. This worktree has
-  none of its own; the project's checkout is
-  \`"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"\`.
-  When it has a \`.codegraph/\`, run \`codegraph explore "<symbols or question>"
-  -p <that folder>\` to find what to read. It shows the checkout's code, not
-  this worktree's: read a file here before you change it, and never trust it
-  for a file you already changed.
 - Before changing a function that already exists, ask what calls it.
 - The board, pane, project and browser commands are also tools of the
   \`dashboard\` MCP server (\`mcp__dashboard__board_show\`, \`board_comment\`,
@@ -62,6 +83,14 @@ project is held to.
   line for the card goes in the card's commit, before the
   pull request is opened: the date and why, with no pull request number. A
   second commit to add the number is a second push and a second CI run.
+- A new numbered docs id (\`<feature>-rule-N\`, \`<feature>-decision-N\`) is
+  taken last, right before you open the pull request (write
+  \`<feature>-decision-next\` until then): first
+  \`git fetch origin && git merge origin/$2\`, then take the next number free
+  there, and name the ids you took in your report to main. Cards in other
+  worktrees add ids at the same time, and two that both took the next one
+  early both say \`-decision-9\`. If the pull request later conflicts on an id,
+  merge \`origin/$2\` again and take the next free one.
 - Build what the card asks for, following the project's own rules.
 - The version: $1.
   \`${KEEP_VERSION}\`, or anything but \`${BUMP_VERSION}\`, means this project
