@@ -1,0 +1,11 @@
+{
+  "id": "d53ad8b4-5ca9-49d4-9e38-c8b21ccf62ca",
+  "title": "Ship and review on a GitLab project: /work-card ends in gh pr create",
+  "notes": "/work-card ends with `gh pr create`, and the review after it (the pull request number on the card, the review sweep, pr land) goes through gh. On a project whose remote is GitLab (insta-experiences), the agent does the work, pushes, then gets 'none of the git remotes configured for this repository point to a known GitHub host'. The card stays in Doing with no pull request and no review. Fix: glab mr create and /mr-loop when the remote is a GitLab host, and record a merge request on the card the way a pull request is recorded. Issue: https://github.com/naeemba/dashboard/issues/354 Review: https://github.com/naeemba/dashboard/pull/353#discussion_r4679307570",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-24T11:27:37.339Z",
+  "updatedAt": "2026-11-24T11:27:37.339Z",
+  "column": "Backlog",
+  "order": 63
+}
