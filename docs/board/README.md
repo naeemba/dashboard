@@ -134,7 +134,7 @@ launch, writes its branch on it and moves it into Doing, unless it is in Doing
 or past it already. From then on the
 app asks `gh pr list --head <branch>` about it, one call per card, when a worker
 reports, when the board is shown, and every minute, and records the number
-it finds. On a project whose remote's URL does not name github it asks `glab mr list
+it finds. On a project whose remote's host does not name github it asks `glab mr list
 --source-branch <branch>` instead, and records the merge request the same way, its iid
 as the number (ship-decision-5, `merge-request.ts`); its glyph is read from the merge
 status alone, which says running and mergeable but not a failed pipeline:

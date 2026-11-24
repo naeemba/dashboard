@@ -230,6 +230,8 @@ describe('reviewPrompt on GitLab', () => {
 
   it('merges only the head it noted, and only when merging is on', () => {
     expect(landing).toContain('`glab mr merge 7 --sha <that sha> --auto-merge=false --yes`');
+    expect(landing.indexOf('glab mr view 7')).toBeGreaterThan(-1);
+    expect(landing.indexOf('glab mr view 7')).toBeLessThan(landing.indexOf('glab ci status --wait'));
     expect(reporting).not.toContain('glab mr merge');
     expect(reporting).toContain('Merging is off for this project');
   });

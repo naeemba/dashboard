@@ -57,8 +57,8 @@ export type ReviewPorts = {
   // Whether the review may merge its pull request (landsPullRequest), read at each start so a change on
   // the settings screen or in projects.yaml holds for the next review.
   landsPullRequest: (projectPath: string) => boolean;
-  // Whether this pull request's review loop already finished at its head commit, asked of gh before
-  // the sweep's own start. False when gh cannot say.
+  // Whether this pull request's review loop already finished at its head commit, asked of the project's
+  // forge (forge.ts) before the sweep's own start. False when the forge's CLI cannot say.
   reviewFinished: (projectPath: string, pullRequest: number) => Promise<boolean>;
   // GitHub or GitLab (forge.ts), for which loop the prompt runs and how it waits and lands.
   forgeOf: (projectPath: string) => Promise<Forge>;
@@ -68,9 +68,9 @@ export type ReviewPorts = {
   // A start under way: the installed `/pr-loop` asked whether it is current, and the status bar told
   // when it is not (review-loop-install.ts). Not awaited; it never refuses.
   loopChecked: () => void;
-  // card.follow for one card: gh asked for the pull request on its branch, the number recorded and
-  // the card moved into Review when one is open, as the pull request sweep does on its next tick.
-  // Throws when gh cannot answer.
+  // card.follow for one card: the project's forge (forge.ts) asked for the pull request on its
+  // branch, the number recorded and the card moved into Review when one is open, as the pull request
+  // sweep does on its next tick. Throws when the forge's CLI cannot answer.
   follow: (projectPath: string, id: string) => Promise<CardFollowAnswer | Refused>;
 };
 
@@ -361,9 +361,9 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     // Just after the pull request opens the card is still in Doing until the pull request sweep's next
-    // ask of gh, so the card's follow is run now rather than refusing a pull request that is open. Its
+    // ask of the forge, so the card's follow is run now rather than refusing a pull request that is open. Its
     // move into Review may start the review itself (review.autoLoop on), and then its answer is this
-    // one's; otherwise the start is tried once more on the board the follow left. gh failing, or no
+    // one's; otherwise the start is tried once more on the board the follow left. The forge failing, or no
     // pull request yet, is the refusal.
     if (pullRequest === null) {
       const answer = followed ? null : await ports.follow(entry.projectPath, id).catch(() => null);

@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pullRequestMerged, unfinishedWork, type RunProgram } from './finished-work';
-
-// A worktree whose every answer is given up front; a missing answer is the program failing.
-function answering(answers: Record<string, string>): RunProgram {
-  return async (program, programArguments) => {
-    const key = `${program} ${programArguments.join(' ')}`;
-    const answer = Object.entries(answers).find(([start]) => key.startsWith(start))?.[1];
-    if (answer === undefined) throw new Error(`${program} failed`);
-    return answer;
-  };
-}
+import { pullRequestMerged, unfinishedWork } from './finished-work';
+import { answeringPrograms as answering } from '../testing/answering-programs';
 
 const done = {
   'git status': '',

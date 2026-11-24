@@ -27,7 +27,6 @@ function asPullRequest(value: unknown): unknown {
     url,
     headRefOid: sha,
     statusCheckRollup: status === 'ci_still_running' ? [{ state: 'PENDING' }] : [],
-    reviewDecision: status === 'not_approved' ? 'REVIEW_REQUIRED' : undefined,
     mergeable: status === 'mergeable' ? 'MERGEABLE' : undefined,
   };
 }

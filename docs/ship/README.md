@@ -76,7 +76,7 @@ The CI wait is one command the agent runs in the background, woken when it exits
 never a poll by hand or a foreground `sleep` (ship-decision-2): `gh pr checks <n> --watch`
 with merging off, `pr land` with it on.
 
-On a project whose remote's URL does not name github the review is GitLab's (ship-decision-5,
+On a project whose remote's host does not name github the review is GitLab's (ship-decision-5,
 `forge.ts`): `/mr-loop` on the merge request, `glab ci status --wait` for its pipeline, and with
 merging on `glab mr merge <iid> --sha <head> --auto-merge=false` on the head noted before the wait.
 Whether its loop already finished is read off the merge request's notes through `glab api`.

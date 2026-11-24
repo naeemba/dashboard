@@ -6,6 +6,8 @@ describe('forgeOfUrl', () => {
   it('reads GitHub from its host, an ssh alias of it included', () => {
     expect(forgeOfUrl('https://github.com/naeemba/dashboard.git')).toBe('github');
     expect(forgeOfUrl('git@github.com-p:naeemba/dashboard.git')).toBe('github');
+    expect(forgeOfUrl('git@gitlab.com:acme/github-webhooks.git')).toBe('gitlab');
+    expect(forgeOfUrl('https://git.arr.lan/tools/github-sync.git')).toBe('gitlab');
   });
 
   // insta-experiences: a self-hosted GitLab whose host does not say gitlab.

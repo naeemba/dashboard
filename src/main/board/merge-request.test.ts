@@ -30,7 +30,6 @@ describe('latestMergeRequest', () => {
     const glyph = (status: string) => pullRequestStatus(latestMergeRequest(JSON.stringify([mergeRequest(9, 'opened', status)]))!);
     expect(glyph('ci_still_running')).toBe('running');
     expect(glyph('mergeable')).toBe('mergeable');
-    expect(glyph('not_approved')).toBeNull();
   });
 });
 

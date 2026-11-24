@@ -76,16 +76,16 @@ its own too, and a second copy would drift from it. The fetch runs at most once 
 checkout's `FETCH_HEAD`, so relaunching does not reach GitHub each time. `review-loop-install.ts`.
 (2026-11-17)
 
-## ship-decision-5: A project is on GitLab when its remote's URL does not name github
+## ship-decision-5: A project is on GitLab when its remote's host does not name github
 
-**The forge is read from the URL of the remote the work goes to (chosenRemote): GitHub when it
-names github, GitLab otherwise. On GitLab the board follows `glab mr list`, read into gh's shape so
-a merge request is recorded the way a pull request is; the review runs `/mr-loop`, waits with
-`glab ci status --wait` and merges with `glab mr merge --sha` on the head it noted before the wait;
+**The forge is read from the URL of the remote the work goes to (chosenRemote): GitHub when its
+host names github, GitLab otherwise. On GitLab the board follows `glab mr list`, read into gh's
+shape so a merge request is recorded the way a pull request is; the review runs `/mr-loop`, notes
+the head, waits with `glab ci status --wait` and merges with `glab mr merge --sha` on that head;
 `/work-card` opens it with `glab mr create`.** Before 2026-11-24 every step asked gh, so a card
 shipped on insta-experiences (GitLab on `git.arr.lan`) was worked and pushed, then `gh pr create`
 answered that no remote points to a GitHub host, and the card sat in Doing with nothing to review.
 Matching "gitlab" in the host was the other rule and was not taken: `git.arr.lan` does not say it.
-It is the rule `~/.claude/scripts/gitlab-remote.sh` uses, which `/mr-loop` reads. A GitHub
+The host alone is read, so a GitLab path such as `acme/github-sync` stays GitLab. A GitHub
 Enterprise host without "github" in its name would read as GitLab. `pr wait` and `pr land` stay
 gh's. `forge.ts`, `merge-request.ts`. (2026-11-24)

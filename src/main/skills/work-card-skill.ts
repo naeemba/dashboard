@@ -29,7 +29,7 @@ fewer words, a missing remote is \`origin\` when \`git remote\` lists it, else
 the only remote, else the one the local main (then master) tracks: read every
 \`$3\` below as that.
 
-When \`git remote get-url $3\` does not name github, the project is on GitLab:
+When the host in \`git remote get-url $3\` does not name github, the project is on GitLab:
 there a pull request is a merge request, its number the iid (\`!12\`), and
 each \`gh pr\` below is its \`glab mr\` twin, named where they differ.
 

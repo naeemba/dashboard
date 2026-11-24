@@ -18,7 +18,8 @@ export type PullRequestSweepPorts = {
   projectBoard(projectPath: string): boolean;
   // The cards of the project worth asking about now (followedBranch), by id.
   followed(projectPath: string): string[];
-  // card.follow for one card. Throws when gh cannot answer: missing, logged out or offline.
+  // card.follow for one card. Throws when the project's forge (forge.ts) cannot answer: its CLI
+  // missing, logged out or offline.
   follow(projectPath: string, id: string): Promise<unknown>;
   // One warning in the log, `board` kind.
   warn(projectPath: string, message: string): void;
