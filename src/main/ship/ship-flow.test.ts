@@ -9,7 +9,7 @@ import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
 
 useGitTestEnvironment();
 
-function project(): string {
+function project(remote = 'origin'): string {
   const origin = temporaryFolder('ship-origin-');
   const projectPath = temporaryFolder('ship-project-');
   git(origin, 'init', '-q', '--bare', '-b', 'trunk');
@@ -17,9 +17,9 @@ function project(): string {
   writeBoard(projectPath, addCard(emptyBoard(), { column: 1, card: 0 }, 'card', 'the card').board);
   git(projectPath, 'add', '-A');
   git(projectPath, 'commit', '-qm', 'first');
-  git(projectPath, 'remote', 'add', 'origin', origin);
-  git(projectPath, 'push', '-q', 'origin', 'trunk');
-  git(projectPath, 'remote', 'set-head', 'origin', 'trunk');
+  git(projectPath, 'remote', 'add', remote, origin);
+  git(projectPath, 'push', '-q', remote, 'trunk');
+  git(projectPath, 'remote', 'set-head', remote, 'trunk');
   return projectPath;
 }
 
@@ -58,7 +58,7 @@ describe('the prompt a ship starts its agent on', () => {
     const { shipCard, asked, prompts } = ports(projectPath, []);
     await shipCard(request(projectPath));
     expect(asked).toEqual([projectPath]);
-    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk`]);
+    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin`]);
     expectBranchUntouched(projectPath);
   });
 
@@ -73,7 +73,15 @@ describe('the prompt a ship starts its agent on', () => {
     const { shipCard, asked, prompts } = ports(projectPath, [existing]);
     await shipCard(request(projectPath));
     expect(asked).toEqual([projectPath]);
-    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk`]);
+    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin`]);
     expectBranchUntouched(worktreePath);
+  });
+
+  // A GitLab project kept on a remote called gitlab, and no origin: once refused as having no base.
+  it('cuts from the project\'s only remote when it is not origin', async () => {
+    const projectPath = project('gitlab');
+    const { shipCard, prompts } = ports(projectPath, []);
+    await shipCard(request(projectPath));
+    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk gitlab`]);
   });
 });

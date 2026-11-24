@@ -15,12 +15,12 @@ export type CreateTaskOptions = {
   notes: string;
   priority: Priority;
   column: string | undefined;
-  remote: string;
+  // undefined: none given, and the program takes the project's own (projectRemoteNow).
+  remote: string | undefined;
   seed: boolean;
   dryRun: boolean;
 };
 
-const DEFAULT_REMOTE = 'origin';
 const DEFAULT_PRIORITY: Priority = 'medium';
 
 export function parseCreateTaskArguments(argv: readonly string[]): { options: CreateTaskOptions } | { message: string } {
@@ -47,7 +47,7 @@ export function parseCreateTaskArguments(argv: readonly string[]): { options: Cr
   if (title === '') return { message: 'a --title is required' };
   const priority = values.priority ?? DEFAULT_PRIORITY;
   if (!isPriority(priority)) return { message: `--priority must be one of: ${PRIORITIES.join(', ')}` };
-  // Nearly always `origin`. Some repos keep GitHub on `origin` and GitLab on a second remote; there,
+  // Left out, the project's own remote, as the app's board sync uses. Some repos keep GitHub on `origin` and GitLab on a second remote; there,
   // `origin` files the card against a mirror nobody reads. An empty value means the caller's
   // `$GITLAB_REMOTE` never got set: refused, rather than filed on that mirror and answered as filed.
   if (values.remote === '') return { message: '--remote needs a remote name' };
@@ -57,7 +57,7 @@ export function parseCreateTaskArguments(argv: readonly string[]): { options: Cr
       notes: values.notes ?? '',
       priority,
       column: values.column,
-      remote: values.remote ?? DEFAULT_REMOTE,
+      remote: values.remote,
       seed: values.seed ?? false,
       dryRun: values['dry-run'] ?? false,
     },

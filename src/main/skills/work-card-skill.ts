@@ -9,14 +9,15 @@
 
 // The second word of the prompt: whether this project bumps its version, from its projects.yaml
 // entry (projects-decision-1). Always one of the two, so `$1` is never left in the text unfilled. The
-// third, `$2`, is the branch the worktree was cut from, which is not always main.
+// third, `$2`, is the branch the worktree was cut from, which is not always main; the fourth, `$3`,
+// the remote it is on, which is not always origin (chosenRemote in app/default-branch.ts).
 export const BUMP_VERSION = 'bump-version';
 export const KEEP_VERSION = 'keep-version';
 
 export const WORK_CARD_SKILL = `---
 name: work-card
 description: Work the board card with this id, start to finish, in the worktree the app already made for it
-argument-hint: <card id> [${BUMP_VERSION}|${KEEP_VERSION}] <base branch>
+argument-hint: <card id> [${BUMP_VERSION}|${KEEP_VERSION}] <base branch> <remote>
 model: opus
 effort: high
 ---
@@ -80,7 +81,7 @@ project is held to.
   Bump last, right before you open the pull request, and bump from what the
   base branch, \`$2\`, says then. Other cards run in their own worktrees at the
   same time, and two that both bumped from \`1.4.0\` early both say \`1.5.0\`.
-  So first run \`git fetch origin && git merge origin/$2\` — the local \`$2\`
+  So first run \`git fetch $3 && git merge $3/$2\` — the local \`$2\`
   here is as old as the worktree — then bump. If the merge conflicts, resolve it the way
   \`/pr-conflicts\` does, commit the merge, then bump.
 
@@ -90,7 +91,7 @@ project is held to.
   worktree, so the next card to reach the same number would fail on it. A
   project with no \`package.json\` is bumped wherever it keeps its version.
   Commit the bump on its own. If the pull request later conflicts on the
-  version, merge \`origin/$2\` the same way, keep its number and bump again
+  version, merge \`$3/$2\` the same way, keep its number and bump again
   from it.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
   type-check and lint scripts. A project with a \`check\` script that runs them
@@ -100,7 +101,7 @@ project is held to.
   must pass. If one fails and you cannot fix it, stop: do not open the pull
   request, and say what failed and why in a comment on the card.
 - Commit in small pieces with messages that say what changed and why.
-- Push the branch and open the pull request with \`gh pr create\`.
+- Push the branch to \`$3\` and open the pull request with \`gh pr create\`.
 
 ## What not to do
 

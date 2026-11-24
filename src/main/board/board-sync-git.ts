@@ -6,7 +6,8 @@ import type { Board } from '../../shared/board/board';
 import { rebaseBoardChange, sameBoard } from '../../shared/board/board-merge';
 import { failureText } from '../../shared/errors/failure';
 import { isManagerPath } from '../../shared/manager/manager';
-import { baseBranch, git, gitNow, NO_HOOKS } from '../app/git';
+import { git, gitNow, NO_HOOKS } from '../app/git';
+import { baseBranch } from '../app/base-branch';
 import { realPath } from '../app/real-path';
 import { BROKEN_SUFFIX } from '../app/set-aside';
 import { readText } from '../app/missing-file';
@@ -24,7 +25,8 @@ import {
   type CheckoutStep,
 } from './board-sync';
 
-// The board's git sync: every write to a board git tracks lands on origin's default branch, and the
+// The board's git sync: every write to a board git tracks lands on the project's base branch on its
+// remote (base-branch.ts; origin below means that remote, whatever it is called), and the
 // project's checkout is brought up to it. The decisions are board-sync.ts's; this is the git and the
 // files, and nothing in it decides. docs/board/README.md says what it does and board-decision-5 why.
 //
@@ -38,8 +40,6 @@ import {
 // read from origin's tip: the checkout's branch, HEAD, index and working tree are not touched by it, a
 // board change never rides in a feature branch, and nothing is left registered with `git worktree` if
 // the program is killed half way.
-
-const REMOTE = 'origin';
 
 export type BoardEdit = (board: Board) => Board;
 
@@ -56,27 +56,28 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
   if (isManagerPath(folder)) return { synced: false, reason: null };
   const top = await answer(['rev-parse', '--show-toplevel'], folder);
   if (top === null) return { synced: false, reason: null };
-  const [tracked, branch, checkout, gitDirectory] = await Promise.all([
+  const [tracked, base, checkout, gitDirectory] = await Promise.all([
     answer(['ls-files', '--', ...BOARD_PATHSPECS], top),
     baseBranch(top).catch((error: unknown) => new Error(failureText(error))),
     checkoutOf(top),
     git(['rev-parse', '--absolute-git-dir'], top),
   ]);
   if ((tracked ?? '') === '') return { synced: false, reason: null };
-  if (branch instanceof Error) return notSynced(branch.message);
+  if (base instanceof Error) return notSynced(base.message);
+  const { remote, branch } = base;
 
   // The commit a try pushed whose answer never came back: the push may have landed all the same.
   let pushed: string | null = null;
   for (let attempt = 1; ; attempt += 1) {
     try {
-      await git(['fetch', '--quiet', REMOTE, branch], top, { timeout: FETCH_TIMEOUT });
+      await git(['fetch', '--quiet', remote, branch], top, { timeout: FETCH_TIMEOUT });
     } catch (error: unknown) {
       const pause = retryAfter(attempt, gitMessage(error), false);
-      if (pause === null) return notSynced(`cannot fetch ${REMOTE}/${branch}: ${gitMessage(error)}`);
+      if (pause === null) return notSynced(`cannot fetch ${remote}/${branch}: ${gitMessage(error)}`);
       await delay(pause);
       continue;
     }
-    const tip = await git(['rev-parse', '--verify', `refs/remotes/${REMOTE}/${branch}^{commit}`], top);
+    const tip = await git(['rev-parse', '--verify', `refs/remotes/${remote}/${branch}^{commit}`], top);
     // Already on origin: the edit is not run again, since a `comment` or an `add` run twice is two.
     if (pushed !== null && (await answer(['merge-base', '--is-ancestor', pushed, tip], top)) !== null) {
       const trackedSeeds = ((await answer(['ls-tree', '-r', '--name-only', tip, '--', ...Object.keys(SEEDED_FILES)], top)) ?? '').split('\n').filter((file) => file !== '');
@@ -95,11 +96,11 @@ export async function syncBoard(folder: string, edit: BoardEdit = (board) => boa
         const message = syncCommitMessage(origin.board, next, reseeded);
         const commit = await commitBoard(origin.scratch, next, origin.staleSeeds, tip, message);
         try {
-          await git([...NO_HOOKS, 'push', '--quiet', REMOTE, `${commit}:refs/heads/${branch}`], top, { timeout: PUSH_TIMEOUT });
+          await git([...NO_HOOKS, 'push', '--quiet', remote, `${commit}:refs/heads/${branch}`], top, { timeout: PUSH_TIMEOUT });
         } catch (error: unknown) {
           pushed = commit;
           const pause = retryAfter(attempt, gitMessage(error), true);
-          if (pause === null) return notSynced(droppedConnection(gitMessage(error)) ? droppedPushReason(`${REMOTE}/${branch}`, gitMessage(error)) : `the push to ${REMOTE}/${branch} was refused: ${gitMessage(error)}`);
+          if (pause === null) return notSynced(droppedConnection(gitMessage(error)) ? droppedPushReason(`${remote}/${branch}`, gitMessage(error)) : `the push to ${remote}/${branch} was refused: ${gitMessage(error)}`);
           await delay(pause);
           continue;
         }

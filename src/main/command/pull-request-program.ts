@@ -4,6 +4,7 @@ import { isRecord } from '../../shared/app/is-record';
 import { isManagerHomeDirectory, projectRoot } from '../board/board-store';
 import { boardTarget } from '../board/board-target';
 import { projectNamedInFile } from '../projects/project-named';
+import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
 import { type ProgramAnswer, landPullRequest, parsePullRequestCommand } from './pull-request-cli';
@@ -34,10 +35,12 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
   try {
     const answer = await landPullRequest({ gh: (words) => answering('gh')(project.project, words), wait: delay }, parsed.target);
     (answer.ok ? process.stdout : process.stderr).write(`${answer.output}\n`);
-    if (answer.ok && answer.base !== undefined) {
+    const { base } = answer;
+    if (answer.ok && base !== undefined) {
       // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
-      const forwarded = await fastForwardCheckout(answering('git'), project.project, answer.base)
-        .catch((error: unknown) => `${answer.base} is not fast-forwarded: ${failureLine(error)}`);
+      const forwarded = await projectRemote(project.project)
+        .then((remote) => fastForwardCheckout(answering('git'), project.project, remote, base))
+        .catch((error: unknown) => `${base} is not fast-forwarded: ${failureLine(error)}`);
       process.stdout.write(`${forwarded}\n`);
     }
     return answer.ok ? 0 : 1;

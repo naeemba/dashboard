@@ -143,7 +143,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
   it('names a remote it cannot find a default branch on', () => {
     const checkout = clone(remote(), true);
     expect(run(checkout, '--title', 'x', '--remote', 'nope')).toEqual({
-      code: 1, stdout: '', stderr: 'create-task: cannot work out which branch on nope is the main one\n',
+      code: 1, stdout: '', stderr: 'create-task: cannot work out which branch on nope is the main one; name it with `dashboard project set <project> --base <branch>`\n',
     });
   });
 

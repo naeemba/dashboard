@@ -29,7 +29,7 @@ function maker(files: string[] = [], failing?: string) {
       ran.push(gitArguments.join(' '));
       return gitArguments[0] === 'for-each-ref' ? 'main\n' : '';
     },
-    baseBranch: async () => 'main',
+    baseBranch: async () => ({ remote: 'gitlab', branch: 'develop' }),
     newId: () => 'fresh-id',
     async queue(projectPath, run) {
       queued.push(projectPath);
@@ -43,18 +43,20 @@ function maker(files: string[] = [], failing?: string) {
 describe('worktree.make', () => {
   it('makes a card branch off the base the ship fetched, inside the queue the ship holds', async () => {
     const { make, ran, queued } = maker();
-    const made = await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: 'main' });
+    const made = await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: { remote: 'origin', branch: 'main' } });
     expect(made).toMatchObject({ branch: expect.stringContaining('fix-login') });
     expect(queued).toEqual([]);
     expect(ran.filter((line) => line.startsWith('fetch'))).toEqual([]);
     expect(ran.at(-1)).toMatch(/^worktree add -b \S*fix-login\S* \S+ origin\/main$/);
   });
 
+  // The base's own remote, which is not always origin (chosenRemote).
   it('takes the queue and fetches for a throwaway, which nothing else holds it for', async () => {
     const { make, ran, queued } = maker();
     await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
     expect(queued).toEqual(['/code/api']);
-    expect(ran[0]).toBe('fetch origin main');
+    expect(ran[0]).toBe('fetch gitlab develop');
+    expect(ran.at(-1)).toMatch(/^worktree add -b \S*try-a-thing\S* \S+ gitlab\/develop$/);
   });
 
   it('checks a reviewed card branch out again at its own path, with no new branch', async () => {
@@ -75,7 +77,7 @@ describe('worktree.make', () => {
   it('installs in a new branch\'s worktree, the throwaway\'s inside the queue it takes', async () => {
     const lockfiles = ['fix-login', 'try-a-thing'].flatMap((name) => [`/code/api.worktrees/${name}/pnpm-lock.yaml`, `/code/api.worktrees/${name}/.git`]);
     const { make, installed } = maker(lockfiles);
-    await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: 'main' });
+    await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: { remote: 'origin', branch: 'main' } });
     await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
     expect(installed).toEqual([
       expect.stringMatching(/^pnpm install --frozen-lockfile in \S*fix-login\S*$/),
@@ -124,7 +126,7 @@ describe('worktree.make', () => {
 
   it('installs nothing in a worktree with no lockfile', async () => {
     const { make, installed } = maker();
-    await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: 'main' });
+    await make.call({ kind: 'card', projectPath: '/code/api', title: 'Fix login', cardId: 'card-1', base: { remote: 'origin', branch: 'main' } });
     expect(installed).toEqual([]);
   });
 

@@ -6,7 +6,8 @@ import { BOARD_FOLDER_PATH, BOARD_PATHSPECS, hasBoard, peekBoard, readBoard, wri
 import { runBoardCommand } from './board-cli';
 import { BROKEN_SUFFIX } from '../app/set-aside';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
-import { defaultBranch, noDefaultBranchMessage } from '../app/default-branch';
+import { noDefaultBranchMessage } from '../app/default-branch';
+import { defaultBranchNow, projectRemoteNow } from '../app/base-branch';
 import { NO_HOOKS } from '../app/git';
 import { droppedConnection, droppedPushReason, lostRace, retryAfter, SYNC_ATTEMPTS } from './board-sync';
 import { boardAddArguments, commitMessage, noBoardMessage, parseCreateTaskArguments, type CreateTaskOptions } from './create-task';
@@ -64,7 +65,7 @@ function seedBoard(repositoryRoot: string, worktree: string, branch: string): st
 //
 // ponytail: a full checkout of the default branch per card. Fine for this repo's size; a sparse
 // checkout of .dashboard/ is the next rung if a big repo makes it slow.
-function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOptions, attempt: number): Outcome {
+function fileOnce(repositoryRoot: string, branch: string, options: CreateTaskOptions & { remote: string }, attempt: number): Outcome {
   const worktree = mkdtempSync(join(tmpdir(), 'create-task-'));
   try {
     git(repositoryRoot, [...NO_HOOKS, 'worktree', 'add', '--quiet', '--detach', worktree, `${options.remote}/${branch}`]);
@@ -123,14 +124,10 @@ function refuse(message: string): number {
 function run(commandArguments: readonly string[], directory: string): number {
   const parsed = parseCreateTaskArguments(commandArguments);
   if ('message' in parsed) return refuse(parsed.message);
-  const { options } = parsed;
-  const { remote } = options;
   const repositoryRoot = git(directory, ['rev-parse', '--show-toplevel']);
-  const branch = defaultBranch(
-    remote,
-    gitOrNull(repositoryRoot, ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`]),
-    (name) => gitOrNull(repositoryRoot, ['rev-parse', '--verify', '--quiet', `refs/remotes/${remote}/${name}`]) !== null,
-  );
+  const remote = parsed.options.remote ?? projectRemoteNow(repositoryRoot);
+  const options = { ...parsed.options, remote };
+  const branch = defaultBranchNow(repositoryRoot, remote);
   if (branch === null) return refuse(noDefaultBranchMessage(remote));
 
   // Another writer pushing between the fetch and the push, or a dropped connection, is tried again on
