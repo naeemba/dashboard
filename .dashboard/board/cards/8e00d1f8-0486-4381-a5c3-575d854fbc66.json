@@ -5,8 +5,9 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T11:04:19.314Z",
-  "updatedAt": "2026-11-24T12:01:46.784Z",
+  "updatedAt": "2026-11-24T12:10:35.992Z",
   "branch": "one-cd-following-helper-for-the-three-bash",
+  "pullRequest": 359,
   "comments": [
     {
       "at": "2026-11-24T11:23:10.725Z",
@@ -15,8 +16,12 @@
     {
       "at": "2026-11-24T11:30:23.032Z",
       "body": "Also: an msys-style 'cd /c/work' resolves to C:\\c\\work on Windows, so the guard finds no lockfile and fails open."
+    },
+    {
+      "at": "2026-11-24T12:10:35.964Z",
+      "body": "Pull request #359 opened: One cd walk for the three Bash guards, and Git Bash drive paths on Windows https://github.com/naeemba/dashboard/pull/359"
     }
   ],
-  "column": "Doing",
-  "order": 1
+  "column": "Review",
+  "order": 8
 }
