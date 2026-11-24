@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T18:46:52.537Z",
-  "updatedAt": "2026-11-24T18:54:42.935Z",
+  "updatedAt": "2026-11-24T19:22:34.805Z",
   "branch": "agents-pick-the-dashboard-browser-on-their",
   "pullRequest": 360,
   "comments": [
     {
       "at": "2026-11-24T18:54:42.890Z",
       "body": "Pull request #360 opened: Agents pick the Dashboard browser on their own: a skill and a when-to-use block https://github.com/naeemba/dashboard/pull/360"
+    },
+    {
+      "at": "2026-11-24T19:22:34.804Z",
+      "body": "Review loop on PR #360: converged, ready to merge. 2 rounds, floor-addressed, nothing open. Round 1 (a2429966): the skill now resets a resized tab before release, and the test checks the skill's tool and parameter names against DASHBOARD_TOOLS. Round 2 (1844c758): the test looks tools up through toolNamed. The final check accepted 1844c758. CI passed on 1844c758. No conflict with main."
     }
   ],
   "column": "Review",
