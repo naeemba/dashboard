@@ -5,8 +5,14 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T19:01:40.636Z",
-  "updatedAt": "2026-11-24T20:00:04.913Z",
+  "updatedAt": "2026-11-24T20:01:36.070Z",
   "branch": "a-browser-release-leaves-an-agent-s-page-si",
+  "comments": [
+    {
+      "at": "2026-11-24T20:01:36.069Z",
+      "body": "Overlap: card d53ad8b4 (Ship and review on a GitLab project, branch ship-and-review-on-a-gitlab-project-work-ca, no commits yet) will edit src/main/skills/work-card-skill.ts (the gh pr create ending) and src/main/ship/review.ts (/pr-loop -> /mr-loop), two of the three texts part (2) of this card checks. Part (2) only adds a test that reads their browser_/dashboard tool names (all currently valid: board_show, board_comment, browser_screenshot, browser_eval, pane_claim, board_ship), so it edits neither file; part (1) touches src/main/actions/browser/claims.ts and browser-actions.ts only."
+    }
+  ],
   "column": "Doing",
   "order": 3
 }
