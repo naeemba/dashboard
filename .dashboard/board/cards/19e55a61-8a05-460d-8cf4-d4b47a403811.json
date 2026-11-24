@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T10:58:39.431Z",
-  "updatedAt": "2026-11-24T10:59:18.473Z",
+  "updatedAt": "2026-11-24T11:11:34.080Z",
   "branch": "pnpm-check-shows-why-a-check-failed-and-cha",
-  "column": "Doing",
-  "order": 3
+  "pullRequest": 351,
+  "comments": [
+    {
+      "at": "2026-11-24T11:11:34.054Z",
+      "body": "Pull request #351 opened: pnpm check shows why a check failed, and a coverage line for the change https://github.com/naeemba/dashboard/pull/351"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }

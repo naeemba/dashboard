@@ -1,0 +1,11 @@
+{
+  "id": "a0925cdc-d3fd-4091-b337-31b4c9e534f1",
+  "title": "A docs check refuses a duplicate docs id or a leftover -next id",
+  "notes": "Follow-up from #352: a worker now writes a new docs id as <feature>-<kind>-next and numbers it at the final merge of main. Nothing stops a '-next' or two entries with one id from merging. Add it to pnpm lint's markdown step (and CI): every '(<feature>-<rule|decision>-<n>)' heading id is unique per feature, and none ends in -next.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-24T11:11:34.553Z",
+  "updatedAt": "2026-11-24T11:11:34.553Z",
+  "column": "Backlog",
+  "order": 62
+}
