@@ -7,7 +7,7 @@ import { latestListed, latestPullRequest, pullRequestListArguments, type PullReq
 // a pull request: the iid as its number, the same opened, merged and closed lines, the same columns.
 
 // `glab mr list` for one branch, every state, newest first.
-export function mergeRequestListArguments(branch: string): string[] {
+function mergeRequestListArguments(branch: string): string[] {
   return ['mr', 'list', '--source-branch', branch, '--all', '--output', 'json', '--per-page', '20'];
 }
 

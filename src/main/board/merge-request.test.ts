@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { runProgram } from '../app/git';
+import { answeringPrograms, remoteAt } from '../testing/answering-programs';
 import { branchPullRequest, latestMergeRequest } from './merge-request';
 import { pullRequestStatus } from './pull-request-status';
 
@@ -35,20 +35,14 @@ describe('latestMergeRequest', () => {
 });
 
 describe('branchPullRequest', () => {
-  const asked: string[] = [];
-  const run = (url: string): typeof runProgram => async (program, programArguments) => {
-    const words = `${program} ${programArguments.join(' ')}`;
-    asked.push(words);
-    if (words === 'git remote') return 'origin';
-    if (words === 'git remote get-url origin') return url;
-    if (program === 'glab') return JSON.stringify([mergeRequest(3, 'opened')]);
-    if (program === 'gh') return JSON.stringify([{ number: 4, state: 'OPEN', title: 'x', url: 'u' }]);
-    throw new Error(`${program} failed`);
-  };
+  const run = (url: string) => answeringPrograms({
+    ...remoteAt(url),
+    'glab mr list --source-branch fix-it --all --output json --per-page 20': JSON.stringify([mergeRequest(3, 'opened')]),
+    'gh pr list': JSON.stringify([{ number: 4, state: 'OPEN', title: 'x', url: 'u' }]),
+  });
 
   it('asks glab on a GitLab project and gh on a GitHub one', async () => {
     expect((await branchPullRequest(run('git@git.arr.lan:fe/app.git'), '/w', 'fix-it', 1000))?.number).toBe(3);
-    expect(asked).toContain('glab mr list --source-branch fix-it --all --output json --per-page 20');
     expect((await branchPullRequest(run('git@github.com:me/app.git'), '/w', 'fix-it', 1000))?.number).toBe(4);
   });
 });

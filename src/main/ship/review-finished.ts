@@ -14,7 +14,7 @@ import { projectForge } from '../app/forge';
 import type { runProgram } from '../app/git';
 
 // The argument list for the gh call whose output reviewFinishedAtHead reads.
-export function reviewViewArguments(pullRequest: number): string[] {
+function reviewViewArguments(pullRequest: number): string[] {
   return ['pr', 'view', String(pullRequest), '--json', 'comments,commits'];
 }
 
@@ -34,7 +34,7 @@ export function reviewFinishedAtHead(view: string): boolean {
 
 // The two glab calls whose answers mergeRequestFinishedAtHead reads: the merge request's notes, newest
 // first, and its commits. `:id` is glab's for the project of the folder it runs in.
-export function mergeRequestReviewArguments(mergeRequest: number): [string[], string[]] {
+function mergeRequestReviewArguments(mergeRequest: number): [string[], string[]] {
   const path = `projects/:id/merge_requests/${mergeRequest}`;
   return [['api', `${path}/notes?sort=desc&per_page=100`], ['api', `${path}/commits?per_page=100`]];
 }

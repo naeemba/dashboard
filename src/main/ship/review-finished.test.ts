@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { runProgram } from '../app/git';
+import { answeringPrograms, remoteAt } from '../testing/answering-programs';
 import { mergeRequestFinishedAtHead, reviewFinished, reviewFinishedAtHead } from './review-finished';
 
 const view = (comments: { body: string; createdAt: string }[], commits: string[]) =>
@@ -47,14 +47,11 @@ describe('mergeRequestFinishedAtHead', () => {
 });
 
 describe('reviewFinished', () => {
-  const run = (url: string): typeof runProgram => async (program, programArguments) => {
-    const words = `${program} ${programArguments.join(' ')}`;
-    if (words === 'git remote') return 'origin';
-    if (words === 'git remote get-url origin') return url;
-    if (words.includes('/notes?')) return notes(finished);
-    if (words.includes('/commits?')) return commits('2026-11-16T15:00:00Z');
-    throw new Error(`${program} failed`);
-  };
+  const run = (url: string) => answeringPrograms({
+    ...remoteAt(url),
+    'glab api projects/:id/merge_requests/12/notes': notes(finished),
+    'glab api projects/:id/merge_requests/12/commits': commits('2026-11-16T15:00:00Z'),
+  });
 
   it('asks glab on a GitLab project', async () => {
     expect(await reviewFinished(run('git@git.arr.lan:fe/app.git'), '/w', 12, 1000)).toBe(true);

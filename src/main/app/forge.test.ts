@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { forgeOfUrl, projectForge } from './forge';
-import type { runProgram } from './git';
-
-// Each git question answered up front; one not listed is git failing.
-function answering(answers: Record<string, string>): typeof runProgram {
-  return async (program, programArguments) => {
-    const answer = answers[`${program} ${programArguments.join(' ')}`];
-    if (answer === undefined) throw new Error(`${program} failed`);
-    return answer;
-  };
-}
+import { answeringPrograms as answering } from '../testing/answering-programs';
 
 describe('forgeOfUrl', () => {
   it('reads GitHub from its host, an ssh alias of it included', () => {
