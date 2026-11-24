@@ -7,3 +7,5 @@ One line per merged change: date and why.
 - 2026-11-16 — The Merge row, `review.autoMerge`, off by default (ship-decision-1)
 - 2026-11-16 — The Budget row, `budget.weeklyCap`; the app takes a change to the file while it runs
   (command-decision-6)
+- 2026-11-24 — The Budget rows: the limit (cap, pace or none), the weekly cap and the daily pace
+  (command-decision-10)

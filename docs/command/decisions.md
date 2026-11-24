@@ -166,3 +166,31 @@ pane. The app does not register it in the user's own config.
 Claude Code defers MCP tools behind its tool search (this machine's sessions
 list them as deferred), so 42 tools cost their names in the list, not their
 schemas. Descriptions are kept to a line.
+
+## command-decision-10: The limit is a cap, a daily pace or none, and the pace reads the reset from the reading
+
+One weekly cap was the wrong shape for the way the user spends the week: about a
+seventh of it a day from the Friday 15:30 reset, so the figure they want moves
+every day ("the cap is daily, it is 71 percent today"), and a new-crm main held
+work twice against a cap of 25% set days before. So `budget.limit` picks one of
+three. The cap is the fixed figure it was. The pace is `budget.dailyShare` (a
+seventh of 100 when unset) for each day begun since the reset, at most 100.
+None is for a user who wants no limit, and exits 0 rather than 2: 2 tells a
+loop to stop, and stopping is not what no limit means. An unset limit is the
+cap, so a file written before this reads as it did, and an unset cap still
+exits 2.
+
+Days are local calendar days, not 24-hour blocks from the reset: the user's 71%
+was a Tuesday after a Friday afternoon reset, the fifth day begun, where 24-hour
+blocks give the fourth. The window's last morning, before the reset, is day 7
+and 100%.
+
+The reset time is not a setting. Both writers of the reading are handed it: the
+SDK's usage call has `rate_limits.seven_day.resets_at`, and the statusline's
+input has `rate_limits.seven_day.resets_at` (the installed CLI builds it as
+`seven_day:{used_percentage, resets_at}`), in epoch seconds like the
+`five_hour` one the user's statusline already prints. So the app writes
+`resetsAt` into the reading, and a pace with no `resetsAt` exits 2 rather than
+guessing: a reading the statusline wrote without it, until the statusline adds
+it, says so. A weekday-and-time setting would be a second copy of a time the
+account already says, and wrong for every user whose reset is elsewhere.
