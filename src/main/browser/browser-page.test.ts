@@ -126,10 +126,22 @@ describe('upload', () => {
     await expect(gone.page.ports.act(4, { kind: 'upload', node: 7, files: ['/cv.pdf'] })).rejects.toThrow(/take a new snapshot$/);
   });
 
+  it('snapshots a file input the page hides, by its name', async () => {
+    const { page } = fakePage({
+      'Accessibility.getFullAXTree': { nodes: [] },
+      'DOM.getDocument': { root: { nodeId: 1 } },
+      'DOM.querySelectorAll': { nodeIds: [9] },
+      'DOM.describeNode': { node: { backendNodeId: 7, attributes: ['style', 'display: none', 'name', 'resume'] } },
+    });
+    await expect(page.reads.snapshot('3:1', 4, undefined)).resolves.toBe('tab 4: 1 elements\ne1 file "resume"');
+    expect([...page.ports.refsOf(4)]).toEqual([['e1', 7]]);
+  });
+
   it.each([
-    ['a file input', { nodeName: 'INPUT', attributes: ['id', 'cv', 'TYPE', ' File '] }, { multiple: false }],
+    ['a file input', { nodeName: 'INPUT', attributes: ['id', 'cv', 'TYPE', 'File'] }, { multiple: false }],
     ['one that takes many', { nodeName: 'INPUT', attributes: ['type', 'file', 'multiple', ''] }, { multiple: true }],
     ['a text input', { nodeName: 'INPUT', attributes: ['type', 'text'] }, null],
+    ['a type the browser reads as text', { nodeName: 'INPUT', attributes: ['type', ' file '] }, null],
     ['an input with no type', { nodeName: 'INPUT', attributes: ['name', 'file'] }, null],
     ['a button', { nodeName: 'BUTTON', attributes: ['type', 'file'] }, null],
   ])('reads %s', async (_name, node, expected) => {

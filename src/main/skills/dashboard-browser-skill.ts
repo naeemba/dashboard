@@ -46,8 +46,10 @@ time:
    such as \`e3\`; \`browser_click\`, \`browser_type\` and \`browser_press\` act on a
    ref. Take a new snapshot after the page changes.
    A form that needs a file, such as a CV: \`browser_upload\` the file into the
-   file input's ref, its path whole or from your folder. Leave the filled form in
-   its tab for the person to review and submit; never press Submit unless told.
+   ref the snapshot lists with the role file (never click the upload button: it
+   opens a dialog only a person can answer), its path whole or from your folder.
+   Leave the filled form in its tab for the person to review and submit; never
+   press Submit unless told.
 4. For anything scripted (every job on a results page, a table's rows), write
    the script to a file, then \`browser_eval\` the file, with \`wait-for\` naming
    a selector that is there once the page has rendered. Its last expression is

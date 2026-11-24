@@ -116,7 +116,7 @@ export const browserUpload = action<BrowserPorts, AgentTarget & { ref: string; f
     const node = heldNode(ports, input, input.ref);
     if (isRefused(node)) return node;
     const fileInput = await ports.fileInputOf(input.tab, node);
-    if (fileInput === null) return { refused: `${input.ref} is not a file input; take a snapshot and name the one that is` };
+    if (fileInput === null) return { refused: `${input.ref} is not a file input; a snapshot lists those as file` };
     if (input.files.length > 1 && !fileInput.multiple) return { refused: `${input.ref} takes one file, and ${input.files.length} were named` };
     for (const file of input.files) {
       if (!await ports.isFile(file)) return { refused: `there is no file at ${file}` };

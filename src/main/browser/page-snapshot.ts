@@ -35,13 +35,22 @@ function cut(name: string): string {
 
 type Snapshot = { text: string; refs: Map<string, number> };
 
-export function snapshotOf(id: number, nodes: readonly AXNode[]): Snapshot {
+// An <input type=file> in the DOM, by its node and the name or id it carries. The tree calls a shown
+// one a button "Choose File", and leaves out one the page hides behind its own button (a dropzone's
+// `display: none`), so each is listed as role `file`, hidden or not, for `upload` to name.
+export type FileInputNode = { node: number; name: string };
+
+export function snapshotOf(id: number, nodes: readonly AXNode[], fileInputs: readonly FileInputNode[] = []): Snapshot {
   const lines: string[] = [];
   const refs = new Map<string, number>();
+  const files = new Map(fileInputs.map((input) => [input.node, input.name]));
+  const hiddenFiles = fileInputs.filter((input) => !nodes.some((node) => node.ignored !== true && node.backendDOMNodeId === input.node));
+  const listed: AXNode[] = [...nodes, ...hiddenFiles.map((input) => ({ backendDOMNodeId: input.node }))];
   let left = 0;
-  for (const node of nodes) {
-    const role = text(node.role);
-    if (node.ignored === true || node.backendDOMNodeId === undefined || !INTERACTIVE.has(role)) continue;
+  for (const node of listed) {
+    const file = node.backendDOMNodeId === undefined ? undefined : files.get(node.backendDOMNodeId);
+    const role = file === undefined ? text(node.role) : 'file';
+    if (node.ignored === true || node.backendDOMNodeId === undefined || (file === undefined && !INTERACTIVE.has(role))) continue;
     if (refs.size === SNAPSHOT_LIMIT) {
       left++;
       continue;
@@ -52,7 +61,7 @@ export function snapshotOf(id: number, nodes: readonly AXNode[]): Snapshot {
     const states = (node.properties ?? [])
       .filter((property) => STATES.includes(property.name) && property.value.value !== false && property.value.value !== 'false')
       .map((property) => (property.value.value === 'mixed' ? `${property.name}=mixed` : property.name));
-    lines.push([ref, role, JSON.stringify(cut(text(node.name))), value === '' ? '' : `= ${JSON.stringify(cut(value))}`, ...states]
+    lines.push([ref, role, JSON.stringify(cut(text(node.name) || (file ?? ''))), value === '' ? '' : `= ${JSON.stringify(cut(value))}`, ...states]
       .filter((part) => part !== '').join(' '));
   }
   if (lines.length === 0) return { text: `tab ${id} has nothing to click or type in`, refs };

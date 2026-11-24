@@ -72,7 +72,7 @@ describe('browser.upload', () => {
 
   it('refuses a ref that is no file input, a missing file, and two files on an input that takes one', async () => {
     const ports = form();
-    await expect(upload(ports, 'e3', ['/me/cv.pdf'])).resolves.toEqual({ refused: 'e3 is not a file input; take a snapshot and name the one that is' });
+    await expect(upload(ports, 'e3', ['/me/cv.pdf'])).resolves.toEqual({ refused: 'e3 is not a file input; a snapshot lists those as file' });
     await expect(upload(ports, 'e1', ['/me/gone.pdf'])).resolves.toEqual({ refused: 'there is no file at /me/gone.pdf' });
     await expect(upload(ports, 'e1', ['/me/cv.pdf', '/me/letter.pdf'])).resolves.toEqual({ refused: 'e1 takes one file, and 2 were named' });
     await expect(upload(ports, 'e2', ['/me/cv.pdf', '/me/gone.pdf'])).resolves.toEqual({ refused: 'there is no file at /me/gone.pdf' });
