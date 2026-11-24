@@ -1,0 +1,11 @@
+{
+  "id": "6565318a-1965-42d1-997c-16e747b61807",
+  "title": "Workers check for overlapping cards and PRs, and start from codegraph",
+  "notes": "Retro 2026-11-24, both in src/main/skills/work-card-skill.ts. (1) Overlap: openwrt shipped 5 cards on the same scripts and two conflicted after review; new-crm's parallel PRs collided on numbered docs ids 4 times; dashboard #347 and #348 built the same throwaway sweep at once and #347's was thrown away. Before writing code the worker lists the Doing/Review cards and open PRs (board list, gh pr list), and if one covers the same files or area it messages main before going on. For docs ids, a worker takes the next free id only at merge-main time and says so in its report, or main reserves ranges: pick the one that holds. (2) Codegraph: 0 codegraph calls in 6 dashboard workers vs 77 grep/sed/cat calls, one a 25 KB sed of a whole file. Make the first exploration step a literal command, e.g. codegraph explore \"<the card's nouns>\" run from the main checkout, rather than a line of advice.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-24T10:58:12.520Z",
+  "updatedAt": "2026-11-24T10:58:12.521Z",
+  "column": "Backlog",
+  "order": 53
+}
