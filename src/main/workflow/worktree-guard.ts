@@ -24,10 +24,9 @@ const EDIT_REASON = 'That file is in another worktree of this repository, where 
   + 'agent, is at work. Change files only in the worktree this session runs in.';
 
 // Whether a `git … worktree remove` in `command` names a folder holding where it runs (`cwd`, then the
-// `cd` before it), where the session's shell is left (`shell`: a `cd` inside a `( … )` subshell does
-// not move it, and closing the subshell puts where it runs back there), or `startFolder`, the folder
-// the session started in, where its shell goes back to. The target is read from where it runs and
-// its `git -C`.
+// `cd` before it), where the session's shell is left (`shell`, as partsWithFolders reads both), or
+// `startFolder`, the folder the session started in, where its shell goes back to. The target is read
+// from where it runs and its `git -C`.
 export function removesOwnWorktree(command: string, cwd: string, startFolder = cwd): boolean {
   return partsWithFolders(command, cwd).some(({ part, folder, shell }) => removes(part, folder, shell, startFolder));
 }

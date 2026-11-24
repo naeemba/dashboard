@@ -101,9 +101,9 @@ export function invocation(part: string, verbs: string): { verb: string; words: 
 // the line moved to. A `cd` inside a `( … )` subshell holds until the subshell closes, which puts the
 // folder back where the line's own shell is: `shell`, which only a `cd` outside a subshell moves.
 // A `cd`'s flags (`-P`, `-L`) are skipped; a bare `-`, the previous folder, is read as a path since
-// that folder is not known. The package-manager, worktree and test-run guards all walk a line here.
+// that folder is not known.
 // ponytail: parentheses are counted without reading quotes; `$( … )` balances itself.
-export function partsWithFolders(command: string, folder: string): { part: string; folder: string; shell: string }[] {
+export function partsWithFolders(command: string, folder: string) {
   const parts: { part: string; folder: string; shell: string }[] = [];
   let base = folder;
   let shell = folder;
