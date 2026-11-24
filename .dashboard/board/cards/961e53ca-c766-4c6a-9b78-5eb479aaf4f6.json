@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T23:39:58.399Z",
-  "updatedAt": "2026-11-24T23:39:58.399Z",
-  "column": "Backlog",
-  "order": 67
+  "updatedAt": "2026-11-24T23:40:07.172Z",
+  "branch": "browser-upload-set-a-file-input-s-files-so",
+  "column": "Doing",
+  "order": 0
 }
