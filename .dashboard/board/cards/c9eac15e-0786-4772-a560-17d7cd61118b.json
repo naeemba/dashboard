@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:32.647Z",
-  "updatedAt": "2026-11-24T10:58:32.647Z",
-  "column": "Backlog",
-  "order": 56
+  "updatedAt": "2026-11-24T11:45:49.379Z",
+  "branch": "pr-wait-a-land-that-survives-network-blips",
+  "column": "Doing",
+  "order": 2
 }
