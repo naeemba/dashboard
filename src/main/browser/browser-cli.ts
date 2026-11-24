@@ -1,4 +1,6 @@
+import path from 'node:path';
 import { readFlagList } from '../command/flags';
+import { wholePath } from '../nvim/file-open';
 import { wholeNumber } from './browser-tabs';
 import { DEFAULT_READ_TOKENS } from './page-reader';
 
@@ -31,6 +33,10 @@ export type BrowserCommand =
 export type BrowserRequest =
   | Exclude<BrowserCommand, { verb: 'eval' }>
   | ({ verb: 'eval'; script: string; waitFor: string | null } & OnTab);
+
+// Each file to upload as the agent meant it: from `~`, whole, or from the folder the command runs in.
+export const wholeFiles = (files: readonly string[], home: string, folder: string): string[] =>
+  files.map((file) => wholePath(file, home) ?? path.resolve(folder, file));
 
 export const BROWSER_USAGE = `browser — the project's browser tabs, for the agent in this pane
 

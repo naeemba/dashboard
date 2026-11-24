@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBrowserCommand } from './browser-cli';
+import { parseBrowserCommand, wholeFiles } from './browser-cli';
 
 const command = (...words: string[]) => {
   const parsed = parseBrowserCommand(words);
@@ -49,5 +49,12 @@ describe('parseBrowserCommand', () => {
     expect(command('eval', '3')).toBe('browser eval takes a tab id and a script file');
     expect(command('upload', '3', 'e4')).toBe('browser upload takes a tab id, a ref and one file or more');
     expect(command('fly', '3')).toMatch(/^no such verb: browser fly/);
+  });
+});
+
+describe('wholeFiles', () => {
+  it('reads a file from home, whole, or from the folder the command runs in', () => {
+    expect(wholeFiles(['~/cv.pdf', '/tmp/a.pdf', 'docs/b.pdf'], '/home/me', '/work/api'))
+      .toEqual(['/home/me/cv.pdf', '/tmp/a.pdf', '/work/api/docs/b.pdf']);
   });
 });

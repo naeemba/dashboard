@@ -1,11 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import { wholePath } from '../nvim/file-open';
 import { projectNamedInFile } from '../projects/project-named';
 import { askRunningApp } from '../workers/session-socket';
-import { BROWSER_REQUEST, OUTSIDE_PANE, parseBrowserCommand, type BrowserRequest } from './browser-cli';
+import { BROWSER_REQUEST, OUTSIDE_PANE, parseBrowserCommand, wholeFiles, type BrowserRequest } from './browser-cli';
 
 // The whole of the `browser` program outside browser-cli.ts and the app: the words parsed, a project
 // name found in ~/.dashboard/projects.yaml, and the command sent for the pane it runs in. `dashboard
@@ -33,8 +31,7 @@ export async function runBrowserProgram(words: readonly string[]): Promise<numbe
     }
     command = { ...rest, script };
   } else if (parsed.command.verb === 'upload') {
-    // A file to upload is named as the agent meant it: `~`, whole, or from the folder the command runs in.
-    command = { ...parsed.command, files: parsed.command.files.map((file) => wholePath(file, homedir()) ?? path.resolve(file)) };
+    command = { ...parsed.command, files: wholeFiles(parsed.command.files, homedir(), process.cwd()) };
   } else command = parsed.command;
   if ('project' in command && command.project !== null) {
     const named = projectNamedInFile(command.project);
