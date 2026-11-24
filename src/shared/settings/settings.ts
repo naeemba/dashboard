@@ -37,9 +37,11 @@ export type Settings = {
   // the app closes its pane (auto-release.ts); 0 closes one only when its card is finished. In the file
   // by hand only.
   workers: { closeAfterMinutes: number };
-  // weeklyCap: the share of the 7-day usage, in percent, that `dashboard budget` calls over (docs/command);
-  // null until one is set, on the settings screen or with `budget --cap`.
-  budget: { weeklyCap: number | null };
+  // limit: what `dashboard budget` holds the 7-day usage to (docs/command). 'cap' is weeklyCap, the
+  // share in percent, null until one is set; 'pace' is dailyShare for each day begun since the weekly
+  // reset, a seventh of the week when null; 'none' is no limit, and budget answers under. Set on the
+  // settings screen or with `budget --cap` and `budget --pace`.
+  budget: { limit: BudgetLimit; weeklyCap: number | null; dailyShare: number | null };
 };
 
 // The on/off settings: each a boolean in a section of the file, named as [section, field], read by
@@ -93,11 +95,22 @@ export function isFontSize(value: string): boolean {
   return value.trim() !== '' && Number.isFinite(size) && size >= 6 && size <= 72;
 }
 
-// The same range parseSettings holds a stored cap to, exported for the settings screen's and the
-// budget command's messages: above 0, at most 100.
-export function isWeeklyCap(value: string | number): boolean {
-  const cap = Number(value);
-  return String(value).trim() !== '' && Number.isFinite(cap) && cap > 0 && cap <= 100;
+export const BUDGET_LIMITS = ['cap', 'pace', 'none'] as const;
+export type BudgetLimit = typeof BUDGET_LIMITS[number];
+
+// The same range parseSettings holds a stored cap and daily share to, exported for the settings
+// screen's and the budget command's messages: above 0, at most 100.
+export const BUDGET_PERCENTAGE_RANGE = 'a percentage above 0 and at most 100';
+
+export function isBudgetPercentage(value: string | number): boolean {
+  return budgetPercentage(value) !== null;
+}
+
+// The percentage a typed word or a stored number names, or null when it is out of that range.
+export function budgetPercentage(value: unknown): number | null {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  const percentage = Number(value);
+  return String(value).trim() !== '' && Number.isFinite(percentage) && percentage > 0 && percentage <= 100 ? percentage : null;
 }
 
 // The same range parseSettings holds a stored port to. Exported for the settings screen's message.
@@ -119,7 +132,7 @@ export function defaultSettings(isMac: boolean): Settings {
     updates: { check: true },
     errors: { notify: true },
     workers: { closeAfterMinutes: DEFAULT_CLOSE_AFTER_MINUTES },
-    budget: { weeklyCap: null },
+    budget: { limit: 'cap', weeklyCap: null, dailyShare: null },
   };
 }
 
@@ -178,7 +191,9 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
   const storedWorkers = asRecord(raw.workers);
-  const storedCap = asRecord(raw.budget).weeklyCap;
+  const storedBudget = asRecord(raw.budget);
+  // A number only: the file never holds a percentage as text.
+  const percentage = (stored: unknown): number | null => (typeof stored === 'number' ? budgetPercentage(stored) : null);
   // A toggle the file holds as a boolean, or the shipped one.
   const toggle = (name: ToggleName): boolean => {
     const [section, field] = TOGGLES[name];
@@ -222,7 +237,11 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     workers: {
       closeAfterMinutes: isMinutes(storedWorkers.closeAfterMinutes) ? storedWorkers.closeAfterMinutes : defaults.workers.closeAfterMinutes,
     },
-    budget: { weeklyCap: typeof storedCap === 'number' && isWeeklyCap(storedCap) ? storedCap : null },
+    budget: {
+      limit: BUDGET_LIMITS.find((limit) => limit === storedBudget.limit) ?? defaults.budget.limit,
+      weeklyCap: percentage(storedBudget.weeklyCap),
+      dailyShare: percentage(storedBudget.dailyShare),
+    },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 

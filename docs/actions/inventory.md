@@ -113,7 +113,8 @@ settings, and stays.
 |---|---|---|---|
 | settings.write | settings.write, `actions/settings/write.ts`, bound in `settings-actions.ts`; main's `writeSettings` its `writeFile` port | launch (`keepHostToken`), IPC `settings:write`, IPC `host:connect` (`saveSettings`) | no: the shell is picked again on every write, the join's included |
 | settings.adopt | settings.adopt, `actions/settings/adopt.ts`, bound in `settings-actions.ts` | the watch on the settings folder | no |
-| settings.cap | settings.cap, `actions/settings/cap.ts`, bound in `budget-program.ts`; `writeWeeklyCap` its `writeFile` port | `dashboard budget --cap` | no |
+| settings.cap | settings.cap, `actions/settings/budget.ts`, bound in `budget-program.ts`; `writeBudget` its `writeFile` port | `dashboard budget --cap` | no |
+| settings.pace | settings.pace, `actions/settings/budget.ts`, bound in `budget-program.ts`; `writeBudget` its `writeFile` port | `dashboard budget --pace` | no |
 | notes.write | `notes:write`, `project-files-ipc.ts:56`; `ink:write` `:64` | IPC | one writer each; no action needed |
 
 ### update
@@ -158,7 +159,8 @@ One row per noun.verb, and what it decides that its callers do not.
 | session.configure | the choice kept for the next start, and the running session moved onto it |
 | settings.write | the one writer of settings.json in the app, and the shell it picks |
 | settings.adopt | a change on disk that main did not write, taken with its shell and pushed to the window (`adoptedSettings` says which) |
-| settings.cap | a cap in range, written with every other line of the file left as it was |
+| settings.cap | a cap in range or none, written with every other line of the file left as it was |
+| settings.pace | a daily share in range or even, written the same way |
 | update.check | whether the release is newer, whether this machine can install it (refused if not, never offered), leaving one being installed alone; the settings row gates only the schedule |
 | update.download | that there is a release to download; a failure kept on the state for the dialog |
 | update.restart | that a download is staged and is the release; the update armed and the quit asked for |

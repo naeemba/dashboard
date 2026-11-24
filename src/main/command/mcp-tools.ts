@@ -91,7 +91,7 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('project close', 'Close a project; refused while any of its panes runs something', [word('name', 'name or aka')], false),
   tool('project focus', 'Bring the app to the front on a project\'s page', [word('name', 'name or aka')], false),
 
-  tool('budget', 'The 7-day usage against the cap; an error at or over it, or when the reading is stale', []),
+  tool('budget', 'The 7-day usage against the weekly cap or today\'s pace; an error at or over it, or when the reading is stale', []),
   { name: 'version', words: ['--version'], description: 'The installed Dashboard build, version+commit', parameters: [], allowed: true },
 
   tool('browser open', 'Open a tab you hold in the project\'s browser; prints its id', [word('url', 'address'), PROJECT]),

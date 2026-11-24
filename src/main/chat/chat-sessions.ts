@@ -595,7 +595,7 @@ export function registerChatSessions(
     ]);
     nameMemoryFiles(projectPath, context.memoryFiles);
     const measure = measureOf(context, models, usage, Date.now());
-    recordWeeklyUsage(measure.sevenDay?.percentage, measure.at);
+    recordWeeklyUsage(measure.sevenDay, measure.at);
     return measure;
   });
 

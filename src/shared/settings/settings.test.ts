@@ -34,12 +34,20 @@ describe('parseSettings', () => {
   });
 
   it('has no weekly cap until the file names a percentage above 0 and at most 100', () => {
-    expect(parseSettings({}, false).budget).toEqual({ weeklyCap: null });
-    expect(parseSettings({ budget: { weeklyCap: 74 } }, false).budget).toEqual({ weeklyCap: 74 });
-    expect(parseSettings({ budget: { weeklyCap: 100 } }, false).budget).toEqual({ weeklyCap: 100 });
+    const unset = { limit: 'cap', weeklyCap: null, dailyShare: null };
+    expect(parseSettings({}, false).budget).toEqual(unset);
+    expect(parseSettings({ budget: { weeklyCap: 74 } }, false).budget).toEqual({ ...unset, weeklyCap: 74 });
+    expect(parseSettings({ budget: { weeklyCap: 100 } }, false).budget).toEqual({ ...unset, weeklyCap: 100 });
     for (const rubbish of [0, -5, 101, '74', null]) {
-      expect(parseSettings({ budget: { weeklyCap: rubbish } }, false).budget).toEqual({ weeklyCap: null });
+      expect(parseSettings({ budget: { weeklyCap: rubbish, dailyShare: rubbish } }, false).budget).toEqual(unset);
     }
+  });
+
+  it('reads the pace and none as limits, and anything else as the cap', () => {
+    expect(parseSettings({ budget: { limit: 'pace', dailyShare: 12.5 } }, false).budget)
+      .toEqual({ limit: 'pace', weeklyCap: null, dailyShare: 12.5 });
+    expect(parseSettings({ budget: { limit: 'none' } }, false).budget.limit).toBe('none');
+    expect(parseSettings({ budget: { limit: 'daily' } }, false).budget.limit).toBe('cap');
   });
 
   it('checks for updates unless the file turns it off', () => {

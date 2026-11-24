@@ -55,7 +55,7 @@ const appCommandPermissions = (userData: string) => ({
     // The pictures `browser screenshot` prints the path of, outside every session's folder.
     screenshotReadRule(userData),
     'Bash(node "$DASHBOARD_BOARD" *)',
-    // A reading only: `budget --cap` changes the cap, and is asked.
+    // A reading only: `budget --cap` and `--pace` change the limit, and are asked.
     'Bash(node "$DASHBOARD_COMMAND" budget)',
     'Bash(node "$DASHBOARD_COMMAND" --version)',
     // The same verbs as the dashboard server's tools (mcp-tools.ts); a project one that changes something is asked.
@@ -92,7 +92,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     'Dispatch rule: a pane is for a task I asked for (do X, review X, research X), never for a lookup you'
       + ' need mid-task; those stay inline or in the Agent tool.',
     '',
-    'Every command below except pr land and budget --cap is also a tool of the dashboard MCP server, named for its words'
+    'Every command below except pr land, budget --cap and budget --pace is also a tool of the dashboard MCP server, named for its words'
       + ' (mcp__dashboard__pane_claim, board_ship, browser_screenshot) and taking them as parameters: call the'
       + ' tool where there is one.',
     '',
@@ -131,8 +131,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' ask me before landing it rather than relaying the change.',
     '',
     'Check the 7-day usage with `node "$DASHBOARD_COMMAND" budget` before each round of a long unattended'
-      + ' loop: it exits 0 under the cap I set once, 1 at or over it, 2 when the reading is missing or'
-      + ' stale. Stop on anything but 0, and never ask me for the cap again; `budget --cap <n>` sets it.',
+      + ' loop: it exits 0 under the limit I set once (a weekly cap, or a daily pace that grows each day'
+      + ' since the weekly reset; it prints today\'s figure), 1 at or over it, 2 when the reading is missing'
+      + ' or stale. Stop on anything but 0, and never ask me for the limit again; `budget --cap <n>` and'
+      + ' `budget --pace even` set it.',
     '',
     'The installed build is `node "$DASHBOARD_COMMAND" --version`; run it before saying which build I am on.',
     '',

@@ -1,7 +1,7 @@
 import { existsSync, lstatSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { adoptedSettings, readSettings, settingsFilePath, tidySettingsFile, writeSettings, writeWeeklyCap } from './settings-store';
+import { adoptedSettings, readSettings, settingsFilePath, tidySettingsFile, writeSettings, writeBudget } from './settings-store';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
 import { temporaryFolder } from '../testing/temporary-folder';
 
@@ -191,18 +191,18 @@ describe('tidySettingsFile', () => {
   });
 });
 
-describe('writeWeeklyCap', () => {
+describe('writeBudget', () => {
   it('sets the cap and leaves every other line as it was', () => {
     const path = file();
     writeFileSync(path, JSON.stringify({ font: { size: 130 }, budget: { other: 1 } }));
-    writeWeeklyCap(path, 74);
-    expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ font: { size: 130 }, budget: { other: 1, weeklyCap: 74 } });
+    writeBudget(path, { limit: 'cap', weeklyCap: 74 });
+    expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ font: { size: 130 }, budget: { other: 1, limit: 'cap', weeklyCap: 74 } });
   });
 
   it('makes the file when there is none', () => {
     const path = join(temporaryFolder('dashboard-settings-'), 'dashboard', 'settings.json');
-    writeWeeklyCap(path, 50);
-    expect(readSettings(path, false).budget).toEqual({ weeklyCap: 50 });
+    writeBudget(path, { weeklyCap: 50 });
+    expect(readSettings(path, false).budget).toEqual({ limit: 'cap', weeklyCap: 50, dailyShare: null });
   });
 
   posixModesOnly('writes through a symlinked file, leaving the link in place', () => {
@@ -210,25 +210,25 @@ describe('writeWeeklyCap', () => {
     writeFileSync(target, '{}');
     const link = file();
     symlinkSync(target, link);
-    writeWeeklyCap(link, 60);
+    writeBudget(link, { weeklyCap: 60 });
     expect(lstatSync(link).isSymbolicLink()).toBe(true);
-    expect(readSettings(target, false).budget).toEqual({ weeklyCap: 60 });
+    expect(readSettings(target, false).budget).toEqual({ limit: 'cap', weeklyCap: 60, dailyShare: null });
   });
 
   posixModesOnly('writes through a symlink whose target does not exist yet, leaving the link in place', () => {
     const target = file();
     const link = file();
     symlinkSync(target, link);
-    writeWeeklyCap(link, 40);
+    writeBudget(link, { weeklyCap: 40 });
     expect(lstatSync(link).isSymbolicLink()).toBe(true);
-    expect(readSettings(target, false).budget).toEqual({ weeklyCap: 40 });
+    expect(readSettings(target, false).budget).toEqual({ limit: 'cap', weeklyCap: 40, dailyShare: null });
   });
 
   it('refuses a file that is not a JSON object, and leaves it alone', () => {
     for (const text of ['{ "font": ', '[1]']) {
       const path = file();
       writeFileSync(path, text);
-      expect(() => writeWeeklyCap(path, 74)).toThrow('fix it, then set the cap again');
+      expect(() => writeBudget(path, { weeklyCap: 74 })).toThrow('fix it, then set the budget again');
       expect(readFileSync(path, 'utf8')).toBe(text);
     }
   });
@@ -239,7 +239,7 @@ describe('adoptedSettings', () => {
     const path = file();
     const current = defaultSettings(false);
     writeFileSync(path, JSON.stringify({ budget: { weeklyCap: 74 } }));
-    expect(adoptedSettings(path, current, false)?.budget).toEqual({ weeklyCap: 74 });
+    expect(adoptedSettings(path, current, false)?.budget).toEqual({ limit: 'cap', weeklyCap: 74, dailyShare: null });
     writeSettings(path, current, false);
     expect(adoptedSettings(path, current, false)).toBeNull();
   });
