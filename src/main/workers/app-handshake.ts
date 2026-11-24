@@ -32,8 +32,17 @@ export function unacceptedLine(milliseconds: number): string {
 // good with its main never told. Its words have only grown words after the state, which the command
 // drops and sends again when an older app refuses them (session-program.ts), and a state the app does
 // not know is refused by parseSessionCommand all the same.
+//
+// A read, and release, are let through from a stamped build of the same major version: after an
+// install main runs `pane list` and `pane release` before anyone restarts, and refusing them lost it
+// every pane until the restart. Their words are a verb and a pane id or two flags, an old parser refuses
+// a flag it does not know, and a wrong answer to a read changes nothing (workers-decision-4).
+const ACROSS_BUILDS = ['list', 'report', 'release'];
+const major = (version: string) => version.split('.')[0];
+
 export function versionRefusal(appVersion: string, commandVersion: unknown, commandArguments: readonly string[]): string | undefined {
   if (commandVersion === appVersion || commandArguments[0] === 'notify') return undefined;
+  if (typeof commandVersion === 'string' && major(commandVersion) === major(appVersion) && ACROSS_BUILDS.includes(commandArguments[0])) return undefined;
   const command = typeof commandVersion === 'string' ? `v${commandVersion}` : 'an older build';
   return `this command is ${command} and the running Dashboard is v${appVersion} — restart the app`;
 }

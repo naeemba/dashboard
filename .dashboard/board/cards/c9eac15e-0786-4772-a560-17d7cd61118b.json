@@ -5,15 +5,23 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:32.647Z",
-  "updatedAt": "2026-11-24T11:58:08.303Z",
+  "updatedAt": "2026-11-24T12:27:36.282Z",
   "branch": "pr-wait-a-land-that-survives-network-blips",
   "pullRequest": 357,
   "comments": [
     {
       "at": "2026-11-24T11:58:08.262Z",
       "body": "Pull request #357 opened: pr wait, a land that survives network blips, and commands across a version gap https://github.com/naeemba/dashboard/pull/357"
+    },
+    {
+      "at": "2026-11-24T12:20:11.193Z",
+      "body": "PR #357 review loop: converged, ready to merge. 2 rounds (floor-addressed). Merged main in first (conflicts in pull-request-program.ts, work-card-skill.ts resolved by hand). Round 1 fixed 6 findings in bb71824f (conflicts read on the project's remote, gh's own lines read for a network error). Round 2 fixed 3 low threads: lost CI-presence read says so and says run again (a512651f), one shared GitPort (ea2720fa), docs wording on merge retries (8300fef3); final check accepted all three. Nothing open. CI: 3/3 checks pass on head 8300fef3. No design change from the card."
+    },
+    {
+      "at": "2026-11-24T12:27:36.263Z",
+      "body": "Pull request #357 merged: pr wait, a land that survives network blips, and commands across a version gap https://github.com/naeemba/dashboard/pull/357"
     }
   ],
-  "column": "Review",
-  "order": 6
+  "column": "Done",
+  "order": 291
 }

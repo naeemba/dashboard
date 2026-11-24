@@ -28,18 +28,27 @@ reported no check
 triggered them or whichever service ran them, and refused otherwise, since CI that never started on
 the commit is not a pass (command-decision-7). A merge call that fails is read back from the pull
 request: merged at the noted commit is reported merged (the merge went through and only gh's answer
-was lost), and a network error is tried once more five seconds on. A network error on the wait is
-watched once more five seconds on, not read as a failed check. A second network error says gh's
-answer was lost, never that a check failed or the merge was refused. A failed check or a refused
-merge exits 1 and merges nothing. The wait is as long as CI takes: main runs it in the background at
+was lost). A network error on any gh call, `error connecting to api.github.com` and a TLS handshake
+timeout among them, is tried again for about four minutes, each wait longer (`RETRY_WAITS_MS`), and
+is never read as a failed check (only gh's own lines are read, never a check row's description); one
+that outlasts them says gh's answer was lost, never that a check failed or the merge was refused. A
+pull request GitHub calls `CONFLICTING`, at the first look, when no checks start, or when the merge
+is refused, is not waited on, since CI does not run on it: the files come from `git merge-tree` on
+the project's remote's base and the head commit, touching no checkout. A failed check, a conflict or
+a refused merge exits 1 and merges nothing. The last line is always the
+verdict, a failure's detail above it: `merged 12 at <sha>`, or `conflicts with main: <files> — merge
+origin/main into the branch, …`, the line main sends the worker. `pr wait <n>` is the same wait,
+retries and conflict check without the merge, ending `checks passed on <sha>`; a worker waiting on
+its own pull request's CI runs it instead of a `sleep` and `gh run view` loop, which died on a TLS
+timeout. The wait is as long as CI takes: main runs it in the background at
 the longest timeout, and runs it again if that limit stops it. Once merged, the checkout on the base
 branch, the project's folder or whichever worktree of its repository has it (`git worktree list`),
 fetches the base's remote and merges `<remote>/<base>` `--ff-only`, as a ship does, when nothing but
 `.dashboard/` is uncommitted there (`blockingChanges`, as a ship reads it); a second line says it
-was fast-forwarded, or why not, and never fails the land, not even when git cannot run. A flag where
-the pull request goes (`pr land --help`) never reaches gh as the pull request. It is a merge by
-whoever runs it, so `review.autoMerge` does not gate it, and it is not in the rules the app allows
-every session (command-decision-5). It needs gh, never the app.
+was fast-forwarded, or why not, above the verdict, and never fails the land, not even when git
+cannot run. A flag where the pull request goes (`pr land --help`) never reaches gh as the pull
+request. It is a merge by whoever runs it, so `review.autoMerge` does not gate it, and it is not
+in the rules the app allows every session (command-decision-5). It needs gh, never the app.
 
 `budget` reads the 7-day usage of the Claude account from
 `~/.claude/usage-7d.json`, which the user's statusline writes each time it draws
@@ -123,8 +132,8 @@ for its words: `board_show`, `pane_claim`, `browser_screenshot`, `version`
 (command-decision-8). A call runs the command with those words, so it answers
 and refuses exactly as the command line does; a refusal comes back as a tool
 error with the command's text. `browser_screenshot` answers with the picture.
-The hooks' verbs, `project init` and `remove`, and `pr land` have no tool;
-`pr land` stays a background Bash run.
+The hooks' verbs, `project init` and `remove`, `pr land` and `pr wait` have no
+tool; both stay a background Bash run.
 
 Every Claude screen the app starts has the server as `dashboard`, and knows its
 pane the way the command does, from the environment it was started in
@@ -252,8 +261,19 @@ Folders: `src/main/command/`.
   runs, then it merges the head commit it noted before the wait and prints
   `merged 12 at <sha>`; a push during the wait makes gh refuse the merge, and it
   says so and exits 1.
-- Given `gh pr merge` fails with `Post https://api.github.com/graphql: unexpected EOF` and the pull request is merged at the noted commit, when `pr land` reads it back, then it prints `merged 12 at <sha>`; still open, it tries the merge once more.
-- Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print.
+- Given `gh pr merge` fails with `Post https://api.github.com/graphql: unexpected EOF` and the
+  pull request is merged at the noted commit, when `pr land` reads it back, then it prints
+  `merged 12 at <sha>`; still open, it tries the merge again, waiting longer each time, as long as
+  `RETRY_WAITS_MS` lasts.
+- Given a check fails, when `pr land` waits on it, then nothing is merged and the checks print, the
+  verdict last.
+- Given gh answers `error connecting to api.github.com` for a minute, when `pr land` asks, then it
+  asks again 5, 10 and 20 seconds on and lands once GitHub answers.
+- Given a pull request that conflicts with main on `src/a.ts`, when `pr land` or `pr wait` runs,
+  then it waits on nothing and its last line is `conflicts with main: src/a.ts — merge origin/main
+  into the branch, resolve, push, and run it again`, exit 1.
+- Given an open pull request whose checks pass, when `pr wait 12` runs, then it prints
+  `checks passed on <sha>`, exits 0, and merges nothing.
 - Given a repository whose merged pull requests reported checks (from a
   `pull_request` or a `push` workflow, or an outside CI service) and a pull
   request on which none started, when `pr land` has asked twice a minute apart,

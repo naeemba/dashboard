@@ -23,7 +23,13 @@ export type BrowserCommand =
   | ({ verb: 'screenshot'; full: boolean; element: string | null } & OnTab)
   | ({ verb: 'click'; ref: string } & OnTab)
   | ({ verb: 'type'; ref: string; text: string } & OnTab)
-  | ({ verb: 'press'; key: string; ref: string | null } & OnTab);
+  | ({ verb: 'press'; key: string; ref: string | null } & OnTab)
+  | ({ verb: 'eval'; file: string; waitFor: string | null } & OnTab);
+
+// What the command sends the app: eval's file read here, where its path means what the agent meant.
+export type BrowserRequest =
+  | Exclude<BrowserCommand, { verb: 'eval' }>
+  | ({ verb: 'eval'; script: string; waitFor: string | null } & OnTab);
 
 export const BROWSER_USAGE = `browser — the project's browser tabs, for the agent in this pane
 
@@ -43,6 +49,10 @@ export const BROWSER_USAGE = `browser — the project's browser tabs, for the ag
   browser click <tab> <ref>
   browser type <tab> <ref> "<text>"           types at the end of what the field holds
   browser press <tab> <key> [<ref>]           Enter, Tab, Escape, an arrow, or one character
+  browser eval <tab> <script file> [--wait-for <css>]
+                                              run the file's JavaScript in the page, once --wait-for
+                                              matches (10 seconds at most); saves the answer, its
+                                              last expression's value, and prints its path
   browser console <tab>                       the last errors the page logged
   browser network <tab>                       the last requests that failed
 
@@ -63,6 +73,7 @@ const FLAGS: Record<string, [string[], string[]]> = {
   tabs: [['project'], []],
   read: [['max-tokens', 'selector'], []],
   screenshot: [['element'], ['full']],
+  eval: [['wait-for'], []],
 };
 
 // The words before the first flag, then the flags as readFlagList reads them (--name value or
@@ -108,6 +119,7 @@ function parseOnTab(verb: string, rest: readonly string[], flags: Map<string, st
       if (words.length !== 1 && words.length !== 2) return refuse('browser press takes a tab id, a key and maybe a ref');
       return { ok: true, command: { verb, tab, key: words[0], ref: words[1] ?? null } };
     }
+    case 'eval': return takes(1, 'a tab id and a script file') ?? { ok: true, command: { verb, tab, file: words[0], waitFor: flags.get('--wait-for') ?? null } };
     default: return refuse(`no such verb: browser ${verb}\n\n${BROWSER_USAGE}`);
   }
 }

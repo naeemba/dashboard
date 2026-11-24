@@ -6,7 +6,7 @@
 // cover it if parallel runs show up there.
 
 import { basename } from 'node:path';
-import { hookRefusal, invocation, repositoryTop, resolveWord, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
+import { hookRefusal, partsWithFolders, repositoryTop, shellBody, textField, wordsOf } from '../board/hook-answer';
 import { isInside } from '../panes/shell-directory';
 import type { ProcessList, RunningProcess } from './running-app-guard';
 
@@ -41,18 +41,14 @@ export function runsTests(words: readonly string[]): boolean {
 }
 
 // The folders the test runs a command line starts run in, `sh -c '…'` bodies included: `folder`, or
-// where a `cd` earlier in the line moved to (`cd ../app.worktrees/card && pnpm test`).
-// ponytail: a `cd` inside a `( … )` subshell is followed past its end, and `pnpm -C <dir>` is not
-// read; worktree-guard.ts counts subshells if a run is ever judged in the wrong worktree that way.
+// where a `cd` earlier in the line moved to (`cd ../app.worktrees/card && pnpm test`), as
+// partsWithFolders reads it. ponytail: `pnpm -C <dir>` is not read.
 export function testRunFolders(command: string, folder: string): string[] {
   const folders: string[] = [];
-  let base = folder;
-  for (const part of simpleCommands(command)) {
+  for (const { part, folder: base } of partsWithFolders(command, folder)) {
     const body = shellBody(part);
     if (body !== null) folders.push(...testRunFolders(body, base));
     else if (runsTests(wordsOf(part))) folders.push(base);
-    const changed = invocation(part, 'cd');
-    if (changed) base = resolveWord(changed.words[0] ?? '~', base);
   }
   return folders;
 }

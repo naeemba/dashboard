@@ -1,6 +1,6 @@
 import { parseEveryWorktree } from '../../shared/ship/git-worktrees';
 import { blockingChanges } from '../ship/ship';
-import type { ProgramAnswer } from './pull-request-cli';
+import type { GitPort } from './pull-request-cli';
 
 // After `pr land` merges, the local checkout of the base branch is behind it, and every land was
 // followed by a git pull by hand. The checkout on that branch is the project's own folder or any
@@ -10,7 +10,6 @@ import type { ProgramAnswer } from './pull-request-cli';
 // the one a ship cuts from) and merges <remote>/<base>, as a ship does (ship-flow.ts), so a
 // base with no upstream set is fast-forwarded all the same. Every answer is a line: the merge already
 // happened, so none of this fails the land.
-export type GitPort = (folder: string, words: string[]) => Promise<ProgramAnswer>;
 
 export async function fastForwardCheckout(git: GitPort, projectFolder: string, remote: string, base: string): Promise<string> {
   const worktrees = await git(projectFolder, ['worktree', 'list', '--porcelain']);

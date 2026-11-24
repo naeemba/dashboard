@@ -81,8 +81,8 @@ describe('listenForSessions and askApp', () => {
     const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
-    expect(await askApp(socket, { directory: '/work/api', args: ['list'], version: '1.5.0+aaaaaaaaaaaa' }))
-      .toEqual({ ok: false, output: versionRefusal(VERSION, '1.5.0+aaaaaaaaaaaa', ['list']) });
+    expect(await askApp(socket, { directory: '/work/api', args: ['run', 'a prompt'], version: '1.5.0+aaaaaaaaaaaa' }))
+      .toEqual({ ok: false, output: versionRefusal(VERSION, '1.5.0+aaaaaaaaaaaa', ['run', 'a prompt']) });
     expect(await askApp(socket, { directory: '/work/api', args: ['list'] }))
       .toEqual({ ok: false, output: versionRefusal(VERSION, undefined, ['list']) });
     server.close();

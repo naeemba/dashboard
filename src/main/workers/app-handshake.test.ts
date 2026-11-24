@@ -11,7 +11,7 @@ describe('versionRefusal', () => {
 
   // Same release, another commit: still another build, and the two can read a request differently.
   it('refuses another commit of the same release, naming both builds', () => {
-    expect(versionRefusal('1.4.0+372685450abc', '1.4.0+aaaaaaaaaaaa', ['list']))
+    expect(versionRefusal('1.4.0+372685450abc', '1.4.0+aaaaaaaaaaaa', ['run', 'a prompt']))
       .toBe('this command is v1.4.0+aaaaaaaaaaaa and the running Dashboard is v1.4.0+372685450abc — restart the app');
   });
 
@@ -26,6 +26,15 @@ describe('versionRefusal', () => {
   it('lets notify through from any build', () => {
     expect(versionRefusal('1.4.0+372685450abc', '1.4.0+aaaaaaaaaaaa', ['notify', '2:3', 'done'])).toBeUndefined();
     expect(versionRefusal('1.4.0+372685450abc', undefined, ['notify', '2:3', 'done'])).toBeUndefined();
+  });
+  // After an install main still lists and releases its panes before the restart.
+  it('lets a read and release through from another build of the same major version', () => {
+    for (const verb of ['list', 'report', 'release']) {
+      expect(versionRefusal('2.53.0+372685450abc', '2.54.0+aaaaaaaaaaaa', [verb, '2:3'])).toBeUndefined();
+    }
+    expect(versionRefusal('2.53.0+372685450abc', '3.0.0+aaaaaaaaaaaa', ['list'])).toContain('restart the app');
+    expect(versionRefusal('2.53.0+372685450abc', undefined, ['list'])).toContain('an older build');
+    expect(versionRefusal('2.53.0+372685450abc', '2.54.0+aaaaaaaaaaaa', ['run', 'a prompt'])).toContain('restart the app');
   });
 });
 

@@ -5,7 +5,19 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T11:11:34.553Z",
-  "updatedAt": "2026-11-24T11:11:34.553Z",
-  "column": "Backlog",
-  "order": 62
+  "updatedAt": "2026-11-24T12:29:05.596Z",
+  "branch": "a-docs-check-refuses-a-duplicate-docs-id-or",
+  "pullRequest": 358,
+  "comments": [
+    {
+      "at": "2026-11-24T12:07:36.308Z",
+      "body": "Pull request #358 opened: Lint refuses a duplicate docs heading id and a leftover -next id https://github.com/naeemba/dashboard/pull/358"
+    },
+    {
+      "at": "2026-11-24T12:29:05.596Z",
+      "body": "Converged, ready to merge. Added the rg check for a leftover -next id to work-card's numbering step. Review loop: 2 rounds, floor-addressed. Round 1 fixed 3 (work-card greps docs and CLAUDE.md for -next; lint skips code blocks; workflow-rule-5 names docs ids). Round 2 fixed 1 nit (indented-code test), final check accepted it. Nothing open, no conflict, CI 5/5 green on e404dd71."
+    }
+  ],
+  "column": "Review",
+  "order": 7
 }

@@ -78,6 +78,9 @@ that moved its project to another page still acts as its own pane. One call,
 a short answer, like `pane` and `board`; `browser --help` prints the verbs.
 Each verb is also a `browser_<verb>` tool on every Claude screen, and
 `browser_screenshot` answers with the picture (docs/command, command-decision-8).
+The server's instructions, main's prompt, the work-card skill and the review
+prompt send every page read or frontend check here rather than to Playwright or
+Claude in Chrome (browser-decision-7).
 
 - `open <url> [--project <name|aka>]` opens a tab the pane holds and prints its
   id. It opens behind the tab you are on, or on screen in a project with none.
@@ -97,10 +100,20 @@ Each verb is also a `browser_<verb>` tool on every Claude screen, and
   app, so a page behind a login never goes to a reading service. Cut at 4000
   tokens unless told.
 - `screenshot <tab> [--full] [--element <css>]` saves a PNG in the app's user
-  data folder, under `browser-screenshots/` (only you read it), and prints its
-  path. A full page is cut at 4000 by 16000 pixels. A picture is kept a day:
-  each screenshot clears out those older. A session the app starts may open
+  data folder, under `browser-files/` (only you read it), and prints its
+  path. A full page is cut at 4000 by 16000 pixels. A file there is kept a day:
+  each one saved clears out those older. A session the app starts may open
   them without asking, in the folder that copy of the app saves into.
+- `eval <tab> <script file> [--wait-for <css>]` reads the file where the
+  command runs and runs it in the page, top-level `await` allowed, once
+  `--wait-for` matches (10 seconds at most, else refused). Its last
+  expression's value is saved under `browser-files/`, a string as it is and
+  anything else as JSON, and the command prints its length and path; an
+  exception is refused, and so is a script with no answer after 15 seconds: one
+  still running is stopped, one awaiting a timer or promise is not, and
+  `browser reload` ends it. A `null` is saved as JSON. NaN,
+  Infinity and a BigInt are saved as their text. It is the `browser.eval`
+  action, not a read: a script can change the page (browser-decision-7).
 - `snapshot <tab>` lists what can be clicked or typed in, from the page's
   accessibility tree, each with a ref (`e3`) good until the next snapshot. A ref
   whose element the page has since dropped or hidden says to take a new one.
@@ -136,7 +149,7 @@ Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser
 - `browser-placement.ts`: where the page goes, and what counts as floating over it
 - `browser-holds.ts`: who may act on a tab, claim it or have it taken back
 - `claims.ts`, `page.ts`, `target.ts` (actions): claim, release and revoke;
-  resize, click, type and press; which tab an action means for each door
+  resize, click, type, press and eval; which tab an action means for each door
 - `browser-page.ts`: the one module driving a page's content, the command's
   reads and what the page actions do
 - `page-reader.ts`, `page-snapshot.ts`, `page-log.ts`, `page-keys.ts`: the

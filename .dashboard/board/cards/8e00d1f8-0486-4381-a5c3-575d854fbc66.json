@@ -5,7 +5,9 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T11:04:19.314Z",
-  "updatedAt": "2026-11-24T11:30:23.032Z",
+  "updatedAt": "2026-11-24T12:24:38.754Z",
+  "branch": "one-cd-following-helper-for-the-three-bash",
+  "pullRequest": 359,
   "comments": [
     {
       "at": "2026-11-24T11:23:10.725Z",
@@ -14,8 +16,20 @@
     {
       "at": "2026-11-24T11:30:23.032Z",
       "body": "Also: an msys-style 'cd /c/work' resolves to C:\\c\\work on Windows, so the guard finds no lockfile and fails open."
+    },
+    {
+      "at": "2026-11-24T12:10:35.964Z",
+      "body": "Pull request #359 opened: One cd walk for the three Bash guards, and Git Bash drive paths on Windows https://github.com/naeemba/dashboard/pull/359"
+    },
+    {
+      "at": "2026-11-24T12:23:28.642Z",
+      "body": "PR #359 review loop converged in 2 rounds, ready to merge. Round 1 found 1 issue: the worktree guard test fixtures used a path Git Bash reads as a drive. Fixed in fdb41909 by rooting them at /project. Round 2's re-review was clean. No conflict with main. CI passed 5/5 on head fdb41909. Nothing left open."
+    },
+    {
+      "at": "2026-11-24T12:24:38.724Z",
+      "body": "Pull request #359 merged: One cd walk for the three Bash guards, and Git Bash drive paths on Windows https://github.com/naeemba/dashboard/pull/359"
     }
   ],
-  "column": "Backlog",
-  "order": 59
+  "column": "Done",
+  "order": 290
 }
