@@ -58,7 +58,7 @@ export const BOARD_PATHSPECS = [
 // or it has none, so a build older than the text on origin never pushes its own text back over it, and
 // an edit to a file the app wrote is kept until a later version. Raise it with any change to either
 // text, or the change never reaches a project that has the old one; a test pins the two together.
-export const SEEDED_DOCS_VERSION = 2;
+export const SEEDED_DOCS_VERSION = 3;
 const VERSION_LINE = `<!-- .dashboard docs version ${SEEDED_DOCS_VERSION}, written by the Dashboard app -->`;
 
 // The version a seeded file's text carries, 0 for none: every text seeded before there was a version.
@@ -81,8 +81,8 @@ the \`board guard\` hook the app installs. Every pane the app opens carries \`DA
     node "$DASHBOARD_BOARD"          prints what it takes
     node "$DASHBOARD_BOARD" list     every card but Done and Cancelled, with the id the others want
 
-No git pull, commit or push is needed before or after a board command: it syncs the board with origin
-itself.
+No git pull, commit or push is needed before or after a board command: it syncs the board with
+the project's remote itself.
 `;
 
 export const EXPLANATION_FOR_PEOPLE = `${VERSION_LINE}

@@ -171,6 +171,9 @@ goes through. A card with no branch is never asked about.
 **Every write to a board git tracks lands on origin's default branch, from the
 screen or the command, from the project or a worktree, and the project's
 checkout is fast-forwarded to it when nothing but the board is in the way.**
+"Origin" here is the project's own remote, which is origin when there is one,
+else the only remote, else the one the local main tracks (`chosenRemote`): a
+GitLab project kept on a remote called `gitlab` has its board there.
 Before, nothing did: the global instructions had agents push board commits from
 temporary worktrees, nothing ever brought the project's checkout up, and a later
 `board move` there wrote cards from a copy 19-32 commits old. On kamandsystem,

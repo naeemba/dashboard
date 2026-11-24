@@ -1,6 +1,5 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
-import { defaultBranch, noDefaultBranchMessage } from './default-branch';
 
 const runCommand = promisify(execFile);
 
@@ -62,28 +61,4 @@ export async function projectFiles(projectPath: string): Promise<string[]> {
     const gone = new Set(deleted);
     return files.filter((file) => !gone.has(file));
   }, () => []);
-}
-
-// origin's default branch, by defaultBranch's rule: origin/HEAD is not set in every clone.
-export async function baseBranch(projectPath: string): Promise<string> {
-  const answer = (gitArguments: string[]) => git(gitArguments, projectPath).then((out) => out, () => null);
-  const [head, main, master] = await Promise.all([
-    answer(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']),
-    answer(['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/main']),
-    answer(['rev-parse', '--verify', '--quiet', 'refs/remotes/origin/master']),
-  ]);
-  const branch = defaultBranch('origin', head, (name) => (name === 'main' ? main : master) !== null);
-  if (branch === null) throw new Error(noDefaultBranchMessage('origin'));
-  return branch;
-}
-
-// The same rule, blocking, and null where baseBranch throws: for a caller that is synchronous itself
-// (seeding a board's docs) and asks only of local refs.
-export function baseBranchNow(projectPath: string): string | null {
-  const answer = (gitArguments: string[]) => gitNowOrNull(gitArguments, projectPath);
-  return defaultBranch(
-    'origin',
-    answer(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']),
-    (name) => answer(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${name}`]) !== null,
-  );
 }

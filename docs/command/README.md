@@ -43,7 +43,7 @@ its own pull request's CI runs it instead of a `sleep` and `gh run view` loop, w
 timeout. The wait is as long as CI takes: main runs it in the background at
 the longest timeout, and runs it again if that limit stops it. Once merged, the checkout on the base
 branch, the project's folder or whichever worktree of its repository has it (`git worktree list`),
-fetches origin and merges `origin/<base>` `--ff-only`, as a ship does, when nothing but
+fetches the base's remote and merges `<remote>/<base>` `--ff-only`, as a ship does, when nothing but
 `.dashboard/` is uncommitted there (`blockingChanges`, as a ship reads it); a second line says it
 was fast-forwarded, or why not, above the verdict, and never fails the land, not even when git
 cannot run. A flag where the pull request goes (`pr land --help`) never reaches gh as the pull

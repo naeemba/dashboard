@@ -4,6 +4,7 @@ import { isRecord } from '../../shared/app/is-record';
 import { isManagerHomeDirectory, projectRoot } from '../board/board-store';
 import { boardTarget } from '../board/board-target';
 import { projectNamedInFile } from '../projects/project-named';
+import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
 import { conflictLine, type LandAnswer, landPullRequest, mergeTreeWords, parsePullRequestCommand, type ProgramAnswer, waitOnPullRequest } from './pull-request-cli';
@@ -39,7 +40,9 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
     const { base } = answer;
     // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
     const forwarded = answer.ok && base !== undefined
-      ? `${await fastForwardCheckout(answering('git'), project.project, base).catch((error: unknown) => `${base} is not fast-forwarded: ${failureLine(error)}`)}\n`
+      ? `${await projectRemote(project.project)
+        .then((remote) => fastForwardCheckout(answering('git'), project.project, remote, base))
+        .catch((error: unknown) => `${base} is not fast-forwarded: ${failureLine(error)}`)}\n`
       : '';
     (answer.ok ? process.stdout : process.stderr).write(`${forwarded}${verdict}\n`);
     return answer.ok ? 0 : 1;

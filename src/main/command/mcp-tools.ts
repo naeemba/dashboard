@@ -82,8 +82,9 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('project add', 'List a folder as a project', [
     word('path', 'the folder'), flag('name', 'name'), flag('aka', 'other names, comma separated'),
     flag('site', 'url'), flag('about', 'one line')], false),
-  tool('project set', 'Change a project; aka adds names, deploy adds or changes one by name, site and about replace', [
+  tool('project set', 'Change a project; aka adds names, deploy adds or changes one by name, site and about replace, base sets the branch work is cut from', [
     word('name', 'name or aka'), flag('aka', 'names to add, comma separated'), flag('site', 'url'), flag('about', 'one line'),
+    flag('base', 'the branch work is cut from, set as <remote>/HEAD, when HEAD, main or master is not it'),
     flag('deploy', 'name=<n>,role=<r>,address=<a>, one per deploy', 'strings'),
     flag('clear', 'aka, site, about or deploy', 'strings')], false),
   tool('project open', 'Open a project in the app with its main session', [word('name', 'name or aka')], false),

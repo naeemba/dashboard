@@ -10,12 +10,12 @@ function options(argv: string[]) {
 describe('parseCreateTaskArguments', () => {
   it('reads title, notes and priority, the interface claude-pr-loop calls', () => {
     expect(options(['--title', ' Fix the thing ', '--notes', 'why', '--priority', 'high'])).toMatchObject({
-      title: 'Fix the thing', notes: 'why', priority: 'high', remote: 'origin', column: undefined,
+      title: 'Fix the thing', notes: 'why', priority: 'high', remote: undefined, column: undefined,
     });
   });
 
-  it('defaults to medium, no notes and origin', () => {
-    expect(options(['--title', 'x'])).toMatchObject({ priority: 'medium', notes: '', remote: 'origin' });
+  it('defaults to medium, no notes and no remote', () => {
+    expect(options(['--title', 'x'])).toMatchObject({ priority: 'medium', notes: '', remote: undefined });
   });
 
   it('takes --remote for a board on a second remote', () => {

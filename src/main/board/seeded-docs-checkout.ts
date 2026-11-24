@@ -1,8 +1,9 @@
-import { baseBranchNow, gitNowOrNull } from '../app/git';
+import { gitNowOrNull } from '../app/git';
+import { baseBranchNow } from '../app/base-branch';
 import { publishesCheckout } from './board-sync';
 
 // Whether a board read may rewrite a seeded doc that is there but older than this build's text
-// (board-decision-8). Only in a checkout standing on origin's default branch, or in a folder git does
+// (board-decision-8). Only in a checkout standing on the project's base branch, or in a folder git does
 // not manage. Anywhere else it is a feature branch's copy: rewritten in place it is a change nobody
 // committed, and the worker's next `git merge` of the default branch refuses to overwrite it, stalling
 // the task until someone restores the file. Left alone, the branch gets the new text with that merge,
@@ -16,8 +17,8 @@ export type SeededDocsCheckout =
   | { insideWorkTree: true; branch: string | null; defaultBranch: string | null };
 
 //
-// A repository with no origin default branch (no origin remote, or none of origin/HEAD, main and
-// master) counts as outside git: no merge of the default branch will ever bring the new text there,
+// A repository with no base branch (none of <remote>/HEAD, main and master on its remote) counts as
+// outside git: no merge of the default branch will ever bring the new text there,
 // and the sync cannot push it either, so left alone the doc would stay stale for good.
 export function rewritesStaleSeededDocs(checkout: SeededDocsCheckout): boolean {
   if (!checkout.insideWorkTree || checkout.defaultBranch === null) return true;
@@ -43,5 +44,5 @@ export function rewritesStaleSeededDocsAt(projectPath: string, now = Date.now())
 function seededDocsCheckout(projectPath: string): SeededDocsCheckout {
   const answer = (gitArguments: string[]) => gitNowOrNull(gitArguments, projectPath);
   if (answer(['rev-parse', '--is-inside-work-tree']) !== 'true') return { insideWorkTree: false };
-  return { insideWorkTree: true, branch: answer(['symbolic-ref', '--short', '-q', 'HEAD']), defaultBranch: baseBranchNow(projectPath) };
+  return { insideWorkTree: true, branch: answer(['symbolic-ref', '--short', '-q', 'HEAD']), defaultBranch: baseBranchNow(projectPath)?.branch ?? null };
 }

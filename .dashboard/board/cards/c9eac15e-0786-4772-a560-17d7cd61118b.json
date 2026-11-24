@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T10:58:32.647Z",
-  "updatedAt": "2026-11-24T10:58:32.647Z",
-  "column": "Backlog",
-  "order": 56
+  "updatedAt": "2026-11-24T11:58:08.303Z",
+  "branch": "pr-wait-a-land-that-survives-network-blips",
+  "pullRequest": 357,
+  "comments": [
+    {
+      "at": "2026-11-24T11:58:08.262Z",
+      "body": "Pull request #357 opened: pr wait, a land that survives network blips, and commands across a version gap https://github.com/naeemba/dashboard/pull/357"
+    }
+  ],
+  "column": "Review",
+  "order": 6
 }

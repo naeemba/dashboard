@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T10:58:39.431Z",
-  "updatedAt": "2026-11-24T11:38:12.269Z",
+  "updatedAt": "2026-11-24T11:45:45.782Z",
   "branch": "pnpm-check-shows-why-a-check-failed-and-cha",
   "pullRequest": 351,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-24T11:38:12.268Z",
       "body": "Review loop converged in 3 rounds (6d27c8cb, 22bd366e), with no open threads. Windows CI then failed on backslash paths; 8a371246 fixes that and pnpm check passes locally. Still open: the PR now conflicts with main, so CI has not run on 8a371246. Resolve the conflict, then let CI run before merging."
+    },
+    {
+      "at": "2026-11-24T11:45:45.764Z",
+      "body": "Pull request #351 merged: pnpm check shows why a check failed, and a coverage line for the change https://github.com/naeemba/dashboard/pull/351"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 286
 }

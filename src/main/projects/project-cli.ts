@@ -20,10 +20,12 @@ export const PROJECT_USAGE = `project — the projects in ~/.dashboard/projects.
   project init          write a first projects.yaml from the open and recent projects, never over one
   project add <path> [--name <n>] [--aka a,b] [--site <url>] [--about "<line>"]
                         list a folder, under its name or name-2; refused when listed already
-  project set <name> [--aka a,b] [--site <url>] [--about "<line>"]
+  project set <name> [--aka a,b] [--site <url>] [--about "<line>"] [--base <branch>]
                      [--deploy name=<n>,role=<r>,address=<a>]... [--clear <field>]...
                         --aka adds names, --deploy adds or changes one deploy by its name,
-                        --site and --about replace, --clear takes aka, site, about or deploy away
+                        --site and --about replace, --clear takes aka, site, about or deploy away;
+                        --base names the branch work is cut from, as <remote>/HEAD in the
+                        project's git, for a remote whose HEAD, main or master is not it
   project remove <name> take the project out of the file
   project open <name>   open it in the app, the way the project picker does, with its main session
   project close <name>  close it, refused while any of its panes is running something
@@ -41,8 +43,12 @@ export const APP_VERBS: readonly string[] = ['open', 'close', 'focus'];
 // `file` is what to write to the file before printing the output: over the file read when there was
 // one, and never over one when there was not (init, or add with no file yet). `ask`, from open close and focus, is what to ask the
 // app: [PROJECT_REQUEST, verb, folder, name].
+// `base` is set's --base: the branch to set the folder's <remote>/HEAD to, which project-program.ts
+// does before writing the file, so a branch git refuses leaves the file as it was too.
+export type ProjectBase = { folder: string; branch: string };
+
 export type ProjectAnswer =
-  | { ok: true; output: string; file?: string }
+  | { ok: true; output: string; file?: string; base?: ProjectBase }
   | { ok: false; message: string }
   | { ok: true; ask: string[] };
 
@@ -124,7 +130,7 @@ const isClearable = (value: string): value is Clearable => (CLEARABLE as readonl
 
 // The flags set takes, as the change projects-write.ts makes, or why they are refused.
 function projectChange(flags: readonly [string, string][]): ProjectChange | string {
-  if (flags.length === 0) return `set takes at least one of --aka, --site, --about, --deploy, --clear\n\n${PROJECT_USAGE}`;
+  if (flags.length === 0) return `set takes at least one of --aka, --site, --about, --base, --deploy, --clear\n\n${PROJECT_USAGE}`;
   const change: ProjectChange = {};
   for (const [flag, value] of flags) {
     if (flag === 'aka') change.aka = [...(change.aka ?? []), ...names(value)];
@@ -152,8 +158,19 @@ function projectEdit(
   const [target, ...flagWords] = words;
   if (target === undefined || target.startsWith('--')) return { ok: false, message: `${verb} takes ${verb === 'add' ? 'a folder' : 'a name'} first\n\n${PROJECT_USAGE}` };
   if (verb === 'remove' && flagWords.length > 0) return { ok: false, message: `remove takes one name and no flags\n\n${PROJECT_USAGE}` };
-  const read = readFlagList(flagWords, verb === 'add' ? ['name', 'aka', 'site', 'about'] : ['aka', 'site', 'about', 'deploy', 'clear']);
+  const read = readFlagList(flagWords, verb === 'add' ? ['name', 'aka', 'site', 'about'] : ['aka', 'site', 'about', 'base', 'deploy', 'clear']);
   if ('message' in read) return { ok: false, message: read.message };
+  // --base is no field of the file but the project's git (base-branch.ts), so it is taken out here.
+  const fileFlags = read.flags.filter(([flag]) => flag !== 'base');
+  const branch = read.flags.findLast(([flag]) => flag === 'base')?.[1].trim();
+  let base: ProjectBase | undefined;
+  if (branch !== undefined) {
+    if (branch === '') return { ok: false, message: '--base needs a branch name' };
+    const named = projectNamed(text, filePath, target, home);
+    if (!named.ok) return named;
+    base = { folder: named.path, branch };
+    if (fileFlags.length === 0) return { ok: true, output: '', base };
+  }
 
   let result: ProjectsWrite;
   if (verb === 'remove') result = removeProject(text, filePath, target);
@@ -164,13 +181,13 @@ function projectEdit(
     const aka = flags.get('aka');
     result = addProject(text, filePath, folder, { name: flags.get('name'), aka: aka === undefined ? undefined : names(aka), site: flags.get('site'), about: flags.get('about') }, home, realPath);
   } else {
-    const change = projectChange(read.flags);
+    const change = projectChange(fileFlags);
     if (typeof change === 'string') return { ok: false, message: change };
     result = setProject(text, filePath, target, change);
   }
   if (!result.ok) return result;
   const done = { add: 'added', set: 'changed', remove: 'removed' }[verb];
-  return { ok: true, file: result.text, output: `${done} ${result.name} in ${filePath}` };
+  return { ok: true, file: result.text, output: `${done} ${result.name} in ${filePath}`, base };
 }
 
 // `project list`: the file's projects, each marked open when the app had it open at its last save, then

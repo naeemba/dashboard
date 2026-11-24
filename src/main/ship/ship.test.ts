@@ -167,8 +167,8 @@ describe('oneAtATime', () => {
 });
 
 describe('workPrompt', () => {
-  it('sends the card, the project\'s version word and the base branch', () => {
-    expect(workPrompt(cardId, true, 'main')).toBe(`/work-card ${cardId} ${BUMP_VERSION} main`);
-    expect(workPrompt(cardId, false, 'master')).toBe(`/work-card ${cardId} ${KEEP_VERSION} master`);
+  it('sends the card, the project\'s version word, the base branch and its remote', () => {
+    expect(workPrompt(cardId, true, { remote: 'origin', branch: 'main' })).toBe(`/work-card ${cardId} ${BUMP_VERSION} main origin`);
+    expect(workPrompt(cardId, false, { remote: 'gitlab', branch: 'develop' })).toBe(`/work-card ${cardId} ${KEEP_VERSION} develop gitlab`);
   });
 });

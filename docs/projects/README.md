@@ -30,7 +30,7 @@ hand; `project set` keeps them as they are.
 | `project find <word>` | the projects whose name or aka match the word, best first, then those whose about contains it |
 | `project init` | writes a first `projects.yaml` from the open and recent projects, name and path each; never over a file that is there |
 | `project add <path> [--name <n>] [--aka a,b] [--site <url>] [--about "<line>"]` | `added <name> in <file>`: a new entry at the end, the name from the folder unless given |
-| `project set <name> [--aka a,b] [--site <url>] [--about "<line>"] [--deploy name=<n>,role=<r>,address=<a>]... [--clear <field>]...` | `changed <name> in <file>` |
+| `project set <name> [--aka a,b] [--site <url>] [--about "<line>"] [--base <branch>] [--deploy name=<n>,role=<r>,address=<a>]... [--clear <field>]...` | `changed <name> in <file>`; `--base` sets the project's `<remote>/HEAD` to the branch (`git remote set-head`), the branch work is cut from ([ship](../ship/README.md)), before the file is written, and says so on a line of its own |
 | `project remove <name>` | `removed <name> in <file>` |
 | `project open <name>` | `opened <name>; main-<folder> is running`, `<folder>` being the slug of the path's last segment, not the entry's name, with `-2`, `-3` after it when another folder was given that slug first; the printed session name is the one to SendMessage. The app opens its folder the way the project picker does and starts its main session, answering once SendMessage can reach it (a minute at most, else a refusal); an open project's main is started the same way |
 | `project close <name>` | `closed <name>`, or the close key's own refusal naming the panes still running something |

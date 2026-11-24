@@ -50,7 +50,8 @@ aside).
 ## /work-card
 
 What a shipped card's agent is started on:
-`/work-card <card id> bump-version|keep-version <base branch>` ([ship](../ship/README.md)). It reads
+`/work-card <card id> bump-version|keep-version <base branch> <remote>`
+([ship](../ship/README.md)). It reads
 the card and its subtasks (the `Subtasks` block `board show` prints) and the project's `CLAUDE.md`,
 does the work, runs the project's checks and opens the pull request. Its first look at the code is
 a literal `codegraph explore` command run from the project's checkout (whose source can lag the
@@ -65,8 +66,8 @@ The checks are the ones `CLAUDE.md` names, else the project's test, type-check a
 a `check` script that runs them all and prints a summary is run once, its log read for a failure.
 The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
-`bump-version` tells it to bump last, from `origin/<base branch>` (the third word, the branch the
-worktree was cut from), with `npm version --no-git-tag-version`.
+`bump-version` tells it to bump last, from `<remote>/<base branch>` (the fourth and third words:
+the remote, and the branch the worktree was cut from), with `npm version --no-git-tag-version`.
 
 It does not repeat what every worker is already told or held to: the board's rules are
 `BOARD_INSTRUCTIONS`, appended to every worker's system prompt, and the board guard's hook refuses

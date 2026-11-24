@@ -9,19 +9,25 @@
 
 // The second word of the prompt: whether this project bumps its version, from its projects.yaml
 // entry (projects-decision-1). Always one of the two, so `$1` is never left in the text unfilled. The
-// third, `$2`, is the branch the worktree was cut from, which is not always main.
+// third, `$2`, is the branch the worktree was cut from, which is not always main; the fourth, `$3`,
+// the remote it is on, which is not always origin (chosenRemote in app/default-branch.ts).
 export const BUMP_VERSION = 'bump-version';
 export const KEEP_VERSION = 'keep-version';
 
 export const WORK_CARD_SKILL = `---
 name: work-card
 description: Work the board card with this id, start to finish, in the worktree the app already made for it
-argument-hint: <card id> [${BUMP_VERSION}|${KEEP_VERSION}] <base branch>
+argument-hint: <card id> [${BUMP_VERSION}|${KEEP_VERSION}] <base branch> <remote>
 model: opus
 effort: high
 ---
 
 Work the card whose id is $0, in this worktree, start to finish.
+
+The base branch is \`$2\` and the remote it is on \`$3\`. Run by hand with
+fewer words, a missing remote is \`origin\` when \`git remote\` lists it, else
+the only remote, else the one the local main (then master) tracks: read every
+\`$3\` below as that.
 
 You are already on the right branch and in the right folder. The app made
 this worktree for this card, moved the card into it, and started you in a
@@ -59,7 +65,7 @@ Before you write any code, list what else is in flight, in one call:
 
 For a card or pull request whose title looks near this card, read its files:
 \`gh pr view <n> --json files\` for a pull request; for a card, its branch
-from the brackets in \`list\`, \`git diff --stat origin/$2...<branch>\`. If
+from the brackets in \`list\`, \`git diff --stat $3/$2...<branch>\`. If
 one covers the same files or the same area, say so in a comment on the card,
 naming the card or pull request and the files you both touch.
 
@@ -112,13 +118,13 @@ conflict after review, and one of them is thrown away.
   project with no \`package.json\` is bumped wherever it keeps its version.
   Commit the bump on its own.
 - When the work is done and before the checks, when the card adds a docs id
-  or bumps the version: run \`git fetch origin && git merge origin/$2\` once
+  or bumps the version: run \`git fetch $3 && git merge $3/$2\` once
   (the local \`$2\` here is as old as the worktree; resolve a conflict the way
   \`/pr-conflicts\` does and commit the merge). Then give each new id the next
   number free there, and bump from the version there. Other cards run in
   their own worktrees at the same time, and two that both took the next one
   early both say \`-decision-9\`, or \`1.5.0\`. If the pull request later
-  conflicts on one, merge \`origin/$2\` again the same way and take the next
+  conflicts on one, merge \`$3/$2\` again the same way and take the next
   free one.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
   type-check and lint scripts. A project with a \`check\` script that runs them
@@ -128,7 +134,7 @@ conflict after review, and one of them is thrown away.
   must pass. If one fails and you cannot fix it, stop: do not open the pull
   request, and say what failed and why in a comment on the card.
 - Commit in small pieces with messages that say what changed and why.
-- Push the branch and open the pull request with \`gh pr create\`.
+- Push the branch to \`$3\` and open the pull request with \`gh pr create\`.
 - To wait for the pull request's CI, run \`node "$DASHBOARD_COMMAND" pr wait <n>\`
   in the background with the longest timeout allowed: it waits on the head
   commit, outlasts a network error, and its last line is the verdict. Never a
