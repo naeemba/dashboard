@@ -5,13 +5,14 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T20:08:16.245Z",
-  "updatedAt": "2026-11-24T20:22:07.669Z",
+  "updatedAt": "2026-11-24T20:33:48.841Z",
+  "branch": "shellbody-reads-powershell-command-pwsh-c-a",
   "comments": [
     {
       "at": "2026-11-24T20:22:07.668Z",
       "body": "This card is GitHub issue #365; the PR says Closes #365. Build on #364's windowsShellBody once #364 is merged."
     }
   ],
-  "column": "Backlog",
-  "order": 65
+  "column": "Doing",
+  "order": 0
 }
