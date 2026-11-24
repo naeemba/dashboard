@@ -18,7 +18,7 @@
 // with a verb is refused, and a lone `'` in a heredoc body (`Don't`) hides every command after it;
 // matching those means running the shell, and this is a guard rail.
 
-import { anyCase, hookRefusal, invocation, pipelines, SHELL_REDIRECT, shellBody, simpleCommands, textField, windowsShellBody, wordsOf } from '../board/hook-answer';
+import { anyCase, hookRefusal, invocation, pipelines, SHELL_REDIRECT, shellBody, simpleCommands, textField, wordsOf } from '../board/hook-answer';
 
 // A process as /proc shows it: its names (comm, argv[0] and argv[0]'s basename), its argv and its
 // command line.
@@ -160,7 +160,7 @@ export function stopsRunningApp(command: string, listProcesses: ProcessList): bo
 
   if (pipelines(command).some((pipeline) => foundAndKilled(pipeline).some(hitsApp) || killsWindowsApp(pipeline))) return true;
   return simpleCommands(command).some((part) => {
-    const body = shellBody(part) ?? windowsShellBody(part);
+    const body = shellBody(part);
     if (body !== null && stopsRunningApp(body, listProcesses)) return true;
     const finder = invocation(part, 'pkill|killall');
     if (finder) return selectors(finder.verb, finder.words).some(hitsApp);
