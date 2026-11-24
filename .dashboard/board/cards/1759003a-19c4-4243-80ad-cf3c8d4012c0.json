@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T22:45:18.521Z",
-  "updatedAt": "2026-11-24T22:45:26.816Z",
+  "updatedAt": "2026-11-24T22:55:43.280Z",
   "branch": "sessions-get-the-ssh-agent-even-when-the-ap",
-  "column": "Doing",
+  "pullRequest": 369,
+  "comments": [
+    {
+      "at": "2026-11-24T22:55:43.251Z",
+      "body": "Pull request #369 opened: Sessions get the SSH agent even when the app was launched without SSH_AUTH_SOCK https://github.com/naeemba/dashboard/pull/369"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
