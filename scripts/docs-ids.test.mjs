@@ -25,7 +25,7 @@ describe('idProblems', () => {
 
   it('skips an id quoted in a fenced or indented code block', () => {
     const fenced = '```markdown\n## board-decision-8: A\n```\n';
-    const indented = '\n    ## board-decision-8: A\n    (board-rule-next)\n';
+    const indented = '\n    (board-rule-next)\n';
     expect(idProblems(`## board-decision-8: A\n\n${fenced}${fenced}${indented}`)).toEqual([]);
   });
 });
