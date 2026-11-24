@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T10:58:45.600Z",
-  "updatedAt": "2026-11-24T11:45:36.155Z",
+  "updatedAt": "2026-11-24T12:00:39.628Z",
   "branch": "budget-an-optional-daily-pace-toward-the-we",
   "pullRequest": 355,
   "comments": [
     {
       "at": "2026-11-24T11:45:36.129Z",
       "body": "Pull request #355 opened: Budget: a weekly cap, a daily pace since the weekly reset, or none https://github.com/naeemba/dashboard/pull/355"
+    },
+    {
+      "at": "2026-11-24T12:00:39.627Z",
+      "body": "Review loop converged, ready to merge. 1 round: 4 low/nit findings fixed (budget none no longer reads the usage file; limit labels 'no limit'/'not set'; typing a cap/pace on the settings screen now sets the limit, as the command does; pace cap rounded once for compare and print). Final check accepted all 4 commits. No conflicts. CI 5/5 green on 66a92742."
     }
   ],
   "column": "Review",
