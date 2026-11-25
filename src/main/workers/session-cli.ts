@@ -285,7 +285,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       const [flag, name = '', ...more] = rest;
       const from = more.length === 2 && more[0] === '--from' && PANE_ID.test(more[1]) ? more[1] : null;
       if ((flag !== '--branch' && flag !== '--card') || name.trim() === '' || (more.length > 0 && from === null)) {
-        return refuse('pane landed takes --branch <branch> or --card <card id>, then --from <id>');
+        return refuse('pane landed takes --branch <branch> or --card <card id>, optionally then --from <id>');
       }
       return { ok: true, command: { kind: 'landed', by: flag === '--branch' ? 'branch' : 'card', name, from } };
     }
