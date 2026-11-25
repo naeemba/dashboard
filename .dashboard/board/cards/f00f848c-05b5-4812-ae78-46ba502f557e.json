@@ -1,0 +1,11 @@
+{
+  "id": "f00f848c-05b5-4812-ae78-46ba502f557e",
+  "title": "browser: open data: URLs, so a worker can check a fixture page",
+  "notes": "Retro. A worker checking how browser snapshot lists file inputs ran browser_open 'data:text/html,...' and got 'is not a web address' (src/main/browser/address.ts:28), so it skipped the live check. Let addressUrl accept data: URLs (and file: if equally simple), with a test in address.test.ts, and mention it in the dashboard-browser skill and the browser docs.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-25T11:37:16.928Z",
+  "updatedAt": "2026-11-25T11:37:16.928Z",
+  "column": "Backlog",
+  "order": 70
+}
