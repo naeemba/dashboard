@@ -39,7 +39,9 @@ time:
 
 1. \`browser_open\` with the address opens a tab you hold and prints its id. To
    work on a page the person already has open, \`browser_tabs\` lists every tab
-   and \`browser_claim\` takes one. Every other tool takes that id.
+   and \`browser_claim\` takes one. Every other tool takes that id. To check a
+   page of your own without a server, open it as a \`data:text/html,...\` address;
+   a \`file:\` address is refused.
 2. \`browser_read\` prints the page's main content as markdown, cut at ${DEFAULT_READ_TOKENS}
    tokens unless \`max-tokens\` says otherwise; \`selector\` reads one part.
 3. \`browser_snapshot\` lists what can be clicked or typed in, each with a ref

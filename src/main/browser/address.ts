@@ -4,6 +4,9 @@ import { isOpenableLink } from '../../shared/panes/links';
 // What the browser view may show, and what typing in its address bar means. The view's frames are
 // held to the first (frameNavigation, window-navigation.ts), and the address bar and every action that
 // loads a page to both, so a tab can never be pointed at a file on this disk or an internal page.
+// A data: address is the one exception, and only typed or sent: it carries its page in the address,
+// so a worker can load a fixture page without a server, and it reads nothing off the disk. A page
+// still cannot send a frame or a popup to one: isBrowsable keeps it out.
 
 // A web page, or the empty page a new tab and a frame start on.
 export function isBrowsable(url: string): boolean {
@@ -15,10 +18,12 @@ export function isBrowsable(url: string): boolean {
 const LOCAL_HOST = /^(localhost|[^/:]+\.localhost|127(\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|10(\.\d{1,3}){3}|172\.(1[6-9]|2\d|3[01])(\.\d{1,3}){2}|192\.168(\.\d{1,3}){2})(:\d+)?(\/|$)/i;
 
 // What was typed, as the address to load: as typed when it names its scheme, else https, except for
-// a server on this machine or its network, which a dev server answers without TLS. Anything that is
-// still not a web page is refused, and so is a search: there is no search engine here to send it to.
+// a server on this machine or its network, which a dev server answers without TLS. A data: page is
+// kept as typed. Anything that is still not a web page is refused, and so is a search: there is no
+// search engine here to send it to.
 export function addressUrl(typed: string): string | Refused {
   const text = typed.trim();
+  if (/^data:/i.test(text)) return text;
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) || text.startsWith('about:')) {
     return isBrowsable(text) ? text : { refused: `${text} is not a web page` };
   }

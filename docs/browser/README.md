@@ -20,7 +20,9 @@ opens it in a first tab. An address without a scheme gets https, and one a dev
 server answers gets http: `localhost` and `*.localhost`, `127.0.0.1`, `0.0.0.0`,
 `[::1]` and the private ranges (`10.*`, `172.16.*` to `172.31.*`, `192.168.*`). A
 search, a file and an internal page are refused on the status bar: there is no
-search engine to send a search to, and a tab never shows a file on this disk.
+search engine to send a search to, and a tab never shows a file on this disk. A
+`data:` address loads as typed, so a worker can check a fixture page without a
+server; a page cannot send a frame or a popup to one.
 
 Arriving gives the web page the keyboard, and from then on every key is the
 page's except two kinds: the keys every screen hears (the mode keys, the project
@@ -189,6 +191,8 @@ The keys are in `src/shared/keys/browser-actions.ts` and
   is on screen and the page is not; closing it brings the page back with the keyboard.
 - Given you typed `file:///etc/passwd`, when you press Enter, then nothing loads
   and the status bar says it is not a web page.
+- Given you typed `data:text/html,<input type=file>`, when you press Enter, then
+  the tab shows a file input.
 - Given you signed in to a site in project A, when you open it in project B,
   then B is signed out.
 - Given two tabs, when you close the one on screen, then the one after it shows,

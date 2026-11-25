@@ -26,3 +26,6 @@ One line per merged change: date and why.
 - 2026-11-25 — `browser upload` and `browser_upload` set a file input's files, because job-search's
   apply workers each opened a Playwright window only to upload a CV; the filled form is left for
   the person to submit
+- 2026-11-25 — the address bar and `browser open` load a `data:` address, because a worker checking
+  how `browser snapshot` lists file inputs was refused one and skipped the live check; `file:` stays
+  refused, as a tab never shows a file on this disk
