@@ -5,7 +5,7 @@ import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/posix-paths-only';
 
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {

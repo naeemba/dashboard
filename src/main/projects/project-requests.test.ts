@@ -6,7 +6,7 @@ import { PROJECT_REQUEST } from './project-cli';
 import { projectRequests } from './project-requests';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/posix-paths-only';
 
 // The command's door and the project actions behind it, on main's ports faked.
 const idle = (index: number): ClosingPane => ({

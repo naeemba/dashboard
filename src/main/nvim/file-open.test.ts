@@ -5,7 +5,7 @@ import { fileCandidates, firstFile, wholePath } from './file-open';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/posix-paths-only';
 
 describe('fileCandidates', () => {
   posixPathsOnly('tries the live folder, then the starting folder, then the project, once each', () => {

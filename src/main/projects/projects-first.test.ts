@@ -3,7 +3,7 @@ import { firstProjectsFile } from './projects-first';
 import { readProjects } from './projects-file';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/posix-paths-only';
 
 describe('firstProjectsFile', () => {
   posixPathsOnly('writes a file readProjects reads back, open and recent folders once each, ~ for home', () => {

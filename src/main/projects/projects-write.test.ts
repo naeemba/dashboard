@@ -4,7 +4,7 @@ import { firstProjectsFile } from './projects-first';
 import { addProject, removeProject, setProject, withOpenedProject, type ProjectsWrite } from './projects-write';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/posix-paths-only';
 
 const FILE = `# Every project I work on.
 - name: new-crm   # the big one

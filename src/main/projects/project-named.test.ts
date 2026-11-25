@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { projectNamed } from './project-named';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/posix-paths-only';
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: ~/Workspace/new-crm\n- name: new-shop\n  path: /shop\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
 const named = (word: string, text: string | null = FILE) => projectNamed(text, 'projects.yaml', word, '/home/me');

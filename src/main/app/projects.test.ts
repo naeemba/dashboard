@@ -5,7 +5,7 @@ import { pickedFolder, projectFromPath, readRecentPaths, rememberRecentPath, rep
 import { temporaryFolder } from '../testing/temporary-folder';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/posix-paths-only';
 
 const exists = () => true;
 
