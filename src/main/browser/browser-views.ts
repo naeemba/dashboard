@@ -76,6 +76,9 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
   // took it while the window did not have it, to be given back when the window gets it again.
   let typing: number | null = null;
   let owed = false;
+  // The tab the person just asked for (focus), until it takes the keyboard or the screen says where
+  // it is drawn: the ask reaches main a frame before the placement does.
+  let asked: number | null = null;
   const watched = new WeakSet<BrowserWindow>();
 
   // To the local window only: a remote screen has a browser of its own.
@@ -104,7 +107,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
 
   function giveKeyboardBack(): void {
     owed = false;
-    const owner = keyboardOwner(typing, shown());
+    const owner = keyboardOwner(typing, shown(), asked);
     (owner === null ? main.window()?.webContents : views.get(owner)?.webContents)?.focus();
   }
 
@@ -165,7 +168,8 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     // Given back on the next turn: Chromium is still moving it when this is heard, and a focus asked
     // for now is undone.
     contents.on('focus', () => {
-      const taken = keyboardTaken(id === shown(), loading.has(id), main.window()?.isFocused() ?? false);
+      const taken = keyboardTaken({ onScreen: id === shown(), asked: id === asked, loadStarting: loading.has(id), windowFocused: main.window()?.isFocused() ?? false });
+      if (id === asked) asked = null;
       if (taken === 'kept') typing = id;
       else if (taken === 'given back') setImmediate(giveKeyboardBack);
       else owed = true;
@@ -248,12 +252,14 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     // The keyboard goes back to the window with the view, so it is never left in a page nobody sees.
     place(next) {
       placed = next;
+      asked = null;
       apply();
       if (next === null) main.window()?.webContents.focus();
     },
     // The person's own ask, so a load on its way no longer gives the keyboard back.
     focus(id) {
       loading.delete(id);
+      asked = id;
       views.get(id)?.webContents.focus();
     },
   };

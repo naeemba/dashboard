@@ -77,13 +77,15 @@ export function viewBounds(tab: BrowserTab | undefined, shown: number | null, pl
 // tab on screen, by a click on its page or the focus verb, so a tab that is not on screen never
 // keeps it: Chromium hands it one when a load the app started in it begins and commits, and when the
 // window is activated again and the tab had it last. Neither does the tab on screen while such a
-// load is on its way in. That goes back at once while the window has the keyboard, else when it
-// gets it again, as giving it back now would raise the window over the app the person is in.
+// load is on its way in. The tab the person just asked for counts as on screen: the ask reaches main
+// before the screen's word of where it is drawn. That goes back at once while the window has the
+// keyboard, else when it gets it again, as giving it back now would raise the window over the app the
+// person is in.
 export type KeyboardTaken = 'kept' | 'given back' | 'given back on return';
 
-export function keyboardTaken(onScreen: boolean, loadStarting: boolean, windowFocused: boolean): KeyboardTaken {
-  if (onScreen && !loadStarting) return 'kept';
-  return windowFocused ? 'given back' : 'given back on return';
+export function keyboardTaken(tab: { onScreen: boolean; asked: boolean; loadStarting: boolean; windowFocused: boolean }): KeyboardTaken {
+  if ((tab.onScreen || tab.asked) && !tab.loadStarting) return 'kept';
+  return tab.windowFocused ? 'given back' : 'given back on return';
 }
 
 // Whether a load that has just started is one the app started (an address, back, forward, reload),
@@ -93,9 +95,10 @@ export function appLoad(start: { isMainFrame: boolean; isSameDocument: boolean; 
   return start.isMainFrame && !start.isSameDocument && start.initiator == null;
 }
 
-// Where the keyboard goes back to: the tab the person was typing in, while it is still the one on
-// screen, else the window's own page (null).
-export function keyboardOwner(typing: number | null, shown: number | null): number | null {
+// Where the keyboard goes back to: the tab the person just asked for and is not drawn yet, else the
+// tab they were typing in while it is still the one on screen, else the window's own page (null).
+export function keyboardOwner(typing: number | null, shown: number | null, asked: number | null): number | null {
+  if (asked !== null) return asked;
   return typing !== null && typing === shown ? typing : null;
 }
 

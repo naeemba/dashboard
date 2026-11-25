@@ -104,25 +104,34 @@ describe('viewBounds', () => {
 
 describe('the keyboard a tab takes', () => {
   it('stays with a tab the person focused, and goes back from one a load handed it', () => {
-    expect(keyboardTaken(true, false, true)).toBe('kept');
-    expect(keyboardTaken(true, true, true)).toBe('given back');
+    expect(keyboardTaken({ onScreen: true, asked: false, loadStarting: false, windowFocused: true })).toBe('kept');
+    expect(keyboardTaken({ onScreen: true, asked: false, loadStarting: true, windowFocused: true })).toBe('given back');
   });
 
   it('never stays with a tab that is not on screen, which the person cannot reach', () => {
-    expect(keyboardTaken(false, false, true)).toBe('given back');
-    expect(keyboardTaken(false, true, true)).toBe('given back');
-    expect(keyboardTaken(false, false, false)).toBe('given back on return');
+    expect(keyboardTaken({ onScreen: false, asked: false, loadStarting: false, windowFocused: true })).toBe('given back');
+    expect(keyboardTaken({ onScreen: false, asked: false, loadStarting: true, windowFocused: true })).toBe('given back');
+    expect(keyboardTaken({ onScreen: false, asked: false, loadStarting: false, windowFocused: false })).toBe('given back on return');
+  });
+
+  it('stays with a tab the person asked for before the screen has drawn it', () => {
+    expect(keyboardTaken({ onScreen: false, asked: true, loadStarting: false, windowFocused: true })).toBe('kept');
   });
 
   it('waits for the window to have the keyboard before giving it back, so the window is never raised', () => {
-    expect(keyboardTaken(true, true, false)).toBe('given back on return');
+    expect(keyboardTaken({ onScreen: true, asked: false, loadStarting: true, windowFocused: false })).toBe('given back on return');
   });
 
   it('goes back to the tab the person typed in while it is on screen, else to the window\'s page', () => {
-    expect(keyboardOwner(2, 2)).toBe(2);
-    expect(keyboardOwner(2, 3)).toBeNull();
-    expect(keyboardOwner(2, null)).toBeNull();
-    expect(keyboardOwner(null, 2)).toBeNull();
+    expect(keyboardOwner(2, 2, null)).toBe(2);
+    expect(keyboardOwner(2, 3, null)).toBeNull();
+    expect(keyboardOwner(2, null, null)).toBeNull();
+    expect(keyboardOwner(null, 2, null)).toBeNull();
+  });
+
+  it('goes to the tab the person asked for while the screen has not drawn it yet', () => {
+    expect(keyboardOwner(2, 2, 3)).toBe(3);
+    expect(keyboardOwner(null, null, 3)).toBe(3);
   });
 });
 

@@ -54,5 +54,6 @@ turn, as Chromium undoes a focus asked for while it is still moving it, and only
 while the window has the keyboard, so the window is never raised over the app
 you are in. Only your own action gives a tab the keyboard: the browser mode, a
 click on the page on screen, or the focus verb from the screen, which lets go of
-the mark first.
+the mark first. The tab you asked for counts as on screen until the screen says
+where it is drawn, as your ask reaches main a frame before that does.
 
