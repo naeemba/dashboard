@@ -44,7 +44,7 @@ in it (`loadURL`, back, forward, reload) begins and again as it commits, even a
 tab nobody sees: before this rule, a worker's `browser open` or `go` took the
 caret out of your prompt and your next keys went to its hidden page.
 
-`browser-views.ts` marks a tab while a load it started is on its way in, and a
+`browser-views.ts` marks a tab while a load no page started is on its way in, and a
 tab that takes the keyboard then gives it back to where you had it, the window's
 page or the tab on screen (`keyboardTaken` and `keyboardOwner` in
 `browser-tabs.ts`). It is given back on the next turn, as Chromium undoes a
