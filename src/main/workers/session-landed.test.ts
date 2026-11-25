@@ -36,9 +36,18 @@ describe('pane landed', () => {
   });
 
   it('releases the worker in the worktree of a card moved to Done', async () => {
-    const { ask, closed } = await finished();
+    const { ask, closed, released } = await finished();
     expect(await ask(['landed', '--card', 'card-1'])).toEqual({ ok: true, output: 'released 2:1' });
     expect(closed).toEqual(['2:1']);
+    expect(released).toEqual(['2:1 card finished: released 2:1']);
+  });
+
+  // A review pane's own pr land, or a worker moving its own card: it is waiting on this very answer.
+  it('never releases the pane the command ran in', async () => {
+    const { answer, ask, closed } = await finished();
+    answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
+    expect(await ask(['landed', '--branch', 'card-one', '--from', '2:1'])).toEqual({ ok: true, output: '' });
+    expect(closed).toEqual([]);
   });
 
   it('answers nothing, and closes nothing, for a branch or card no worker is on', async () => {

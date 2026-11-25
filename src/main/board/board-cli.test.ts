@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { asksApp, finishedByMove, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList, withWholeId } from './board-cli';
+import { asksApp, finishedByMove, withLandedLine, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList, withWholeId } from './board-cli';
 import { USAGE } from './board-usage';
 import { allCards, emptyBoard, cardById, type Board } from '../../shared/board/board';
 
@@ -502,5 +502,13 @@ describe('finishedByMove', () => {
     expect(finishedByMove(['move', id, 'Done'], run(done.board, 'move', id, 'Done'))).toBeNull();
     expect(finishedByMove(['move', 'nobody', 'Done'], run(board, 'move', 'nobody', 'Done'))).toBeNull();
     expect(finishedByMove(['set', id, '--priority', 'high'], run(board, 'set', id, '--priority', 'high'))).toBeNull();
+  });
+});
+
+describe('withLandedLine', () => {
+  it('adds the line after the move, and nothing when there is none', () => {
+    const moved = { ok: true, output: 'moved abc to Done', board: null } as const;
+    expect(withLandedLine(moved, 'released 2:1')).toEqual({ ...moved, output: 'moved abc to Done\nreleased 2:1' });
+    expect(withLandedLine(moved, '')).toBe(moved);
   });
 });

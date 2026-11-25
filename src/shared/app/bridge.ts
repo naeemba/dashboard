@@ -216,7 +216,7 @@ export type DashboardBridge = {
   closePane(slot: number, index: number): Promise<void>;
   // A worker's hooks saying it is waiting on a permission or has finished its turn.
   onPaneMark(listener: (id: string, state: WorkerState) => void): void;
-  // A finished worker the app closed itself (auto-release.ts), or the kept shells pane.reap ended or
+  // A finished worker `pane landed` closed (session-requests.ts), or the kept shells pane.reap ended or
   // kept back: said as a passing notice main has already logged.
   onPaneReleased(listener: (text: string) => void): void;
   // The installed /pr-loop is behind its checkout's origin, or install.sh has not been rerun since a pull

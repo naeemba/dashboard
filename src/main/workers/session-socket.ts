@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import { outsidePaneRefusal, retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
+import { landedLine, landedWords, outsidePaneRefusal, retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
 import { appUserDataFolder, clearSocketPointer, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
@@ -146,11 +146,11 @@ async function runningAppReply(commandArguments: readonly string[], directory: s
 // no worker was released. Never starting the app, which their own work did not need, and nothing at
 // all outside a pane (outsidePaneRefusal).
 export async function askLanded(by: 'branch' | 'card', name: string, directory: string): Promise<string> {
-  if (process.env.DASHBOARD_SOCKET === undefined && outsidePaneRefusal({ kind: 'landed', by, name }) !== null) return '';
-  const words = ['landed', `--${by}`, name];
+  if (process.env.DASHBOARD_SOCKET === undefined && outsidePaneRefusal({ kind: 'landed', by, name, from: null }) !== null) return '';
+  const words = landedWords(by, name, process.env.DASHBOARD_PANE);
   const reply = await runningAppReply(words, directory, words, false)
     .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }));
-  return reply.ok ? reply.output : `no worker released: ${reply.output}`;
+  return landedLine(reply);
 }
 
 // The command's half: the request out as one line, with the connection left open for the answer, and

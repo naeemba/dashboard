@@ -408,11 +408,12 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // Main's own command put the work in: each of the asker's panes on that branch or card released, or
   // kept for what auto-release.ts says, a line each. One at a time, so two releases never race over one
-  // throwaway worktree. Nothing on it answers nothing.
-  async function landed(slot: number, projectPath: string, by: 'branch' | 'card', name: string): Promise<SessionReply> {
+  // throwaway worktree. Nothing on it answers nothing. The pane the command ran in is never one: its
+  // own land or move is waiting on this answer.
+  async function landed(slot: number, projectPath: string, by: 'branch' | 'card', name: string, from: string | null): Promise<SessionReply> {
     const lines: string[] = [];
     for (const id of openPaneIds()) {
-      if (worker(id, slot) !== null || !(await worksOn(id, projectPath, by, name))) continue;
+      if (id === from || worker(id, slot) !== null || !(await worksOn(id, projectPath, by, name))) continue;
       const verdict = releaseVerdict(look(id));
       const released = verdict.release ? await release.call({ id }) : { refused: verdict.why };
       if (isRefused(released)) {
@@ -420,7 +421,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         lines.push(`kept ${id}: ${released.refused}`);
         continue;
       }
-      ports.released(id, by === 'branch' ? `${name} merged` : `card ${name} finished`, released.output);
+      ports.released(id, by === 'branch' ? `${name} merged` : 'card finished', released.output);
       lines.push(`released ${id}`);
     }
     return answered(lines.join('\n'));
@@ -522,7 +523,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'release': return await onWorker(command.id, slot, () => release.call({ id: command.id }));
         case 'finish': return await onWorker(command.id, slot, () => finish(command.id));
         case 'report': return report(command.id, slot);
-        case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name);
+        case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name, command.from);
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);

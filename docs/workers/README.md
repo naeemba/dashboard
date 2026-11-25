@@ -190,7 +190,12 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   line before the verdict says `released 2:3`; with `--keep` nothing is asked.
 - Given a worker in a card's worktree, when main moves the card into Done or
   Cancelled with the board command or its MCP tool, then the pane is released
-  the same way and the move's output ends `released 2:3`.
+  the same way, the status bar says `Closed pane 2:3: card finished`, and the
+  move's output ends `released 2:3`.
+- Given a review pane's own `pr land`, or a worker moving its own card into
+  Done, when the app is asked `pane landed`, then the pane the command ran in
+  (`--from`, its `DASHBOARD_PANE`) is never released: it is waiting on that
+  answer, and main releases it with `pane finish` after its report.
 - Given a worker main finished that way, when it has the keyboard, is blocked
   on a question, is mid-turn, you typed into it since main last sent it work,
   or no main ever handed it work, then it stays open and the line says why:

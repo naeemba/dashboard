@@ -24,10 +24,11 @@ at <sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or w
 long as CI takes: run it in the background with the longest timeout allowed; one stopped at that
 limit has not failed, run it again. Once merged, the checkout on the base branch (the project's own,
 or the worktree that has it) is fast-forwarded when it has nothing uncommitted, so no git pull is
-needed after, and the worker pane on its branch is released: a line before the verdict says
-\`released <pane>\` or \`kept <pane>: <why>\` (one with the keyboard, waiting on a question, mid-turn,
-or typed into by you). --keep merges without releasing it. It runs in the project of the folder you are in, or with --project in that project's
-folder from ~/.dashboard/projects.yaml.`;
+needed after, and the worker pane on its branch is released, unless it is the pane the land runs
+in: a line before the verdict says \`released <pane>\` or \`kept <pane>: <why>\` (the keyboard, a
+question, mid-turn, typed into by you, or no main handed it work). --keep merges without releasing
+it. It runs in the project of the folder you are in, or with --project in that project's folder
+from ~/.dashboard/projects.yaml.`;
 
 export type PullRequestVerb = 'wait' | 'land';
 type Parsed = { ok: true; verb: PullRequestVerb; target: string; keep: boolean } | { ok: false; message: string };

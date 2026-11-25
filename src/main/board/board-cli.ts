@@ -154,6 +154,11 @@ export function finishedByMove(commandArguments: readonly string[], result: Comm
   return 'column' in at && isFinishedColumn(result.board, at.column) ? cardAt(result.board, at)?.id ?? null : null;
 }
 
+// The move's own answer with what \`pane landed\` printed after it, a line only when it printed one.
+export function withLandedLine(result: CommandResult, line: string): CommandResult {
+  return line === '' || !result.ok ? result : { ...result, output: `${result.output}\n${line}` };
+}
+
 // How much a card has to read, or nothing when it has no trail. `list` carries it beside the branch
 // and the pull request for the same reason the card front in the app does: without it, finding which
 // cards have anything to read means running `show` on every one of them.

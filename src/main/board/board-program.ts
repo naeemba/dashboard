@@ -1,7 +1,7 @@
 import { isManagerHomeDirectory, openBoard, peekBoard, projectRoot, putBackSeededDocs, readBoard, seededDocsNow, writeBoard } from './board-store';
 import { failureLine } from '../command/failure-line';
 import { projectNamedInFile } from '../projects/project-named';
-import { asksApp, BOARD_REQUEST, brokenFilesRefusal, finishedByMove, readsBoard, runBoardCommand, runBoardCommandOnLatest, withWholeId, type CommandResult } from './board-cli';
+import { asksApp, BOARD_REQUEST, brokenFilesRefusal, finishedByMove, readsBoard, runBoardCommand, runBoardCommandOnLatest, withLandedLine, withWholeId, type CommandResult } from './board-cli';
 import { syncBoard, type BoardSync } from './board-sync-git';
 import { notSyncedRefusal, notSyncedWarning } from './board-sync';
 import { rebaseBoardChange } from '../../shared/board/board-merge';
@@ -96,9 +96,7 @@ async function run(words: readonly string[]): Promise<number> {
 // says so after the move's own line (workers-decision-1).
 async function withLanded(project: string, commandArguments: readonly string[], result: CommandResult): Promise<CommandResult> {
   const card = finishedByMove(commandArguments, result);
-  if (card === null || !result.ok) return result;
-  const line = await askLanded('card', card, project);
-  return line === '' ? result : { ...result, output: `${result.output}\n${line}` };
+  return card === null ? result : withLandedLine(result, await askLanded('card', card, project));
 }
 
 // The command run on this folder's board and written here. Against the board as it stands a moment

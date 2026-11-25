@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hookArguments, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
+import { hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -102,9 +102,9 @@ describe('parseSessionCommand', () => {
   });
 
   it('reads landed as a branch or a card, and refuses anything else', () => {
-    expect(parseSessionCommand(['landed', '--branch', 'fix-it'])).toEqual({ ok: true, command: { kind: 'landed', by: 'branch', name: 'fix-it' } });
-    expect(parseSessionCommand(['landed', '--card', 'card-1'])).toEqual({ ok: true, command: { kind: 'landed', by: 'card', name: 'card-1' } });
-    for (const words of [['landed'], ['landed', '--branch'], ['landed', 'fix-it'], ['landed', '--card', 'card-1', 'more']]) {
+    expect(parseSessionCommand(['landed', '--branch', 'fix-it'])).toEqual({ ok: true, command: { kind: 'landed', by: 'branch', name: 'fix-it', from: null } });
+    expect(parseSessionCommand(['landed', '--card', 'card-1', '--from', '2:1'])).toEqual({ ok: true, command: { kind: 'landed', by: 'card', name: 'card-1', from: '2:1' } });
+    for (const words of [['landed'], ['landed', '--branch'], ['landed', 'fix-it'], ['landed', '--card', 'card-1', 'more'], ['landed', '--card', 'card-1', '--from', 'x']]) {
       expect(parseSessionCommand(words)).toMatchObject({ ok: false });
     }
   });
@@ -193,6 +193,19 @@ describe('outsidePaneRefusal', () => {
   });
 
   it('refuses landed, which no main outside a pane asks', () => {
-    expect(outsidePaneRefusal({ kind: 'landed', by: 'branch', name: 'fix-it' })).not.toBeNull();
+    expect(outsidePaneRefusal({ kind: 'landed', by: 'branch', name: 'fix-it', from: null })).not.toBeNull();
+  });
+});
+
+describe('landed from a command', () => {
+  it('names the pane it ran in, when there is one', () => {
+    expect(landedWords('branch', 'fix-it', '2:1')).toEqual(['landed', '--branch', 'fix-it', '--from', '2:1']);
+    expect(landedWords('card', 'card-1', undefined)).toEqual(['landed', '--card', 'card-1']);
+  });
+
+  it('prints the app\'s lines, or the first line of why no worker was released', () => {
+    expect(landedLine({ ok: true, output: 'released 2:1' })).toBe('released 2:1');
+    expect(landedLine({ ok: true, output: '' })).toBe('');
+    expect(landedLine({ ok: false, output: 'no such command: landed\n\npane — the Dashboard panes' })).toBe('no worker released: no such command: landed');
   });
 });

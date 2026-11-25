@@ -29,7 +29,7 @@ now.
 | claim | pane.claim, `actions/pane/claim.ts`, bound in `session-requests.ts`; opens through pane.open | CLI `pane claim` | no; `--project` opens through project.open |
 | open (add) | pane.open, `actions/pane/open.ts` | IPC `pane:add` (`workers/worker-channels.ts`), the drawer, pane.claim | no |
 | send | pane.send, `actions/pane/send.ts` | CLI `pane send` | no |
-| release | pane.release, `actions/pane/release.ts`, bound in `session-requests.ts`; closes through pane.close | CLI `pane release`, the finished-worker sweep (`auto-release.ts`) | the throwaway's removal is worktree.remove's row |
+| release | pane.release, `actions/pane/release.ts`, bound in `session-requests.ts`; closes through pane.close | CLI `pane release`, `pane finish` and `pane landed` (`session-requests.ts`) | the throwaway's removal is worktree.remove's row |
 | close | pane.close, `actions/pane/close.ts` | IPC `pane:close`, pane.release | no |
 | agent exited | `releaseAgentPane`, `main.ts` | the shell's exit | yes, and stays an event, not a request |
 | restart a shell | pane.restart, `actions/pane/restart.ts` | IPC `pty:restart` (Enter on an exited pane), pane.dispatch's shell started over | no |
