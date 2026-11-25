@@ -29,3 +29,8 @@ One line per merged change: date and why.
 - 2026-11-25 — the address bar and `browser open` load a `data:` address, because a worker checking
   how `browser snapshot` lists file inputs was refused one and skipped the live check; `file:` stays
   refused, as a tab never shows a file on this disk
+- 2026-11-25 — A load in an agent's tab gives the keyboard back to where you were typing, because
+  a worker's `browser open` or `go` took the caret out of main's prompt; and an agent's tab is drawn
+  one pixel into the window's corner, because a hidden tab reported `hidden`, painted nothing and
+  an agent measuring performance got its first contentful paint only from a screenshot
+

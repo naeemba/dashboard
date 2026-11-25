@@ -148,6 +148,15 @@ it. The protocol is each tab's own `webContents.debugger`; the app never opens a
 remote debugging port, which would hand its window and terminals to anything on
 the machine (browser-decision-6).
 
+An agent's work never moves your keyboard: you keep typing in main's prompt, a
+pane or the page on screen while it opens, loads, clicks, types and reads
+(browser-rule-4). While a pane holds a tab, its page runs as a foreground
+tab at its own size: `document.visibilityState` is `visible`, it paints, and its
+frames and timers run at full rate, so its paint and timing metrics are real.
+All of it is off the window but one pixel in the top-left corner
+(browser-decision-9); a tab of yours that is not on screen is hidden and
+throttled, as a background tab is.
+
 ## Files
 
 Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser/`,
@@ -157,8 +166,8 @@ Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser
 - `browser-views.ts`: the one module holding a WebContentsView, a tab each, and
   the ports the actions reach them through; a page's title, address and new
   windows; the keys taken off the page
-- `browser-tabs.ts`: the tab list's rules, the view on screen, the partition and
-  the permissions a page gets
+- `browser-tabs.ts`: the tab list's rules, where each view is drawn, where the
+  keyboard goes back to, the partition and the permissions a page gets
 - `address.ts`: what a tab may show, and what typing an address means
 - `browser-ports.ts`, `tabs.ts`, `navigate.ts`, `view.ts`: the actions, each
   with its test against `browser-fixture.ts`
@@ -208,6 +217,11 @@ The keys are in `src/shared/keys/browser-actions.ts` and
   name goes, and the worker's next `browser read` on it says you took it back.
 - Given a worker holds two tabs, one it resized to 390x844, when its pane is
   released, then both stay open, are yours, and fill the page's box.
+- Given you are typing in main's prompt, when a worker runs `browser open`,
+  `go`, `back` or `reload`, then what you type still lands in the prompt.
+- Given a worker's tab not on screen logs `document.visibilityState` and its
+  paint entries, then it reads `visible` and has its first contentful paint
+  without a screenshot.
 - Given `browser read 3 --max-tokens 500` on a long article, then the first line
   says ~500 of the whole estimate and that it was cut.
 

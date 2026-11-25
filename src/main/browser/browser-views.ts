@@ -5,7 +5,7 @@ import type { Settings } from '../../shared/settings/settings';
 import type { BrowserPorts } from '../actions/browser/browser-ports';
 import type { BrowserPagePorts } from './browser-page';
 import { isBrowsable } from './address';
-import { mayAsk, partitionOf, shownTab, withTabChange } from './browser-tabs';
+import { appLoad, keyboardOwner, keyboardTaken, mayAsk, partitionOf, shownTab, viewBounds, withTabChange } from './browser-tabs';
 import { pageLog, requestFailure, type PageLog } from './page-log';
 
 // The one module that holds a WebContentsView, a tab each. The browser actions reach the views only
@@ -67,20 +67,57 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
   let adopting: { contents: WebContents; opener: number } | null = null;
   // Each partition's permission rule is set once, by its first tab.
   const ruled = new Set<string>();
+  // The tabs a load no page started (the app's: an address, back, forward, reload) is on its way in,
+  // which take the keyboard uninvited (keyboardTaken); each is let go once its page commits.
+  const loading = new Set<number>();
+  // Where each view was last put, so a title ticking every second touches no view.
+  const drawn = new Map<number, string>();
+  // The tab the person last put the keyboard in, null for the window's own page, and whether a tab
+  // took it while the window did not have it, to be given back when the window gets it again.
+  let typing: number | null = null;
+  let owed = false;
+  // The tab the person just asked for (focus), until it takes the keyboard or the screen says where
+  // it is drawn: the ask reaches main a frame before the placement does.
+  let asked: number | null = null;
+  const watched = new WeakSet<BrowserWindow>();
 
   // To the local window only: a remote screen has a browser of its own.
   function send(projectPath: string): void {
     main.window()?.webContents.send('browser:change', projectPath, browsers.get(projectPath) ?? NO_TABS);
   }
 
-  // Exactly one view drawn, the placed project's tab on screen, and every other one hidden.
+  // The placed project's tab on screen, every agent's tab drawn off the window but a pixel, and every
+  // other one hidden (viewBounds).
+  const shown = (): number | null => shownTab(placed?.projectPath ?? null, browsers);
+
   function apply(): void {
-    const shown = shownTab(placed?.projectPath ?? null, browsers);
+    const onScreen = shown();
     if (placed !== null) lastBounds = placed.bounds;
-    for (const [id, view] of views) {
-      view.setVisible(id === shown);
-      if (id === shown && placed !== null) view.setBounds(placed.bounds);
+    for (const tab of [...browsers.values()].flatMap((state) => state.tabs)) {
+      const view = views.get(tab.id);
+      if (view === undefined) continue;
+      const bounds = viewBounds(tab, onScreen, placed?.bounds ?? null, view.getBounds());
+      const place = JSON.stringify(bounds);
+      if (drawn.get(tab.id) === place) continue;
+      drawn.set(tab.id, place);
+      view.setVisible(bounds !== null);
+      if (bounds !== null) view.setBounds(bounds);
     }
+  }
+
+  function giveKeyboardBack(): void {
+    owed = false;
+    const owner = keyboardOwner(typing, shown(), asked);
+    (owner === null ? main.window()?.webContents : views.get(owner)?.webContents)?.focus();
+  }
+
+  // Where the person puts the keyboard in the window's own page, and the window getting it back.
+  function watchWindow(): void {
+    const window = main.window();
+    if (window === undefined || watched.has(window)) return;
+    watched.add(window);
+    window.webContents.on('focus', () => { typing = null; });
+    window.on('focus', () => { if (owed) setImmediate(giveKeyboardBack); });
   }
 
   // What the page did by itself, a link followed or a title set: written down, not asked for, so it
@@ -120,7 +157,23 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     // `views` already.
     contents.once('destroyed', () => { if (views.has(id)) page.closed(projectPath, id, opener); });
     contents.on('page-title-updated', (_event, title) => record(projectPath, id, { title }));
-    contents.on('did-navigate', (_event, url) => record(projectPath, id, { url }));
+    contents.on('did-navigate', (_event, url) => {
+      record(projectPath, id, { url });
+      // After the focus the commit hands out, which comes before this.
+      setImmediate(() => loading.delete(id));
+    });
+    contents.on('did-stop-loading', () => loading.delete(id));
+    // Chromium's own word that a load no frame started is under way, heard before the focus it hands out.
+    contents.on('did-start-navigation', (start) => { if (appLoad(start)) loading.add(id); });
+    // Given back on the next turn: Chromium is still moving it when this is heard, and a focus asked
+    // for now is undone.
+    contents.on('focus', () => {
+      const taken = keyboardTaken({ onScreen: id === shown(), asked: id === asked, loadStarting: loading.has(id), windowFocused: main.window()?.isFocused() ?? false });
+      if (id === asked) asked = null;
+      if (taken === 'kept') typing = id;
+      else if (taken === 'given back') setImmediate(giveKeyboardBack);
+      else owed = true;
+    });
     contents.on('did-navigate-in-page', (_event, url, isMainFrame) => { if (isMainFrame) record(projectPath, id, { url }); });
     contents.on('console-message', ({ level, message, sourceId, lineNumber }) => logs.get(id)?.console(level, message, sourceId, lineNumber));
     // A web page has the keyboard to itself. The keys the window's lookup acts on in browser mode are
@@ -171,17 +224,20 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
         : { webContents: popup.contents });
       logs.set(id, pageLog());
       wire(projectPath, id, view.webContents, popup?.opener ?? null);
+      watchWindow();
       view.setVisible(false);
       view.setBounds(lastBounds);
       main.window()?.contentView.addChildView(view);
       views.set(id, view);
-      if (popup === null) view.webContents.loadURL(url).catch(() => undefined);
+      if (popup === null) ports.load(id, url);
       return id;
     },
     dropView(id) {
       const view = views.get(id);
       views.delete(id);
       logs.delete(id);
+      loading.delete(id);
+      drawn.delete(id);
       if (view === undefined) return;
       main.window()?.contentView.removeChildView(view);
       if (!view.webContents.isDestroyed()) view.webContents.close();
@@ -196,10 +252,16 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     // The keyboard goes back to the window with the view, so it is never left in a page nobody sees.
     place(next) {
       placed = next;
+      asked = null;
       apply();
       if (next === null) main.window()?.webContents.focus();
     },
-    focus: (id) => { views.get(id)?.webContents.focus(); },
+    // The person's own ask, so a load on its way no longer gives the keyboard back.
+    focus(id) {
+      loading.delete(id);
+      asked = id;
+      views.get(id)?.webContents.focus();
+    },
   };
 
   // The tab's protocol, attached on its first use and kept for the tab's life.

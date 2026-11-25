@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NO_TABS, type BrowserState } from '../../shared/browser/browser';
-import { activeTab, mayAsk, namedTab, partitionOf, shownTab, steppedTab, wholeNumber, withoutTab, withTab, withTabChange } from './browser-tabs';
+import { activeTab, appLoad, keyboardOwner, keyboardTaken, mayAsk, namedTab, partitionOf, shownTab, steppedTab, viewBounds, wholeNumber, withoutTab, withTab, withTabChange } from './browser-tabs';
 
 const tab = (id: number) => ({ id, url: 'about:blank', title: '', holder: 'user' });
 const three: BrowserState = { tabs: [tab(1), tab(2), tab(3)], active: 2 };
@@ -80,6 +80,61 @@ describe('shownTab', () => {
   });
 });
 
+describe('viewBounds', () => {
+  const placed = { x: 300, y: 80, width: 900, height: 600 };
+  const size = { x: 0, y: 0, width: 1280, height: 800 };
+
+  it('draws the tab on screen where the screen put it, whoever holds it', () => {
+    expect(viewBounds(tab(2), 2, placed, size)).toEqual(placed);
+    expect(viewBounds({ ...tab(2), holder: '3:1' }, 2, placed, size)).toEqual(placed);
+  });
+
+  it('draws an agent\'s tab at its size with only its last pixel in the window\'s corner', () => {
+    expect(viewBounds({ ...tab(4), holder: '3:1' }, 2, placed, size)).toEqual({ x: -1279, y: -799, width: 1280, height: 800 });
+    expect(viewBounds({ ...tab(4), holder: '3:1' }, null, null, size)).toEqual({ x: -1279, y: -799, width: 1280, height: 800 });
+  });
+
+  it('hides the person\'s tabs off screen, and a view whose tab is not kept yet', () => {
+    expect(viewBounds(tab(1), 2, placed, size)).toBeNull();
+    expect(viewBounds(tab(2), null, null, size)).toBeNull();
+    expect(viewBounds(tab(2), 2, null, size)).toBeNull();
+    expect(viewBounds(undefined, 2, placed, size)).toBeNull();
+  });
+});
+
+describe('the keyboard a tab takes', () => {
+  it('stays with a tab the person focused, and goes back from one a load handed it', () => {
+    expect(keyboardTaken({ onScreen: true, asked: false, loadStarting: false, windowFocused: true })).toBe('kept');
+    expect(keyboardTaken({ onScreen: true, asked: false, loadStarting: true, windowFocused: true })).toBe('given back');
+  });
+
+  it('never stays with a tab that is not on screen, which the person cannot reach', () => {
+    expect(keyboardTaken({ onScreen: false, asked: false, loadStarting: false, windowFocused: true })).toBe('given back');
+    expect(keyboardTaken({ onScreen: false, asked: false, loadStarting: true, windowFocused: true })).toBe('given back');
+    expect(keyboardTaken({ onScreen: false, asked: false, loadStarting: false, windowFocused: false })).toBe('given back on return');
+  });
+
+  it('stays with a tab the person asked for before the screen has drawn it', () => {
+    expect(keyboardTaken({ onScreen: false, asked: true, loadStarting: false, windowFocused: true })).toBe('kept');
+  });
+
+  it('waits for the window to have the keyboard before giving it back, so the window is never raised', () => {
+    expect(keyboardTaken({ onScreen: true, asked: false, loadStarting: true, windowFocused: false })).toBe('given back on return');
+  });
+
+  it('goes back to the tab the person typed in while it is on screen, else to the window\'s page', () => {
+    expect(keyboardOwner(2, 2, null)).toBe(2);
+    expect(keyboardOwner(2, 3, null)).toBeNull();
+    expect(keyboardOwner(2, null, null)).toBeNull();
+    expect(keyboardOwner(null, 2, null)).toBeNull();
+  });
+
+  it('goes to the tab the person asked for while the screen has not drawn it yet', () => {
+    expect(keyboardOwner(2, 2, 3)).toBe(3);
+    expect(keyboardOwner(null, null, 3)).toBe(3);
+  });
+});
+
 describe('partitionOf', () => {
   it('keeps each folder\'s logins on disk, apart from every other folder\'s', () => {
     expect(partitionOf('/work/api')).toMatch(/^persist:browser-[0-9a-f]{16}$/);
@@ -94,5 +149,21 @@ describe('mayAsk', () => {
     for (const permission of ['media', 'geolocation', 'notifications', 'fullscreen', 'display-capture']) {
       expect(mayAsk(permission)).toBe(false);
     }
+  });
+});
+
+describe('a load the app started', () => {
+  const start = { isMainFrame: true, isSameDocument: false };
+
+  it('is a whole page in the main frame that no frame started, whether the initiator is left out or null', () => {
+    expect(appLoad(start)).toBe(true);
+    expect(appLoad({ ...start, initiator: undefined })).toBe(true);
+    expect(appLoad({ ...start, initiator: null })).toBe(true);
+  });
+
+  it('is not a page\'s own link, a frame inside it, or a move within the page', () => {
+    expect(appLoad({ ...start, initiator: {} })).toBe(false);
+    expect(appLoad({ ...start, isMainFrame: false })).toBe(false);
+    expect(appLoad({ ...start, isSameDocument: true })).toBe(false);
   });
 });
