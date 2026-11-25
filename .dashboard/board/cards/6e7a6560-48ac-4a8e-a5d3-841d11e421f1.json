@@ -1,0 +1,11 @@
+{
+  "id": "6e7a6560-48ac-4a8e-a5d3-841d11e421f1",
+  "title": "checks: posixPathsOnly shared from src/main/testing/; check.log opens with the summary",
+  "notes": "Retro. (1) #370's review loop added a test on POSIX paths that passed on Linux and failed Windows CI; the fix copied the local posixPathsOnly = it.skipIf(win32) from src/main/nvim/file-open.test.ts. Move it to src/main/testing/ beside temporaryFolder() and use it in both, and name it in the docs rule that covers Windows-portable tests (see card 43ceddd8 on Windows-portable tests; do not take on that whole card). (2) A worker sent pnpm check stdout to /dev/null and read check.log with head: it showed vitest preamble (a Vite configLoader warning), not the summary, costing 3 calls. scripts/check-step.mjs should write the summary block at the top of check.log too. Silence the configLoader warning if it is a one-line fix.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-25T11:37:10.046Z",
+  "updatedAt": "2026-11-25T11:37:10.046Z",
+  "column": "Backlog",
+  "order": 69
+}
