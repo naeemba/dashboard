@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NO_TABS, type BrowserState } from '../../shared/browser/browser';
-import { activeTab, mayAsk, namedTab, partitionOf, shownTab, steppedTab, wholeNumber, withoutTab, withTab, withTabChange } from './browser-tabs';
+import { activeTab, keyboardOwner, keyboardTaken, mayAsk, namedTab, partitionOf, shownTab, steppedTab, viewBounds, wholeNumber, withoutTab, withTab, withTabChange } from './browser-tabs';
 
 const tab = (id: number) => ({ id, url: 'about:blank', title: '', holder: 'user' });
 const three: BrowserState = { tabs: [tab(1), tab(2), tab(3)], active: 2 };
@@ -77,6 +77,45 @@ describe('shownTab', () => {
   it('is none with nothing placed, or a project with no tabs', () => {
     expect(shownTab(null, browsers)).toBeNull();
     expect(shownTab('/work/web', browsers)).toBeNull();
+  });
+});
+
+describe('viewBounds', () => {
+  const placed = { x: 300, y: 80, width: 900, height: 600 };
+  const size = { x: 0, y: 0, width: 1280, height: 800 };
+
+  it('draws the tab on screen where the screen put it, whoever holds it', () => {
+    expect(viewBounds(tab(2), 2, placed, size)).toEqual(placed);
+    expect(viewBounds({ ...tab(2), holder: '3:1' }, 2, placed, size)).toEqual(placed);
+  });
+
+  it('draws an agent\'s tab at its size with only its last pixel in the window\'s corner', () => {
+    expect(viewBounds({ ...tab(4), holder: '3:1' }, 2, placed, size)).toEqual({ x: -1279, y: -799, width: 1280, height: 800 });
+    expect(viewBounds({ ...tab(4), holder: '3:1' }, null, null, size)).toEqual({ x: -1279, y: -799, width: 1280, height: 800 });
+  });
+
+  it('hides the person\'s tabs off screen, and a view whose tab is not kept yet', () => {
+    expect(viewBounds(tab(1), 2, placed, size)).toBeNull();
+    expect(viewBounds(tab(2), null, null, size)).toBeNull();
+    expect(viewBounds(undefined, 2, placed, size)).toBeNull();
+  });
+});
+
+describe('the keyboard a tab takes', () => {
+  it('stays with a tab the person focused, and goes back from one a load handed it', () => {
+    expect(keyboardTaken(false, true)).toBe('kept');
+    expect(keyboardTaken(true, true)).toBe('given back');
+  });
+
+  it('waits for the window to have the keyboard before giving it back, so the window is never raised', () => {
+    expect(keyboardTaken(true, false)).toBe('given back on return');
+  });
+
+  it('goes back to the tab the person typed in while it is on screen, else to the window\'s page', () => {
+    expect(keyboardOwner(2, 2)).toBe(2);
+    expect(keyboardOwner(2, 3)).toBeNull();
+    expect(keyboardOwner(2, null)).toBeNull();
+    expect(keyboardOwner(null, 2)).toBeNull();
   });
 });
 

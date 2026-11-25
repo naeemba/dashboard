@@ -35,3 +35,21 @@ signed in to in another tab, or clicks in the tab you took back from it a minute
 ago. The command's reads go through `browser-page.ts` only, never a door's own
 code. A pane let go of is `browser.release` of all its tabs, from `dropPane`,
 the pane's shell exiting and a new agent starting in the pane.
+
+## browser-rule-4: An agent's action never moves the keyboard
+
+You type in main's prompt while a worker browses, and every key lands there.
+Chromium hands a tab in the window the keyboard whenever a load the app started
+in it (`loadURL`, back, forward, reload) begins and again as it commits, even a
+tab nobody sees: before this rule, a worker's `browser open` or `go` took the
+caret out of your prompt and your next keys went to its hidden page.
+
+`browser-views.ts` marks a tab while a load it started is on its way in, and a
+tab that takes the keyboard then gives it back to where you had it, the window's
+page or the tab on screen (`keyboardTaken` and `keyboardOwner` in
+`browser-tabs.ts`). It is given back on the next turn, as Chromium undoes a
+focus asked for while it is still moving it, and only while the window has the
+keyboard, so the window is never raised over the app you are in. Only your own
+action gives a tab the keyboard: the browser mode, a click on the page on
+screen, or the focus verb from the screen, which lets go of the mark first.
+

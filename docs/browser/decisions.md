@@ -92,3 +92,25 @@ description names them. A sign-in page is answered by asking the person to sign 
 browser, since its sign-ins are kept per project, not by switching to Chrome. Claude in Chrome is
 not disabled: a page that needs the person's own Chrome profile or an extension, or a person who
 asks for Chrome, still goes there. (2026-11-24)
+
+## browser-decision-9: An agent's tab is drawn one pixel into the window
+
+A hidden view (`setVisible(false)`) is a background tab: `visibilityState`
+`hidden`, no paint, no animation frames, timers at about one a second. An agent
+measuring performance got its first contentful paint at 31.6 s, when its
+screenshot forced one. So while a pane holds a tab, its view is drawn at its own
+size with only its bottom-right pixel in the window's top-left corner
+(`viewBounds`). Measured in a dev build: `visible`, first contentful paint at
+52-76 ms, 60 frames a second, timers at full rate.
+
+What was measured and turned down: `setBackgroundThrottling(false)` makes the
+page `visible` with full-rate timers, but paints nothing and runs no frames. A
+view drawn wholly off the window, or under a covering view, is `hidden`: the
+window's own page is not in `contentView`, so every child draws over it and none
+can sit under it. `Page.startScreencast` on a hidden view changes nothing;
+`incrementCapturerCount` is gone from Electron 45; a rounded corner does not clip
+the pixel. The cost is that one pixel of the page, its bottom-right, shows in
+the corner while an agent holds the tab. Only agent-held tabs pay it, and a page
+that does not change draws no frames, so many tabs cost no more than their pages
+do.
+

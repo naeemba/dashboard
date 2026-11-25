@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Refused } from '../../shared/app/bridge';
-import type { BrowserState, BrowserTab } from '../../shared/browser/browser';
+import type { BrowserBounds, BrowserState, BrowserTab } from '../../shared/browser/browser';
 
 // The tab list's rules, apart from the views that draw it, so each can be tested without Electron.
 
@@ -60,6 +60,36 @@ export function activeTab(state: BrowserState): number | Refused {
 // The one view on the window, if any: the tab on screen in the project placed there.
 export function shownTab(placedProject: string | null, browsers: ReadonlyMap<string, BrowserState>): number | null {
   return placedProject === null ? null : browsers.get(placedProject)?.active ?? null;
+}
+
+// Where a tab's view is drawn, null for hidden. The tab on screen fills the box the screen measured.
+// A tab an agent holds is drawn too, at its own size, all of it off the window but its bottom-right
+// pixel in the window's top-left corner: a hidden page is throttled and paints nothing, and one
+// drawn runs as a foreground tab does (browser-decision-9). Every other tab is hidden.
+export function viewBounds(tab: BrowserTab | undefined, shown: number | null, placed: BrowserBounds | null, size: BrowserBounds): BrowserBounds | null {
+  if (tab === undefined) return null;
+  if (tab.id === shown && placed !== null) return placed;
+  if (tab.holder === 'user') return null;
+  return { x: 1 - size.width, y: 1 - size.height, width: size.width, height: size.height };
+}
+
+// What becomes of the keyboard a tab just took (browser-rule-4). A load the app started in it (an
+// address, back, forward, reload) hands a tab in the window the keyboard as it starts and again as
+// it commits, wherever the person was typing; that goes back at once while the window has the
+// keyboard, else when it gets it again, as giving it back now would raise the window over the app
+// the person is in. Anything else that focuses a tab, a click on the page on screen or the focus
+// verb, is the person's own, and the tab keeps it.
+export type KeyboardTaken = 'kept' | 'given back' | 'given back on return';
+
+export function keyboardTaken(loadStarting: boolean, windowFocused: boolean): KeyboardTaken {
+  if (!loadStarting) return 'kept';
+  return windowFocused ? 'given back' : 'given back on return';
+}
+
+// Where the keyboard goes back to: the tab the person was typing in, while it is still the one on
+// screen, else the window's own page (null).
+export function keyboardOwner(typing: number | null, shown: number | null): number | null {
+  return typing !== null && typing === shown ? typing : null;
 }
 
 // Each project's cookies, logins and storage, kept on disk under a name of its own: a sign-in in one
