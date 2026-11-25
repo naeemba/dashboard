@@ -5,11 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { unacceptedLine, versionRefusal } from './app-handshake';
 import { askApp, listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { posixModesOnly } from '../testing/windows-skips';
 
 describe('sessionSocketPath', () => {
   // The folder is the lock: only you can enter it, so only you can reach the socket inside.
-  // Skipped on Windows, which has no POSIX file modes to read back.
-  const posixModesOnly = it.skipIf(process.platform === 'win32');
   posixModesOnly('puts the socket in a fresh folder only this user can enter', () => {
     const temporary = temporaryFolder('socket-test-');
     const socket = sessionSocketPath('linux', temporary, 42);

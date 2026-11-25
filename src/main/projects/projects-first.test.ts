@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { firstProjectsFile } from './projects-first';
 import { readProjects } from './projects-file';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 describe('firstProjectsFile', () => {
   posixPathsOnly('writes a file readProjects reads back, open and recent folders once each, ~ for home', () => {

@@ -104,18 +104,18 @@ it; CI runs both anyway.
 
 ## workflow-rule-6: A test that touches paths or processes passes on Windows
 
-Windows has been a target since #191, and `windows-latest` runs the tests on every pull
-request. #288 and #289 built expected paths with `/` and reached that job only after their review
-loop had finished, so the fix was another round. A test that names a path builds it with
-`path.join`; one that needs POSIX paths, file modes, unix sockets or signals skips on `win32` with a
-named `it.skipIf` saying why: `posixPathsOnly` from `src/main/testing/posix-paths-only.ts` for POSIX
-path literals, one import rather than a copy per file (#370's review loop added such a test without
-it, and it failed Windows CI), and a named one such as `posixModesOnly` in
-`src/main/app/log-store.test.ts` for the rest. CI's Windows job holds it, after review. No lint or
-test holds it earlier: 24 of the 40 test files with a `/tmp/`-style literal have no `win32` guard
-and pass on Windows, since they use the path as a string and never touch the disk, so a check
-on the literal would flag mostly correct tests. Card 43ceddd8 (make the POSIX path-literal tests
-portable instead of skipping them) is the way to a check that holds.
+Windows has been a target since #191, and `windows-latest` runs the tests on every pull request.
+#288 and #289 built expected paths with `/` and reached that job only after their review loop had
+finished, so the fix was another round. A test that names a path builds it with `path.join`; one
+that needs POSIX paths, file modes, unix sockets or signals skips on `win32` with a named
+`it.skipIf` saying why, imported from `src/main/testing/windows-skips.ts` rather than copied per
+file: `posixPathsOnly` for POSIX path literals (#370's review loop added such a test without it, and
+it failed Windows CI), `posixModesOnly` for file modes, and a new export there for the rest. CI's
+Windows job holds it, after review. No lint or test holds it earlier: 24 of the 40 test files with a
+`/tmp/`-style literal have no `win32` guard and pass on Windows, since they use the path as a string
+and never touch the disk, so a check on the literal would flag mostly correct tests. Card 43ceddd8
+(make the POSIX path-literal tests portable instead of skipping them) is the way to a check that
+holds.
 
 ## workflow-rule-7: A pull request leaves the board's files alone
 

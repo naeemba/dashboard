@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readProjects } from './projects-file';
 import { firstProjectsFile } from './projects-first';
 import { addProject, removeProject, setProject, withOpenedProject, type ProjectsWrite } from './projects-write';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const FILE = `# Every project I work on.
 - name: new-crm   # the big one

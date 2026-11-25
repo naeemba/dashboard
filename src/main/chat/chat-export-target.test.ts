@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { exportTarget } from './chat-export-target';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const none = () => false;
 

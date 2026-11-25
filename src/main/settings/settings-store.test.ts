@@ -4,9 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { adoptedSettings, readSettings, settingsFilePath, tidySettingsFile, writeSettings, writeBudget } from './settings-store';
 import { bindKey, defaultSettings } from '../../shared/settings/settings';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-// Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
-const posixModesOnly = it.skipIf(process.platform === 'win32');
+import { posixModesOnly } from '../testing/windows-skips';
 
 function file(): string {
   return join(temporaryFolder('dashboard-settings-'), 'settings.json');

@@ -4,8 +4,7 @@ import { projectActions, type ProjectActionsMain } from '../actions/project/proj
 import { MAIN_START_MS } from '../actions/project/open';
 import { PROJECT_REQUEST } from './project-cli';
 import { projectRequests } from './project-requests';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 // The command's door and the project actions behind it, on main's ports faked.
 const idle = (index: number): ClosingPane => ({

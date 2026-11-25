@@ -3,8 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { pickedFolder, projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, withRecentPath } from './projects';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const exists = () => true;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bumpsVersion, findProjects, landsPullRequest, readProjects, type Project } from './projects-file';
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const FILE = `- name: new-crm
   aka: [crm]

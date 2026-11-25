@@ -3,7 +3,7 @@
 // one, a coverage line for the code changed against main (scripts/coverage.mjs), and the log's path.
 /* global process, console */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { CHECKS, capped, reasonLines, summaryLine } from './check.mjs';
@@ -29,7 +29,10 @@ let failed = false;
 for (const check of CHECKS) {
   // `2>&1` reads the same in sh and cmd, so the log keeps a check's errors beside its other output.
   const { status, stdout } = spawnSync(`pnpm ${check} 2>&1`, { shell: true, encoding: 'utf8', maxBuffer: 1 << 28, env: check === 'test' ? testEnvironment : process.env });
-  sections.push(`\n=== pnpm ${check} ===\n${stdout}`);
+  const section = `\n=== pnpm ${check} ===\n${stdout}`;
+  // Written as it finishes, so a run cut short keeps the checks it got through.
+  appendFileSync(logPath, section);
+  sections.push(section);
   lines.push(summaryLine(check, stdout, status === 0));
   if (status !== 0) lines.push(...capped(reasonLines(check, stdout, process.cwd())));
   failed ||= status !== 0;

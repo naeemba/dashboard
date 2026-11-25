@@ -3,8 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fileCandidates, firstFile, wholePath } from './file-open';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 describe('fileCandidates', () => {
   posixPathsOnly('tries the live folder, then the starting folder, then the project, once each', () => {

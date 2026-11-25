@@ -3,8 +3,7 @@ import { projectOfFolder, sessionRequests, type WorkerStart } from './session-re
 import { project } from './session-requests-fixture';
 import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 // A stop is told only once it has lasted the grace period; stop-notices.test.ts holds what it waits for.
 beforeEach(() => { vi.useFakeTimers(); });

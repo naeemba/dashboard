@@ -3,8 +3,7 @@ import {
   blockingChanges, branchNameFor, changedFiles, oneAtATime, workPrompt, worktreePathFor,
 } from './ship';
 import { BUMP_VERSION, KEEP_VERSION } from '../skills/work-card-skill';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
 

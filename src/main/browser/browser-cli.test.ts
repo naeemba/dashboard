@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseBrowserCommand, wholeFiles } from './browser-cli';
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const command = (...words: string[]) => {
   const parsed = parseBrowserCommand(words);

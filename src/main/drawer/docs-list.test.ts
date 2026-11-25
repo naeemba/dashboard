@@ -3,8 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-import { posixPathsOnly } from '../testing/posix-paths-only';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {
