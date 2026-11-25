@@ -1,0 +1,11 @@
+{
+  "id": "ed7f95a1-2c2e-41f9-be3e-3926e61c34c3",
+  "title": "Agent tab's first load runs as a background tab",
+  "notes": "Found testing v2.58.0 (#377). A worker ran browser open on a data: fixture page and measured it 1.2 s later: visibilityState visible, but first-contentful-paint null and rAF 2 per second; timers ran at 100. After a browser go on the same tab it measured fcp 76 ms and rAF 145. So a new tab loads its page before its view is moved into the one-pixel held placement (viewBounds, browser-decision-9): makeView in src/main/browser/browser-views.ts calls loadURL while the view is setVisible(false) at lastBounds, and the open action's keep() places it only afterwards. An agent that opens a page and measures it straight away, the new-crm case, still gets no paint metrics. Fix: a tab opened for a pane is placed in its held spot (visible, one pixel in the window) before its first load starts, without taking the keyboard (browser-rule-4). Test the placement decision, and in a dev build check the fixture: fcp recorded and rAF about 60/s on the first load. The fixture is /tmp/dashboard-test/page.html (url.txt holds its data: URL, measure.js the eval). Never restart the running app.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-25T15:11:27.052Z",
+  "updatedAt": "2026-11-25T15:11:27.052Z",
+  "column": "Backlog",
+  "order": 69
+}
