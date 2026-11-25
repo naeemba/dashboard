@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T11:37:03.572Z",
-  "updatedAt": "2026-11-25T11:43:58.739Z",
+  "updatedAt": "2026-11-25T12:16:18.162Z",
   "branch": "work-card-report-to-main-once-the-pr-opens",
   "pullRequest": 374,
   "comments": [
     {
       "at": "2026-11-25T11:43:58.710Z",
       "body": "Pull request #374 opened: work-card: report to main once the PR opens; a coverage-line file gets a test or a reason https://github.com/naeemba/dashboard/pull/374"
+    },
+    {
+      "at": "2026-11-25T12:16:18.162Z",
+      "body": "Review loop: converged, ready to merge. 3 rounds, 7 findings addressed, 0 rejected, nothing open; CI passed on fdb7d8c9. Round 1 widened the design: a fifth prompt word, review-loop/no-review-loop from settings review.autoLoop. With autoLoop off no review starts, so the worker waits on CI itself before reporting instead of stopping when the PR opens."
     }
   ],
   "column": "Review",
