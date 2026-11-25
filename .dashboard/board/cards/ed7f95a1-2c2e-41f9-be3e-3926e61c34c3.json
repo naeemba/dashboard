@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T15:11:27.052Z",
-  "updatedAt": "2026-11-25T15:11:27.052Z",
-  "column": "Backlog",
-  "order": 69
+  "updatedAt": "2026-11-25T15:11:39.846Z",
+  "branch": "agent-tab-s-first-load-runs-as-a-background",
+  "column": "Doing",
+  "order": 0
 }
