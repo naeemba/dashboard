@@ -5,8 +5,15 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-25T12:54:32.878Z",
-  "updatedAt": "2026-11-25T12:54:47.623Z",
+  "updatedAt": "2026-11-25T13:45:18.468Z",
   "branch": "agent-browser-tabs-never-take-the-keyboard",
-  "column": "Doing",
+  "pullRequest": 377,
+  "comments": [
+    {
+      "at": "2026-11-25T13:45:18.439Z",
+      "body": "Pull request #377 opened: Agent browser tabs never take the keyboard, and run as a foreground tab while held https://github.com/naeemba/dashboard/pull/377"
+    }
+  ],
+  "column": "Review",
   "order": 1
 }
