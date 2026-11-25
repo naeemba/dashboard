@@ -5,8 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T15:11:27.052Z",
-  "updatedAt": "2026-11-25T15:11:39.846Z",
+  "updatedAt": "2026-11-25T15:23:55.206Z",
   "branch": "agent-tab-s-first-load-runs-as-a-background",
+  "comments": [
+    {
+      "at": "2026-11-25T15:23:55.206Z",
+      "body": "Stopped before a pull request: the diagnosis does not reproduce. I built this branch (v2.58.0) as a throwaway copy (its own HOME and --user-data-dir, through the scripts/performance demo launcher) and ran the card's fixture from a worker pane: browser open, sleep 1.2, eval measure.js, then browser go and measure again. The old order (makeView loads before keep places the view) already paints on the first load. Headless weston: first load fcp 84 ms, rAF 62; after go fcp 64, rAF 61. Real Wayland display: first load fcp 208, rAF 63; after go fcp 64, rAF 62. Real display with the browser screen shown first and a tab already open: first load fcp 92, rAF 61. With the fix (the open action calls a new start port after keep), headless gave first load fcp 156, rAF 59, so no difference either way. Whatever gave fcp null and rAF 2/s in the installed app, it is not the load starting before placement. What differs from my runs and may matter: the installed app's uptime and open tabs, the 144 Hz display (rAF 145 there), the window or workspace state at the time, and which project page was on screen. The fix is committed on this branch (b905d70c: tabs.ts, browser-ports.ts, browser-views.ts, a test in tabs.test.ts) but not pushed. It is harmless and right by construction, but it fixes nothing I can measure. Next step: reproduce in the installed app with the window state written down, then diagnose again."
+    }
+  ],
   "column": "Doing",
   "order": 0
 }
