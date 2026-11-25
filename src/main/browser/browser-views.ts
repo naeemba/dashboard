@@ -67,9 +67,11 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
   let adopting: { contents: WebContents; opener: number } | null = null;
   // Each partition's permission rule is set once, by its first tab.
   const ruled = new Set<string>();
-  // The tabs a load the app started is on its way in, which take the keyboard uninvited
-  // (keyboardTaken); each is let go once its page commits.
+  // The tabs a load no page started (the app's: an address, back, forward, reload) is on its way in,
+  // which take the keyboard uninvited (keyboardTaken); each is let go once its page commits.
   const loading = new Set<number>();
+  // Where each view was last put, so a title ticking every second touches no view.
+  const drawn = new Map<number, string>();
   // The tab the person last put the keyboard in, null for the window's own page, and whether a tab
   // took it while the window did not have it, to be given back when the window gets it again.
   let typing: number | null = null;
@@ -83,12 +85,18 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
 
   // The placed project's tab on screen, every agent's tab drawn off the window but a pixel, and every
   // other one hidden (viewBounds).
+  const shown = (): number | null => shownTab(placed?.projectPath ?? null, browsers);
+
   function apply(): void {
-    const shown = shownTab(placed?.projectPath ?? null, browsers);
+    const onScreen = shown();
     if (placed !== null) lastBounds = placed.bounds;
-    const tabs = new Map([...browsers.values()].flatMap((state) => state.tabs.map((tab) => [tab.id, tab] as const)));
-    for (const [id, view] of views) {
-      const bounds = viewBounds(tabs.get(id), shown, placed?.bounds ?? null, view.getBounds());
+    for (const tab of [...browsers.values()].flatMap((state) => state.tabs)) {
+      const view = views.get(tab.id);
+      if (view === undefined) continue;
+      const bounds = viewBounds(tab, onScreen, placed?.bounds ?? null, view.getBounds());
+      const place = JSON.stringify(bounds);
+      if (drawn.get(tab.id) === place) continue;
+      drawn.set(tab.id, place);
       view.setVisible(bounds !== null);
       if (bounds !== null) view.setBounds(bounds);
     }
@@ -96,7 +104,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
 
   function giveKeyboardBack(): void {
     owed = false;
-    const owner = keyboardOwner(typing, shownTab(placed?.projectPath ?? null, browsers));
+    const owner = keyboardOwner(typing, shown());
     (owner === null ? main.window()?.webContents : views.get(owner)?.webContents)?.focus();
   }
 
@@ -152,6 +160,10 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       setImmediate(() => loading.delete(id));
     });
     contents.on('did-stop-loading', () => loading.delete(id));
+    // Chromium's own word that a load no frame started is under way, heard before the focus it hands out.
+    contents.on('did-start-navigation', ({ isMainFrame, isSameDocument, initiator }) => {
+      if (isMainFrame && !isSameDocument && initiator === undefined) loading.add(id);
+    });
     // Given back on the next turn: Chromium is still moving it when this is heard, and a focus asked
     // for now is undone.
     contents.on('focus', () => {
@@ -223,21 +235,16 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       views.delete(id);
       logs.delete(id);
       loading.delete(id);
+      drawn.delete(id);
       if (view === undefined) return;
       main.window()?.contentView.removeChildView(view);
       if (!view.webContents.isDestroyed()) view.webContents.close();
     },
     // A load that fails shows Chromium's own error page in the tab, which says why better than a bar.
-    load(id, url) {
-      const contents = views.get(id)?.webContents;
-      if (contents === undefined) return;
-      loading.add(id);
-      contents.loadURL(url).catch(() => undefined);
-    },
+    load: (id, url) => { views.get(id)?.webContents.loadURL(url).catch(() => undefined); },
     step(id, step) {
       const contents = views.get(id)?.webContents;
       if (contents === undefined) return;
-      loading.add(id);
       ({ back: () => contents.navigationHistory.goBack(), forward: () => contents.navigationHistory.goForward(), reload: () => contents.reload() })[step]();
     },
     // The keyboard goes back to the window with the view, so it is never left in a page nobody sees.
