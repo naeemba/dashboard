@@ -5,13 +5,17 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-25T12:54:32.878Z",
-  "updatedAt": "2026-11-25T13:45:18.468Z",
+  "updatedAt": "2026-11-25T14:26:55.543Z",
   "branch": "agent-browser-tabs-never-take-the-keyboard",
   "pullRequest": 377,
   "comments": [
     {
       "at": "2026-11-25T13:45:18.439Z",
       "body": "Pull request #377 opened: Agent browser tabs never take the keyboard, and run as a foreground tab while held https://github.com/naeemba/dashboard/pull/377"
+    },
+    {
+      "at": "2026-11-25T14:26:55.542Z",
+      "body": "Review loop converged in 3 rounds, ready to merge. Round 1 (f260d074): a tab not on screen never keeps the keyboard, so the window regaining focus cannot hand it to an agent's tab; app-load detection is appLoad, tested. Round 2 (1057aac8): the tab the person asks to focus keeps the keyboard before the screen has drawn it. Round 3 re-review clean. 4 findings fixed, 0 rejected, nothing open, no conflict with main. CI passed on 1057aac8. Neither round changed the card's ask or design. The hand check in a dev build (visibilityState and paint) is still the user's to do."
     }
   ],
   "column": "Review",
