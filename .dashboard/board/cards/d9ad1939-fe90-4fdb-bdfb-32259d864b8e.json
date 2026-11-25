@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T11:37:03.572Z",
-  "updatedAt": "2026-11-25T11:37:03.572Z",
-  "column": "Backlog",
-  "order": 68
+  "updatedAt": "2026-11-25T11:37:34.480Z",
+  "branch": "work-card-report-to-main-once-the-pr-opens",
+  "column": "Doing",
+  "order": 0
 }
