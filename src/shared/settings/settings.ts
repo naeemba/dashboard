@@ -33,10 +33,6 @@ export type Settings = {
   // notify: whether an error on the status bar raises a desktop notification while the window is not
   // in front (docs/errors).
   errors: { notify: boolean };
-  // closeAfterMinutes: how long a worker that reported, and whose report main read, sits idle before
-  // the app closes its pane (auto-release.ts); 0 closes one only when its card is finished. In the file
-  // by hand only.
-  workers: { closeAfterMinutes: number };
   // limit: what `dashboard budget` holds the 7-day usage to (docs/command). 'cap' is weeklyCap, the
   // share in percent, null until one is set; 'pace' is dailyShare for each day begun since the weekly
   // reset, a seventh of the week when null; 'none' is no limit, and budget answers under. Set on the
@@ -69,13 +65,6 @@ const DEFAULT_FONT = { name: 'JetBrains Mono', size: 13 };
 export const DEFAULT_WEATHER_PLACE = 'Tehran';
 
 const DEFAULT_HOST_BIND = '127.0.0.1';
-
-const DEFAULT_CLOSE_AFTER_MINUTES = 10;
-
-// A whole number of minutes, none or more, the range parseSettings holds closeAfterMinutes to.
-function isMinutes(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
-}
 
 // The colours the theme has. A file naming one that is not here is ignored rather than added: xterm
 // would not read it, and a settings screen row for it would edit nothing.
@@ -131,7 +120,6 @@ export function defaultSettings(isMac: boolean): Settings {
     review: { autoLoop: true, autoMerge: false },
     updates: { check: true },
     errors: { notify: true },
-    workers: { closeAfterMinutes: DEFAULT_CLOSE_AFTER_MINUTES },
     budget: { limit: 'cap', weeklyCap: null, dailyShare: null },
   };
 }
@@ -190,7 +178,6 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedFont = asRecord(raw.font);
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
-  const storedWorkers = asRecord(raw.workers);
   const storedBudget = asRecord(raw.budget);
   // A number only: the file never holds a percentage as text.
   const percentage = (stored: unknown): number | null => (typeof stored === 'number' ? budgetPercentage(stored) : null);
@@ -234,9 +221,6 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     review: { autoLoop: toggle('autoLoop'), autoMerge: toggle('autoMerge') },
     updates: { check: toggle('updates') },
     errors: { notify: toggle('errors') },
-    workers: {
-      closeAfterMinutes: isMinutes(storedWorkers.closeAfterMinutes) ? storedWorkers.closeAfterMinutes : defaults.workers.closeAfterMinutes,
-    },
     budget: {
       limit: BUDGET_LIMITS.find((limit) => limit === storedBudget.limit) ?? defaults.budget.limit,
       weeklyCap: percentage(storedBudget.weeklyCap),

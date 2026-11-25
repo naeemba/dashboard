@@ -24,15 +24,6 @@ describe('parseSettings', () => {
     expect(parseSettings({ errors: { notify: false } }, false).errors).toEqual({ notify: false });
     expect(parseSettings({ errors: { notify: 'no' } }, false).errors).toEqual({ notify: true });
   });
-  it('closes a finished worker ten minutes after its report unless the file says other whole minutes', () => {
-    expect(parseSettings({}, false).workers).toEqual({ closeAfterMinutes: 10 });
-    expect(parseSettings({ workers: { closeAfterMinutes: 0 } }, false).workers).toEqual({ closeAfterMinutes: 0 });
-    expect(parseSettings({ workers: { closeAfterMinutes: 30 } }, false).workers).toEqual({ closeAfterMinutes: 30 });
-    for (const rubbish of [-1, 2.5, '10', null]) {
-      expect(parseSettings({ workers: { closeAfterMinutes: rubbish } }, false).workers).toEqual({ closeAfterMinutes: 10 });
-    }
-  });
-
   it('has no weekly cap until the file names a percentage above 0 and at most 100', () => {
     const unset = { limit: 'cap', weeklyCap: null, dailyShare: null };
     expect(parseSettings({}, false).budget).toEqual(unset);
