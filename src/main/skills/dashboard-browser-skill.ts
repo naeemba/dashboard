@@ -60,7 +60,7 @@ time:
    for one part); \`browser_resize\` to 390x844 first for a phone's layout.
    \`browser_console\` and \`browser_network\` show what the page got wrong.
    A tab you hold runs as a foreground tab though the person never sees it:
-   \`document.visibilityState\` is \`visible\`, it paints, and its frames and
+   \`document.visibilityState\` reads visible, it paints, and its frames and
    timers run at full rate, so paint and timing metrics measured in it are valid.
 6. \`browser_release\` hands a tab back when you are done with it. Your tabs go
    back on their own when your pane is released or your agent exits, laid out

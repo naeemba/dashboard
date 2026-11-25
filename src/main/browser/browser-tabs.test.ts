@@ -97,6 +97,7 @@ describe('viewBounds', () => {
   it('hides the person\'s tabs off screen, and a view whose tab is not kept yet', () => {
     expect(viewBounds(tab(1), 2, placed, size)).toBeNull();
     expect(viewBounds(tab(2), null, null, size)).toBeNull();
+    expect(viewBounds(tab(2), 2, null, size)).toBeNull();
     expect(viewBounds(undefined, 2, placed, size)).toBeNull();
   });
 });
