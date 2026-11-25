@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-25T11:37:16.928Z",
-  "updatedAt": "2026-11-25T11:37:16.928Z",
-  "column": "Backlog",
-  "order": 70
+  "updatedAt": "2026-11-25T11:37:42.761Z",
+  "branch": "browser-open-data-urls-so-a-worker-can-chec",
+  "column": "Doing",
+  "order": 2
 }

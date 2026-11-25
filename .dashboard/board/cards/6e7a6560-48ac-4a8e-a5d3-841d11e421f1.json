@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-25T11:37:10.046Z",
-  "updatedAt": "2026-11-25T11:37:10.046Z",
-  "column": "Backlog",
-  "order": 69
+  "updatedAt": "2026-11-25T11:37:38.833Z",
+  "branch": "checks-posixpathsonly-shared-from-src-main",
+  "column": "Doing",
+  "order": 1
 }
