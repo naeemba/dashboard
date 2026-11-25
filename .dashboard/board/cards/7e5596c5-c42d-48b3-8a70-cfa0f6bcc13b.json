@@ -5,7 +5,8 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-25T12:54:32.878Z",
-  "updatedAt": "2026-11-25T12:54:32.879Z",
-  "column": "Backlog",
-  "order": 69
+  "updatedAt": "2026-11-25T12:54:47.623Z",
+  "branch": "agent-browser-tabs-never-take-the-keyboard",
+  "column": "Doing",
+  "order": 1
 }
