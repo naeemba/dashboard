@@ -144,6 +144,17 @@ export function withWholeId(board: Board | null, commandArguments: readonly stri
   return { commandArguments: [verb, cardAt(board, at)!.id, ...rest] };
 }
 
+// The whole id of the card a move put into Done or Cancelled, whose worker the app is then asked to
+// release (`pane landed --card`, workers-decision-1), or null: another verb, or a move that changed
+// nothing.
+export function finishedByMove(commandArguments: readonly string[], result: CommandResult): string | null {
+  const [verb, id] = commandArguments;
+  if (verb !== 'move' || id === undefined || !result.ok || result.board === null) return null;
+  const matches = cardsNamed(result.board, id);
+  if (matches.length !== 1 || !isFinishedColumn(result.board, matches[0].column)) return null;
+  return cardAt(result.board, matches[0])?.id ?? null;
+}
+
 // How much a card has to read, or nothing when it has no trail. `list` carries it beside the branch
 // and the pull request for the same reason the card front in the app does: without it, finding which
 // cards have anything to read means running `show` on every one of them.

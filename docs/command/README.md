@@ -132,8 +132,9 @@ for its words: `board_show`, `pane_claim`, `browser_screenshot`, `version`
 (command-decision-8). A call runs the command with those words, so it answers
 and refuses exactly as the command line does; a refusal comes back as a tool
 error with the command's text. `browser_screenshot` answers with the picture.
-The hooks' verbs, `project init` and `remove`, `pr land` and `pr wait` have no
-tool; both stay a background Bash run.
+The hooks' verbs, `pane landed` (which `pr land` and a board move run themselves),
+`project init` and `remove`, `pr land` and `pr wait` have no tool; the last two
+stay a background Bash run.
 
 Every Claude screen the app starts has the server as `dashboard`, and knows its
 pane the way the command does, from the environment it was started in
@@ -284,6 +285,9 @@ Folders: `src/main/command/`.
   `pr land 12` merges into main, then a second line says main was fast-forwarded in that folder;
   with an edited file there it says so and leaves the checkout as it was, and the land still
   exits 0.
+- Given a worker pane whose worktree is on the merged branch, when `pr land 12`
+  merges from a pane, then a line before the verdict says `released 2:3` or
+  `kept 2:3: <why>` (workers-decision-1); `pr land 12 --keep` asks nothing.
 - Given the manager's main in `~/.dashboard`, when it runs
   `pr land 12 --project crm`, then gh runs in crm's folder.
 - Given a cap of 74 and a reading of 64% from three minutes ago, when

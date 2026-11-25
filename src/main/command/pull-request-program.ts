@@ -7,7 +7,8 @@ import { projectNamedInFile } from '../projects/project-named';
 import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
-import { conflictedFiles, landPullRequest, parsePullRequestCommand, type ProgramAnswer, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, landPullRequest, parsePullRequestCommand, type ProgramAnswer, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import { askLanded } from '../workers/session-socket';
 
 // gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
 // failure. One that could not start (none installed) has no exit code, and still throws. gh runs as
@@ -34,7 +35,8 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
   }
   try {
     const verb = parsed.verb === 'land' ? landPullRequest : waitOnPullRequest;
-    const answer = await verb({ gh: (words) => answering('gh')(project.project, words), wait: delay }, parsed.target);
+    const ports = { gh: (words: string[]) => answering('gh')(project.project, words), wait: delay };
+    const answer = await verb(ports, parsed.target);
     // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
     const { conflicts } = answer;
     const verdict = conflicts === undefined
@@ -47,7 +49,12 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
         .then((remote) => fastForwardCheckout(answering('git'), project.project, remote, base))
         .catch((error: unknown) => `${base} is not fast-forwarded: ${failureLine(error)}`)}\n`
       : '';
-    (answer.ok ? process.stdout : process.stderr).write(`${forwarded}${verdict}\n`);
+    // The worker on the merged branch, released or kept, as the app answers it: never the last line.
+    const landed = answer.ok && base !== undefined
+      ? await releaseLanded({ ...ports, landed: (branch) => askLanded('branch', branch, project.project) }, parsed.target, parsed.keep)
+        .catch((error: unknown) => `no worker released: ${failureLine(error)}`)
+      : '';
+    (answer.ok ? process.stdout : process.stderr).write(`${forwarded}${landed === '' ? '' : `${landed}\n`}${verdict}\n`);
     return answer.ok ? 0 : 1;
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);

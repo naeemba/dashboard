@@ -62,11 +62,6 @@ typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 
-`workers.closeAfterMinutes` (default 10, in the file by hand only, no row) is how
-long a worker whose report main has read sits with nothing sent to it before the
-app closes its pane; 0 closes one only when its card is finished. A whole number
-of minutes, none or more; anything else reads as the default (docs/workers).
-
 The Host rows make this Dashboard reachable from another: a port, read at the
 next launch, and the token the other machine pastes once. The port opens on
 127.0.0.1 only, so the other machine reaches it through an SSH tunnel (ssh -L

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conflictedFiles, conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
 
 // A gh that answers each command's first two words from the table, in order when a row has several.
 function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
@@ -31,8 +31,11 @@ const merges = (github: { asked: string[] }) => github.asked.filter((each) => ea
 describe('parsePullRequestCommand', () => {
   // --project is taken out before, by boardTarget, as for `board`.
   it('reads land and its pull request', () => {
-    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, verb: 'land', target: '12' });
-    expect(parsePullRequestCommand(['wait', '12'])).toEqual({ ok: true, verb: 'wait', target: '12' });
+    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, verb: 'land', target: '12', keep: false });
+    expect(parsePullRequestCommand(['wait', '12'])).toEqual({ ok: true, verb: 'wait', target: '12', keep: false });
+    expect(parsePullRequestCommand(['land', '12', '--keep'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
+    expect(parsePullRequestCommand(['land', '--keep', '12'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
+    expect(parsePullRequestCommand(['wait', '12', '--keep'])).toMatchObject({ ok: false });
   });
 
   it('answers no verb with the usage and refuses anything else', () => {
@@ -270,5 +273,42 @@ describe('isNetworkError', () => {
 
   it('is never a call that succeeded', () => {
     expect(isNetworkError({ ok: true, output: 'Post "https://api.github.com/graphql": unexpected EOF' })).toBe(false);
+  });
+});
+
+describe('releaseLanded', () => {
+  const branchOf12 = { ok: true, output: 'fix-it\n' };
+  // The app's answer to `pane landed`, and the branches it was asked about.
+  const app = (answer: ProgramAnswer) => {
+    const asked: string[] = [];
+    return { asked, landed: async (branch: string) => { asked.push(branch); return answer; } };
+  };
+
+  it('asks the app to release the worker on the merged branch, and prints what it answers', async () => {
+    const github = fakeGitHub({ 'pr view': [branchOf12] });
+    const answering = app({ ok: true, output: 'released 0:2' });
+    expect(await releaseLanded({ ...github.ports, landed: answering.landed }, '12', false)).toBe('released 0:2');
+    expect(answering.asked).toEqual(['fix-it']);
+  });
+
+  it('prints why a worker was kept', async () => {
+    const github = fakeGitHub({ 'pr view': [branchOf12] });
+    const answering = app({ ok: true, output: 'kept 0:2: it has the keyboard' });
+    expect(await releaseLanded({ ...github.ports, landed: answering.landed }, '12', false)).toBe('kept 0:2: it has the keyboard');
+  });
+
+  it('with --keep asks neither gh nor the app', async () => {
+    const github = fakeGitHub({});
+    const answering = app({ ok: true, output: 'released 0:2' });
+    expect(await releaseLanded({ ...github.ports, landed: answering.landed }, '12', true)).toBe('');
+    expect(github.asked).toEqual([]);
+    expect(answering.asked).toEqual([]);
+  });
+
+  it('says no worker was released when gh names no branch or the app is not there', async () => {
+    const unnamed = fakeGitHub({ 'pr view': [{ ok: false, output: 'not found' }] });
+    expect(await releaseLanded({ ...unnamed.ports, ...app({ ok: true, output: '' }) }, '12', false)).toBe('no worker released: gh did not name the branch of 12');
+    const github = fakeGitHub({ 'pr view': [branchOf12] });
+    expect(await releaseLanded({ ...github.ports, ...app({ ok: false, output: 'no Dashboard is running' }) }, '12', false)).toBe('no worker released: no Dashboard is running');
   });
 });

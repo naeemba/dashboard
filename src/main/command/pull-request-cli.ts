@@ -5,11 +5,12 @@
 // is the same wait without the merge, so nobody hand-rolls a sleep and gh loop around CI.
 
 import { failureLine } from './failure-line';
+import { landedLine } from '../workers/session-cli';
 
 export const PULL_REQUEST_USAGE = `pr — wait on or land a pull request of the project you are in
 
   pr wait <number|url|branch> [--project <name|aka>]
-  pr land <number|url|branch> [--project <name|aka>]
+  pr land <number|url|branch> [--keep] [--project <name|aka>]
 
 wait notes the pull request's head commit and waits for every check on it (gh pr checks --watch),
 merging nothing. land waits the same, then merges that commit: gh pr merge --merge
@@ -24,21 +25,25 @@ at <sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or w
 long as CI takes: run it in the background with the longest timeout allowed; one stopped at that
 limit has not failed, run it again. Once merged, the checkout on the base branch (the project's own,
 or the worktree that has it) is fast-forwarded when it has nothing uncommitted, so no git pull is
-needed after. It runs in the project of the folder you are in, or with --project in that project's
+needed after, and the worker pane on its branch is released: a line before the verdict says
+\`released <pane>\` or \`kept <pane>: <why>\` (one with the keyboard, waiting on a question, mid-turn,
+or typed into by you). --keep merges without releasing it. It runs in the project of the folder you are in, or with --project in that project's
 folder from ~/.dashboard/projects.yaml.`;
 
 export type PullRequestVerb = 'wait' | 'land';
-type Parsed = { ok: true; verb: PullRequestVerb; target: string } | { ok: false; message: string };
+type Parsed = { ok: true; verb: PullRequestVerb; target: string; keep: boolean } | { ok: false; message: string };
 
 // The words after `pr`, with --project already taken out by boardTarget, as `board` takes it.
 export function parsePullRequestCommand(commandArguments: readonly string[]): Parsed {
-  const [verb, ...targets] = commandArguments;
+  const [verb, ...words] = commandArguments;
+  const keep = verb === 'land' && words.includes('--keep');
+  const targets = words.filter((word) => !keep || word !== '--keep');
   if (verb === undefined) return { ok: false, message: PULL_REQUEST_USAGE };
   if (verb !== 'land' && verb !== 'wait') return { ok: false, message: `no such command: ${verb}\n\n${PULL_REQUEST_USAGE}` };
   // `pr land --help`, or any flag where the pull request goes, would reach gh as the pull request.
   if (targets.some((target) => target.startsWith('-'))) return { ok: false, message: PULL_REQUEST_USAGE };
   if (targets.length !== 1) return { ok: false, message: `pr ${verb} takes one pull request: its number, url or branch` };
-  return { ok: true, verb, target: targets[0] };
+  return { ok: true, verb, target: targets[0], keep };
 }
 
 // What gh or git answered: whether it exited 0, and what it printed on either stream.
@@ -148,6 +153,19 @@ export async function landPullRequest(ports: LandPorts, target: string): Promise
   if (isNetworkError(merged)) return { ok: false, output: `${merged.output}\n\nlost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again` };
   if (!merged.ok) return { ok: false, output: `${merged.output}\n\ngh refused to merge ${target} at ${sha}` };
   return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', a repository with no CI' : ''}`, base };
+}
+
+// What a land that merged prints before its verdict: the app's answer to `pane landed` for the pull
+// request's branch, a line per worker pane on it released or kept (workers-decision-1), and nothing
+// with --keep or no pane on it. Main's own command is what closes a finished worker, never a timer.
+export type ReleasePorts = LandPorts & { landed(branch: string): Promise<ProgramAnswer> };
+
+export async function releaseLanded(ports: ReleasePorts, target: string, keep: boolean): Promise<string> {
+  if (keep) return '';
+  const head = await patiently(ports, ['pr', 'view', target, '--json', 'headRefName', '-q', '.headRefName']);
+  const branch = head.output.trim();
+  if (!head.ok || branch === '') return `no worker released: gh did not name the branch of ${target}`;
+  return landedLine(await ports.landed(branch));
 }
 
 // A merge whose answer was lost may have gone through: a failed call is read back from the

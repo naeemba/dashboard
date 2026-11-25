@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { asksApp, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList, withWholeId } from './board-cli';
+import { asksApp, finishedByMove, homeDirectoryRefusal, runBoardCommand, runBoardCommandOnLatest, formatList, withWholeId } from './board-cli';
 import { USAGE } from './board-usage';
 import { allCards, emptyBoard, cardById, type Board } from '../../shared/board/board';
 
@@ -482,5 +482,25 @@ describe('asksApp', () => {
     expect(asksApp(['move', 'card', 'Done'], true)).toBe(false);
     expect(asksApp(['set', 'card', '--priority', 'high'], true)).toBe(false);
     expect(asksApp([], true)).toBe(false);
+  });
+});
+
+describe('finishedByMove', () => {
+  it('names the whole id of a card moved into Done or Cancelled, by a prefix too', () => {
+    const { board, id } = withCard();
+    for (const column of ['Done', 'cancelled']) {
+      const words = ['move', id.slice(0, 6), column];
+      expect(finishedByMove(words, run(board, ...words))).toBe(id);
+    }
+  });
+
+  it('is null for a move elsewhere, a move that changed nothing, a refusal, and every other verb', () => {
+    const { board, id } = withCard();
+    expect(finishedByMove(['move', id, 'Doing'], run(board, 'move', id, 'Doing'))).toBeNull();
+    const done = run(board, 'move', id, 'Done');
+    if (!done.ok || done.board === null) throw new Error('move failed');
+    expect(finishedByMove(['move', id, 'Done'], run(done.board, 'move', id, 'Done'))).toBeNull();
+    expect(finishedByMove(['move', 'nobody', 'Done'], run(board, 'move', 'nobody', 'Done'))).toBeNull();
+    expect(finishedByMove(['set', id, '--priority', 'high'], run(board, 'set', id, '--priority', 'high'))).toBeNull();
   });
 });

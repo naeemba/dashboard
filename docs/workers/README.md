@@ -17,8 +17,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Dispatch: `dispatch.ts`, `../projects/project-named.ts` (the project
   `--project` names), `project-names.ts` (the name each project's sessions go
   by), `worker-channels.ts`, `finished-work.ts` (also whether a worktree's
-  branch merged, for `pane finish` and the sweep, tested in
-  `session-finish.test.ts`)
+  branch merged, for `pane finish`, tested in `session-finish.test.ts`, and the
+  branch `pane landed` finds a worker by)
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
   `dashboard pane`, see [command](../command/README.md))
@@ -31,9 +31,11 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   whose turn it was, `prompt-source.ts`
 - Work sent into a pane reported to the main that sent it:
   `../actions/pane/send.ts`, `../actions/pane/dispatch.ts` (workers-decision-1)
-- Finished workers closed by the app: `auto-release.ts`, the sweep in
-  `session-requests.ts`, the keyboard's pane from `../app/session-store.ts`
-  (workers-decision-1)
+- Finished workers closed by main's own commands: `auto-release.ts`,
+  `pane landed` in `session-requests.ts` (tested in `session-landed.test.ts`),
+  asked by `pr land` (`../command/pull-request-cli.ts`) and a board move into
+  Done or Cancelled (`../board/board-cli.ts`), the keyboard's pane from
+  `../app/session-store.ts` (workers-decision-1)
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 - What each main dispatched, as its status line and workers popup read it:
   `worker-roster.ts`, `pane-link.ts`
@@ -97,7 +99,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   background task in flight or a wakeup scheduled, then main is told nothing,
   and `pane list` says `paused, waiting on 2 background tasks` and the workers
   popup `waiting on 2 background tasks`; its next stop decides again, and a
-  pause that lasts 30 minutes is told to main once.
+  pause that lasts 30 minutes is told to main once, unless main read a report
+  from it since it last handed it work, or its work is in.
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks`
   or `session_crons`, when its turn ends, then main is told only once it has
   stayed out of `running` for three minutes, as before them
@@ -181,16 +184,22 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a worker's report says its review loop changed what the card asked
   for, or its design (the review prompt asks it to say so), when main is asked
   to land it, then main asks the user first instead of relaying the change.
-- Given a worker main handed work, when its turn ends with nothing in flight or
-  scheduled and its card is Done or Cancelled on the project's board, then
-  within half a minute the app releases the pane through pane.release, logs it,
-  and the status bar says `Closed pane 2:3: card done`.
-- Given a worker main handed work in a worktree of its own (a `--worktree`
-  throwaway or a card's), when its turn ends with nothing in flight or scheduled
-  and its branch's pull request merged, as `pane finish` reads it, then within
-  half a minute the app releases it with `Closed pane 2:3: pull request merged`.
-  A worker in the project's checkout, or one gh cannot answer for, is left to
-  its card and its report.
+- Given a worker main handed work in a worktree on branch `fix-it`, when
+  main's `pr land 12` merges that branch, then the app releases the pane through
+  pane.release, the status bar says `Closed pane 2:3: fix-it merged`, and a
+  line before the verdict says `released 2:3`; with `--keep` nothing is asked.
+- Given a worker in a card's worktree, when main moves the card into Done or
+  Cancelled with the board command or its MCP tool, then the pane is released
+  the same way and the move's output ends `released 2:3`.
+- Given a worker main finished that way, when it has the keyboard, is blocked
+  on a question, is mid-turn, you typed into it since main last sent it work,
+  or no main ever handed it work, then it stays open and the line says why:
+  `kept 2:3: it has the keyboard`. One only paused on its own background work
+  is released: its work is in.
+- Given a worker whose card is Done or Cancelled, or one `pane landed` kept,
+  when its turn has ended, then `pane list` says
+  `done, work in: pane finish 2:3` until main sends it work. Nothing closes a
+  pane on a timer.
 - Given a worker whose card is Done or Cancelled, or whose worktree's branch's
   pull request (the open one if any, else the newest, as the follow reads it)
   merged before the follow moved its card, when main runs `pane finish <id>`,
@@ -201,19 +210,6 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given main is asked to work a card, when it reads its prompt and
   `pane --help`, then both send it to `board ship <id>`, which makes the worktree, the pane and the
   agent; there is no pane verb for it.
-- Given a worker whose report main has read, when it has been sent nothing for
-  `workers.closeAfterMinutes` (default 10) after the last of the work sent, the
-  report read and its stop, then the app releases it with
-  `Closed pane 2:3: reported done`; 0 turns this off and leaves only the card's and the merged
-  branch's close.
-- Given a card worker in Review whose review has not started, when the app
-  closes its pane as reported done, then the review sweep still starts the
-  review on its next tick; a closed pane never holds a review back (ship's
-  README).
-- Given a worker the app would close, when a page of any screen has the keyboard
-  on it (zoomed or not), it is on the manager page, it is blocked on a question,
-  it is paused on its own background work, or no main ever handed it work, then
-  the app leaves it open.
 - Given a plain terminal outside every project, when
   `dashboard pane claim --project crm` runs, then a worker opens on crm's page and reports to crm's
   main; `pane run`, `send` and `release` there act on the project their pane id names.

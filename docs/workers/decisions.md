@@ -204,30 +204,34 @@ What this costs: a ship's agent on a Claude screen is main's, so /clear, /resume
 hand and main then sent work keeps its owner (screen-owner.ts) and, after a restart, comes back as
 yours, not main's worker: screen-workers.json is not rewritten on a send.
 
-**The app closes finished workers.** Mains were told to `pane release` a worker once they had its
-report and often did not; the user closed finished panes by hand. auto-release.ts decides, every
-half minute, whether each pane holding main's worker is closed through pane.release
-(actions-rule-1), which keeps a worktree with no pull request as before. It is closed only once its
-turn has ended with nothing in flight or scheduled, and then when its card (the worktree record
-naming the pane) is Done or Cancelled on the project's own board, when the branch of the worktree it
-works in merged (the predicate `pane finish` releases on, so a `--worktree` worker with no card does
-not wait out its grace period; asked of gh only once nothing else has kept the pane), or when main
-has read a report from it since work was last sent and nothing was sent, read or stopped for
-`workers.closeAfterMinutes` (settings.json, default 10, 0 for the card or a merged branch only).
-Never a pane no main handed work, the pane a page of any screen puts the keyboard back on (a zoomed
-pane always is), a worker blocked on a question or paused on its own background work. gh is given
-ten seconds, and a pane it released is looked at again once it answers, since the keyboard or a turn
-may have moved meanwhile. Nor any pane on the manager page: the saved layout has no manager page, so
-the pane you are typing in there cannot be told apart, and the manager's main releases its own
-workers. Each close is logged with pane.release's answer and shown as a passing notice,
-`Closed pane 2:3: card done`.
+**Main's own commands close finished workers, never a timer.** Mains were told to `pane release` a
+worker once they had its report and often did not. A sweep every half minute then closed them, on
+the card's Done, a merged branch, or a report read and ten quiet minutes: it closed a pane the user
+still needed data from, and kept three review workers open with their cards Done, because a leftover
+one-hour wakeup made them paused and paused stopped the verdict before the card was read. So the
+close is driven by the commands with which main finishes the work, and no rule in any prompt or
+CLAUDE.md asks main to remember it: `pr land` that merged, which asks the app `pane landed --branch`
+for the pull request's head branch (`--keep` merges without), and a board move into Done or
+Cancelled through the command or its MCP tool, which asks `pane landed --card`. Each matching pane
+of the asking project (the worker whose own worktree is on that branch, or stands in the card's
+worktree) goes through auto-release.ts and, released, through pane.release (actions-rule-1), which
+keeps a worktree with no pull request as before. Each is a line before the verdict, `released 2:3`
+or `kept 2:3: <why>`, logged and shown as `Closed pane 2:3: fix-it merged`. Asked only from a pane,
+and never starting the app: a command outside every pane finished no main's worker.
 
-The card's Done is read on the project's board, not the worktree's: a card agent moving its own copy
-to Done while it waits for CI is still at work, and it is its turn ending, not the column, that lets
-the pane go.
+Kept: a pane no main handed work, the pane a page of any screen puts the keyboard back on (a zoomed
+pane always is), a worker blocked on a question, one mid-turn, and one whose last typed prompt was
+the user's (prompt-source.ts: that turn is theirs). A worker only paused on its own background work
+is released, since what it waits on is moot once its work is in. Nor any pane on the manager page:
+the saved layout has no manager page, so the pane you are typing in there cannot be told apart.
 
-Watch for: a worker brought back by a restart has said nothing to its hooks yet, so it reads as at
-work and is not closed until it runs and stops again.
+With no timer, a kept worker, or one whose work went in some other way (a merge by hand that the
+follow moved to Done), is listed by `pane list` as `done, work in: pane finish 2:3`, so reading the
+list tells main what is left. Its 30-minute pause notice is not told, nor one of a worker main read
+a report from since it last handed it work.
+
+Watch for: a worker brought back by a restart has said nothing to its hooks yet, so it reads as
+mid-turn and is kept; `pane finish` closes it.
 
 Watch for: worker numbers stay put while others close, and a new one takes the lowest number free,
 so it can appear in the middle of the list. Workers come back after a restart only when they were

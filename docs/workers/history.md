@@ -73,3 +73,7 @@ One line per merged change: date and why.
   new-crm kept 32 research worktrees, 25 GB, as never pushed or with no pull request
 - 2026-11-24 — `pane list`, `report` and `release` work across builds of one major version: after an
   install main lost its panes to "restart the app" until a restart (workers-decision-4)
+- 2026-11-25 — Workers close when main's own command puts their work in, `pr land` or a board move
+  into Done or Cancelled, never on a timer: the sweep closed a pane the user still needed, and kept
+  three paused review workers with their cards Done; `workers.closeAfterMinutes` is gone
+  (workers-decision-1)
