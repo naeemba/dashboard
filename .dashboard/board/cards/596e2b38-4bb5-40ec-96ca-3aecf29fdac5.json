@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T12:41:32.651Z",
-  "updatedAt": "2026-11-25T13:30:06.943Z",
+  "updatedAt": "2026-11-25T14:48:18.479Z",
   "branch": "workers-close-when-main-s-own-command-finis",
   "pullRequest": 376,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-25T13:30:06.943Z",
       "body": "Review loop converged, ready to merge. 2 rounds, no conflict with main. Round 1 fixed 6 threads (f1178ed9): pr land and the board move now pass their own pane as --from so it is never released, which keeps a review pane from closing itself mid-land and a worker from closing itself when it moves its own card. Round 2 fixed 2 wording threads (40c84fd8: BOARD_INSTRUCTIONS and the board docs say a worker's own Done move leaves its pane for main; fa5b2d24: the refusal says --from is optional). The final check accepted both. Nothing left open. CI passed on fa5b2d24. Design note: a worker that moves its own card into Done is no longer closed by that move. pane list marks it done for main to finish instead, which is the card's mid-turn guard made explicit."
+    },
+    {
+      "at": "2026-11-25T14:48:18.416Z",
+      "body": "Pull request #376 merged: Workers close when main's own command finishes their work, never on a timer https://github.com/naeemba/dashboard/pull/376"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 305
 }
