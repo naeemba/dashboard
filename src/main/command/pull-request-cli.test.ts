@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conflictedFiles, conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
 
 // A gh that answers each command's first two words from the table, in order when a row has several.
 function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
@@ -18,7 +18,7 @@ function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
   };
 }
 
-const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12' };
+const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' };
 const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
 const RECENT_CHECKS = 'pr list --repo github.com/acme/api --state merged --limit 20 --json statusCheckRollup -q [.[].statusCheckRollup | length] | add // 0';
 const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
@@ -31,8 +31,11 @@ const merges = (github: { asked: string[] }) => github.asked.filter((each) => ea
 describe('parsePullRequestCommand', () => {
   // --project is taken out before, by boardTarget, as for `board`.
   it('reads land and its pull request', () => {
-    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, verb: 'land', target: '12' });
-    expect(parsePullRequestCommand(['wait', '12'])).toEqual({ ok: true, verb: 'wait', target: '12' });
+    expect(parsePullRequestCommand(['land', '12'])).toEqual({ ok: true, verb: 'land', target: '12', keep: false });
+    expect(parsePullRequestCommand(['wait', '12'])).toEqual({ ok: true, verb: 'wait', target: '12', keep: false });
+    expect(parsePullRequestCommand(['land', '12', '--keep'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
+    expect(parsePullRequestCommand(['land', '--keep', '12'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
+    expect(parsePullRequestCommand(['wait', '12', '--keep'])).toMatchObject({ ok: false });
   });
 
   it('answers no verb with the usage and refuses anything else', () => {
@@ -47,7 +50,7 @@ describe('parsePullRequestCommand', () => {
 describe('landPullRequest', () => {
   it('merges the head commit it noted once every check on it passed', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: 'all green' }], 'pr merge': [{ ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
     expect(github.asked.at(-1)).toBe(MERGE);
   });
 
@@ -59,7 +62,7 @@ describe('landPullRequest', () => {
 
   it('asks again a minute on when no checks are reported, and merges a repository whose pull requests never reported a check', async () => {
     const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '0' }], 'pr merge': [{ ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123, a repository with no CI', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123, a repository with no CI', base: 'main', branch: 'fix-it' });
     expect(github.waited).toEqual([NO_CHECKS_WAIT_MS]);
     expect(github.asked).toContain(RECENT_CHECKS);
   });
@@ -108,7 +111,7 @@ describe('landPullRequest', () => {
 
   it('watches once more when the wait on the checks lost its answer', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: lostAnswer }, { ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
   });
 
   it('says the answer was lost, not that a check failed, once every try lost it', async () => {
@@ -142,13 +145,13 @@ describe('landPullRequest', () => {
   // Seen: the merge went through and only gh's answer was lost.
   it('reports merged when the merge call failed but the pull request merged at the noted commit', async () => {
     const github = fakeGitHub({ 'pr view': [open, { ok: true, output: 'MERGED abc123 main' }], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
     expect(merges(github)).toBe(1);
   });
 
   it('tries a merge lost to a network error once more', async () => {
     const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }, { ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
     expect(merges(github)).toBe(2);
   });
 
@@ -270,5 +273,29 @@ describe('isNetworkError', () => {
 
   it('is never a call that succeeded', () => {
     expect(isNetworkError({ ok: true, output: 'Post "https://api.github.com/graphql": unexpected EOF' })).toBe(false);
+  });
+});
+
+describe('releaseLanded', () => {
+  const merged = { ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' };
+  // The app's answer to `pane landed`, and the branches it was asked about.
+  const app = (line: string) => {
+    const asked: string[] = [];
+    return { asked, landed: async (branch: string) => { asked.push(branch); return line; } };
+  };
+
+  it('asks the app to release the worker on the merged branch, and prints what it answers', async () => {
+    const answering = app('released 0:2');
+    expect(await releaseLanded(answering.landed, merged, false)).toBe('released 0:2');
+    expect(answering.asked).toEqual(['fix-it']);
+    expect(await releaseLanded(app('kept 0:2: it has the keyboard').landed, merged, false)).toBe('kept 0:2: it has the keyboard');
+  });
+
+  it('asks nothing with --keep, for a land that merged nothing, or for one with no branch', async () => {
+    const answering = app('released 0:2');
+    expect(await releaseLanded(answering.landed, merged, true)).toBe('');
+    expect(await releaseLanded(answering.landed, { ok: false, output: 'a check failed' }, false)).toBe('');
+    expect(await releaseLanded(answering.landed, { ...merged, branch: '' }, false)).toBe('');
+    expect(answering.asked).toEqual([]);
   });
 });

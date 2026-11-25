@@ -7,7 +7,8 @@ import { projectNamedInFile } from '../projects/project-named';
 import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
-import { conflictedFiles, landPullRequest, parsePullRequestCommand, type ProgramAnswer, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, landPullRequest, parsePullRequestCommand, type ProgramAnswer, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import { askLanded } from '../workers/session-socket';
 
 // gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
 // failure. One that could not start (none installed) has no exit code, and still throws. gh runs as
@@ -47,7 +48,9 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
         .then((remote) => fastForwardCheckout(answering('git'), project.project, remote, base))
         .catch((error: unknown) => `${base} is not fast-forwarded: ${failureLine(error)}`)}\n`
       : '';
-    (answer.ok ? process.stdout : process.stderr).write(`${forwarded}${verdict}\n`);
+    // The worker on the merged branch, released or kept, as the app answers it: never the last line.
+    const landed = await releaseLanded((branch) => askLanded('branch', branch, project.project), answer, parsed.keep);
+    (answer.ok ? process.stdout : process.stderr).write(`${forwarded}${landed === '' ? '' : `${landed}\n`}${verdict}\n`);
     return answer.ok ? 0 : 1;
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);

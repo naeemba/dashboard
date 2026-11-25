@@ -60,5 +60,6 @@ export function worktreeChecks(run: RunProgram) {
   return {
     unfinished: (worktreePath: string) => unfinishedWork(run, worktreePath),
     merged: (worktreePath: string) => pullRequestMerged(run, worktreePath),
+    branch: (worktreePath: string) => branchOf(run, worktreePath),
   };
 }

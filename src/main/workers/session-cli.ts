@@ -20,6 +20,11 @@ export type SessionCommand =
   // release, refused until the worker's card is Done or Cancelled or its branch's pull request merged.
   | { kind: 'finish'; id: string }
   | { kind: 'report'; id: string }
+  // What `pr land` and a board move into Done or Cancelled ask once the work is in: the worker on that
+  // branch, or in that card's worktree, released unless something keeps it (auto-release.ts). `from`
+  // is the pane the command ran in, never released by its own command: a review pane's own land, or a
+  // worker moving its own card, is still mid-turn waiting on the answer.
+  | { kind: 'landed'; by: 'branch' | 'card'; name: string; from: string | null }
   // `waiting` is what a Stop hook said its session waits on, when it said so; `told` the rest a hook's
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold };
@@ -48,6 +53,7 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane release <id>
   pane finish <id>
   pane report <id>
+  pane landed --branch <branch> | --card <card id> [--from <id>]
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
 claim opens a worker pane and prints its id: --project opens it on the page of the project
@@ -64,7 +70,11 @@ app, and --screen asks for a screen. send types the text into the pane and press
 it to a Claude screen as its next prompt. finish releases a worker whose work is in: its card is
 Done or Cancelled, or the branch of the worktree it is in has a merged pull request; it refuses
 otherwise. report prints the pane's line from list and the last
-message its worker ended a turn with. notify is what a worker's hooks call: --stop-input reads Claude
+message its worker ended a turn with. landed is what pr land runs once it merged, and a board
+move into Done or Cancelled: it releases the worker on that branch or in that card's worktree,
+never the pane --from names, and prints \`released <id>\`, or \`kept <id>: <why>\` for one
+something keeps (the keyboard, a question, mid-turn, typed into by you, or no main handed it work).
+notify is what a worker's hooks call: --stop-input reads Claude
 Code's Stop hook input for how many background tasks and wakeups the session still waits on and its
 last message, --prompt-input the prompt hook's for who put the prompt in. list --all lists the panes
 of every open project and the manager; --reports ends each line with the end of the last message
@@ -271,6 +281,14 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       const id = paneId(rest[0], verb);
       return typeof id === 'string' ? { ok: true, command: { kind: verb, id } } : id;
     }
+    case 'landed': {
+      const [flag, name = '', ...more] = rest;
+      const from = more.length === 2 && more[0] === '--from' && PANE_ID.test(more[1]) ? more[1] : null;
+      if ((flag !== '--branch' && flag !== '--card') || name.trim() === '' || (more.length > 0 && from === null)) {
+        return refuse('pane landed takes --branch <branch> or --card <card id>, optionally then --from <id>');
+      }
+      return { ok: true, command: { kind: 'landed', by: flag === '--branch' ? 'branch' : 'card', name, from } };
+    }
     case 'notify': {
       const id = paneId(rest[0], 'notify');
       if (typeof id !== 'string') return id;
@@ -284,6 +302,17 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
   }
 }
 
+// The words `pr land` and a board move ask `pane landed` in, from the pane they ran in when there is one.
+export function landedWords(by: 'branch' | 'card', name: string, from: string | undefined): string[] {
+  return ['landed', `--${by}`, name, ...(from === undefined ? [] : ['--from', from])];
+}
+
+// What they print of the app's answer: its lines, or the first line of why no worker was released. An
+// app from before \`pane landed\` refuses it with the whole usage after its first line.
+export function landedLine(reply: SessionReply): string {
+  return reply.ok ? reply.output : `no worker released: ${reply.output.split('\n')[0]}`;
+}
+
 // Whether the words say which project they act on without a folder to go by: a pane id names its own
 // project, claim --project and list --all name theirs. The app reads it for a command from a folder in
 // no open project (session-requests.ts), and outsidePaneRefusal for one from outside every pane.
@@ -295,6 +324,8 @@ export function namesItsTarget(command: SessionCommand): boolean {
 // project and a plain terminal does not, so a claim there has to name one: claiming in whatever
 // project the terminal happens to stand in would be a guess.
 export function outsidePaneRefusal(command: SessionCommand): string | null {
+  // No main's worker is finished from outside every pane, so `pr land` and a board move there ask nothing.
+  if (command.kind === 'landed') return 'outside a Dashboard pane, landed has no main whose worker it finished';
   if (command.kind === 'claim' && !namesItsTarget(command)) {
     return 'outside a Dashboard pane, claim needs --project <name|aka> to say which project the worker is for';
   }

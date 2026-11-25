@@ -36,7 +36,8 @@ export const BOARD_INSTRUCTIONS = [
   'A card with a branch has its column moved by the app from its pull request: Doing when its agent starts,'
     + ' Review when the pull request opens, Done when it merges, Doing again when it closes unmerged. Do not'
     + ' move one yourself or record its pull request; the app finds it from the branch. A card with no'
-    + ' branch, such as research, is moved by whoever works it.',
+    + ' branch, such as research, is moved by whoever works it; a move into Done by main releases its'
+    + ' worker\'s pane, and a worker\'s own move leaves its pane for main to finish.',
 ].join('\n');
 
 // The app's own commands, allowed in the settings of every session it starts (main's screen, a worker's
@@ -110,7 +111,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '                         --all across every open project, --reports with the end of each',
     '                         worker\'s last message',
     '  report <id>            a worker\'s line from list and the last message it ended a turn with',
-    '  release <id>           close a worker\'s pane now, before the app would',
+    '  release <id>           close a worker\'s pane now',
     '  finish <id>            release a worker once its card is Done or its branch merged',
     '',
     `A card is dispatched with \`node "$DASHBOARD_BOARD" ship <id>${projectFlag}\`: it makes the card's worktree, a worker`
@@ -153,9 +154,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' work. A turn the user typed into a worker is theirs, and you are told nothing of it. Read a worker\'s'
       + ' state with `report`, never its session log.',
     '',
-    'The app closes a finished worker\'s pane itself: once its card is Done or Cancelled, once its'
-      + ' worktree\'s pull request merged, or once you have read its report and sent it nothing for a'
-      + ' while. Text you `send` an agent tells it to report to you too.',
+    '`pr land` releases the worker on the branch it merged, and a board move into Done or Cancelled the'
+      + ' card\'s; one kept is listed `done, work in`. Text you `send` an agent tells it to report to you too.',
     '',
     BOARD_INSTRUCTIONS,
     'So a worker you dispatch on a card is never asked to move it either.',

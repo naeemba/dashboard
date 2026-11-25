@@ -27,14 +27,6 @@ export function tail(text: string, characters: number): string {
 const LIST_TAIL = 200;
 export const oneLineTail = (text: string, characters = LIST_TAIL) => tail(text.replace(/\s+/g, ' ').trim(), characters);
 
-// What main is told about a worker the app closed (auto-release.ts) before main read a report from it:
-// the close takes back any stop notice, and main would wait on a pane that is gone. The worker may
-// have sent a report main has not read yet, and the pane is gone when main reads it, so nothing could
-// take this back: it is worded to hold either way.
-export function closedReport(name: string, id: string, reason: string): string {
-  return `${name} in pane ${id} (${paneLink(id)}) was closed by the app, ${reason}. ${IF_REPORTED} \`pane list\` shows where every worker stands.`;
-}
-
 // How long a pause may last before main is told anyway (stop-notices.ts): a worker that left a dev
 // server or a watcher running and forgot to report is never woken, so no later stop would come.
 export const PAUSE_CEILING_MS = 30 * 60 * 1000;
@@ -67,7 +59,8 @@ export function asksForReport(prompt: string): boolean {
   return ASKS_FOR_REPORT.test(prompt);
 }
 
-// Whether a prompt is one doneReport or closedReport wrote, live or read back from a saved conversation.
+// Whether a prompt is one doneReport wrote, or the close notice of a build before workers-decision-1
+// dropped its timer, live or read back from a saved conversation.
 export function isDoneReport(text: string): boolean {
   return DONE_REPORT.test(text);
 }
