@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T11:37:03.572Z",
-  "updatedAt": "2026-11-25T11:37:34.480Z",
+  "updatedAt": "2026-11-25T11:43:58.739Z",
   "branch": "work-card-report-to-main-once-the-pr-opens",
-  "column": "Doing",
-  "order": 0
+  "pullRequest": 374,
+  "comments": [
+    {
+      "at": "2026-11-25T11:43:58.710Z",
+      "body": "Pull request #374 opened: work-card: report to main once the PR opens; a coverage-line file gets a test or a reason https://github.com/naeemba/dashboard/pull/374"
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }
