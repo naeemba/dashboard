@@ -1,6 +1,6 @@
 // The coverage line of `pnpm check`: how much of each code file the branch changed against main its
 // tests run, so a new branch with no test shows before review does (workflow-rule-2). It rides on the
-// check's own `pnpm test`, which vitest.config.ts turns coverage on for when CHECK_COVERAGE names the
+// check's own `pnpm test`, which vitest.config.mts turns coverage on for when CHECK_COVERAGE names the
 // files, so it costs no second run. It never fails the check: a view has no test environment.
 import { label, plural, relativePath } from './check.mjs';
 
