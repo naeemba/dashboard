@@ -191,4 +191,8 @@ describe('outsidePaneRefusal', () => {
     expect(outsidePaneRefusal({ kind: 'send', id: '2:3', text: 'hi' })).toBeNull();
     expect(outsidePaneRefusal({ kind: 'list', all: true, reports: false })).toBeNull();
   });
+
+  it('refuses landed, which no main outside a pane asks', () => {
+    expect(outsidePaneRefusal({ kind: 'landed', by: 'branch', name: 'fix-it' })).not.toBeNull();
+  });
 });

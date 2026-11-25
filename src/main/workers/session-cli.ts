@@ -40,10 +40,6 @@ export type SessionRequest = { directory: string; args: readonly string[]; versi
 export type SessionReply = { ok: boolean; output: string };
 
 export const answered = (output: string): SessionReply => ({ ok: true, output });
-
-// What `pr land` and a board move print of the app's answer to `pane landed`: its lines, or why no
-// worker was released.
-export const landedLine = (reply: SessionReply): string => (reply.ok ? reply.output : `no worker released: ${reply.output}`);
 export const refused = (output: string): SessionReply => ({ ok: false, output });
 
 export const SESSION_USAGE = `pane — the Dashboard panes of the project you are in
@@ -313,6 +309,8 @@ export function namesItsTarget(command: SessionCommand): boolean {
 // project and a plain terminal does not, so a claim there has to name one: claiming in whatever
 // project the terminal happens to stand in would be a guess.
 export function outsidePaneRefusal(command: SessionCommand): string | null {
+  // No main's worker is finished from outside every pane, so `pr land` and a board move there ask nothing.
+  if (command.kind === 'landed') return 'outside a Dashboard pane, landed has no main whose worker it finished';
   if (command.kind === 'claim' && !namesItsTarget(command)) {
     return 'outside a Dashboard pane, claim needs --project <name|aka> to say which project the worker is for';
   }

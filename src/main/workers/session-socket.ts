@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import { retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
+import { outsidePaneRefusal, retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
 import { appUserDataFolder, clearSocketPointer, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
@@ -119,15 +119,14 @@ export function listenForSessions(
 // the app refuses this one's words: a notify whose hook grew words an app from before them does not
 // take (workers-decision-4).
 export async function askRunningApp(commandArguments: readonly string[], older: readonly string[] = commandArguments): Promise<number> {
-  const reply = await runningAppReply(commandArguments, process.cwd(), older);
+  const reply = await runningAppReply(commandArguments, process.cwd(), older, mayStartApp(commandArguments));
   if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
   return reply.ok ? 0 : 1;
 }
 
-// The app's answer to the words, asked from `directory`, for a command that prints it among its own
-// lines (`pr land`, a board move). Which app, and starting it when none answers, is reach-app.ts's;
-// not reaching one is a refusal saying so.
-export async function runningAppReply(commandArguments: readonly string[], directory: string, older: readonly string[] = commandArguments): Promise<SessionReply> {
+// The app's answer to the words, asked from `directory`. Which app, and starting it when none answers
+// and `mayStart` allows, is reach-app.ts's; not reaching one is a refusal saying so.
+async function runningAppReply(commandArguments: readonly string[], directory: string, older: readonly string[], mayStart: boolean): Promise<SessionReply> {
   const userData = appUserDataFolder();
   const reached = await reachApp({
     paneSocket: process.env.DASHBOARD_SOCKET,
@@ -136,18 +135,22 @@ export async function runningAppReply(commandArguments: readonly string[], direc
     start: appStarter(process.env),
     sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
     now: Date.now,
-  }, mayStartApp(commandArguments));
+  }, mayStart);
   if (!reached.ok) return { ok: false, output: reached.message };
   const ask = (args: readonly string[]) => askApp(reached.socket, { directory, args, version: __BUILD_VERSION__ });
   const reply = await ask(commandArguments);
   return retriesInOlderWords(reply, commandArguments, older) ? ask(older) : reply;
 }
 
-// `pane landed` (workers-decision-1), asked only from a pane: a terminal outside every one has no main
-// whose worker it put in, and would print a line about an app it never meant to ask.
-export function askLanded(by: 'branch' | 'card', name: string, directory: string): Promise<SessionReply> {
-  if (process.env.DASHBOARD_SOCKET === undefined) return Promise.resolve({ ok: true, output: '' });
-  return runningAppReply(['landed', `--${by}`, name], directory);
+// What `pr land` and a board move print of `pane landed` (workers-decision-1): the app's lines, or why
+// no worker was released. Never starting the app, which their own work did not need, and nothing at
+// all outside a pane (outsidePaneRefusal).
+export async function askLanded(by: 'branch' | 'card', name: string, directory: string): Promise<string> {
+  if (process.env.DASHBOARD_SOCKET === undefined && outsidePaneRefusal({ kind: 'landed', by, name }) !== null) return '';
+  const words = ['landed', `--${by}`, name];
+  const reply = await runningAppReply(words, directory, words, false)
+    .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }));
+  return reply.ok ? reply.output : `no worker released: ${reply.output}`;
 }
 
 // The command's half: the request out as one line, with the connection left open for the answer, and

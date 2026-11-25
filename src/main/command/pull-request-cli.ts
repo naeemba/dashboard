@@ -5,7 +5,6 @@
 // is the same wait without the merge, so nobody hand-rolls a sleep and gh loop around CI.
 
 import { failureLine } from './failure-line';
-import { landedLine } from '../workers/session-cli';
 
 export const PULL_REQUEST_USAGE = `pr — wait on or land a pull request of the project you are in
 
@@ -50,7 +49,8 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
 export type ProgramAnswer = { ok: boolean; output: string };
 // A landed pull request says the branch it merged into, for the fast-forward after (fast-forward-checkout.ts).
 // One that conflicts says its base and head, for the files it conflicts on (conflictLine).
-export type LandAnswer = ProgramAnswer & { base?: string; conflicts?: { base: string; sha: string } };
+// A landed one says its head branch too, whose worker pane the app is asked to release (releaseLanded).
+export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: { base: string; sha: string } };
 export type LandPorts = { gh(words: string[]): Promise<ProgramAnswer>; wait(milliseconds: number): Promise<void> };
 
 // gh's words for a pull request whose CI has not started, or that runs none.
@@ -81,12 +81,12 @@ async function patiently(ports: LandPorts, words: string[]): Promise<ProgramAnsw
   return answer;
 }
 
-// The pull request's state, head commit, base branch, mergeability and url, as
-// `OPEN <sha> main MERGEABLE https://...`.
-const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName,mergeable,url', '-q', '.state + " " + .headRefOid + " " + .baseRefName + " " + .mergeable + " " + .url'];
+// The pull request's state, head commit, base branch, mergeability, url and head branch, as
+// `OPEN <sha> main MERGEABLE https://... fix-it`.
+const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName,mergeable,url,headRefName', '-q', '.state + " " + .headRefOid + " " + .baseRefName + " " + .mergeable + " " + .url + " " + .headRefName'];
 const readHead = (answer: ProgramAnswer) => {
-  const [state = '', sha = '', base = '', mergeable = '', url = ''] = answer.output.trim().split(' ');
-  return { state, sha, base, mergeable, url };
+  const [state = '', sha = '', base = '', mergeable = '', url = '', branch = ''] = answer.output.trim().split(' ');
+  return { state, sha, base, mergeable, url, branch };
 };
 const conflicting = (answer: ProgramAnswer) => answer.ok && readHead(answer).mergeable === 'CONFLICTING';
 // The program prints the files in place of the output (conflictLine), so the output is only a fallback.
@@ -104,13 +104,13 @@ function recentCheckCount(url: string): string[] | undefined {
 
 // What the wait found: every check passed on the noted commit, or the answer to print. A failure's
 // detail comes first and its verdict last, so the last line is always the one to read.
-type Checked = { ok: true; sha: string; base: string; noChecks: boolean } | LandAnswer;
+type Checked = { ok: true; sha: string; base: string; branch: string; noChecks: boolean } | LandAnswer;
 
 async function checksPassed(ports: LandPorts, target: string): Promise<Checked> {
   const head = await patiently(ports, stateAndHead(target));
   if (isNetworkError(head)) return lost(head, `reading ${target}`);
   if (!head.ok) return head;
-  const { state, sha, base, url } = readHead(head);
+  const { state, sha, base, url, branch } = readHead(head);
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
   // CI does not run on a pull request that conflicts: waiting on it would end in "no checks reported".
   if (conflicting(head)) return conflictAnswer(target, base, sha);
@@ -135,7 +135,7 @@ async function checksPassed(ports: LandPorts, target: string): Promise<Checked> 
     if (!checksBefore.ok) return { ok: false, output: `${checksBefore.output}\n\nno checks reported on ${sha}, and gh could not say whether the repository has CI; ${target} is not merged` };
     if (checksBefore.output.trim() !== '0') return { ok: false, output: `no checks reported on ${sha} a minute on, in a repository whose pull requests run CI; ${target} is not merged` };
   }
-  return { ok: true, sha, base, noChecks };
+  return { ok: true, sha, base, branch, noChecks };
 }
 
 export async function waitOnPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {
@@ -147,25 +147,19 @@ export async function waitOnPullRequest(ports: LandPorts, target: string): Promi
 export async function landPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {
   const checked = await checksPassed(ports, target);
   if (!('sha' in checked)) return checked;
-  const { sha, base, noChecks } = checked;
+  const { sha, base, branch, noChecks } = checked;
   const merged = await mergeAt(ports, target, sha);
   if (merged.conflicting === true) return conflictAnswer(target, base, sha);
   if (isNetworkError(merged)) return { ok: false, output: `${merged.output}\n\nlost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again` };
   if (!merged.ok) return { ok: false, output: `${merged.output}\n\ngh refused to merge ${target} at ${sha}` };
-  return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', a repository with no CI' : ''}`, base };
+  return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', a repository with no CI' : ''}`, base, branch };
 }
 
-// What a land that merged prints before its verdict: the app's answer to `pane landed` for the pull
-// request's branch, a line per worker pane on it released or kept (workers-decision-1), and nothing
-// with --keep or no pane on it. Main's own command is what closes a finished worker, never a timer.
-export type ReleasePorts = LandPorts & { landed(branch: string): Promise<ProgramAnswer> };
-
-export async function releaseLanded(ports: ReleasePorts, target: string, keep: boolean): Promise<string> {
-  if (keep) return '';
-  const head = await patiently(ports, ['pr', 'view', target, '--json', 'headRefName', '-q', '.headRefName']);
-  const branch = head.output.trim();
-  if (!head.ok || branch === '') return `no worker released: gh did not name the branch of ${target}`;
-  return landedLine(await ports.landed(branch));
+// What a land prints before its verdict: the app's answer to `pane landed` for the branch it merged, a
+// line per worker pane on it released or kept (workers-decision-1), and nothing for a land that merged
+// nothing, with --keep, or with no pane on it. Main's own command closes a finished worker, never a timer.
+export async function releaseLanded(landed: (branch: string) => Promise<string>, answer: LandAnswer, keep: boolean): Promise<string> {
+  return !answer.ok || keep || answer.branch === undefined || answer.branch === '' ? '' : landed(answer.branch);
 }
 
 // A merge whose answer was lost may have gone through: a failed call is read back from the

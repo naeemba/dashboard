@@ -8,7 +8,6 @@ import { rebaseBoardChange } from '../../shared/board/board-merge';
 import { failureText } from '../../shared/errors/failure';
 import type { Board } from '../../shared/board/board';
 import { askLanded, askRunningApp } from '../workers/session-socket';
-import { landedLine } from '../workers/session-cli';
 import { boardTarget } from './board-target';
 import { isLinkedWorktree } from './linked-worktree';
 import { holdsWorktree } from '../workers/run-folder';
@@ -98,8 +97,7 @@ async function run(words: readonly string[]): Promise<number> {
 async function withLanded(project: string, commandArguments: readonly string[], result: CommandResult): Promise<CommandResult> {
   const card = finishedByMove(commandArguments, result);
   if (card === null || !result.ok) return result;
-  const line = await askLanded('card', card, project)
-    .then(landedLine, (error: unknown) => `no worker released: ${failureLine(error)}`);
+  const line = await askLanded('card', card, project);
   return line === '' ? result : { ...result, output: `${result.output}\n${line}` };
 }
 

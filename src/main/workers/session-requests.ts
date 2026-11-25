@@ -397,15 +397,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     typedByUser: prompts.fromUser(id),
   });
 
-  // Whether the pane works on the branch, or in the card's worktree. A worktree already gone, or one
+  // Whether the pane's own worktree is the card's, or on the branch. A worktree already gone, or one
   // git cannot answer in, is on no branch to match.
   async function worksOn(id: string, projectPath: string, by: 'branch' | 'card', name: string): Promise<boolean> {
-    if (by === 'card') {
-      const directory = ports.directoryOf(id);
-      const found = ports.cardWorktree(projectPath, name);
-      return directory !== undefined && found !== undefined && isInside(directory, found.worktreePath);
-    }
     const worktree = ownWorktree(id);
+    if (by === 'card') return worktree !== undefined && worktree === ports.cardWorktree(projectPath, name)?.worktreePath;
     if (worktree === undefined || !ports.exists(worktree)) return false;
     return (await ports.branch(worktree).catch(() => '')).trim() === name;
   }

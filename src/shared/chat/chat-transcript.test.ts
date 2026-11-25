@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   afterReset, applyEvent, applyMessage, conversationChange, EMPTY_TRANSCRIPT, IMAGE_LIMIT_SHOWN, imagesFit, preferencesOf, turnTokens, withEarlier, working, type Transcript,
 } from './chat-transcript';
-import { closedReport, doneReport } from '../workers/done-report';
+import { doneReport } from '../workers/done-report';
 import { KEPT_CONVERSATIONS } from './chat-agents';
 
 const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }], id: said });
@@ -246,7 +246,8 @@ describe('applyMessage', () => {
     const said = doneReport('api-terminal-2', '2:1', false, `${'x'.repeat(700)}\n\nOpened #12.`);
     expect(said).toMatch(/Its last message: …x+ Opened #12\.$/);
     expect(prompted(said).entries).toEqual([{ kind: 'notice', text: said }]);
-    const closed = closedReport('api-terminal-2', '2:1', 'card done');
+    const closed = 'api-terminal-2 in pane 2:1 (dashboard://pane/2:1) was closed by the app, card done. If it sent you a report, that says what it did;'
+      + ' `pane list` shows where every worker stands.';
     expect(prompted(closed).entries).toEqual([{ kind: 'notice', text: closed }]);
     const saved = 'api-terminal-2 in pane 2:1 (dashboard://pane/2:1) has finished its turn. If it sent you a report, that says what it did;'
       + ' `pane list` shows where every worker stands.';

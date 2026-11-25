@@ -25,11 +25,10 @@ export type ReachPorts = {
 
 export type Reached = { ok: true; socket: string } | { ok: false; message: string };
 
-// A worker's hook reports with notify from wherever it stands, and `pr land` and a board move ask
-// landed after work that needs no app; an app either starts would be one nobody asked for, so one
-// that has quit is answered with the line instead.
+// A worker's hook reports with notify from wherever it stands; an app it starts would be one nobody
+// asked for, so a hook whose app has quit is answered with the line instead.
 export function mayStartApp(commandArguments: readonly string[]): boolean {
-  return commandArguments[0] !== 'notify' && commandArguments[0] !== 'landed';
+  return commandArguments[0] !== 'notify';
 }
 
 export const NOT_RUNNING = 'no Dashboard is running — start it with `dashboard`';

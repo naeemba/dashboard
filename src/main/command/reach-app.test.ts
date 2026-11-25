@@ -60,10 +60,9 @@ describe('reachApp', () => {
 
 describe('mayStartApp', () => {
   // A worker's hook whose app has quit must not bring a window up.
-  it('lets every pane and project command start the app except notify and landed', () => {
+  it('lets every pane and project command start the app except notify', () => {
     expect(mayStartApp(['claim', '--project', 'crm'])).toBe(true);
     expect(mayStartApp(['project', 'open', '/work/crm', 'crm'])).toBe(true);
     expect(mayStartApp(['notify', '2:3', 'done'])).toBe(false);
-    expect(mayStartApp(['landed', '--branch', 'fix-it'])).toBe(false);
   });
 });

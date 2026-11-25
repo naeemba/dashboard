@@ -150,9 +150,8 @@ export function withWholeId(board: Board | null, commandArguments: readonly stri
 export function finishedByMove(commandArguments: readonly string[], result: CommandResult): string | null {
   const [verb, id] = commandArguments;
   if (verb !== 'move' || id === undefined || !result.ok || result.board === null) return null;
-  const matches = cardsNamed(result.board, id);
-  if (matches.length !== 1 || !isFinishedColumn(result.board, matches[0].column)) return null;
-  return cardAt(result.board, matches[0])?.id ?? null;
+  const at = findCard(result.board, id);
+  return 'column' in at && isFinishedColumn(result.board, at.column) ? cardAt(result.board, at)?.id ?? null : null;
 }
 
 // How much a card has to read, or nothing when it has no trail. `list` carries it beside the branch

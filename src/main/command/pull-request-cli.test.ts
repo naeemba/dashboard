@@ -18,7 +18,7 @@ function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
   };
 }
 
-const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12' };
+const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' };
 const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
 const RECENT_CHECKS = 'pr list --repo github.com/acme/api --state merged --limit 20 --json statusCheckRollup -q [.[].statusCheckRollup | length] | add // 0';
 const none = { ok: false, output: 'no checks reported on the \'fix\' branch' };
@@ -50,7 +50,7 @@ describe('parsePullRequestCommand', () => {
 describe('landPullRequest', () => {
   it('merges the head commit it noted once every check on it passed', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: 'all green' }], 'pr merge': [{ ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
     expect(github.asked.at(-1)).toBe(MERGE);
   });
 
@@ -62,7 +62,7 @@ describe('landPullRequest', () => {
 
   it('asks again a minute on when no checks are reported, and merges a repository whose pull requests never reported a check', async () => {
     const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [none, none], 'pr list': [{ ok: true, output: '0' }], 'pr merge': [{ ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123, a repository with no CI', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123, a repository with no CI', base: 'main', branch: 'fix-it' });
     expect(github.waited).toEqual([NO_CHECKS_WAIT_MS]);
     expect(github.asked).toContain(RECENT_CHECKS);
   });
@@ -111,7 +111,7 @@ describe('landPullRequest', () => {
 
   it('watches once more when the wait on the checks lost its answer', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: false, output: lostAnswer }, { ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
   });
 
   it('says the answer was lost, not that a check failed, once every try lost it', async () => {
@@ -145,13 +145,13 @@ describe('landPullRequest', () => {
   // Seen: the merge went through and only gh's answer was lost.
   it('reports merged when the merge call failed but the pull request merged at the noted commit', async () => {
     const github = fakeGitHub({ 'pr view': [open, { ok: true, output: 'MERGED abc123 main' }], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
     expect(merges(github)).toBe(1);
   });
 
   it('tries a merge lost to a network error once more', async () => {
     const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: false, output: lostAnswer }, { ok: true, output: '' }] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main' });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' });
     expect(merges(github)).toBe(2);
   });
 
@@ -277,38 +277,25 @@ describe('isNetworkError', () => {
 });
 
 describe('releaseLanded', () => {
-  const branchOf12 = { ok: true, output: 'fix-it\n' };
+  const merged = { ok: true, output: 'merged 12 at abc123', base: 'main', branch: 'fix-it' };
   // The app's answer to `pane landed`, and the branches it was asked about.
-  const app = (answer: ProgramAnswer) => {
+  const app = (line: string) => {
     const asked: string[] = [];
-    return { asked, landed: async (branch: string) => { asked.push(branch); return answer; } };
+    return { asked, landed: async (branch: string) => { asked.push(branch); return line; } };
   };
 
   it('asks the app to release the worker on the merged branch, and prints what it answers', async () => {
-    const github = fakeGitHub({ 'pr view': [branchOf12] });
-    const answering = app({ ok: true, output: 'released 0:2' });
-    expect(await releaseLanded({ ...github.ports, landed: answering.landed }, '12', false)).toBe('released 0:2');
+    const answering = app('released 0:2');
+    expect(await releaseLanded(answering.landed, merged, false)).toBe('released 0:2');
     expect(answering.asked).toEqual(['fix-it']);
+    expect(await releaseLanded(app('kept 0:2: it has the keyboard').landed, merged, false)).toBe('kept 0:2: it has the keyboard');
   });
 
-  it('prints why a worker was kept', async () => {
-    const github = fakeGitHub({ 'pr view': [branchOf12] });
-    const answering = app({ ok: true, output: 'kept 0:2: it has the keyboard' });
-    expect(await releaseLanded({ ...github.ports, landed: answering.landed }, '12', false)).toBe('kept 0:2: it has the keyboard');
-  });
-
-  it('with --keep asks neither gh nor the app', async () => {
-    const github = fakeGitHub({});
-    const answering = app({ ok: true, output: 'released 0:2' });
-    expect(await releaseLanded({ ...github.ports, landed: answering.landed }, '12', true)).toBe('');
-    expect(github.asked).toEqual([]);
+  it('asks nothing with --keep, for a land that merged nothing, or for one with no branch', async () => {
+    const answering = app('released 0:2');
+    expect(await releaseLanded(answering.landed, merged, true)).toBe('');
+    expect(await releaseLanded(answering.landed, { ok: false, output: 'a check failed' }, false)).toBe('');
+    expect(await releaseLanded(answering.landed, { ...merged, branch: '' }, false)).toBe('');
     expect(answering.asked).toEqual([]);
-  });
-
-  it('says no worker was released when gh names no branch or the app is not there', async () => {
-    const unnamed = fakeGitHub({ 'pr view': [{ ok: false, output: 'not found' }] });
-    expect(await releaseLanded({ ...unnamed.ports, ...app({ ok: true, output: '' }) }, '12', false)).toBe('no worker released: gh did not name the branch of 12');
-    const github = fakeGitHub({ 'pr view': [branchOf12] });
-    expect(await releaseLanded({ ...github.ports, ...app({ ok: false, output: 'no Dashboard is running' }) }, '12', false)).toBe('no worker released: no Dashboard is running');
   });
 });
