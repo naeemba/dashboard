@@ -11,7 +11,7 @@ pull request that moves the version (tested beside it; `scripts/version-unchange
 entry), `scripts/board-unchanged.mjs`, CI's refusal of a pull request that changes the board's files
 (tested beside it; `scripts/board-unchanged-step.mjs` is its entry; workflow-rule-7) and the
 `/release` command (`.claude/commands/`, beside `/rebuild`), the pnpm setup and the build hooks, the
-test run's temporary-folder guard and its eslint rule (`vitest.config.ts`,
+test run's temporary-folder guard and its eslint rule (`vitest.config.mts`,
 `vitest.temporary-folder-guard.ts`, tested beside it, its count in
 `vitest.temporary-folder-leftovers.ts`, tested beside it, and
 `src/main/testing/temporary-folder.ts`), `src/main/testing/source-files.ts` (every non-test `.ts`
@@ -40,7 +40,8 @@ stay, which a tool or hook should carry, and the cards that moved them.
 The three in `CLAUDE.md`, or all three at once with `pnpm check`. It runs `pnpm test`,
 `pnpm typecheck` and `pnpm lint` in turn, writes everything they print to `check.log` at the
 checkout's top (ignored as `*.log`), and prints one line each, the first five reasons under a
-failed one, a coverage line and the log's path:
+failed one, a coverage line and the log's path. The same summary opens `check.log`, so `head`
+on it reads the summary, not vitest's preamble:
 
     test       FAIL  1 failed | 3831 passed | 1 skipped (3833)
         src/a.test.ts > outer > adds: AssertionError: expected 1 to be 2 // Object.is equality
@@ -60,7 +61,7 @@ end of it.
 The coverage line counts the code under `src/` and `scripts/` that the branch changed against
 main (its merge base with `origin/main`, else `main`, plus untracked files), tests aside, and lists
 each one a test leaves partly unrun, or that no test runs. It rides on the check's own `pnpm test`
-(`vitest.config.ts` turns coverage on when `CHECK_COVERAGE` names the files) and never fails the
+(`vitest.config.mts` turns coverage on when `CHECK_COVERAGE` names the files) and never fails the
 check: a view has no test environment, so a view always reads `no test runs it`
 (workflow-decision-13). A check that died before counting anything (a missing module, a broken
 config) says `no test count`, `no error count` or `no problem count` instead of a count of 0, and

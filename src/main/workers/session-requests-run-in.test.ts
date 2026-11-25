@@ -1,14 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project } from './session-requests-fixture';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 // `pane run --in <folder>`: a worker in a folder the caller keeps, and the worktree it is in.
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
-
-// --in goes through path.resolve, which on Windows puts a drive on the fixture's POSIX folders.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
 
 describe('sessionRequests run --in', () => {
   // The caller's own worktree, typed from main's folder: the worker starts there, and release closes the

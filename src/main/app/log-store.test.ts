@@ -4,9 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LogDraft, LogEntry } from '../../shared/app/log-entry';
 import { logStore } from './log-store';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-// Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
-const posixModesOnly = it.skipIf(process.platform === 'win32');
+import { posixModesOnly } from '../testing/windows-skips';
 
 // Lets one test make a rename or an append fail the way a busy or locked file does; every other test
 // writes for real.

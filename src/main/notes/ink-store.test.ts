@@ -5,9 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
 import { INK_FILE, inkPath, readInk, writeInk } from './ink-store';
 import { temporaryFolder } from '../testing/temporary-folder';
-
-// Skipped on Windows, which has no POSIX file modes: chmod neither locks a folder against writes nor leaves a mode to read back.
-const posixModesOnly = it.skipIf(process.platform === 'win32');
+import { posixModesOnly } from '../testing/windows-skips';
 
 function project(): string {
   return temporaryFolder('dashboard-ink-');

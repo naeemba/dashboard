@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseBrowserCommand, wholeFiles } from './browser-cli';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const command = (...words: string[]) => {
   const parsed = parseBrowserCommand(words);
@@ -53,8 +54,7 @@ describe('parseBrowserCommand', () => {
 });
 
 describe('wholeFiles', () => {
-  // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths this expects never come back.
-  it.skipIf(process.platform === 'win32')('reads a file from home, whole, or from the folder the command runs in', () => {
+  posixPathsOnly('reads a file from home, whole, or from the folder the command runs in', () => {
     expect(wholeFiles(['~/cv.pdf', '/tmp/a.pdf', 'docs/b.pdf'], '/home/me', '/work/api'))
       .toEqual(['/home/me/cv.pdf', '/tmp/a.pdf', '/work/api/docs/b.pdf']);
   });

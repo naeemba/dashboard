@@ -3,9 +3,7 @@ import {
   blockingChanges, branchNameFor, changedFiles, oneAtATime, workPrompt, worktreePathFor,
 } from './ship';
 import { BUMP_VERSION, KEEP_VERSION } from '../skills/work-card-skill';
-
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
 

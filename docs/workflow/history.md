@@ -62,3 +62,7 @@ One line per merged change: date and why.
 - 2026-11-25 — The test-run guard and `pane send` read a `powershell -Command`, `pwsh -c` or
   `cmd /c` body as the running-app guard does: `pwsh -c "pnpm test"` started a second test run, and
   `powershell -Command claude` started a worker with none of the app's settings (issue #365)
+- 2026-11-25 — `posixPathsOnly` is one import from `src/main/testing/`, not a copy in each of 14
+  test files, after #370 added a POSIX-path test without it; `check.log` opens with the summary,
+  since `head check.log` showed only vitest's preamble; `vitest.config.mts`, so Vite stops warning
+  that the config is ESM loaded as CommonJS (workflow-rule-6)
