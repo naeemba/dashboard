@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T15:11:27.052Z",
-  "updatedAt": "2026-11-25T15:25:31.712Z",
+  "updatedAt": "2026-11-25T15:25:38.674Z",
   "branch": "agent-tab-s-first-load-runs-as-a-background",
   "comments": [
     {
@@ -17,6 +17,6 @@
       "body": "Cancelled: not reproducible. Installed v2.58.0, 4 fresh tabs opened and measured 1.2 s later: fcp 100–264 ms, rAF 123–144/s. The worker's throwaway build painted on first load too. The one failure was tab 1, the first tab after an app restart, likely a one-off warm-up. The local ordering commit b905d70c was not pushed."
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Cancelled",
+  "order": 24
 }
