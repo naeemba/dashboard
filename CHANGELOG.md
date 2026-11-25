@@ -1,5 +1,25 @@
 # Changelog
 
+## v2.58.0 (2026-11-25)
+
+### What's new
+
+- browser: open data: URLs, so a worker can check a fixture page
+- checks: posixPathsOnly shared from src/main/testing/; check.log opens with the summary
+- work-card: report to main once the PR opens; a coverage-line file gets a test or a reason
+- Workers close when main's own command finishes their work, never on a timer
+- Agent browser tabs: never take the keyboard, and render as a foreground tab while off screen
+
+### What's Changed
+* browser: open data: URLs, so a worker can check a fixture page by @naeemba in https://github.com/naeemba/dashboard/pull/372
+* checks: posixPathsOnly shared from src/main/testing/; check.log opens with the summary by @naeemba in https://github.com/naeemba/dashboard/pull/373
+* work-card: report to main once the PR opens; a coverage-line file gets a test or a reason by @naeemba in https://github.com/naeemba/dashboard/pull/374
+* Workers close when main's own command finishes their work, never on a timer by @naeemba in https://github.com/naeemba/dashboard/pull/376
+* Agent browser tabs never take the keyboard, and run as a foreground tab while held by @naeemba in https://github.com/naeemba/dashboard/pull/377
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.57.0...v2.58.0
+
 ## v2.57.0 (2026-11-25)
 
 ### What's new
