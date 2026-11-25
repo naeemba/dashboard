@@ -141,15 +141,20 @@ conflict after review, and one of them is thrown away.
   tests in parallel, or start a second run while one is going. All of them
   must pass. If one fails and you cannot fix it, stop: do not open the pull
   request, and say what failed and why in a comment on the card.
+- When the checks list changed files a test leaves partly unrun (a coverage
+  line, like \`pnpm check\`'s), each one gets a test for what it leaves
+  unrun, or a line in the pull request's body saying why not; run the new
+  test files on their own, not the whole check again. A file left on that
+  line with neither is the review's first round of work.
 - Commit in small pieces with messages that say what changed and why.
 - Push the branch to \`$3\` and open the pull request with \`gh pr create\`; on
   GitLab, \`glab mr create --target-branch $2 --title "<title>" --description
   "<body>" --push=false --yes\`, which the board records the same way.
-- To wait for the pull request's CI, run \`node "$DASHBOARD_COMMAND" pr wait <n>\`
-  in the background with the longest timeout allowed: it waits on the head
-  commit, outlasts a network error, and its last line is the verdict. Never a
-  \`sleep\` and \`gh run view\` loop. It asks gh, so on GitLab the wait is
-  \`glab ci status --wait\`, run the same way.
+- Once the pull request is open you are done: send main (when your prompt
+  names one) your report now, with its number, and end your turn. Do not wait
+  on its CI. The review the app starts on it waits on CI, and a wait left
+  running here is killed when that review starts, with the report promised
+  after it.
 
 ## What not to do
 

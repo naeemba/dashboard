@@ -23,3 +23,6 @@ One line per merged change: date and why.
 - 2026-11-24 — The app installs a `dashboard-browser` skill, so a session matching a page task to
   a skill finds this browser rather than Claude in Chrome (browser-decision-8)
 - 2026-11-24 — `/work-card` opens a merge request with `glab mr create` on a GitLab project
+- 2026-11-25 — `/work-card` reports to main and stops once its pull request opens, since the review
+  the app starts waits on CI and killed a worker's own wait with the report after it; a file on the
+  checks' coverage line gets a test or a reason in the pull request's body

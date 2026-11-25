@@ -56,7 +56,9 @@ What a shipped card's agent is started on:
 the card and its subtasks (the `Subtasks` block `board show` prints) and the project's `CLAUDE.md`,
 does the work, runs the project's checks and opens the pull request: with `glab mr create` when
 `<remote>`'s host does not name github (ship-decision-5), where it lists open work with `glab mr
-list` and waits on CI with `glab ci status --wait`, since `pr wait` asks gh. Its first look at
+list`. Once the pull request is open it reports its number to main and ends its turn, without
+waiting on CI: the review the app starts waits on CI, and kills a wait the worker left running,
+with any report promised after it. Its first look at
 the code is
 a literal `codegraph explore` command run from the project's checkout (whose source can lag the
 worktree, so it reads a file before changing it). Before writing code it lists the Doing and Review
@@ -69,6 +71,9 @@ request number, and takes a new docs id last, then greps `docs` and `CLAUDE.md` 
 left, for a project without this repository's docs-ids lint (skills-decision-3).
 The checks are the ones `CLAUDE.md` names, else the project's test, type-check and lint scripts;
 a `check` script that runs them all and prints a summary is run once, its log read for a failure.
+Each changed file `pnpm check`'s coverage line lists gets a test for what it leaves unrun, or a
+line in the pull request's body saying why not (workflow-decision-13): workers that left them there
+handed the review loop the tests to write.
 The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
 `bump-version` tells it to bump last, from `<remote>/<base branch>` (the fourth and third words:
