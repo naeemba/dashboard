@@ -51,7 +51,8 @@ export function snapshotOf(id: number, nodes: readonly AXNode[], fileInputs: rea
     const file = node.backendDOMNodeId === undefined ? undefined : files.get(node.backendDOMNodeId);
     const role = file === undefined ? text(node.role) : 'file';
     if (node.ignored === true || node.backendDOMNodeId === undefined || (file === undefined && !INTERACTIVE.has(role))) continue;
-    if (refs.size === SNAPSHOT_LIMIT) {
+    // A file input is let through past the limit: a page has a handful, and `upload` has no other way to name one.
+    if (refs.size >= SNAPSHOT_LIMIT && file === undefined) {
       left++;
       continue;
     }

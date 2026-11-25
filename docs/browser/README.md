@@ -124,7 +124,8 @@ the person asks for it (browser-decision-8).
   accessibility tree, each with a ref (`e3`) good until the next snapshot. A ref
   whose element the page has since dropped or hidden says to take a new one.
   Each `<input type=file>` is listed as role `file`, by its label or its `name`
-  or `id`, even one the page hides behind its own upload button.
+  or `id`, even one the page hides behind its own upload button, and even past
+  the 300 the snapshot otherwise stops at.
   `click <tab> <ref>`, `type <tab> <ref> "<text>"` (typed at the end of what the
   field holds) and `press <tab> <key> [<ref>]` act on it.
 - `upload <tab> <ref> <file>...` sets a file input's files, as the file dialog

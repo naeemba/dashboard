@@ -47,6 +47,12 @@ describe('snapshotOf', () => {
     expect([...made.refs]).toEqual([['e1', 3], ['e2', 4], ['e3', 5]]);
   });
 
+  it('lists a file input past the limit', () => {
+    const many = Array.from({ length: SNAPSHOT_LIMIT + 1 }, (_, place) => node('button', 'b', place + 1));
+    const lines = snapshotOf(1, many, [{ node: 9999, name: 'resume' }]).text.split('\n');
+    expect(lines.slice(-2)).toEqual([`e${SNAPSHOT_LIMIT + 1} file "resume"`, `… 1 more past the first ${SNAPSHOT_LIMIT}; \`browser read\` for the text`]);
+  });
+
   it('says a page has nothing to act on', () => {
     expect(snapshotOf(1, [node('heading', 'Hi', 1)]).text).toBe('tab 1 has nothing to click or type in');
   });
