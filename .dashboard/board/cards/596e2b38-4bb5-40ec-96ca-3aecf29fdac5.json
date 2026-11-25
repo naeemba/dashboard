@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T12:41:32.651Z",
-  "updatedAt": "2026-11-25T12:41:50.624Z",
+  "updatedAt": "2026-11-25T13:01:07.210Z",
   "branch": "workers-close-when-main-s-own-command-finis",
-  "column": "Doing",
+  "pullRequest": 376,
+  "comments": [
+    {
+      "at": "2026-11-25T13:01:07.151Z",
+      "body": "Pull request #376 opened: Workers close when main's own command finishes their work, never on a timer https://github.com/naeemba/dashboard/pull/376"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
