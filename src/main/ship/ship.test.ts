@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   blockingChanges, branchNameFor, changedFiles, oneAtATime, workPrompt, worktreePathFor,
 } from './ship';
-import { BUMP_VERSION, KEEP_VERSION } from '../skills/work-card-skill';
+import { BUMP_VERSION, KEEP_VERSION, NO_REVIEW_LOOP, REVIEW_LOOP } from '../skills/work-card-skill';
 
 // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 const posixPathsOnly = it.skipIf(process.platform === 'win32');
@@ -161,8 +161,8 @@ describe('oneAtATime', () => {
 });
 
 describe('workPrompt', () => {
-  it('sends the card, the project\'s version word, the base branch and its remote', () => {
-    expect(workPrompt(cardId, true, { remote: 'origin', branch: 'main' })).toBe(`/work-card ${cardId} ${BUMP_VERSION} main origin`);
-    expect(workPrompt(cardId, false, { remote: 'gitlab', branch: 'develop' })).toBe(`/work-card ${cardId} ${KEEP_VERSION} develop gitlab`);
+  it('sends the card, the project\'s version word, the base branch, its remote and whether a review starts', () => {
+    expect(workPrompt(cardId, true, { remote: 'origin', branch: 'main' }, true)).toBe(`/work-card ${cardId} ${BUMP_VERSION} main origin ${REVIEW_LOOP}`);
+    expect(workPrompt(cardId, false, { remote: 'gitlab', branch: 'develop' }, false)).toBe(`/work-card ${cardId} ${KEEP_VERSION} develop gitlab ${NO_REVIEW_LOOP}`);
   });
 });

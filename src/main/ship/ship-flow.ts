@@ -20,6 +20,8 @@ export type ShipPorts = {
   attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult>;
   // Whether a card shipped in the project bumps its version: its projects.yaml entry, off by default.
   bumpsVersion(projectPath: string): boolean;
+  // settings.review.autoLoop: whether the app starts a review once the card's pull request opens.
+  autoLoop(): boolean;
   agentRunsIn(slot: number, pane: number | null): boolean;
   dropDeadWorktrees(): void;
   forgetReview(cardId: string): void;
@@ -33,8 +35,8 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
   // and two folders on disk, and the one nothing points at can neither be seen nor removed from inside
   // the app.
   const shippingCards = new Set<string>();
-  // Read at each ship, so a hand edit of projects.yaml holds from the next one.
-  const prompt = (projectPath: string, cardId: string, base: BaseBranch) => workPrompt(cardId, ports.bumpsVersion(projectPath), base);
+  // Read at each ship, so a hand edit of projects.yaml or the settings screen holds from the next one.
+  const prompt = (projectPath: string, cardId: string, base: BaseBranch) => workPrompt(cardId, ports.bumpsVersion(projectPath), base, ports.autoLoop());
 
   // The whole ship, in the order the design doc sets out. Each step's failure stops the flow and comes
   // back as a message the board's status bar prints; everything before it is left as it was. Every git

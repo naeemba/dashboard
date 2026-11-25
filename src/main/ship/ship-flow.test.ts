@@ -3,7 +3,7 @@ import { addCard, emptyBoard } from '../../shared/board/board';
 import type { ShipResult, WorktreeEntry } from '../../shared/app/bridge';
 import { writeBoard } from '../board/board-store';
 import { shipFlow, type ShipPorts } from './ship-flow';
-import { BUMP_VERSION } from '../skills/work-card-skill';
+import { BUMP_VERSION, REVIEW_LOOP } from '../skills/work-card-skill';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
 
@@ -35,6 +35,7 @@ function ports(projectPath: string, worktrees: WorktreeEntry[]) {
     dropDeadWorktrees: () => undefined,
     forgetReview: () => undefined,
     bumpsVersion: (path) => { asked.push(path); return true; },
+    autoLoop: () => true,
     queue: (_, run) => run(),
   };
   return { shipCard: shipFlow(flowPorts), asked, prompts };
@@ -58,7 +59,7 @@ describe('the prompt a ship starts its agent on', () => {
     const { shipCard, asked, prompts } = ports(projectPath, []);
     await shipCard(request(projectPath));
     expect(asked).toEqual([projectPath]);
-    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin`]);
+    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin ${REVIEW_LOOP}`]);
     expectBranchUntouched(projectPath);
   });
 
@@ -73,7 +74,7 @@ describe('the prompt a ship starts its agent on', () => {
     const { shipCard, asked, prompts } = ports(projectPath, [existing]);
     await shipCard(request(projectPath));
     expect(asked).toEqual([projectPath]);
-    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin`]);
+    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin ${REVIEW_LOOP}`]);
     expectBranchUntouched(worktreePath);
   });
 
@@ -82,6 +83,6 @@ describe('the prompt a ship starts its agent on', () => {
     const projectPath = project('gitlab');
     const { shipCard, prompts } = ports(projectPath, []);
     await shipCard(request(projectPath));
-    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk gitlab`]);
+    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk gitlab ${REVIEW_LOOP}`]);
   });
 });

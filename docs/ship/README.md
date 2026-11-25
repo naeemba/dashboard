@@ -34,12 +34,14 @@ stdout and stderr from the first that names an error (pnpm says why on stdout, n
 stderr above its help); the worktree stays.
 
 The agent is started on
-`/work-card <card id> bump-version|keep-version <base branch> <remote>`
+`/work-card <card id> bump-version|keep-version <base branch> <remote> review-loop|no-review-loop`
 (`workPrompt`), the skill the app installs ([skills](../skills/README.md#work-card)).
 The second word is the project's `bumpVersion` in `projects.yaml`, read at each
 ship, `keep-version` unless it says `true` (projects-decision-1). The third is the
 branch the worktree was cut from, which a bump merges in first, and the fourth the
-remote it is on.
+remote it is on. The fifth is settings `review.autoLoop`, read at each ship: with
+`no-review-loop` nothing starts a review when the pull request opens, so the agent
+waits on CI itself.
 
 The remote is not always origin: it is origin when there is one, else the only
 remote, else the one the local main (then master) tracks (`chosenRemote`). Never
