@@ -3,7 +3,6 @@ import { readProjects } from './projects-file';
 import { firstProjectsFile } from './projects-first';
 import { addProject, removeProject, setProject, withOpenedProject, type ProjectsWrite } from './projects-write';
 
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive.
 import { posixPathsOnly } from '../testing/posix-paths-only';
 
 const FILE = `# Every project I work on.

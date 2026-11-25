@@ -4,7 +4,6 @@ import { project } from './session-requests-fixture';
 import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
 
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 import { posixPathsOnly } from '../testing/posix-paths-only';
 
 // A stop is told only once it has lasted the grace period; stop-notices.test.ts holds what it waits for.

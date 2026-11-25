@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { describeProject, initialPaths, NO_APP_DATA_MESSAGE, PROJECT_REQUEST, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
 import { readProjects } from './projects-file';
 
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 import { posixPathsOnly } from '../testing/posix-paths-only';
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';

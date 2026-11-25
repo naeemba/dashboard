@@ -4,7 +4,6 @@ import {
 } from './ship';
 import { BUMP_VERSION, KEEP_VERSION } from '../skills/work-card-skill';
 
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 import { posixPathsOnly } from '../testing/posix-paths-only';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';

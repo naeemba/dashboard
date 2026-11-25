@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { firstProjectsFile } from './projects-first';
 import { readProjects } from './projects-file';
 
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 import { posixPathsOnly } from '../testing/posix-paths-only';
 
 describe('firstProjectsFile', () => {

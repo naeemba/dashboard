@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
 import { temporaryFolder } from '../testing/temporary-folder';
 
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
 import { posixPathsOnly } from '../testing/posix-paths-only';
 
 describe('docOrder', () => {

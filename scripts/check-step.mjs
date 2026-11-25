@@ -21,6 +21,8 @@ const testEnvironment = reportsDirectory === undefined
   : { ...process.env, CHECK_COVERAGE: JSON.stringify({ include: changed, reportsDirectory }) };
 
 const logPath = resolve('check.log');
+// Emptied now, so a run cut short leaves no earlier run's log looking like this one's.
+writeFileSync(logPath, '');
 const sections = [];
 const lines = [];
 let failed = false;
