@@ -13,6 +13,8 @@
 // the remote it is on, which is not always origin (chosenRemote in app/default-branch.ts). The fifth,
 // `$4`, is settings.review.autoLoop: whether the app starts a review, which waits on CI, once the
 // pull request opens. Off, nothing does, so the agent waits on CI itself.
+import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+
 export const BUMP_VERSION = 'bump-version';
 export const KEEP_VERSION = 'keep-version';
 export const REVIEW_LOOP = 'review-loop';
@@ -162,9 +164,13 @@ conflict after review, and one of them is thrown away.
   is killed when that review starts, with the report promised after it.
 
   \`${NO_REVIEW_LOOP}\`, or anything else, means nothing starts a review, so
-  nothing else watches CI: wait on it in the background (\`node
-  "$DASHBOARD_COMMAND" pr wait <n>\`, or \`glab ci status --wait\` on GitLab),
-  then send main your report with the number and CI's verdict.
+  nothing else watches CI: wait on it with \`node "$DASHBOARD_COMMAND" pr wait
+  <n>\`, or \`glab ci status --wait\` on GitLab, run in the background
+  (${LONGEST_BACKGROUND_RUN}), so you are woken when it exits. A wait stopped
+  at that time limit has not failed: run it once more. That is the whole wait:
+  no \`gh pr checks\`, \`gh run view\` or \`glab ci status\` by hand in
+  between, and no foreground \`sleep\`. Its last line is the verdict; send
+  main your report with the number and that verdict.
 
 ## What not to do
 

@@ -3,7 +3,7 @@ import { addCard, emptyBoard } from '../../shared/board/board';
 import type { ShipResult, WorktreeEntry } from '../../shared/app/bridge';
 import { writeBoard } from '../board/board-store';
 import { shipFlow, type ShipPorts } from './ship-flow';
-import { BUMP_VERSION, REVIEW_LOOP } from '../skills/work-card-skill';
+import { BUMP_VERSION, NO_REVIEW_LOOP, REVIEW_LOOP } from '../skills/work-card-skill';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
 
@@ -23,7 +23,7 @@ function project(remote = 'origin'): string {
   return projectPath;
 }
 
-function ports(projectPath: string, worktrees: WorktreeEntry[]) {
+function ports(projectPath: string, worktrees: WorktreeEntry[], autoLoop = () => true) {
   const asked: string[] = [];
   const prompts: string[] = [];
   const flowPorts: ShipPorts = {
@@ -35,7 +35,7 @@ function ports(projectPath: string, worktrees: WorktreeEntry[]) {
     dropDeadWorktrees: () => undefined,
     forgetReview: () => undefined,
     bumpsVersion: (path) => { asked.push(path); return true; },
-    autoLoop: () => true,
+    autoLoop,
     queue: (_, run) => run(),
   };
   return { shipCard: shipFlow(flowPorts), asked, prompts };
@@ -84,5 +84,16 @@ describe('the prompt a ship starts its agent on', () => {
     const { shipCard, prompts } = ports(projectPath, []);
     await shipCard(request(projectPath));
     expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk gitlab ${REVIEW_LOOP}`]);
+  });
+
+  // Off, nothing starts a review that waits on CI, so the worker has to: the setting is read at each
+  // ship, not once when the flow is built, so turning the Review row off reaches the next card.
+  it('reads the review setting at each ship', async () => {
+    const projectPath = project();
+    let loop = true;
+    const { shipCard, prompts } = ports(projectPath, [], () => loop);
+    loop = false;
+    await shipCard(request(projectPath));
+    expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin ${NO_REVIEW_LOOP}`]);
   });
 });
