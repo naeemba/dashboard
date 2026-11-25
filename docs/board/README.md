@@ -394,7 +394,7 @@ board there does not parse, and when it cannot tell which branch on the remote i
 - Given `crm` in `~/.dashboard/projects.yaml`, when `dashboard board move <id> Done --project crm`
   runs from any folder, then the card moves on crm's board.
 - Given a worker pane in a card's worktree, when `board move <id> Done` (or
-  Cancelled) runs from a pane, then the app is asked to release it and the move's
+  Cancelled) runs from another pane, then the app is asked to release it and the move's
   output ends `released 2:3` or `kept 2:3: <why>` (workers-decision-1).
 - Given the board is on screen, when `board move` writes the file from a pane, then the board
   re-reads without moving your selection.

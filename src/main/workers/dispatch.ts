@@ -36,7 +36,8 @@ export const BOARD_INSTRUCTIONS = [
   'A card with a branch has its column moved by the app from its pull request: Doing when its agent starts,'
     + ' Review when the pull request opens, Done when it merges, Doing again when it closes unmerged. Do not'
     + ' move one yourself or record its pull request; the app finds it from the branch. A card with no'
-    + ' branch, such as research, is moved by whoever works it; a move into Done releases its worker\'s pane.',
+    + ' branch, such as research, is moved by whoever works it; a move into Done by main releases its'
+    + ' worker\'s pane, and a worker\'s own move leaves its pane for main to finish.',
 ].join('\n');
 
 // The app's own commands, allowed in the settings of every session it starts (main's screen, a worker's
