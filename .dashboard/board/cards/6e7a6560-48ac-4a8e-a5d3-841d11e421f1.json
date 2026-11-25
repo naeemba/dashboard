@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-25T11:37:10.046Z",
-  "updatedAt": "2026-11-25T11:44:06.802Z",
+  "updatedAt": "2026-11-25T12:06:36.743Z",
   "branch": "checks-posixpathsonly-shared-from-src-main",
   "pullRequest": 373,
   "comments": [
     {
       "at": "2026-11-25T11:44:06.782Z",
       "body": "Pull request #373 opened: checks: posixPathsOnly shared from src/main/testing/; check.log opens with the summary https://github.com/naeemba/dashboard/pull/373"
+    },
+    {
+      "at": "2026-11-25T12:06:36.743Z",
+      "body": "Review loop converged in 2 rounds, ready to merge. Round 1 found 3 things and fixed all 3 in e6c4c9e9: check.log is written as each check finishes again, so a run cut short keeps its finished checks (medium); posixModesOnly moved beside posixPathsOnly in src/main/testing/windows-skips.ts (low); the imports went back to the top of the file (nit). Round 2 re-review was clean. CI passed on e6c4c9e9. No conflict with main. Scope note: the shared posixModesOnly (5 test files) goes beyond the card, which asked only for posixPathsOnly. It is a small change in the same style."
     }
   ],
   "column": "Review",
