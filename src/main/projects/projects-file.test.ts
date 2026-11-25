@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bumpsVersion, findProjects, landsPullRequest, readProjects, type Project } from './projects-file';
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const FILE = `- name: new-crm
   aka: [crm]
@@ -136,8 +137,6 @@ describe('findProjects', () => {
     expect(findProjects(billing, 'crm').map((project) => project.name)).toEqual(['new-crm', 'billing']);
   });
 });
-
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
 
 describe('bumpsVersion', () => {
   const same = (folder: string) => folder;

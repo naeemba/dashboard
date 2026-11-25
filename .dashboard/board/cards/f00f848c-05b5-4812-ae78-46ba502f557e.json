@@ -5,7 +5,23 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-25T11:37:16.928Z",
-  "updatedAt": "2026-11-25T11:37:16.928Z",
-  "column": "Backlog",
-  "order": 70
+  "updatedAt": "2026-11-25T11:48:18.368Z",
+  "branch": "browser-open-data-urls-so-a-worker-can-chec",
+  "pullRequest": 372,
+  "comments": [
+    {
+      "at": "2026-11-25T11:40:20.237Z",
+      "body": "Pull request #372 opened: browser: open data: URLs, so a worker can check a fixture page https://github.com/naeemba/dashboard/pull/372"
+    },
+    {
+      "at": "2026-11-25T11:47:04.315Z",
+      "body": "Review loop on #372: converged, ready to merge. 1 round, 0 findings, no fix commits, no conflict with main. Checks passed on 5b77c88e. Matches the card: addressUrl takes data: typed or sent (frames and popups still refused), test in address.test.ts, skill and browser docs updated. file: left refused on purpose (the card said only if equally simple)."
+    },
+    {
+      "at": "2026-11-25T11:48:18.339Z",
+      "body": "Pull request #372 merged: browser: open data: URLs, so a worker can check a fixture page https://github.com/naeemba/dashboard/pull/372"
+    }
+  ],
+  "column": "Done",
+  "order": 302
 }

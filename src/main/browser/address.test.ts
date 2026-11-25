@@ -21,6 +21,11 @@ describe('addressUrl', () => {
     expect(addressUrl('http://example.com/a')).toBe('http://example.com/a');
   });
 
+  it('keeps a data: page as typed, which only the address may load', () => {
+    expect(addressUrl(' data:text/html,<input type=file> ')).toBe('data:text/html,<input type=file>');
+    expect(isBrowsable('data:text/html,<input type=file>')).toBe(false);
+  });
+
   it('adds https to a bare host, and http to this machine', () => {
     expect(addressUrl(' github.com/owner/repo ')).toBe('https://github.com/owner/repo');
     expect(addressUrl('localhost:5173')).toBe('http://localhost:5173');

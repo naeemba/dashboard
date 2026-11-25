@@ -1,0 +1,11 @@
+{
+  "id": "d2bdd5db-9680-4106-b377-101c67fa53f3",
+  "title": "Name the nine bare it.skipIf(win32) Windows skips",
+  "notes": "Nine bare it.skipIf(process.platform === 'win32') calls have their reason only in a comment, which breaks the 'named it.skipIf' half of workflow-rule-6: create-task-program.test.ts:212,222, board-sync-git.test.ts:200,208, session-socket.test.ts:63,93,141, claude-process.test.ts:14,28. Cost: the reason is lost when a test is copied, and the rule says otherwise. Fix: a named skip per reason, shared from src/main/testing/. Issue: https://github.com/naeemba/dashboard/issues/375 Review: https://github.com/naeemba/dashboard/pull/373#discussion_r4694421466",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-25T11:48:41.622Z",
+  "updatedAt": "2026-11-25T11:48:41.623Z",
+  "column": "Backlog",
+  "order": 68
+}

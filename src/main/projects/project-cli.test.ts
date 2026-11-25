@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { describeProject, initialPaths, NO_APP_DATA_MESSAGE, PROJECT_REQUEST, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
 import { readProjects } from './projects-file';
-
-// Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths these expect never come back.
-const posixPathsOnly = it.skipIf(process.platform === 'win32');
+import { posixPathsOnly } from '../testing/windows-skips';
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
 const NO_FOLDERS = () => { throw new Error('asked for the folders'); };

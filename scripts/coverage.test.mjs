@@ -7,7 +7,7 @@ const file = (lines, branches) => ({ lines, branches, statements: lines, functio
 describe('coveredFile', () => {
   it('takes the code under src/ and scripts/, never a test, a declaration or a doc', () => {
     expect(['src/main/a.ts', 'scripts/check.mjs', 'src/a.test.ts', 'scripts/check.test.mjs', 'src/env.d.ts',
-      'docs/a.md', 'vitest.config.ts'].filter(coveredFile)).toEqual(['src/main/a.ts', 'scripts/check.mjs']);
+      'docs/a.md', 'vitest.config.mts'].filter(coveredFile)).toEqual(['src/main/a.ts', 'scripts/check.mjs']);
   });
 });
 
