@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-24T23:39:58.399Z",
-  "updatedAt": "2026-11-24T23:48:20.361Z",
+  "updatedAt": "2026-11-25T00:14:36.438Z",
   "branch": "browser-upload-set-a-file-input-s-files-so",
   "pullRequest": 370,
   "comments": [
     {
       "at": "2026-11-24T23:48:20.339Z",
       "body": "Pull request #370 opened: browser upload: set a file input's files, so a form with a CV upload is filled in a Dashboard tab https://github.com/naeemba/dashboard/pull/370"
+    },
+    {
+      "at": "2026-11-25T00:14:36.438Z",
+      "body": "Review loop converged in 3 rounds, ready to merge. Round 1 fixed 4: upload paths resolved in a tested wholeFiles function; the snapshot lists every <input type=file> as role file, including hidden ones (dropzones), with the type read untrimmed; an import order fix. Round 2 fixed 1: file inputs are listed past the 300-element snapshot limit. Round 3 was clean. Then CI failed on Windows (wholeFiles test used POSIX paths); it is now skipped on win32, as file-open.test does (55b021bd). CI passed on 55b021bd. Design note: snapshot output changed for every page (file inputs now show as role file, hidden ones too), which upload needs to name a hidden CV input. No conflicts, nothing open."
     }
   ],
   "column": "Review",
