@@ -9,7 +9,7 @@ import { isRefused } from '../actions/action';
 import { heldTab, tabLines } from './browser-holds';
 import { PageTimeout, type PagePorts } from './browser-views';
 import { DEFAULT_READ_TOKENS, READ_SCRIPT, readingText, readPage, type ReaderPage } from './page-reader';
-import { snapshotOf, type AXNode } from './page-snapshot';
+import { snapshotOf, type AXNode, type FileInputNode } from './page-snapshot';
 
 // The one module that drives a page's content, over the DevTools protocol browser-views.ts attaches
 // to a tab: the reads the browser command answers (read, screenshot, snapshot, console, network,
@@ -83,6 +83,21 @@ async function dropOldFiles(folder: string, now: number): Promise<void> {
   }
 }
 
+// What DOM.describeNode says of a node, read as a file input or not. Its attributes are a flat list,
+// name then value; `multiple` is there or not, whatever its value.
+function attributesOf(attributes: unknown): Map<string, string> {
+  const named = new Map<string, string>();
+  if (!Array.isArray(attributes)) return named;
+  for (let index = 0; index < attributes.length; index += 2) named.set(String(attributes[index]).toLowerCase(), String(attributes[index + 1]));
+  return named;
+}
+
+function fileInput(nodeName: unknown, attributes: unknown): { multiple: boolean } | null {
+  if (nodeName !== 'INPUT') return null;
+  const named = attributesOf(attributes);
+  return named.get('type')?.toLowerCase() === 'file' ? { multiple: named.has('multiple') } : null;
+}
+
 export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<string, BrowserState>, folder: string, now: () => number = Date.now) {
   // Each tab's refs from its last snapshot, to the DOM node each names.
   // ponytail: a closed tab's refs stay, a small map per tab ever snapshotted; drop them on close if it shows.
@@ -116,9 +131,9 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     return Buffer.from(isRecord(answer) && typeof answer.data === 'string' ? answer.data : '', 'base64');
   }
 
-  async function sendToNode(id: number, method: string, node: number): Promise<unknown> {
+  async function sendToNode(id: number, method: string, node: number, extra: Record<string, unknown> = {}): Promise<unknown> {
     try {
-      return await pages.send(id, method, { backendNodeId: node });
+      return await pages.send(id, method, { ...extra, backendNodeId: node });
     } catch (error) {
       const text = failureText(error);
       if (!STALE_NODE.test(text)) throw error;
@@ -149,6 +164,11 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
       }
       return;
     }
+    // Chromium sets the files and fires the input's input and change events, as a person's pick does.
+    if (done.kind === 'upload') {
+      await sendToNode(id, 'DOM.setFileInputFiles', done.node, { files: done.files });
+      return;
+    }
     if (done.node !== null) await sendToNode(id, 'DOM.focus', done.node);
     if (done.kind === 'type') {
       await caretToEnd(id, done.node);
@@ -159,6 +179,12 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     const shared = { key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
     await pages.send(id, 'Input.dispatchKeyEvent', { type: text === undefined ? 'rawKeyDown' : 'keyDown', ...shared, ...(text === undefined ? {} : { text }) });
     await pages.send(id, 'Input.dispatchKeyEvent', { type: 'keyUp', ...shared });
+  }
+
+  async function fileInputOf(id: number, node: number): Promise<{ multiple: boolean } | null> {
+    const described = await sendToNode(id, 'DOM.describeNode', node);
+    const element = isRecord(described) && isRecord(described.node) ? described.node : {};
+    return fileInput(element.nodeName, element.attributes);
   }
 
   async function read(id: number, { maxTokens, selector }: ReadOptions): Promise<string | Refused> {
@@ -238,10 +264,26 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
     return file;
   }
 
+  // Every <input type=file> in the page's document, shown or hidden (page-snapshot.ts says why).
+  async function fileInputsOf(id: number): Promise<FileInputNode[]> {
+    const document = await pages.send(id, 'DOM.getDocument', { depth: 0 });
+    const root = isRecord(document) && isRecord(document.root) ? document.root.nodeId : undefined;
+    const found = await pages.send(id, 'DOM.querySelectorAll', { nodeId: root, selector: 'input[type=file]' });
+    const inputs: FileInputNode[] = [];
+    for (const nodeId of isRecord(found) && Array.isArray(found.nodeIds) ? found.nodeIds : []) {
+      const described = await pages.send(id, 'DOM.describeNode', { nodeId });
+      const element = isRecord(described) && isRecord(described.node) ? described.node : {};
+      if (typeof element.backendNodeId !== 'number') continue;
+      const named = attributesOf(element.attributes);
+      inputs.push({ node: element.backendNodeId, name: named.get('name') || named.get('id') || '' });
+    }
+    return inputs;
+  }
+
   async function snapshot(id: number): Promise<string> {
     const tree = await pages.send(id, 'Accessibility.getFullAXTree');
     const nodes = isRecord(tree) && Array.isArray(tree.nodes) ? tree.nodes as AXNode[] : [];
-    const made = snapshotOf(id, nodes);
+    const made = snapshotOf(id, nodes, await fileInputsOf(id));
     refs.set(id, made.refs);
     return made.text;
   }
@@ -255,7 +297,7 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
 
   return {
     // The ports the page actions are given (browser-ports.ts).
-    ports: { emulate, act, runScript, refsOf: (id: number): ReadonlyMap<string, number> => refs.get(id) ?? new Map() },
+    ports: { emulate, act, fileInputOf, runScript, refsOf: (id: number): ReadonlyMap<string, number> => refs.get(id) ?? new Map() },
     reads: {
       tabs: (pane: string, projectPath: string): string => tabLines(allBrowsers().get(projectPath) ?? NO_TABS, pane),
       read: reading(read),
@@ -268,3 +310,4 @@ export function browserPage(pages: PagePorts, allBrowsers: () => ReadonlyMap<str
 }
 
 export type BrowserReads = ReturnType<typeof browserPage>['reads'];
+export type BrowserPagePorts = ReturnType<typeof browserPage>['ports'];

@@ -23,3 +23,6 @@ One line per merged change: date and why.
   agent's resize gave it cleared, because the person was handed the tab drawn 390 wide; the
   work-card skill, review prompt and main's prompt have their tool names checked against the
   server's
+- 2026-11-25 — `browser upload` and `browser_upload` set a file input's files, because job-search's
+  apply workers each opened a Playwright window only to upload a CV; the filled form is left for
+  the person to submit

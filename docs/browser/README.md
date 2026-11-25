@@ -123,8 +123,17 @@ the person asks for it (browser-decision-8).
 - `snapshot <tab>` lists what can be clicked or typed in, from the page's
   accessibility tree, each with a ref (`e3`) good until the next snapshot. A ref
   whose element the page has since dropped or hidden says to take a new one.
+  Each `<input type=file>` is listed as role `file`, by its label or its `name`
+  or `id`, even one the page hides behind its own upload button, and even past
+  the 300 the snapshot otherwise stops at.
   `click <tab> <ref>`, `type <tab> <ref> "<text>"` (typed at the end of what the
   field holds) and `press <tab> <key> [<ref>]` act on it.
+- `upload <tab> <ref> <file>...` sets a file input's files, as the file dialog
+  would, and the page gets its change event: a form's CV. A path is whole, from
+  `~`, or from the folder the command runs in. Refused for a ref that is not an
+  `<input type=file>`, a file that is not there, and more than one file on an
+  input without `multiple`. The skill says to leave the filled form for you to
+  review and submit, never pressing Submit unless told.
 - `console <tab>` and `network <tab>` print the last 50 errors the page logged
   and requests that failed (a status of 400 or more, or no answer), kept from the
   tab's first load.
@@ -157,7 +166,7 @@ Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser
 - `browser-placement.ts`: where the page goes, and what counts as floating over it
 - `browser-holds.ts`: who may act on a tab, claim it or have it taken back
 - `claims.ts`, `page.ts`, `target.ts` (actions): claim, release and revoke;
-  resize, click, type, press and eval; which tab an action means for each door
+  resize, click, type, press, upload and eval; which tab an action means for each door
 - `browser-page.ts`: the one module driving a page's content, the command's
   reads and what the page actions do
 - `page-reader.ts`, `page-snapshot.ts`, `page-log.ts`, `page-keys.ts`: the

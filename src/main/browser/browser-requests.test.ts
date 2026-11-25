@@ -19,7 +19,7 @@ function fakeDoor() {
     hasCommand: (pane) => ['2:1', `${MANAGER_SLOT}:0`].includes(pane),
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
     slotOf: (folder) => ({ '/work/api': 2, '/work/web': 3 } as Record<string, number>)[folder] ?? -1,
-    actions: Object.fromEntries(['open', 'claim', 'release', 'navigate', 'step', 'resize', 'click', 'type', 'press', 'eval']
+    actions: Object.fromEntries(['open', 'claim', 'release', 'navigate', 'step', 'resize', 'click', 'type', 'press', 'upload', 'eval']
       .map((name) => [name, bound(name)])) as BrowserRequestPorts['actions'],
     reads: {
       tabs: (pane, projectPath) => `tabs of ${projectPath} for ${pane}`,

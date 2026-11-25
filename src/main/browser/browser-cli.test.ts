@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBrowserCommand } from './browser-cli';
+import { parseBrowserCommand, wholeFiles } from './browser-cli';
 
 const command = (...words: string[]) => {
   const parsed = parseBrowserCommand(words);
@@ -30,6 +30,8 @@ describe('parseBrowserCommand', () => {
     expect(command('type', '3', 'e4', 'hello there')).toEqual({ verb: 'type', tab: 3, ref: 'e4', text: 'hello there' });
     expect(command('press', '3', 'Enter')).toEqual({ verb: 'press', tab: 3, key: 'Enter', ref: null });
     expect(command('press', '3', 'Enter', 'e4')).toEqual({ verb: 'press', tab: 3, key: 'Enter', ref: 'e4' });
+    expect(command('upload', '3', 'e4', 'cv.pdf', '/home/me/letter.pdf'))
+      .toEqual({ verb: 'upload', tab: 3, ref: 'e4', files: ['cv.pdf', '/home/me/letter.pdf'] });
     expect(command('eval', '3', 'jobs.js', '--wait-for', '.job')).toEqual({ verb: 'eval', tab: 3, file: 'jobs.js', waitFor: '.job' });
     expect(command('eval', '3', 'jobs.js')).toEqual({ verb: 'eval', tab: 3, file: 'jobs.js', waitFor: null });
   });
@@ -45,6 +47,15 @@ describe('parseBrowserCommand', () => {
     expect(command('read', '3', '--max-tokens=800')).toEqual({ verb: 'read', tab: 3, maxTokens: 800, selector: null });
     expect(command('open')).toBe('browser open takes one address');
     expect(command('eval', '3')).toBe('browser eval takes a tab id and a script file');
+    expect(command('upload', '3', 'e4')).toBe('browser upload takes a tab id, a ref and one file or more');
     expect(command('fly', '3')).toMatch(/^no such verb: browser fly/);
+  });
+});
+
+describe('wholeFiles', () => {
+  // Skipped on Windows, which reads a POSIX path such as /work/api as one on the current drive, D:\work\api, so the paths this expects never come back.
+  it.skipIf(process.platform === 'win32')('reads a file from home, whole, or from the folder the command runs in', () => {
+    expect(wholeFiles(['~/cv.pdf', '/tmp/a.pdf', 'docs/b.pdf'], '/home/me', '/work/api'))
+      .toEqual(['/home/me/cv.pdf', '/tmp/a.pdf', '/work/api/docs/b.pdf']);
   });
 });

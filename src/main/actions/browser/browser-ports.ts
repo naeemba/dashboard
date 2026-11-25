@@ -11,7 +11,8 @@ import type { KeyEvent } from '../../browser/page-keys';
 export type PageAct =
   | { kind: 'click'; node: number }
   | { kind: 'type'; node: number; text: string }
-  | { kind: 'press'; key: KeyEvent; node: number | null };
+  | { kind: 'press'; key: KeyEvent; node: number | null }
+  | { kind: 'upload'; node: number; files: readonly string[] };
 
 export type BrowserPorts = {
   browserOf(projectPath: string): BrowserState;
@@ -32,6 +33,10 @@ export type BrowserPorts = {
   // The element refs the tab's last snapshot handed out, each to its DOM node.
   refsOf(id: number): ReadonlyMap<string, number>;
   act(id: number, act: PageAct): Promise<void>;
+  // Whether the node is an <input type=file>, and if so whether it takes more than one file.
+  fileInputOf(id: number, node: number): Promise<{ multiple: boolean } | null>;
+  // Whether a file is there to upload: a regular file this user can see.
+  isFile(file: string): Promise<boolean>;
   // The script run in the page once `waitFor` matches, if one is given: the line saying where its
   // answer was saved, or why it was not.
   runScript(id: number, script: string, waitFor: string | null): Promise<string | Refused>;

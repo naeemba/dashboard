@@ -1,4 +1,6 @@
+import path from 'node:path';
 import { readFlagList } from '../command/flags';
+import { wholePath } from '../nvim/file-open';
 import { wholeNumber } from './browser-tabs';
 import { DEFAULT_READ_TOKENS } from './page-reader';
 
@@ -24,12 +26,17 @@ export type BrowserCommand =
   | ({ verb: 'click'; ref: string } & OnTab)
   | ({ verb: 'type'; ref: string; text: string } & OnTab)
   | ({ verb: 'press'; key: string; ref: string | null } & OnTab)
+  | ({ verb: 'upload'; ref: string; files: string[] } & OnTab)
   | ({ verb: 'eval'; file: string; waitFor: string | null } & OnTab);
 
 // What the command sends the app: eval's file read here, where its path means what the agent meant.
 export type BrowserRequest =
   | Exclude<BrowserCommand, { verb: 'eval' }>
   | ({ verb: 'eval'; script: string; waitFor: string | null } & OnTab);
+
+// Each file to upload as the agent meant it: from `~`, whole, or from the folder the command runs in.
+export const wholeFiles = (files: readonly string[], home: string, folder: string): string[] =>
+  files.map((file) => wholePath(file, home) ?? path.resolve(folder, file));
 
 export const BROWSER_USAGE = `browser — the project's browser tabs, for the agent in this pane
 
@@ -49,6 +56,7 @@ export const BROWSER_USAGE = `browser — the project's browser tabs, for the ag
   browser click <tab> <ref>
   browser type <tab> <ref> "<text>"           types at the end of what the field holds
   browser press <tab> <key> [<ref>]           Enter, Tab, Escape, an arrow, or one character
+  browser upload <tab> <ref> <file>...        set a file input's files, as the file dialog would
   browser eval <tab> <script file> [--wait-for <css>]
                                               run the file's JavaScript in the page, once --wait-for
                                               matches (10 seconds at most); saves the answer, its
@@ -118,6 +126,10 @@ function parseOnTab(verb: string, rest: readonly string[], flags: Map<string, st
     case 'press': {
       if (words.length !== 1 && words.length !== 2) return refuse('browser press takes a tab id, a key and maybe a ref');
       return { ok: true, command: { verb, tab, key: words[0], ref: words[1] ?? null } };
+    }
+    case 'upload': {
+      if (words.length < 2) return refuse('browser upload takes a tab id, a ref and one file or more');
+      return { ok: true, command: { verb, tab, ref: words[0], files: words.slice(1) } };
     }
     case 'eval': return takes(1, 'a tab id and a script file') ?? { ok: true, command: { verb, tab, file: words[0], waitFor: flags.get('--wait-for') ?? null } };
     default: return refuse(`no such verb: browser ${verb}\n\n${BROWSER_USAGE}`);

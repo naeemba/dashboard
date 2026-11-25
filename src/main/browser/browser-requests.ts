@@ -19,7 +19,7 @@ export type BrowserRequestPorts = {
   projectPath(slot: number): string | undefined;
   // The page a project folder is open on, or -1.
   slotOf(projectPath: string): number;
-  actions: Record<'open' | 'claim' | 'release' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'eval', BoundAction>;
+  actions: Record<'open' | 'claim' | 'release' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'upload' | 'eval', BoundAction>;
   reads: BrowserReads;
 };
 
@@ -74,6 +74,7 @@ async function answer(ports: BrowserRequestPorts, pane: string, command: Browser
     case 'click': return sessionReply(await actions.click.call({ ...onTab, ref: command.ref }));
     case 'type': return sessionReply(await actions.type.call({ ...onTab, ref: command.ref, text: command.text }));
     case 'press': return sessionReply(await actions.press.call({ ...onTab, key: command.key, ref: command.ref }));
+    case 'upload': return sessionReply(await actions.upload.call({ ...onTab, ref: command.ref, files: command.files }));
     case 'eval': return sessionReply(await actions.eval.call({ ...onTab, script: command.script, waitFor: command.waitFor }));
     case 'read': return reply(await reads.read(pane, command.tab, command));
     case 'screenshot': return reply(await reads.screenshot(pane, command.tab, command));

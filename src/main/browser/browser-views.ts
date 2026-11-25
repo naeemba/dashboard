@@ -3,6 +3,7 @@ import { NO_TABS, type BrowserBounds, type BrowserPlacement, type BrowserState, 
 import { leavingKey } from '../../shared/keys/browser-keys';
 import type { Settings } from '../../shared/settings/settings';
 import type { BrowserPorts } from '../actions/browser/browser-ports';
+import type { BrowserPagePorts } from './browser-page';
 import { isBrowsable } from './address';
 import { mayAsk, partitionOf, shownTab, withTabChange } from './browser-tabs';
 import { pageLog, requestFailure, type PageLog } from './page-log';
@@ -35,9 +36,9 @@ export class PageTimeout extends Error {
   }
 }
 
-// The ports the views give the actions; the page's own (emulate, refsOf, act, runScript) are
-// browser-page.ts's.
-type ViewPorts = Omit<BrowserPorts, 'emulate' | 'refsOf' | 'act' | 'runScript'>;
+// The ports the views give the actions; the page's own are browser-page.ts's, and isFile is
+// browser-actions.ts's.
+type ViewPorts = Omit<BrowserPorts, keyof BrowserPagePorts | 'isFile'>;
 
 // The size a tab is laid out at before it was ever on screen, an agent's tab: a laptop's window.
 const UNPLACED: BrowserBounds = { x: 0, y: 0, width: 1280, height: 800 };
