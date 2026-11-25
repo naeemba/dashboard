@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-25T12:41:32.651Z",
-  "updatedAt": "2026-11-25T12:41:32.651Z",
-  "column": "Backlog",
-  "order": 69
+  "updatedAt": "2026-11-25T12:41:50.624Z",
+  "branch": "workers-close-when-main-s-own-command-finis",
+  "column": "Doing",
+  "order": 0
 }
