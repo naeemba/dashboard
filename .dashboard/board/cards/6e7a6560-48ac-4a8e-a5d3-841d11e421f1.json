@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-25T11:37:10.046Z",
-  "updatedAt": "2026-11-25T11:37:38.833Z",
+  "updatedAt": "2026-11-25T11:44:06.802Z",
   "branch": "checks-posixpathsonly-shared-from-src-main",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 373,
+  "comments": [
+    {
+      "at": "2026-11-25T11:44:06.782Z",
+      "body": "Pull request #373 opened: checks: posixPathsOnly shared from src/main/testing/; check.log opens with the summary https://github.com/naeemba/dashboard/pull/373"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }
