@@ -10,7 +10,7 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { closedReport, doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
+import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import { promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
@@ -81,17 +81,17 @@ export type SessionPorts = {
   exists(worktreePath: string): boolean;
   prune(projectPath: string): Promise<void>;
   unfinished(worktreePath: string): Promise<string | null>;
-  // Whether the branch a worktree is on has a merged pull request (pane finish, the sweep).
+  // Whether the branch a worktree is on has a merged pull request (pane finish).
   merged(worktreePath: string): Promise<boolean>;
+  // The branch a worktree is on, which `pane landed --branch` finds its worker by.
+  branch(worktreePath: string): Promise<string>;
   removeWorktree(worktreePath: string, projectPath: string): Promise<void>;
-  // What closeFinished asks of a worker beside what is held here (auto-release.ts): whether its page
-  // puts the keyboard back on it, and the column its card is in when that is Done or Cancelled, asked
-  // only once nothing else has kept the pane open.
+  // What `pane landed` asks of a worker beside what is held here (auto-release.ts): whether its page
+  // puts the keyboard back on it. And the column its card is in when that is Done or Cancelled, which
+  // `pane finish` releases on and `pane list` marks.
   hasKeyboard(id: string): boolean;
   finishedCard(id: string): string | null;
-  // The grace period after a report read, from the settings; 0 closes a worker only for its card.
-  closeAfterMs(): number;
-  // A worker closed by closeFinished, why, and what pane.release answered: logged and shown.
+  // A worker closed by `pane landed`, why, and what pane.release answered: logged and shown.
   released(id: string, reason: string, output: string): void;
   // What became of the throwaway of a pane that went without a release: logged under its project.
   threwAway(id: string, said: string, projectPath: string): void;
@@ -140,8 +140,6 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   mainTurn(slot: number, running: boolean): void;
   // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
   notify(id: string, state: WorkerState, waiting?: StopWaiting, told?: HookTold): SessionReply;
-  // Every finished worker pane released, each for the reason auto-release.ts gives. Run on a timer.
-  closeFinished(): Promise<void>;
   // The pane is gone, closed by hand or with its project rather than released: its throwaway is let
   // go of as release would (throwaway.ts).
   dropped(id: string): Promise<void>;
@@ -172,11 +170,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // report, and what it was asked. Kept apart from `dispatchers`, which is who may run the pane, not
   // who did.
   const dispatched = new Map<string, { dispatcher: number; about: string }>();
-  // For each worker, since when it has been quiet — the last of work handed to it, a report from it
-  // read, its turn ending — and whether a report was read since work was last handed to it: what
-  // closeFinished's grace period runs on. Gone with the pane's worker.
-  const quiet = new Map<string, { since: number; reportRead: boolean }>();
-  const quietFrom = (id: string, reportRead: boolean) => quiet.set(id, { since: Date.now(), reportRead });
+  // The workers main read a report from since it last handed them work: a pause of theirs is not news.
+  const reportsRead = new Set<string>();
+  // The workers `pane landed` kept with their work in, until they are handed work again or let go of.
+  const keptWithWorkIn = new Set<string>();
+  const handedWork = (id: string) => { reportsRead.delete(id); keptWithWorkIn.delete(id); };
+  // Its card is Done or Cancelled, or `pane landed` kept it after its branch merged: `pane finish` is
+  // all that is left for it.
+  const workIn = (id: string) => keptWithWorkIn.has(id) || ports.finishedCard(id) !== null;
   // Only main's worker: one it ran or sent work, or a card's agent; a Claude opened by hand and never
   // sent work reports to nobody. The main that claimed it hears, which is another project's when
   // it was claimed with --project. `dispatched` is gone after a restart, so a resumed worker's main is
@@ -207,9 +208,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   };
   const notices = stopNotices({
     midTurn: (id) => midTurn(mainOf(id)),
-    // Not for a turn you typed into the worker yourself (prompt-source.ts).
+    // Not for a turn you typed into the worker yourself (prompt-source.ts), nor a pause of one that
+    // already reported or whose work is in: what it waits on is moot.
     notice(id, paused) {
       if (!mainsWorker(id) || prompts.fromUser(id)) return;
+      if (paused && (reportsRead.has(id) || workIn(id))) return;
       const slot = mainOf(id);
       const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused, lastMessages.get(id)));
       return () => ports.withdraw(slot, messageId);
@@ -234,6 +237,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       return program === null ? 'idle' : `busy ${program}`;
     }
     const said = states.get(id);
+    if (said?.state === 'done' && mainsWorker(id) && workIn(id)) return `done, work in: pane finish ${id}`;
     return isPaused(said?.waiting) ? `paused, ${waitingText(said.waiting)}` : said?.state ?? 'running';
   }
 
@@ -241,7 +245,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     ...ports,
     claimedBy(id, slot) {
       dispatched.delete(id);
-      quiet.delete(id);
+      handedWork(id);
       if (slot === null) dispatchers.delete(id);
       else dispatchers.set(id, slot);
     },
@@ -301,7 +305,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const started = await ports.startWorker(id, { directory, prompt, as, cardId: card, dispatcherPath });
     if (isRefused(started)) return refused(started.refused);
     dispatched.set(id, { dispatcher: slot, about: workerAbout(prompt) });
-    quietFrom(id, false);
+    handedWork(id);
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}${unmarked} ${paneLink(id)}`);
@@ -324,7 +328,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       forgetWorker(id);
       dispatchers.delete(id);
       dispatched.delete(id);
-      quiet.delete(id);
+      handedWork(id);
       const throwaway = throwaways.get(id);
       throwaways.delete(id);
       return throwaway;
@@ -354,7 +358,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   });
 
   // Whether the branch of the pane's own worktree merged, which is the card's too before the follow
-  // moves it: what `pane finish` and the sweep release on beside the card. A worktree already gone was
+  // moves it: what `pane finish` releases on beside the card. A worktree already gone was
   // taken by the merge (`gh pr merge --delete-branch`), and git cannot be asked in it: release says so.
   async function branchMerged(id: string): Promise<boolean> {
     const worktree = ownWorktree(id);
@@ -376,7 +380,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const sent = await ports.send(id, text, dispatcherPath);
     if (isRefused(sent) || !sent.handed) return sent;
     if (!dispatched.has(id)) dispatched.set(id, { dispatcher: slot, about: workerAbout(text) });
-    quietFrom(id, false);
+    handedWork(id);
     notify(id, 'running');
     return sent;
   }
@@ -386,64 +390,44 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     .flatMap(({ slot }) => ports.openPanes(slot).map((index) => terminalId(slot, index)));
 
   // What auto-release.ts decides a worker's close on.
-  function look(id: string): WorkerLook {
-    const said = states.get(id);
-    const { since = 0, reportRead = false } = quiet.get(id) ?? {};
-    return {
-      handedToMain: mainsWorker(id),
-      hasKeyboard: ports.hasKeyboard(id),
-      state: said?.state ?? 'running',
-      paused: isPaused(said?.waiting),
-      finishedCard: () => ports.finishedCard(id),
-      // gh failing (offline, signed out) keeps the pane, and the next sweep asks again, rather than
-      // stopping the sweep for every other worker.
-      branchMerged: () => branchMerged(id).catch(() => false),
-      reportRead,
-      quietMs: Date.now() - since,
-    };
+  const look = (id: string): WorkerLook => ({
+    handedToMain: mainsWorker(id),
+    hasKeyboard: ports.hasKeyboard(id),
+    state: states.get(id)?.state ?? 'running',
+    typedByUser: prompts.fromUser(id),
+  });
+
+  // Whether the pane works on the branch, or in the card's worktree. A worktree already gone, or one
+  // git cannot answer in, is on no branch to match.
+  async function worksOn(id: string, projectPath: string, by: 'branch' | 'card', name: string): Promise<boolean> {
+    if (by === 'card') {
+      const directory = ports.directoryOf(id);
+      const found = ports.cardWorktree(projectPath, name);
+      return directory !== undefined && found !== undefined && isInside(directory, found.worktreePath);
+    }
+    const worktree = ownWorktree(id);
+    if (worktree === undefined || !ports.exists(worktree)) return false;
+    return (await ports.branch(worktree).catch(() => '')).trim() === name;
   }
 
-  // One at a time, so two releases never race over one throwaway worktree. A refusal leaves the pane
-  // as it is, and the next sweep decides again. Release takes back the worker's stop notice, so a
-  // worker closed for its card before main read a report from it is told to main here instead. Not
-  // while its main is mid-turn: the turn may have read the report, heard only at its end, and a close
-  // told meanwhile is taken the moment it ends (workers-decision-1). A sweep that comes due while the
-  // last is still waiting on gh is skipped, so a hung gh does not pile up a sweep every half minute.
-  let sweeping = false;
-  async function closeFinished(): Promise<void> {
-    if (sweeping) return;
-    sweeping = true;
-    try {
-      await sweep();
-    } finally {
-      sweeping = false;
+  // Main's own command put the work in: each of the asker's panes on that branch or card released, or
+  // kept for what auto-release.ts says, a line each. One at a time, so two releases never race over one
+  // throwaway worktree. Nothing on it answers nothing.
+  async function landed(slot: number, projectPath: string, by: 'branch' | 'card', name: string): Promise<SessionReply> {
+    const lines: string[] = [];
+    for (const id of openPaneIds()) {
+      if (worker(id, slot) !== null || !(await worksOn(id, projectPath, by, name))) continue;
+      const verdict = releaseVerdict(look(id));
+      const released = verdict.release ? await release.call({ id }) : { refused: verdict.why };
+      if (isRefused(released)) {
+        keptWithWorkIn.add(id);
+        lines.push(`kept ${id}: ${released.refused}`);
+        continue;
+      }
+      ports.released(id, by === 'branch' ? `${name} merged` : `card ${name} finished`, released.output);
+      lines.push(`released ${id}`);
     }
-  }
-
-  async function sweep(): Promise<void> {
-    const closeAfterMs = ports.closeAfterMs();
-    for (const id of openPaneIds().filter(mainsWorker)) {
-      if (midTurn(mainOf(id))) continue;
-      // gh is asked at most once per pane: the second look below reuses its answer.
-      let merged: Promise<boolean> | undefined;
-      const lookNow = (): WorkerLook => {
-        const fresh = look(id);
-        return { ...fresh, branchMerged: () => (merged ??= fresh.branchMerged()) };
-      };
-      if (!(await releaseVerdict(lookNow(), closeAfterMs)).release) continue;
-      // gh may have taken seconds, in which the pane got the keyboard, was sent work, or its main
-      // started a turn: decide again on the pane as it is now.
-      if (midTurn(mainOf(id))) continue;
-      const seen = lookNow();
-      const verdict = await releaseVerdict(seen, closeAfterMs);
-      if (!verdict.release) continue;
-      const slot = mainOf(id);
-      const name = nameOfPane(id);
-      const released = await release.call({ id });
-      if (isRefused(released)) continue;
-      ports.released(id, verdict.reason, released.output);
-      if (!seen.reportRead) ports.tell(slot, closedReport(name, id, verdict.reason));
-    }
+    return answered(lines.join('\n'));
   }
 
   // Send and release are refused a pane the asker may not touch before the action is asked.
@@ -509,7 +493,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       prompts.prompted(id, told.promptSource, told.handed === true);
       states.delete(id);
     } else states.set(id, { state, waiting });
-    if (state === 'done') quietFrom(id, quiet.get(id)?.reportRead ?? false);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
     return answered('');
@@ -543,6 +526,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'release': return await onWorker(command.id, slot, () => release.call({ id: command.id }));
         case 'finish': return await onWorker(command.id, slot, () => finish(command.id));
         case 'report': return report(command.id, slot);
+        case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name);
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
@@ -550,7 +534,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }, {
     workers,
     notify,
-    closeFinished,
     async dropped(id: string) {
       const throwaway = throwaways.get(id);
       if (throwaway === undefined || releasing.has(id)) return;
@@ -568,7 +551,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (id !== undefined && !throwaways.has(id)) throwaways.set(id, throwaway);
       return id;
     },
-    forget: (id: string) => { dispatched.delete(id); quiet.delete(id); forgetWorker(id); },
+    forget: (id: string) => { dispatched.delete(id); handedWork(id); forgetWorker(id); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two
     // projects in folders of one name give their workers one name.
@@ -578,7 +561,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
           && mainOf(each) === reader);
       if (id === undefined) return;
       notices.reported(id);
-      quietFrom(id, true);
+      reportsRead.add(id);
     },
     mainTurn(slot: number, running: boolean) {
       if (running) {

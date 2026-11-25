@@ -45,7 +45,7 @@ import { launchScopes, stopMainsNow, stopScope } from './processes/launch-scopes
 import { memorySweep, recordedUnits, userServiceCgroup } from './processes/memory-sweep';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
-import { CLOSE_SWEEP_MS, finishedCardIn } from './workers/auto-release';
+import { finishedCardIn } from './workers/auto-release';
 import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
@@ -796,7 +796,6 @@ const workerAnswers = sessionRequests({
     const { slot, index } = paneFromId(id);
     return finishedCardIn(worktrees.entries(), projectIn(slot)?.path, index, boardLog.latest);
   },
-  closeAfterMs: () => settings.workers.closeAfterMinutes * 60_000,
   released(id, reason, output) {
     logStore.log({ level: 'info', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `${output}: ${reason}` });
     sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
@@ -804,10 +803,6 @@ const workerAnswers = sessionRequests({
   threwAway: (id, said, projectPath) => logStore.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
   realPath,
 });
-// Finished workers closed by the app itself, through pane.release (auto-release.ts).
-setInterval(() => {
-  workerAnswers.closeFinished().catch((error: unknown) => failures.hold(`Finished workers not closed: ${failureText(error)}`));
-}, CLOSE_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 const answerSession = browser.requests(projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));

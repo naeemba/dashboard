@@ -115,10 +115,19 @@ export function listenForSessions(
 }
 
 // A command's whole conversation with the app, whichever noun it was: the words out, the answer
-// printed, the exit code back. Which app, and starting it when none answers, is reach-app.ts's.
-// `older` is the same request in an older app's words, sent instead when the app refuses this one's
-// words: a notify whose hook grew words an app from before them does not take (workers-decision-4).
+// printed, the exit code back. `older` is the same request in an older app's words, sent instead when
+// the app refuses this one's words: a notify whose hook grew words an app from before them does not
+// take (workers-decision-4).
 export async function askRunningApp(commandArguments: readonly string[], older: readonly string[] = commandArguments): Promise<number> {
+  const reply = await runningAppReply(commandArguments, process.cwd(), older);
+  if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
+  return reply.ok ? 0 : 1;
+}
+
+// The app's answer to the words, asked from `directory`, for a command that prints it among its own
+// lines (`pr land`, a board move). Which app, and starting it when none answers, is reach-app.ts's;
+// not reaching one is a refusal saying so.
+export async function runningAppReply(commandArguments: readonly string[], directory: string, older: readonly string[] = commandArguments): Promise<SessionReply> {
   const userData = appUserDataFolder();
   const reached = await reachApp({
     paneSocket: process.env.DASHBOARD_SOCKET,
@@ -128,15 +137,17 @@ export async function askRunningApp(commandArguments: readonly string[], older: 
     sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
     now: Date.now,
   }, mayStartApp(commandArguments));
-  if (!reached.ok) {
-    process.stderr.write(`${reached.message}\n`);
-    return 1;
-  }
-  const ask = (args: readonly string[]) => askApp(reached.socket, { directory: process.cwd(), args, version: __BUILD_VERSION__ });
-  let reply = await ask(commandArguments);
-  if (retriesInOlderWords(reply, commandArguments, older)) reply = await ask(older);
-  if (reply.output !== '') (reply.ok ? process.stdout : process.stderr).write(`${reply.output}\n`);
-  return reply.ok ? 0 : 1;
+  if (!reached.ok) return { ok: false, output: reached.message };
+  const ask = (args: readonly string[]) => askApp(reached.socket, { directory, args, version: __BUILD_VERSION__ });
+  const reply = await ask(commandArguments);
+  return retriesInOlderWords(reply, commandArguments, older) ? ask(older) : reply;
+}
+
+// `pane landed` (workers-decision-1), asked only from a pane: a terminal outside every one has no main
+// whose worker it put in, and would print a line about an app it never meant to ask.
+export function askLanded(by: 'branch' | 'card', name: string, directory: string): Promise<SessionReply> {
+  if (process.env.DASHBOARD_SOCKET === undefined) return Promise.resolve({ ok: true, output: '' });
+  return runningAppReply(['landed', `--${by}`, name], directory);
 }
 
 // The command's half: the request out as one line, with the connection left open for the answer, and

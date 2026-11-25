@@ -100,6 +100,14 @@ describe('parseSessionCommand', () => {
     expect(parseSessionCommand(['report', '2:3'])).toEqual({ ok: true, command: { kind: 'report', id: '2:3' } });
     expect(parseSessionCommand(['report'])).toMatchObject({ ok: false });
   });
+
+  it('reads landed as a branch or a card, and refuses anything else', () => {
+    expect(parseSessionCommand(['landed', '--branch', 'fix-it'])).toEqual({ ok: true, command: { kind: 'landed', by: 'branch', name: 'fix-it' } });
+    expect(parseSessionCommand(['landed', '--card', 'card-1'])).toEqual({ ok: true, command: { kind: 'landed', by: 'card', name: 'card-1' } });
+    for (const words of [['landed'], ['landed', '--branch'], ['landed', 'fix-it'], ['landed', '--card', 'card-1', 'more']]) {
+      expect(parseSessionCommand(words)).toMatchObject({ ok: false });
+    }
+  });
   it('answers nothing, or a word it does not know, with what it takes', () => {
     expect(parseSessionCommand([])).toMatchObject({ ok: false, message: expect.stringContaining('pane claim') });
     expect(parseSessionCommand(['spawn'])).toMatchObject({ ok: false, message: expect.stringMatching(/^no such command: spawn/) });

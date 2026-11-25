@@ -1,6 +1,6 @@
 import { sessionRequests, type SessionPorts, type WorkerStart } from './session-requests';
 
-// The session command's fake app for session-requests.test.ts and close-finished.test.ts.
+// The session command's fake app for session-requests.test.ts and session-landed.test.ts.
 
 // One project, api, in slot 2, with main open and nothing else until a test opens a worker.
 export function project(overrides: Partial<SessionPorts> = {}) {
@@ -75,10 +75,10 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     prune: async () => undefined,
     unfinished: async () => null,
     merged: async () => false,
+    branch: async () => 'main',
     removeWorktree: async (worktreePath, projectPath) => { removed.push(`${worktreePath} from ${projectPath}`); },
     hasKeyboard: (id) => keyboard.has(id),
     finishedCard: (id) => finishedCards.get(id) ?? null,
-    closeAfterMs: () => 10 * 60 * 1000,
     released: (id, reason, output) => { released.push(`${id} ${reason}: ${output}`); },
     threwAway: (id, said, projectPath) => { released.push(`${id} dropped: ${said} (${projectPath})`); },
     realPath: (folder) => folder,

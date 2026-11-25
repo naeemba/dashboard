@@ -20,6 +20,9 @@ export type SessionCommand =
   // release, refused until the worker's card is Done or Cancelled or its branch's pull request merged.
   | { kind: 'finish'; id: string }
   | { kind: 'report'; id: string }
+  // What `pr land` and a board move into Done or Cancelled ask once the work is in: the worker on that
+  // branch, or in that card's worktree, released unless something keeps it (auto-release.ts).
+  | { kind: 'landed'; by: 'branch' | 'card'; name: string }
   // `waiting` is what a Stop hook said its session waits on, when it said so; `told` the rest a hook's
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold };
@@ -37,6 +40,10 @@ export type SessionRequest = { directory: string; args: readonly string[]; versi
 export type SessionReply = { ok: boolean; output: string };
 
 export const answered = (output: string): SessionReply => ({ ok: true, output });
+
+// What `pr land` and a board move print of the app's answer to `pane landed`: its lines, or why no
+// worker was released.
+export const landedLine = (reply: SessionReply): string => (reply.ok ? reply.output : `no worker released: ${reply.output}`);
 export const refused = (output: string): SessionReply => ({ ok: false, output });
 
 export const SESSION_USAGE = `pane — the Dashboard panes of the project you are in
@@ -48,6 +55,7 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane release <id>
   pane finish <id>
   pane report <id>
+  pane landed --branch <branch> | --card <card id>
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
 claim opens a worker pane and prints its id: --project opens it on the page of the project
@@ -64,7 +72,10 @@ app, and --screen asks for a screen. send types the text into the pane and press
 it to a Claude screen as its next prompt. finish releases a worker whose work is in: its card is
 Done or Cancelled, or the branch of the worktree it is in has a merged pull request; it refuses
 otherwise. report prints the pane's line from list and the last
-message its worker ended a turn with. notify is what a worker's hooks call: --stop-input reads Claude
+message its worker ended a turn with. landed is what pr land runs once it merged, and a board move
+into Done or Cancelled: it releases the worker on that branch or in that card's worktree and prints
+\`released <id>\`, or \`kept <id>: <why>\` for one with the keyboard, waiting on a question, mid-turn,
+or typed into by you since main last sent it work. notify is what a worker's hooks call: --stop-input reads Claude
 Code's Stop hook input for how many background tasks and wakeups the session still waits on and its
 last message, --prompt-input the prompt hook's for who put the prompt in. list --all lists the panes
 of every open project and the manager; --reports ends each line with the end of the last message
@@ -270,6 +281,13 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     case 'report': {
       const id = paneId(rest[0], verb);
       return typeof id === 'string' ? { ok: true, command: { kind: verb, id } } : id;
+    }
+    case 'landed': {
+      const [flag, name = '', ...more] = rest;
+      if ((flag !== '--branch' && flag !== '--card') || name.trim() === '' || more.length > 0) {
+        return refuse('pane landed takes --branch <branch> or --card <card id>');
+      }
+      return { ok: true, command: { kind: 'landed', by: flag === '--branch' ? 'branch' : 'card', name } };
     }
     case 'notify': {
       const id = paneId(rest[0], 'notify');
