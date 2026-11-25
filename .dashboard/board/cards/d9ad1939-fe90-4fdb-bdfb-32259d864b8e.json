@@ -1,0 +1,11 @@
+{
+  "id": "d9ad1939-fe90-4fdb-bdfb-32259d864b8e",
+  "title": "work-card: report to main once the PR opens; a coverage-line file gets a test or a reason",
+  "notes": "Retro of 30 sessions. (1) All 3 recent work-card workers (#368/#369/#370) opened the PR, started pr wait in the background and promised to SendMessage main when CI finished; about a minute later the app starts the review pane, the wait is killed and the report never runs. The skill (src/main/skills/work-card-skill.ts) should say: after the PR opens, send main its number and stop, since the review pane waits on CI. (2) Workers opened PRs with files pnpm check listed on its coverage line (browser-program.ts 'no test runs it', shell-path.ts 2 of 14 branches, ssh-agent.ts 8 of 18 lines); the review loop then had to add the tests. The checks step should require each listed file to get a test or a one-line reason in the PR body (workflow-rule-2 made concrete).",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-25T11:37:03.572Z",
+  "updatedAt": "2026-11-25T11:37:03.572Z",
+  "column": "Backlog",
+  "order": 68
+}
