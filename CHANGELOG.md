@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.57.0 (2026-11-25)
+
+### What's new
+
+- browser upload: set a file input's files, so a form with a CV upload is filled in a Dashboard tab
+
+### What's Changed
+* browser upload: set a file input's files, so a form with a CV upload is filled in a Dashboard tab by @naeemba in https://github.com/naeemba/dashboard/pull/370
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.56.0...v2.57.0
+
 ## v2.56.0 (2026-11-24)
 
 ### What's new
