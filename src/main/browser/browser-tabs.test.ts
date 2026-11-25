@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NO_TABS, type BrowserState } from '../../shared/browser/browser';
-import { activeTab, keyboardOwner, keyboardTaken, mayAsk, namedTab, partitionOf, shownTab, steppedTab, viewBounds, wholeNumber, withoutTab, withTab, withTabChange } from './browser-tabs';
+import { activeTab, appLoad, keyboardOwner, keyboardTaken, mayAsk, namedTab, partitionOf, shownTab, steppedTab, viewBounds, wholeNumber, withoutTab, withTab, withTabChange } from './browser-tabs';
 
 const tab = (id: number) => ({ id, url: 'about:blank', title: '', holder: 'user' });
 const three: BrowserState = { tabs: [tab(1), tab(2), tab(3)], active: 2 };
@@ -104,12 +104,18 @@ describe('viewBounds', () => {
 
 describe('the keyboard a tab takes', () => {
   it('stays with a tab the person focused, and goes back from one a load handed it', () => {
-    expect(keyboardTaken(false, true)).toBe('kept');
-    expect(keyboardTaken(true, true)).toBe('given back');
+    expect(keyboardTaken(true, false, true)).toBe('kept');
+    expect(keyboardTaken(true, true, true)).toBe('given back');
+  });
+
+  it('never stays with a tab that is not on screen, which the person cannot reach', () => {
+    expect(keyboardTaken(false, false, true)).toBe('given back');
+    expect(keyboardTaken(false, true, true)).toBe('given back');
+    expect(keyboardTaken(false, false, false)).toBe('given back on return');
   });
 
   it('waits for the window to have the keyboard before giving it back, so the window is never raised', () => {
-    expect(keyboardTaken(true, false)).toBe('given back on return');
+    expect(keyboardTaken(true, true, false)).toBe('given back on return');
   });
 
   it('goes back to the tab the person typed in while it is on screen, else to the window\'s page', () => {
@@ -134,5 +140,21 @@ describe('mayAsk', () => {
     for (const permission of ['media', 'geolocation', 'notifications', 'fullscreen', 'display-capture']) {
       expect(mayAsk(permission)).toBe(false);
     }
+  });
+});
+
+describe('a load the app started', () => {
+  const start = { isMainFrame: true, isSameDocument: false };
+
+  it('is a whole page in the main frame that no frame started, whether the initiator is left out or null', () => {
+    expect(appLoad(start)).toBe(true);
+    expect(appLoad({ ...start, initiator: undefined })).toBe(true);
+    expect(appLoad({ ...start, initiator: null })).toBe(true);
+  });
+
+  it('is not a page\'s own link, a frame inside it, or a move within the page', () => {
+    expect(appLoad({ ...start, initiator: {} })).toBe(false);
+    expect(appLoad({ ...start, isMainFrame: false })).toBe(false);
+    expect(appLoad({ ...start, isSameDocument: true })).toBe(false);
   });
 });

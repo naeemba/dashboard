@@ -5,7 +5,7 @@ import type { Settings } from '../../shared/settings/settings';
 import type { BrowserPorts } from '../actions/browser/browser-ports';
 import type { BrowserPagePorts } from './browser-page';
 import { isBrowsable } from './address';
-import { keyboardOwner, keyboardTaken, mayAsk, partitionOf, shownTab, viewBounds, withTabChange } from './browser-tabs';
+import { appLoad, keyboardOwner, keyboardTaken, mayAsk, partitionOf, shownTab, viewBounds, withTabChange } from './browser-tabs';
 import { pageLog, requestFailure, type PageLog } from './page-log';
 
 // The one module that holds a WebContentsView, a tab each. The browser actions reach the views only
@@ -161,13 +161,11 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     });
     contents.on('did-stop-loading', () => loading.delete(id));
     // Chromium's own word that a load no frame started is under way, heard before the focus it hands out.
-    contents.on('did-start-navigation', ({ isMainFrame, isSameDocument, initiator }) => {
-      if (isMainFrame && !isSameDocument && initiator === undefined) loading.add(id);
-    });
+    contents.on('did-start-navigation', (start) => { if (appLoad(start)) loading.add(id); });
     // Given back on the next turn: Chromium is still moving it when this is heard, and a focus asked
     // for now is undone.
     contents.on('focus', () => {
-      const taken = keyboardTaken(loading.has(id), main.window()?.isFocused() ?? false);
+      const taken = keyboardTaken(id === shown(), loading.has(id), main.window()?.isFocused() ?? false);
       if (taken === 'kept') typing = id;
       else if (taken === 'given back') setImmediate(giveKeyboardBack);
       else owed = true;

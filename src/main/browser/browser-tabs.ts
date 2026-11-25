@@ -73,17 +73,24 @@ export function viewBounds(tab: BrowserTab | undefined, shown: number | null, pl
   return { x: 1 - size.width, y: 1 - size.height, width: size.width, height: size.height };
 }
 
-// What becomes of the keyboard a tab just took (browser-rule-4). A load the app started in it (an
-// address, back, forward, reload) hands a tab in the window the keyboard as it starts and again as
-// it commits, wherever the person was typing; that goes back at once while the window has the
-// keyboard, else when it gets it again, as giving it back now would raise the window over the app
-// the person is in. Anything else that focuses a tab, a click on the page on screen or the focus
-// verb, is the person's own, and the tab keeps it.
+// What becomes of the keyboard a tab just took (browser-rule-4). The person can only put it in the
+// tab on screen, by a click on its page or the focus verb, so a tab that is not on screen never
+// keeps it: Chromium hands it one when a load the app started in it begins and commits, and when the
+// window is activated again and the tab had it last. Neither does the tab on screen while such a
+// load is on its way in. That goes back at once while the window has the keyboard, else when it
+// gets it again, as giving it back now would raise the window over the app the person is in.
 export type KeyboardTaken = 'kept' | 'given back' | 'given back on return';
 
-export function keyboardTaken(loadStarting: boolean, windowFocused: boolean): KeyboardTaken {
-  if (!loadStarting) return 'kept';
+export function keyboardTaken(onScreen: boolean, loadStarting: boolean, windowFocused: boolean): KeyboardTaken {
+  if (onScreen && !loadStarting) return 'kept';
   return windowFocused ? 'given back' : 'given back on return';
+}
+
+// Whether a load that has just started is one the app started (an address, back, forward, reload),
+// which hands its tab the keyboard: a whole page in the tab's own frame that no frame started.
+// Electron documents `initiator` as null then, and this build leaves it out.
+export function appLoad(start: { isMainFrame: boolean; isSameDocument: boolean; initiator?: unknown }): boolean {
+  return start.isMainFrame && !start.isSameDocument && start.initiator == null;
 }
 
 // Where the keyboard goes back to: the tab the person was typing in, while it is still the one on

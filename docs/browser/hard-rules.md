@@ -44,12 +44,15 @@ in it (`loadURL`, back, forward, reload) begins and again as it commits, even a
 tab nobody sees: before this rule, a worker's `browser open` or `go` took the
 caret out of your prompt and your next keys went to its hidden page.
 
-`browser-views.ts` marks a tab while a load no page started is on its way in, and a
-tab that takes the keyboard then gives it back to where you had it, the window's
-page or the tab on screen (`keyboardTaken` and `keyboardOwner` in
-`browser-tabs.ts`). It is given back on the next turn, as Chromium undoes a
-focus asked for while it is still moving it, and only while the window has the
-keyboard, so the window is never raised over the app you are in. Only your own
-action gives a tab the keyboard: the browser mode, a click on the page on
-screen, or the focus verb from the screen, which lets go of the mark first.
+`browser-views.ts` marks a tab while a load no page started is on its way in
+(`appLoad`). A tab not on screen that takes the keyboard, marked or not, gives
+it back to where you had it, the window's page or the tab on screen, and so
+does the tab on screen while it is marked (`keyboardTaken` and `keyboardOwner`
+in `browser-tabs.ts`): the window being activated again hands the keyboard to
+the tab that had it last, which can be an agent's. It is given back on the next
+turn, as Chromium undoes a focus asked for while it is still moving it, and only
+while the window has the keyboard, so the window is never raised over the app
+you are in. Only your own action gives a tab the keyboard: the browser mode, a
+click on the page on screen, or the focus verb from the screen, which lets go of
+the mark first.
 
