@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T12:13:33.277Z",
-  "updatedAt": "2026-11-26T12:13:33.278Z",
-  "column": "Backlog",
-  "order": 51
+  "updatedAt": "2026-11-26T12:21:37.254Z",
+  "branch": "keep-less-terminal-scrollback-once-a-heap-s",
+  "column": "Doing",
+  "order": 3
 }
