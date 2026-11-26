@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { sessionRequests, type SessionPorts, type WorkerStart } from './session-requests';
 
 // The session command's fake app for session-requests.test.ts and session-landed.test.ts.
@@ -66,11 +67,14 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     makeWorktree: async () => ({ worktreePath: '/work/api.worktrees/fix-the-tests' }),
     markThrowaway: async () => undefined,
     // api-mr174 is a sibling worktree, x one nested in the checkout, packages/web a folder of it.
-    checkRunFolder: async (_projectPath, folder) => (
-      { '/work/api-mr174': { worktree: '/work/api-mr174' }, '/work/api.worktrees/card-one': { worktree: '/work/api.worktrees/card-one' }, '/work/api/.claude/worktrees/x': { worktree: '/work/api/.claude/worktrees/x' } }[folder]
-      ?? (folder === '/work/api/packages/web' ? { worktree: undefined } : { refused: `${folder} is not a folder` })
-    ),
-    holdsWorktree: (folder) => /\/(api-mr174|api\.worktrees\/[^/]+|\.claude\/worktrees\/[^/]+)$/.test(folder),
+    // The command resolves --in against the caller's folder, so on Windows these are C:\work\... too.
+    checkRunFolder: async (_projectPath, folder) => {
+      const worktree = ['/work/api-mr174', '/work/api.worktrees/card-one', '/work/api/.claude/worktrees/x']
+        .map((each) => path.resolve(each)).find((each) => each === folder);
+      if (worktree !== undefined) return { worktree };
+      return folder === path.resolve('/work/api/packages/web') ? { worktree: undefined } : { refused: `${folder} is not a folder` };
+    },
+    holdsWorktree: (folder) => /[\\/](api-mr174|api\.worktrees[\\/][^\\/]+|\.claude[\\/]worktrees[\\/][^\\/]+)$/.test(folder),
     exists: () => true,
     prune: async () => undefined,
     unfinished: async () => null,

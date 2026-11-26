@@ -1,9 +1,9 @@
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { projectOfFolder, sessionRequests, type WorkerStart } from './session-requests';
 import { project } from './session-requests-fixture';
 import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 // A stop is told only once it has lasted the grace period; stop-notices.test.ts holds what it waits for.
 beforeEach(() => { vi.useFakeTimers(); });
@@ -584,25 +584,28 @@ describe('sessionRequests across projects', () => {
 });
 
 describe('projectOfFolder', () => {
-  const projects = [undefined, '/work/api', '/work/web'];
-  const asGiven = (path: string): string => path;
+  const work = path.resolve('/work');
+  const api = path.join(work, 'api');
+  const projects = [undefined, api, path.join(work, 'web')];
+  const asGiven = (folder: string): string => folder;
 
-  posixPathsOnly('finds the project from its checkout, anywhere inside it, or one of its worktrees', () => {
-    expect(projectOfFolder(projects, '/work/api', asGiven)).toBe(1);
-    expect(projectOfFolder(projects, '/work/api/src', asGiven)).toBe(1);
-    expect(projectOfFolder(projects, '/work/api.worktrees/fix-it', asGiven)).toBe(1);
+  it('finds the project from its checkout, anywhere inside it, or one of its worktrees', () => {
+    expect(projectOfFolder(projects, api, asGiven)).toBe(1);
+    expect(projectOfFolder(projects, path.join(api, 'src'), asGiven)).toBe(1);
+    expect(projectOfFolder(projects, path.join(work, 'api.worktrees', 'fix-it'), asGiven)).toBe(1);
   });
 
   // `/work/api-old` starts with `/work/api` and is a different folder.
   it('does not take a folder that only starts with the project\'s name', () => {
-    expect(projectOfFolder(projects, '/work/api-old', asGiven)).toBe(-1);
-    expect(projectOfFolder(projects, '/elsewhere', asGiven)).toBe(-1);
+    expect(projectOfFolder(projects, path.join(work, 'api-old'), asGiven)).toBe(-1);
+    expect(projectOfFolder(projects, path.resolve('/elsewhere'), asGiven)).toBe(-1);
   });
 
   // ~/work is a symlink to /mnt/data, and the command reports the folder it really is in.
-  posixPathsOnly('finds a project opened through a symlink', () => {
-    const real = (path: string): string => path.replace('/work/', '/mnt/data/');
-    expect(projectOfFolder(projects, '/mnt/data/api', real)).toBe(1);
-    expect(projectOfFolder(projects, '/mnt/data/api.worktrees/fix-it', real)).toBe(1);
+  it('finds a project opened through a symlink', () => {
+    const data = path.resolve('/mnt/data');
+    const real = (folder: string): string => folder.replace(work, data);
+    expect(projectOfFolder(projects, path.join(data, 'api'), real)).toBe(1);
+    expect(projectOfFolder(projects, path.join(data, 'api.worktrees', 'fix-it'), real)).toBe(1);
   });
 });
