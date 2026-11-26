@@ -1,0 +1,11 @@
+{
+  "id": "98124dde-cffe-4391-b5c1-3ef7efa88b6a",
+  "title": "Cache the usage sweep's per-file counts so a launch rereads only changed session logs",
+  "notes": "From the Rust review (/tmp/rust-review.md section 4) and docs/performance/history.md:181-207. The usage sweep (src/main/usage/usage-store.ts) rereads about 4.6 GB of session logs on every launch: 14-17 CPU-seconds on its worker thread. history.md:205 already names the fix: save per-file counts in userData, keyed by path, size and mtime, and reread only a file that changed or is new (an appended log rereads from where it left off, or whole if simpler). Totals must equal the uncached sweep's: a test comparing the two on a fixture folder. Record the before/after launch CPU in history.md.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T12:13:44.127Z",
+  "updatedAt": "2026-11-26T12:13:44.128Z",
+  "column": "Backlog",
+  "order": 52
+}
