@@ -7,6 +7,7 @@ import { BOARD_FOLDER_PATH, EXPLANATION_FOR_AGENTS, openBoard, peekBoard, writeB
 import { syncBoard, type BoardEdit } from './board-sync-git';
 import { boardOn, dropsFirstConnection, git, remote, useGitTestEnvironment } from './create-task-git-fixture';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { posixCommandsOnly } from '../testing/windows-skips';
 
 // Real git, against a bare repository in a temporary folder standing in for origin: what the sync
 // promises is about git — what lands on origin's main, what the checkout is left at, and that a
@@ -196,16 +197,14 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Done' });
   });
 
-  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
-  it.skipIf(process.platform === 'win32')('fetches again when the connection dropped on the fetch', async () => {
+  posixCommandsOnly('fetches again when the connection dropped on the fetch', async () => {
     const { bare, checkout } = project();
     dropsFirstConnection(checkout, 'upload-pack');
     expect(await syncBoard(checkout, command('move', 'a', 'Doing'))).toMatchObject({ synced: true });
     expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Todo' });
   });
 
-  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
-  it.skipIf(process.platform === 'win32')('does not make the edit twice when the connection dropped after the push landed', async () => {
+  posixCommandsOnly('does not make the edit twice when the connection dropped after the push landed', async () => {
     const { bare, checkout } = project();
     dropsFirstConnection(checkout, 'receive-pack');
     expect(await syncBoard(checkout, command('comment', 'a', 'tests pass'))).toMatchObject({ synced: true });

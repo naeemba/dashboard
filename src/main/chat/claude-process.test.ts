@@ -1,6 +1,7 @@
 import type { Options, Query, SpawnedProcess } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vitest';
 import { scopedQuery, withScope } from './claude-process';
+import { posixCommandsOnly } from '../testing/windows-skips';
 
 describe('withScope', () => {
   const options: Options = { cwd: '/work/shop' };
@@ -11,7 +12,7 @@ describe('withScope', () => {
     expect(withScope(options, { file: '/sdk/claude', args: [], unit: null }, tail)).toBe(options);
   });
 
-  it.skipIf(process.platform === 'win32')('starts the process through the scope, its stdin and stdout piped', async () => {
+  posixCommandsOnly('starts the process through the scope, its stdin and stdout piped', async () => {
     // `env --` stands in for systemd-run: it runs what follows its `--`, as the scope does.
     const spawnHook = withScope(options, { file: 'env', args: ['--', 'ignored'], unit: 'agent-test-0000.scope' }, tail).spawnClaudeCodeProcess;
     const child = spawnHook?.({ command: 'cat', args: [], cwd: '/', env: {}, signal: new AbortController().signal }) as SpawnedProcess;
@@ -25,7 +26,7 @@ describe('withScope', () => {
 });
 
 describe('scopedQuery', () => {
-  it.skipIf(process.platform === 'win32')("ends a failed session with the scoped CLI's stderr", async () => {
+  posixCommandsOnly("ends a failed session with the scoped CLI's stderr", async () => {
     // Stands in for the SDK: spawns through the hook, then fails the way it does when the CLI exits 1.
     const query = ({ options }: { options: Options }): Query => (async function* () {
       const child = options.spawnClaudeCodeProcess?.({
