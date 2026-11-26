@@ -50,3 +50,6 @@ One line per merged change: date and why.
 - 2026-11-25 — With merging on, a review whose loop changed what the card asked for or its design
   stops before the merge and reports it to main: a #329-style swap of the card's rule would have
   landed with nobody asked, the gap #338 closed only where main lands
+- 2026-11-26 — A GitHub review runs pr-loop.js directly and does `/pr-loop`'s draft flag, start
+  and finish comments and CI wait in two fixed calls, with the install check moved into the
+  review start's refusal: twelve review workers had spent about six turns each on those steps

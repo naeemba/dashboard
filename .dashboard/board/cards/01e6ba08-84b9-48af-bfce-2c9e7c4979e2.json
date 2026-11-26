@@ -1,0 +1,11 @@
+{
+  "id": "01e6ba08-84b9-48af-bfce-2c9e7c4979e2",
+  "title": "The card ship's git fetch has no timeout and can hold the project's queue indefinitely",
+  "notes": "**[low]** [out-of-scope] The card ship's own fetch in `src/main/ship/ship-flow.ts:52` (`await git(['fetch', base.remote, base.branch], projectPath)`) still has no timeout. It runs with the project's queue held, as this one does.\n\nWhat happens: a ship starts while the connection to the remote stalls mid-transfer. ssh without `ServerAliveInterval` can wait indefinitely. The queue stays held, and the next `pane run --worktree` in that project waits behind it with no answer, so the 60-second cap added here never gets to run. The PR keeps the ship's refusal on purpose, and that is right. Whether the ship gets the same timeout is a separate question from whether it may start from a stale base. Predates this change, so it goes in the follow-up.\n\nIssue: https://github.com/naeemba/dashboard/issues/381\nReview: https://github.com/naeemba/dashboard/pull/378#discussion_r4705693672",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-26T08:37:38.475Z",
+  "updatedAt": "2026-11-26T08:37:38.475Z",
+  "column": "Backlog",
+  "order": 76
+}

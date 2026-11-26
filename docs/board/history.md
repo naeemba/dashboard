@@ -45,3 +45,6 @@ One line per merged change: date and why.
   and the seeded docs (version 3) say so
 - 2026-11-24 — A card on a GitLab project records its merge request the way a pull request is
   recorded, from `glab mr list`
+- 2026-11-26 — An untracked file outside `.dashboard/` no longer stops the sync fast-forwarding the
+  checkout: kamandsystem's untracked `.claude/` left each board write uncommitted there, and
+  `git pull` refused over the card files

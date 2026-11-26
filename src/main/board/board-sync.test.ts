@@ -14,6 +14,10 @@ describe('checkoutStep', () => {
     expect(checkoutStep({ ...behind, porcelain: ' M .dashboard/board/cards/a.json\n?? .dashboard/board/cards/b.json' })).toBe('fast-forward');
   });
 
+  it('fast-forwards over an untracked file outside .dashboard/', () => {
+    expect(checkoutStep({ ...behind, porcelain: '?? .claude/\n M .dashboard/board/cards/a.json' })).toBe('fast-forward');
+  });
+
   it('leaves a checkout with work outside .dashboard/', () => {
     expect(checkoutStep({ ...behind, porcelain: ' M src/main.ts' })).toEqual({ stay: 'it has changes outside .dashboard/' });
   });
@@ -60,6 +64,10 @@ describe('syncCommitMessage', () => {
     expect(syncCommitMessage(before, deleteCard(before, selectionOf(before, 'b')!).board)).toBe('board: remove "Add search"');
     const both = renameCard(renamed, selectionOf(renamed, 'b')!, 'Add a search').board;
     expect(syncCommitMessage(before, both)).toBe('board: update 2 cards');
+  });
+
+  it('says the columns changed when no card did', () => {
+    expect(syncCommitMessage(before, { columns: [...before.columns, { name: 'Later', cards: [] }] })).toBe('board: update the columns');
   });
 });
 

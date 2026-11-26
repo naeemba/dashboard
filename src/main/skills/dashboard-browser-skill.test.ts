@@ -34,7 +34,7 @@ describe('the dashboard-browser skill', () => {
 
   // The other texts that name the server's tools by hand: a renamed tool fails here, not in a worker.
   it('names only tools the server has, in the work-card skill, the review prompt and main\'s prompt', () => {
-    const texts = [WORK_CARD_SKILL, reviewPrompt('card', 1, '/work/api', true, 'github'), reviewPrompt('card', 1, '/work/api', false, 'github'), mainPrompt('/work/api')];
+    const texts = [WORK_CARD_SKILL, reviewPrompt('card', 1, '/work/api', true, 'github', '/w/pr-loop.js'), reviewPrompt('card', 1, '/work/api', false, 'github', '/w/pr-loop.js'), mainPrompt('/work/api')];
     const named = texts.flatMap(toolNames);
     expect(named).toContain('browser_eval');
     for (const name of named) expect(known).toContain(name);

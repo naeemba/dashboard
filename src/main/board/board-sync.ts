@@ -65,15 +65,21 @@ export type CheckoutState = {
 
 // What becomes of the checkout. `current` it already is; `fast-forward` it is moved there, its own board
 // edits laid back over the top; `stay` it is left as it is, and why. Only the board's files and the
-// folder they sit in may be dirty for the move: anything else is somebody's work, and a fast-forward
-// that touches it is one nobody asked for.
+// folder they sit in may be changed for the move: any other tracked file changed is somebody's work,
+// and a fast-forward that touches it is one nobody asked for.
+//
+// An untracked file is not in the way. The fast-forward leaves it alone, and refuses when the target
+// would write over one, which puts the board back and stays. Counting it left a checkout with an
+// untracked `.claude/` behind on every board write, each edit pushed and also left uncommitted in the
+// checkout, and the next `git pull` refused over the card's file.
 export type CheckoutStep = 'current' | 'fast-forward' | { stay: string };
 
 export function checkoutStep(state: CheckoutState): CheckoutStep {
   if (state.branch !== state.defaultBranch) return { stay: `it is not on ${state.defaultBranch}` };
   if (state.current) return 'current';
   if (!state.behind) return { stay: `it has commits ${state.defaultBranch} on origin does not` };
-  if (blockingChanges(state.porcelain).length > 0) return { stay: 'it has changes outside .dashboard/' };
+  const tracked = state.porcelain.split('\n').filter((line) => !line.startsWith('??')).join('\n');
+  if (blockingChanges(tracked).length > 0) return { stay: 'it has changes outside .dashboard/' };
   return 'fast-forward';
 }
 
