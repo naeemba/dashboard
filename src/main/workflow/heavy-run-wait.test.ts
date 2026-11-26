@@ -109,6 +109,14 @@ describe('waitForHeavyRuns', () => {
     expect(otherTerminal.waited()).toBe(4_000);
   });
 
+  it('waits on a vitest that runs once in a terminal', () => {
+    for (const once of [['run'], ['--run'], ['--watch=false']]) {
+      const terminal = machineWith((now) => (now < 4_000 ? [['node', '/app/node_modules/vitest/vitest.mjs', ...once]] : []), 0, { 100: '/dev/pts/3' });
+      expect(waitForHeavyRuns(...bash('pnpm check'), terminal.machine)).toBe('');
+      expect(terminal.waited()).toBe(4_000);
+    }
+  });
+
   it('gives up at its limit and tells the agent, naming the run it waited on', () => {
     const { machine, claims, waited } = machineWith(() => [['vitest', 'run']]);
     const answer = JSON.parse(waitForHeavyRuns(...bash('pnpm test'), machine));

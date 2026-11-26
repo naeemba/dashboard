@@ -110,11 +110,12 @@ export type HeavyRunMachine = {
 };
 
 // Bare `vitest`, `vitest watch` or `vitest dev` on a terminal is watch mode with no flag saying so; with
-// no terminal (an agent's call) it runs once. Its terminal is answered, so the package manager that
+// no terminal (an agent's call) it runs once. `--run` and `--watch=false` run once on a terminal too. Its terminal is answered, so the package manager that
 // started it there (`pnpm test` for a `"test": "vitest"` script) is read as the same watch.
 function watchTerminal(process: RunningProcess, machine: HeavyRunMachine): string | null {
   const program = commandProgram(process.argv);
   if (program?.name !== 'vitest' || program.rest.some((word) => word !== 'watch' && word !== 'dev')) return null;
+  if (program.after.some((word) => word === '--run' || word === '--watch=false')) return null;
   return machine.terminal(process.pid);
 }
 
