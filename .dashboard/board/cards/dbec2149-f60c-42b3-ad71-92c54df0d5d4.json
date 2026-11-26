@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:23:58.303Z",
-  "updatedAt": "2026-11-26T08:25:41.751Z",
+  "updatedAt": "2026-11-26T08:40:04.620Z",
   "branch": "review-workers-run-their-set-up-and-wrap-up",
-  "column": "Doing",
+  "pullRequest": 382,
+  "comments": [
+    {
+      "at": "2026-11-26T08:40:04.585Z",
+      "body": "Pull request #382 opened: Review workers run the loop's set-up and wrap-up in two fixed calls https://github.com/naeemba/dashboard/pull/382"
+    }
+  ],
+  "column": "Review",
   "order": 3
 }
