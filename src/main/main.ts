@@ -213,8 +213,12 @@ const boards = boardWatchers((projectPath) => {
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
+// Text typed into a pane's shell, Enter after it; with a Claude screen's prompt first, how a worker is
+// prompted in either kind of pane (pane.send, and the browser's question about a worker's tabs).
+const typeIntoShell = (id: string, text: string): void => typeIntoPane((data) => shells.get(id)?.write(data), text);
+const promptPane = (id: string, text: string): void => { if (!workerScreens.send(id, text)) typeIntoShell(id, text); };
 // Each project's browser tabs, beside the window: browser-actions.ts.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
@@ -506,7 +510,7 @@ const pane = paneActions({
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
   agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
   programRunsIn: (id) => runsAProgram(panes.foregroundOf(id), panes.startedWith.get(id)),
-  typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
+  typeIntoShell,
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   unclaimed: shellHost.unclaimed, keep: shellHost.keep, killKept: shellHost.killKept, inSession: (projectPath) => projectPath === MANAGER_FOLDER || claudeSessions.launchedWith(projectPath),
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
@@ -782,7 +786,7 @@ const workerAnswers = sessionRequests({
   },
   close: (id) => pane.close.call({ id }),
   send: (id, text, dispatcherPath) => pane.send.call({ id, text, dispatcherPath }),
-  mark: (id, state) => sendToRenderer('pane:mark', id, state),
+  mark: (id, state) => sendToRenderer('pane:mark', id, state), turnEnded: (id) => browser.turnEnded(id),
   tell: chats.tell,
   withdraw: (slot, messageId) => { chats.withdraw(slot, messageId).catch(() => undefined); },
   cardWorktree(projectPath, cardId) {

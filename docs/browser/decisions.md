@@ -125,20 +125,24 @@ is used and idles again. A tab you opened or are looking at is never asked
 about: the screen counts as use, and a claim of your tab does not make it the
 agent's to close.
 
-An agent that is ending is not asked at the release. The release kills it, so
-waiting on an answer would hold `pane release`, `pane finish` and every sweep
-that lets a pane go until the agent replied. The dashboard-browser skill tells
-it to close or release its tabs before it finishes instead, and a pane let go of
-still holding tabs hands them to you open, with the main it reports to told
-which.
+A worker is asked when its turn ends with nothing left running while it still
+holds tabs, before anyone releases its pane: the agent is still alive to answer
+with `browser close`, and nothing waits on the answer. It is asked once per
+holding, as the idle question is: silence leaves the tabs, and it is asked about
+one again only after it uses it and ends another turn. A release afterwards
+hands what is left to you open, with the main it reports to told which. Asking
+at the release instead would hold `pane release`, `pane finish` and every sweep
+that lets a pane go until the dying agent replied.
 
-A worker is not asked either, finished or at work. The question starts a turn
-whose stop overwrites its report, so `pane report` would print "Closed tab 4."
-in place of what it did. Asked when finished, main gets a second done notice;
-asked at work, the question queued behind its turn calls off the notice of the
-turn that did the work and is itself held back as a prompt of yours, so main
-never hears the worker stopped. Main lets it go once it has read the report, and
-that release names the tabs it left open.
+The question's turn is not the worker's work. Taken as one, its stop would
+overwrite the report, so `pane report` would print "Closed tab 4." in place of
+what it did. Its start would also call off main's pending notice of the stop
+that did the work, and its prompt would count as one of yours, so main would
+never hear the worker finished and auto-release would keep the pane. The
+question opens with "The Dashboard app asks:", and a turn opened that way leaves
+the report, the notice and whose turn it was as the worker's last turn left
+them. A worker is still never asked mid-work: a question queued behind its turn
+would land as its next prompt with the work unreported.
 
 Only the tab on screen counts as looked at, not each project's active tab: an
 agent's first tab in a project you never opened a tab in becomes its active one,

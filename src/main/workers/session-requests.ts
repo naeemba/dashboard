@@ -12,7 +12,7 @@ import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
-import { promptSources } from './prompt-source';
+import { isTyped, promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
 import { paneClaim } from '../actions/pane/claim';
@@ -65,6 +65,9 @@ export type SessionPorts = {
   // by the main of `dispatcherPath`; `handed` when the pane's agent became its worker.
   send(id: string, text: string, dispatcherPath: string): Promise<{ output: string; handed: boolean } | Refused>;
   mark(id: string, state: WorkerState): void;
+  // The worker ended a turn with nothing left running, its own and not the app's question: the browser
+  // asks it about the tabs it still holds (tab-idle.ts).
+  turnEnded(id: string): void;
   // A message into that project's main session, queued behind whatever it is doing (chat-decision-7).
   // Answers with the id `withdraw` takes it back by while it still waits in the queue.
   tell(slot: number, text: string): string;
@@ -209,8 +212,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // while it works again, so a report still says what it got to; gone with the worker.
   const lastMessages = new Map<string, string>();
   const prompts = promptSources();
+  // The panes on a turn the app's question started (app-question.ts), until a prompt of anyone else's.
+  const appTurns = new Set<string>();
   // Every time a worker is let go of: its stop, its last message and whose turn it was on.
   const forgetWorker = (id: string) => {
+    appTurns.delete(id);
     notices.forget(id);
     lastMessages.delete(id);
     prompts.forget(id);
@@ -532,10 +538,21 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     });
   }
 
+  // Whether the hook belongs to such a turn, which leaves the worker's report, notice and prompts as
+  // its own last turn left them. A tool call inside it, or the session waking itself, types no prompt,
+  // so only one typed by somebody else ends it (prompt-source.ts's isTyped).
+  function onAppTurn(id: string, state: WorkerState, told: HookTold): boolean {
+    if (state === 'done') return appTurns.delete(id);
+    if (told.appAsks === true) appTurns.add(id);
+    else if (isTyped(told.promptSource) || told.handed === true) appTurns.delete(id);
+    return appTurns.has(id);
+  }
+
   // The hooks report from wherever their worker stands, so a pane id is all a notify needs.
   function notify(id: string, state: WorkerState, waiting?: StopWaiting, told: HookTold = {}): SessionReply {
     const { slot, index } = paneFromId(id);
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
+    if (onAppTurn(id, state, told)) return answered('');
     if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
     if (state === 'running') {
       prompts.prompted(id, told.promptSource, told.handed === true);
@@ -543,6 +560,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     } else states.set(id, { state, waiting });
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
+    if (state === 'done' && !isPaused(waiting)) ports.turnEnded(id);
     return answered('');
   }
 

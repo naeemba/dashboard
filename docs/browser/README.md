@@ -152,11 +152,13 @@ another project's for one claimed with `--project`, is told which were left
 open. A tab is never closed for being idle (browser-decision-10). One a main
 opened that sees no browser call from it and is not the tab on screen for
 `browser.idleMinutes` (30 by default, `null` never) gets one question to that
-main through its chat: may it be closed? A worker is never asked, since its
-answer would replace its report; its tabs reach main when it is let go of. The
-main answers with `browser close`; saying nothing keeps it, and it is not asked
-again until it is used and goes unused again. A tab you opened or are looking at
-is never asked about, even once an agent claims it.
+main through its chat: may it be closed? A worker is asked instead when its turn
+ends with nothing left running while it holds tabs, as its next prompt, a Claude
+screen's or typed into its terminal; that turn leaves its report and main's
+notice alone. Either answers with `browser close`; saying nothing keeps the tab,
+and it is not asked again until it is used and goes unused again, or for a
+worker, until it uses it and ends another turn. A tab you opened or are looking
+at is never asked about, even once an agent claims it.
 
 A tab handed back, those and the one you take back, is laid out at its own size
 again, whatever size an agent gave it. The protocol is each tab's own
@@ -191,8 +193,10 @@ Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser
   on the window or taken off it
 - `browser-placement.ts`: where the page goes, and what counts as floating over it
 - `browser-holds.ts`: who may act on a tab, claim it or have it taken back
-- `tab-idle.ts`: which tabs a main is asked about and when, and the notice when a
-  pane is let go of still holding tabs
+- `tab-idle.ts`: which tabs a main or a worker is asked about and when, and the
+  notice when a pane is let go of still holding tabs
+- `../workers/app-question.ts`: the opening that keeps the question's turn out
+  of the worker's report and stop notice
 - `claims.ts`, `page.ts`, `target.ts` (actions): claim, release and revoke;
   resize, click, type, press, upload and eval; which tab an action means for each door
 - `browser-page.ts`: the one module driving a page's content, the command's
@@ -237,8 +241,11 @@ The keys are in `src/shared/keys/browser-actions.ts` and
 - Given main opened a tab and has not touched it for 30 minutes, then its chat
   gets one question naming the tab; it runs `browser close 4` and the tab goes,
   or says nothing and the tab stays, unasked until it is used again.
-- Given a worker opened a tab and has not touched it for 30 minutes, then
-  nothing is asked; when main runs `pane release`, main's chat names the tab.
+- Given a worker ends its turn still holding a tab it opened, with nothing left
+  running, then it gets one prompt naming the tab and runs `browser close 4`, and
+  `pane report` and main's notice still give the report it ended its work with.
+- Given that worker says nothing about the tab, then it stays open, unasked at
+  its later turn ends until it uses the tab again.
 - Given a worker still holds a tab when main runs `pane release`, then the tab
   stays open, is yours, and main's chat gets a line naming it.
 - Given you are typing in main's prompt, when a worker runs `browser open`,

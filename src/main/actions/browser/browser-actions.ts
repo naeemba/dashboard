@@ -5,7 +5,7 @@ import type { Channels } from '../../app/channels';
 import { browserFileFolder, browserPage } from '../../browser/browser-page';
 import { browserRequests, type BrowserRequestPorts } from '../../browser/browser-requests';
 import { browserViews, type BrowserViewsMain } from '../../browser/browser-views';
-import { idleQuestion, tabClock } from '../../browser/tab-idle';
+import { idleQuestion, tabClock, turnEndQuestion } from '../../browser/tab-idle';
 import { firstFile } from '../../nvim/file-open';
 import type { SessionReply, SessionRequest } from '../../workers/session-cli';
 import { bind, registerActions } from '../action';
@@ -24,11 +24,13 @@ import { browserFocus, browserHide, browserReset, browserShow } from './view';
 // `panes` is what the browser command's door asks main of the panes and pages (browser-requests.ts).
 type PaneLookups = Omit<BrowserRequestPorts, 'actions' | 'reads' | 'used'>;
 
-// How the app asks a tab's agent, and when: a main through its chat, queued behind its turn. A worker
-// is never asked (tab-idle.ts). `idleMinutes` is the setting, null never asking. `mainOf` is the main
-// a worker reports to, told of the tabs it still held when let go of.
+// How the app asks a tab's agent, and when: a main through its chat, queued behind its turn, once its
+// tab goes unused; a worker as its next prompt, a Claude screen's or typed into its terminal, once its
+// turn ends (tab-idle.ts). `idleMinutes` is the setting, null never asking. `mainOf` is the main a
+// worker reports to, told of the tabs it still held when let go of.
 export type TabAsking = {
   tellMain(slot: number, text: string): void;
+  tellWorker(pane: string, text: string): void;
   mainOf(pane: string): number;
   idleMinutes(): number | null;
 };
@@ -81,6 +83,11 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
     // Every tab the pane holds back to the user, still open, and its main told which: the pane released,
     // finished, its agent exited, or another agent started in it.
     letGo: (pane: string): void => void release.call({ pane }),
+    // The worker's turn ended with nothing left running: asked about the tabs it still holds.
+    turnEnded(pane: string): void {
+      const tabs = clock.ended(views.ports.allBrowsers(), pane, views.shown());
+      if (tabs.length > 0) asking.tellWorker(pane, turnEndQuestion(tabs));
+    },
     requests: (otherwise: (request: SessionRequest) => Promise<SessionReply>) => browserRequests({
       ...panes, actions, reads: page.reads, used: (pane, tab) => clock.calledOn(views.ports.allBrowsers(), pane, tab, Date.now()),
     }, otherwise),

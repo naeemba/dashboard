@@ -68,6 +68,11 @@ export function withoutPane(state: BrowserState, pane: string): BrowserState {
   };
 }
 
+// Every tab the pane holds, in every project's browser.
+export function heldTabs(browsers: Browsers, pane: string): BrowserTab[] {
+  return [...browsers.values()].flatMap((state) => state.tabs.filter((tab) => tab.holder === pane));
+}
+
 // The revoke key's change: the tab the user's, and the pane it held it remembered among those taken from.
 export const takenBack = (tab: BrowserTab): Partial<BrowserTab> => ({ holder: 'user', takenFrom: [...(tab.takenFrom ?? []), tab.holder] });
 

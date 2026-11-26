@@ -28,7 +28,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - What the command and the app agree on before an answer, the build stamp and
   the acceptance timeout: `app-handshake.ts`
 - When main hears a worker stopped: `stop-notices.ts`, `done-report.ts`, and
-  whose turn it was, `prompt-source.ts`
+  whose turn it was, `prompt-source.ts`, and the app's own question about a
+  worker's tabs, whose turn counts as none of them, `app-question.ts`
 - Work sent into a pane reported to the main that sent it:
   `../actions/pane/send.ts`, `../actions/pane/dispatch.ts` (workers-decision-1)
 - Finished workers closed by main's own commands: `auto-release.ts`,

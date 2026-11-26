@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BrowserState, BrowserTab } from '../../shared/browser/browser';
-import { idleQuestion, leftOpenNotice, mainSlotOf, tabClock } from './tab-idle';
+import { isAppQuestion } from '../workers/app-question';
+import { idleQuestion, leftOpenNotice, mainSlotOf, tabClock, turnEndQuestion } from './tab-idle';
 
 const MINUTE = 60_000;
 const IDLE = 30 * MINUTE;
@@ -92,6 +93,34 @@ describe('tabClock', () => {
     clock.due(browsers([]), MINUTE, null, 30);
     clock.seen({ tabs: [tab(1)], active: null }, MINUTE);
     expect(asked(clock.due(browsers([tab(1)]), MINUTE + IDLE, null, 30))).toEqual(['2: 1']);
+  });
+});
+
+describe('a worker\'s turn ending', () => {
+  const held = [tab(1, '2:3'), tab(2, '2:3'), tab(3, '2:4'), tab(4, 'user')];
+
+  it('asks about the tabs it holds that an agent opened, but the one on screen, once until it uses one', () => {
+    const clock = tabClock();
+    clock.seen({ tabs: [...held, tab(5, 'user')], active: null }, 0);
+    const all = browsers([...held, tab(5, '2:3')]);
+    expect(clock.ended(all, '2:3', 2).map((each) => each.id)).toEqual([1]);
+    expect(clock.ended(all, '2:3', null).map((each) => each.id)).toEqual([2]);
+    expect(clock.ended(all, '2:3', null)).toEqual([]);
+    clock.calledOn(all, '2:3', 1, MINUTE);
+    expect(clock.ended(all, '2:3', null).map((each) => each.id)).toEqual([1]);
+  });
+
+  it('does not ask again about a tab asked about at a turn end, until it is used, whoever holds it', () => {
+    const clock = tabClock();
+    clock.seen({ tabs: [tab(1, '2:3')], active: null }, 0);
+    clock.ended(browsers([tab(1, '2:3')]), '2:3', null);
+    expect(clock.due(browsers([tab(1)]), 2 * IDLE, null, 30)).toEqual([]);
+  });
+
+  it('opens with the line that keeps its answer out of the worker\'s report', () => {
+    expect(isAppQuestion(turnEndQuestion([tab(4)]))).toBe(true);
+    expect(isAppQuestion(idleQuestion([tab(4)], 30))).toBe(true);
+    expect(turnEndQuestion([tab(4)])).toContain('these browser tabs.\n  4  https://example.com/4\n');
   });
 });
 

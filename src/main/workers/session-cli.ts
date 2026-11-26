@@ -7,6 +7,7 @@ import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { asksForReport, LAST_MESSAGE_KEPT, tail } from '../../shared/workers/done-report';
+import { isAppQuestion } from './app-question';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -37,9 +38,9 @@ export type SessionCommand =
 
 // What a worker's hooks say beside its state: a Stop hook its last message, a prompt hook who put the
 // prompt in (UserPromptSubmit's `source`) and whether the prompt is one main handed the worker, ending
-// with the line asking for a report (both read by prompt-source.ts). Each is left out by a Claude Code
-// too old to send it.
-export type HookTold = { lastMessage?: string; promptSource?: string; handed?: boolean };
+// with the line asking for a report (both read by prompt-source.ts), and whether it is the app's own
+// question (app-question.ts). Each is left out by a Claude Code too old to send it.
+export type HookTold = { lastMessage?: string; promptSource?: string; handed?: boolean; appAsks?: boolean };
 
 // What goes over the socket and what comes back. The folder is where the command was run, which is how
 // main tells which project is asking; a worker's hook runs in its worktree and is found the same way.
@@ -150,7 +151,8 @@ const NOTIFY_WORDS_REFUSED = 'session notify takes nothing after its state';
 const LAST_MESSAGE_FLAG = '--last-message';
 const PROMPT_SOURCE_FLAG = '--prompt-source';
 const HANDED_FLAG = '--handed';
-const GROWN_FLAGS = [LAST_MESSAGE_FLAG, PROMPT_SOURCE_FLAG, HANDED_FLAG];
+const APP_ASKS_FLAG = '--app-asks';
+const GROWN_FLAGS = [LAST_MESSAGE_FLAG, PROMPT_SOURCE_FLAG, HANDED_FLAG, APP_ASKS_FLAG];
 
 // Whether a refused notify is sent again in an older app's words (session-socket.ts): only when the
 // app refused it for its words, not for the pane or for being unreachable, and only when the older
@@ -179,6 +181,7 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
   if (lastMessage !== undefined && state === 'done') told.lastMessage = lastMessage;
   if (promptSource !== undefined && state === 'running') told.promptSource = promptSource;
   if (flags.get(HANDED_FLAG) === 'yes' && state === 'running') told.handed = true;
+  if (flags.get(APP_ASKS_FLAG) === 'yes' && state === 'running') told.appAsks = true;
   const command: SessionCommand = { kind: 'notify', id, state };
   if (counts) command.waiting = { background: Number(background), scheduled: Number(scheduled) };
   if (Object.keys(told).length > 0) command.told = told;
@@ -218,10 +221,11 @@ export function stopInputArguments(input: string): string[] {
 
 // A prompt hook's input: the arguments the app is sent in place of --prompt-input.
 export function promptInputArguments(input: string): string[] {
-  const { promptSource, handed } = hookTold(parsedInput(input));
+  const { promptSource, handed, appAsks } = hookTold(parsedInput(input));
   return [
     ...(promptSource === undefined ? [] : [PROMPT_SOURCE_FLAG, promptSource]),
     ...(handed === true ? [HANDED_FLAG, 'yes'] : []),
+    ...(appAsks === true ? [APP_ASKS_FLAG, 'yes'] : []),
   ];
 }
 
@@ -243,6 +247,7 @@ export function hookTold(input: unknown): HookTold {
     ...(typeof lastMessage === 'string' && lastMessage !== '' && { lastMessage }),
     ...(typeof promptSource === 'string' && { promptSource }),
     ...(typeof prompt === 'string' && asksForReport(prompt) && { handed: true }),
+    ...(typeof prompt === 'string' && isAppQuestion(prompt) && { appAsks: true }),
   };
 }
 
