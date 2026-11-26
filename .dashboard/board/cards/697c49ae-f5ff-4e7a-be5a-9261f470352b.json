@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-07T13:54:58.728Z",
-  "updatedAt": "2026-11-07T13:54:58.728Z",
-  "column": "Backlog",
-  "order": 37
+  "updatedAt": "2026-11-26T11:44:25.993Z",
+  "branch": "one-conversation-port-per-slot-in-chat-sess",
+  "column": "Doing",
+  "order": 2
 }
