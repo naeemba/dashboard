@@ -144,8 +144,9 @@ conflict after review, and one of them is thrown away.
   type-check and lint scripts. A project with a \`check\` script that runs them
   all and prints a summary (\`pnpm check\`) is checked with that, once: read the
   log it names for a failure rather than running the suite again. Never run
-  tests in parallel, or start a second run while one is going. All of them
-  must pass. If one fails and you cannot fix it, stop: do not open the pull
+  tests in parallel, or start a second run while one is going. To tell a
+  failure from load, rerun only the failed files, never the whole suite. All
+  of them must pass. If one fails and you cannot fix it, stop: do not open the pull
   request, and say what failed and why in a comment on the card.
 - When the checks list changed files a test leaves partly unrun (a coverage
   line, like \`pnpm check\`'s), each one gets a test for what it leaves

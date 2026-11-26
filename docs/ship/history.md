@@ -53,3 +53,5 @@ One line per merged change: date and why.
 - 2026-11-26 — A GitHub review runs pr-loop.js directly and does `/pr-loop`'s draft flag, start
   and finish comments and CI wait in two fixed calls, with the install check moved into the
   review start's refusal: twelve review workers had spent about six turns each on those steps
+- 2026-11-26 — The review prompt says to rerun only the failed files to tell a failure from load,
+  since a full run now waits while another runs on the machine (workflow-decision-14)

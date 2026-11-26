@@ -357,3 +357,33 @@ ran `pnpm lint` again, and 4 of 21 findings in a pr-loop were new branches with 
   environment) and a `*-step.mjs` entry always read `no test runs it`, and the line cannot tell
   those from a decision module that owes a test.
 
+## workflow-decision-14: One full test, build or typecheck run at a time on the machine
+
+Agreed on 2026-11-26, from a retro: with several panes at once the load reached 22-50 on 16
+cores, and whole suites timed out at random; one new-crm worker ran vitest four times, and every
+suite that failed passed alone. workflow-decision-12 holds one worktree to one test run; this holds
+the machine to one heavy run. `board guard --wait` waits, after every refusal, from a Bash entry
+only the settings the app gives its sessions carry, so a worker in any project waits with no change
+there and a session of your own does not; the user's `board guard` entry keeps Claude Code's
+default timeout (`src/main/workflow/heavy-run-wait.ts`):
+
+- **A heavy run** is a whole suite, build or typecheck: a runner with nothing named to run
+  (`vitest run`, `pytest -x`), a package manager's `test`, `check`, `build`, `typecheck` or
+  `test:*`/`build:*` script with no target after it, `tsc`, `vite build`, `cargo test|build|check`,
+  `go test ./...`. A run naming files, a folder or a filter is the rerun that tells a failure from
+  load, and never waits; nor does watch mode, which never ends: `--watch`, `-w` past a package
+  manager (to pnpm and npm it is the workspace flag), and a bare `vitest` on a terminal, which
+  watches with no flag, along with the package manager that started it on the same terminal.
+- **The lock is the running process**, read off `/proc` by the same rule, not a lock file held by
+  the run: a run nothing claimed counts, and a crashed one holds nothing. The card asked for
+  `flock`; a lock held across the Bash call means rewriting the command, which changes what the
+  permission rules and the Bash tool's own timeout see, and a wait in the hook counts against
+  neither.
+- **A claim file**, `~/.cache/dashboard/heavy-run.claim`, covers the moment between one wait
+  ending and its process showing up, for 30 seconds: without it every waiting pane sees the machine
+  free in the same poll and starts at once.
+- **Nine minutes at most**, under the hook's timeout of ten (`GUARD_TIMEOUT`); then the call starts
+  anyway and the agent is told a failure may be load.
+
+The `/work-card` skill and the review prompt tell a worker to rerun only the failed files to tell a
+failure from load, never the whole suite. On a mac, with no `/proc`, nothing waits.

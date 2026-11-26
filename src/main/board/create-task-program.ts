@@ -6,6 +6,7 @@ import { BOARD_FOLDER_PATH, BOARD_PATHSPECS, hasBoard, peekBoard, readBoard, wri
 import { runBoardCommand } from './board-cli';
 import { BROKEN_SUFFIX } from '../app/set-aside';
 import { ExpectedFailure, failureLine } from '../command/failure-line';
+import { sleep } from '../command/sleep';
 import { noDefaultBranchMessage } from '../app/default-branch';
 import { defaultBranchNow, projectRemoteNow } from '../app/base-branch';
 import { NO_HOOKS } from '../app/git';
@@ -157,11 +158,6 @@ function run(commandArguments: readonly string[], directory: string): number {
     process.stdout.write(`${outcome.line}\n`);
     return 0;
   }
-}
-
-// Synchronous, like the rest of this program.
-function sleep(milliseconds: number): void {
-  if (milliseconds > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 
 export function runCreateTask(commandArguments: readonly string[], directory: string): number {

@@ -21,7 +21,9 @@ workflow-decision-7), the package-manager guard (`src/main/workflow/package-mana
 tested beside it, run by `board guard`; workflow-decision-9), the worktree guard
 (`src/main/workflow/worktree-guard.ts`, tested beside it, run by `board guard`;
 workflow-decision-10), the test-run guard (`src/main/workflow/test-run-guard.ts`, tested beside it,
-run by `board guard`; workflow-decision-12), `scripts/node-pty-built.mjs` and
+run by `board guard`; workflow-decision-12), the heavy-run wait
+(`src/main/workflow/heavy-run-wait.ts`, tested beside it, run by `board guard --wait` in a pane;
+workflow-decision-14), `scripts/node-pty-built.mjs` and
 `scripts/no-running-app.mjs` (its rule in `scripts/running-app.mjs`, tested beside it), written in
 Node so the same hook runs on a mac, Linux and Windows; `pnpm check` (its summary and reasons in
 `scripts/check.mjs` and its coverage line in `scripts/coverage.mjs`, each tested beside it, run by
@@ -209,6 +211,11 @@ started (workflow-decision-5).
   one's pid and command line and saying to wait for it; a run while the only one going is in
   another worktree, `pnpm lint`, `pnpm add -D vitest` and a commit message naming `pnpm test` go
   through (`test-run-guard.test.ts`).
+- Given an agent in a pane the app opened, on Linux, when it runs a full `pnpm test`, `pnpm check`,
+  `pnpm typecheck`, `npm run build`, `tsc` or `cargo test` while another such run is going anywhere
+  on the machine, then its call waits until that run ends and no other call claimed the turn in the
+  last 30 seconds, up to nine minutes, and then starts; `pnpm test src/a.test.ts`, `vitest --watch`
+  and `pnpm lint` never wait (`heavy-run-wait.test.ts`).
 - Given a test that makes a temporary folder and never removes it, when `pnpm test` ends, then the
   run fails naming the folder's prefix and count, and nothing it made is left in `/tmp`.
 - Given a clean `pnpm test`, when it ends, then `/tmp` holds the same `dashboard-*`, `create-task-*`

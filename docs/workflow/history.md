@@ -66,3 +66,6 @@ One line per merged change: date and why.
   test files, after #370 added a POSIX-path test without it; `check.log` opens with the summary,
   since `head check.log` showed only vitest's preamble; `vitest.config.mts`, so Vite stops warning
   that the config is ESM loaded as CommonJS (workflow-rule-6)
+- 2026-11-26 — A pane's full test, build or typecheck run waits in `board guard` while another
+  runs on the machine, and workers rerun only the failed files to tell a failure from load, after
+  whole suites timed out at a load of 22-50 with several panes at once (workflow-decision-14)
