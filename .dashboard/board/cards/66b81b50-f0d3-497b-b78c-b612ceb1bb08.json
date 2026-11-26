@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T12:13:33.277Z",
-  "updatedAt": "2026-11-26T14:20:22.339Z",
+  "updatedAt": "2026-11-26T14:21:27.337Z",
   "branch": "keep-less-terminal-scrollback-once-a-heap-s",
   "pullRequest": 403,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-26T14:20:22.339Z",
       "body": "Merged origin/main as 37e0ef80. The one conflict, in docs/performance/README.md, keeps both the scrollback row and #401's usage-sweep row. pnpm check passed and every CI check passed on 37e0ef80. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:21:27.316Z",
+      "body": "Pull request #403 merged: Give a worker 5000 lines of scrollback, half of the editor's https://github.com/naeemba/dashboard/pull/403"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 330
 }
