@@ -5,8 +5,14 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:12:57.428Z",
-  "updatedAt": "2026-11-26T14:11:02.613Z",
+  "updatedAt": "2026-11-26T14:38:17.822Z",
   "branch": "browser-tabs-are-closed-by-asking-the-agent",
+  "comments": [
+    {
+      "at": "2026-11-26T14:38:17.822Z",
+      "body": "Overlap with card 95a08d4a (pane pool) was reported to main, and main said go on. The shared files are wiring only: src/main/main.ts ports and one field each in src/shared/settings/settings.ts. Trigger 1 as built: the ending agent is not asked at the release, because the release kills it. The skill tells agents to close or release their tabs before they finish, and a pane let go of with tabs still held tells its main which tabs it left open (browser-decision-10)."
+    }
+  ],
   "column": "Doing",
   "order": 1
 }
