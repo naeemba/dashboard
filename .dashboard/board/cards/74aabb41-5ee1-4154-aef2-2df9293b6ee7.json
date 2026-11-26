@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T09:56:15.018Z",
-  "updatedAt": "2026-11-26T09:56:15.018Z",
-  "column": "Backlog",
-  "order": 79
+  "updatedAt": "2026-11-26T09:56:42.475Z",
+  "branch": "browser-eval-s-script-file-read-gets-a-test",
+  "column": "Doing",
+  "order": 1
 }

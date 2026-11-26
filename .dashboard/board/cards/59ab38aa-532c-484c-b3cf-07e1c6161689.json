@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T09:55:46.211Z",
-  "updatedAt": "2026-11-26T09:55:46.211Z",
-  "column": "Backlog",
-  "order": 77
+  "updatedAt": "2026-11-26T09:56:47.631Z",
+  "branch": "card-ship-s-fetch-gets-the-same-timeout-as",
+  "column": "Doing",
+  "order": 2
 }
