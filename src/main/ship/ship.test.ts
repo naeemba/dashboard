@@ -1,9 +1,9 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   blockingChanges, branchNameFor, changedFiles, oneAtATime, workPrompt, worktreePathFor,
 } from './ship';
 import { BUMP_VERSION, KEEP_VERSION, NO_REVIEW_LOOP, REVIEW_LOOP } from '../skills/work-card-skill';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 const cardId = 'fc2bf7b0-1234-4321-8888-aaaaaaaaaaaa';
 
@@ -52,14 +52,16 @@ describe('branchNameFor', () => {
 describe('worktreePathFor', () => {
   // Beside the project, never inside it: nothing to gitignore, and a search in the real checkout
   // never walks into it.
-  posixPathsOnly('puts the worktree in a sibling folder named after the project', () => {
-    expect(worktreePathFor('/Users/sharp/workspace/personal/dashboard', 'panes-name-themselves'))
-      .toBe('/Users/sharp/workspace/personal/dashboard.worktrees/panes-name-themselves');
+  it('puts the worktree in a sibling folder named after the project', () => {
+    const personal = path.resolve('/Users/sharp/workspace/personal');
+    expect(worktreePathFor(path.join(personal, 'dashboard'), 'panes-name-themselves'))
+      .toBe(path.join(personal, 'dashboard.worktrees', 'panes-name-themselves'));
   });
 
-  posixPathsOnly('is not confused by a trailing slash on the project path', () => {
-    expect(worktreePathFor('/Users/sharp/work/api/', 'bump-deps'))
-      .toBe('/Users/sharp/work/api.worktrees/bump-deps');
+  it('is not confused by a trailing slash on the project path', () => {
+    const work = path.resolve('/Users/sharp/work');
+    expect(worktreePathFor(`${path.join(work, 'api')}${path.sep}`, 'bump-deps'))
+      .toBe(path.join(work, 'api.worktrees', 'bump-deps'));
   });
 });
 

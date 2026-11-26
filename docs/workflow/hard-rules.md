@@ -106,21 +106,21 @@ it; CI runs both anyway.
 
 Windows has been a target since #191, and `windows-latest` runs the tests on every pull request.
 #288 and #289 built expected paths with `/` and reached that job only after their review loop had
-finished, so the fix was another round. A test that names a path builds it with `path.join`; one
-that needs POSIX paths, file modes, unix sockets or signals skips on `win32` with a named
-`it.skipIf` saying why, imported from `src/main/testing/windows-skips.ts` rather than copied per
-file: `posixPathsOnly` for POSIX path literals (#370's review loop added such a test without it, and
-it failed Windows CI), `posixModesOnly` for file modes, `posixCommandsOnly` for a shell script or
-POSIX command, `halfOpenSocketsOnly` for a socket read after its half-close, and a new export there
-for the rest; never a bare `it.skipIf` with its reason in a comment (#375 named nine). A `describe`
-whose every test shares the reason takes a suite-level skip from the same file:
+finished, so the fix was another round. A test that names a path builds it with `path.join`, and a
+folder the code resolves with `path.resolve('/work/api')` (`C:\work\api` on Windows); a path never
+skips Windows, since a skip leaves the branch only Windows takes unrun (45 tests skipped for their
+POSIX literals hid that `ranInProject` missed every folder under a project there). One that needs
+file modes, unix sockets or signals skips on `win32` with a named `it.skipIf` saying why, imported
+from `src/main/testing/windows-skips.ts` rather than copied per file: `posixModesOnly` for file
+modes, `posixCommandsOnly` for a shell script or POSIX command, `halfOpenSocketsOnly` for a socket
+read after its half-close, and a new export there for the rest; never a bare `it.skipIf` with its
+reason in a comment (#375 named nine). A `describe` whose every test shares the reason takes a
+suite-level skip from the same file:
 `posixCommandsSuite`, `socketFilesSuite` for a stale socket file to claim, `screenHostSuite` where
 there is no screen host; never a bare `describe.skipIf` (#389 named five). CI's Windows
 job holds it, after review. No lint or test holds it earlier: 24 of the 40 test files with a
 `/tmp/`-style literal have no `win32` guard and pass on Windows, since they use the path as a string
-and never touch the disk, so a check on the literal would flag mostly correct tests. Card 43ceddd8
-(make the POSIX path-literal tests portable instead of skipping them) is the way to a check that
-holds.
+and never touch the disk, so a check on the literal would flag mostly correct tests.
 
 ## workflow-rule-7: A pull request leaves the board's files alone
 
