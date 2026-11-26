@@ -241,3 +241,7 @@ The keys are in `src/shared/keys/browser-actions.ts` and
   so a site behind a Google login never signs in here.
 - The sign-ins are kept per folder path on this machine, so a host's project at
   the same path as one of yours shares its sign-ins while you are joined to it.
+- The manager's browser is this machine's one, on a host too: its path is the same
+  on every machine and `browser:*` never leaves the screen. The join empties its
+  tabs, but a tab this machine's manager panes open afterwards shows beside the
+  host's worker of that number, and the host's manager panes cannot open one here.
