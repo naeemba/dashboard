@@ -5,6 +5,25 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-26: a launch reads only the logs written since the last run
+
+Fixes the "Not done" of the 2026-11-02 usage sweep below. The sweep's thread
+saves each log's counts in userData (`src/main/usage/usage-counts.ts`), keyed
+by path, counted size and mtime, and a launch's first sweep takes a saved count
+for every log whose mtime has not moved; one whose mtime moved is read whole.
+
+`measure.mjs usage-sweep ~/.claude/projects`, 8,674 files, 6.26 GB, two runs.
+The logs have grown since the run below, so the full read costs more than it
+did then.
+
+| | before (every log read) | after (from saved counts) |
+|---|---|---|
+| A launch's first sweep | 28.3–35.8 s | 0.2–0.3 s |
+| Its CPU | 36.5–40.3 CPU-s | 0.2–0.3 CPU-s |
+
+Both runs' all-time totals from the saved counts equal the full read's to the
+token.
+
 ## 2026-11-16: a shown terminal skips the selection redraw when nothing is selected
 
 Same machine, compositor and tooling as the first profile, `measure.mjs
