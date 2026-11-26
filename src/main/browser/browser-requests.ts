@@ -19,8 +19,10 @@ export type BrowserRequestPorts = {
   projectPath(slot: number): string | undefined;
   // The page a project folder is open on, or -1.
   slotOf(projectPath: string): number;
-  actions: Record<'open' | 'claim' | 'release' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'upload' | 'eval', BoundAction>;
+  actions: Record<'open' | 'claim' | 'release' | 'close' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'upload' | 'eval', BoundAction>;
   reads: BrowserReads;
+  // The pane's browser call named the tab: its idle clock starts over if the pane holds it (tab-idle.ts).
+  used(pane: string, tab: number): void;
 };
 
 const UNREADABLE = 'the browser request was not one the app could read';
@@ -55,6 +57,13 @@ export function browserProject(ports: Pick<BrowserRequestPorts, 'projectPath' | 
 }
 
 async function answer(ports: BrowserRequestPorts, pane: string, command: BrowserRequest): Promise<SessionReply> {
+  const result = await act(ports, pane, command);
+  // After the action, so a claim counts as its new holder's call and a release as nobody's.
+  if ('tab' in command) ports.used(pane, command.tab);
+  return result;
+}
+
+async function act(ports: BrowserRequestPorts, pane: string, command: BrowserRequest): Promise<SessionReply> {
   const reply = (result: string | Refused): SessionReply => (isRefused(result) ? refused(result.refused) : answered(result));
   const { actions, reads } = ports;
   if (command.verb === 'open' || command.verb === 'tabs') {
@@ -67,6 +76,7 @@ async function answer(ports: BrowserRequestPorts, pane: string, command: Browser
   switch (command.verb) {
     case 'claim': return sessionReply(await actions.claim.call(onTab));
     case 'release': return sessionReply(await actions.release.call(onTab));
+    case 'close': return sessionReply(await actions.close.call(onTab));
     case 'go': return sessionReply(await actions.navigate.call({ ...onTab, url: command.url }));
     case 'back': case 'forward': case 'reload': return sessionReply(await actions.step.call({ ...onTab, step: command.verb }));
     case 'resize': return sessionReply(await actions.resize.call({ ...onTab, width: command.width, height: command.height }));

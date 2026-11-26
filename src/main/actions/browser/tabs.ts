@@ -1,9 +1,11 @@
+import type { Refused } from '../../../shared/app/bridge';
 import { stringOrEmpty } from '../../../shared/app/is-record';
 import { isRefused, action } from '../action';
 import { addressUrl } from '../../browser/address';
 import { activeTab, namedTab, steppedTab, wholeNumber, withoutTab, withTab } from '../../browser/browser-tabs';
 import type { BrowserPorts } from './browser-ports';
 import { isFilledText, projectInput } from '../pane/pane-input';
+import { agentInput, targetTab, type AgentTarget } from './target';
 
 // browser.open, browser.close and browser.switch: a project's tab list. A tab opens for you, or for
 // the agent in the pane the browser command names, which then holds it (browser-holds.ts).
@@ -40,17 +42,31 @@ export const browserOpen = action<BrowserPorts, OpenInput, Opened>('browser.open
 const NO_TAB_NAMED = { refused: 'no tab was named' };
 
 // `opener` is the tab a popup that closed itself came from, which gets the screen back (withoutTab).
-export const browserClose = action<BrowserPorts, { projectPath: string; tab: number; opener: number | null }, { output: string }>('browser.close', {
+// A pane named is the browser command's agent, closing a tab it holds: its answer to the idle question
+// (tab-idle.ts), or work it is done with.
+type CloseInput = { projectPath: string; tab: number; opener: number | null } | AgentTarget;
+
+export const browserClose = action<BrowserPorts, CloseInput, { output: string }>('browser.close', {
   words: ['tab'],
   input: (raw) => {
+    if (raw.pane !== undefined) return agentInput(raw);
     const project = projectInput(raw);
     if (isRefused(project)) return project;
     const tab = wholeNumber(raw.tab);
     return tab === null ? NO_TAB_NAMED : { ...project, tab, opener: wholeNumber(raw.opener) };
   },
-  async run(ports, { projectPath, tab, opener }) {
-    const id = namedTab(ports.browserOf(projectPath), tab);
-    if (isRefused(id)) return id;
+  async run(ports, input) {
+    let found: { projectPath: string; id: number } | Refused;
+    let opener: number | null = null;
+    if ('pane' in input) {
+      found = targetTab(ports, input);
+    } else {
+      const id = namedTab(ports.browserOf(input.projectPath), input.tab);
+      found = isRefused(id) ? id : { projectPath: input.projectPath, id };
+      opener = input.opener;
+    }
+    if (isRefused(found)) return found;
+    const { projectPath, id } = found;
     ports.dropView(id);
     ports.keep(projectPath, withoutTab(ports.browserOf(projectPath), id, opener));
     return { output: `closed tab ${id}` };

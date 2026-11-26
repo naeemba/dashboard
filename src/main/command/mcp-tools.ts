@@ -110,6 +110,7 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('browser tabs', 'Every tab: id, who holds it, address, title', [PROJECT]),
   tool('browser claim', 'Hold a tab the user opened', [TAB]),
   tool('browser release', 'Hand a tab back to the user', [TAB]),
+  tool('browser close', 'Close a tab you hold and are done with', [TAB]),
   tool('browser go', 'Load an address in a tab', [TAB, word('url', 'address')]),
   tool('browser back', 'Go back in a tab', [TAB]),
   tool('browser forward', 'Go forward in a tab', [TAB]),

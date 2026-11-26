@@ -25,7 +25,7 @@ function wired({ startScreen = () => undefined, units = new Map<string, string>(
     shells: new Map([['2:3', { kill: () => undefined }]]), spawn: (id) => { const unit = spawned.shift(); if (unit === undefined) units.delete(id); else units.set(id, unit); }, agentStarted: () => undefined,
     startScreen, log: (draft) => logged.push(draft),
     project: () => undefined, openPanes: () => [], drop: () => undefined, scopeOf: (id) => units.get(id), stopScope: stops,
-    endClaim: () => undefined, changed: () => undefined, agentIn: () => true, programRunsIn: () => false, screenIn: () => true, screenPrompt: () => false, typeIntoShell: () => undefined,
+    endClaim: () => undefined, changed: () => undefined, agentIn: () => true, programRunsIn: () => false, screenIn: () => true, prompt: () => undefined,
     kept: () => [], unclaimed: () => [], keep: () => undefined, inSession: () => false, killKept: () => undefined, listenTo: () => undefined, takeResume: () => null, owedResumes: () => [], moveResume: () => undefined,
     screensBack: () => [], worktrees: () => [], panesBeforeLaunch: new Map(), realPath: (folder) => folder,
     givePane: () => undefined,

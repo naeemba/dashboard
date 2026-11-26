@@ -41,6 +41,9 @@ export type Settings = {
   // reset, a seventh of the week when null; 'none' is no limit, and budget answers under. Set on the
   // settings screen or with `budget --cap` and `budget --pace`.
   budget: { limit: BudgetLimit; weeklyCap: number | null; dailyShare: number | null };
+  // idleMinutes: how long an agent's browser tab goes unused before its agent is asked whether it may
+  // close it (docs/browser), null never asking. Written in the file by hand only.
+  browser: { idleMinutes: number | null };
   // cap: how many of main's workers run at once across the app, null for no cap ("none" in the file).
   // A start past it waits in the pane pool's queue (docs/workers).
   workers: { cap: number | null };
@@ -168,6 +171,7 @@ export function defaultSettings(isMac: boolean): Settings {
     updates: { check: true },
     errors: { notify: true },
     budget: { limit: 'cap', weeklyCap: null, dailyShare: null },
+    browser: { idleMinutes: 30 },
     workers: { cap: DEFAULT_WORKER_CAP },
   };
 }
@@ -227,6 +231,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
   const storedBudget = asRecord(raw.budget);
+  const idleMinutes = asRecord(raw.browser).idleMinutes;
   const storedCap = workerCap(asRecord(raw.workers).cap);
   // A number only: the file never holds a percentage as text.
   const percentage = (stored: unknown): number | null => (typeof stored === 'number' ? budgetPercentage(stored) : null);
@@ -275,6 +280,9 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       limit: BUDGET_LIMITS.find((limit) => limit === storedBudget.limit) ?? defaults.budget.limit,
       weeklyCap: percentage(storedBudget.weeklyCap),
       dailyShare: percentage(storedBudget.dailyShare),
+    },
+    browser: {
+      idleMinutes: idleMinutes === null || (typeof idleMinutes === 'number' && idleMinutes > 0) ? idleMinutes : defaults.browser.idleMinutes,
     },
     workers: { cap: storedCap === undefined ? defaults.workers.cap : storedCap },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));

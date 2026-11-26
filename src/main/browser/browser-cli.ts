@@ -13,7 +13,7 @@ import { DEFAULT_READ_TOKENS } from './page-reader';
 export const BROWSER_REQUEST = 'browser-request';
 
 type OnTab = { tab: number };
-const ON_TAB_ONLY = ['claim', 'release', 'back', 'forward', 'reload', 'reset', 'snapshot', 'console', 'network'] as const;
+const ON_TAB_ONLY = ['claim', 'release', 'close', 'back', 'forward', 'reload', 'reset', 'snapshot', 'console', 'network'] as const;
 const isOnTabOnly = (verb: string): verb is typeof ON_TAB_ONLY[number] => (ON_TAB_ONLY as readonly string[]).includes(verb);
 export type BrowserCommand =
   | { verb: 'open'; url: string; project: string | null }
@@ -53,6 +53,7 @@ export const BROWSER_USAGE = `browser — the project's browser tabs, for the ag
   browser tabs [--project <name|aka>]         every tab: id, who holds it, address, title
   browser claim <tab>                         hold a tab the user opened
   browser release <tab>                       hand a tab back to the user
+  browser close <tab>                         close a tab you are done with
   browser go <tab> <url>
   browser back|forward|reload <tab>
   browser resize <tab> <width>x<height>       lay the page out at that size, as a phone: 390x844
@@ -75,9 +76,11 @@ export const BROWSER_USAGE = `browser — the project's browser tabs, for the ag
 
 You act only on the tabs you hold: the ones you opened and the ones you claimed. A tab opens behind
 the one the user is on. The user can take any tab back; your next call on it then says so, and it is
-theirs. Your tabs go back to the user when your pane is released or your agent exits; they stay
-open. --project opens a tab in another open project's browser. A ref is good until the page changes;
-take a new snapshot then. read prints its token estimate first, and cuts at --max-tokens (${DEFAULT_READ_TOKENS} by
+theirs. Close each tab you are done with before you finish: your tabs go back to the user when your
+pane is released or your agent exits, and they stay open. A main's tab unused for a while gets one
+question from the app; close it, or leave it and it stays. A worker is never asked. --project opens
+a tab in another open project's browser. A ref is good until the page changes; take a new snapshot
+then. read prints its token estimate first, and cuts at --max-tokens (${DEFAULT_READ_TOKENS} by
 default).`;
 
 type Parsed = { ok: true; command: BrowserCommand } | { ok: false; message: string };

@@ -15,7 +15,7 @@ describe('parseBrowserCommand', () => {
   });
 
   it('reads the verbs that take only a tab', () => {
-    for (const verb of ['claim', 'release', 'back', 'forward', 'reload', 'reset', 'snapshot', 'console', 'network']) {
+    for (const verb of ['claim', 'release', 'close', 'back', 'forward', 'reload', 'reset', 'snapshot', 'console', 'network']) {
       expect(command(verb, '3')).toEqual({ verb, tab: 3 });
     }
   });

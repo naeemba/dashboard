@@ -99,7 +99,8 @@ the person asks for it (browser-decision-8).
   or its main, opens it in the manager's browser.
 - `tabs` lists the project's tabs: id, who holds them (yours, the user's, another
   pane), address and title. `claim <tab>` takes one of your tabs; one another
-  pane holds is refused. `release <tab>` hands one back.
+  pane holds is refused. `release <tab>` hands one back, open; `close <tab>`
+  closes one the pane holds.
 - `go <tab> <url>`, `back`, `forward`, `reload`; `resize <tab> 390x844` lays the
   page out at that size (DevTools' device metrics, for a layout at a phone's
   width) and `reset <tab>` lays it out at the view's own size again.
@@ -146,11 +147,23 @@ the person asks for it (browser-decision-8).
 
 A pane acts only on the tabs it holds, reads included (browser-rule-3). Its tabs
 go back to you, still open, when its pane is released, finished or closed, its
-agent exits, or another agent starts in it. A tab handed back, those and the one
-you take back, is laid out at its own size again, whatever size an agent gave
-it. The protocol is each tab's own `webContents.debugger`; the app never opens a
-remote debugging port, which would hand its window and terminals to anything on
-the machine (browser-decision-6).
+agent exits, or another agent starts in it, and the main the pane reports to,
+another project's for one claimed with `--project`, is told which were left
+open. A tab is never closed for being idle (browser-decision-10). One a main
+opened that sees no browser call from it and is not the tab on screen for
+`browser.idleMinutes` (30 by default, `null` never) gets one question to that
+main through its chat: may it be closed? A worker is asked instead when its turn
+ends with nothing left running while it holds tabs, as its next prompt, a Claude
+screen's or typed into its terminal; that turn leaves its report and main's
+notice alone. Either answers with `browser close`; saying nothing keeps the tab,
+and it is not asked again until it is used and goes unused again, or for a
+worker, until it uses it and ends another turn. A tab you opened or are looking
+at is never asked about, even once an agent claims it.
+
+A tab handed back, those and the one you take back, is laid out at its own size
+again, whatever size an agent gave it. The protocol is each tab's own
+`webContents.debugger`; the app never opens a remote debugging port, which would
+hand its window and terminals to anything on the machine (browser-decision-6).
 
 An agent's work never moves your keyboard: you keep typing in main's prompt, a
 pane or the page on screen while it opens, loads, clicks, types and reads
@@ -180,6 +193,10 @@ Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser
   on the window or taken off it
 - `browser-placement.ts`: where the page goes, and what counts as floating over it
 - `browser-holds.ts`: who may act on a tab, claim it or have it taken back
+- `tab-idle.ts`: which tabs a main or a worker is asked about and when, and the
+  notice when a pane is let go of still holding tabs
+- `../workers/app-question.ts`: the opening that keeps the question's turn out
+  of the worker's report and stop notice
 - `claims.ts`, `page.ts`, `target.ts` (actions): claim, release and revoke;
   resize, click, type, press, upload and eval; which tab an action means for each door
 - `browser-page.ts`: the one module driving a page's content, the command's
@@ -221,6 +238,16 @@ The keys are in `src/shared/keys/browser-actions.ts` and
   name goes, and the worker's next `browser read` on it says you took it back.
 - Given a worker holds two tabs, one it resized to 390x844, when its pane is
   released, then both stay open, are yours, and fill the page's box.
+- Given main opened a tab and has not touched it for 30 minutes, then its chat
+  gets one question naming the tab; it runs `browser close 4` and the tab goes,
+  or says nothing and the tab stays, unasked until it is used again.
+- Given a worker ends its turn still holding a tab it opened, with nothing left
+  running, then it gets one prompt naming the tab and runs `browser close 4`, and
+  `pane report` and main's notice still give the report it ended its work with.
+- Given that worker says nothing about the tab, then it stays open, unasked at
+  its later turn ends until it uses the tab again.
+- Given a worker still holds a tab when main runs `pane release`, then the tab
+  stays open, is yours, and main's chat gets a line naming it.
 - Given you are typing in main's prompt, when a worker runs `browser open`,
   `go`, `back` or `reload`, then what you type still lands in the prompt.
 - Given a worker's tab not on screen logs `document.visibilityState` and its

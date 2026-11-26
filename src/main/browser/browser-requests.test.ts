@@ -8,8 +8,11 @@ import { browserProject, browserRequests, livePane, paneIsOpen, type BrowserRequ
 // Each action and read as a record of what it was called with.
 function fakeDoor() {
   const calls: string[] = [];
+  const used: string[] = [];
+  // Actions and uses together, in the order they ran.
+  const order: string[] = [];
   const bound = (name: string): BoundAction => ({
-    name, words: [], call: async (raw) => { calls.push(`${name} ${JSON.stringify(raw)}`); return { output: `${name} done` }; },
+    name, words: [], call: async (raw) => { calls.push(`${name} ${JSON.stringify(raw)}`); order.push(name); return { output: `${name} done` }; },
   });
   const read = (name: string) => async (pane: string, tab: number, options: unknown) => {
     calls.push(`${name} ${pane} ${tab} ${JSON.stringify(options)}`);
@@ -19,16 +22,19 @@ function fakeDoor() {
     hasCommand: (pane) => ['2:1', `${MANAGER_SLOT}:0`].includes(pane),
     projectPath: (slot) => (slot === 2 ? '/work/api' : undefined),
     slotOf: (folder) => ({ '/work/api': 2, '/work/web': 3 } as Record<string, number>)[folder] ?? -1,
-    actions: Object.fromEntries(['open', 'claim', 'release', 'navigate', 'step', 'resize', 'click', 'type', 'press', 'upload', 'eval']
+    actions: Object.fromEntries(['open', 'claim', 'release', 'close', 'navigate', 'step', 'resize', 'click', 'type', 'press', 'upload', 'eval']
       .map((name) => [name, bound(name)])) as BrowserRequestPorts['actions'],
     reads: {
       tabs: (pane, projectPath) => `tabs of ${projectPath} for ${pane}`,
       read: read('read'), screenshot: read('screenshot'), snapshot: read('snapshot'), console: read('console'), network: read('network'),
     },
+    used: (pane, tab) => { used.push(`${pane} ${tab}`); order.push('used'); },
   };
   const ask = browserRequests(ports, async () => answered('otherwise'));
   return {
     calls,
+    used,
+    order,
     ask: (pane: string, command: object, paneProject = '/work/api') => ask({ directory: '/', args: [BROWSER_REQUEST, pane, JSON.stringify(command), paneProject] }),
   };
 }
@@ -50,12 +56,21 @@ describe('browserRequests', () => {
     await door.ask('2:1', { verb: 'reset', tab: 4 });
     await door.ask('2:1', { verb: 'press', tab: 4, key: 'Enter', ref: null });
     await door.ask('2:1', { verb: 'eval', tab: 4, script: 'document.title', waitFor: 'main' });
+    await door.ask('2:1', { verb: 'close', tab: 5 });
+    expect(door.used).toEqual(['2:1 4', '2:1 4', '2:1 4', '2:1 4', '2:1 5']);
     expect(door.calls).toEqual([
       'step {"pane":"2:1","tab":4,"step":"back"}',
       'resize {"pane":"2:1","tab":4}',
       'press {"pane":"2:1","tab":4,"key":"Enter","ref":null}',
       'eval {"pane":"2:1","tab":4,"script":"document.title","waitFor":"main"}',
+      'close {"pane":"2:1","tab":5}',
     ]);
+  });
+
+  it('counts a call on a tab after its action, so a claim counts as its new holder\'s', async () => {
+    const door = fakeDoor();
+    await door.ask('2:1', { verb: 'claim', tab: 4 });
+    expect(door.order).toEqual(['claim', 'used']);
   });
 
   it('answers a read with what it printed, or its refusal', async () => {
@@ -88,7 +103,7 @@ describe('browserRequests', () => {
   it('says a read that failed, rather than failing the socket', async () => {
     const door = fakeDoor();
     const failing = browserRequests({
-      ...({} as BrowserRequestPorts), hasCommand: () => true, slotOf: () => 2,
+      ...({} as BrowserRequestPorts), hasCommand: () => true, slotOf: () => 2, used: () => undefined,
       reads: { snapshot: async () => { throw new Error('tab 4 is closed'); } } as unknown as BrowserRequestPorts['reads'],
     }, async () => answered('otherwise'));
     await expect(failing({ directory: '/', args: [BROWSER_REQUEST, '2:1', '{"verb":"snapshot","tab":4}', '/work/api'] }))

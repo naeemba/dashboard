@@ -52,7 +52,7 @@ import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
-import { landOnPane, raiseWindow, registerPaneChannels, typeIntoPane } from './panes/pane-channels';
+import { landOnPane, panePrompt, raiseWindow, registerPaneChannels } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
 import { registerSessionChannels, sessionActions } from './actions/session/session-actions';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
@@ -215,8 +215,9 @@ const boards = boardWatchers((projectPath) => {
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
+const promptPane = panePrompt((id) => shells.get(id), (id, text) => workerScreens.send(id, text));
 // Each project's browser tabs, beside the window: browser-actions.ts.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject });
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
@@ -298,8 +299,8 @@ function agentWorksIn(slot: number, pane: number | null): boolean {
 // worktree, because that is where the work is. Left alone, Enter would start the agent over instead
 // of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
 function releaseAgentPane(id: string): void {
-  mainsWorkers.delete(id);
   browser.letGo(id);
+  mainsWorkers.delete(id);
   const command = terminalCommands.get(id);
   if (!runsAnAgent(command)) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
@@ -506,9 +507,8 @@ const pane = paneActions({
   log: (draft) => logStore.log(draft),
   project: projectIn, openPanes, drop: dropPane, changed: () => panesChanged(), scopeOf: (id) => panes.scopeUnits.get(id), stopScope,
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
-  agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
+  agentIn, screenIn: workerScreens.has, prompt: promptPane,
   programRunsIn: (id) => runsAProgram(panes.foregroundOf(id), panes.startedWith.get(id)),
-  typeIntoShell: (id, text) => typeIntoPane((data) => shells.get(id)?.write(data), text),
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   unclaimed: shellHost.unclaimed, keep: shellHost.keep, killKept: shellHost.killKept, inSession: (projectPath) => projectPath === MANAGER_FOLDER || claudeSessions.launchedWith(projectPath),
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
@@ -593,17 +593,18 @@ function setPaneCommand(id: string, command: PaneCommand): void {
   if (opening) panesChanged();
 }
 
-// A pane that stopped being its worker's: what the session command and the browser hold for it.
+// A pane that stopped being its worker's: what the session command and the browser hold for it. The
+// browser first, while the session command still knows the main the pane reports to.
 function forgetPane(id: string): void {
-  workerAnswers.forget(id);
   browser.letGo(id);
+  workerAnswers.forget(id);
 }
 
 // One pane let go of for good.
 function dropPane(id: string): void {
   workerScreens.drop(id);
-  mainsWorkers.delete(id);
   forgetPane(id);
+  mainsWorkers.delete(id);
   panes.drop(id);
   terminalCommands.delete(id);
   paneScreens.drop(id);
@@ -784,7 +785,7 @@ const workerAnswers = sessionRequests({
   },
   close: (id) => pane.close.call({ id }),
   send: (id, text, dispatcherPath) => pane.send.call({ id, text, dispatcherPath }),
-  mark: (id, state) => sendToRenderer('pane:mark', id, state),
+  mark: (id, state) => sendToRenderer('pane:mark', id, state), turnEnded: (id) => browser.turnEnded(id),
   tell: chats.tell,
   withdraw: (slot, messageId) => { chats.withdraw(slot, messageId).catch(() => undefined); },
   cardWorktree(projectPath, cardId) {

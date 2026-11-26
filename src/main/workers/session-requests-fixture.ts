@@ -13,6 +13,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
   const started: ({ id: string } & WorkerStart)[] = [];
   const closed: string[] = [];
   const marked: string[] = [];
+  const turnsEnded: string[] = [];
   const removed: string[] = [];
   const told: string[] = [];
   // The told messages taken back, by their place in `told`.
@@ -52,6 +53,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       return { output: '' };
     },
     mark: (id, state) => { marked.push(`${id} ${state}`); },
+    turnEnded: (id) => { turnsEnded.push(id); },
     send: async (id, text, dispatcherPath) => {
       typed.push(`${id} ${text}`);
       const handed = agents.has(id);
@@ -101,5 +103,5 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
-  return { ports, ask, open, agents, workers, started, closed, marked, removed, told, withdrawn, typed, released, keyboard, finishedCards };
+  return { ports, ask, open, agents, workers, started, closed, marked, turnsEnded, removed, told, withdrawn, typed, released, keyboard, finishedCards };
 }

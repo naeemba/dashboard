@@ -166,6 +166,12 @@ describe('stopInputArguments', () => {
     const handed = 'fix it\n\nSendMessage to main-api when done, saying what you did.';
     expect(promptInputArguments(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: handed, source: 'sdk' })))
       .toEqual(['--prompt-source', 'sdk', '--handed', 'yes']);
+    const asked = 'The Dashboard app asks: you ended your turn still holding these browser tabs.';
+    const sent = ['notify', '2:3', 'running', ...promptInputArguments(JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: asked, source: 'sdk' }))];
+    expect(sent).toEqual(['notify', '2:3', 'running', '--prompt-source', 'sdk', '--app-asks', 'yes']);
+    expect(parseSessionCommand(sent)).toEqual({
+      ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { promptSource: 'sdk', appAsks: true } },
+    });
   });
 
   it('sends nothing for input from an older Claude Code, or none that parses', () => {

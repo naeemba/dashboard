@@ -1,6 +1,7 @@
 import { isRefused, action } from '../action';
 import { claimFound, revokeRefusal, takenBack, withoutPane } from '../../browser/browser-holds';
 import { NO_TAB_OPEN, withTabChange } from '../../browser/browser-tabs';
+import { leftOpenNotice } from '../../browser/tab-idle';
 import type { BrowserPorts } from './browser-ports';
 import { isFilledText, projectInput } from '../pane/pane-input';
 import { agentInput, targetTab, type AgentTarget } from './target';
@@ -27,7 +28,8 @@ async function unsize(ports: BrowserPorts, tabs: number[]): Promise<void> {
 }
 
 // One tab back to the user, or with no tab named every tab the pane holds, in every project: a pane
-// released, finished, its agent exited or another started in it.
+// released, finished, its agent exited or another started in it. Those stay open, and the main it
+// reports to is told which (tab-idle.ts), asked before the first await, while the pane is still its.
 export const browserRelease = action<BrowserPorts, { pane: string; tab: number | null }, { output: string }>('browser.release', {
   words: ['tab'],
   input(raw) {
@@ -42,6 +44,7 @@ export const browserRelease = action<BrowserPorts, { pane: string; tab: number |
       await unsize(ports, [tab]);
       return { output: `tab ${tab} is the user's again` };
     }
+    const notice = leftOpenNotice(ports.allBrowsers(), pane, ports.mainOf(pane));
     const released: number[] = [];
     for (const [projectPath, state] of [...ports.allBrowsers()]) {
       const next = withoutPane(state, pane);
@@ -50,6 +53,7 @@ export const browserRelease = action<BrowserPorts, { pane: string; tab: number |
       ports.keep(projectPath, next);
     }
     await unsize(ports, released);
+    if (notice !== null) ports.tellMain(notice.main, notice.text);
     return { output: `released ${released.length} tabs of ${pane}` };
   },
 });

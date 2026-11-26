@@ -114,3 +114,36 @@ the corner while an agent holds the tab. Only agent-held tabs pay it, and a page
 that does not change draws no frames, so many tabs cost no more than their pages
 do.
 
+## browser-decision-10: A tab is closed by the agent holding it, never for being idle
+
+Eleven open tabs held about 517 MB, but an idle tab may be a form left for you
+to submit or a page an agent comes back to, so the app never closes one on a
+timer. The agent that holds it decides. A main's tab unused for
+`browser.idleMinutes` gets one question to that main; its answer is
+`browser close`, and silence keeps the tab and is not asked again until the tab
+is used and idles again. A tab you opened or are looking at is never asked
+about: the screen counts as use, and a claim of your tab does not make it the
+agent's to close.
+
+A worker is asked when its turn ends with nothing left running while it still
+holds tabs, before anyone releases its pane: the agent is still alive to answer
+with `browser close`, and nothing waits on the answer. It is asked once per
+holding, as the idle question is: silence leaves the tabs, and it is asked about
+one again only after it uses it and ends another turn. A release afterwards
+hands what is left to you open, with the main it reports to told which. Asking
+at the release instead would hold `pane release`, `pane finish` and every sweep
+that lets a pane go until the dying agent replied.
+
+The question's turn is not the worker's work. Taken as one, its stop would
+overwrite the report, so `pane report` would print "Closed tab 4." in place of
+what it did. Its start would also call off main's pending notice of the stop
+that did the work, and its prompt would count as one of yours, so main would
+never hear the worker finished and auto-release would keep the pane. The
+question opens with "The Dashboard app asks:", and a turn opened that way leaves
+the report, the notice and whose turn it was as the worker's last turn left
+them. A worker is still never asked mid-work: a question queued behind its turn
+would land as its next prompt with the work unreported.
+
+Only the tab on screen counts as looked at, not each project's active tab: an
+agent's first tab in a project you never opened a tab in becomes its active one,
+and counting that would have kept it from ever being asked.

@@ -14,8 +14,7 @@ function panes(overrides: Partial<PaneSendPorts> = {}) {
     screenIn: (id) => id === '2:1',
     mainsWorkerIn: (id) => id === '2:3',
     handTo: (id, dispatcherPath) => { handed.push(`${id} ${dispatcherPath}`); },
-    screenPrompt: (id, text) => id === '2:1' && prompted.push(`${id} ${text}`) > 0,
-    typeIntoShell: (id, text) => { typed.push(`${id} ${text}`); },
+    prompt: (id, text) => { (id === '2:1' ? prompted : typed).push(`${id} ${text}`); },
     ...overrides,
   });
   return { send, typed, prompted, handed };

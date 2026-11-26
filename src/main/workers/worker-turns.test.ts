@@ -67,6 +67,29 @@ describe('a worker\'s turns, as main hears them', () => {
     expect(await answer({ directory: '/work/api', args: ['report', '2:0'] })).toMatchObject({ ok: false });
   });
 
+  it('asks about its tabs once its turn ends with nothing running, and hears the app\'s question as none of its turns', async () => {
+    const { answer, told, turnsEnded } = await running();
+    answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
+    expect(turnsEnded).toEqual([]);
+    answer.notify('2:1', 'running', undefined, { promptSource: 'system' });
+    answer.notify('2:1', 'done', NOTHING_WAITING, { lastMessage: 'Opened #12.' });
+    expect(turnsEnded).toEqual(['2:1']);
+    // The question, put to it before main's notice of that stop is due: a tool call, then its answer.
+    answer.notify('2:1', 'running', undefined, { promptSource: 'sdk', appAsks: true });
+    answer.notify('2:1', 'running');
+    answer.notify('2:1', 'done', NOTHING_WAITING, { lastMessage: 'Closed tab 4.' });
+    vi.advanceTimersByTime(REPORT_SETTLE_MS);
+    expect(turnsEnded).toEqual(['2:1']);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', false, 'Opened #12.')}`]);
+    expect((await answer({ directory: '/work/api', args: ['report', '2:1'] })).output).toBe('2:1\tterminal 2\tdone\t/work/api\n\nOpened #12.');
+    // Main's next prompt is the worker's own turn again.
+    await answer({ directory: '/work/api', args: ['send', '2:1', 'now merge it'] });
+    answer.notify('2:1', 'running', undefined, { promptSource: 'sdk', handed: true });
+    stop(answer, 'merged');
+    expect(turnsEnded).toEqual(['2:1', '2:1']);
+    expect(told[1]).toContain('Its last message: merged');
+  });
+
   it('forgets the last message once the pane is run again', async () => {
     const { answer } = await running();
     stop(answer, 'Opened #12.');

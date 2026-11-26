@@ -32,10 +32,9 @@ export type PaneSendPorts = {
   mainsWorkerIn(id: string): boolean;
   // The pane is that main's worker from now on: its stop is told there and main may release it.
   handTo(id: string, dispatcherPath: string): void;
-  // The text as the screen's next prompt, or false when the pane has no screen.
-  screenPrompt(id: string, text: string): boolean;
-  // Typed into the pane's shell, then Enter pressed a moment after (typeIntoPane).
-  typeIntoShell(id: string, text: string): void;
+  // The text as the screen's next prompt, or typed into the pane's shell when it has none, Enter
+  // pressed a moment after (panePrompt).
+  prompt(id: string, text: string): void;
 };
 
 // Whether the pane's agent says when its turn ends: a Claude screen always does, through its own
@@ -71,7 +70,7 @@ export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; h
     const handed = reportsTurns(ports, id);
     if (handed) ports.handTo(id, dispatcherPath);
     const typed = handed ? workerPrompt(text, dispatcherPath) : text;
-    if (!ports.screenPrompt(id, typed)) ports.typeIntoShell(id, typed);
+    ports.prompt(id, typed);
     return { output: `typed into ${id}`, handed };
   },
 });

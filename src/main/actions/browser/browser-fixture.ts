@@ -3,7 +3,8 @@ import { NO_TABS } from '../../../shared/browser/browser';
 import type { BrowserPorts } from './browser-ports';
 
 // The views as a list of what was asked of them, for the actions' tests.
-// A node is a file input when `fileInputs` names it, and a file is there when `files` holds it.
+// A node is a file input when `fileInputs` names it, and a file is there when `files` holds it. Every
+// worker reports to page 5's main, another project's than any pane the tests name.
 export function fakePorts(
   start: Record<string, BrowserState> = {}, refs: Record<string, number> = {},
   fileInputs: Record<number, { multiple: boolean }> = {}, files: readonly string[] = [],
@@ -34,6 +35,8 @@ export function fakePorts(
     },
     fileInputOf: async (_tab, node) => fileInputs[node] ?? null,
     isFile: async (file) => files.includes(file),
+    tellMain: (slot, text) => { done.push(`tell ${slot} ${text.split('\n')[0]}`); },
+    mainOf: () => 5,
     act: async (tab, act) => { done.push(`${act.kind} ${tab} ${JSON.stringify({ ...act, kind: undefined })}`); },
   };
 }

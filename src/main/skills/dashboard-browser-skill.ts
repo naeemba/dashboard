@@ -62,9 +62,17 @@ time:
    A tab you hold runs as a foreground tab though the person never sees it:
    \`document.visibilityState\` reads visible, it paints, and its frames and
    timers run at full rate, so paint and timing metrics measured in it are valid.
-6. \`browser_release\` hands a tab back when you are done with it. Your tabs go
-   back on their own when your pane is released or your agent exits, laid out
-   at their own size again.
+6. \`browser_close\` closes a tab you are done with; \`browser_release\` hands
+   one back to the person, open, when they should see it. Before you finish,
+   close or release every tab you opened: one you still hold goes back to the
+   person, still open, when your pane is released or your agent exits, laid out
+   at its own size again, and your main is told it was left open. An open tab
+   costs memory, so close it rather than leave it. The app asks about a tab you
+   hold, in a message opening "The Dashboard app asks:": a project's main once
+   the tab goes unused for a while, a worker once its turn ends still holding
+   it. Close it if you are done with it, or leave it and it stays; nothing
+   closes it for you. A worker answers with the close alone and ends that turn
+   without a report: main already has the one it gave.
 
 ## A page that asks you to sign in
 
