@@ -36,6 +36,8 @@ export type PaneQueuePorts = {
   begin(entry: QueueEntry): Promise<{ output: string } | Refused>;
   // card.move, for a withdrawn card going back to the column it came from.
   move(projectPath: string, cardId: string, column: string): Promise<{ output: string } | Refused>;
+  // An entry taken out without starting, dropped or withdrawn, for what waited on its start.
+  gone(entry: QueueEntry): void;
   // A notice to the main of that page, behind whatever it is doing.
   tell(dispatcherPath: string, text: string): void;
   now(): number;
@@ -103,6 +105,7 @@ export function drainQueue(ports: PaneQueuePorts, answering: string | null = nul
     changed = true;
     const quiet = entry.id === answering;
     if ('drop' in step) {
+      ports.gone(entry);
       if (quiet) own = Promise.resolve({ refused: step.why });
       else ports.tell(entry.dispatcherPath, `${entry.id} dropped: ${step.why}`);
     } else {
@@ -160,6 +163,7 @@ export const paneUnqueue = action<PaneQueuePorts, { id: string; dispatcherPath: 
     if (entry.dispatcherPath !== dispatcherPath) return { refused: `${id} was queued by another project's main` };
     ports.pool.entries = ports.pool.entries.filter((each) => each !== entry);
     save(ports);
+    ports.gone(entry);
     const column = withdrawnColumn(entry, ports.board(entry.projectPath));
     if (column === null || entry.cardId === null) return { output: `withdrew ${id}` };
     if ('stays' in column) return { output: `withdrew ${id}; ${column.stays}` };

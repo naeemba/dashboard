@@ -448,6 +448,26 @@ describe('reviewSweep', () => {
     expect(log.started).toEqual([]);
   });
 
+  // The review the sweep's move queued is withdrawn, so the next start is a person's, and is retried as one.
+  it('takes a review the queue let go without starting as a start by hand next time', async () => {
+    const { entry } = flight(12);
+    let committed = false;
+    const retried: string[] = [];
+    const { ports: made } = ports(entry, {
+      removeWorktree: async () => (committed
+        ? { ok: true, message: '', dirty: [] }
+        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+      retry: async (id) => { retried.push(id); },
+    });
+    const sweep = reviewSweep({ ...made, arrived: async () => ({ output: 'queued q1, 1st', ran: 'review', started: 'queued q1, 1st' }) });
+    await sweep.run();
+    sweep.unqueued(CARD);
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
+    committed = true;
+    await sweep.run();
+    expect(retried).toEqual([CARD]);
+  });
+
   it('refuses a review by hand for a card the project board does not show', async () => {
     const { entry, projectPath } = flight(12);
     writeBoard(projectPath, boardWithCard(null, 'another-card'));

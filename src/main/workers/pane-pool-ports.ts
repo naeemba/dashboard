@@ -13,7 +13,7 @@ import { PANE_QUEUE_FILE, readQueue, writeQueue, type SavedQueue } from './pane-
 // boards, and the start of a ship or a review, which card-actions.ts holds. The rest is the session
 // command's (session-requests.ts).
 
-export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board' | 'now' | 'move'> & {
+export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board' | 'now' | 'move' | 'gone'> & {
   saved: SavedQueue;
   beginCard(entry: QueueEntry, work: CardWork): Promise<{ output: string } | Refused>;
 };
@@ -23,8 +23,9 @@ export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board'
 // command asked for (the screen, the sweeps), which the card's project's main is told.
 export type CardStart = Omit<PaneStartInput, 'dispatcherPath'> & { askedFrom: string | null };
 
-// What card-actions.ts gives the pool: a card's start, and card.move for a withdrawn card.
-export type CardPool = Pick<PoolPorts, 'beginCard' | 'move'>;
+// What card-actions.ts gives the pool: a card's start, card.move for a withdrawn card, and the review
+// sweep told of a review that will not start.
+export type CardPool = Pick<PoolPorts, 'beginCard' | 'move' | 'gone'>;
 
 export function poolPorts(userData: string, settings: () => Settings, cards: CardPool): PoolPorts {
   const file = path.join(userData, PANE_QUEUE_FILE);

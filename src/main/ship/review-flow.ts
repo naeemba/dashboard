@@ -226,6 +226,9 @@ export type ReviewSweep = {
   // The review loop for one shipped card, started now: card.review's whole job. Refused, with why,
   // for a card with no worktree, no pull request yet, an agent still working, or a review running.
   review: (cardId: string) => Promise<{ output: string } | Refused>;
+  // This card's queued review was dropped or withdrawn, so the sweep's mark on it comes off: left on,
+  // the next review a person starts would be taken for the sweep's.
+  unqueued: (cardId: string) => void;
 };
 
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
@@ -360,7 +363,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // mark comes off. A start the sweep's move made comes back through that move, which asks the setting.
   const byHand = new Set<string>();
   // Cards whose review the sweep's own move started, until that start begins here: at once inside the
-  // awaited move, or later, when the pane pool's queue starts it. Taken off by the start that reads it.
+  // awaited move, or later, when the pane pool's queue starts it. Taken off by the start that reads it,
+  // or by `unqueued` when the queue lets it go without starting.
   const arriving = new Set<string>();
 
   // `followed` is whether card.follow has been asked once already in this start.
@@ -460,5 +464,5 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     arriving.delete(cardId);
   }
 
-  return { run, forget, review };
+  return { run, forget, review, unqueued: (cardId) => { arriving.delete(cardId); } };
 }

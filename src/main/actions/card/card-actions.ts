@@ -166,6 +166,7 @@ export function cardActions(main: CardActionsMain): CardActions {
   const pool: CardPool = {
     beginCard: begin,
     move: (projectPath, id, column) => move.call({ projectPath, id, column, source: 'automatic' }),
+    gone: ({ cardId, work }) => { if (cardId !== null && work.kind === 'review') reviews.unqueued(cardId); },
   };
   return { reviews, pullRequests, start, actions: [move, ship, review], pool };
 }

@@ -14,7 +14,7 @@ const ship: QueueEntry = {
 };
 
 describe('poolPorts', () => {
-  const cards = { beginCard: async () => ({ output: '' }), move: async () => ({ output: '' }) };
+  const cards = { beginCard: async () => ({ output: '' }), move: async () => ({ output: '' }), gone: () => undefined };
   it('keeps the queue in the user data folder and reads the cap and the budget off the live settings', () => {
     const folder = temporaryFolder('dashboard-queue-');
     let settings = defaultSettings(false);
