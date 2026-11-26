@@ -1,7 +1,7 @@
 import { appendFile, mkdir, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadCounts, saveCounts } from './usage-counts';
+import { countsSchedule, loadCounts, saveCounts, SAVE_EVERY_MS } from './usage-counts';
 import { sweepUsage } from './usage-store';
 import { totalsOf, type FileUsage } from '../../shared/usage/usage';
 import { temporaryFolder } from '../testing/temporary-folder';
@@ -56,6 +56,35 @@ describe('saved counts', () => {
     expect(totalsOf((await sweepUsage(root, new Map(), NOW, saved)).values(), NOW).allTime).toBe(999);
     await utimes(file, new Date(), new Date(Date.now() + 5_000));
     expect(totalsOf((await sweepUsage(root, new Map(), NOW, saved)).values(), NOW).allTime).toBe(10);
+  });
+
+  // A log emptied while the app runs has no whole line to read; its old count must still go, or it is
+  // saved and taken back on every launch after.
+  it('forget a log emptied between two sweeps, in the running app and on the next launch', async () => {
+    const folder = temporaryFolder('usage-counts-');
+    const root = path.join(folder, 'projects');
+    await mkdir(path.join(root, 'p'), { recursive: true });
+    const file = path.join(root, 'p', 's.jsonl');
+    await writeFile(file, reply(50));
+    const known = await sweepUsage(root, new Map(), NOW);
+    await writeFile(file, reply(4).slice(0, 20));
+    expect(totalsOf((await sweepUsage(root, known, NOW)).values(), NOW).allTime).toBe(0);
+    const counts = path.join(folder, 'usage-counts.json');
+    saveCounts(counts, known);
+    expect(totalsOf((await sweepUsage(root, new Map(), NOW, loadCounts(counts))).values(), NOW).allTime).toBe(0);
+  });
+
+  it('load for the first sweep that succeeds, and save then and every SAVE_EVERY_MS after', () => {
+    const schedule = countsSchedule();
+    expect(schedule.toLoad()).toBe(true);
+    // A first sweep that threw never reached swept(), so the next one still loads.
+    expect(schedule.toLoad()).toBe(true);
+    schedule.swept();
+    expect(schedule.toLoad()).toBe(false);
+    expect(schedule.dueToSave(NOW)).toBe(true);
+    // Due once: a save that then failed is not asked for again on the next sweep.
+    expect(schedule.dueToSave(NOW + 30_000)).toBe(false);
+    expect(schedule.dueToSave(NOW + SAVE_EVERY_MS)).toBe(true);
   });
 
   it('are nothing when the file is missing, damaged or from another version', async () => {

@@ -79,21 +79,19 @@ async function walk(
 async function readAppended(file: string, from: number, size: number): Promise<{ text: string; size: number } | null> {
   const handle = await open(file, 'r');
   try {
-    // A file that has shrunk is not the file we were reading — a session cleared, a log rotated — so
-    // it is counted again from the start rather than read from an offset inside it.
-    const start = size < from ? 0 : from;
-    const buffer = Buffer.allocUnsafe(size - start);
+    // `from` is never past `size`: sweepUsage resets a file that shrank to 0 before reading it.
+    const buffer = Buffer.allocUnsafe(size - from);
     // Only the bytes that were actually read. `allocUnsafe` hands back whatever was in that heap
     // memory, and a short read — the file cleared between the stat and here — would otherwise have the
     // tail of it decoded as content: one stale `\n` in there and `size` moves past lines nobody
     // counted, whose tokens are then gone for the life of the app.
-    const { bytesRead } = await handle.read(buffer, 0, size - start, start);
+    const { bytesRead } = await handle.read(buffer, 0, size - from, from);
     const text = buffer.subarray(0, bytesRead).toString('utf8');
     const lastBreak = text.lastIndexOf('\n');
     // Nothing whole yet. Left for the next sweep, which reads the same bytes again with the rest of
     // the line behind them.
     if (lastBreak === -1) return null;
-    return { text: text.slice(0, lastBreak), size: start + Buffer.byteLength(text.slice(0, lastBreak + 1)) };
+    return { text: text.slice(0, lastBreak), size: from + Buffer.byteLength(text.slice(0, lastBreak + 1)) };
   } finally {
     await handle.close();
   }
@@ -156,15 +154,18 @@ export async function sweepUsage(
       const { size, mtimeMs } = await stat(file);
       const last = saved.get(file);
       if (!known.has(file) && last?.modified === mtimeMs) usage = last;
+      // A file shorter than what was counted is not the file we were reading — a session cleared, a
+      // log rotated — so it forgets what it contributed before and is read from the start. Before the
+      // read, whatever the read finds: a log emptied, or cut to half a line, has no whole line to
+      // read, and would otherwise keep its old count, saved and taken back on every launch after.
+      if (size < usage.size) {
+        usage.size = 0;
+        usage.allTime = 0;
+        usage.samples = [];
+        usage.cache = null;
+      }
       const appended = size === usage.size ? null : await readAppended(file, usage.size, size);
       if (appended !== null) {
-        // A file read from the start again has to forget what it contributed before, or its whole
-        // history is counted twice.
-        if (appended.size < usage.size) {
-          usage.allTime = 0;
-          usage.samples = [];
-          usage.cache = null;
-        }
         countInto(usage, appended.text);
         usage.size = appended.size;
       }

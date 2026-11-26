@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { FileUsage } from '../../shared/usage/usage';
-import { replaceFile } from '../app/replace-file';
+import { replaceFileIfChanged } from '../app/replace-file';
+import { isStale } from '../../shared/app/stale';
 
 // Each log's counts, saved in userData so a launch reads only the logs written since the last run
 // rather than every one there has ever been: 4.5 GB and 14 to 18 CPU-seconds on one machine. Which
@@ -29,7 +30,26 @@ export function loadCounts(file: string): Map<string, FileUsage> {
   }
 }
 
+// Written only when the bytes differ: an app left open with no session running would otherwise
+// rewrite and flush the same few megabytes every ten minutes.
 export function saveCounts(file: string, known: ReadonlyMap<string, FileUsage>): void {
   const counts: CountsFile = { version: COUNTS_VERSION, files: [...known] };
-  replaceFile(file, JSON.stringify(counts));
+  replaceFileIfChanged(file, JSON.stringify(counts));
+}
+
+// When the thread loads and saves: loaded for the first sweep that succeeds and never again, saved
+// after that sweep and then once every SAVE_EVERY_MS. A save that is due counts as done whether or not
+// it then fails, so a disk that refuses is asked again in ten minutes, not every sweep.
+export function countsSchedule(): { toLoad(): boolean; swept(): void; dueToSave(now: number): boolean } {
+  let swept = false;
+  let lastSaved: number | undefined;
+  return {
+    toLoad: () => !swept,
+    swept: () => { swept = true; },
+    dueToSave(now) {
+      if (!isStale(lastSaved, now, SAVE_EVERY_MS)) return false;
+      lastSaved = now;
+      return true;
+    },
+  };
 }

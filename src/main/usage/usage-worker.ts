@@ -1,8 +1,7 @@
 import { parentPort } from 'node:worker_threads';
 import { snapshotOf, type FileUsage } from '../../shared/usage/usage';
 import { sweepUsage } from './usage-store';
-import { isStale } from '../../shared/app/stale';
-import { loadCounts, saveCounts, SAVE_EVERY_MS } from './usage-counts';
+import { countsSchedule, loadCounts, saveCounts } from './usage-counts';
 import type { SweepReply, SweepRequest } from './usage-thread';
 
 // The usage sweep's own thread. A first sweep with nothing saved reads every Claude Code log there has
@@ -16,21 +15,17 @@ import type { SweepReply, SweepRequest } from './usage-thread';
 // from that file, so it reads only the logs written since the last run.
 
 const known = new Map<string, FileUsage>();
-// Whether a sweep has run on this thread yet. The first one starts from what the last run saved.
-let swept = false;
-// When this thread last saved the counts. Saved on the first sweep, then once every SAVE_EVERY_MS.
-let lastSaved: number | undefined;
+const schedule = countsSchedule();
 
 parentPort?.on('message', async (request: SweepRequest) => {
   let reply: SweepReply;
   try {
-    const lastRun = swept ? undefined : loadCounts(request.counts);
+    const lastRun = schedule.toLoad() ? loadCounts(request.countsFile) : undefined;
     await sweepUsage(request.root, known, request.now, lastRun);
-    swept = true;
-    if (isStale(lastSaved, request.now, SAVE_EVERY_MS)) {
-      lastSaved = request.now;
+    schedule.swept();
+    if (schedule.dueToSave(request.now)) {
       try {
-        saveCounts(request.counts, known);
+        saveCounts(request.countsFile, known);
       } catch {
         // A full disk or a userData that is not writable. The figures are right; only the next launch
         // reads every log again, as one did before the counts were saved.

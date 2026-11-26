@@ -344,10 +344,13 @@ async function usageSweep(root) {
   const file = path.join(here, '..', '..', '.vite', 'build', 'usage-worker.js');
   if (!existsSync(file)) return print('usage-sweep-thread', { skipped: `${file} not built` });
   const worker = new Worker(file);
+  // A counts file that is not there, so this run starts with nothing saved, as a first launch does.
+  const countsFile = path.join(mkdtempSync(path.join(tmpdir(), 'usage-counts-')), 'missing.json');
   stop = holdTimer();
-  const threaded = await timed(() => requestSweep(worker, { root, now: Date.now(), projects: everything, paneSessions: new Map() }));
+  const threaded = await timed(() => requestSweep(worker, { root, countsFile, now: Date.now(), projects: everything, paneSessions: new Map() }));
   const mainLongest = stop();
   await worker.terminate();
+  rmSync(path.dirname(countsFile), { recursive: true, force: true });
   print('usage-sweep-thread', {
     firstSweepSeconds: threaded.seconds, firstSweepCpuSeconds: threaded.cpuSeconds, mainLongestHoldMs: Math.round(mainLongest),
     allTimeTokens: threaded.result.projects[''].allTime,
