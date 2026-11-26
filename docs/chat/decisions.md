@@ -193,9 +193,7 @@ one of the app's theme colours instead.
 The popup is drawn above what opened it, lined up with whichever of its edges faces the middle of
 the window (`popup-placement.ts`). The context meter sits on the right of the foot, so its popup
 grows leftwards; the workers count on the left would grow rightwards from the same code, so the two
-never cover each other's anchor. The workers popup is still the centred search sheet;
-`anchored-popup.ts` takes rows with a choice, so moving it over is a change of caller, not of the
-popup.
+never cover each other's anchor. The workers popup is the same popup, opened from the count.
 
 ## chat-decision-11: A streaming reply is cut at a paragraph break, and drawn whole when it cannot be
 

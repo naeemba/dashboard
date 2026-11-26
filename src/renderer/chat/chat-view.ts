@@ -203,7 +203,13 @@ export function createChatView(options: ChatViewOptions): ChatView {
     workers = workerCount(list);
     drawFoot();
   });
-  const openWorkers = (): void => void showWorkers(bridge, slot, options.goToPane).then((landed) => { if (!landed) focus(); });
+  // The count is drawn only while there is a worker, and the popup opens above it, so with none the
+  // key says so instead.
+  const openWorkers = (): void => {
+    const count = foot.querySelector<HTMLElement>(`.${FOOT_WORKERS}`);
+    if (!count) return options.onNotice('No worker of this session is open.');
+    void showWorkers(bridge, slot, count, options.goToPane).then((landed) => { if (!landed) focus(); });
+  };
   const showContext = (): void => void measures.show(() => foot.querySelector<HTMLElement>(`.${FOOT_CONTEXT}`), () => transcript, select).then(focus);
   foot.addEventListener('click', (event) => {
     const target = event.target instanceof Element ? event.target : null;

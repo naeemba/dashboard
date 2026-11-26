@@ -1,15 +1,16 @@
 import type { DashboardBridge } from '../../shared/app/bridge';
-import { workerRows, type DispatchedWorker } from '../../shared/workers/worker-roster';
-import { searchOverlay } from '../app/overlay';
+import { workerCount, workerRows, type DispatchedWorker } from '../../shared/workers/worker-roster';
+import { anchoredPopup } from '../app/anchored-popup';
+import { piece } from './chat-foot-view';
 import type { UsageSnapshot } from '../../shared/usage/usage';
 
 // Every main's workers, kept current for the Claude screens' status lines and the workers popup. What
 // is counted and how the rows read is worker-roster.ts's; this only asks main and draws.
 
-// A worker's hooks mark its pane, and a claim, a run, a release or a pane closing changes the open
-// list, so those two events are every change there is but an agent exiting, which shows on the next
-// of them. One read per change serves every page: each watcher picks out its own slot's workers.
-// ponytail: an exit alone does not refresh; add a main-side event if idle needs to show at once.
+// A worker's hooks mark its pane, a claim, a run, a release or a pane closing changes the open list,
+// and a terminal worker's agent exiting ends its pane's shell, which main says after it has stopped
+// counting the agent: those three events are every change there is. One read per change serves every
+// page: each watcher picks out its own slot's workers.
 const watchers = new Set<() => void>();
 let roster: DispatchedWorker[] = [];
 // Each pane's last use of the prompt cache, from the usage sweep, for the popup's warm or cold.
@@ -34,6 +35,8 @@ function watch(bridge: DashboardBridge, changed: () => void): () => void {
     listening = true;
     bridge.onPaneMark(() => read(bridge));
     bridge.onProjectsChange(() => read(bridge));
+    // Only a listed worker's pane: a plain shell or nvim ending changes nothing here.
+    bridge.onExit((id) => { if (roster.some((worker) => worker.id === id)) read(bridge); });
     const takeCaches = (usage: UsageSnapshot) => {
       caches = usage.caches;
       tellWatchers();
@@ -54,12 +57,18 @@ export function followWorkers(bridge: DashboardBridge, slot: number, drawn: (wor
   read(bridge);
 }
 
-// The popup: one row per worker, arrows walk them, Enter lands on the pane, Escape closes. Its rows
-// follow the same roster while it is open, so a worker finishing shows without closing it.
-export async function showWorkers(bridge: DashboardBridge, slot: number, goToPane: (id: string) => void): Promise<boolean> {
-  const id = await searchOverlay({
-    name: 'chat-workers', placeholder: 'Search this session\'s workers', empty: 'No worker of this session is open.',
-    rows: (query) => workerRows(ofSlot(slot), query, caches, Date.now()), glyph: () => 'claude',
+// The popup, just above `anchor`, the count: one row per worker, arrows walk them, Enter lands on
+// the pane, Escape closes. Its rows follow the same roster while it is open, so a worker finishing
+// shows without closing it.
+export async function showWorkers(bridge: DashboardBridge, slot: number, anchor: HTMLElement, goToPane: (id: string) => void): Promise<boolean> {
+  const id = await anchoredPopup({
+    name: 'chat-workers', anchor, heading: () => `${workerCount(ofSlot(slot)) || 'No worker is open'} · Enter goes to one`,
+    sections: () => [{
+      title: null,
+      rows: workerRows(ofSlot(slot), caches, Date.now()).map((row) => ({
+        key: row.choice, choice: row.choice, cells: [piece('search-name', row.name), piece('search-detail', row.detail)],
+      })),
+    }],
     watch: (changed) => watch(bridge, changed),
   });
   if (id !== undefined) goToPane(id);
