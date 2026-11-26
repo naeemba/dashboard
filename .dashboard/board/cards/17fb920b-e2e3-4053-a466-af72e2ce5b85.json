@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:12:57.428Z",
-  "updatedAt": "2026-11-26T16:59:14.512Z",
+  "updatedAt": "2026-11-26T17:01:22.028Z",
   "branch": "browser-tabs-are-closed-by-asking-the-agent",
   "pullRequest": 406,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-26T16:59:14.512Z",
       "body": "Merged origin/main after #408 (pane pool) in 0d53c008: kept both workers.cap + pool.drain and browser.idleMinutes + turnEnded. pane.send now takes the shared panePrompt, so main.ts stays at 600 code lines. pnpm check passes. CI passed on 0d53c008. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T17:01:21.996Z",
+      "body": "Pull request #406 merged: Browser tabs are closed by asking the agent that holds them, never on a timer https://github.com/naeemba/dashboard/pull/406"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 335
 }
