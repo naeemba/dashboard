@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T23:54:32.170Z",
-  "updatedAt": "2026-11-24T23:54:32.171Z",
-  "column": "Backlog",
-  "order": 67
+  "updatedAt": "2026-11-26T10:06:09.220Z",
+  "comments": [
+    {
+      "at": "2026-11-26T10:05:59.060Z",
+      "body": "Duplicate of card 74aabb41, shipped for the same GitHub issue; cancelled."
+    }
+  ],
+  "column": "Cancelled",
+  "order": 25
 }
