@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:17.573Z",
-  "updatedAt": "2026-11-26T08:31:57.629Z",
+  "updatedAt": "2026-11-26T09:03:34.642Z",
   "branch": "pane-run-worktree-survives-one-failed-git-f",
   "pullRequest": 378,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-26T08:31:57.579Z",
       "body": "Pull request #378 opened: pane run --worktree survives one failed git fetch https://github.com/naeemba/dashboard/pull/378"
+    },
+    {
+      "at": "2026-11-26T09:03:34.642Z",
+      "body": "Review loop: 2 rounds, floor-addressed, CI passed on c5ce1df4, no conflict with main. Converged, ready to merge. Round 1 (4793cae4) added a 1s pause before the second fetch, skips the retry for a branch the remote lacks, puts the reason on one line and pins a 60s limit per fetch. Round 2: 983bbcf9 added workers-decision-10 (a refused key is tried again). c9be99f7 was rejected by the final check and reverted (c5ce1df4) because it let an OpenSSH '** WARNING' banner become the reported reason. Still open, low: the warning can quote git's generic 'Could not read from remote repository' instead of ssh's own line. Design unchanged from the card: one retry, then cut from the remote-tracking ref with a stale warning."
     }
   ],
   "column": "Review",
