@@ -11,8 +11,9 @@ const PNPM_FAILURE = Object.assign(new Error('Command failed: pnpm install --fro
 
 // `files` are the paths that exist, read with `/` since the lockfile lookup joins with the platform's
 // separator and on Windows asks for `\code\api.worktrees\fix\.git`; an install of `failing` throws. Each install is noted with whether
-// the queue was held while it ran.
-function maker(files: string[] = [], failing?: string) {
+// the queue was held while it ran. The first `fetchFailures` fetches fail as a lost SSH key does.
+function maker(files: string[] = [], failing?: string, fetchFailures = 0) {
+  let fetchesLeftToFail = fetchFailures;
   const ran: string[] = [];
   const queued: string[] = [];
   const installed: string[] = [];
@@ -27,6 +28,7 @@ function maker(files: string[] = [], failing?: string) {
     log: (draft) => logged.push(draft),
     async git(gitArguments) {
       ran.push(gitArguments.join(' '));
+      if (gitArguments[0] === 'fetch' && fetchesLeftToFail-- > 0) throw new Error('Permission denied (publickey).');
       return gitArguments[0] === 'for-each-ref' ? 'main\n' : '';
     },
     baseBranch: async () => ({ remote: 'gitlab', branch: 'develop' }),
@@ -57,6 +59,22 @@ describe('worktree.make', () => {
     expect(queued).toEqual(['/code/api']);
     expect(ran[0]).toBe('fetch gitlab develop');
     expect(ran.at(-1)).toMatch(/^worktree add -b \S*try-a-thing\S* \S+ gitlab\/develop$/);
+  });
+
+  it('fetches a throwaway\'s base once more when the first fetch fails, and says nothing', async () => {
+    const { make, ran, logged } = maker([], undefined, 1);
+    const made = await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
+    expect(ran.slice(0, 2)).toEqual(['fetch gitlab develop', 'fetch gitlab develop']);
+    expect(made).not.toHaveProperty('warning');
+    expect(logged).toEqual([]);
+  });
+
+  it('cuts a throwaway from the last fetched base when both fetches fail, warning it may be stale', async () => {
+    const { make, ran, logged } = maker([], undefined, 2);
+    const made = await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
+    expect(ran.at(-1)).toMatch(/^worktree add -b \S*try-a-thing\S* \S+ gitlab\/develop$/);
+    expect(made).toMatchObject({ warning: expect.stringMatching(/gitlab\/develop as last fetched and may be stale: .*publickey/) });
+    expect(logged).toEqual([expect.objectContaining({ level: 'warn', kind: 'worktree', message: expect.stringContaining('may be stale') })]);
   });
 
   it('checks a reviewed card branch out again at its own path, with no new branch', async () => {

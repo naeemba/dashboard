@@ -66,9 +66,7 @@ export function worktreeActions(main: WorktreeRemovePorts) {
     // card.ship's, with the project's queue held and the base fetched.
     makeForShip: (request: ShipWorktreeRequest): Promise<ShipWorktree> => made(make.call({ kind: 'card', ...request })),
     // `pane run --worktree`'s.
-    async makeThrowaway(projectPath: string, title: string): Promise<string> {
-      return (await made(make.call({ kind: 'throwaway', projectPath, title }))).worktreePath;
-    },
+    makeThrowaway: (projectPath: string, title: string) => made(make.call({ kind: 'throwaway', projectPath, title })),
     // card.review's, with the queue held: the branch checked out again, and the old folder removed.
     makeAgain: ({ projectPath, worktreePath, branch }: WorktreeEntry) => made(make.call({ kind: 'again', projectPath, worktreePath, branch })),
     removeForReview: (worktreePath: string) => removed(remove.call({ worktreePath, from: 'review' })),
