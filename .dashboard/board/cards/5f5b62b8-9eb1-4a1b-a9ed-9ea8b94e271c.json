@@ -5,7 +5,9 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-02T00:40:52.538Z",
-  "updatedAt": "2026-11-26T10:42:57.090Z",
+  "updatedAt": "2026-11-26T12:02:24.271Z",
+  "branch": "workers-popup-follow-ups-anchor-it-to-the-c",
+  "pullRequest": 396,
   "comments": [
     {
       "at": "2026-11-02T08:53:07.402Z",
@@ -14,8 +16,20 @@
     {
       "at": "2026-11-26T10:42:57.090Z",
       "body": "Rescope from main, 2026-11-26 check: (4) last message is done (doneReport, done-report.ts) and 'report only when it stays stopped' is done. (2) keyboard pane links is likely done (the link command walks every a in the entry; chat-view.ts:711-713): check by hand, only fix if not. Left: (1) it still opens in searchOverlay (chat-workers-view.ts:3), anchor it to the count; (3) no refresh on exit (ponytail note at chat-workers-view.ts:12); (5) pane claim returns the bare id (actions/pane/claim.ts:47)."
+    },
+    {
+      "at": "2026-11-26T11:39:23.476Z",
+      "body": "Pull request #396 opened: Open the workers popup above the count, and refresh it when a worker's agent exits https://github.com/naeemba/dashboard/pull/396"
+    },
+    {
+      "at": "2026-11-26T12:00:59.281Z",
+      "body": "Review loop: converged, ready to merge. 1 round, 3 nits fixed (popup row highlight colour, empty-list heading hint, chat-decision-10 wording), final check accepted all 3. CI passed on efab3ce9. Scope: (1) anchored popup and (3) refresh on exit done; (2) already worked, unchanged; (5) not done on purpose, workers-decision-3 keeps pane claim's bare id. Open: spawn-failure catch in pane-shells.ts skips main.ended (out of scope, #397)."
+    },
+    {
+      "at": "2026-11-26T12:02:24.242Z",
+      "body": "Pull request #396 merged: Open the workers popup above the count, and refresh it when a worker's agent exits https://github.com/naeemba/dashboard/pull/396"
     }
   ],
-  "column": "Backlog",
-  "order": 13
+  "column": "Done",
+  "order": 322
 }

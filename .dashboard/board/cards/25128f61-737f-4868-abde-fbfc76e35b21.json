@@ -1,0 +1,11 @@
+{
+  "id": "25128f61-737f-4868-abde-fbfc76e35b21",
+  "title": "Window transparency setting (for example 0.7 opacity)",
+  "notes": "Goal: a setting that makes the app window see-through, so the desktop shows behind it at about 0.7.\n\nElectron's options, checked against its BrowserWindow docs during the build:\n- win.setOpacity(n) dims the whole window, text included, but works only on Windows and macOS. On Linux, where the user runs the app, it does nothing.\n- transparent: true on the BrowserWindow (src/main/app/app-window.ts:60, which sets backgroundColor today) plus rgba backgrounds in the CSS, and xterm's allowTransparency with an rgba theme background, keeps text solid and makes only the backgrounds see-through. It works on Linux under a compositor. It is a constructor option, so changing it needs a window restart, not a live toggle.\n\nLimits to check by hand:\n- the project browser (a native WebContentsView) stays opaque;\n- transparent windows have had resize, maximize and shadow problems on Windows;\n- text readability over a busy wallpaper.\n\nProposal: one opacity setting in the settings file (1 = off) that drives the rgba backgrounds; restart to apply. Docs and a decision test for the setting's parsing, per workflow-rule-2.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-26T11:58:48.183Z",
+  "updatedAt": "2026-11-26T11:58:48.183Z",
+  "column": "Backlog",
+  "order": 47
+}

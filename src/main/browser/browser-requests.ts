@@ -1,7 +1,7 @@
 import type { Refused } from '../../shared/app/bridge';
 import { isRecord } from '../../shared/app/is-record';
 import { failureText } from '../../shared/errors/failure';
-import { MANAGER_SLOT } from '../../shared/manager/manager';
+import { MANAGER_BROWSER_PATH, MANAGER_SLOT } from '../../shared/manager/manager';
 import { MAIN_INDEX, paneFromId, terminalId } from '../../shared/panes/terminals';
 import { isRefused, sessionReply, type BoundAction } from '../actions/action';
 import { answered, PANE_ID, refused, type SessionReply, type SessionRequest } from '../workers/session-cli';
@@ -46,11 +46,11 @@ export function paneIsOpen(ports: Pick<BrowserRequestPorts, 'hasCommand' | 'proj
 }
 
 // The project whose browser a pane's open and tabs mean: the one named with --project, else the
-// pane's own. The manager's page has no browser.
+// pane's own. The manager's panes and its main have the manager's browser.
 export function browserProject(ports: Pick<BrowserRequestPorts, 'projectPath' | 'slotOf'>, pane: string, named: string | null): string | Refused {
   if (named !== null) return ports.slotOf(named) === -1 ? { refused: `${named} is not open in the app; \`dashboard project open\` it first` } : named;
   const { slot } = paneFromId(pane);
-  if (slot === MANAGER_SLOT) return { refused: 'the manager has no browser; name a project with --project' };
+  if (slot === MANAGER_SLOT) return MANAGER_BROWSER_PATH;
   return ports.projectPath(slot) ?? { refused: `pane ${pane} is in no open project` };
 }
 

@@ -48,3 +48,6 @@ One line per merged change: date and why.
 - 2026-11-26 — An untracked file outside `.dashboard/` no longer stops the sync fast-forwarding the
   checkout: kamandsystem's untracked `.claude/` left each board write uncommitted there, and
   `git pull` refused over the card files
+- 2026-11-26 — The drag's grab, column listeners and drop moved out of `board-view.ts` into
+  `card-dragging.ts`: the view sat at 599 of 600 code lines, so the next board change would have had
+  to split it first

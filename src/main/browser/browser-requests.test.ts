@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MANAGER_SLOT } from '../../shared/manager/manager';
+import { MANAGER_BROWSER_PATH, MANAGER_SLOT } from '../../shared/manager/manager';
 import type { BoundAction } from '../actions/action';
 import { answered } from '../workers/session-cli';
 import { BROWSER_REQUEST } from './browser-cli';
@@ -105,8 +105,9 @@ describe('browserRequests', () => {
 describe('browserProject', () => {
   const ports = { projectPath: (slot: number) => (slot === 2 ? '/work/api' : undefined), slotOf: (folder: string) => (folder === '/work/web' ? 3 : -1) };
 
-  it('refuses the manager without --project, and a project that is not open', () => {
-    expect(browserProject(ports, `${MANAGER_SLOT}:0`, null)).toEqual({ refused: 'the manager has no browser; name a project with --project' });
+  it('gives the manager its own browser, the named project for --project, and refuses one not open', () => {
+    expect(browserProject(ports, `${MANAGER_SLOT}:0`, null)).toBe(MANAGER_BROWSER_PATH);
+    expect(browserProject(ports, `${MANAGER_SLOT}:3`, null)).toBe(MANAGER_BROWSER_PATH);
     expect(browserProject(ports, `${MANAGER_SLOT}:0`, '/work/web')).toBe('/work/web');
     expect(browserProject(ports, '2:1', '/work/gone')).toEqual({ refused: '/work/gone is not open in the app; `dashboard project open` it first' });
   });

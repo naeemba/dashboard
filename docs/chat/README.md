@@ -147,8 +147,8 @@ background work for thirty minutes is told as paused, not stopped.
 
 While the session has workers open the foot counts them by how they stand,
 working, paused (waiting on its own background work), blocked, done or idle; a
-click on the count or the workers key opens a list of them, the manager's across
-every project, that keeps up while it is open: the arrows walk it, Enter lands
+click on the count or the workers key opens a list of them just above it, the
+manager's across every project, that keeps up while it is open: the arrows walk it, Enter lands
 on the pane and Escape closes it. Above the working line, a strip lists the
 agents, workflows and background commands Claude has running, each under the one
 that started it, with its tool calls, tokens, time and last tool so far; a task
@@ -357,9 +357,9 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   the same of its own session (chat-decision-12).
 - Given main has workers open, when the foot is drawn, then between what Claude
   is doing and the meters it counts them, `3 workers: 2 working, 1 done`; a
-  click on it or Alt+W opens a list of them (the manager's across every project)
-  that updates while open, the arrows walk it, Enter lands on the pane and
-  Escape closes it.
+  click on it or Alt+W opens a list of them just above it (the manager's across
+  every project) that updates while open, an agent exiting included; the arrows
+  walk it, Enter lands on the pane and Escape closes it.
 - Given a turn has been measured, when you click the context meter, press Alt+U
   or send `/context`, then a popup opens just above the meter, lined up with its
   right edge, listing each part of the window (system prompt, tools, memory

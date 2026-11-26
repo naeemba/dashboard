@@ -5,7 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-07T13:54:58.728Z",
-  "updatedAt": "2026-11-07T13:54:58.728Z",
-  "column": "Backlog",
-  "order": 37
+  "updatedAt": "2026-11-26T11:59:43.102Z",
+  "branch": "one-conversation-port-per-slot-in-chat-sess",
+  "pullRequest": 399,
+  "comments": [
+    {
+      "at": "2026-11-26T11:59:43.072Z",
+      "body": "Pull request #399 opened: Read a slot's conversation in one place https://github.com/naeemba/dashboard/pull/399"
+    }
+  ],
+  "column": "Review",
+  "order": 6
 }

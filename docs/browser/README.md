@@ -13,7 +13,9 @@ blurb for it; this is where the rest lives.
 
 Ctrl+Shift+B shows the browser of the project in front. A row of tabs runs along
 the top, the address bar sits under it, and the rest of the page is the web page
-of the tab on screen. The manager has no browser.
+of the tab on screen. The manager has a browser of its own, signed in apart from
+every project's, for its main and its workers; its strip names it after the
+terminals, and Ctrl+Shift+B gets there as on a project.
 
 A project with no tab open lands on the address bar. Type an address and Enter
 opens it in a first tab. An address without a scheme gets https, and one a dev
@@ -57,7 +59,8 @@ and that pane may not claim it again until the pane itself is let go
 back from that one too.
 
 The tabs close with the project's page: the project closed, or the screen
-joining another host or coming back from one. The sign-ins do not: cookies and storage are
+joining another host or coming back from one. The manager's page never closes, so its
+tabs close only on that host change. The sign-ins do not: cookies and storage are
 kept on disk per project folder, apart from every other project and from the
 app's own window, and the next open of the project is still signed in. A page is
 refused the camera, the microphone, the location, notifications and the screen,
@@ -92,7 +95,8 @@ the person asks for it (browser-decision-8).
 
 - `open <url> [--project <name|aka>]` opens a tab the pane holds and prints its
   id. It opens behind the tab you are on, or on screen in a project with none.
-  `--project` opens it in another open project's browser; the manager has none.
+  `--project` opens it in another open project's browser. A pane of the manager,
+  or its main, opens it in the manager's browser.
 - `tabs` lists the project's tabs: id, who holds them (yours, the user's, another
   pane), address and title. `claim <tab>` takes one of your tabs; one another
   pane holds is refused. `release <tab>` hands one back.
@@ -237,3 +241,7 @@ The keys are in `src/shared/keys/browser-actions.ts` and
   so a site behind a Google login never signs in here.
 - The sign-ins are kept per folder path on this machine, so a host's project at
   the same path as one of yours shares its sign-ins while you are joined to it.
+- The manager's browser is this machine's one, on a host too: its path is the same
+  on every machine and `browser:*` never leaves the screen. The join empties its
+  tabs, but a tab this machine's manager panes open afterwards shows beside the
+  host's worker of that number, and the host's manager panes cannot open one here.

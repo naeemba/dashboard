@@ -1,0 +1,11 @@
+{
+  "id": "f9e813f3-da85-45cf-8a85-b34fed89bc40",
+  "title": "Count a pane whose shell failed to spawn as ended, not working",
+  "notes": "pane-shells.ts:90-96: the in-process spawn catch (a stale SHELL_COMMAND) sends pty:exit 127 without calling main.ended, so releaseAgentPane never runs and mainsWorkers keeps the pane. The foot then says '1 worker: 1 working' over a pane showing exit 127 until the worker is released by hand. Fix: call main.ended(id, 127) in that catch. Issue: https://github.com/naeemba/dashboard/issues/397 Review: https://github.com/naeemba/dashboard/pull/396#discussion_r4707963204",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-26T11:52:19.591Z",
+  "updatedAt": "2026-11-26T11:52:19.591Z",
+  "column": "Backlog",
+  "order": 46
+}

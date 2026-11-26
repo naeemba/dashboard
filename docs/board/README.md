@@ -338,7 +338,8 @@ Folders: `src/main/board/`, `src/shared/board/`, `src/renderer/board/`.
   `create-task-cli-entry.ts` (built by `vite.create-task-cli.config.ts`), `create-task-install.ts`
   (what the app writes under `~/.claude` at launch), each beside its `.test.ts`
 - Screen: `board-view.ts`, `board-detail.ts`, `board-toolbar.ts`,
-  `board-state.ts`, `board-drag.ts`, `drop-marker.ts`, `card-aim.ts`, `card-editor.ts`,
+  `board-state.ts`, `board-drag.ts`, `card-dragging.ts` (the drag's DOM: grab, line, drop),
+  `drop-marker.ts`, `card-aim.ts`, `card-editor.ts`,
   `board-saves.ts` (the screen's saves, one at a time, each beside the board it replays from),
   `board-wiring.ts` (the board's files written elsewhere, re-read on the page in front)
 - The delete key: `card-delete.ts`, Cancelled or gone

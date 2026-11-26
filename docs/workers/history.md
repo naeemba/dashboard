@@ -85,3 +85,5 @@ One line per merged change: date and why.
   refusals and its agent wrote retry loops by hand
 - 2026-11-26 — A throwaway worktree whose only changes or unpushed commits are the board's is
   removed when its worker goes, the board being a stale copy of origin's (ship-decision-7)
+- 2026-11-26 — The workers popup opens just above the count, and the count shows a worker idle as
+  soon as its agent exits rather than at the next hook mark

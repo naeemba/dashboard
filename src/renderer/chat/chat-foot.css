@@ -50,6 +50,9 @@
 }
 .chat-foot-workers:hover { color: var(--white); }
 
+/* A row of the workers popup keeps the pane's name whole and cuts its detail short. */
+.chat-workers-dialog .search-name { flex-shrink: 0; }
+
 /* The context meter opens the context popup on a click, the same way. */
 .chat-foot-context { cursor: pointer; }
 .chat-foot-context:hover .chat-meter-label { color: var(--white); }

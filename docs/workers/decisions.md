@@ -279,13 +279,16 @@ on whatever holds the number now, and a link to a number nothing holds says the 
 one more thing to strip. A link is drawn from text nodes only, so an address in an attribute stays
 text.
 
-**The popup is the search dialog, not a box anchored to the count.** It is the same dialog every
-picker uses, with the arrows, Enter and Escape already right, and it now takes a `watch` so it reads
-main again while it is open. Anchoring it to the button would be a second list dialog to keep in
-step. The keyboard way to a worker is the popup (Alt+W); a link is the mouse's.
+**The popup is anchored to the count.** It opens just above the count it was opened from, through
+`anchored-popup.ts`, the context meter's popup: the arrows, Enter and Escape and the `watch` that
+reads main again while it is open are that popup's, so there is no second list dialog to keep in
+step. It has no search box: a session has a handful of workers, and they are ordered by state. With
+no worker open the count is not drawn, so Alt+W says none is open instead. A pane link is reached
+from the keyboard by the link key, as every other link in an entry is.
 
-Watch for: the count refreshes on a hook mark and on the open-pane list changing. A worker whose
-agent exits without either shows as working until the next one.
+The count refreshes on a hook mark, on the open-pane list changing, and on a pane's shell ending:
+a terminal worker's agent exiting ends its pane's shell, and main sends that after it has stopped
+counting the agent, so the worker shows as idle at once.
 
 ## workers-decision-4: The command and the app must be the same build, but for reads and release
 

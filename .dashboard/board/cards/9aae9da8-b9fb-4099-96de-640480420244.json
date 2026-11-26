@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-18T11:10:00.874Z",
-  "updatedAt": "2026-11-26T10:53:04.599Z",
+  "updatedAt": "2026-11-26T11:06:04.560Z",
   "branch": "running-app-guard-match-the-mac-install-pat",
   "pullRequest": 390,
   "comments": [
@@ -16,8 +16,16 @@
     {
       "at": "2026-11-26T10:53:04.565Z",
       "body": "Pull request #390 opened: Running-app guard: match the mac install path in any case https://github.com/naeemba/dashboard/pull/390"
+    },
+    {
+      "at": "2026-11-26T11:04:44.202Z",
+      "body": "Converged, ready to merge. pr-loop: 1 round, floor-addressed. Review found one low: the open check (open /applications/dashboard.app, open -a dashboard) was also case-sensitive; 62bc129a adds /i and a lowercase test case, final check accepted. No conflicts, nothing open. CI passed on 62bc129a."
+    },
+    {
+      "at": "2026-11-26T11:06:04.516Z",
+      "body": "Pull request #390 merged: Running-app guard: match the mac install path in any case https://github.com/naeemba/dashboard/pull/390"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 317
 }
