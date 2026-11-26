@@ -1,0 +1,11 @@
+{
+  "id": "74aabb41-5ee1-4154-aef2-2df9293b6ee7",
+  "title": "browser eval's script-file read gets a tested decision",
+  "notes": "GitHub issue #371 (gh issue view 371); the PR body says Closes #371. The eval branch of src/main/browser/browser-program.ts reads the script file and refuses when it can't be read, with no test (pnpm check lists the file as untested; workflow-rule-2). Move that decision into a pure function in browser-cli.ts with a test.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T09:56:15.018Z",
+  "updatedAt": "2026-11-26T09:56:15.018Z",
+  "column": "Backlog",
+  "order": 79
+}
