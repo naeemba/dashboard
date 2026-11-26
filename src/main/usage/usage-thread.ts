@@ -9,6 +9,8 @@ import { unpacked } from '../app/unpacked';
 
 export type SweepRequest = {
   root: string;
+  // The file in userData the thread keeps each log's counts in between launches (usage-counts.ts).
+  countsFile: string;
   now: number;
   projects: { path: string; worktrees: string }[];
   paneSessions: Map<string, string>;
@@ -57,7 +59,8 @@ function startWorker(): Thread {
 
 // Started on the first sweep and kept for the life of the app, since the counts it holds are what make
 // every sweep after the first one cheap. A thread that died is replaced on the next sweep, which then
-// reads every log again from the start. The test hands in its own starter.
+// starts again from the saved counts and rereads the logs changed since they were saved. The test
+// hands in its own starter.
 export function usageThread(start: () => Thread = startWorker): (request: SweepRequest) => Promise<UsageSnapshot> {
   let thread: Thread | undefined;
   return (request) => {

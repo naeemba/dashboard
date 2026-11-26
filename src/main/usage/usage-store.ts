@@ -8,10 +8,11 @@ import { cacheUseOf } from '../../shared/usage/cache-warmth';
 // arithmetic: how much of a file has been counted.
 //
 // The logs are ~/.claude/projects/<folder>/<session>.jsonl, with a subagent's own file one or two
-// folders deeper under the session it was spawned from. The first sweep reads the lot — 4.5 GB took 18
-// seconds on one machine, which is why it runs on a thread of its own (usage-worker.ts) — and every
-// sweep after it reads only what has been appended, which is nothing at all for all but the handful of
-// sessions running right now.
+// folders deeper under the session it was spawned from. A first sweep with nothing saved reads the lot
+// — 4.5 GB took 18 seconds on one machine, which is why it runs on a thread of its own
+// (usage-worker.ts) — a launch's first sweep reads only the logs written since the last run
+// (usage-counts.ts), and every sweep after it reads only what has been appended, which is nothing at
+// all for all but the handful of sessions running right now.
 
 const LOG_SUFFIX = '.jsonl';
 
@@ -78,21 +79,19 @@ async function walk(
 async function readAppended(file: string, from: number, size: number): Promise<{ text: string; size: number } | null> {
   const handle = await open(file, 'r');
   try {
-    // A file that has shrunk is not the file we were reading — a session cleared, a log rotated — so
-    // it is counted again from the start rather than read from an offset inside it.
-    const start = size < from ? 0 : from;
-    const buffer = Buffer.allocUnsafe(size - start);
+    // `from` is never past `size`: sweepUsage resets a file that shrank to 0 before reading it.
+    const buffer = Buffer.allocUnsafe(size - from);
     // Only the bytes that were actually read. `allocUnsafe` hands back whatever was in that heap
     // memory, and a short read — the file cleared between the stat and here — would otherwise have the
     // tail of it decoded as content: one stale `\n` in there and `size` moves past lines nobody
     // counted, whose tokens are then gone for the life of the app.
-    const { bytesRead } = await handle.read(buffer, 0, size - start, start);
+    const { bytesRead } = await handle.read(buffer, 0, size - from, from);
     const text = buffer.subarray(0, bytesRead).toString('utf8');
     const lastBreak = text.lastIndexOf('\n');
     // Nothing whole yet. Left for the next sweep, which reads the same bytes again with the rest of
     // the line behind them.
     if (lastBreak === -1) return null;
-    return { text: text.slice(0, lastBreak), size: start + Buffer.byteLength(text.slice(0, lastBreak + 1)) };
+    return { text: text.slice(0, lastBreak), size: from + Buffer.byteLength(text.slice(0, lastBreak + 1)) };
   } finally {
     await handle.close();
   }
@@ -128,40 +127,49 @@ function countInto(usage: FileUsage, text: string): void {
 // One pass over the logs, folded into what the last pass found. `known` is kept across sweeps and
 // edited in place: that is what makes every sweep after the first one cheap, since a file whose size
 // has not moved is not opened at all.
-// ponytail: reads every log whole again on each launch, since the counts live only in memory — 18
-// CPU-seconds for 4.5 GB, off main's thread. If launches start feeling it, save each file's size and
-// counts in userData so a launch reads only what was appended since the last run.
+//
+// `saved` is what the last run counted (usage-counts.ts), for the first sweep of a launch. A file this
+// run has not counted yet starts from its saved count when its mtime is the one the count was taken
+// at, so a launch reads only the logs written since; one whose mtime moved is read whole, which is
+// right whether it was appended to or rewritten.
 // ponytail: stats every log every sweep — about a hundred milliseconds for four thousand files. If
 // that starts showing, narrow the walk to the folders of the projects that are open.
 export async function sweepUsage(
   root: string,
   known: Map<string, FileUsage>,
   now: number,
+  saved: ReadonlyMap<string, FileUsage> = new Map(),
 ): Promise<Map<string, FileUsage>> {
   const files = await logFiles(root);
   const seen = new Set<string>();
   const cutoff = retainFrom(now);
   for (const { file, session } of files) {
     seen.add(file);
-    const usage = known.get(file) ?? { size: 0, directory: '', session, allTime: 0, samples: [] };
+    let usage = known.get(file) ?? { size: 0, directory: '', session, allTime: 0, samples: [] };
     try {
       // Stat first, and open nothing at all for a log that has not moved — which is every log but the
       // handful being written to right now. This is the whole of what makes a sweep cheap: without it
       // a quarter of a second goes on opening four thousand files to find that none of them has
       // anything new in it, every half minute.
-      const { size } = await stat(file);
+      const { size, mtimeMs } = await stat(file);
+      const last = saved.get(file);
+      if (!known.has(file) && last?.modified === mtimeMs) usage = last;
+      // A file shorter than what was counted is not the file we were reading — a session cleared, a
+      // log rotated — so it forgets what it contributed before and is read from the start. Before the
+      // read, whatever the read finds: a log emptied, or cut to half a line, has no whole line to
+      // read, and would otherwise keep its old count, saved and taken back on every launch after.
+      if (size < usage.size) {
+        usage.size = 0;
+        usage.allTime = 0;
+        usage.samples = [];
+        usage.cache = null;
+      }
       const appended = size === usage.size ? null : await readAppended(file, usage.size, size);
       if (appended !== null) {
-        // A file read from the start again has to forget what it contributed before, or its whole
-        // history is counted twice.
-        if (appended.size < usage.size) {
-          usage.allTime = 0;
-          usage.samples = [];
-          usage.cache = null;
-        }
         countInto(usage, appended.text);
         usage.size = appended.size;
       }
+      usage.modified = mtimeMs;
     } catch {
       // Deleted between the walk and the read, or unreadable. Left as it was; the next sweep either
       // finds it again or drops it below.
