@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T09:55:56.820Z",
-  "updatedAt": "2026-11-26T10:07:27.623Z",
+  "updatedAt": "2026-11-26T10:38:51.803Z",
   "branch": "name-the-nine-bare-windows-skips",
   "pullRequest": 388,
   "comments": [
     {
       "at": "2026-11-26T10:07:27.592Z",
       "body": "Pull request #388 opened: Name the bare Windows skips after their reason https://github.com/naeemba/dashboard/pull/388"
+    },
+    {
+      "at": "2026-11-26T10:38:51.803Z",
+      "body": "Converged, ready to merge. pr-loop: 1 round, floor-addressed. Fixed a nit in the posixCommandsOnly comment wording (21d922a1). Rejected as out of scope: the five suite-level describe.skipIf skips, which are follow-up work in #389. All nine bare it.skipIf calls are replaced by named skips from windows-skips.ts. No conflict with main. CI passed on 21d922a1."
     }
   ],
   "column": "Review",
