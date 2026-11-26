@@ -6,7 +6,9 @@ import { action, isRefused } from '../action';
 import type { ReturnTo } from '../../workers/pane-pool';
 import { cardInput, type CardInput } from './card-input';
 
-export type CardMoveInput = CardInput & { column: string; source: MoveSource };
+// `from` is the column the screen's own move took the card out of, which the board read here no longer
+// shows: the screen saves its move before it asks.
+export type CardMoveInput = CardInput & { column: string; source: MoveSource; from?: string };
 
 export type CardMovePorts = {
   // The project's board, without salvage: a move is committed, so a card file that does not parse is
@@ -40,12 +42,13 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
   input(raw) {
     const card = cardInput(raw);
     if (isRefused(card)) return card;
-    const { column, source } = raw;
+    const { column, source, from } = raw;
     if (typeof column !== 'string' || column.trim() === '') return { refused: 'move needs a card id and a column' };
     if (!isMoveSource(source)) return { refused: 'a move needs a source' };
-    return { ...card, column, source };
+    if (from !== undefined && typeof from !== 'string') return { refused: 'a move\'s from must be a column name' };
+    return { ...card, column, source, from };
   },
-  async run(ports, { projectPath, id, column, source }) {
+  async run(ports, { projectPath, id, column, source, from }) {
     const { board, brokenFiles } = ports.read(projectPath);
     if (brokenFiles.length > 0) return { refused: brokenFilesRefusal(brokenFiles) };
     if (source === 'user' && movedOn(board, id, column)) return { output: `card ${id} has moved on from ${column}`, ran: 'nothing', started: '' };
@@ -63,7 +66,7 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
     // included: the worktree's board then shows the card where main has it. The ship itself writes no
     // board on the branch (ship-decision-3).
     await ports.published(projectPath);
-    const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id, returnTo: returnTo(board, id, column) });
+    const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id, returnTo: returnTo(board, id, column, from ?? null) });
     // The move stays written: a card refused a ship or a review is still where it was put, and the
     // refusal says why nothing started there.
     if (isRefused(started)) return { refused: `${moved.output}; ${started.refused}` };
@@ -79,11 +82,14 @@ function movedOn(board: Board, id: string, column: string): boolean {
   return at !== null && named !== -1 && at.column !== named;
 }
 
-// The move a withdrawal undoes: the column the card was in before this move and the one it entered,
-// or null when it was there already (the screen saves its move before it asks) or is not on the board.
-function returnTo(board: Board, id: string, column: string): ReturnTo | null {
+// The move a withdrawal undoes: the column the card was in before this move and the one it entered.
+// A card already there was moved by the screen, which says where from; with no other column named, as
+// for `s` pressed on a card where it stands, or a card not on the board, there is nothing to undo.
+function returnTo(board: Board, id: string, column: string, from: string | null): ReturnTo | null {
   const at = selectionOf(board, id);
   const into = columnNamed(board, column);
-  if (at === null || into === -1 || at.column === into) return null;
-  return { from: board.columns[at.column].name, into: board.columns[into].name };
+  if (at === null || into === -1) return null;
+  const before = at.column === into && from !== null ? columnNamed(board, from) : at.column;
+  if (before === -1 || before === into) return null;
+  return { from: board.columns[before].name, into: board.columns[into].name };
 }

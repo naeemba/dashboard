@@ -33,8 +33,8 @@ function columnOf(board: Board): string | undefined {
   return board.columns.find((column) => column.cards.some((card) => card.id === 'card'))?.name;
 }
 
-async function move(ports: CardMovePorts, column: string, source: MoveSource = 'command') {
-  const input = cardMove.input({ projectPath: PROJECT, id: 'card', column, source });
+async function move(ports: CardMovePorts, column: string, source: MoveSource = 'command', from?: string) {
+  const input = cardMove.input({ projectPath: PROJECT, id: 'card', column, source, from });
   if ('refused' in input) throw new Error(input.refused);
   return cardMove.run(ports, input);
 }
@@ -49,9 +49,17 @@ describe('card.move', () => {
     });
     await move(ports, 'Ship');
     await move(ports, 'Review');
-    // The screen has saved its own move before it asks: the card is already there.
+    // The screen has saved its own move before it asks: the card is already there, and only the
+    // column the screen names says where it came from.
     await move(ports, 'Review', 'user');
-    expect(asked).toEqual([{ from: 'Todo', into: 'Ship' }, { from: 'Ship', into: 'Review' }, null]);
+    await move(ports, 'Review', 'user', 'Doing');
+    await move(ports, 'Review', 'user', 'Review');
+    await move(ports, 'Review', 'user', 'Nowhere');
+    expect(asked).toEqual([{ from: 'Todo', into: 'Ship' }, { from: 'Ship', into: 'Review' }, null, { from: 'Doing', into: 'Review' }, null, null]);
+  });
+
+  it('refuses a from that is not a column name', () => {
+    expect(cardMove.input({ projectPath: PROJECT, id: 'card', column: 'Ship', source: 'user', from: 3 })).toEqual({ refused: 'a move\'s from must be a column name' });
   });
 
   it('writes the move, then ships a card entering Ship', async () => {

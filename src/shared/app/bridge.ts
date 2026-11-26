@@ -107,7 +107,8 @@ export type Refused = { refused: string };
 // `started` is what the entry's action answered, empty when it ran none. CardInput is what every
 // card action starts from: the project's folder and the card's id.
 export type CardInput = { projectPath: string; id: string };
-export type CardMoveRequest = CardInput & { column: string };
+// `from` is the column the screen's move took the card out of, for a withdrawn ship or review to undo.
+export type CardMoveRequest = CardInput & { column: string; from?: string };
 export type CardMoveResult = { output: string; ran: ColumnEntry; started: string };
 export type CardMoveAnswer = CardMoveResult | Refused;
 

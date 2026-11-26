@@ -94,3 +94,5 @@ One line per merged change: date and why.
   test: building them in every test took one past vitest's 5 s on the Windows CI job
 - 2026-11-26 — A withdrawn card goes back to the column its move took it from, and a review
   retried by hand starts through the pane pool like every other start (workers-decision-11)
+- 2026-11-26 — A card moved on the board screen goes back when withdrawn too: the screen names
+  the column it came from on card:move (workers-decision-11)

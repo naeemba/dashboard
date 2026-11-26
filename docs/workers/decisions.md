@@ -633,8 +633,8 @@ review sweep's own starts could push past a main that counted perfectly.
   (`withdrawnColumn`): main unqueues a card it moved from Todo into Ship, and the card is in Todo
   again rather than sitting in Ship with nothing coming. Only a card still where the move put it
   goes back, and never into Review, whose entry would start the review being withdrawn. A move made
-  on the board screen is saved before the app hears of it, so the column it came from is not known
-  and the card stays.
+  on the board screen is saved before the app hears of it, so the screen names the column it came
+  from (`from` on card:move), and a drag or key move goes back the same as the command's.
 - **No start goes around it**, the review sweep's retry of a review a person started included: it
   goes through card.review, as every other review start does.
 - **The pane and worktree are picked when the entry starts, never when it is queued.** Six queued
