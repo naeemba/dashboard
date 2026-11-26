@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T10:27:36.542Z",
-  "updatedAt": "2026-11-26T10:28:23.128Z",
+  "updatedAt": "2026-11-26T10:57:21.205Z",
   "branch": "the-manager-page-gets-a-browser-of-its-own",
-  "column": "Doing",
-  "order": 0
+  "pullRequest": 391,
+  "comments": [
+    {
+      "at": "2026-11-26T10:57:21.161Z",
+      "body": "Pull request #391 opened: The manager page gets a browser of its own https://github.com/naeemba/dashboard/pull/391"
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }

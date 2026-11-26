@@ -5,7 +5,19 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-18T11:10:00.874Z",
-  "updatedAt": "2026-11-18T11:10:00.874Z",
-  "column": "Backlog",
-  "order": 47
+  "updatedAt": "2026-11-26T10:53:04.599Z",
+  "branch": "running-app-guard-match-the-mac-install-pat",
+  "pullRequest": 390,
+  "comments": [
+    {
+      "at": "2026-11-26T10:43:44.303Z",
+      "body": "From main, 2026-11-26: INSTALLED in running-app-guard.ts:56 puts anyCase() on the Windows parts but leaves /Applications/Dashboard.app case-sensitive; tests use only the capitalised path."
+    },
+    {
+      "at": "2026-11-26T10:53:04.565Z",
+      "body": "Pull request #390 opened: Running-app guard: match the mac install path in any case https://github.com/naeemba/dashboard/pull/390"
+    }
+  ],
+  "column": "Review",
+  "order": 0
 }

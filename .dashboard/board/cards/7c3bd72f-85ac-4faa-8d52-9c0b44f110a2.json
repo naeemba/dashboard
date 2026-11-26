@@ -4,6 +4,19 @@
   "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
   "priority": "low",
   "parent": null,
-  "column": "Backlog",
-  "order": 11
+  "updatedAt": "2026-11-26T10:57:40.709Z",
+  "branch": "split-board-view-ts-along-its-drag-and-drop",
+  "pullRequest": 392,
+  "comments": [
+    {
+      "at": "2026-11-26T10:43:34.193Z",
+      "body": "From main, 2026-11-26: board-view.ts is at 599 code lines against the 600 max-lines limit; the drag-and-drop functions are around :506-569."
+    },
+    {
+      "at": "2026-11-26T10:57:40.662Z",
+      "body": "Pull request #392 opened: Move the board's drag and drop out of board-view.ts https://github.com/naeemba/dashboard/pull/392"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }
