@@ -5,6 +5,35 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-26: keeping the hidden manager painted is not kept
+
+The question was whether Ctrl+1 gets faster if the hidden manager page stays
+painted under the page in front, rather than moved off screen
+(`.page-manager[hidden] { visibility: visible; translate: none }`). This was
+the experiment #314 left open. Same machine and headless compositor, both
+builds of `main` from the same day. Two counts:
+
+- the `keys` step's tab-switch line, 5 runs each, one Ctrl+1 per run;
+- an unsaved script running 15 trips of Ctrl+1 then Ctrl+2, each press
+  timed alone, 3 runs each. One variant run is left out: machine load
+  pushed every press, both ways, to 0.1–13 s.
+
+| | moved off screen (now) | left painted |
+|---|---|---|
+| `keys`: Ctrl+1 to the manager | 120, 128, 144, 160, 160 ms | 112, 136, 144, 160, 272 ms |
+| `keys`: project tabs, median per run | 32–40 ms | 32–64 ms |
+| 15 trips: Ctrl+1, median per run | 32, 40, 48 ms | 56, 64 ms |
+| 15 trips: Ctrl+2 to alpha, median per run | 32 ms | 24, 32 ms |
+
+- No gain, so the change is not made and pages still hide by moving off
+  screen. In the trips, the painted manager is the slower one.
+- The gap the experiment was for has mostly closed on `main`. In #314,
+  Ctrl+1 took 88 ms against 48 ms for alpha. It now takes 32–48 ms against
+  32 ms. What is left is the `keys` step's single Ctrl+1 at 120–160 ms. It is
+  the manager's first arrival in that run, and it pays the board re-read
+  (`BOARD_STALE_MS`) that #314 measured at 64–128 ms. Neither way of hiding
+  the page moves it.
+
 ## 2026-11-16: a shown terminal skips the selection redraw when nothing is selected
 
 Same machine, compositor and tooling as the first profile, `measure.mjs
