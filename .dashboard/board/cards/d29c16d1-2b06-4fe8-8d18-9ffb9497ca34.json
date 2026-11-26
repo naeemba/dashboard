@@ -5,13 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:39.822Z",
-  "updatedAt": "2026-11-26T08:59:31.133Z",
+  "updatedAt": "2026-11-26T08:59:41.586Z",
+  "branch": "heavy-checks-wait-on-a-machine-wide-lock-in",
   "comments": [
     {
       "at": "2026-11-26T08:59:31.133Z",
       "body": "From main: PR #380 (open) changes src/main/skills/work-card-skill.ts to open PRs with pr create; #382 (merged) rewrote the review prompt in src/main/ship/review.ts. Keep your edits to those files small and merge origin/main in if #380 lands first."
     }
   ],
-  "column": "Backlog",
-  "order": 73
+  "column": "Doing",
+  "order": 0
 }
