@@ -16,6 +16,9 @@ import { WORK_STATUS, changedFiles, isBoardPath, pastRemotes } from './ship';
 // in a worktree is the Review its agent wrote, and origin has moved the card to Done since. A file
 // the worktree deleted reached origin when origin's tip has no such file.
 //
+// `committedToo` false asks only the uncommitted files: the list's forced removal keeps the branch, so
+// a committed one is not lost with the folder.
+//
 // Null when every one did, otherwise the reason the folder stays, written to follow "kept <folder>:".
 // A fetch or git that fails keeps it too: silence is not "already there".
 type RunProgram = typeof runProgram;
@@ -31,19 +34,21 @@ function written(rawLog: string): Set<string> {
 }
 
 // The board files the worktree changed past the remotes (and past `mergedAt`, the commit its pull
-// request merged at), committed or not.
-async function boardFilesChanged(run: RunProgram, worktreePath: string, mergedAt?: string): Promise<string[]> {
+// request merged at), committed or not; only the uncommitted ones when `committedToo` is false.
+async function boardFilesChanged(run: RunProgram, worktreePath: string, mergedAt: string | undefined, committedToo: boolean): Promise<string[]> {
   const [status, committed] = await Promise.all([
     run('git', [...WORK_STATUS], worktreePath),
-    run('git', ['log', '--format=', '--name-only', '--no-renames', ...pastRemotes(mergedAt), '--', ...BOARD_PATHSPECS], worktreePath),
+    committedToo
+      ? run('git', ['log', '--format=', '--name-only', '--no-renames', ...pastRemotes(mergedAt), '--', ...BOARD_PATHSPECS], worktreePath)
+      : '',
   ]);
   const uncommitted = changedFiles(status).filter(isBoardPath);
   return [...new Set([...uncommitted, ...committed.split('\n').filter((path) => path !== '')])];
 }
 
-export async function boardNotOnOrigin(run: RunProgram, worktreePath: string, mergedAt?: string): Promise<string | null> {
+export async function boardNotOnOrigin(run: RunProgram, worktreePath: string, mergedAt?: string, committedToo = true): Promise<string | null> {
   try {
-    const paths = await boardFilesChanged(run, worktreePath, mergedAt);
+    const paths = await boardFilesChanged(run, worktreePath, mergedAt, committedToo);
     if (paths.length === 0) return null;
     const { remote, branch } = await baseBranch(worktreePath, run);
     const origin = `${remote}/${branch}`;

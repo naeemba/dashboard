@@ -6,3 +6,5 @@ One line per merged change: date and why.
 - 2026-09-28 #64 — A token trend on the manager page
 - 2026-11-02 #172 — The sweep runs on a thread of its own, so the first one after a launch no longer
   stalls panes
+- 2026-11-26 — Each log's counts are saved in userData, so a launch reads only the logs written
+  since the last run: 36 CPU-seconds down to 0.3

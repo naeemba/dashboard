@@ -87,7 +87,7 @@ instance:
 | `measure.mjs soak $D [minutes]` | Five streaming workers and a tab-and-board round every minute, with memory after a GC each minute |
 | `measure.mjs memory $D` | Private memory of every Electron process and every child of main |
 | `measure.mjs scrollback $D [lines]` | Four workers on alpha each print `lines` (12000) lines. The renderer before and after, then a heap snapshot's biggest kinds |
-| `measure.mjs usage-sweep ~/.claude/projects` | No instance. The app's own `sweepUsage`, loaded through vite, on a real log folder, read-only: the first sweep, a later one, and the longest the thread was held. Then the first sweep again on the built `usage-worker.js` thread, as the app runs it, with how long main was held and its token total beside the in-process one |
+| `measure.mjs usage-sweep ~/.claude/projects` | No instance. The app's own `sweepUsage`, loaded through vite, on a real log folder, read-only: the first sweep, a later one, and the longest the thread was held. Then a launch's first sweep from the counts the first one saved (`usage-counts.ts`), with its token total beside the full read's. Then the first sweep again on the built `usage-worker.js` thread, as the app runs it, with how long main was held and its token total beside the in-process one |
 | `measure.mjs bundle $D` | Minified renderer bytes per package, from a source-mapped build into `$D` |
 | `measure.mjs profile <file.cpuprofile> [n]` | Self time per function of a profile written by the others |
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { NO_USAGE } from '../../shared/usage/usage';
 import { requestSweep, usageThread, type SweepRequest } from './usage-thread';
 
-const request: SweepRequest = { root: '/logs', now: 0, projects: [], paneSessions: new Map() };
+const request: SweepRequest = { root: '/logs', countsFile: '/counts.json', now: 0, projects: [], paneSessions: new Map() };
 
 // A thread that answers each request with whatever the test says, as a Worker would.
 function thread(answer: (emitter: EventEmitter) => void) {

@@ -5,8 +5,23 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:13:44.127Z",
-  "updatedAt": "2026-11-26T12:17:40.974Z",
+  "updatedAt": "2026-11-26T14:11:32.290Z",
   "branch": "cache-the-usage-sweep-s-per-file-counts-so",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 401,
+  "comments": [
+    {
+      "at": "2026-11-26T13:22:08.614Z",
+      "body": "Pull request #401 opened: Save the usage sweep's per-file counts so a launch rereads only changed logs https://github.com/naeemba/dashboard/pull/401"
+    },
+    {
+      "at": "2026-11-26T14:04:51.412Z",
+      "body": "Review loop converged, ready to merge. 2 rounds (floor-addressed): round 1 fixed 6 findings in 62f4c25e (medium: a log shrunk to no whole line kept and re-saved its old count, now forgotten before reading; save only when bytes changed; load/save schedule in its own tested function; measure.mjs passes the counts file; countsFile rename; usage README consistency), round 2 fixed stale 'first launch reads every log' wording in manager README and two comments (c160bac5, final check accepted). Nothing open, no conflicts, CI passed on c160bac5. Card scope and design unchanged."
+    },
+    {
+      "at": "2026-11-26T14:11:32.263Z",
+      "body": "Pull request #401 merged: Save the usage sweep's per-file counts so a launch rereads only changed logs https://github.com/naeemba/dashboard/pull/401"
+    }
+  ],
+  "column": "Done",
+  "order": 328
 }

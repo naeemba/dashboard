@@ -5,14 +5,23 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T14:49:26.436Z",
-  "updatedAt": "2026-11-26T12:17:14.814Z",
+  "updatedAt": "2026-11-26T13:37:05.843Z",
   "branch": "experiment-keep-the-hidden-manager-page-pai",
+  "pullRequest": 402,
   "comments": [
     {
       "at": "2026-11-26T10:43:18.634Z",
       "body": "Rescope from main, 2026-11-26 check: scripts/performance/measure.mjs has no manager-switch mode any more (removed with #314); its keys step's tab-switch line (measure.mjs:183) already times Ctrl+1. Measure with that, record the result in docs/performance/history.md, and only change the app if the numbers show a gain."
+    },
+    {
+      "at": "2026-11-26T13:21:27.493Z",
+      "body": "Pull request #402 opened: Record that keeping the hidden manager painted does not speed up Ctrl+1 https://github.com/naeemba/dashboard/pull/402"
+    },
+    {
+      "at": "2026-11-26T13:37:05.842Z",
+      "body": "Review loop on #402: floor-addressed in 1 round. 2 docs threads (low, nit) fixed in 20ba6295 and 945274d2, final check accepted both, nothing open on the review side and no conflict with main. CI on 945274d2: the checks job and CodeQL passed; the windows job failed on 2 finished-work.test.ts tests that hit the 5 s timeout. The PR only changes docs/performance/history.md, and main's same workflow failed then passed today, so this looks like a flaky Windows test, not this PR. Re-run the windows job before merging."
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 1
 }
