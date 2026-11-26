@@ -329,7 +329,8 @@
 }
 
 .search-list li.highlighted .search-detail,
-.whats-new-list li.highlighted .search-detail {
+.whats-new-list li.highlighted .search-detail,
+.anchored-list li.highlighted .search-detail {
   color: var(--white);
 }
 

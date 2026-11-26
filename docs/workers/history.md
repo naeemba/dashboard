@@ -83,3 +83,5 @@ One line per merged change: date and why.
 - 2026-11-26 — `pane run --worktree` fetches its base twice and, failing both, starts on the last
   fetched base with a warning: one session met nine transient `Permission denied (publickey)`
   refusals and its agent wrote retry loops by hand
+- 2026-11-26 — The workers popup opens just above the count, and the count shows a worker idle as
+  soon as its agent exits rather than at the next hook mark
