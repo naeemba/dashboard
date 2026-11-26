@@ -5,13 +5,17 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-07T13:54:58.728Z",
-  "updatedAt": "2026-11-26T11:59:43.102Z",
+  "updatedAt": "2026-11-26T12:16:23.387Z",
   "branch": "one-conversation-port-per-slot-in-chat-sess",
   "pullRequest": 399,
   "comments": [
     {
       "at": "2026-11-26T11:59:43.072Z",
       "body": "Pull request #399 opened: Read a slot's conversation in one place https://github.com/naeemba/dashboard/pull/399"
+    },
+    {
+      "at": "2026-11-26T12:16:23.387Z",
+      "body": "Converged, ready to merge. Review loop: 1 round, 2 findings (low, nit), both fixed: 32390965 start() reads its conversation in the folder it was handed; 4456d75e transcript reader renamed transcript so conversation names the slot's port. Final check accepted both. No conflicts. CI passed on 4456d75e. Nothing open; card scope and design unchanged."
     }
   ],
   "column": "Review",
