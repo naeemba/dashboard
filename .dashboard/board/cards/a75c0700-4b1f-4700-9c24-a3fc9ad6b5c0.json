@@ -1,0 +1,11 @@
+{
+  "id": "a75c0700-4b1f-4700-9c24-a3fc9ad6b5c0",
+  "title": "Pane queue keeps an entry whose card file briefly fails to parse",
+  "notes": "Left open by #408's review. pane-pool.ts:123 drops a queued entry as 'not on the board' when its card file fails to parse for a moment (for example mid-write during a board sync), so a queued ship silently vanishes. Fix only in the drain's readiness read: an unreadable card holds the entry, it does not drop it; queueRefusal and withdrawnColumn keep their board. The final check reverted a broader attempt (4485d81e) for nulling the board there too.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-26T16:50:47.524Z",
+  "updatedAt": "2026-11-26T16:50:47.525Z",
+  "column": "Backlog",
+  "order": 56
+}
