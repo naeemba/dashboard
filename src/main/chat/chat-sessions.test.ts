@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, liveConversation, mainSessionStart, relayed, runningConversation, shownPreferences, workerSessionStart } from './chat-sessions';
+import { afterReport, conversationReporter, flagSettingsOf, nextConversation, replayedFlagSettings, mainSessionStart, relayed, runningConversation, shownPreferences } from './chat-sessions';
+import { slotConversation } from './slot-conversation';
 
 describe('relayed', () => {
   const streamed = (event: unknown) => ({ type: 'stream_event', event });
@@ -31,28 +32,6 @@ describe('relayed', () => {
   it('relays a finished message', () => expect(relayed({ type: 'assistant' })).toBe(true));
   it('relays the suggested next prompt', () => expect(relayed({ type: 'prompt_suggestion' })).toBe(true));
   it('relays a prompt\'s lifecycle', () => expect(relayed({ type: 'command_lifecycle' })).toBe(true));
-});
-
-describe('workerSessionStart', () => {
-  it('starts a new worker under its own id and resumes one whose conversation is written', () => {
-    const worker = { id: '1:2', projectPath: '/work/api', session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
-    expect(workerSessionStart({ ...worker, resume: false })).toEqual({ sessionId: 'abc' });
-    expect(workerSessionStart({ ...worker, resume: true })).toEqual({ resume: 'abc' });
-  });
-});
-
-describe('liveConversation', () => {
-  const worker = { id: '1:2', projectPath: '/work/api', session: 'abc', name: 'api-terminal-2', hooks: {}, owner: 'main' as const, carryOnIn: () => undefined };
-
-  it('names a worker its own conversation once written, and never main\'s', () => {
-    expect(liveConversation({ ...worker, resume: true }, 'main')).toBe('abc');
-    expect(liveConversation({ ...worker, resume: false }, 'main')).toBeUndefined();
-  });
-
-  it('names main the remembered conversation', () => {
-    expect(liveConversation(undefined, 'main')).toBe('main');
-    expect(liveConversation(undefined, undefined)).toBeUndefined();
-  });
 });
 
 describe('mainSessionStart', () => {
@@ -128,20 +107,23 @@ describe('conversationReporter', () => {
 describe('nextConversation', () => {
   const screen = { id: '1:2', projectPath: '/work/api', session: 'abc', resume: true, name: 'api-terminal-2', hooks: {}, owner: 'you' as const, carryOnIn: () => undefined };
 
+  const onScreen = slotConversation(screen, 'mains', undefined);
+  const page = slotConversation(undefined, 'mains', undefined);
+
   it('keeps a screen opened by hand off main\'s remembered conversation and its held cut', () => {
-    expect(nextConversation(screen, screen, 'picked')).toEqual({ carryOnIn: 'picked' });
-    expect(nextConversation(screen, screen, undefined)).toEqual({ carryOnIn: null });
-    expect(nextConversation(screen, screen, { cutAt: 'm3' })).toEqual({ fork: 'm3' });
+    expect(nextConversation(onScreen, screen, 'picked')).toEqual({ carryOnIn: 'picked' });
+    expect(nextConversation(onScreen, screen, undefined)).toEqual({ carryOnIn: null });
+    expect(nextConversation(onScreen, screen, { cutAt: 'm3' })).toEqual({ fork: 'm3' });
   });
 
   it('has the page\'s main remember the id, forget it, or hold the cut', () => {
-    expect(nextConversation(undefined, undefined, 'picked')).toEqual({ remember: 'picked' });
-    expect(nextConversation(undefined, undefined, undefined)).toEqual({ remember: undefined });
-    expect(nextConversation(undefined, undefined, { cutAt: 'm3' })).toEqual({ cut: 'm3' });
+    expect(nextConversation(page, undefined, 'picked')).toEqual({ remember: 'picked' });
+    expect(nextConversation(page, undefined, undefined)).toEqual({ remember: undefined });
+    expect(nextConversation(page, undefined, { cutAt: 'm3' })).toEqual({ cut: 'm3' });
   });
 
   it('leaves main alone when the screen closed while its fork ran', () => {
-    expect(nextConversation(screen, undefined, 'forked')).toEqual({ nothing: true });
-    expect(nextConversation(screen, undefined, { cutAt: 'm3' })).toEqual({ nothing: true });
+    expect(nextConversation(onScreen, undefined, 'forked')).toEqual({ nothing: true });
+    expect(nextConversation(onScreen, undefined, { cutAt: 'm3' })).toEqual({ nothing: true });
   });
 });
