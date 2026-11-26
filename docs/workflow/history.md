@@ -69,3 +69,7 @@ One line per merged change: date and why.
 - 2026-11-26 — A pane's full test, build or typecheck run waits in `board guard` while another
   runs on the machine, and workers rerun only the failed files to tell a failure from load, after
   whole suites timed out at a load of 22-50 with several panes at once (workflow-decision-14)
+- 2026-11-26 — The nine bare `it.skipIf(win32)` tests #375 named, and a tenth in
+  `create-task-install.test.ts`, take a name from `windows-skips.ts`, new
+  `posixCommandsOnly` and `halfOpenSocketsOnly` among them, so each skip says why in its name
+  rather than a comment the next copy drops (workflow-rule-6)

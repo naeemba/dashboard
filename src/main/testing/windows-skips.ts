@@ -8,3 +8,11 @@ export const posixPathsOnly = it.skipIf(process.platform === 'win32');
 // A test that sets or reads POSIX file modes skips on Windows, which has none: chmod neither locks a
 // folder against writes nor leaves a mode to read back.
 export const posixModesOnly = it.skipIf(process.platform === 'win32');
+
+// A test that runs a POSIX shell script or command (a `#!/bin/sh` hook git runs, `env`, `cat`) skips on
+// Windows, which can run none of them.
+export const posixCommandsOnly = it.skipIf(process.platform === 'win32');
+
+// A test that half-closes a socket and reads the answer skips on Windows: a named pipe closes whole,
+// leaving nobody to read what the other side sends back.
+export const halfOpenSocketsOnly = it.skipIf(process.platform === 'win32');

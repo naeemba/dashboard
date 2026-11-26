@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { clone, remote, useGitTestEnvironment } from './create-task-git-fixture';
 import { createTaskScript, installCreateTask } from './create-task-install';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { posixModesOnly } from '../testing/windows-skips';
 
 useGitTestEnvironment();
 
@@ -43,7 +44,7 @@ describe('installCreateTask', () => {
     expect(statSync(createTaskScript(home)).mtimeMs).toBe(before);
   });
 
-  it.skipIf(!posix)('makes an installed program executable without rewriting it when only its mode is wrong', () => {
+  posixModesOnly('makes an installed program executable without rewriting it when only its mode is wrong', () => {
     const home = folder();
     const built = join(folder(), 'create-task-cli-entry.js');
     writeFileSync(built, 'program');

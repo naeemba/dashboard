@@ -6,6 +6,7 @@ import { BOARD_FILE_PATH, BOARD_FOLDER_PATH, writeBoard } from './board-store';
 import { boardOn as boardOnBranch, clone, dropsFirstConnection, git, remote, useGitTestEnvironment, writeLegacyBoard } from './create-task-git-fixture';
 import { SYNC_ATTEMPTS } from './board-sync';
 import { runCreateTask } from './create-task-program';
+import { posixCommandsOnly } from '../testing/windows-skips';
 
 // Real git, against a bare repository standing in for the remote: what the program promises is
 // about git — the card lands on the default branch there, and the branch it was run from is left
@@ -208,8 +209,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(pushesTo(bare)).toBe(SYNC_ATTEMPTS);
   });
 
-  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
-  it.skipIf(process.platform === 'win32')('fetches again when the connection dropped on the fetch', () => {
+  posixCommandsOnly('fetches again when the connection dropped on the fetch', () => {
     const bare = remote();
     const checkout = clone(bare, true);
     dropsFirstConnection(checkout, 'upload-pack');
@@ -218,8 +218,7 @@ describe('runCreateTask', { timeout: 60_000 }, () => {
     expect(boardOn(bare).columns.flatMap((column) => column.cards).map((card) => card.title)).toEqual(['Flaky']);
   });
 
-  // dropsFirstConnection fakes the drop with a POSIX shell script git cannot run on Windows.
-  it.skipIf(process.platform === 'win32')('files the card once when the connection dropped after the push landed', () => {
+  posixCommandsOnly('files the card once when the connection dropped after the push landed', () => {
     const bare = remote();
     const checkout = clone(bare, true);
     dropsFirstConnection(checkout, 'receive-pack');

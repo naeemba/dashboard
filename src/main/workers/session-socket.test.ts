@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { unacceptedLine, versionRefusal } from './app-handshake';
 import { askApp, listenForSessions, sessionSocketFolder, sessionSocketPath } from './session-socket';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { posixModesOnly } from '../testing/windows-skips';
+import { halfOpenSocketsOnly, posixModesOnly } from '../testing/windows-skips';
 
 describe('sessionSocketPath', () => {
   // The folder is the lock: only you can enter it, so only you can reach the socket inside.
@@ -57,9 +57,8 @@ describe('listenForSessions and askApp', () => {
   });
 
   // A command killed halfway through writing its request closes before the newline. It is refused like
-  // any request the app cannot read, not answered from half a line. Only where a socket stays half open
-  // is there anyone left to read the refusal, so a Windows pipe skips this.
-  it.skipIf(process.platform === 'win32')('refuses a request cut off before its newline', async () => {
+  // any request the app cannot read, not answered from half a line.
+  halfOpenSocketsOnly('refuses a request cut off before its newline', async () => {
     const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
@@ -89,7 +88,7 @@ describe('listenForSessions and askApp', () => {
 
   // A command from before #196 ended its whole request by closing its side, with no newline. It is
   // told to restart like any other build, not that its request could not be read.
-  it.skipIf(process.platform === 'win32')('refuses a half-closed whole request as another build', async () => {
+  halfOpenSocketsOnly('refuses a half-closed whole request as another build', async () => {
     const socket = sessionSocketPath(process.platform, temporaryFolder('socket-test-'), process.pid);
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: 'answered' }), () => undefined);
     await new Promise((resolve) => server.once('listening', resolve));
@@ -137,7 +136,7 @@ describe('listenForSessions and askApp', () => {
     expect(reply).toMatchObject({ ok: false, output: expect.stringContaining('stopped answering') });
   });
 
-  it.skipIf(process.platform === 'win32')('leaves the socket readable by this user alone, then says it is listening', async () => {
+  posixModesOnly('leaves the socket readable by this user alone, then says it is listening', async () => {
     const socket = path.join(temporaryFolder('socket-test-'), 'session.sock');
     let listening = false;
     const server = listenForSessions(socket, VERSION, async () => ({ ok: true, output: '' }), () => undefined, () => { listening = true; });
