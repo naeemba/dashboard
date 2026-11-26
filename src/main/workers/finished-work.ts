@@ -1,6 +1,7 @@
 import type { runProgram } from '../app/git';
 import { branchPullRequest } from '../board/merge-request';
-import { BEYOND_THE_BOARD, workChanges } from '../ship/ship';
+import { workChanges } from '../ship/ship';
+import { BOARD_PATHSPECS } from '../board/board-store';
 import { FETCH_TIMEOUT } from '../board/board-sync';
 
 // Whether removing a throwaway worktree would lose anything: changes nobody committed, or commits no
@@ -33,6 +34,9 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
 // not the upstream: a branch never pushed that is still where origin/main was has nothing to lose,
 // and a worker that checked out a pull request's branch has none. NaN, never 0, for an answer that is
 // not a number.
+// workChanges' rule for commits: what limits `git rev-list` to the ones touching anything but the board.
+const BEYOND_THE_BOARD = ['--', `:(exclude)${BOARD_PATHSPECS[0]}`] as const;
+
 export async function unpushedWork(run: RunProgram, worktreePath: string, mergedAt?: string): Promise<number> {
   const not = mergedAt === undefined ? [] : [mergedAt];
   const count = await run('git', ['rev-list', '--count', 'HEAD', '--not', ...not, '--remotes', ...BEYOND_THE_BOARD], worktreePath);
@@ -55,7 +59,7 @@ const pullRequestOf = (run: RunProgram, worktreePath: string, branch: string) =>
   branchPullRequest(run, worktreePath, branch, FETCH_TIMEOUT);
 
 // The commit the branch's pull request was merged at, or null while the one it stands for is not
-// merged. A worktree whose HEAD is that commit has nothing on it the merge did not take; its
+// merged. A worktree with nothing past that commit has nothing on it the merge did not take; its
 // `@{upstream}` cannot say so, because a merge that deletes the branch takes the upstream with it.
 export async function mergedHead(run: RunProgram, worktreePath: string, branch: string): Promise<string | null> {
   const pull = await pullRequestOf(run, worktreePath, branch);

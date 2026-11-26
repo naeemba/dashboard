@@ -13,7 +13,7 @@ const TWO_DAYS_AGO = NOW - 2 * AGENT_IDLE_MS;
 
 type Folder = {
   dirty?: boolean; merged?: string | null; process?: boolean; gh?: 'fails'; unpushed?: boolean; modifiedAt?: number;
-  locked?: true; refused?: boolean; branch?: string;
+  locked?: true; refused?: boolean; detached?: true;
 };
 
 // A project whose worktrees are these, every one clean, merged, nothing past it unpushed, untouched for two
@@ -26,8 +26,8 @@ async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPort
     projectPaths: () => [PROJECT],
     recorded: () => [],
     throwaways: async () => [],
-    list: async (projectPath) => Object.entries(folders).map(([worktreePath, { locked, branch }]) =>
-      ({ projectPath, worktreePath, branch: branch ?? 'b', ...(locked ? { locked } : {}) })),
+    list: async (projectPath) => Object.entries(folders).map(([worktreePath, { locked, detached }]) =>
+      ({ projectPath, worktreePath, branch: 'b', ...(locked ? { locked } : {}), ...(detached ? { detached } : {}) })),
     dirty: async (path) => at(path).dirty ?? false,
     mergedHead: async (path) => {
       if (at(path).gh === 'fails') throw new Error('gh: not signed in');
@@ -84,7 +84,7 @@ describe('leftoverSweep', () => {
 
   // No branch to ask the forge about: a day quiet and nothing unpushed, as an agent's.
   it('answers a detached card worktree by the agents\' rule', async () => {
-    const detached = { branch: 'detached 5f3e2d1', gh: 'fails' as const };
+    const detached = { detached: true as const, gh: 'fails' as const };
     expect(await sweep({
       [`${ROOT}/on-main`]: detached,
       [`${ROOT}/recent`]: { ...detached, modifiedAt: NOW - 60_000 },

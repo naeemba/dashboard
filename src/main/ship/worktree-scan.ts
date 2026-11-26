@@ -5,7 +5,7 @@ import { realPath } from '../app/real-path';
 import {
   diskUsageBytes, distinctWorktrees, parseWorktreeList, type GitWorktree, type ScannedWorktree, type WorktreeRecord,
 } from '../../shared/ship/git-worktrees';
-import { changedFiles } from './ship';
+import { workChanges } from './ship';
 import { createWorktreeSizes } from './worktree-sizes';
 
 // The manager's scan: every worktree git knows of in each project, the ones a ship made and every other
@@ -16,12 +16,12 @@ import { createWorktreeSizes } from './worktree-sizes';
 // Not commandOutput: that gives up after two seconds, and a folder with node_modules in it takes longer.
 const runFile = promisify(execFile);
 
-// Whether a worktree has uncommitted changes, or git could not answer for it. changedFiles is the
-// predicate worktree:remove asks, so a row and the removal it offers agree on what is in the way. A
+// Whether a worktree has uncommitted changes, or git could not answer for it. workChanges is the
+// predicate worktree:remove asks (removalChanges), so a row and the removal it offers agree on what is in the way. A
 // worktree git cannot read comes back unreadable rather than clean: silence is not no changes.
 export async function worktreeState(worktreePath: string): Promise<{ dirty: boolean; unreadable: boolean }> {
   try {
-    return { dirty: changedFiles(await git(['status', '--porcelain'], worktreePath)).length > 0, unreadable: false };
+    return { dirty: workChanges(await git(['status', '--porcelain'], worktreePath)).length > 0, unreadable: false };
   } catch {
     return { dirty: false, unreadable: true };
   }

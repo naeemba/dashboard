@@ -24,7 +24,7 @@ describe('parseWorktreeList', () => {
   it('lists every linked worktree and leaves the project checkout out', () => {
     expect(parseWorktreeList(LIST, '/code/crm')).toEqual([
       { projectPath: '/code/crm', worktreePath: '/code/crm.worktrees/feature', branch: 'feat/thing' },
-      { projectPath: '/code/crm', worktreePath: '/code/crm/.worktrees/pr 7', branch: 'detached 3333333' },
+      { projectPath: '/code/crm', worktreePath: '/code/crm/.worktrees/pr 7', branch: 'detached 3333333', detached: true },
       { projectPath: '/code/crm', worktreePath: '/code/gone', branch: 'gone' },
     ]);
   });

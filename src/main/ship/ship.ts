@@ -1,5 +1,6 @@
 import { basename, dirname, join } from 'node:path';
 import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
+import { BOARD_FOLDER_PATH } from '../board/board-store';
 import { slug } from '../../shared/app/slug';
 import { BUMP_VERSION, KEEP_VERSION, NO_REVIEW_LOOP, REVIEW_LOOP } from '../skills/work-card-skill';
 import type { BaseBranch } from '../app/base-branch';
@@ -82,11 +83,11 @@ export function workPrompt(cardId: string, bumpVersion: boolean, base: BaseBranc
   return `/work-card ${cardId} ${bumpVersion ? BUMP_VERSION : KEEP_VERSION} ${base.branch} ${base.remote} ${reviewLoop ? REVIEW_LOOP : NO_REVIEW_LOOP}`;
 }
 
-// Every file `git status --porcelain` named, whatever it is. This is git's own answer, so it is the
-// one to ask wherever git is the thing doing the refusing: `git worktree remove` counts the whole
-// working tree and will not be talked out of it.
+// Every file `git status --porcelain` named, whatever it is. This is git's own answer: `git worktree
+// remove` counts the whole working tree, so removalChanges forces git past the board's files rather
+// than asking a narrower question and letting git refuse.
 //
-// What asking the narrower question there costs, and it is the bug this split was written for: a
+// What asking the narrower question without forcing costs, and it is the bug this split was written for: a
 // worktree whose only change is the board move the agent has just written passes the app's check,
 // so nothing is refused and nothing is listed — and then git refuses anyway, and the only thing left
 // to put on the card is a raw `fatal: ... contains modified or untracked files`.
@@ -126,7 +127,8 @@ export function blockingChanges(porcelain: string): string[] {
 // worktrees sat a week in dashboard.worktrees/ on no more than that (2026-11-24). Every removal and
 // both sweeps ask this, so what a sweep lets go of, git is not left to refuse. The board's files and
 // no more of .dashboard/, unlike blockingChanges: the rest is written in the project, not a worktree.
-const isBoardPath = (path: string) => path.startsWith(`${DASHBOARD_FOLDER_NAME}/board`);
+// BEYOND_THE_BOARD (finished-work.ts) says the same for git, from the same board-store spelling.
+const isBoardPath = (path: string) => path.startsWith(BOARD_FOLDER_PATH);
 
 export function workChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !isBoardPath(path));
@@ -137,11 +139,9 @@ export function workChanges(porcelain: string): string[] {
 // dialog, after you said yes to losing what is in it, nothing is refused. workChanges, not
 // blockingChanges: the rest of .dashboard/ is still asked about.
 export function removalChanges(porcelain: string, force: boolean): { dirty: string[]; forced: boolean } {
-  return { dirty: force ? [] : workChanges(porcelain), forced: force || changedFiles(porcelain).length > 0 };
+  const changed = changedFiles(porcelain);
+  return { dirty: force ? [] : changed.filter((path) => !isBoardPath(path)), forced: force || changed.length > 0 };
 }
-
-// The same for commits: what limits `git rev-list` to the ones touching anything but the board.
-export const BEYOND_THE_BOARD = ['--', `:(exclude)${DASHBOARD_FOLDER_NAME}/board*`] as const;
 
 // How many of them there are, for the ship's refusal — the one place a count is worth printing,
 // because somebody pressed a key and is waiting on the answer in the status bar. The refusals nobody

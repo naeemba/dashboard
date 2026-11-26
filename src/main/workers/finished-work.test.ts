@@ -1,9 +1,9 @@
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runProgram } from '../app/git';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
 import { pullRequestMerged, unfinishedWork } from './finished-work';
 import { answeringPrograms as answering } from '../testing/answering-programs';
 
@@ -44,14 +44,15 @@ describe('unfinishedWork', () => {
 // The three worktrees that sat a week in dashboard.worktrees/ (2026-11-24), in a real repository whose
 // origin/main has a card and a source file. The forge is never reached: only git answers.
 describe('unfinishedWork, with the board a stale copy of origin\'s', () => {
+  useGitTestEnvironment();
   const gitOnly: typeof runProgram = (program, programArguments, cwd) =>
     program === 'git' ? runProgram(program, programArguments, cwd) : Promise.reject(new Error(`${program} failed`));
 
+  const CARD = '.dashboard/board/cards/a1.json';
+
   function checkout(): { folder: string; run: (...gitArguments: string[]) => void } {
     const folder = temporaryFolder('finished-work-');
-    const run = (...gitArguments: string[]) => {
-      execFileSync('git', ['-c', 'user.name=test', '-c', 'user.email=test@example.com', ...gitArguments], { cwd: folder });
-    };
+    const run = (...gitArguments: string[]) => { git(folder, ...gitArguments); };
     run('init', '--quiet', '--initial-branch', 'card');
     mkdirSync(join(folder, '.dashboard', 'board', 'cards'), { recursive: true });
     mkdirSync(join(folder, 'src'));
@@ -62,7 +63,6 @@ describe('unfinishedWork, with the board a stale copy of origin\'s', () => {
     run('update-ref', 'refs/remotes/origin/main', 'HEAD');
     return { folder, run };
   }
-  const CARD = '.dashboard/board/cards/a1.json';
 
   it('lets go of a worktree whose only change is its own card file', async () => {
     const { folder } = checkout();

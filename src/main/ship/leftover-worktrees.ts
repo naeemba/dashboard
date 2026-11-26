@@ -58,9 +58,9 @@ type Kind = 'card' | 'agent';
 // One that throws keeps the worktree, and the next sweep asks again. A detached card worktree has no
 // branch to ask the forge about, so it answers to the agents' rule: the one that sat in
 // dashboard.worktrees/ a week (2026-11-24) was already on origin/main.
-async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, branch, locked }: GitWorktree): Promise<boolean> {
+async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, branch, locked, detached }: GitWorktree): Promise<boolean> {
   if (locked || await ports.dirty(worktreePath)) return false;
-  if (kind === 'card' && !branch.startsWith('detached ')) {
+  if (kind === 'card' && !detached) {
     const merged = await ports.mergedHead(worktreePath, branch);
     if (merged === null || await ports.unpushed(worktreePath, merged)) return false;
   } else {
