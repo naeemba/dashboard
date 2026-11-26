@@ -5,7 +5,13 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-26T13:39:16.572Z",
-  "updatedAt": "2026-11-26T13:43:02.352Z",
+  "updatedAt": "2026-11-26T13:43:15.029Z",
+  "comments": [
+    {
+      "at": "2026-11-26T13:43:15.029Z",
+      "body": "Not flaky: the windows re-run of 45830087851 failed the same test again at 5019 ms: finished-work.test.ts > unfinishedWork, with the board a stale copy of origin's > lets go of a worktree whose only change is its own card file, once origin has held it. It blocks #402 and every PR's windows job."
+    }
+  ],
   "column": "Backlog",
   "order": 53
 }
