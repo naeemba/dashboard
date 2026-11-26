@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T13:03:26.403Z",
-  "updatedAt": "2026-11-26T12:02:44.921Z",
+  "updatedAt": "2026-11-26T12:10:35.762Z",
   "branch": "worktree-sweeps-treat-board-only-leftovers",
   "pullRequest": 393,
   "comments": [
@@ -24,6 +24,10 @@
     {
       "at": "2026-11-26T12:02:44.921Z",
       "body": "User's decision applied (f0b6b657): a board-only leftover is swept only once origin's default branch holds the worktree's version of each board file it changed, uncommitted or in an unpushed commit. Held means at the tip or anywhere in origin's history after a fetch, so a Review that origin has since moved to Done still counts. A version origin never held keeps the worktree, and the throwaway reason names the files; a failed fetch keeps it too. New tests: unsynced edit, unsynced board commit, deleted card, fetch failure. ship-decision-7 and the ship/workers README lines are updated. pnpm check passes, and CI passed on f0b6b657. Still open: d on a board-only worktree in the list still removes it without asking. Ready to merge."
+    },
+    {
+      "at": "2026-11-26T12:10:35.761Z",
+      "body": "Merged origin/main (after #396) into the branch as 359f468a. Git merged it cleanly with nothing to resolve. pnpm check passes, CI passed on 359f468a, and GitHub reports the PR mergeable. Ready to merge."
     }
   ],
   "column": "Review",
