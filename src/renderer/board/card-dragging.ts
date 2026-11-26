@@ -50,7 +50,7 @@ export function createCardDragging(host: CardDraggingPorts): CardDragging {
     event.dataTransfer.effectAllowed = 'move';
   }
 
-  // However the drag ended. A drop has already redrawn through change(); this is what puts the
+  // However the drag ended. A drop has already redrawn through host.move; this is what puts the
   // highlight on the grabbed card when you let go over nothing, or press Escape.
   function endDrag(): void {
     dropMarker.clear();
