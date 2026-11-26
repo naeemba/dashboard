@@ -1,9 +1,8 @@
 import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { pickedFolder, projectFromPath, readRecentPaths, rememberRecentPath, replacesProject, withRecentPath } from './projects';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 const exists = () => true;
 
@@ -97,20 +96,20 @@ describe('the recents file', () => {
 });
 
 describe('pickedFolder', () => {
-  posixPathsOnly('opens a folder that is there, resolved', () => {
-    expect(pickedFolder('/code/api/', '/home/you', exists)).toEqual({ path: '/code/api' });
+  it('opens a folder that is there, resolved', () => {
+    expect(pickedFolder('/code/api/', '/home/you', exists)).toEqual({ path: resolve('/code/api') });
   });
 
-  posixPathsOnly('reads ~ as the home folder', () => {
-    expect(pickedFolder('~/code/api', '/home/you', exists)).toEqual({ path: '/home/you/code/api' });
-    expect(pickedFolder('~', '/home/you', exists)).toEqual({ path: '/home/you' });
+  it('reads ~ as the home folder', () => {
+    expect(pickedFolder('~/code/api', '/home/you', exists)).toEqual({ path: resolve('/home/you/code/api') });
+    expect(pickedFolder('~', '/home/you', exists)).toEqual({ path: resolve('/home/you') });
   });
 
   it('refuses a relative path, which names no place on the host', () => {
     expect(pickedFolder('code/api', '/home/you', exists)).toEqual({ refused: 'No folder at code/api' });
   });
 
-  posixPathsOnly('refuses a path that is not a folder', () => {
-    expect(pickedFolder('/code/typo', '/home/you', () => false)).toEqual({ refused: 'No folder at /code/typo' });
+  it('refuses a path that is not a folder', () => {
+    expect(pickedFolder('/code/typo', '/home/you', () => false)).toEqual({ refused: `No folder at ${resolve('/code/typo')}` });
   });
 });

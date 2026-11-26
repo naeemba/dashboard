@@ -46,12 +46,20 @@ describe('removeWorktreeAsking', () => {
 
   it('names the uncommitted files, and forces only when asked a second time', async () => {
     const { bridge: port, removeWorktree } = bridge(
-      { ok: false, message: 'dirty', dirty: ['a.ts', 'b.ts', 'c.ts', 'd.ts'] },
+      { ok: false, message: '', dirty: ['a.ts', 'b.ts', 'c.ts', 'd.ts'] },
     );
     answers.push(true, true);
     await removeWorktreeAsking(port, entry, () => {});
     expect(asked[1]).toBe('fix-login has uncommitted changes: a.ts, b.ts, c.ts and 1 more.');
     expect(removeWorktree.mock.calls).toEqual([[entry.worktreePath, false, entry.projectPath], [entry.worktreePath, true, entry.projectPath]]);
+  });
+
+  it('names the board edits beside the uncommitted files when both would go', async () => {
+    const reason = 'its board edits of .dashboard/board/cards/a1.json never reached origin/main';
+    const { bridge: port } = bridge({ ok: false, message: reason, dirty: ['src/a.ts'] });
+    answers.push(true, false);
+    await removeWorktreeAsking(port, entry, () => {});
+    expect(asked[1]).toBe(`fix-login has uncommitted changes: src/a.ts, and ${reason}.`);
   });
 
   // git refuses files the dirty check exempts. Without the offer that worktree could never be removed.

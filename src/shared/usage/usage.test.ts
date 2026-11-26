@@ -87,6 +87,12 @@ describe('ranInProject', () => {
   it('leaves out a sibling whose name only starts the same way', () => {
     expect(ranInProject('/Users/sharp/work/api-docs', project, worktrees)).toBe(false);
   });
+
+  it('takes a Windows folder under the checkout or its worktrees, past a backslash', () => {
+    expect(ranInProject('C:\\work\\api\\src', 'C:\\work\\api', 'C:\\work\\api.worktrees')).toBe(true);
+    expect(ranInProject('C:\\work\\api.worktrees\\fix-login', 'C:\\work\\api', 'C:\\work\\api.worktrees')).toBe(true);
+    expect(ranInProject('C:\\work\\api-docs', 'C:\\work\\api', 'C:\\work\\api.worktrees')).toBe(false);
+  });
 });
 
 describe('formatTokens', () => {

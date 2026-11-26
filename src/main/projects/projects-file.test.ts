@@ -1,6 +1,6 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { bumpsVersion, findProjects, landsPullRequest, readProjects, type Project } from './projects-file';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 const FILE = `- name: new-crm
   aka: [crm]
@@ -142,10 +142,11 @@ describe('bumpsVersion', () => {
   const same = (folder: string) => folder;
   const file = '- name: a\n  path: ~/a\n  bumpVersion: true\n- name: b\n  path: /b\n';
 
-  posixPathsOnly('is the entry for the folder, matched through ~ and through a link', () => {
-    expect(bumpsVersion(file, '/home/me/a', '/home/me', same)).toBe(true);
+  it('is the entry for the folder, matched through ~ and through a link', () => {
+    const a = path.join('/home/me', 'a');
+    expect(bumpsVersion(file, a, '/home/me', same)).toBe(true);
     expect(bumpsVersion(file, '/b', '/home/me', same)).toBe(false);
-    expect(bumpsVersion(file, '/link-to-a', '/home/me', (folder) => (folder === '/link-to-a' ? '/home/me/a' : folder))).toBe(true);
+    expect(bumpsVersion(file, '/link-to-a', '/home/me', (folder) => (folder === '/link-to-a' ? a : folder))).toBe(true);
   });
 
   it('is false with no file, a file that does not read, or a folder it does not list', () => {

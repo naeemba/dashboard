@@ -1,13 +1,14 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { describeProject, initialPaths, NO_APP_DATA_MESSAGE, PROJECT_REQUEST, PROJECT_USAGE, runProjectCommand, type KnownFolders } from './project-cli';
 import { readProjects } from './projects-file';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 const FILE = '- name: new-crm\n  aka: [crm]\n  path: /crm\n- name: screensaver\n  aka: [mandala]\n  path: /screensaver\n';
+const HOME = path.resolve('/home/me');
 const NO_FOLDERS = () => { throw new Error('asked for the folders'); };
-const run = (words: string[], text: string | null = FILE, folders: () => KnownFolders = NO_FOLDERS) => runProjectCommand(words, text, 'projects.yaml', folders, '/home/me');
+const run = (words: string[], text: string | null = FILE, folders: () => KnownFolders = NO_FOLDERS) => runProjectCommand(words, text, 'projects.yaml', folders, HOME);
 const NONE_OPEN = () => null;
-const init = (text: string | null, folders: () => KnownFolders, words: string[] = []) => runProjectCommand(['init', ...words], text, 'projects.yaml', folders, '/home/me');
+const init = (text: string | null, folders: () => KnownFolders, words: string[] = []) => runProjectCommand(['init', ...words], text, 'projects.yaml', folders, HOME);
 
 describe('runProjectCommand', () => {
   it('answers no verb with the usage and an unknown one with its name', () => {
@@ -25,7 +26,7 @@ describe('runProjectCommand', () => {
   });
 
   // What the app had open at its last save, read from its own files: list never starts the app.
-  posixPathsOnly('marks the projects the app has open, and lists open ones the file does not', () => {
+  it('marks the projects the app has open, and lists open ones the file does not', () => {
     const open = () => ({ open: ['/crm', '/home/me/notes'], recent: [] });
     expect(run(['list'], FILE, open)).toEqual({
       ok: true,
@@ -43,10 +44,10 @@ describe('runProjectCommand', () => {
 });
 
 describe('project open, close and focus', () => {
-  posixPathsOnly('asks the app with the folder, ~ expanded, and the name, for a name or an aka in any case', () => {
+  it('asks the app with the folder, ~ expanded, and the name, for a name or an aka in any case', () => {
     expect(run(['open', 'Mandala'])).toEqual({ ok: true, ask: [PROJECT_REQUEST, 'open', '/screensaver', 'screensaver'] });
     expect(run(['close', 'new-crm'], '- name: new-crm\n  path: ~/Workspace/new-crm\n'))
-      .toEqual({ ok: true, ask: [PROJECT_REQUEST, 'close', '/home/me/Workspace/new-crm', 'new-crm'] });
+      .toEqual({ ok: true, ask: [PROJECT_REQUEST, 'close', path.join(HOME, 'Workspace', 'new-crm'), 'new-crm'] });
     expect(run(['focus', 'crm'])).toEqual({ ok: true, ask: [PROJECT_REQUEST, 'focus', '/crm', 'new-crm'] });
   });
 
@@ -57,8 +58,8 @@ describe('project open, close and focus', () => {
 });
 
 describe('project init', () => {
-  posixPathsOnly('writes from the known folders, and never over a file that is there', () => {
-    expect(init(null, () => ({ open: ['/home/me/crm'], recent: ['/home/me/crm'] }))).toEqual({ ok: true, file: expect.stringContaining('path: ~/crm'), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy with "dashboard project set" or by hand' });
+  it('writes from the known folders, and never over a file that is there', () => {
+    expect(init(null, () => ({ open: [path.join(HOME, 'crm')], recent: [path.join(HOME, 'crm')] }))).toEqual({ ok: true, file: expect.stringContaining(`path: ~/crm`), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy with "dashboard project set" or by hand' });
     expect(init('', NO_FOLDERS)).toEqual({ ok: false, message: 'projects.yaml already exists; init never overwrites it' });
     expect(init(null, NO_FOLDERS, ['now'])).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });
   });
@@ -73,7 +74,7 @@ describe('project init', () => {
 });
 
 describe('project add, set and remove', () => {
-  const edit = (words: string[], text: string | null = FILE) => runProjectCommand(words, text, 'projects.yaml', NO_FOLDERS, '/home/me', (folder) => folder);
+  const edit = (words: string[], text: string | null = FILE) => runProjectCommand(words, text, 'projects.yaml', NO_FOLDERS, HOME, (folder) => folder);
   const written = (words: string[], text: string | null = FILE) => {
     const answer = edit(words, text);
     if (!answer.ok || !('file' in answer) || answer.file === undefined) throw new Error(JSON.stringify(answer));
@@ -81,8 +82,8 @@ describe('project add, set and remove', () => {
     return read.ok ? read.projects.find((project) => project.name === 'screensaver') : read;
   };
 
-  posixPathsOnly('adds a folder with its flags, the name from the folder unless given', () => {
-    expect(edit(['add', '~/api', '--aka', 'backend, server', '--about=The API'])).toMatchObject({ ok: true, output: 'added api in projects.yaml', file: expect.stringContaining('- name: api\n  aka: [backend, server]\n  path: ~/api\n  about: The API\n') });
+  it('adds a folder with its flags, the name from the folder unless given', () => {
+    expect(edit(['add', '~/api', '--aka', 'backend, server', '--about=The API'])).toMatchObject({ ok: true, output: 'added api in projects.yaml', file: expect.stringContaining(`- name: api\n  aka: [backend, server]\n  path: ~/api\n  about: The API\n`) });
     expect(edit(['add', '/work/x', '--name', 'thing'])).toMatchObject({ ok: true, output: 'added thing in projects.yaml' });
     expect(edit(['add', '/crm'])).toEqual({ ok: false, message: '/crm is already listed, as new-crm' });
   });

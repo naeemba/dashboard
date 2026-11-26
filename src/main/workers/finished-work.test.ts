@@ -1,6 +1,6 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { runProgram } from '../app/git';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
@@ -45,22 +45,27 @@ describe('unfinishedWork', () => {
 // The three worktrees that sat a week in dashboard.worktrees/ (2026-11-24), in a real repository
 // whose origin (a bare repository) has a card and a source file. The forge is never reached: only git
 // answers. `synced` writes the card on origin's main the way the board's sync does, from another clone.
+// The repository is built once and copied for each test: a git process costs a Windows runner a few
+// hundred ms, and building it in every test took one of them past vitest's 5 s. Each clone names its
+// origin by a relative path, so a copy fetches from and pushes to its own copy of origin.
 describe('unfinishedWork, with the board a stale copy of origin\'s', () => {
   useGitTestEnvironment();
   const gitOnly: typeof runProgram = (program, programArguments, cwd, options) =>
     program === 'git' ? runProgram(program, programArguments, cwd, options) : Promise.reject(new Error(`${program} failed`));
 
   const CARD = '.dashboard/board/cards/a1.json';
+  const template = temporaryFolder('finished-work-');
 
-  function checkout() {
-    const origin = temporaryFolder('finished-work-origin-');
-    git(origin, 'init', '--quiet', '--bare', '--initial-branch', 'main');
+  beforeAll(() => {
+    // --template= leaves out git's sample hooks, files every test would copy for nothing.
+    git(template, 'init', '--quiet', '--template=', '--bare', '--initial-branch', 'main', 'origin');
     const clone = (name: string) => {
-      const folder = join(temporaryFolder(name), 'work');
-      git(dirname(folder), 'clone', '--quiet', origin, folder);
+      git(template, 'clone', '--quiet', '--template=', 'origin', name);
+      const folder = join(template, name);
+      git(folder, 'remote', 'set-url', 'origin', '../origin');
       return folder;
     };
-    const seed = clone('finished-work-seed-');
+    const seed = clone('seed');
     mkdirSync(join(seed, '.dashboard', 'board', 'cards'), { recursive: true });
     mkdirSync(join(seed, 'src'));
     writeFileSync(join(seed, CARD), '{"column":"Doing"}');
@@ -68,16 +73,21 @@ describe('unfinishedWork, with the board a stale copy of origin\'s', () => {
     git(seed, 'add', '-A');
     git(seed, 'commit', '--quiet', '-m', 'start');
     git(seed, 'push', '--quiet', 'origin', 'HEAD:main');
-    const folder = clone('finished-work-');
-    const run = (...gitArguments: string[]) => { git(folder, ...gitArguments); };
-    run('checkout', '--quiet', '-b', 'card');
+    git(clone('work'), 'checkout', '--quiet', '-b', 'card');
+  });
+
+  function checkout() {
+    const root = temporaryFolder('finished-work-');
+    cpSync(template, root, { recursive: true });
+    const [origin, seed, work] = ['origin', 'seed', 'work'].map((name) => join(root, name));
+    const run = (...gitArguments: string[]) => { git(work, ...gitArguments); };
+    // The seed is the only clone that pushes, so it never needs to pull first.
     const synced = (column: string) => {
-      git(seed, 'pull', '--quiet', 'origin', 'main');
       writeFileSync(join(seed, CARD), `{"column":"${column}"}`);
       git(seed, 'commit', '--quiet', '-am', `board: ${column}`);
       git(seed, 'push', '--quiet', 'origin', 'HEAD:main');
     };
-    return { folder, run, synced, origin };
+    return { folder: work, run, synced, origin };
   }
 
   // Its Review reached origin, and origin has moved the card on to Done since.

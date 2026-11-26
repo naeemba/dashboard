@@ -61,3 +61,5 @@ One line per merged change: date and why.
 - 2026-11-26 — A worktree holding only board changes or board-only commits, or detached on
   origin/main, is no longer kept by either sweep once origin's default branch holds those board
   files: five sat in dashboard.worktrees/ for ten days (ship-decision-7)
+- 2026-11-26 — `d` in the worktree list asks before removing a worktree whose board edits never
+  reached origin's default branch: one keypress lost a card edit made offline (ship-decision-7)

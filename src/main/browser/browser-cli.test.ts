@@ -1,6 +1,6 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { evalRequest, parseBrowserCommand, wholeFiles } from './browser-cli';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 const command = (...words: string[]) => {
   const parsed = parseBrowserCommand(words);
@@ -54,9 +54,10 @@ describe('parseBrowserCommand', () => {
 });
 
 describe('wholeFiles', () => {
-  posixPathsOnly('reads a file from home, whole, or from the folder the command runs in', () => {
-    expect(wholeFiles(['~/cv.pdf', '/tmp/a.pdf', 'docs/b.pdf'], '/home/me', '/work/api'))
-      .toEqual(['/home/me/cv.pdf', '/tmp/a.pdf', '/work/api/docs/b.pdf']);
+  it('reads a file from home, whole, or from the folder the command runs in', () => {
+    const api = path.resolve('/work/api');
+    expect(wholeFiles(['~/cv.pdf', '/tmp/a.pdf', 'docs/b.pdf'], '/home/me', api))
+      .toEqual([path.join('/home/me', 'cv.pdf'), '/tmp/a.pdf', path.join(api, 'docs', 'b.pdf')]);
   });
 });
 

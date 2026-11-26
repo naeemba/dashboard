@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readWorktrees } from './worktree-store';
@@ -6,6 +6,7 @@ import { worktreeKeeper } from './worktree-keeper';
 import type { WorktreeEntry, WorktreeList } from '../../shared/app/bridge';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
 
 const folder = temporaryFolder('dashboard-keeper-');
 const projectPath = join(folder, 'project');
@@ -61,6 +62,63 @@ describe('remove', () => {
     await pending;
     keeper.dropDead();
     expect(keeper.entries()).toEqual([]);
+  });
+
+  describe('with a check of what is past the board', () => {
+    useGitTestEnvironment();
+
+    const CARD = '.dashboard/board/cards/a1.json';
+
+    // A worktree whose one change is a card's file: what the board's force lets go.
+    function boardOnlyWorktree() {
+      const project = join(temporaryFolder('dashboard-keeper-git-'), 'project');
+      mkdirSync(project);
+      git(project, 'init', '--quiet', '--initial-branch', 'main');
+      mkdirSync(join(project, '.dashboard', 'board', 'cards'), { recursive: true });
+      writeFileSync(join(project, CARD), '{"column":"Doing"}');
+      git(project, 'add', '-A');
+      git(project, 'commit', '--quiet', '-m', 'start');
+      const worktreePath = join(project, '..', 'card');
+      git(project, 'worktree', 'add', '--quiet', '-b', 'card', worktreePath);
+      writeFileSync(join(worktreePath, CARD), '{"column":"Review"}');
+      return { project, worktreePath };
+    }
+
+    it('keeps the folder in the reason the check gives', async () => {
+      const { project, worktreePath } = boardOnlyWorktree();
+      const { keeper } = keeperWith([], new Map());
+      const reason = 'its board edits of .dashboard/board/cards/a1.json never reached origin/main';
+      expect(await keeper.remove(worktreePath, false, project, async () => reason)).toEqual({ ok: false, message: reason, dirty: [] });
+      expect(existsSync(worktreePath)).toBe(true);
+    });
+
+    it('removes it when the check has no reason', async () => {
+      const { project, worktreePath } = boardOnlyWorktree();
+      const { keeper } = keeperWith([], new Map());
+      expect(await keeper.remove(worktreePath, false, project, async () => null)).toMatchObject({ ok: true });
+      expect(existsSync(worktreePath)).toBe(false);
+    });
+
+    it('gives the reason beside the work changes when both are in the way', async () => {
+      const { project, worktreePath } = boardOnlyWorktree();
+      writeFileSync(join(worktreePath, 'a.ts'), 'work');
+      const { keeper } = keeperWith([], new Map());
+      const reason = 'its board edits of .dashboard/board/cards/a1.json never reached origin/main';
+      const refused = await keeper.remove(worktreePath, false, project, async () => reason);
+      expect(refused).toEqual({ ok: false, message: reason, dirty: ['a.ts'] });
+      expect(existsSync(worktreePath)).toBe(true);
+    });
+
+    it('does not ask about a clean worktree, whose unforced remove loses no commit', async () => {
+      const { project, worktreePath } = boardOnlyWorktree();
+      git(worktreePath, 'commit', '--quiet', '-am', 'board: move a1');
+      const { keeper } = keeperWith([], new Map());
+      let asked = false;
+      const check = async () => { asked = true; return 'never reached origin/main'; };
+      expect(await keeper.remove(worktreePath, false, project, check)).toMatchObject({ ok: true });
+      expect(existsSync(worktreePath)).toBe(false);
+      expect(asked).toBe(false);
+    });
   });
 
   it('answers yes for a path with no record and no project', async () => {

@@ -5,7 +5,13 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:06:45.517Z",
-  "updatedAt": "2026-11-26T12:06:45.517Z",
-  "column": "Backlog",
-  "order": 49
+  "updatedAt": "2026-11-26T12:20:43.307Z",
+  "comments": [
+    {
+      "at": "2026-11-26T12:20:30.355Z",
+      "body": "Review done, report at /tmp/pane-pool-review.md. Sound idea: every agent start already goes through pane.dispatch, and no cap exists in code today (the 4 rule lives only in main's conversation; c5b8a687's 8-worker OOM is the motivation). Design: one app-wide pool, cap workers.cap in settings.json (default 4). Gate the new-work doors only (new pane start, board ship, review sweep); restore, pane send and New Claude are never queued. A slot is held by running, blocked and paused (hook can't tell a CI wait from a test run); done and kept panes free it. FIFO plus --first, pane queue, pane unqueue, and --after <card> for file overlap (the app can't know a queued card's files). Pane and worktree are picked at start, never at queue time (freePaneIn would hand a reserved shell to a ship). Budget is checked in the app before each start, with 'no limit set' as no gate (default weeklyCap null makes budget exit 2). Start answers at once with started/queued q7, then a notice at start. Queue persisted to pane-queue.json. Deletes from main's prompt: claim+run, the 10-minute timeout, the budget-before-each-round paragraph, the slot counting."
+    }
+  ],
+  "column": "Done",
+  "order": 325
 }
