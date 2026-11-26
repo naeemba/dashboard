@@ -5,7 +5,7 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
-## 2026-11-26: keeping the hidden manager painted is not kept
+## 2026-11-26: keeping the hidden manager painted does not speed up Ctrl+1
 
 The question was whether Ctrl+1 gets faster if the hidden manager page stays
 painted under the page in front, rather than moved off screen
