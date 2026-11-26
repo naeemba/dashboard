@@ -1,0 +1,11 @@
+{
+  "id": "fd7581cf-3d48-4371-b553-4a8c2f26f198",
+  "title": "Deleting a board-only worktree from the list asks first when its board edits never reached GitHub",
+  "notes": "Follow-up to #393 (ship-decision-7). The sweeps now keep a worktree whose board edits are not on origin's default branch (boardNotOnOrigin in src/main/ship/board-on-origin.ts), but pressing d on a board-only worktree in the worktree list still force-removes it without asking. Example: a card edit made in a worktree while offline is gone after one keypress.\n\nDo: when d targets a worktree for which boardNotOnOrigin finds files, ask first (a confirm row the arrow keys walk, per conventions-rule-1) naming the files; a failed fetch counts as not on origin. A worktree whose board edits are all on origin is removed as today. The refusal's predicate is the one the sweeps use (errors-rule-1), with a decision test, and the help blurb and docs updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T12:06:32.539Z",
+  "updatedAt": "2026-11-26T12:06:32.539Z",
+  "column": "Backlog",
+  "order": 48
+}
