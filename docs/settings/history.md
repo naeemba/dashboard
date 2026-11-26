@@ -9,3 +9,4 @@ One line per merged change: date and why.
   (command-decision-6)
 - 2026-11-24 — The Budget rows: the limit (cap, pace or none), the weekly cap and the daily pace
   (command-decision-10)
+- 2026-11-26 — `opacity`, a see-through window behind solid text, read at launch
