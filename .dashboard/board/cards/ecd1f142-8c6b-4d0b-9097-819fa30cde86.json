@@ -1,0 +1,11 @@
+{
+  "id": "ecd1f142-8c6b-4d0b-9097-819fa30cde86",
+  "title": "Board card writes never leave the main checkout dirty",
+  "notes": "Retro 2026-11-26: in kamandsystem's main session, git pull failed 4 times with 'Your local changes to .dashboard/board/cards/*.json would be overwritten', and main sidestepped it with a throwaway worktree ('the board files the app keeps writing here'). The board command commits and pushes its own writes, so find which writer leaves uncommitted card files in the project checkout (the app's own UI writes, an offline fallback, a write raced against a pull, or a worktree board?) and make it commit them or never leave them there. Evidence: /tmp/retro2/00-ce-personal-kamandsystem.txt lines 498, 522, 547, 672, 697.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T08:24:29.163Z",
+  "updatedAt": "2026-11-26T08:24:29.163Z",
+  "column": "Backlog",
+  "order": 72
+}
