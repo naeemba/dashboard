@@ -25,6 +25,8 @@ export type BrowserView = {
   focus(): void;
   runCommand(command: BrowserCommand): void;
   statusLabel(): string;
+  // Every tab gone, the screen staying: the manager's on a host change, its page never discarded.
+  reset(): void;
   // The page is gone, and its tabs with it: its screen is measured and told of nothing more.
   close(): void;
 };
@@ -209,6 +211,12 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
     revoke: () => run('revoke', {}),
   };
 
+  // Main closes a project's tabs when this machine closes it, but a host's project, or one of ours
+  // left behind on joining a host, goes from this screen without main hearing: the page says so.
+  function reset(): void {
+    void bridge.browser('reset', { projectPath }).catch(() => undefined);
+  }
+
   return {
     element,
     focus: focusPage,
@@ -217,10 +225,9 @@ export function createBrowserView(options: BrowserOptions): BrowserView {
       const tab = shownTab();
       return tab === undefined ? 'no tab' : tabName(tab);
     },
-    // Main closes a project's tabs when this machine closes it, but a host's project, or one of ours
-    // left behind on joining a host, goes from this screen without main hearing: the page says so.
+    reset,
     close() {
-      void bridge.browser('reset', { projectPath }).catch(() => undefined);
+      reset();
       screens.delete(projectPath);
       resized.unobserve(page);
       window.removeEventListener('mouseup', endPress);

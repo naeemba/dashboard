@@ -148,8 +148,9 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     binding: options.binding,
   });
   ink.element.hidden = true;
-  // The notes view is the box and the page beside it, in the wrapper a project's page has (makeView): `.view` is what the stylesheet positions and hides, and `.page-manager .view` is
-  // what pushes it down below the strip.
+  // The notes view is the box and the page beside it, in the wrapper a project's page has (makeView):
+  // `.view` is what the stylesheet positions and hides, and `.page-manager .view` is what pushes it
+  // down below the strip.
   const notesView = makeView('notes', 'manager');
   notesView.append(notes.element, ink.element);
   const log = createLogView({
@@ -169,7 +170,7 @@ export function createManagerPage(options: ManagerPageOptions): Page {
   });
   const browserView = makeView('browser', 'manager');
   browserView.append(browser.element);
-  // Above the five views rather than inside one, so it is on screen whichever section is showing.
+  // Above the views rather than inside one, so it is on screen whichever section is showing.
   const strip = createSectionStrip(options.onSection);
   // Above the strip, and on screen whichever section is showing for the same reason the strip is.
   const markets = createMarketsView(options.bridge);

@@ -59,7 +59,8 @@ and that pane may not claim it again until the pane itself is let go
 back from that one too.
 
 The tabs close with the project's page: the project closed, or the screen
-joining another host or coming back from one. The sign-ins do not: cookies and storage are
+joining another host or coming back from one. The manager's page never closes, so its
+tabs close only on that host change. The sign-ins do not: cookies and storage are
 kept on disk per project folder, apart from every other project and from the
 app's own window, and the next open of the project is still signed in. A page is
 refused the camera, the microphone, the location, notifications and the screen,
