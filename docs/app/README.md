@@ -159,8 +159,8 @@ appears under its name without it and the umask cannot narrow it.
 ## Dependency holds
 
 `package.json` cannot carry a comment, so each deliberate hold is recorded here
-with its reason and the condition that lifts it. `package-pins.test.ts` fails when an exact
-hold below is written as a range.
+with its reason and the condition that lifts it. `package-pins.test.ts` fails
+when an exact hold below is written as a range.
 
 - `electron`, `@anthropic-ai/claude-agent-sdk`, `marked`, `highlight.js` and
   `yaml` stay on exact versions. Each is bumped by hand after reading its
