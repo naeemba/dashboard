@@ -38,7 +38,7 @@ export type BrowserRequest =
 export const evalRequest = (
   { tab, waitFor }: Extract<BrowserCommand, { verb: 'eval' }>,
   read: string | { failed: string },
-): { ok: true; request: BrowserRequest } | { ok: false; message: string } =>
+): { ok: true; request: Extract<BrowserRequest, { verb: 'eval' }> } | { ok: false; message: string } =>
   typeof read === 'string'
     ? { ok: true, request: { verb: 'eval', tab, waitFor, script: read } }
     : { ok: false, message: `the script file could not be read: ${read.failed}` };
