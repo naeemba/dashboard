@@ -4,14 +4,16 @@
 
 import { type GitHubPorts, isNetworkError, type Look, type ProgramAnswer, retried, RETRY_MINUTES } from './gh-answer';
 
-export const WRITE_LINES = `  pr create <gh pr create's flags> [--project <name|aka>]
+export const WRITE_LINES = `  pr create <gh pr create's flags>
   pr ready <number|url|branch> [--undo] [--project <name|aka>]
   pr comment <number|url|branch> --body <text> [--project <name|aka>]`;
 
 export const WRITE_HELP = `create, ready and comment are gh's, made safe to run again: create prints the branch's open
-pull request when it has one, and ready says when it is ready already (a draft already, with
---undo). On a network error or a 5xx from GitHub each looks at the pull request before trying again,
-for about four minutes, so a lost answer never opens a second pull request or posts a comment twice.`;
+pull request when it has one (its --head branch, in its --repo), and ready says when it is ready
+already (a draft already, with --undo). On a network error or a 5xx from GitHub each looks at the
+pull request before trying again, for about ${RETRY_MINUTES} minutes, so a lost answer never opens a
+second pull request or posts a comment twice. create runs in the folder you are in, never with
+--project, whose folder is the project's main checkout and not the branch's worktree.`;
 
 const WRITE_VERBS = ['create', 'ready', 'comment'] as const;
 export type WriteVerb = typeof WRITE_VERBS[number];
@@ -38,7 +40,7 @@ export function parseWriteCommand(verb: WriteVerb, words: readonly string[]): Pa
 }
 
 // `words` once, and again after a network error only when `look` finds the lost try did not go through.
-async function safely(ports: GitHubPorts, words: string[], look: () => Promise<Look>, doing: string): Promise<ProgramAnswer> {
+async function safely(ports: GitHubPorts, words: string[], look: (() => Promise<Look>) | undefined, doing: string): Promise<ProgramAnswer> {
   const answer = await retried(ports, words, look);
   return isNetworkError(answer)
     ? { ok: false, output: `${answer.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes ${doing}; look before running it again` }
@@ -46,28 +48,45 @@ async function safely(ports: GitHubPorts, words: string[], look: () => Promise<L
 }
 
 // One read of the pull request: its answer, or unknown when that was lost too.
-async function read(ports: GitHubPorts, words: string[], done: (output: string) => string | undefined): Promise<Look> {
+async function readPullRequest(ports: GitHubPorts, words: string[], done: (output: string) => string | undefined): Promise<Look> {
   const answer = await ports.gh(words);
   if (isNetworkError(answer)) return 'unknown';
   const line = answer.ok ? done(answer.output.trim()) : undefined;
   return line === undefined ? 'not done' : { done: line };
 }
 
-// The open pull request of the branch gh pr create opens one for, by its url.
-const openOne = (ports: GitHubPorts) => read(ports, ['pr', 'view', '--json', 'state,url', '-q', 'select(.state == "OPEN") | .url'],
-  (url) => url === '' ? undefined : `${url}\nalready open for this branch`);
+// The value of a flag of gh pr create's, as `--head x`, `-H x` or `--head=x`.
+function flagValue(words: readonly string[], long: string, short: string): string | undefined {
+  const at = words.findIndex((word) => word === long || word === short);
+  return at === -1 ? words.find((word) => word.startsWith(`${long}=`))?.slice(long.length + 1) : words[at + 1];
+}
 
-const readiness = (ports: GitHubPorts, target: string, undo: boolean) => read(ports, ['pr', 'view', target, '--json', 'isDraft', '-q', '.isDraft'],
+// The open pull request, by its url, of the branch gh pr create opens one for: its --head, in its
+// --repo, else the folder's branch.
+function branchOpenPullRequest(ports: GitHubPorts, createWords: readonly string[]) {
+  const head = flagValue(createWords, '--head', '-H');
+  const repository = flagValue(createWords, '--repo', '-R');
+  const target = [...(head === undefined ? [] : [head]), ...(repository === undefined ? [] : ['--repo', repository])];
+  return readPullRequest(ports, ['pr', 'view', ...target, '--json', 'state,url', '-q', 'select(.state == "OPEN") | .url'],
+    (url) => url === '' ? undefined : `${url}\nalready open for this branch`);
+}
+
+const readiness = (ports: GitHubPorts, target: string, undo: boolean) => readPullRequest(ports, ['pr', 'view', target, '--json', 'isDraft', '-q', '.isDraft'],
   (draft) => draft === String(undo) ? `${target} is ${undo ? 'a draft' : 'ready for review'}` : undefined);
 
-const lastComment = (ports: GitHubPorts, target: string, body: string) => read(ports, ['pr', 'view', target, '--json', 'comments', '-q', '.comments[-1].body // ""'],
-  (last) => last === body.trim() ? `commented on ${target}` : undefined);
+// Whether one of the comments made since the post was asked (the `before`th on) has its body: an
+// earlier comment with the same words, or someone else's after it, says nothing about this post.
+const postedSince = (ports: GitHubPorts, target: string, body: string, before: string) => readPullRequest(ports, ['pr', 'view', target, '--json', 'comments', '-q', `.comments[${before}:] | map(.body)`],
+  (bodies) => {
+    const posted: unknown = JSON.parse(bodies || '[]');
+    return Array.isArray(posted) && posted.some((each) => typeof each === 'string' && each.trim() === body.trim()) ? `commented on ${target}` : undefined;
+  });
 
 export async function writePullRequest(ports: GitHubPorts, command: WriteCommand): Promise<ProgramAnswer> {
   if (command.verb === 'create') {
-    const before = await openOne(ports);
+    const before = await branchOpenPullRequest(ports, command.words);
     if (typeof before === 'object') return { ok: true, output: before.done };
-    return safely(ports, ['pr', 'create', ...command.words], () => openOne(ports), 'opening the pull request');
+    return safely(ports, ['pr', 'create', ...command.words], () => branchOpenPullRequest(ports, command.words), 'opening the pull request');
   }
   if (command.verb === 'ready') {
     const { target, undo } = command;
@@ -75,7 +94,11 @@ export async function writePullRequest(ports: GitHubPorts, command: WriteCommand
     if (typeof before === 'object') return { ok: true, output: `${before.done} already` };
     return safely(ports, ['pr', 'ready', target, ...(undo ? ['--undo'] : [])], () => readiness(ports, target, undo), `marking ${target}`);
   }
-  // Not looked at first: the same words posted twice on purpose, a round apart, are two comments.
+  // Not looked for first: the same words posted twice on purpose, a round apart, are two comments. The
+  // count before is what tells this post from an earlier one with the same words.
   const { target, body } = command;
-  return safely(ports, ['pr', 'comment', target, '--body', body], () => lastComment(ports, target, body), `commenting on ${target}`);
+  const count = await safely(ports, ['pr', 'view', target, '--json', 'comments', '-q', '.comments | length'], undefined, `reading ${target}'s comments`);
+  if (!count.ok) return count;
+  const before = count.output.trim();
+  return safely(ports, ['pr', 'comment', target, '--body', body], () => postedSince(ports, target, body, before), `commenting on ${target}`);
 }

@@ -13,7 +13,7 @@ its own verbs; this feature only picks the program.
 | `board` | the `board` command ([board](../board/README.md)) | list, show, add, move, set, comment; any of them with `--project <name>` |
 | `pane` | the `session` command ([workers](../workers/README.md)) | claim [--project], run [--card \| --worktree \| --in <folder>], list [--all] [--reports], send, release, finish, report, notify |
 | `project` | the `project` program ([projects](../projects/README.md)) | list, find, init, add, set, remove, open, close, focus |
-| `pr` | the `pr` program, here | land, wait, create, ready, comment; any of them with `--project` |
+| `pr` | the `pr` program, here | land, wait, create, ready, comment; all but create with `--project` |
 | `budget` | the `budget` program, here | none, --cap or --pace |
 | `browser` | the `browser` program ([browser](../browser/README.md)) | open [--project], tabs, claim, release, go, back, forward, reload, resize, reset, read, screenshot, snapshot, click, type, press, console, network |
 
@@ -39,7 +39,8 @@ a refused merge exits 1 and merges nothing. The last line is always the
 verdict, a failure's detail above it: `merged 12 at <sha>`, or `conflicts with main: <files> — merge
 origin/main into the branch, …`, the line main sends the worker. `pr wait <n>` is the same wait,
 retries and conflict check without the merge, ending `checks passed on <sha>`; both refuse a draft
-at once, since CI skips a draft and the wait never ended; a worker waiting on
+no checks start on, since a repository's CI may skip one, and wait on a draft whose checks run, as
+this repository's do; a worker waiting on
 its own pull request's CI runs it instead of a `sleep` and `gh run view` loop, which died on a TLS
 timeout. The wait is as long as CI takes: main runs it in the background at
 the longest timeout, and runs it again if that limit stops it. Once merged, the checkout on the base
@@ -53,13 +54,15 @@ in the rules the app allows every session (command-decision-5). It needs gh, nev
 
 `pr create`, `pr ready <n> [--undo]` and `pr comment <n> --body <text>` are gh's verbs made safe
 to run again (command-decision-11). `create` passes `gh pr create`'s flags through, and prints the
-branch's open pull request instead when it has one; `ready` says a pull request is ready already
-(a draft already, with `--undo`) without asking gh to mark it. On a lost answer or a 5xx, GraphQL's
-`non-200 OK status code: 502` and `Something went wrong while executing your query` among them,
-each reads the pull request before trying again, as long as `RETRY_WAITS_MS` lasts: open, as
-marked, or ending on the same comment is done, and a read lost too waits another round instead of
-acting twice. `comment` does not look first, since one body posted twice on purpose, a round apart,
-is two comments. Workers retried `gh pr create` by hand after a 502 that had opened it, five times,
+branch's open pull request instead when it has one (its `--head` branch, in its `--repo`); it runs
+in the folder it is called in, never with `--project`, whose folder is the main checkout's. `ready`
+says a pull request is ready already (a draft already, with `--undo`) without asking gh to mark it.
+On a lost answer or a 5xx, GraphQL's `non-200 OK status code: 502` and `Something went wrong while
+executing your query` among them, each reads the pull request before trying again, as long as
+`RETRY_WAITS_MS` lasts: open, as marked, or the body among the comments made since the post was
+asked (counted before it) is done, and a read lost too waits another round instead of acting twice.
+`comment` does not look first, since one body posted twice on purpose, a round apart, is two
+comments. Workers retried `gh pr create` by hand after a 502 that had opened it, five times,
 ending on `a pull request already exists`.
 
 `budget` reads the 7-day usage of the Claude account from

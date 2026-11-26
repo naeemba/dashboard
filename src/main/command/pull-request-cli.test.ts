@@ -1,23 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { isNetworkError, type ProgramAnswer, RETRY_WAITS_MS } from './gh-answer';
+import { fakeGitHub } from '../testing/fake-github';
+import { isNetworkError, RETRY_WAITS_MS } from './gh-answer';
 import { conflictedFiles, conflictLine, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
-
-// A gh that answers each command's first two words from the table, in order when a row has several.
-function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
-  const asked: string[] = [];
-  const waited: number[] = [];
-  return {
-    asked,
-    waited,
-    ports: {
-      gh: async (words: string[]) => {
-        asked.push(words.join(' '));
-        return answers[words.slice(0, 2).join(' ')].shift() ?? { ok: false, output: 'asked too often' };
-      },
-      wait: async (milliseconds: number) => { waited.push(milliseconds); },
-    },
-  };
-}
 
 const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' };
 const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
@@ -198,17 +182,24 @@ describe('landPullRequest', () => {
 });
 
 describe('waitOnPullRequest', () => {
+  const draft = { ok: true, output: `${open.output} true` };
+
   it('waits on the head commit\'s checks and merges nothing', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: 'all green' }] });
     expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'checks passed on abc123' });
     expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
   });
 
-  // CI skips a draft, so a wait on one waited forever.
-  it('refuses a draft at once, asking for no checks', async () => {
-    const github = fakeGitHub({ 'pr view': [{ ok: true, output: `${open.output} true` }] });
+  // This repository's CI runs on a draft: refusing every draft refused checks that had passed.
+  it('waits on a draft whose checks run', async () => {
+    const github = fakeGitHub({ 'pr view': [draft], 'pr checks': [{ ok: true, output: 'all green' }] });
+    expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'checks passed on abc123' });
+  });
+
+  it('refuses a draft no checks start on, asking for none of the repository\'s', async () => {
+    const github = fakeGitHub({ 'pr view': [draft, draft], 'pr checks': [none, none] });
     expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: false, output: expect.stringContaining('12 is a draft') });
-    expect(github.asked.some((each) => each.startsWith('pr checks'))).toBe(false);
+    expect(github.asked.some((each) => each.startsWith('pr list'))).toBe(false);
   });
 
   it('says what failed, as land does', async () => {

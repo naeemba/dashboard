@@ -15,15 +15,16 @@ export const PULL_REQUEST_USAGE = `pr — open, mark, comment on, wait on or lan
 ${WRITE_LINES}
 
 wait notes the pull request's head commit and waits for every check on it (gh pr checks --watch),
-merging nothing; a draft is refused at once, since CI does not run on it. land waits the same, then
-merges that commit: gh pr merge --merge --match-head-commit <sha>, so a push during the wait is refused rather than merged unchecked. No
-checks reported a minute after asking passes only in a repository whose recently merged pull
-requests reported no check; anywhere else it is refused, since its CI did not start on that commit (a
-push, or gh pr merge by hand, if it never will). A pull request GitHub says conflicts with its base is
-refused at once, naming the files, since CI does not run on it. A merge call that fails is checked
-against the pull request: merged at that commit is merged. A network error on any gh call is tried
-again for about four minutes, waiting longer each time. The last line is the verdict: \`merged <n>
-at <sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or why not. The wait is as
+merging nothing. land waits the same, then merges that commit: gh pr merge --merge
+--match-head-commit <sha>, so a push during the wait is refused rather than merged unchecked. No
+checks reported a minute after asking is refused on a draft, since a repository's CI may skip one,
+and otherwise passes only in a repository whose recently merged pull requests reported no check;
+anywhere else it is refused, since its CI did not start on that commit (a push, or gh pr merge by
+hand, if it never will). A pull request GitHub says conflicts with its base is refused at once,
+naming the files, since CI does not run on it. A merge call that fails is checked against the pull
+request: merged at that commit is merged. A network error on any gh call is tried again for about
+${RETRY_MINUTES} minutes, waiting longer each time. The last line is the verdict: \`merged <n> at
+<sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or why not. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; one stopped at that
 limit has not failed, run it again. Once merged, the checkout on the base branch (the project's own,
 or the worktree that has it) is fast-forwarded when it has nothing uncommitted, so no git pull is
@@ -101,8 +102,6 @@ async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked
   if (!head.ok) return head;
   const { state, sha, base, url, branch, draft } = readHead(head);
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
-  // CI skips a draft, so a wait on one would never end.
-  if (draft) return { ok: false, output: `pull request ${target} is a draft, and CI does not run on a draft; mark it ready (pr ready ${target}) and run it again` };
   // CI does not run on a pull request that conflicts: waiting on it would end in "no checks reported".
   if (conflicting(head)) return conflictAnswer(target, base, sha);
   const watch = () => patiently(ports, ['pr', 'checks', target, '--watch']);
@@ -119,6 +118,8 @@ async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked
   // commit, or a pull request that came to conflict after the first look.
   if (noChecks) {
     if (conflicting(await patiently(ports, stateAndHead(target)))) return conflictAnswer(target, base, sha);
+    // Some repositories' CI skips a draft and some runs on it, so only a draft with no checks is refused.
+    if (draft) return { ok: false, output: `no checks reported on ${sha}, and ${target} is a draft, which CI may skip; mark it ready (pr ready ${target}) and run it again if it should run` };
     const checkCount = recentCheckCount(url);
     if (checkCount === undefined) return { ok: false, output: `no checks reported on ${sha}, and gh gave no repository for ${target} to ask whether it has CI; ${target} is not merged` };
     const checksBefore = await patiently(ports, checkCount);

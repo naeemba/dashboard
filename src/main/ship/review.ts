@@ -182,7 +182,7 @@ function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
       '   `gh pr view`, `gh pr checks` or `gh run view` in between, and no foreground `sleep`, which is refused.',
       '   It waits on the commit the pull request ends on, asks again a minute on when CI has not started,',
       '   and rides out a network error; its last line is the verdict: `checks passed on <sha>`, a failed',
-      '   check, or the files the pull request conflicts on.',
+      '   check, the files the pull request conflicts on, or a draft no checks started on.',
     ],
     land: [
       `   land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, run in the`,

@@ -1,21 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ProgramAnswer } from './gh-answer';
+import { fakeGitHub } from '../testing/fake-github';
 import { parseWriteCommand, writePullRequest } from './pull-request-write-cli';
-
-// A gh that answers each command's first two words from the table, in order.
-function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
-  const asked: string[] = [];
-  return {
-    asked,
-    ports: {
-      gh: async (words: string[]) => {
-        asked.push(words.join(' '));
-        return answers[words.slice(0, 2).join(' ')]?.shift() ?? { ok: false, output: 'asked too often' };
-      },
-      wait: async () => {},
-    },
-  };
-}
 
 const badGateway = { ok: false, output: 'non-200 OK status code: 502 Bad Gateway body: ""' };
 const lost = { ok: false, output: 'Post "https://api.github.com/graphql": unexpected EOF' };
@@ -59,6 +44,14 @@ describe('pr create', () => {
     expect(tries(github, 'create')).toBe(1);
   });
 
+  it('looks at the --head branch in the --repo it is opened for, not the folder\'s', async () => {
+    const github = fakeGitHub({ 'pr view': [{ ok: true, output: url }] });
+    await writePullRequest(github.ports, { verb: 'create', words: ['-H', 'fix-it', '-R', 'acme/api', '--fill'] });
+    await writePullRequest(github.ports, { verb: 'create', words: ['--head=fix-it', '--repo=acme/api'] });
+    expect(github.asked[0]).toMatch(/^pr view fix-it --repo acme\/api --json/);
+    expect(github.asked[1]).toMatch(/^pr view fix-it --repo acme\/api --json/);
+  });
+
   it('passes a refusal through', async () => {
     const github = fakeGitHub({ 'pr view': [none], 'pr create': [{ ok: false, output: 'must first push the current branch' }] });
     expect(await writePullRequest(github.ports, { verb: 'create', words: [] })).toEqual({ ok: false, output: 'must first push the current branch' });
@@ -85,14 +78,26 @@ describe('pr ready', () => {
 });
 
 describe('pr comment', () => {
+  const count = (comments: number) => ({ ok: true, output: String(comments) });
+
   it('posts without looking first, and a lost post that landed is not posted twice', async () => {
-    const github = fakeGitHub({ 'pr comment': [lost], 'pr view': [{ ok: true, output: 'Review loop started\n' }] });
+    const github = fakeGitHub({ 'pr view': [count(3), { ok: true, output: '["Review loop started\\n","a reply"]' }], 'pr comment': [lost] });
     expect(await writePullRequest(github.ports, { verb: 'comment', target: '12', body: 'Review loop started' })).toEqual({ ok: true, output: 'commented on 12' });
     expect(tries(github, 'comment')).toBe(1);
+    expect(github.asked).toContain('pr view 12 --json comments -q .comments[3:] | map(.body)');
   });
 
-  it('posts again when the lost one is not there', async () => {
-    const github = fakeGitHub({ 'pr comment': [lost, { ok: true, output: `${url}#issuecomment-1` }], 'pr view': [{ ok: true, output: 'something else' }] });
-    expect(await writePullRequest(github.ports, { verb: 'comment', target: '12', body: 'hi' })).toEqual({ ok: true, output: `${url}#issuecomment-1` });
+  // A re-run loop posts the line its last run started with, so the last comment says nothing about
+  // this post.
+  it('posts again when the lost one is not among the comments since, even with an earlier one the same', async () => {
+    const github = fakeGitHub({ 'pr view': [count(3), { ok: true, output: '[]' }], 'pr comment': [lost, { ok: true, output: `${url}#issuecomment-1` }] });
+    expect(await writePullRequest(github.ports, { verb: 'comment', target: '12', body: 'Review loop started' })).toEqual({ ok: true, output: `${url}#issuecomment-1` });
+    expect(tries(github, 'comment')).toBe(2);
+  });
+
+  it('posts nothing when the comments cannot be counted', async () => {
+    const github = fakeGitHub({ 'pr view': [{ ok: false, output: 'no pull requests found' }] });
+    expect(await writePullRequest(github.ports, { verb: 'comment', target: '12', body: 'hi' })).toEqual({ ok: false, output: 'no pull requests found' });
+    expect(tries(github, 'comment')).toBe(0);
   });
 });
