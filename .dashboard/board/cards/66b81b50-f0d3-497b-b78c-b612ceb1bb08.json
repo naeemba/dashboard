@@ -1,0 +1,11 @@
+{
+  "id": "66b81b50-f0d3-497b-b78c-b612ceb1bb08",
+  "title": "Keep less terminal scrollback once a heap snapshot shows it dominates",
+  "notes": "From the Rust review (/tmp/rust-review.md section 4). The window renderer held 569 MB private after 21 h. Every pane gets scrollback: PANE_SCROLLBACK (src/renderer/app/page.ts:370), PANE_SCROLLBACK = 10000 (src/renderer/panes/pane.ts:34); xterm keeps 12 bytes a cell, so a full 200-column pane is about 24 MB and twenty about 480 MB. That is arithmetic, not measured.\n\nDo: first measure the real split with measure.mjs memory on the demo (a heap snapshot). If scrollback dominates, lower it for worker panes (for example 5,000 lines) or trim hidden and folded panes; leave main's own pane as is unless the numbers say otherwise. Record the before/after in docs/performance/history.md. If scrollback does not dominate, comment the real split on this card and cancel it.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-26T12:13:33.277Z",
+  "updatedAt": "2026-11-26T12:13:33.278Z",
+  "column": "Backlog",
+  "order": 51
+}
