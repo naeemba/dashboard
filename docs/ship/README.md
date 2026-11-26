@@ -170,8 +170,9 @@ Whether its loop already finished is read off the merge request's notes through 
   merged, nothing past the merged commit is unpushed, nothing in it is uncommitted, and no process
   on the machine stands in it, then the leftover sweep removes it, a minute after launch and every
   half hour after, with the branch kept. A change or commit of `.dashboard/board/` alone counts as
-  nothing (ship-decision-7). Any other answer, or gh failing, keeps it; a detached one answers
-  to the workflow agents' rule below (`leftover-worktrees.test.ts`).
+  nothing once origin's default branch holds it after a fetch; one origin never held, or a fetch
+  that fails, keeps it (ship-decision-7). Any other answer, or gh failing, keeps it; a detached
+  one answers to the workflow agents' rule below (`leftover-worktrees.test.ts`).
 - Given a leftover worktree that is locked (`git worktree lock`), then the sweep keeps it; given one
   git refuses to remove unforced (submodules), then the sweep does not ask again until the app
   restarts (`leftover-worktrees.test.ts`).

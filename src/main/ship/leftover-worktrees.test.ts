@@ -13,7 +13,7 @@ const TWO_DAYS_AGO = NOW - 2 * AGENT_IDLE_MS;
 
 type Folder = {
   dirty?: boolean; merged?: string | null; process?: boolean; gh?: 'fails'; unpushed?: boolean; modifiedAt?: number;
-  locked?: true; refused?: boolean; detached?: true;
+  locked?: true; refused?: boolean; detached?: true; boardOffOrigin?: true;
 };
 
 // A project whose worktrees are these, every one clean, merged, nothing past it unpushed, untouched for two
@@ -35,6 +35,7 @@ async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPort
       return merged === undefined ? MERGED : merged;
     },
     unpushed: async (path) => at(path).unpushed ?? false,
+    boardOnOrigin: async (path) => !at(path).boardOffOrigin,
     modifiedAt: async (path) => at(path).modifiedAt ?? TWO_DAYS_AGO,
     now: () => NOW,
     processIn: async (path) => at(path).process ?? false,
@@ -61,6 +62,7 @@ describe('leftoverSweep', () => {
       [`${ROOT}/running`]: { process: true },
       [`${ROOT}/offline`]: { gh: 'fails' },
       [`${ROOT}/locked`]: { locked: true },
+      [`${ROOT}/board-never-synced`]: { boardOffOrigin: true },
     })).toEqual([]);
   });
 

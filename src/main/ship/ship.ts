@@ -128,11 +128,14 @@ export function blockingChanges(porcelain: string): string[] {
 // both sweeps ask this, so what a sweep lets go of, git is not left to refuse. The board's files and
 // no more of .dashboard/, unlike blockingChanges: the rest is written in the project, not a worktree.
 // BEYOND_THE_BOARD (finished-work.ts) says the same for git, from the same board-store spelling.
-const isBoardPath = (path: string) => path.startsWith(BOARD_FOLDER_PATH);
+export const isBoardPath = (path: string) => path.startsWith(BOARD_FOLDER_PATH);
 
 // The status every workChanges caller asks: untracked files named outright, whatever
 // status.showUntrackedFiles says, or a worktree holding only an untracked file reads as clean.
 export const WORK_STATUS: readonly string[] = ['status', '--porcelain', '--untracked-files=normal'];
+
+// The commits HEAD reaches that neither a remote-tracking branch nor `mergedAt` does, as a revision range.
+export const pastRemotes = (mergedAt?: string): string[] => ['HEAD', '--not', ...(mergedAt === undefined ? [] : [mergedAt]), '--remotes'];
 
 export function workChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !isBoardPath(path));

@@ -1,14 +1,16 @@
 import type { runProgram } from '../app/git';
 import { branchPullRequest } from '../board/merge-request';
-import { WORK_STATUS, workChanges } from '../ship/ship';
+import { WORK_STATUS, pastRemotes, workChanges } from '../ship/ship';
 import { BOARD_PATHSPECS } from '../board/board-store';
 import { FETCH_TIMEOUT } from '../board/board-sync';
+import { boardNotOnOrigin } from '../ship/board-on-origin';
 
 // Whether removing a throwaway worktree would lose anything: changes nobody committed, or commits no
 // remote has. Only then is the folder kept when its worker goes. A pull request is not asked for: a
 // research worker that changed nothing, or one that merged somebody else's pull request, leaves a branch
 // with no commits of its own and nothing to open one for, and keeping those piled up 32 folders, 25 GB,
-// in one project. The board's files are not work (workChanges says why). Ignored files (build output,
+// in one project. The board's files are not work (workChanges says why) once origin holds them
+// (boardNotOnOrigin). Ignored files (build output,
 // node_modules) are not work either, and git status does not list them.
 //
 // Null when nothing would be lost, otherwise the reason the folder stays, written to follow "kept <folder>:".
@@ -19,14 +21,15 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
     return 'it has uncommitted changes';
   }
   const missing = await unpushedWork(run, worktreePath);
-  if (missing === 0) return null;
+  if (missing === 0) return boardNotOnOrigin(run, worktreePath);
   // A squash or rebase merge leaves the branch's own commits on no remote once --delete-branch and a
   // prune take the branch: nothing past the commit its pull request merged at, nothing the merge did not take.
-  const past = await branchOf(run, worktreePath)
+  const merged = await branchOf(run, worktreePath)
     .then((branch) => mergedHead(run, worktreePath, branch))
-    .then((merged) => (merged === null ? missing : unpushedWork(run, worktreePath, merged)))
-    .catch(() => missing);
-  return past === 0 ? null : `${missing} of its commits are on no remote`;
+    .catch(() => null);
+  const past = merged === null ? missing : await unpushedWork(run, worktreePath, merged).catch(() => missing);
+  if (past !== 0) return `${missing} of its commits are on no remote`;
+  return boardNotOnOrigin(run, worktreePath, merged ?? undefined);
 }
 
 // How many commits HEAD reaches that touch more than the board and that neither a remote-tracking
@@ -38,8 +41,7 @@ export async function unfinishedWork(run: RunProgram, worktreePath: string): Pro
 const BEYOND_THE_BOARD = ['--', `:(exclude)${BOARD_PATHSPECS[0]}`] as const;
 
 export async function unpushedWork(run: RunProgram, worktreePath: string, mergedAt?: string): Promise<number> {
-  const not = mergedAt === undefined ? [] : [mergedAt];
-  const count = await run('git', ['rev-list', '--count', 'HEAD', '--not', ...not, '--remotes', ...BEYOND_THE_BOARD], worktreePath);
+  const count = await run('git', ['rev-list', '--count', ...pastRemotes(mergedAt), ...BEYOND_THE_BOARD], worktreePath);
   return count.trim() === '' ? Number.NaN : Number(count);
 }
 

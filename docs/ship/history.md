@@ -59,5 +59,5 @@ One line per merged change: date and why.
   project's queue, so a stalled connection left every later ship, review and `pane run --worktree`
   there waiting with no answer
 - 2026-11-26 — A worktree holding only board changes or board-only commits, or detached on
-  origin/main, is no longer kept by either sweep: five sat in dashboard.worktrees/ for ten days
-  (ship-decision-7)
+  origin/main, is no longer kept by either sweep once origin's default branch holds those board
+  files: five sat in dashboard.worktrees/ for ten days (ship-decision-7)

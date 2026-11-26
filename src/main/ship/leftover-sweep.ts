@@ -13,6 +13,7 @@ import type { WorktreeEntry } from '../../shared/app/bridge';
 import { leftoverSweep } from './leftover-worktrees';
 import { WORK_STATUS, workChanges } from './ship';
 import { listWorktrees } from './worktree-scan';
+import { boardNotOnOrigin } from './board-on-origin';
 
 // Main's wiring for the leftover sweep (leftover-worktrees.ts): a minute after launch, once the
 // projects have opened, then every half hour. Spawning only; every decision is next door.
@@ -54,6 +55,7 @@ export function startLeftoverSweep(main: {
     dirty: async (worktreePath) => workChanges(await git([...WORK_STATUS], worktreePath)).length > 0,
     mergedHead: (worktreePath, branch) => mergedHead(runProgram, worktreePath, branch),
     unpushed: async (worktreePath, mergedAt) => (await unpushedWork(runProgram, worktreePath, mergedAt)) !== 0,
+    boardOnOrigin: async (worktreePath, mergedAt) => (await boardNotOnOrigin(runProgram, worktreePath, mergedAt)) === null,
     modifiedAt,
     now: Date.now,
     processIn,

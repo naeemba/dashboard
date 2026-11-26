@@ -1,5 +1,5 @@
 import { chosenRemote, defaultBranch, noDefaultBranchMessage } from './default-branch';
-import { git, gitNowOrNull, runProgram } from './git';
+import { gitNowOrNull, runProgram } from './git';
 
 // Where a project's work is cut from and its board is written: a remote (chosenRemote's rule) and a
 // branch on it (defaultBranch's rule: `<remote>/HEAD`, else main, else master, since `<remote>/HEAD`
@@ -24,9 +24,9 @@ export async function projectRemote(folder: string, run: typeof runProgram = run
   return chosenRemote(lines(remotes), upstreams);
 }
 
-export async function baseBranch(folder: string): Promise<BaseBranch> {
-  const answer = (gitArguments: string[]) => git(gitArguments, folder).catch(() => null);
-  const remote = await projectRemote(folder);
+export async function baseBranch(folder: string, run: typeof runProgram = runProgram): Promise<BaseBranch> {
+  const answer = (gitArguments: string[]) => run('git', gitArguments, folder).catch(() => null);
+  const remote = await projectRemote(folder, run);
   const [head, main, master] = await Promise.all([
     answer(headQuestion(remote)), answer(branchQuestion(remote, 'main')), answer(branchQuestion(remote, 'master')),
   ]);
