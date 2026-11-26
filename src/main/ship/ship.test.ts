@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  blockingChanges, branchNameFor, changedFiles, oneAtATime, workPrompt, worktreePathFor,
+  blockingChanges, branchNameFor, changedFiles, oneAtATime, removalChanges, workPrompt, worktreePathFor,
 } from './ship';
 import { BUMP_VERSION, KEEP_VERSION, NO_REVIEW_LOOP, REVIEW_LOOP } from '../skills/work-card-skill';
 import { posixPathsOnly } from '../testing/windows-skips';
@@ -162,5 +162,22 @@ describe('workPrompt', () => {
   it('sends the card, the project\'s version word, the base branch, its remote and whether a review starts', () => {
     expect(workPrompt(cardId, true, { remote: 'origin', branch: 'main' }, true)).toBe(`/work-card ${cardId} ${BUMP_VERSION} main origin ${REVIEW_LOOP}`);
     expect(workPrompt(cardId, false, { remote: 'gitlab', branch: 'develop' }, false)).toBe(`/work-card ${cardId} ${KEEP_VERSION} develop gitlab ${NO_REVIEW_LOOP}`);
+  });
+});
+
+describe('removalChanges', () => {
+  // A worktree's board is a stale copy of origin's: removing it loses nothing, and git is forced past it.
+  it('refuses nothing over the board\'s files and forces git past them', () => {
+    expect(removalChanges(' M .dashboard/board/cards/a1.json\n?? .dashboard/board/cards/b2.json\n', false)).toEqual({ dirty: [], forced: true });
+  });
+
+  it('refuses on anything else, the rest of .dashboard/ included', () => {
+    expect(removalChanges(' M .dashboard/board/cards/a1.json\n M src/a.ts\n?? .dashboard/notes/plan.md\n', false))
+      .toEqual({ dirty: ['src/a.ts', '.dashboard/notes/plan.md'], forced: true });
+  });
+
+  it('forces nothing for a clean worktree, and refuses nothing once the dialog has said force', () => {
+    expect(removalChanges('', false)).toEqual({ dirty: [], forced: false });
+    expect(removalChanges(' M src/a.ts\n', true)).toEqual({ dirty: [], forced: true });
   });
 });

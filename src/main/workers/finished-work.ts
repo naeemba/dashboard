@@ -1,30 +1,48 @@
 import type { runProgram } from '../app/git';
 import { branchPullRequest } from '../board/merge-request';
-import { changedFiles } from '../ship/ship';
+import { WORK_STATUS, pastRemotes, workChanges } from '../ship/ship';
+import { BOARD_PATHSPECS } from '../board/board-store';
 import { FETCH_TIMEOUT } from '../board/board-sync';
+import { boardNotOnOrigin } from '../ship/board-on-origin';
 
 // Whether removing a throwaway worktree would lose anything: changes nobody committed, or commits no
 // remote has. Only then is the folder kept when its worker goes. A pull request is not asked for: a
 // research worker that changed nothing, or one that merged somebody else's pull request, leaves a branch
 // with no commits of its own and nothing to open one for, and keeping those piled up 32 folders, 25 GB,
-// in one project. changedFiles rather than blockingChanges, because git counts .dashboard/ like any other
-// folder and so does this: an uncommitted board move is work not yet on the branch. Ignored files (build
-// output, node_modules) are not work, and git status does not list them.
+// in one project. The board's files are not work (workChanges says why) once origin holds them
+// (boardNotOnOrigin). Ignored files (build output,
+// node_modules) are not work either, and git status does not list them.
 //
 // Null when nothing would be lost, otherwise the reason the folder stays, written to follow "kept <folder>:".
 type RunProgram = typeof runProgram;
 
 export async function unfinishedWork(run: RunProgram, worktreePath: string): Promise<string | null> {
-  if (changedFiles(await run('git', ['status', '--porcelain'], worktreePath)).length > 0) {
+  if (workChanges(await run('git', [...WORK_STATUS], worktreePath)).length > 0) {
     return 'it has uncommitted changes';
   }
-  // Against every remote-tracking branch, not the upstream: a branch never pushed that is still where
-  // origin/main was has nothing to lose, and a worker that checked out a pull request's branch has none.
-  const missing = await run('git', ['rev-list', '--count', 'HEAD', '--not', '--remotes'], worktreePath);
-  if (missing === '0') return null;
+  const missing = await unpushedWork(run, worktreePath);
+  if (missing === 0) return boardNotOnOrigin(run, worktreePath);
   // A squash or rebase merge leaves the branch's own commits on no remote once --delete-branch and a
-  // prune take the branch: HEAD at the commit its pull request merged at has nothing the merge did not take.
-  return await mergedAtHead(run, worktreePath).catch(() => false) ? null : `${missing} of its commits are on no remote`;
+  // prune take the branch: nothing past the commit its pull request merged at, nothing the merge did not take.
+  const merged = await branchOf(run, worktreePath)
+    .then((branch) => mergedHead(run, worktreePath, branch))
+    .catch(() => null);
+  const past = merged === null ? missing : await unpushedWork(run, worktreePath, merged).catch(() => missing);
+  if (past !== 0) return `${missing} of its commits are on no remote`;
+  return boardNotOnOrigin(run, worktreePath, merged ?? undefined);
+}
+
+// How many commits HEAD reaches that touch more than the board and that neither a remote-tracking
+// branch nor `mergedAt` (the commit its pull request merged at) does. Every remote-tracking branch,
+// not the upstream: a branch never pushed that is still where origin/main was has nothing to lose,
+// and a worker that checked out a pull request's branch has none. NaN, never 0, for an answer that is
+// not a number.
+// workChanges' rule for commits: what limits `git rev-list` to the ones touching anything but the board.
+const BEYOND_THE_BOARD = ['--', `:(exclude)${BOARD_PATHSPECS[0]}`] as const;
+
+export async function unpushedWork(run: RunProgram, worktreePath: string, mergedAt?: string): Promise<number> {
+  const count = await run('git', ['rev-list', '--count', ...pastRemotes(mergedAt), ...BEYOND_THE_BOARD], worktreePath);
+  return count.trim() === '' ? Number.NaN : Number(count);
 }
 
 const branchOf = (run: RunProgram, worktreePath: string) => run('git', ['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
@@ -43,16 +61,11 @@ const pullRequestOf = (run: RunProgram, worktreePath: string, branch: string) =>
   branchPullRequest(run, worktreePath, branch, FETCH_TIMEOUT);
 
 // The commit the branch's pull request was merged at, or null while the one it stands for is not
-// merged. A worktree whose HEAD is that commit has nothing on it the merge did not take; its
+// merged. A worktree with nothing past that commit has nothing on it the merge did not take; its
 // `@{upstream}` cannot say so, because a merge that deletes the branch takes the upstream with it.
 export async function mergedHead(run: RunProgram, worktreePath: string, branch: string): Promise<string | null> {
   const pull = await pullRequestOf(run, worktreePath, branch);
   return pull?.state === 'MERGED' && typeof pull.headRefOid === 'string' ? pull.headRefOid : null;
-}
-
-async function mergedAtHead(run: RunProgram, worktreePath: string): Promise<boolean> {
-  const merged = await mergedHead(run, worktreePath, await branchOf(run, worktreePath));
-  return merged !== null && merged === (await run('git', ['rev-parse', 'HEAD'], worktreePath)).trim();
 }
 
 // What a worktree's worker is asked before it is let go of, as session-requests.ts's ports take them.

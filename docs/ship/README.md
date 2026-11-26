@@ -161,14 +161,18 @@ Whether its loop already finished is read off the merge request's notes through 
   `worktrees.json.broken` (`worktrees.json.2.broken` and on if that name is taken) and the list
   opens empty (`worktree-store.test.ts`).
 - Given a worktree with modified files, when you remove it from the list, then the app says so
-  instead of git's raw `fatal:`.
+  instead of git's raw `fatal:`; one whose only changes are to `.dashboard/board/` is removed
+  without asking, its board a stale copy of origin's (ship-decision-7, `ship.test.ts`).
 - Given a card whose review the sweep started, when the card reaches Done in the same run, then its
   worktree is removed without a restart (`review-flow-clearing.test.ts`).
 - Given a worktree under `<project>.worktrees/` that the app has no record of and no throwaway
   marker (a record lost, or a throwaway older than the marker), when its branch's pull request
-  merged at its HEAD, nothing in it is uncommitted, and no process on the machine stands in it,
-  then the leftover sweep removes it, a minute after launch and every half hour after, with the
-  branch kept. Any other answer, or gh failing, keeps it (`leftover-worktrees.test.ts`).
+  merged, nothing past the merged commit is unpushed, nothing in it is uncommitted, and no process
+  on the machine stands in it, then the leftover sweep removes it, a minute after launch and every
+  half hour after, with the branch kept. A change or commit of `.dashboard/board/` alone counts as
+  nothing once origin's default branch holds it after a fetch; one origin never held, or a fetch
+  that fails, keeps it (ship-decision-7). Any other answer, or gh failing, keeps it; a detached
+  one answers to the workflow agents' rule below (`leftover-worktrees.test.ts`).
 - Given a leftover worktree that is locked (`git worktree lock`), then the sweep keeps it; given one
   git refuses to remove unforced (submodules), then the sweep does not ask again until the app
   restarts (`leftover-worktrees.test.ts`).

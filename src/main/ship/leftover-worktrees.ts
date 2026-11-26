@@ -9,9 +9,10 @@ import { worktreesRoot } from './ship';
 // node_modules; eight of them filled /home in two days in new-crm (2026-11-23). A marked throwaway
 // (throwaway-marker.ts) is worktree.sweep's and its pane's, never this sweep's.
 //
-// One is removed only when nothing in it can be lost: no uncommitted change, HEAD the very commit its
+// One is removed only when nothing in it can be lost: no uncommitted change, no commit past the one its
 // branch's pull request merged at (so no commit of it is anywhere the merge did not take), and no
-// process on the machine standing in it. A worktree the app records is the review sweep's
+// process on the machine standing in it. A change or commit of the board's files alone is nothing
+// (workChanges says why) once origin's default branch holds it (boardNotOnOrigin). A worktree the app records is the review sweep's
 // (review-flow.ts), which removes a card's once it is past Review, and keeps a cancelled one's.
 // Only folders under `<project>.worktrees/`, where the app makes them: a worktree made by hand
 // anywhere else is yours.
@@ -33,13 +34,16 @@ export type LeftoverPorts = {
   // The project's marked throwaways (throwawaysOf).
   throwaways: (projectPath: string) => Promise<string[]>;
   list: (projectPath: string) => Promise<GitWorktree[]>;
-  // True when git cannot say: silence is not no changes.
+  // Changes past the board's (workChanges). True when git cannot say: silence is not no changes.
   dirty: (worktreePath: string) => Promise<boolean>;
-  head: (worktreePath: string) => Promise<string>;
   // The commit the branch's pull request merged at, or null while it is not merged (mergedHead).
   mergedHead: (worktreePath: string, branch: string) => Promise<string | null>;
-  // Whether every commit HEAD reaches is on some remote ref.
-  pushed: (worktreePath: string) => Promise<boolean>;
+  // Whether HEAD reaches a commit touching more than the board that is on no remote ref, nor reached
+  // by `mergedAt` (unpushedWork).
+  unpushed: (worktreePath: string, mergedAt?: string) => Promise<boolean>;
+  // Whether the board files it changed past the remotes (and `mergedAt`) are on origin's default
+  // branch, after a fetch; false when that cannot be checked (boardNotOnOrigin).
+  boardOnOrigin: (worktreePath: string, mergedAt?: string) => Promise<boolean>;
   // When the folder, or git's own record of it (index, HEAD), last changed, in milliseconds.
   modifiedAt: (worktreePath: string) => Promise<number>;
   now: () => number;
@@ -53,18 +57,24 @@ export const AGENT_IDLE_MS = 24 * 60 * 60 * 1000;
 
 type Kind = 'card' | 'agent';
 
-// Cheapest question first: git status, then git or the forge (forge.ts), then the process table.
-// One that throws keeps the worktree, and the next sweep asks again.
-async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, branch, locked }: GitWorktree): Promise<boolean> {
+// Cheapest question first: git status, then git or the forge (forge.ts), then the process table, then
+// a fetch of origin for a worktree with board changes (boardOnOrigin).
+// One that throws keeps the worktree, and the next sweep asks again. A detached card worktree has no
+// branch to ask the forge about, so it answers to the agents' rule: the one that sat in
+// dashboard.worktrees/ a week (2026-11-24) was already on origin/main.
+async function isLeftover(ports: LeftoverPorts, kind: Kind, { worktreePath, branch, locked, detached }: GitWorktree): Promise<boolean> {
   if (locked || await ports.dirty(worktreePath)) return false;
-  if (kind === 'card') {
+  let mergedAt: string | undefined;
+  if (kind === 'card' && !detached) {
     const merged = await ports.mergedHead(worktreePath, branch);
-    if (merged === null || merged !== (await ports.head(worktreePath)).trim()) return false;
+    if (merged === null || await ports.unpushed(worktreePath, merged)) return false;
+    mergedAt = merged;
   } else {
     if (ports.now() - await ports.modifiedAt(worktreePath) <= AGENT_IDLE_MS) return false;
-    if (!(await ports.pushed(worktreePath))) return false;
+    if (await ports.unpushed(worktreePath)) return false;
   }
-  return !(await ports.processIn(worktreePath));
+  if (await ports.processIn(worktreePath)) return false;
+  return ports.boardOnOrigin(worktreePath, mergedAt);
 }
 
 // Which rule a folder answers to, by where it is; null for one that is neither's. A `.claude/worktrees`

@@ -12,11 +12,11 @@ const NOW = Date.parse('2026-11-23T12:00:00Z');
 const TWO_DAYS_AGO = NOW - 2 * AGENT_IDLE_MS;
 
 type Folder = {
-  dirty?: boolean; head?: string; merged?: string | null; process?: boolean; gh?: 'fails'; pushed?: boolean; modifiedAt?: number;
-  locked?: true; refused?: boolean;
+  dirty?: boolean; merged?: string | null; process?: boolean; gh?: 'fails'; unpushed?: boolean; modifiedAt?: number;
+  locked?: true; refused?: boolean; detached?: true; boardOffOrigin?: true;
 };
 
-// A project whose worktrees are these, every one clean, merged at its HEAD, pushed, untouched for two
+// A project whose worktrees are these, every one clean, merged, nothing past it unpushed, untouched for two
 // days and empty of processes unless it says otherwise, swept `times` times. Answers every removal
 // asked for, refused or not.
 async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPorts> = {}, times = 1): Promise<string[]> {
@@ -26,16 +26,16 @@ async function sweep(folders: Record<string, Folder>, over: Partial<LeftoverPort
     projectPaths: () => [PROJECT],
     recorded: () => [],
     throwaways: async () => [],
-    list: async (projectPath) => Object.entries(folders).map(([worktreePath, { locked }]) =>
-      ({ projectPath, worktreePath, branch: 'b', ...(locked ? { locked } : {}) })),
+    list: async (projectPath) => Object.entries(folders).map(([worktreePath, { locked, detached }]) =>
+      ({ projectPath, worktreePath, branch: 'b', ...(locked ? { locked } : {}), ...(detached ? { detached } : {}) })),
     dirty: async (path) => at(path).dirty ?? false,
-    head: async (path) => `${at(path).head ?? MERGED}\n`,
     mergedHead: async (path) => {
       if (at(path).gh === 'fails') throw new Error('gh: not signed in');
       const { merged } = at(path);
       return merged === undefined ? MERGED : merged;
     },
-    pushed: async (path) => at(path).pushed ?? true,
+    unpushed: async (path) => at(path).unpushed ?? false,
+    boardOnOrigin: async (path) => !at(path).boardOffOrigin,
     modifiedAt: async (path) => at(path).modifiedAt ?? TWO_DAYS_AGO,
     now: () => NOW,
     processIn: async (path) => at(path).process ?? false,
@@ -57,11 +57,12 @@ describe('leftoverSweep', () => {
   it('keeps every worktree where something could be lost', async () => {
     expect(await sweep({
       [`${ROOT}/dirty`]: { dirty: true },
-      [`${ROOT}/committed-after-merge`]: { head: 'ffffff' },
+      [`${ROOT}/committed-after-merge`]: { unpushed: true },
       [`${ROOT}/open`]: { merged: null },
       [`${ROOT}/running`]: { process: true },
       [`${ROOT}/offline`]: { gh: 'fails' },
       [`${ROOT}/locked`]: { locked: true },
+      [`${ROOT}/board-never-synced`]: { boardOffOrigin: true },
     })).toEqual([]);
   });
 
@@ -74,6 +75,23 @@ describe('leftoverSweep', () => {
   it('asks about a worktree once however many open projects list it, and never about an open one', async () => {
     const projectPaths = () => [PROJECT, PROJECT, `${ROOT}/opened`];
     expect(await sweep({ [`${ROOT}/fix`]: {}, [`${ROOT}/opened`]: {} }, { projectPaths })).toEqual([`${ROOT}/fix`]);
+  });
+
+  // A commit past the merge is asked about past the merge's commit, not past the remotes alone: a
+  // squash merge's branch is on no remote once the merge deletes it.
+  it('asks whether anything is unpushed past the commit the pull request merged at', async () => {
+    const unpushed = async (_path: string, mergedAt?: string) => mergedAt !== MERGED;
+    expect(await sweep({ [`${ROOT}/squashed`]: {} }, { unpushed })).toEqual([`${ROOT}/squashed`]);
+  });
+
+  // No branch to ask the forge about: a day quiet and nothing unpushed, as an agent's.
+  it('answers a detached card worktree by the agents\' rule', async () => {
+    const detached = { detached: true as const, gh: 'fails' as const };
+    expect(await sweep({
+      [`${ROOT}/on-main`]: detached,
+      [`${ROOT}/recent`]: { ...detached, modifiedAt: NOW - 60_000 },
+      [`${ROOT}/ahead`]: { ...detached, unpushed: true },
+    })).toEqual([`${ROOT}/on-main`]);
   });
 
   // The review sweep's to remove, or a cancelled card's to keep (board-decision-4).
@@ -98,7 +116,7 @@ describe('leftoverSweep', () => {
   it('keeps a workflow agent worktree where something could be lost', async () => {
     expect(await sweep({
       [`${AGENTS}/wf_a-1`]: { dirty: true },
-      [`${AGENTS}/wf_a-2`]: { pushed: false },
+      [`${AGENTS}/wf_a-2`]: { unpushed: true },
       [`${AGENTS}/wf_a-3`]: { modifiedAt: NOW - 60_000 },
       [`${AGENTS}/wf_a-4`]: { process: true },
     })).toEqual([]);

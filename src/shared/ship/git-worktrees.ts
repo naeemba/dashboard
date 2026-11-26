@@ -8,7 +8,8 @@ export const SIZE_STALE_MS = 300_000;
 
 // `locked` only when `git worktree lock` was run on it: someone said keep it, and git refuses an
 // unforced remove of it anyway.
-export type GitWorktree = { projectPath: string; worktreePath: string; branch: string; locked?: true };
+// `detached` when HEAD is on no branch, so `branch` is only a label.
+export type GitWorktree = { projectPath: string; worktreePath: string; branch: string; locked?: true; detached?: true };
 
 // A folder's size: null until it has been measured — a size is a walk of every file in it, so it
 // arrives later than the rest — and `unmeasurable` when the walk gave no number, most often because
@@ -43,7 +44,11 @@ function worktreeBlocks(blocks: readonly string[], projectPath: string): GitWork
     if (!worktreePath || fields.has('bare')) return [];
     const branch = fields.get('branch')?.replace(/^refs\/heads\//, '')
       ?? `detached ${(fields.get('HEAD') ?? '').slice(0, 7)}`;
-    return [{ projectPath, worktreePath, branch, ...(fields.has('locked') ? { locked: true as const } : {}) }];
+    return [{
+      projectPath, worktreePath, branch,
+      ...(fields.has('locked') ? { locked: true as const } : {}),
+      ...(fields.has('detached') ? { detached: true as const } : {}),
+    }];
   });
 }
 

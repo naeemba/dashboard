@@ -1,5 +1,6 @@
 import { basename, dirname, join } from 'node:path';
 import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
+import { BOARD_FOLDER_PATH } from '../board/board-store';
 import { slug } from '../../shared/app/slug';
 import { BUMP_VERSION, KEEP_VERSION, NO_REVIEW_LOOP, REVIEW_LOOP } from '../skills/work-card-skill';
 import type { BaseBranch } from '../app/base-branch';
@@ -82,11 +83,11 @@ export function workPrompt(cardId: string, bumpVersion: boolean, base: BaseBranc
   return `/work-card ${cardId} ${bumpVersion ? BUMP_VERSION : KEEP_VERSION} ${base.branch} ${base.remote} ${reviewLoop ? REVIEW_LOOP : NO_REVIEW_LOOP}`;
 }
 
-// Every file `git status --porcelain` named, whatever it is. This is git's own answer, so it is the
-// one to ask wherever git is the thing doing the refusing: `git worktree remove` counts the whole
-// working tree and will not be talked out of it.
+// Every file `git status --porcelain` named, whatever it is. This is git's own answer: `git worktree
+// remove` counts the whole working tree, so removalChanges forces git past the board's files rather
+// than asking a narrower question and letting git refuse.
 //
-// What asking the narrower question there costs, and it is the bug this split was written for: a
+// What asking the narrower question without forcing costs, and it is the bug this split was written for: a
 // worktree whose only change is the board move the agent has just written passes the app's check,
 // so nothing is refused and nothing is listed — and then git refuses anyway, and the only thing left
 // to put on the card is a raw `fatal: ... contains modified or untracked files`.
@@ -118,6 +119,35 @@ export function changedFiles(porcelain: string): string[] {
 // origin, and the ship writes no board in it.
 export function blockingChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !path.startsWith(`${DASHBOARD_FOLDER_NAME}/`));
+}
+
+// What removing a worktree would lose: its changed files less the board's. Every board write, from a
+// worktree too, lands on origin's default branch (board-decision-5), so a worktree's own
+// .dashboard/board/ is a stale copy, and an edit of it, or a commit of nothing else, is not work. Five
+// worktrees sat a week in dashboard.worktrees/ on no more than that (2026-11-24). Every removal and
+// both sweeps ask this, so what a sweep lets go of, git is not left to refuse. The board's files and
+// no more of .dashboard/, unlike blockingChanges: the rest is written in the project, not a worktree.
+// BEYOND_THE_BOARD (finished-work.ts) says the same for git, from the same board-store spelling.
+export const isBoardPath = (path: string) => path.startsWith(BOARD_FOLDER_PATH);
+
+// The status every workChanges caller asks: untracked files named outright, whatever
+// status.showUntrackedFiles says, or a worktree holding only an untracked file reads as clean.
+export const WORK_STATUS: readonly string[] = ['status', '--porcelain', '--untracked-files=normal'];
+
+// The commits HEAD reaches that neither a remote-tracking branch nor `mergedAt` does, as a revision range.
+export const pastRemotes = (mergedAt?: string): string[] => ['HEAD', '--not', ...(mergedAt === undefined ? [] : [mergedAt]), '--remotes'];
+
+export function workChanges(porcelain: string): string[] {
+  return changedFiles(porcelain).filter((path) => !isBoardPath(path));
+}
+
+// What a removal is refused on, and whether git is forced: the board's files alone are forced past
+// git's own refusal, which would otherwise land on the card in its raw `fatal:` words. Forced from the
+// dialog, after you said yes to losing what is in it, nothing is refused. workChanges, not
+// blockingChanges: the rest of .dashboard/ is still asked about.
+export function removalChanges(porcelain: string, force: boolean): { dirty: string[]; forced: boolean } {
+  const changed = changedFiles(porcelain);
+  return { dirty: force ? [] : workChanges(porcelain), forced: force || changed.length > 0 };
 }
 
 // How many of them there are, for the ship's refusal — the one place a count is worth printing,

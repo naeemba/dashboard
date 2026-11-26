@@ -246,7 +246,10 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   session, from the usage sweep (chat-decision-12).
 - Given a throwaway worktree with uncommitted work or commits no remote has,
   when the worker is released, then the worktree is kept and the reply says why;
-  one with neither is removed, pull request or not, never pushed or not.
+  one with neither is removed, pull request or not, never pushed or not. A change or commit of
+  `.dashboard/board/` alone is neither once origin's default branch holds it; one origin never
+  held, or a fetch that fails, keeps it and the reply names the files (ship-decision-7,
+  `finished-work.test.ts`).
 - Given a throwaway worktree whose pull request squash-merged at its HEAD and whose remote branch
   is gone, when the worker is released, then the worktree is removed, not kept for commits on no
   remote (`finished-work.test.ts`).
