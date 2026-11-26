@@ -24,8 +24,9 @@ import { GUARD_TIMEOUT } from '../board/board-guard';
 const HEAVY_SCRIPT = /^(?:t|test|check|build|typecheck|type-check|tsc)$|^(?:test|build):/;
 const TYPECHECKER = /^(?:tsc|vue-tsc)$/;
 const BUNDLER = /^(?:vite|next|nuxt|astro|webpack)$/;
-// Watch mode never ends, so a run in it would hold every pane until its wait ran out.
-const WATCH = /^(?:-w|--watch(?:=true)?|--watchAll)$/;
+// Watch mode never ends, so a run in it would hold every pane until its wait ran out. `-w` is watch
+// only past a package manager: to pnpm and npm it is the workspace flag (`pnpm -w build`).
+const WATCH = /^(?:--watch(?:=true)?|--watchAll)$/;
 
 // Whether these words, a command typed or a process's argv, run a whole suite, build or typecheck. A
 // run naming what to run, a file, folder or filter (`vitest run src/a.test.ts`, `pnpm test -- board`,
@@ -35,6 +36,7 @@ const WATCH = /^(?:-w|--watch(?:=true)?|--watchAll)$/;
 export function runsHeavy(words: readonly string[]): boolean {
   const program = commandProgram(words);
   if (program === null || words.some((word) => WATCH.test(word))) return false;
+  if (!program.manager && program.after.includes('-w')) return false;
   const { name, rest } = program;
   if (program.runner) return rest.filter((word) => word !== 'run').length === 0;
   if (TYPECHECKER.test(name)) return true;
@@ -103,9 +105,20 @@ export type HeavyRunMachine = {
   claim(id: string): boolean;
   now(): number;
   sleep(milliseconds: number): void;
+  // The terminal a process reads its input from (`/dev/pts/3`), or null for none: an agent's call has none.
+  terminal(pid: number): string | null;
 };
 
-// Under the hook's own timeout (GUARD_ENTRY), so the wait ends with the call let through and a word
+// Bare `vitest`, `vitest watch` or `vitest dev` on a terminal is watch mode with no flag saying so; with
+// no terminal (an agent's call) it runs once. Its terminal is answered, so the package manager that
+// started it there (`pnpm test` for a `"test": "vitest"` script) is read as the same watch.
+function watchTerminal(process: RunningProcess, machine: HeavyRunMachine): string | null {
+  const program = commandProgram(process.argv);
+  if (program?.name !== 'vitest' || program.rest.some((word) => word !== 'watch' && word !== 'dev')) return null;
+  return machine.terminal(process.pid);
+}
+
+// Under the wait entry's own timeout (WAIT_ENTRY, GUARD_TIMEOUT), so the wait ends with the call let through and a word
 // saying so, not the hook killed.
 export const LONGEST_WAIT = (GUARD_TIMEOUT - 60) * 1000;
 const POLL = 2_000;
@@ -120,7 +133,8 @@ export function waitForHeavyRuns(toolName: string, toolInput: unknown, id: strin
   while (machine.now() < deadline) {
     const processes = machine.listProcesses();
     if (processes === null) return '';
-    running = processes.find((process) => runsHeavy(process.argv));
+    const watching = new Set(processes.map((process) => watchTerminal(process, machine)).filter((terminal) => terminal !== null));
+    running = processes.find((process) => runsHeavy(process.argv) && !watching.has(machine.terminal(process.pid) ?? ''));
     if (running === undefined && machine.claim(id)) return '';
     machine.sleep(POLL);
   }

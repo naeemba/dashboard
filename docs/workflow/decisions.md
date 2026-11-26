@@ -371,7 +371,9 @@ default timeout (`src/main/workflow/heavy-run-wait.ts`):
   (`vitest run`, `pytest -x`), a package manager's `test`, `check`, `build`, `typecheck` or
   `test:*`/`build:*` script with no target after it, `tsc`, `vite build`, `cargo test|build|check`,
   `go test ./...`. A run naming files, a folder or a filter is the rerun that tells a failure from
-  load, and never waits; nor does watch mode, which never ends.
+  load, and never waits; nor does watch mode, which never ends: `--watch`, `-w` past a package
+  manager (to pnpm and npm it is the workspace flag), and a bare `vitest` on a terminal, which
+  watches with no flag, along with the package manager that started it on the same terminal.
 - **The lock is the running process**, read off `/proc` by the same rule, not a lock file held by
   the run: a run nothing claimed counts, and a crashed one holds nothing. The card asked for
   `flock`; a lock held across the Bash call means rewriting the command, which changes what the

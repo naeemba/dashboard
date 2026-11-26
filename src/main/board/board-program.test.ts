@@ -214,6 +214,7 @@ describe('board guard', () => {
       claim: () => true,
       now: () => now,
       sleep: (milliseconds: number) => { now += milliseconds; },
+      terminal: () => null,
     };
     const build = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'pnpm build' }, tool_use_id: 'call-1' });
     expect(guardAnswer(build, undefined, 'board.js', nothing, undefined)).toBe('');

@@ -27,6 +27,7 @@ describe('startsHeavyRun', () => {
     'cd packages/core && pnpm build',
     "sh -c 'pnpm check'",
     'pnpm check > check.log 2>/dev/null',
+    'pnpm -w build',
   ])('holds %s', (command) => {
     expect(startsHeavyRun(command)).toBe(true);
   });
@@ -40,6 +41,8 @@ describe('startsHeavyRun', () => {
     'go test ./internal/board',
     'vitest --watch',
     'tsc --watch',
+    'tsc -w',
+    'pnpm vitest -w',
     'pnpm dev',
     'vite',
     'pnpm lint',
@@ -53,12 +56,14 @@ describe('startsHeavyRun', () => {
     expect(runsHeavy(['/usr/bin/node', '/app/node_modules/pnpm/bin/pnpm.cjs', 'check'])).toBe(true);
     expect(runsHeavy(['node', '/app/node_modules/vitest/vitest.mjs', 'run'])).toBe(true);
     expect(runsHeavy(['node', '/app/node_modules/vitest/dist/workers/forks.js'])).toBe(false);
+    // Bare vitest runs once with no terminal, as an agent's call has; on one it is watch (waitForHeavyRuns).
+    expect(runsHeavy(['node', '/app/node_modules/vitest/vitest.mjs'])).toBe(true);
   });
 });
 
 // A clock a sleep moves, a process table that can change as it does, and a claim another call holds
-// until `heldUntil`.
-function machineWith(table: (now: number) => string[][] | null, heldUntil = 0) {
+// until `heldUntil`, and the terminal each pid reads from.
+function machineWith(table: (now: number) => string[][] | null, heldUntil = 0, terminals: Record<number, string> = {}) {
   let now = 0;
   const claims: string[] = [];
   const machine: HeavyRunMachine = {
@@ -66,6 +71,7 @@ function machineWith(table: (now: number) => string[][] | null, heldUntil = 0) {
     claim: (id) => (now < heldUntil ? false : (claims.push(id), true)),
     now: () => now,
     sleep: (milliseconds) => { now += milliseconds; },
+    terminal: (pid) => terminals[pid] ?? null,
   };
   return { machine, claims, waited: () => now };
 }
@@ -92,6 +98,15 @@ describe('waitForHeavyRuns', () => {
     const mac = machineWith(() => null);
     expect(waitForHeavyRuns(...bash('pnpm test'), mac.machine)).toBe('');
     expect(mac.claims).toEqual([]);
+  });
+
+  it('never waits on a vitest watching in a terminal, or the pnpm that started it there', () => {
+    const watcher = machineWith(() => [['pnpm', 'test'], ['node', '/app/node_modules/vitest/vitest.mjs']], 0, { 100: '/dev/pts/3', 101: '/dev/pts/3' });
+    expect(waitForHeavyRuns(...bash('pnpm check'), watcher.machine)).toBe('');
+    expect(watcher.waited()).toBe(0);
+    const otherTerminal = machineWith((now) => (now < 4_000 ? [['pnpm', 'check'], ['vitest']] : []), 0, { 100: '/dev/pts/5', 101: '/dev/pts/3' });
+    expect(waitForHeavyRuns(...bash('pnpm check'), otherTerminal.machine)).toBe('');
+    expect(otherTerminal.waited()).toBe(4_000);
   });
 
   it('gives up at its limit and tells the agent, naming the run it waited on', () => {

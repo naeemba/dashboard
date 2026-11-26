@@ -17,7 +17,7 @@ import { packageManagerGuard } from '../workflow/package-manager-guard';
 import { testRunGuard, type TestRunMachine } from '../workflow/test-run-guard';
 import { worktreeGuard, type WorktreeList } from '../workflow/worktree-guard';
 import { claimFile, waitForHeavyRuns, type HeavyRunMachine } from '../workflow/heavy-run-wait';
-import { sleep } from './create-task-program';
+import { sleep } from '../command/sleep';
 import { gitNow } from '../app/git';
 import { parseEveryWorktree } from '../../shared/ship/git-worktrees';
 import { existsSync, readdirSync, readFileSync, readlinkSync } from 'node:fs';
@@ -183,6 +183,16 @@ function procProcesses(): RunningProcess[] | null {
   });
 }
 
+// The terminal a process reads its input from, or null for none or where /proc hides it.
+function terminal(pid: number): string | null {
+  try {
+    const input = readlinkSync(`/proc/${pid}/fd/0`);
+    return /^\/dev\/(?:pts\/|tty)/.test(input) ? input : null;
+  } catch {
+    return null;
+  }
+}
+
 // The folder a process works in, or null where /proc hides it (another user's process).
 function workingFolder(pid: number): string | null {
   try {
@@ -203,7 +213,7 @@ function gitWorktrees(folder: string): string[] | null {
 
 function guard(wait: boolean): number {
   const machine = { listProcesses: procProcesses, workingFolder, exists: existsSync, listWorktrees: gitWorktrees };
-  const heavyRuns = wait ? { listProcesses: procProcesses, claim: claimFile(path.join(os.homedir(), '.cache', 'dashboard', 'heavy-run.claim')), now: Date.now, sleep } : undefined;
+  const heavyRuns = wait ? { listProcesses: procProcesses, claim: claimFile(path.join(os.homedir(), '.cache', 'dashboard', 'heavy-run.claim')), now: Date.now, sleep, terminal } : undefined;
   process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], machine, process.env.CLAUDE_PROJECT_DIR, heavyRuns));
   return 0;
 }

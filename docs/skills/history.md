@@ -27,3 +27,5 @@ One line per merged change: date and why.
   starts a review on it, since that review waits on CI and killed a worker's own wait with the
   report after it; with `review.autoLoop` off it still waits on CI itself. A file on the checks'
   coverage line gets a test or a reason in the pull request's body
+- 2026-11-26 — `/work-card` says to rerun only the failed files to tell a failure from load, since
+  a full run now waits while another runs on the machine (workflow-decision-14)
