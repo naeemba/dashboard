@@ -1,0 +1,11 @@
+{
+  "id": "443e305a-652e-4e20-91ef-24e51178fe08",
+  "title": "dashboard status: one call for panes, cards, PRs and CI",
+  "notes": "Retro 2026-11-26: the dashboard main session made about 250 status calls rebuilding its state (112 pane list, 69 board list, 48 gh pr list; pane list together with gh pr list 22 times), most after its 9 compactions. Add one command (and MCP tool) printing each worker pane with its card, branch, PR, CI state and the end of its last report, plus open PRs no pane holds. Keep it short enough to call after every compaction.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T08:25:04.092Z",
+  "updatedAt": "2026-11-26T08:25:04.092Z",
+  "column": "Backlog",
+  "order": 75
+}
