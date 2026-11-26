@@ -13,7 +13,9 @@ blurb for it; this is where the rest lives.
 
 Ctrl+Shift+B shows the browser of the project in front. A row of tabs runs along
 the top, the address bar sits under it, and the rest of the page is the web page
-of the tab on screen. The manager has no browser.
+of the tab on screen. The manager has a browser of its own, signed in apart from
+every project's, for its main and its workers; its strip names it after the
+terminals, and Ctrl+Shift+B gets there as on a project.
 
 A project with no tab open lands on the address bar. Type an address and Enter
 opens it in a first tab. An address without a scheme gets https, and one a dev
@@ -92,7 +94,8 @@ the person asks for it (browser-decision-8).
 
 - `open <url> [--project <name|aka>]` opens a tab the pane holds and prints its
   id. It opens behind the tab you are on, or on screen in a project with none.
-  `--project` opens it in another open project's browser; the manager has none.
+  `--project` opens it in another open project's browser. A pane of the manager,
+  or its main, opens it in the manager's browser.
 - `tabs` lists the project's tabs: id, who holds them (yours, the user's, another
   pane), address and title. `claim <tab>` takes one of your tabs; one another
   pane holds is refused. `release <tab>` hands one back.

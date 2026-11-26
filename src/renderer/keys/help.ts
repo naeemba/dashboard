@@ -40,10 +40,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + '.dashboard/notes-ink.svg, the project\'s, or for the manager in your home directory. The switch '
     + 'key turns between them. No save key: written a moment after you stop, read only when you '
     + 'arrive. Draw with mouse, pen or touch; the keys pick tool, colour and width.',
-  browser: 'The project\'s own browser: tabs, an address bar and the page, signed in apart from '
-    + 'every other project and from the app. These keys work from inside the page too; '
+  browser: 'A project\'s or the manager\'s own browser: tabs, an address bar and the page, signed in '
+    + 'apart from every other and from the app. These keys work inside the page too; '
     + 'every other key is the page\'s. Up from the address walks the tabs. An agent\'s tab names '
-    + 'its pane; revoke takes it back. Tabs close with the project; sign-ins stay.',
+    + 'its pane; revoke takes it back. Tabs close with the project.',
   manager: 'The first tab, and no project: no shells, so the terminal and nvim keys do nothing here. '
     + 'Needs you lists what waits on you across the open projects, oldest first; under it, each '
     + 'project with its panes, figures and worktrees. A letter, digit or symbol answers the '
@@ -61,7 +61,7 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'cards above the strip now rather than at the next half hour.',
   modes: 'A project is shown five ways and remembers the one you left it on. The five are named along '
     + 'the foot of its page, and a click on a name goes there. On the manager the board and notes '
-    + 'keys land on its own board and notes sections.',
+    + 'keys land on its own board and notes sections, and the browser key on its own browser.',
   projects: 'The first tab is the manager; every tab after it is a project, in your order. Worker '
     + 'shells run in a pane host outside the app, so a quit or crash leaves them running. The close '
     + 'key takes a project away, refused while a worker runs something. The drawer lists the '

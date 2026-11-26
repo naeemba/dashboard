@@ -2,8 +2,9 @@ import type { CardsPage } from './cards';
 import { createCardsView } from './cards-view';
 import { createCommandView } from './command-view';
 import type { DashboardBridge, WorktreeEntry } from '../../shared/app/bridge';
+import { createBrowserView } from '../browser/browser-view';
 import type { SendPlan } from '../panes/free-pane';
-import { MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
+import { MANAGER_BROWSER_PATH, MANAGER_PROJECT, MANAGER_SLOT } from '../../shared/manager/manager';
 import { createLogView } from './log-view';
 import { createManagerReads } from './manager-reads';
 import { createManagerView } from './manager-view';
@@ -12,7 +13,7 @@ import type { Mode } from '../../shared/keys/modes';
 import type { Need } from '../../shared/manager/needs-you';
 import { createInkView } from '../notes/ink-view';
 import { createNotesView } from '../notes/notes-view';
-import { showMode, type Page } from '../app/page';
+import { makeView, showMode, type Page } from '../app/page';
 import { createSectionStrip } from './section-strip';
 import { removeWorktreeAsking } from '../ship/worktree-removal';
 import type { JumpToWorktree } from '../ship/worktree-view';
@@ -147,11 +148,9 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     binding: options.binding,
   });
   ink.element.hidden = true;
-  // The notes view is the box and the page beside it, so the wrapper a project's page builds in page.ts is
-  // built here too: `.view` is what the stylesheet positions and hides, and `.page-manager .view` is
+  // The notes view is the box and the page beside it, in the wrapper a project's page has (makeView): `.view` is what the stylesheet positions and hides, and `.page-manager .view` is
   // what pushes it down below the strip.
-  const notesView = document.createElement('div');
-  notesView.className = 'view view-notes';
+  const notesView = makeView('notes', 'manager');
   notesView.append(notes.element, ink.element);
   const log = createLogView({
     bridge: options.bridge,
@@ -159,22 +158,33 @@ export function createManagerPage(options: ManagerPageOptions): Page {
     onNotice: (message) => options.onNotice('log', message),
     binding: options.binding,
   });
+  // The manager's own browser, signed in apart from every project's, for its main and its workers. Not
+  // a section, as the terminals are not: Ctrl+Shift+B gets there, and the strip draws it after them.
+  const browser = createBrowserView({
+    bridge: options.bridge,
+    projectPath: MANAGER_BROWSER_PATH,
+    onError: (message) => options.onError(`browser:${MANAGER_SLOT}`, message),
+    onNotice: (message) => options.onNotice(`browser:${MANAGER_SLOT}`, message),
+    onChanged: options.onChanged,
+  });
+  const browserView = makeView('browser', 'manager');
+  browserView.append(browser.element);
   // Above the five views rather than inside one, so it is on screen whichever section is showing.
   const strip = createSectionStrip(options.onSection);
   // Above the strip, and on screen whichever section is showing for the same reason the strip is.
   const markets = createMarketsView(options.bridge);
   element.append(
     markets.element, strip.element, manager.element, cards.element, command.element,
-    notesView, log.element,
+    notesView, log.element, browserView,
   );
   const page: Page = {
     project: MANAGER_PROJECT, element,
     views: {
       manager: manager.element, board: cards.element, command: command.element, notes: notesView,
-      log: log.element,
+      log: log.element, browser: browserView,
     },
     mode: 'manager', panes: [], focused: 0, slot: MANAGER_SLOT, editor: null, editorStarted: false,
-    board: cards, notes, ink, inkShowing: false, manager, command, strip, markets, log, chat: null, browser: null, workers: null,
+    board: cards, notes, ink, inkShowing: false, manager, command, strip, markets, log, chat: null, browser, workers: null,
   };
   // Which view is on screen and which mode the page is in are one fact, and showMode is where they are
   // set together — including here, where the page has not been arrived at yet.

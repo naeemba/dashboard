@@ -19,14 +19,17 @@ export const SECTIONS: readonly { name: string; mode: Mode }[] = [
   { name: 'log', mode: 'log' },
 ];
 
-// What the strip draws: the sections, then the manager's terminals. Drawn there so they can be seen and
-// clicked, but not a section: Alt+H and Alt+L are the terminals keys' left and right in that view, as
-// on every project's, so the section keys are not heard there and do not walk into it. Ctrl+T gets
-// there, as it does on a project, and the mode keys leave it.
-export const STRIP: readonly { name: string; mode: Mode }[] = [...SECTIONS, { name: 'terminals', mode: 'terminals' }];
+// What the strip draws: the sections, then the manager's terminals and its browser. Drawn there so they
+// can be seen and clicked, but not sections: Alt+H and Alt+L are the terminals keys' left and right in
+// that view, as on every project's, and every key but the browser's own is the web page's in the other,
+// so the section keys are not heard there and do not walk into them. Ctrl+T and Ctrl+Shift+B get there,
+// as they do on a project, and the mode keys leave them.
+export const STRIP: readonly { name: string; mode: Mode }[] = [
+  ...SECTIONS, { name: 'terminals', mode: 'terminals' }, { name: 'browser', mode: 'browser' },
+];
 
 // Where this mode sits among the sections, or -1 for one that is not a section — the manager's
-// terminals among them, which the strip draws after the sections. Board is a mode the
+// terminals and browser among them, which the strip draws after the sections. Board is a mode the
 // manager shares with every project, so this alone does not say you are on the manager — the scope of
 // the keys does that, and this only says where they land.
 export function sectionIndex(mode: Mode): number {

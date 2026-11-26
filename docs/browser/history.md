@@ -35,3 +35,5 @@ One line per merged change: date and why.
   an agent measuring performance got its first contentful paint only from a screenshot
 - 2026-11-26 — `browser eval`'s refusal of a script file it cannot read is `evalRequest` in
   `browser-cli.ts`, with a test, because it sat untested in `browser-program.ts`
+- 2026-11-26 — the manager has a browser of its own: the door refused its panes with "name a
+  project with --project", so its agents named one and drove that project's tabs and sign-ins
