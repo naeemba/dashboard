@@ -4,7 +4,7 @@
   "notes": "PR #197 skips 26 tests on Windows with `posixPathsOnly` because their expected values are POSIX literals such as /work/app. Every function behind them goes through node:path (exportTarget, docScope, fileCandidates, worktreePathFor, projectOfFolder, pickedFolder, projectNamed, firstProjectsFile, the project CLI and requests), so building fixtures with path.resolve(\"/work/app\") and expecting path.join(base, \"notes\", \"a.txt\") keeps them on both platforms. Skipped, the Windows job never runs the branches only Windows reaches: for example exportTarget's startsWith(`..${path.sep}`) check takes a backslash there, and nothing checks that a name like notes\\a.txt stays inside the folder.\n\nFiles: src/main/app/projects.test.ts, src/main/chat/chat-export-target.test.ts, src/main/drawer/docs-list.test.ts, src/main/nvim/file-open.test.ts, src/main/projects/project-cli.test.ts, src/main/projects/project-named.test.ts, src/main/projects/project-requests.test.ts, src/main/projects/projects-first.test.ts, src/main/ship/ship.test.ts, src/main/workers/session-requests.test.ts.\n\nDone when `grep -rn posixPathsOnly src/` prints nothing.\n\nReview: https://github.com/naeemba/dashboard/pull/197#discussion_r4441552042",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-26T11:33:06.764Z",
+  "updatedAt": "2026-11-26T11:35:21.088Z",
   "branch": "make-the-posix-path-literal-tests-portable",
   "comments": [
     {
@@ -18,6 +18,10 @@
     {
       "at": "2026-11-26T10:43:06.590Z",
       "body": "Rescope from main, 2026-11-26 check: now 45 posixPathsOnly( calls in 14 files (the card lists 26 in 10); new ones in browser-cli, projects-write, projects-file, session-requests-run-in tests. The dropsFirstConnection tests are done by #388 (posixCommandsOnly), leave them out. Large: if it does not split cleanly, do the files with the most calls first and say what is left."
+    },
+    {
+      "at": "2026-11-26T11:35:21.088Z",
+      "body": "Overlap check before starting: PR #393 (Worktree sweeps treat board-only leftovers as nothing to keep) also edits src/main/ship/ship.test.ts: it changes the ship import on line 3 and appends a removalChanges describe at the end. This card changes lines 6 (the posixPathsOnly import), 55 and 60 of that file. Different hunks, but the line 3 and line 6 edits are close enough that git may report a conflict in the imports. No other in-flight card or PR touches the 14 test files."
     }
   ],
   "column": "Doing",
