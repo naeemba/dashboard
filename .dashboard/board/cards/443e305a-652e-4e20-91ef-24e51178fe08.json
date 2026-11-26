@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:25:04.092Z",
-  "updatedAt": "2026-11-26T09:47:10.238Z",
+  "updatedAt": "2026-11-26T09:48:23.773Z",
   "branch": "dashboard-status-one-call-for-panes-cards-p",
   "pullRequest": 383,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-26T09:47:10.237Z",
       "body": "Converged, ready to merge. Merged origin/main (with #380, d6cbc2a3) into the branch with no conflicts and pushed it as a2c76670. Local pnpm check passed (4035 tests, typecheck, lint), and CI checks passed on a2c76670."
+    },
+    {
+      "at": "2026-11-26T09:48:23.741Z",
+      "body": "Pull request #383 merged: pane status: panes, cards, PRs and CI in one call https://github.com/naeemba/dashboard/pull/383"
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 311
 }
