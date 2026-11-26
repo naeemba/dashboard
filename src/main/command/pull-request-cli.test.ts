@@ -229,6 +229,19 @@ describe('landPullRequest handing off a conflict', () => {
     expect(github.asked).toContain('pr merge 12 --merge --match-head-commit def456');
   });
 
+  // Merged or closed by hand while the agent worked: the land starts over and says so.
+  it('starts over once the pull request is no longer open', async () => {
+    const closed = { ok: true, output: 'CLOSED abc123 main UNKNOWN https://github.com/acme/api/pull/12 fix-it false' };
+    const github = fakeGitHub({ 'pr view': [branchConflicting, closed, closed] });
+    expect(await landPullRequest(github.ports, '12', handOffs(true).handOff)).toEqual({ ok: false, output: 'pull request 12 is closed, not open' });
+  });
+
+  it('hands nothing off for a pull request gh named no branch for', async () => {
+    const { asked, handOff } = handOffs(true);
+    expect(await landPullRequest(fakeGitHub({ 'pr view': [conflicting] }).ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { branch: '' } });
+    expect(asked).toEqual([]);
+  });
+
   it('stops at the conflict when no agent took it', async () => {
     const github = fakeGitHub({ 'pr view': [branchConflicting] });
     const { handOff } = handOffs(false);

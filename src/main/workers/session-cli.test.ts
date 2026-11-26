@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
+import { conflictedWords, hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -189,6 +189,7 @@ describe('outsidePaneRefusal', () => {
     expect(outsidePaneRefusal({ kind: 'claim', project: null })).toContain('--project');
     expect(outsidePaneRefusal({ kind: 'claim', project: 'crm' })).toBeNull();
     expect(outsidePaneRefusal({ kind: 'send', id: '2:3', text: 'hi' })).toBeNull();
+    expect(outsidePaneRefusal({ kind: 'conflicted', branch: 'fix-it', pullRequest: '12', from: null })).toContain('outside a Dashboard pane');
     expect(outsidePaneRefusal({ kind: 'list', all: true, reports: false })).toBeNull();
   });
 
@@ -207,5 +208,12 @@ describe('landed from a command', () => {
     expect(landedLine({ ok: true, output: 'released 2:1' })).toBe('released 2:1');
     expect(landedLine({ ok: true, output: '' })).toBe('');
     expect(landedLine({ ok: false, output: 'no such command: landed\n\npane — the Dashboard panes' })).toBe('no worker released: no such command: landed');
+  });
+});
+
+describe('conflictedWords', () => {
+  it('asks from the land\'s pane when there is one, and parses back', () => {
+    expect(conflictedWords('fix-it', '12', '2:0')).toEqual(['conflicted', 'fix-it', '12', '--from', '2:0']);
+    expect(parseSessionCommand(conflictedWords('fix-it', '12', undefined))).toEqual({ ok: true, command: { kind: 'conflicted', branch: 'fix-it', pullRequest: '12', from: null } });
   });
 });
