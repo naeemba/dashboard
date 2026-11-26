@@ -151,19 +151,21 @@ export type HandOff = (branch: string, target: string) => Promise<boolean>;
 // A conflict handed to the branch's agent is waited out: once its merge is pushed (a new head, or the
 // pull request no longer open) the land starts over. No agent, no push within the hour, or HAND_OFFS
 // spent, and the conflict is the answer, as without a hand-off.
-export async function landPullRequest(ports: GitHubPorts, target: string, handOff?: HandOff, handedOff = 0): Promise<LandAnswer> {
-  const answer = await landOnce(ports, target);
-  const { conflicts } = answer;
-  if (conflicts === undefined || handOff === undefined || handedOff === HAND_OFFS || conflicts.branch === '') return answer;
-  if (!(await handOff(conflicts.branch, target)) || !(await newHead(ports, target, conflicts.sha))) return answer;
-  return landPullRequest(ports, target, handOff, handedOff + 1);
+export async function landPullRequest(ports: GitHubPorts, target: string, handOff?: HandOff): Promise<LandAnswer> {
+  for (let handedOff = 0; ; handedOff += 1) {
+    const answer = await landOnce(ports, target);
+    const { conflicts } = answer;
+    if (conflicts === undefined || handOff === undefined || handedOff === HAND_OFFS || conflicts.branch === '') return answer;
+    if (!(await handOff(conflicts.branch, target)) || !(await newHead(ports, target, conflicts.sha))) return answer;
+  }
 }
 
 async function newHead(ports: GitHubPorts, target: string, sha: string): Promise<boolean> {
   for (let waited = 0; waited < NEW_HEAD_WAIT_MS; waited += NEW_HEAD_POLL_MS) {
     await ports.wait(NEW_HEAD_POLL_MS);
     const head = await patiently(ports, stateAndHead(target));
-    if (head.ok && (readHead(head).sha !== sha || readHead(head).state !== 'OPEN')) return true;
+    const now = readHead(head);
+    if (head.ok && (now.sha !== sha || now.state !== 'OPEN')) return true;
   }
   return false;
 }

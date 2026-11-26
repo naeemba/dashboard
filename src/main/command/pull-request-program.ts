@@ -44,9 +44,9 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
     }
     // A land's conflict goes to the agent on its branch, said at once, since the land then waits on it.
     const handOff = async (branch: string, target: string) => {
-      const line = await askConflicted(branch, target, project.project);
+      const { handed, line } = await askConflicted(branch, target, project.project);
       if (line !== '') process.stdout.write(`${line}\n`);
-      return line !== '';
+      return handed;
     };
     const answer = parsed.verb === 'land'
       ? await landPullRequest({ gh, wait: delay }, parsed.target, handOff)

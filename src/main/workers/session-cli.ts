@@ -298,7 +298,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     }
     case 'landed': {
       const [flag, name = '', ...more] = rest;
-      const from = more.length === 2 && more[0] === '--from' && PANE_ID.test(more[1]) ? more[1] : null;
+      const from = fromFlag(more);
       if ((flag !== '--branch' && flag !== '--card') || name.trim() === '' || (more.length > 0 && from === null)) {
         return refuse('pane landed takes --branch <branch> or --card <card id>, optionally then --from <id>');
       }
@@ -306,7 +306,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     }
     case 'conflicted': {
       const [branch = '', pullRequest = '', ...more] = rest;
-      const from = more.length === 2 && more[0] === '--from' && PANE_ID.test(more[1]) ? more[1] : null;
+      const from = fromFlag(more);
       if (branch.trim() === '' || pullRequest.trim() === '' || (more.length > 0 && from === null)) {
         return refuse('pane conflicted takes <branch> <pull request>, optionally then --from <id>');
       }
@@ -325,14 +325,18 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
   }
 }
 
+// `--from <id>`, the pane `landed` and `conflicted` are asked from: its id, or null for none or a bad one.
+const fromFlag = (words: readonly string[]): string | null => (words.length === 2 && words[0] === '--from' && PANE_ID.test(words[1]) ? words[1] : null);
+const fromWords = (from: string | undefined): string[] => (from === undefined ? [] : ['--from', from]);
+
 // The words `pr land` and a board move ask `pane landed` in, from the pane they ran in when there is one.
 export function landedWords(by: 'branch' | 'card', name: string, from: string | undefined): string[] {
-  return ['landed', `--${by}`, name, ...(from === undefined ? [] : ['--from', from])];
+  return ['landed', `--${by}`, name, ...fromWords(from)];
 }
 
 // The words `pr land` asks `pane conflicted` in, as landedWords.
 export function conflictedWords(branch: string, pullRequest: string, from: string | undefined): string[] {
-  return ['conflicted', branch, pullRequest, ...(from === undefined ? [] : ['--from', from])];
+  return ['conflicted', branch, pullRequest, ...fromWords(from)];
 }
 
 // What they print of the app's answer: its lines, or the first line of why no worker was released. An
