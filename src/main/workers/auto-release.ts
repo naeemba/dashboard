@@ -1,4 +1,5 @@
 import type { WorktreeEntry } from '../../shared/app/bridge';
+import { entryForPane } from '../ship/worktree-store';
 import { isFinishedColumn, selectionOf, type Board } from '../../shared/board/board';
 
 // Whether a worker pane may close now that main's own command put its work in: `pr land` merged the
@@ -45,6 +46,6 @@ export function finishedColumnOf(board: Board | null, cardId: string): string | 
 export function finishedCardIn(
   entries: readonly WorktreeEntry[], projectPath: string | undefined, index: number, board: (projectPath: string) => Board | null,
 ): string | null {
-  const entry = entries.find((each) => each.pane === index && each.projectPath === projectPath);
+  const entry = entryForPane(entries, projectPath, index);
   return entry === undefined ? null : finishedColumnOf(board(entry.projectPath), entry.cardId);
 }

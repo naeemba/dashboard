@@ -75,6 +75,7 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('pane list', 'Every pane and whether its worker is running, blocked or done', [
     flag('all', 'every open project', 'boolean'), flag('reports', 'with the end of each last message', 'boolean')]),
   tool('pane send', 'Type text into a pane and press Enter, or hand it to a screen as its next prompt', [PANE, word('text', 'the text')]),
+  tool('pane status', 'Each pane with its card, branch, pull request, CI and last message, then open pull requests no pane holds; the call after a compaction', []),
   tool('pane report', 'A worker\'s line from pane_list and its last message', [PANE]),
   tool('pane release', 'Close a worker\'s pane now', [PANE]),
   tool('pane finish', 'Release a worker whose card is Done or Cancelled or whose branch merged; refused otherwise', [PANE]),

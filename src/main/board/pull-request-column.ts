@@ -12,7 +12,7 @@ export type PullRequestState = 'OPEN' | 'MERGED' | 'CLOSED';
 // only that file reads them, and it checks each.
 export type PullRequest = {
   number: number; state: PullRequestState; title: string; url: string;
-  statusCheckRollup?: unknown; reviewDecision?: unknown; mergeable?: unknown; headRefOid?: unknown;
+  statusCheckRollup?: unknown; reviewDecision?: unknown; mergeable?: unknown; headRefOid?: unknown; headRefName?: unknown;
 };
 
 // A Done card is asked about for this long after it last changed, then never again. Long enough to
@@ -24,12 +24,19 @@ export const DONE_FOLLOWED_MS = 24 * 60 * 60 * 1000;
 // the app knows it has said one already, so they never change: the title after them may.
 const SAID = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed without merging' } as const;
 
-// `gh pr list` for one branch, every state, newest first, with what the comments name and what the
-// card's glyph is read from (pull-request-status.ts), and the head commit a merged one ended on
-// (mergedHead in finished-work.ts).
+// What `gh pr list` asks for: what the comments name, what the card's glyph is read from
+// (pull-request-status.ts), the head commit a merged one ended on (mergedHead in finished-work.ts),
+// and the branch pane status names each open one by (headRefName).
+const PULL_REQUEST_FIELDS = 'number,state,title,url,statusCheckRollup,reviewDecision,mergeable,headRefOid,headRefName';
+
+// `gh pr list` for one branch, every state, newest first.
 export function pullRequestListArguments(branch: string): string[] {
-  const fields = 'number,state,title,url,statusCheckRollup,reviewDecision,mergeable,headRefOid';
-  return ['pr', 'list', '--head', branch, '--state', 'all', '--json', fields, '--limit', '20'];
+  return ['pr', 'list', '--head', branch, '--state', 'all', '--json', PULL_REQUEST_FIELDS, '--limit', '20'];
+}
+
+// Every open one of the project, for pane status.
+export function openPullRequestListArguments(): string[] {
+  return ['pr', 'list', '--state', 'open', '--json', PULL_REQUEST_FIELDS, '--limit', '100'];
 }
 
 // The pull request a branch stands for, from `gh pr list`'s JSON: an open one first, since a branch
@@ -41,8 +48,13 @@ export function latestPullRequest(json: string): PullRequest | null {
 
 // The same pick from a list already parsed, which merge-request.ts hands over in gh's shape.
 export function latestListed(listed: unknown): PullRequest | null {
-  const pulls = (Array.isArray(listed) ? listed : []).filter(isPullRequest);
+  const pulls = listedPullRequests(listed);
   return pulls.find((pull) => pull.state === 'OPEN') ?? pulls[0] ?? null;
+}
+
+// What of a parsed list is a pull request, in its order.
+export function listedPullRequests(listed: unknown): PullRequest[] {
+  return (Array.isArray(listed) ? listed : []).filter(isPullRequest);
 }
 
 function isPullRequest(value: unknown): value is PullRequest {
