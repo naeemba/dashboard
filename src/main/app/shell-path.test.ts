@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loginShellValue, pathFromShell } from './shell-path';
+import { posixCommandsSuite } from '../testing/windows-skips';
 
 describe('pathFromShell', () => {
   it('takes the last line, past whatever the shell printed on start', () => {
@@ -8,7 +9,7 @@ describe('pathFromShell', () => {
   it('keeps the app\'s own when the shell said nothing', () => expect(pathFromShell('', '/usr/bin')).toBe('/usr/bin'));
 });
 
-describe.skipIf(process.platform === 'win32')('loginShellValue', () => {
+posixCommandsSuite('loginShellValue', () => {
   const shell = process.env.SHELL;
   beforeEach(() => {
     process.env.SHELL = '/bin/sh';

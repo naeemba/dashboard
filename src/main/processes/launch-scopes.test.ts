@@ -2,10 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { posixCommandsSuite } from '../testing/windows-skips';
 import { probe, stopScope, writeNew } from './launch-scopes';
 import { scopeRefusal } from './scope-support';
 
-describe.skipIf(process.platform === 'win32')('probe', () => {
+posixCommandsSuite('probe', () => {
   it('answers what a command printed, trimmed', async () => {
     await expect(probe('sh', ['-c', 'echo " running "'])).resolves.toBe('running');
   });

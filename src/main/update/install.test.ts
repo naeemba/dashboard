@@ -5,6 +5,7 @@ import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { posixCommandsSuite } from '../testing/windows-skips';
 import { download, swapInto, unpack } from './install';
 
 // Lets one test make the rename of the staged app fail the way EXDEV does; every other rename is real.
@@ -65,8 +66,8 @@ describe('download', () => {
   });
 });
 
-// zip and unzip, as a Linux install has them; Windows updates through Squirrel and never unpacks.
-describe.skipIf(process.platform === 'win32')('unpack', () => {
+// Windows updates through Squirrel and never unpacks.
+posixCommandsSuite('unpack', () => {
   function zipped(parent: string, entries: string[]): string {
     const source = path.join(parent, 'source');
     for (const entry of entries) {
