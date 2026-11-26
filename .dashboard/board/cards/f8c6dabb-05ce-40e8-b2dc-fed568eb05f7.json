@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T13:03:26.403Z",
-  "updatedAt": "2026-11-26T12:10:35.762Z",
+  "updatedAt": "2026-11-26T12:11:02.963Z",
   "branch": "worktree-sweeps-treat-board-only-leftovers",
   "pullRequest": 393,
   "comments": [
@@ -28,8 +28,12 @@
     {
       "at": "2026-11-26T12:10:35.761Z",
       "body": "Merged origin/main (after #396) into the branch as 359f468a. Git merged it cleanly with nothing to resolve. pnpm check passes, CI passed on 359f468a, and GitHub reports the PR mergeable. Ready to merge."
+    },
+    {
+      "at": "2026-11-26T12:11:02.941Z",
+      "body": "Pull request #393 merged: Worktree sweeps treat board-only leftovers as nothing to keep https://github.com/naeemba/dashboard/pull/393"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 323
 }
