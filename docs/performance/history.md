@@ -5,13 +5,16 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
-## 2026-11-26: keeping the hidden manager painted does not speed up Ctrl+1
+## 2026-11-26: keeping the hidden manager painted does not speed up Ctrl+1 (finding 8)
 
 The question was whether Ctrl+1 gets faster if the hidden manager page stays
 painted under the page in front, rather than moved off screen
 (`.page-manager[hidden] { visibility: visible; translate: none }`). This was
-the experiment #314 left open. Same machine and headless compositor, both
-builds of `main` from the same day. Two counts:
+the experiment #314 left open. #314 was closed without merging, so its
+`measure.mjs manager-switch` step and its row-keeping change are not on
+`main`; the numbers below quoted from it come from its description. Same
+machine and headless compositor, both builds of `main` from the same day.
+Two counts:
 
 - the `keys` step's tab-switch line, 5 runs each, one Ctrl+1 per run;
 - an unsaved script running 15 trips of Ctrl+1 then Ctrl+2, each press
@@ -26,13 +29,15 @@ builds of `main` from the same day. Two counts:
 | 15 trips: Ctrl+2 to alpha, median per run | 32 ms | 24, 32 ms |
 
 - No gain, so the change is not made and pages still hide by moving off
-  screen. In the trips, the painted manager is the slower one.
-- The gap the experiment was for has mostly closed on `main`. In #314,
-  Ctrl+1 took 88 ms against 48 ms for alpha. It now takes 32–48 ms against
-  32 ms. What is left is the `keys` step's single Ctrl+1 at 120–160 ms. It is
-  the manager's first arrival in that run, and it pays the board re-read
-  (`BOARD_STALE_MS`) that #314 measured at 64–128 ms. Neither way of hiding
-  the page moves it.
+  screen. The `keys` rows alone carry that: Ctrl+1 has the same 144 ms
+  median both ways. The trips, which cannot be rerun, only add that the
+  painted manager is the slower one.
+- The gap the experiment was for, finding 8, has mostly closed on `main`.
+  In #314's description, Ctrl+1 took 88 ms against 48 ms for alpha. It
+  now takes 32–48 ms against 32 ms. What is left is the `keys` step's
+  single Ctrl+1 at 120–160 ms. It is the manager's first arrival in that
+  run, and it pays the board re-read (`BOARD_STALE_MS`) that #314's
+  description puts at 64–128 ms. Neither way of hiding the page moves it.
 
 ## 2026-11-16: a shown terminal skips the selection redraw when nothing is selected
 
@@ -380,6 +385,7 @@ installed app was never touched.
      also fires `board:peek` and `worktree:scan` when stale.
    - You notice: Ctrl+1 hesitates, where every other tab key is instant.
    - Fix (small): build the rows once and update the ones whose data changed.
+   - Now: mostly closed on `main` without that fix; see the 2026-11-26 entry.
 
 ### Ruled out, by measurement
 
