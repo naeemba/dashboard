@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:39.822Z",
-  "updatedAt": "2026-11-26T09:53:59.177Z",
+  "updatedAt": "2026-11-26T09:55:04.297Z",
   "branch": "heavy-checks-wait-on-a-machine-wide-lock-in",
   "pullRequest": 384,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-26T09:53:59.177Z",
       "body": "Converged, ready to merge. Merged origin/main (#380) into the branch with no conflicts and pushed 340ccb84. pnpm check passed locally (4072 tests, typecheck, lint). CI: checks passed on 340ccb84. GitHub now reports the PR MERGEABLE. Review loop result unchanged: 2 rounds, all 6 findings fixed, nothing open."
+    },
+    {
+      "at": "2026-11-26T09:55:04.268Z",
+      "body": "Pull request #384 merged: Heavy checks wait on a machine-wide lock instead of flaking under load https://github.com/naeemba/dashboard/pull/384"
     }
   ],
-  "column": "Review",
-  "order": 5
+  "column": "Done",
+  "order": 312
 }
