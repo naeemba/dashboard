@@ -38,6 +38,9 @@ export type Settings = {
   // reset, a seventh of the week when null; 'none' is no limit, and budget answers under. Set on the
   // settings screen or with `budget --cap` and `budget --pace`.
   budget: { limit: BudgetLimit; weeklyCap: number | null; dailyShare: number | null };
+  // idleMinutes: how long an agent's browser tab goes unused before its agent is asked whether it may
+  // close it (docs/browser), null never asking. Written in the file by hand only.
+  browser: { idleMinutes: number | null };
 };
 
 // The on/off settings: each a boolean in a section of the file, named as [section, field], read by
@@ -121,6 +124,7 @@ export function defaultSettings(isMac: boolean): Settings {
     updates: { check: true },
     errors: { notify: true },
     budget: { limit: 'cap', weeklyCap: null, dailyShare: null },
+    browser: { idleMinutes: 30 },
   };
 }
 
@@ -179,6 +183,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
   const storedBudget = asRecord(raw.budget);
+  const idleMinutes = asRecord(raw.browser).idleMinutes;
   // A number only: the file never holds a percentage as text.
   const percentage = (stored: unknown): number | null => (typeof stored === 'number' ? budgetPercentage(stored) : null);
   // A toggle the file holds as a boolean, or the shipped one.
@@ -225,6 +230,9 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       limit: BUDGET_LIMITS.find((limit) => limit === storedBudget.limit) ?? defaults.budget.limit,
       weeklyCap: percentage(storedBudget.weeklyCap),
       dailyShare: percentage(storedBudget.dailyShare),
+    },
+    browser: {
+      idleMinutes: idleMinutes === null || (typeof idleMinutes === 'number' && idleMinutes > 0) ? idleMinutes : defaults.browser.idleMinutes,
     },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }

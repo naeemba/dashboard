@@ -5,6 +5,7 @@ import type { Channels } from '../../app/channels';
 import { browserFileFolder, browserPage } from '../../browser/browser-page';
 import { browserRequests, type BrowserRequestPorts } from '../../browser/browser-requests';
 import { browserViews, type BrowserViewsMain } from '../../browser/browser-views';
+import { idleQuestion, mainSlotOf, tabClock } from '../../browser/tab-idle';
 import { firstFile } from '../../nvim/file-open';
 import type { SessionReply, SessionRequest } from '../../workers/session-cli';
 import { bind, registerActions } from '../action';
@@ -21,9 +22,20 @@ import { browserFocus, browserHide, browserReset, browserShow } from './view';
 // screen, is browser.reset; the browser command reaches them through `requests`, and a pane let go
 // of is browser.release of all its tabs. docs/browser/README.md has the whole of it.
 // `panes` is what the browser command's door asks main of the panes and pages (browser-requests.ts).
-type PaneLookups = Omit<BrowserRequestPorts, 'actions' | 'reads'>;
+type PaneLookups = Omit<BrowserRequestPorts, 'actions' | 'reads' | 'used'>;
 
-export function browserActions(table: Channels, main: BrowserViewsMain, panes: PaneLookups) {
+// How the app asks a tab's agent, and when: a main through its chat, queued behind its turn; a worker
+// through its Claude screen. A pane with none never hears, which is the same as not answering.
+// `idleMinutes` is the setting, null never asking.
+export type TabAsking = {
+  tellMain(slot: number, text: string): void;
+  tellWorker(pane: string, text: string): void;
+  idleMinutes(): number | null;
+};
+
+const SWEEP_MS = 60_000;
+
+export function browserActions(table: Channels, main: BrowserViewsMain, panes: PaneLookups, asking: TabAsking) {
   // A page's window that is no web page is denied before it opens (browser-views.ts).
   const views = browserViews(main, {
     opened: (projectPath, url, opener) => void open.call({ projectPath, url, opener }),
@@ -33,7 +45,24 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
   // The folder screenshots were saved in before browser-files/, which nothing clears any more.
   void rm(path.join(app.getPath('userData'), 'browser-screenshots'), { recursive: true, force: true }).catch(() => undefined);
   const isFile = async (file: string): Promise<boolean> => (await firstFile([file])) !== undefined;
-  const ports: BrowserPorts = { ...views.ports, ...page.ports, isFile };
+  // Every state kept is seen by the idle clock, so it knows who opened each tab (tab-idle.ts).
+  const clock = tabClock();
+  const keep: BrowserPorts['keep'] = (projectPath, state) => {
+    views.ports.keep(projectPath, state);
+    clock.seen(state, Date.now());
+  };
+  const ports: BrowserPorts = { ...views.ports, ...page.ports, isFile, keep, tellMain: asking.tellMain };
+  const tell = (pane: string, text: string): void => {
+    const main = mainSlotOf(pane);
+    if (main === null) asking.tellWorker(pane, text);
+    else asking.tellMain(main, text);
+  };
+  // An agent that does not answer keeps its tab: a question is asked once and nothing closes on a timer.
+  setInterval(() => {
+    const minutes = asking.idleMinutes();
+    const questions = clock.due(views.ports.allBrowsers(), Date.now(), minutes === null ? null : minutes * 60_000);
+    if (minutes !== null) for (const { pane, tabs } of questions) tell(pane, idleQuestion(tabs, minutes));
+  }, SWEEP_MS).unref();
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);
   const reset = bind(browserReset, ports);
@@ -47,16 +76,18 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
   // A read, so no action: the tabs a page built after they were opened draws.
   table.handle('browser:read', (_screen, projectPath: unknown) => views.ports.browserOf(String(projectPath)));
   const actions: BrowserRequestPorts['actions'] = {
-    open, release, navigate, step, claim: bind(browserClaim, ports), resize: bind(browserResize, ports),
+    open, release, close, navigate, step, claim: bind(browserClaim, ports), resize: bind(browserResize, ports),
     click: bind(browserClick, ports), type: bind(browserType, ports), press: bind(browserPress, ports),
     upload: bind(browserUpload, ports), eval: bind(browserEval, ports),
   };
   return {
     owns: views.owns,
     reset,
-    // Every tab the pane holds back to the user: the pane released, finished, its agent exited, or
-    // another agent started in it.
+    // Every tab the pane holds back to the user, still open, and its main told which: the pane released,
+    // finished, its agent exited, or another agent started in it.
     letGo: (pane: string): void => void release.call({ pane }),
-    requests: (otherwise: (request: SessionRequest) => Promise<SessionReply>) => browserRequests({ ...panes, actions, reads: page.reads }, otherwise),
+    requests: (otherwise: (request: SessionRequest) => Promise<SessionReply>) => browserRequests({
+      ...panes, actions, reads: page.reads, used: (tab) => clock.used(tab, Date.now()),
+    }, otherwise),
   };
 }

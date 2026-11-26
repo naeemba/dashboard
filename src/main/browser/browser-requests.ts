@@ -19,8 +19,10 @@ export type BrowserRequestPorts = {
   projectPath(slot: number): string | undefined;
   // The page a project folder is open on, or -1.
   slotOf(projectPath: string): number;
-  actions: Record<'open' | 'claim' | 'release' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'upload' | 'eval', BoundAction>;
+  actions: Record<'open' | 'claim' | 'release' | 'close' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'upload' | 'eval', BoundAction>;
   reads: BrowserReads;
+  // A browser call named the tab: its idle clock starts over (tab-idle.ts).
+  used(tab: number): void;
 };
 
 const UNREADABLE = 'the browser request was not one the app could read';
@@ -64,9 +66,11 @@ async function answer(ports: BrowserRequestPorts, pane: string, command: Browser
     return sessionReply(await actions.open.call({ projectPath, url: command.url, pane }));
   }
   const onTab = { pane, tab: command.tab };
+  ports.used(command.tab);
   switch (command.verb) {
     case 'claim': return sessionReply(await actions.claim.call(onTab));
     case 'release': return sessionReply(await actions.release.call(onTab));
+    case 'close': return sessionReply(await actions.close.call(onTab));
     case 'go': return sessionReply(await actions.navigate.call({ ...onTab, url: command.url }));
     case 'back': case 'forward': case 'reload': return sessionReply(await actions.step.call({ ...onTab, step: command.verb }));
     case 'resize': return sessionReply(await actions.resize.call({ ...onTab, width: command.width, height: command.height }));

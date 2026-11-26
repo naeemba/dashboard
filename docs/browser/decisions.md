@@ -114,3 +114,20 @@ the corner while an agent holds the tab. Only agent-held tabs pay it, and a page
 that does not change draws no frames, so many tabs cost no more than their pages
 do.
 
+
+## browser-decision-10: A tab is closed by the agent holding it, never for being idle
+
+Eleven open tabs held about 517 MB, but an idle tab may be a form left for you
+to submit or a page an agent comes back to, so the app never closes one on a
+timer. The agent that holds it decides. An agent's tab unused for
+`browser.idleMinutes` gets one question to that agent; its answer is
+`browser close`, and silence keeps the tab and is not asked again until the tab
+is used and idles again. A tab you opened or are looking at is never asked
+about: the screen counts as use, and a claim of your tab does not make it the
+agent's to close.
+
+An agent that is ending is not asked at the release. The release kills it, so
+waiting on an answer would hold `pane release`, `pane finish` and every sweep
+that lets a pane go until the agent replied. The dashboard-browser skill tells
+it to close or release its tabs before it finishes instead, and a pane let go of
+still holding tabs hands them to you open, with its page's main told which.

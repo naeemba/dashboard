@@ -34,6 +34,7 @@ export function fakePorts(
     },
     fileInputOf: async (_tab, node) => fileInputs[node] ?? null,
     isFile: async (file) => files.includes(file),
+    tellMain: (slot, text) => { done.push(`tell ${slot} ${text.split('\n')[0]}`); },
     act: async (tab, act) => { done.push(`${act.kind} ${tab} ${JSON.stringify({ ...act, kind: undefined })}`); },
   };
 }

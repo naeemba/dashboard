@@ -76,7 +76,12 @@ export function tabLines(state: BrowserState, pane: string): string {
   if (state.tabs.length === 0) return 'no tab is open in this project';
   return state.tabs.map((tab) => {
     const holder = tab.holder === pane ? 'yours' : tab.holder === 'user' ? 'the user\'s' : `pane ${tab.holder}`;
-    const title = tab.title.trim() === '' ? '' : `  ${tab.title.trim()}`;
-    return `${tab.id}  ${holder}  ${tab.url}${title}`;
+    return tabLine(tab, holder);
   }).join('\n');
+}
+
+// One tab as every listing of tabs prints it: id, who holds it when that is said, address, title.
+export function tabLine(tab: BrowserTab, holder?: string): string {
+  const title = tab.title.trim();
+  return [tab.id, holder, tab.url, title === '' ? undefined : title].filter((part) => part !== undefined).join('  ');
 }

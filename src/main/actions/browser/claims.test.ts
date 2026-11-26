@@ -55,7 +55,9 @@ describe('browser.release', () => {
     await expect(bind(browserRelease, ports).call({ pane: '3:1' })).resolves.toEqual({ output: 'released 2 tabs of 3:1' });
     expect(ports.browsers.get(project)?.tabs).toEqual([tab(1), tab(2, '3:2'), tab(3)]);
     expect(ports.browsers.get('/work/web')?.tabs).toEqual([tab(4)]);
-    expect(ports.done).toEqual(['unsize 1', 'unsize 4']);
+    expect(ports.done).toEqual(['unsize 1', 'unsize 4', 'tell 3 Pane 3:1 was let go of still holding these browser tabs. They are left open and are the user\'s now:']);
+    await expect(bind(browserRelease, ports).call({ pane: '3:1' })).resolves.toEqual({ output: 'released 0 tabs of 3:1' });
+    expect(ports.done).toHaveLength(3);
   });
 });
 

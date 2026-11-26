@@ -41,6 +41,13 @@ describe('parseSettings', () => {
     expect(parseSettings({ budget: { limit: 'daily' } }, false).budget.limit).toBe('cap');
   });
 
+  it('asks about an agent\'s tab after 30 idle minutes, the minutes the file names, or never for null', () => {
+    expect(parseSettings({}, false).browser).toEqual({ idleMinutes: 30 });
+    expect(parseSettings({ browser: { idleMinutes: 90 } }, false).browser).toEqual({ idleMinutes: 90 });
+    expect(parseSettings({ browser: { idleMinutes: null } }, false).browser).toEqual({ idleMinutes: null });
+    for (const rubbish of [0, -5, '30']) expect(parseSettings({ browser: { idleMinutes: rubbish } }, false).browser).toEqual({ idleMinutes: 30 });
+  });
+
   it('checks for updates unless the file turns it off', () => {
     expect(parseSettings({}, false).updates).toEqual({ check: true });
     expect(parseSettings({ updates: { check: false } }, false).updates).toEqual({ check: false });

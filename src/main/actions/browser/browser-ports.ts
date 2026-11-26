@@ -35,6 +35,8 @@ export type BrowserPorts = {
   act(id: number, act: PageAct): Promise<void>;
   // Whether the node is an <input type=file>, and if so whether it takes more than one file.
   fileInputOf(id: number, node: number): Promise<{ multiple: boolean } | null>;
+  // A message into that page's main session, queued behind its turn: the tabs a pane let go of left open.
+  tellMain(slot: number, text: string): void;
   // Whether a file is there to upload: a regular file this user can see.
   isFile(file: string): Promise<boolean>;
   // The script run in the page once `waitFor` matches, if one is given: the line saying where its

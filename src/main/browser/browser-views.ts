@@ -38,7 +38,7 @@ export class PageTimeout extends Error {
 
 // The ports the views give the actions; the page's own are browser-page.ts's, and isFile is
 // browser-actions.ts's.
-type ViewPorts = Omit<BrowserPorts, keyof BrowserPagePorts | 'isFile'>;
+type ViewPorts = Omit<BrowserPorts, keyof BrowserPagePorts | 'isFile' | 'tellMain'>;
 
 // The size a tab is laid out at before it was ever on screen, an agent's tab: a laptop's window.
 const UNPLACED: BrowserBounds = { x: 0, y: 0, width: 1280, height: 800 };

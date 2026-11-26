@@ -214,7 +214,7 @@ const boards = boardWatchers((projectPath) => {
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
 // Each project's browser tabs, beside the window: browser-actions.ts.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject });
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: (pane, text) => workerScreens.send(pane, text), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
