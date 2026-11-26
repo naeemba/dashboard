@@ -4,7 +4,7 @@
   "notes": "Claude Code: Tab adds a note to a yes. Pane: a typed reason exists only on No (chat-permission.ts:55). Whether PermissionResult carries an allow note is unverified; if not, comment on the card and stop without a PR. Size S.",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-26T10:41:02.026Z",
+  "updatedAt": "2026-11-26T10:41:29.472Z",
   "comments": [
     {
       "at": "2026-10-31T22:51:43.326Z",
@@ -15,6 +15,6 @@
       "body": "Still blocked: SDK 0.3.316 allow answer has no message field; re-add when it does."
     }
   ],
-  "column": "Backlog",
-  "order": 1
+  "column": "Cancelled",
+  "order": 31
 }
