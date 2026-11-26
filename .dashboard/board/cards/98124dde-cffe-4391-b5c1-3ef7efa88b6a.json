@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:13:44.127Z",
-  "updatedAt": "2026-11-26T12:17:40.974Z",
+  "updatedAt": "2026-11-26T13:22:08.639Z",
   "branch": "cache-the-usage-sweep-s-per-file-counts-so",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 401,
+  "comments": [
+    {
+      "at": "2026-11-26T13:22:08.614Z",
+      "body": "Pull request #401 opened: Save the usage sweep's per-file counts so a launch rereads only changed logs https://github.com/naeemba/dashboard/pull/401"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }
