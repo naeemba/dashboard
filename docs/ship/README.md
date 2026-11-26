@@ -61,18 +61,29 @@ waits for CI, says the ending on the card and reports to the project's main; on,
 it lands the pull request with `dashboard pr land` ([command](../command/README.md)),
 which merges the head commit it noted before the CI wait (ship-decision-1).
 
+On GitHub the prompt runs `~/.claude/workflows/pr-loop.js` straight from the
+Workflow tool rather than through `/pr-loop`, and does that command's fixed
+steps itself in two calls: one, beside the Workflow call, marks the pull request
+a draft (when it was ready) and posts `Review loop started`; the other, after the
+loop, posts `Review loop finished: <status>`, marks it ready again and runs the
+wait or land, all in one background call. The worker reads the card and loads
+SendMessage in that first message too, and arms no wakeup: the Workflow tool
+says when the loop ends. GitLab's `/mr-loop` has no such steps and runs as it is
+(ship-decision-6).
+
 `/pr-loop` is not the app's: it comes from a checkout of
 naeemba/claude-pr-loop, whose `install.sh` links its commands into
 `~/.claude/commands` and copies its workflow into `~/.claude/workflows`
 (ship-decision-4). A review start with no `~/.claude/commands/pr-loop.md` (or one
 linking to a checkout that has gone) is refused, on the card too, with the install
-line. At launch and at each review start the app asks the checkout whether it is
-current, and says on the status bar, until dismissed or a later check finds it
-fixed, what to run when it is behind origin's default branch (fetched at most once
-a day), when an installed workflow differs from the checkout's, when a file
-`install.sh` links (`commands/`, `review/`, `scripts/`) has nothing in
-`~/.claude`, or when a link there points at a file the checkout no longer has
-(`review-loop-install.ts`).
+line, and so is one whose `~/.claude/workflows/pr-loop.js` is missing or differs
+from its checkout's: the review calls that copy by path. At launch and at each
+review start the app asks the checkout whether it is current, and says on the
+status bar, until dismissed or a later check finds it fixed, what to run when it
+is behind origin's default branch (fetched at most once a day), when an installed
+workflow differs from the checkout's, when a file `install.sh` links (`commands/`,
+`review/`, `scripts/`) has nothing in `~/.claude`, or when a link there points at
+a file the checkout no longer has (`review-loop-install.ts`).
 
 The CI wait is one command the agent runs in the background, woken when it exits,
 never a poll by hand or a foreground `sleep` (ship-decision-2): `gh pr checks <n> --watch`
@@ -137,7 +148,10 @@ Whether its loop already finished is read off the merge request's notes through 
   (`review-flow.test.ts`).
 - Given the claude-pr-loop checkout was pulled but `install.sh` not rerun, when the app starts or a
   review starts, then the status bar says the installed workflow differs and to run `./install.sh`
-  in the checkout (`review-loop-install.test.ts`).
+  in the checkout, and the review start is refused with that line (`review-loop-install.test.ts`).
+- Given a GitHub review, when its pane starts, then the draft flag, the start comment, the Workflow
+  call, the card read and the SendMessage load go in one message, and the finish comment, the ready
+  flag and the CI wait or land in one background call (`review.test.ts`).
 - Given a `worktrees.json` that does not parse, when the app reads it, then it is moved aside as
   `worktrees.json.broken` (`worktrees.json.2.broken` and on if that name is taken) and the list
   opens empty (`worktree-store.test.ts`).

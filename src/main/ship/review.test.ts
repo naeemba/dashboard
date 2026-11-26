@@ -143,7 +143,31 @@ describe('reviewPrompt', () => {
   });
 
   it('names the pull request to run the loop against', () => {
-    expect(prompt).toContain('/pr-loop 12');
+    expect(prompt).toContain('/.claude/workflows/pr-loop.js` and args `"12"`');
+  });
+
+  // Retro 2026-11-26: twelve review workers each spent about six turns on /pr-loop's fixed steps (the
+  // install cmp, the draft flag and two comments a turn each, a tail of the wait's output) and seven
+  // armed a ScheduleWakeup nobody asked for. The set-up goes beside the Workflow call and the close is
+  // chained into the wait, so the only turns left are the loop's and the judging.
+  it('sets up beside the loop and closes in the wait\'s own call, without /pr-loop\'s turns', () => {
+    for (const merge of [true, false]) {
+      const github = reviewPrompt(CARD, 12, '/work/api', merge, 'github');
+      expect(github).toContain('In one message, side by side');
+      expect(github).toContain('gh pr ready 12 --undo && echo was ready');
+      expect(github).toContain('gh pr comment 12 --body "Review loop started.');
+      // The heading review-finished.ts reads to skip a loop already run at the head.
+      expect(github).toContain('gh pr comment 12 --body "Review loop finished: <status> ..."; gh pr ready 12 && <step 2\'s command>');
+      expect(github).toContain(merge ? 'pr land 12`, the last command of step 1\'s closing call' : 'pr wait 12`, the last command');
+      expect(github).toContain('do not run /pr-loop itself');
+      expect(github).not.toMatch(/cmp -s|tail /);
+    }
+    for (const forge of ['github', 'gitlab'] as const) {
+      const any = reviewPrompt(CARD, 12, '/work/api', false, forge);
+      expect(any).toContain('no ScheduleWakeup');
+      expect(any).toContain('ToolSearch `select:SendMessage`');
+    }
+    expect(reviewPrompt(CARD, 7, '/work/insta', false, 'gitlab')).toContain('Run /mr-loop 7.');
   });
 
   // The land steps copied out of a prompt had no second try on a network error and no reading back of
@@ -194,7 +218,7 @@ describe('reviewPrompt', () => {
     const reporting = reviewPrompt(CARD, 12, '/work/api', false, 'github');
 
     it('runs the loop and waits for CI, and never merges', () => {
-      expect(reporting).toContain('/pr-loop 12');
+      expect(reporting).toContain('args `"12"`');
       expect(reporting).toContain('pr wait 12');
       expect(reporting).not.toContain('gh pr merge');
       expect(reporting).not.toContain('pr land');

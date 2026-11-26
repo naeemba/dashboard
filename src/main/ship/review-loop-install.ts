@@ -24,11 +24,26 @@ function loopCommand(claudeFolder: string): string {
   return path.join(commandsFolder(claudeFolder), 'pr-loop.md');
 }
 
+// The workflow a GitHub review calls by path (review.ts), the copy install.sh leaves.
+export function loopWorkflow(claudeFolder: string): string {
+  return path.join(claudeFolder, 'workflows', 'pr-loop.js');
+}
+
 // Why a review cannot start for want of `/pr-loop`, or null when the command is there. A link whose
 // checkout has gone counts as missing: the session would read nothing. review-flow.ts refuses on it.
+// So does a workflow copy that is missing or differs from its checkout's: the review calls the copy
+// directly, and an old one runs old rounds next to new command files. This is the `cmp` /pr-loop's
+// own first step makes, made here so no review worker spends a turn on it.
 export function reviewLoopMissing(claudeFolder: string): string | null {
-  if (existsSync(loopCommand(claudeFolder))) return null;
-  return `/pr-loop is not installed (no ${loopCommand(claudeFolder)}); install it with \`${REVIEW_LOOP_INSTALL}\`, then start the review again`;
+  if (!existsSync(loopCommand(claudeFolder))) {
+    return `/pr-loop is not installed (no ${loopCommand(claudeFolder)}); install it with \`${REVIEW_LOOP_INSTALL}\`, then start the review again`;
+  }
+  const target = linkTarget(loopCommand(claudeFolder));
+  const checkout = target === null ? null : path.dirname(path.dirname(target));
+  const installed = loopWorkflow(claudeFolder);
+  if (checkout === null ? existsSync(installed) : sameFile(installed, path.join(checkout, 'workflows', 'pr-loop.js'))) return null;
+  const run = checkout === null ? REVIEW_LOOP_INSTALL : `cd ${posixQuoted(checkout)} && ./install.sh`;
+  return `${installed} is missing or differs from the checkout's; run \`${run}\`, then start the review again`;
 }
 
 // Where a link points, resolved the way the file system does, or null for a file that is not a link.
