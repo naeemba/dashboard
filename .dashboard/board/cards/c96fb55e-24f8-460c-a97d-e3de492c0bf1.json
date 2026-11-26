@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:06.521Z",
-  "updatedAt": "2026-11-26T08:24:06.522Z",
-  "column": "Backlog",
-  "order": 70
+  "updatedAt": "2026-11-26T08:25:26.149Z",
+  "branch": "pr-wait-refuses-a-draft-pr-pr-create-ready",
+  "column": "Doing",
+  "order": 0
 }
