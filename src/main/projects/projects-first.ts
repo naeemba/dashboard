@@ -21,7 +21,7 @@ const HEADER = `# Every project the manager can be asked about. Written by \`das
 `;
 
 // A path under home is written from ~/, the way a person would write it, with / between the parts on
-// every platform: wholePath reads only `~/`, so `~\\Workspace` written on Windows would never read back.
+// every platform: wholePath reads only `~/`, so `~\Workspace` written on Windows would never read back.
 export function writtenPath(path: string, home: string): string {
   if (path === home) return '~';
   if (!path.startsWith(home + sep)) return path;
