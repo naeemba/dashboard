@@ -111,6 +111,9 @@ Whether its loop already finished is read off the merge request's notes through 
 - Given a project whose only remote is `gitlab`, when a card ships or `pane run --worktree` runs,
   then the worktree is cut from `gitlab/<base>` rather than refused for having no origin
   (`ship-flow.test.ts`, `make.test.ts`).
+- Given a ship whose fetch of the base fails or stalls, when the card moves into Ship, then git is
+  stopped after 60 seconds, as a throwaway's fetch is, and the ship stops before any worktree with
+  the line naming why, so the project's queue is free for the next ship (`ship-flow.test.ts`).
 - Given a project whose remote is a GitLab host, when its card's merge request opens, then the
   review runs `/mr-loop` on it and waits and merges through glab, never `pr wait`, `pr land` or gh
   (`review.test.ts`, `review-finished.test.ts`).

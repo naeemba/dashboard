@@ -55,3 +55,6 @@ One line per merged change: date and why.
   review start's refusal: twelve review workers had spent about six turns each on those steps
 - 2026-11-26 — The review prompt says to rerun only the failed files to tell a failure from load,
   since a full run now waits while another runs on the machine (workflow-decision-14)
+- 2026-11-26 — The ship's fetch is stopped after 60 seconds like the throwaway's: it holds the
+  project's queue, so a stalled connection left every later ship, review and `pane run --worktree`
+  there waiting with no answer
