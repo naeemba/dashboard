@@ -3,11 +3,10 @@ import type { Refused } from '../../../shared/app/bridge';
 import { notOpenRefusal } from '../../ship/ship';
 import { action, isRefused } from '../action';
 import { isFilledTextOrNull } from '../pane/pane-input';
-import type { ReturnTo } from '../../workers/pane-pool';
-import { columnsBack } from '../../workers/pane-queue-store';
-import { cardInput, type CardInput } from './card-input';
+import { columnsBack, type ReturnTo } from '../../workers/pane-pool';
+import { askedFromInput, cardInput, type CardInput } from './card-input';
 
-export type CardShipInput = CardInput & { first: boolean; after: string | null; returnTo: ReturnTo | null };
+export type CardShipInput = CardInput & { first: boolean; after: string | null; returnTo: ReturnTo | null; askedFrom: string | null };
 
 export type CardShipPorts = {
   read(projectPath: string): Board;
@@ -33,7 +32,7 @@ export const cardShip = action<CardShipPorts, CardShipInput, { output: string }>
     }
     const returnTo = columnsBack(raw.returnTo ?? null);
     if (returnTo === undefined) return { refused: 'the ship was not one the app could read' };
-    return { ...card, first, after, returnTo };
+    return { ...card, first, after, returnTo, askedFrom: askedFromInput(raw) };
   },
   async run(ports, input) {
     const card = cardById(ports.read(input.projectPath), input.id);

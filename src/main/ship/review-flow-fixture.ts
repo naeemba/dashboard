@@ -4,11 +4,16 @@ import { readBoard, writeBoard } from '../board/board-store';
 import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
 import { emptyBoard, moveCardById, setPullRequest, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from './review-flow';
-import type { WorktreeEntry } from '../../shared/app/bridge';
+import type { CardMoveAnswer, Refused, WorktreeEntry } from '../../shared/app/bridge';
+import { isRefused } from '../actions/action';
 import { temporaryFolder } from '../testing/temporary-folder';
 
 // What review-flow.test.ts and review-flow-clearing.test.ts both build a sweep from.
 export const CARD = '7bd176c4-65d3-45b6-8237-58625797ea93';
+
+// card.move's answer for a move into Review that started nothing, and for one whose review answered.
+export const MOVED: CardMoveAnswer = { output: 'moved', ran: 'nothing', started: '' };
+export const reviewRan = (answer: { output: string } | Refused): CardMoveAnswer => (isRefused(answer) ? answer : { output: answer.output, ran: 'review', started: answer.output });
 
 function folder(): string {
   return temporaryFolder('dashboard-review-');
@@ -77,7 +82,7 @@ export function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { 
       },
       queue: (_key, run) => run(),
       writeBoard: (projectPath, board) => { writeBoard(projectPath, board); },
-      arrived: async () => undefined,
+      arrived: async () => MOVED,
       landsPullRequest: () => false,
       reviewFinished: async () => false,
       forgeOf: async () => 'github',
@@ -96,7 +101,7 @@ export function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { 
 export function sweepWith(made: ReviewPorts): ReviewSweep {
   const sweep: ReviewSweep = reviewSweep({
     ...made,
-    arrived: (entry) => sweep.review(entry.cardId),
+    arrived: (entry) => sweep.review(entry.cardId).then(reviewRan),
   });
   return sweep;
 }

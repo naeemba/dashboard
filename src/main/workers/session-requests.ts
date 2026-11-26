@@ -24,9 +24,7 @@ import { statusText, type PaneStatus } from './status-lines';
 import type { OpenPullRequest } from '../board/merge-request';
 import { holdsSlot, type RunWork } from './pane-pool';
 import { panePool, type PanePoolActions } from '../actions/pane/queue';
-import type { PoolPorts } from './pane-queue-store';
-// For main.ts, at its line ceiling, which builds SessionPorts' `pool` with it.
-export { poolPorts } from './pane-queue-store';
+import type { CardStart, PoolPorts } from './pane-pool-ports';
 
 // What main does with a `session` command: who is asking and what they may touch, against what main.ts
 // hands over. Every change to a pane is a pane action (actions/pane/): claim and release are bound here,
@@ -163,8 +161,11 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   hold(throwaway: Throwaway): string | undefined;
   // The pane pool, built here on the slots these workers hold: `pane start`, `queue` and `unqueue` are
   // its, `run` asks it whether the cap is reached, and every state change here that may free a slot
-  // drains it. A ship and a review start through its `start` too.
+  // drains it.
   pool: PanePoolActions;
+  // A ship's or a review's start, through the pool's `start`, told to the main of the page the `board`
+  // command ran in, or the card's project's main for one no command asked for.
+  startCard(start: CardStart): Promise<{ output: string } | Refused>;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -648,6 +649,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     workers,
     notify,
     pool,
+    startCard({ askedFrom, ...start }: CardStart) {
+      const asker = askedFrom === null ? undefined : ports.projectPath(ports.slotOf(askedFrom));
+      return pool.start.call({ ...start, dispatcherPath: asker ?? start.projectPath });
+    },
     async dropped(id: string) {
       pool.drain();
       const throwaway = throwaways.get(id);

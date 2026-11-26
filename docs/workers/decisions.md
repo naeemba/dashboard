@@ -635,6 +635,13 @@ review sweep's own starts could push past a main that counted perfectly.
   goes back, and never into Review, whose entry would start the review being withdrawn. A move made
   on the board screen is saved before the app hears of it, so the screen names the column it came
   from (`from` on card:move), and a drag or key move goes back the same as the command's.
+- **An entry starts only while its card is still where it was queued from**: a card Done,
+  Cancelled, deleted, or moved out of the column whose move queued it is dropped (`readiness`), so
+  a card dragged back out of Ship is not shipped from Todo later. The board is read off the disk at
+  each look, since a `board move` is written plainly and the move log hears of it only later. An
+  entry also waits while the page of the main that queued it is closed: that main is the one told.
+- **A queued ship or review is its asker's**: the `board` door hands on the folder the command ran
+  in, so the manager's `board ship --project` is told to and withdrawn by the manager.
 - **No start goes around it**, the review sweep's retry of a review a person started included: it
   goes through card.review, as every other review start does.
 - **The pane and worktree are picked when the entry starts, never when it is queued.** Six queued

@@ -41,6 +41,23 @@ function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueu
 }
 
 describe('pane.start', () => {
+  // card.review by hand on a card still in Doing: its follow's move into Review asks for the review
+  // again from inside the start holding its slot, which goes on in place rather than refusing itself.
+  it('lets a review asked for again inside its own start go on in place', async () => {
+    const begun: string[] = [];
+    const made = pool({
+      begin: (entry: QueueEntry) => {
+        begun.push(entry.id);
+        if (begun.length === 1) return made.start({ cardId: 'a', work: { kind: 'review' } });
+        return Promise.resolve({ output: 'review started' });
+      },
+    });
+    made.actions.ready();
+    await expect(made.start({ cardId: 'a', work: { kind: 'review' } })).resolves.toEqual({ output: 'review started' });
+    expect(begun).toEqual(['q1', 'q2']);
+    expect(made.told).toEqual([]);
+  });
+
   it('queues everything until the restored panes are counted', async () => {
     const { actions, start, begun } = pool();
     await expect(start()).resolves.toEqual({ output: 'queued q1, 1st: the panes a restart brings back are not all back yet' });
@@ -124,8 +141,8 @@ describe('the pool\'s other doors', () => {
   it('puts a withdrawn card back in the column its move took it from, through card.move', async () => {
     const { actions, start, moves, board } = pool({ cap: () => 0 });
     actions.ready();
-    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
     board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
+    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
     await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q1; card a back in Todo' });
     expect(moves).toEqual(['a Todo']);
   });
@@ -133,8 +150,8 @@ describe('the pool\'s other doors', () => {
   it('says so when the move back is refused, and leaves a card the move did not queue alone', async () => {
     const { actions, start, moves, board } = pool({ cap: () => 0, move: async () => ({ refused: 'board files do not parse' }) });
     actions.ready();
-    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
     board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
+    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
     await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q1; card a stays: board files do not parse' });
     await start({ cardId: 'a', work: { kind: 'ship', title: 'A' } });
     await expect(actions.unqueue.call({ id: 'q2', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q2' });

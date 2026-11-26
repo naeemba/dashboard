@@ -28,7 +28,7 @@ describe('card.ship', () => {
   it('hands the card to the pane pool with its title and its place in the queue', async () => {
     const { call, asked } = ship();
     await expect(call({ projectPath: '/work/api', id: 'card', first: true, after: 'other', source: 'command' })).resolves.toEqual({ output: 'queued q1, 1st' });
-    expect(asked).toEqual([{ projectPath: '/work/api', id: 'card', first: true, after: 'other', returnTo: null, title: 'Fix login' }]);
+    expect(asked).toEqual([{ projectPath: '/work/api', id: 'card', first: true, after: 'other', returnTo: null, askedFrom: null, title: 'Fix login' }]);
   });
 
   it('takes a move\'s ship as last in line, holding for nobody', async () => {
@@ -59,13 +59,14 @@ describe('the card actions on the pane pool', () => {
     return { built, verb, started, projectPath };
   }
 
-  it('starts a ship and a review through pane.start, reporting to the project\'s main', async () => {
+  // The manager's `board ship <id> --project api` is told by the manager, from the folder it ran in.
+  it('starts a ship and a review through pane.start, with the folder the command ran in', async () => {
     const { verb, started, projectPath } = cards();
-    await verb('card.ship').call({ projectPath, id: 'card', source: 'command' });
+    await verb('card.ship').call({ projectPath, id: 'card', source: 'command', askedFrom: '/home/u/.dashboard' });
     await verb('card.review').call({ projectPath, id: 'card', source: 'command' });
     expect(started).toEqual([
-      { dispatcherPath: projectPath, projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'ship', title: 'Fix login' } },
-      { dispatcherPath: projectPath, projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'review' } },
+      { askedFrom: '/home/u/.dashboard', projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'ship', title: 'Fix login' } },
+      { askedFrom: null, projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'review' } },
     ]);
   });
 

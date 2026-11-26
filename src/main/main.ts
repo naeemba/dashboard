@@ -28,7 +28,8 @@ import { stopOrWarn } from './actions/pane/close';
 import { projectActions, registerProjectChannels } from './actions/project/project-actions';
 import { actionRequests, isRefused } from './actions/action';
 import { updateActions } from './actions/update/update-actions';
-import { poolPorts, projectOfFolder, sessionRequests } from './workers/session-requests';
+import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { poolPorts } from './workers/pane-pool-ports';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
 import { projectNamedInFile } from './projects/project-named';
@@ -698,7 +699,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList, pool: 
   boardSync,
   autoLoop: () => settings.review.autoLoop,
   autoMerge: () => settings.review.autoMerge,
-  startWork: (raw) => workerAnswers.pool.start.call(raw),
+  startWork: (start) => workerAnswers.startCard(start),
   log: (draft) => logStore.log(draft),
   pullRequestOf: async (projectPath, branch) => {
     const pull = await branchPullRequest(runProgram, projectPath, branch, 20_000);
@@ -809,8 +810,7 @@ const workerAnswers = sessionRequests({
     sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
   },
   threwAway: (id, said, projectPath) => logStore.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
-  realPath,
-  pool: poolPorts(app.getPath('userData'), () => settings, boardLog.latest, cardPool),
+  realPath, pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
 });
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());

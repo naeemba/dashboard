@@ -108,8 +108,8 @@ function readFlags(words: readonly string[], flags: ActionFlags): { positional: 
 }
 
 // The command's door, on the session socket: [BOARD_REQUEST, verb, folder, ...words], the folder
-// already resolved by the command the way every other board verb resolves it. Anything else is
-// `otherwise`'s.
+// already resolved by the command the way every other board verb resolves it, and `askedFrom` the
+// folder it ran in, whose main a ship or a review it queues tells. Anything else is `otherwise`'s.
 export function actionRequests(
   actions: readonly BoundAction[],
   otherwise: (request: SessionRequest) => Promise<SessionReply>,
@@ -125,7 +125,7 @@ export function actionRequests(
     if ('message' in read) return refused(`${read.message}\n${usage(verb, bound)}`);
     const { positional, flagged } = read;
     if (positional.length !== bound.words.length) return refused(usage(verb, bound));
-    const raw = { projectPath: folder, ...flagged, ...Object.fromEntries(bound.words.map((name, index) => [name, positional[index]])) };
+    const raw = { projectPath: folder, askedFrom: request.directory, ...flagged, ...Object.fromEntries(bound.words.map((name, index) => [name, positional[index]])) };
     const result = await bound.call(withSource(raw, 'command'));
     return sessionReply(result);
   };

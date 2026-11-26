@@ -1,8 +1,8 @@
 import type { Refused } from '../../../shared/app/bridge';
 import type { Board } from '../../../shared/board/board';
 import { failureText } from '../../../shared/errors/failure';
-import { capReached, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, withdrawnColumn, type NextStart, type QueueEntry } from '../../workers/pane-pool';
-import { columnsBack, queuedWork, type SavedQueue } from '../../workers/pane-queue-store';
+import { capReached, columnsBack, nextToStart, ordinal, placed, queuedWork, queueRefusal, queueText, readiness, withdrawnColumn, type NextStart, type QueueEntry } from '../../workers/pane-pool';
+import type { SavedQueue } from '../../workers/pane-queue-store';
 import { action, bind, isRefused, type BoundAction } from '../action';
 import { isFilledText, isFilledTextOrNull } from './pane-input';
 
@@ -57,13 +57,18 @@ const taken = (ports: PaneQueuePorts) => ports.running() + ports.pool.starting.s
 const save = (ports: PaneQueuePorts) => ports.save({ next: ports.pool.next, entries: ports.pool.entries });
 
 // What would start next, as it stands. An empty queue asks nothing: a drain runs on every hook's
-// notify, and counting the slots walks every open pane.
+// notify, and counting the slots walks every open pane. Each project's board is read once.
 function next(ports: PaneQueuePorts): NextStart {
   if (ports.pool.entries.length === 0) return { held: null };
   if (!ports.pool.ready) return { held: 'the panes a restart brings back are not all back yet' };
+  const boards = new Map<string, Board | null>();
+  const boardOf = (projectPath: string): Board | null => {
+    if (!boards.has(projectPath)) boards.set(projectPath, ports.board(projectPath));
+    return boards.get(projectPath) ?? null;
+  };
   return nextToStart(
     ports.pool.entries, taken(ports), ports.cap(), ports.budget,
-    (entry) => readiness(entry, ports.open(entry.projectPath), () => ports.board(entry.projectPath)),
+    (entry) => readiness(entry, ports.open, () => boardOf(entry.projectPath)),
   );
 }
 
@@ -114,6 +119,7 @@ export const paneStart = action<PaneQueuePorts, PaneStartInput, { output: string
   input: startInput,
   async run(ports, { first, ...input }) {
     const entry: QueueEntry = { id: `q${ports.pool.next}`, ...input, queuedAt: new Date(ports.now()).toISOString() };
+    if (nestedReview(ports, entry)) return ports.begin(entry);
     const refusal = queueRefusal([...ports.pool.entries, ...ports.pool.starting.values()], entry, ports.board(entry.projectPath));
     if (refusal !== null) return { refused: refusal };
     ports.pool.next += 1;
@@ -124,6 +130,15 @@ export const paneStart = action<PaneQueuePorts, PaneStartInput, { output: string
     return { output: `queued ${entry.id}, ${ordinal(at + 1)}${held === null ? '' : `: ${held}`}` };
   },
 });
+
+// A review's own start asking for it again: a review by hand on a card still in Doing runs card.follow,
+// whose move into Review starts the review through card.review, inside the start already holding the
+// slot. That start goes on in place rather than queueing behind itself. A real second start of the
+// review is reviews.review's to refuse (review-flow.ts).
+function nestedReview(ports: PaneQueuePorts, entry: QueueEntry): boolean {
+  if (entry.work.kind !== 'review') return false;
+  return [...ports.pool.starting.values()].some((each) => each.cardId === entry.cardId && each.work.kind === 'review');
+}
 
 export const paneQueue = action<PaneQueuePorts, Record<string, never>, { output: string }>('pane.queue', {
   words: [],

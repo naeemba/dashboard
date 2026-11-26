@@ -59,7 +59,7 @@ export function startsClaude(text: string): boolean {
 }
 
 export const STARTS_CLAUDE_REFUSAL = 'typing claude starts a worker with none of the app\'s settings that never'
-  + ' reports to you: start it with pane run <id> (--card, --worktree or --in <folder>)';
+  + ' reports to you: start it with pane start (--card, --worktree or --in <folder>)';
 
 // `handed`: the pane's agent is the sending main's worker now.
 export const paneSend = action<PaneSendPorts, PaneSendInput, { output: string; handed: boolean }>('pane.send', {

@@ -22,7 +22,7 @@ import { pullRequestSweep, type PullRequestSweep } from '../../board/pull-reques
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
 import { notOpenRefusal } from '../../ship/ship';
 import type { CardWork, QueueEntry } from '../../workers/pane-pool';
-import type { CardPool } from '../../workers/pane-queue-store';
+import type { CardPool, CardStart } from '../../workers/pane-pool-ports';
 import { bind, registerActions, type BoundAction } from '../action';
 import { cardFollow } from './follow';
 import { cardMove } from './move';
@@ -46,7 +46,7 @@ export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
     // The branch's pull request, asked of the project's forge (branchPullRequest in merge-request.ts).
     pullRequestOf(projectPath: string, branch: string): Promise<PullRequest | null>;
     // pane.start (actions/pane/queue.ts): a ship's or a review's start, now or once a worker slot frees.
-    startWork(raw: Record<string, unknown>): Promise<{ output: string } | Refused>;
+    startWork(start: CardStart): Promise<{ output: string } | Refused>;
   };
 
 export type CardActions = {
@@ -115,10 +115,10 @@ export function cardActions(main: CardActionsMain): CardActions {
   const ship = bind(cardShip, {
     read: (projectPath) => read(projectPath).board,
     slotOf: main.slotOf,
-    ship: ({ projectPath, id, title, first, after, returnTo }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after, first, returnTo, work: { kind: 'ship', title } }),
+    ship: ({ projectPath, id, title, first, after, returnTo, askedFrom }) => main.startWork({ askedFrom, projectPath, cardId: id, after, first, returnTo, work: { kind: 'ship', title } }),
   });
   const review = bind(cardReview, {
-    review: ({ projectPath, id, returnTo }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after: null, first: false, returnTo, work: { kind: 'review' } }),
+    review: ({ projectPath, id, returnTo, askedFrom }) => main.startWork({ askedFrom, projectPath, cardId: id, after: null, first: false, returnTo, work: { kind: 'review' } }),
   });
   async function begin({ projectPath, cardId }: QueueEntry, work: CardWork): Promise<{ output: string } | Refused> {
     if (cardId === null) return { refused: 'no card was queued' };

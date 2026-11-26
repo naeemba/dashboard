@@ -70,3 +70,15 @@ describe('pane start', () => {
     expect(await ask(['queue'])).toEqual({ ok: true, output: 'nothing queued' });
   });
 });
+
+describe('a ship or a review the board command starts', () => {
+  // The manager's `board ship <id> --project crm`: its main is told how the start goes, and may withdraw it.
+  it('belongs to the main of the page the command ran in, else to the card\'s project\'s', async () => {
+    const { answer, ask } = capped(0);
+    const ship = { projectPath: '/work/crm', cardId: 'c', after: null, first: false, returnTo: null, work: { kind: 'ship', title: 'C' } } as const;
+    expect(await answer.startCard({ ...ship, askedFrom: '/work/api/packages' })).toEqual({ output: 'queued q1, 1st: 0 running, the cap is 0' });
+    expect(await answer.startCard({ ...ship, cardId: 'd', askedFrom: null })).toEqual({ output: 'queued q2, 2nd: 0 running, the cap is 0' });
+    expect(await ask(['unqueue', 'q1'])).toEqual({ ok: true, output: 'withdrew q1' });
+    expect(await ask(['unqueue', 'q2'])).toEqual({ ok: false, output: 'q2 was queued by another project\'s main' });
+  });
+});

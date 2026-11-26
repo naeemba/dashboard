@@ -27,7 +27,7 @@ describe('the action registry', () => {
     const answer = actionRequests([{ ...bind(echo, null), name: 'card.move' }], otherwise);
     const reply = await answer({ directory: '/', args: [BOARD_REQUEST, 'move', '/work/api', 'card', 'Done'] });
     expect(reply.ok).toBe(true);
-    expect(JSON.parse(reply.output)).toEqual({ projectPath: '/work/api', id: 'card', column: 'Done', source: 'command' });
+    expect(JSON.parse(reply.output)).toEqual({ projectPath: '/work/api', askedFrom: '/', id: 'card', column: 'Done', source: 'command' });
     await expect(answer({ directory: '/', args: [BOARD_REQUEST, 'move', '/work/api', 'card'] }))
       .resolves.toEqual({ ok: false, output: 'usage: board move <id> <column>' });
     await expect(answer({ directory: '/', args: [BOARD_REQUEST, 'move', '/work/api', 'no', 'Done'] }))
@@ -39,7 +39,7 @@ describe('the action registry', () => {
     const flagged = { ...bind(echo, null), name: 'card.ship', words: ['id'], flags: { first: 'switch', after: 'value' } } as const;
     const answer = actionRequests([flagged], otherwise);
     const reply = await answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', 'card', '--after=other', '--first'] });
-    expect(JSON.parse(reply.output)).toEqual({ projectPath: '/work/api', id: 'card', after: 'other', first: true, source: 'command' });
+    expect(JSON.parse(reply.output)).toEqual({ projectPath: '/work/api', askedFrom: '/', id: 'card', after: 'other', first: true, source: 'command' });
     await expect(answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', 'card', '--after'] }))
       .resolves.toEqual({ ok: false, output: '--after needs a value\nusage: board ship <id> [--first] [--after <after>]' });
     await expect(answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', '--first'] }))

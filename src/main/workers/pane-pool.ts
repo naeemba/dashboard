@@ -4,7 +4,10 @@ import { baseName } from '../../shared/app/base-name';
 import { isColumnNamed, selectionOf, type Board } from '../../shared/board/board';
 import { columnEntry } from '../../shared/board/column-entry';
 import { workerAbout } from '../../shared/workers/worker-roster';
+import { isRecord } from '../../shared/app/is-record';
+import { isPaneKindOrNull } from '../../shared/panes/pane-kind';
 import type { Settings } from '../../shared/settings/settings';
+import { isFilledText, isFilledTextOrNull } from '../actions/pane/pane-input';
 import type { BudgetVerdict } from '../command/budget-cli';
 import { finishedColumnOf } from './auto-release';
 import type { RunWords } from './session-cli';
@@ -44,6 +47,23 @@ export type QueueEntry = {
   work: QueuedWork;
 };
 
+// The move a withdrawal undoes, as the queue's file and every door that starts work read it: null, or
+// undefined for one that does not read.
+export function columnsBack(stored: unknown): ReturnTo | null | undefined {
+  if (stored === null) return null;
+  return isRecord(stored) && isFilledText(stored.from) && isFilledText(stored.into) ? { from: stored.from, into: stored.into } : undefined;
+}
+
+// What an entry starts, as the queue's file and pane.start's door both read it, or undefined.
+export function queuedWork(stored: unknown): QueuedWork | undefined {
+  if (!isRecord(stored)) return undefined;
+  if (stored.kind === 'review') return { kind: 'review' };
+  if (stored.kind === 'ship') return isFilledText(stored.title) ? { kind: 'ship', title: stored.title } : undefined;
+  const { project, prompt, card, worktree, folder, as } = stored;
+  if (stored.kind !== 'run' || !isFilledText(prompt) || !isFilledTextOrNull(project) || !isFilledTextOrNull(card) || typeof worktree !== 'boolean' || !isFilledTextOrNull(folder) || !isPaneKindOrNull(as)) return undefined;
+  return { kind: 'run', project, prompt, card, worktree, folder, as };
+}
+
 export type SlotLook = {
   // A main's worker with its agent in the pane: one a main ran, a card's agent, a review's.
   mainsWorker: boolean;
@@ -77,18 +97,32 @@ export function budgetHold(budget: Settings['budget'], verdict: () => BudgetVerd
 export type Readiness = { state: 'ready' | 'wait' | 'drop'; why: string };
 
 // What an entry's start waits on, given the facts about it now. A card already Done or Cancelled is
-// dropped, so one cancelled while queued never starts an hour later. A closed project waits, unless
-// the start opens it (--project, as `pane claim --project` does). An --after card waits until it is
-// finished. A waiting entry never holds up the ones behind it. The board is read only for an entry
-// with a card or an --after card.
-export function readiness(entry: QueueEntry, open: boolean, boardOf: () => Board | null): Readiness {
+// dropped, so one cancelled while queued never starts an hour later, and so is a card deleted, or moved
+// out of the column whose move queued it: dragged back out of Ship, it is not shipped twenty minutes
+// later. A board that cannot be read drops nothing. A closed project waits, unless the start opens it
+// (--project, as `pane claim --project` does), and so does a closed page of the main that queued it,
+// which is the one told how the start went. An --after card waits until it is finished. A waiting
+// entry never holds up the ones behind it. The board is read only for an entry with a card or an
+// --after card.
+export function readiness(entry: QueueEntry, open: (path: string) => boolean, boardOf: () => Board | null): Readiness {
   const board = entry.cardId === null && entry.after === null ? null : boardOf();
-  const finished = entry.cardId === null ? null : finishedColumnOf(board, entry.cardId);
-  if (finished !== null) return { state: 'drop', why: `card ${entry.cardId} is ${finished}` };
+  const gone = entry.cardId === null || board === null ? null : cardGone(board, entry.cardId, entry.returnTo);
+  if (gone !== null) return { state: 'drop', why: gone };
   const opensItself = entry.work.kind === 'run' && entry.work.project !== null;
-  if (!open && !opensItself) return { state: 'wait', why: `${baseName(entry.projectPath)} is not open` };
+  if (!open(entry.projectPath) && !opensItself) return { state: 'wait', why: `${baseName(entry.projectPath)} is not open` };
+  if (!open(entry.dispatcherPath)) return { state: 'wait', why: `${baseName(entry.dispatcherPath)} is not open` };
   if (entry.after !== null && finishedColumnOf(board, entry.after) === null) return { state: 'wait', why: `waits on card ${entry.after}` };
   return { state: 'ready', why: '' };
+}
+
+// Why a queued card's start is over before it began, or null.
+function cardGone(board: Board, cardId: string, returnTo: ReturnTo | null): string | null {
+  const finished = finishedColumnOf(board, cardId);
+  if (finished !== null) return `card ${cardId} is ${finished}`;
+  const at = selectionOf(board, cardId);
+  if (at === null) return `card ${cardId} is not on the board`;
+  if (returnTo !== null && !isColumnNamed(board.columns[at.column].name, returnTo.into)) return `card ${cardId} left ${returnTo.into}`;
+  return null;
 }
 
 // Why nothing more may start, the cap reached, or null. `running` counts the slots held and the starts

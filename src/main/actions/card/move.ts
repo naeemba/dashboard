@@ -4,11 +4,11 @@ import type { CardMoveResult, Refused } from '../../../shared/app/bridge';
 import { brokenFilesRefusal, runBoardCommand } from '../../board/board-cli';
 import { action, isRefused } from '../action';
 import type { ReturnTo } from '../../workers/pane-pool';
-import { cardInput, type CardInput } from './card-input';
+import { askedFromInput, cardInput, type CardInput } from './card-input';
 
 // `from` is the column the screen's own move took the card out of, which the board read here no longer
 // shows: the screen saves its move before it asks.
-export type CardMoveInput = CardInput & { column: string; source: MoveSource; from?: string };
+export type CardMoveInput = CardInput & { column: string; source: MoveSource; from?: string; askedFrom: string | null };
 
 export type CardMovePorts = {
   // The project's board, without salvage: a move is committed, so a card file that does not parse is
@@ -22,9 +22,10 @@ export type CardMovePorts = {
   // Whether the folder is a project's own board, not a worktree's or the manager's.
   projectBoard(projectPath: string): boolean;
   autoLoop(): boolean;
-  // Each with the move that started it, for a withdrawal from the pane pool's queue to undo.
-  ship(input: CardInput & { returnTo: ReturnTo | null }): Promise<{ output: string } | Refused>;
-  review(input: CardInput & { returnTo: ReturnTo | null }): Promise<{ output: string } | Refused>;
+  // Each with the move that started it, for a withdrawal from the pane pool's queue to undo, and the
+  // folder a `board move` ran in, whose main the start tells.
+  ship(input: CardInput & { returnTo: ReturnTo | null; askedFrom: string | null }): Promise<{ output: string } | Refused>;
+  review(input: CardInput & { returnTo: ReturnTo | null; askedFrom: string | null }): Promise<{ output: string } | Refused>;
 };
 
 // Every move of a card between columns, from the board, `dashboard board move` and the review sweep:
@@ -46,9 +47,9 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
     if (typeof column !== 'string' || column.trim() === '') return { refused: 'move needs a card id and a column' };
     if (!isMoveSource(source)) return { refused: 'a move needs a source' };
     if (from !== undefined && typeof from !== 'string') return { refused: 'a move\'s from must be a column name' };
-    return { ...card, column, source, from };
+    return { ...card, column, source, from, askedFrom: askedFromInput(raw) };
   },
-  async run(ports, { projectPath, id, column, source, from }) {
+  async run(ports, { projectPath, id, column, source, from, askedFrom }) {
     const { board, brokenFiles } = ports.read(projectPath);
     if (brokenFiles.length > 0) return { refused: brokenFilesRefusal(brokenFiles) };
     if (source === 'user' && movedOn(board, id, column)) return { output: `card ${id} has moved on from ${column}`, ran: 'nothing', started: '' };
@@ -66,7 +67,7 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
     // included: the worktree's board then shows the card where main has it. The ship itself writes no
     // board on the branch (ship-decision-3).
     await ports.published(projectPath);
-    const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id, returnTo: returnTo(board, id, column, from ?? null) });
+    const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id, returnTo: returnTo(board, id, column, from ?? null), askedFrom });
     // The move stays written: a card refused a ship or a review is still where it was put, and the
     // refusal says why nothing started there.
     if (isRefused(started)) return { refused: `${moved.output}; ${started.refused}` };

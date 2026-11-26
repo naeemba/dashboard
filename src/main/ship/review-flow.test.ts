@@ -5,7 +5,7 @@ import { BOARD_FOLDER_PATH, readBoard, writeBoard } from '../board/board-store';
 import { CANCELLED_COLUMN, REVIEW_COLUMN, columnNamed, emptyBoard, moveCardById, type Board } from '../../shared/board/board';
 import { reviewSweep, type ReviewSweep } from './review-flow';
 import { intoReview } from './review';
-import { CARD, boardWithCard, columnOfCard, commentsOnCard, flight, inDone, ports, sweepWith } from './review-flow-fixture';
+import { CARD, MOVED, boardWithCard, columnOfCard, commentsOnCard, flight, inDone, ports, reviewRan, sweepWith } from './review-flow-fixture';
 
 describe('reviewSweep', () => {
   it('moves the card into Review and swaps the worktree for one that reviews it', async () => {
@@ -128,7 +128,7 @@ describe('reviewSweep', () => {
           const board = boardWithCard(null);
           writeBoard(projectPath, moveCardById(board, CARD, columnNamed(board, CANCELLED_COLUMN)) ?? board);
         }
-        return sweep.review(arrived.cardId);
+        return sweep.review(arrived.cardId).then(reviewRan);
       },
     });
     await sweep.run();
@@ -366,6 +366,7 @@ describe('reviewSweep', () => {
       arrived: async (arrived) => {
         arrivals += 1;
         writeBoard(arrived.projectPath, intoReview(readBoard(arrived.projectPath).board, arrived.cardId) ?? readBoard(arrived.projectPath).board);
+        return MOVED;
       },
     });
     const sweep = reviewSweep(made);
@@ -412,12 +413,38 @@ describe('reviewSweep', () => {
     });
     const sweep: ReviewSweep = reviewSweep({
       ...made,
-      arrived: async (arrived) => (loopOn ? sweep.review(arrived.cardId) : undefined),
+      arrived: async (arrived) => (loopOn ? sweep.review(arrived.cardId).then(reviewRan) : MOVED),
     });
     await sweep.run();
     loopOn = false;
     committed = true;
     await sweep.run();
+    expect(log.started).toEqual([]);
+  });
+
+  // The same, with every worker slot held: the sweep's move queues the review, which begins later,
+  // outside the move, and is still the sweep's start when it meets the dirty worktree.
+  it('retries a sweep start the queue began later through the move, not as a start by hand', async () => {
+    const { entry } = flight(12);
+    let committed = false;
+    let loopOn = true;
+    const retried: string[] = [];
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async () => (committed
+        ? { ok: true, message: '', dirty: [] }
+        : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
+      retry: async (id) => { retried.push(id); },
+    });
+    const sweep: ReviewSweep = reviewSweep({
+      ...made,
+      arrived: async () => (loopOn ? { output: 'queued q1, 1st', ran: 'review', started: 'queued q1, 1st' } : MOVED),
+    });
+    await sweep.run();
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
+    loopOn = false;
+    committed = true;
+    await sweep.run();
+    expect(retried).toEqual([]);
     expect(log.started).toEqual([]);
   });
 

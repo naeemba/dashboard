@@ -60,18 +60,37 @@ describe('budgetHold', () => {
 });
 
 describe('readiness', () => {
+  const open = () => true;
   it('drops an entry whose card is finished, and waits on a closed project or an unfinished --after card', () => {
-    expect(readiness(entry('q1', { cardId: 'a' }), true, () => board({ a: DONE }))).toEqual({ state: 'drop', why: 'card a is Done' });
-    expect(readiness(entry('q1', { cardId: 'a' }), true, () => board({ a: CANCELLED })).state).toBe('drop');
-    expect(readiness(entry('q1'), false, () => null)).toEqual({ state: 'wait', why: 'api is not open' });
-    expect(readiness(entry('q1', { after: 'b' }), true, () => board())).toEqual({ state: 'wait', why: 'waits on card b' });
-    expect(readiness(entry('q1', { after: 'b' }), true, () => board({ b: DONE }))).toEqual(ready);
-    expect(readiness(entry('q1', { cardId: 'a' }), true, () => board())).toEqual(ready);
+    expect(readiness(entry('q1', { cardId: 'a' }), open, () => board({ a: DONE }))).toEqual({ state: 'drop', why: 'card a is Done' });
+    expect(readiness(entry('q1', { cardId: 'a' }), open, () => board({ a: CANCELLED })).state).toBe('drop');
+    expect(readiness(entry('q1'), () => false, () => null)).toEqual({ state: 'wait', why: 'api is not open' });
+    expect(readiness(entry('q1', { after: 'b' }), open, () => board())).toEqual({ state: 'wait', why: 'waits on card b' });
+    expect(readiness(entry('q1', { after: 'b' }), open, () => board({ b: DONE }))).toEqual(ready);
+    expect(readiness(entry('q1', { cardId: 'a' }), open, () => board())).toEqual(ready);
   });
 
   it('does not wait on a closed project the start opens itself', () => {
-    const elsewhere = entry('q1', { work: { kind: 'run', project: 'crm', prompt: 'p', card: null, worktree: false, folder: null, as: null } });
-    expect(readiness(elsewhere, false, () => null)).toEqual(ready);
+    const elsewhere = entry('q1', { projectPath: '/work/crm', work: { kind: 'run', project: 'crm', prompt: 'p', card: null, worktree: false, folder: null, as: null } });
+    expect(readiness(elsewhere, (path) => path === '/work/api', () => null)).toEqual(ready);
+  });
+
+  // Its main is the one told how the start went: started now, nobody would hear it.
+  it('waits while the page of the main that queued it is closed', () => {
+    const elsewhere = entry('q1', { projectPath: '/work/crm', work: { kind: 'run', project: 'crm', prompt: 'p', card: null, worktree: false, folder: null, as: null } });
+    expect(readiness(elsewhere, (path) => path === '/work/crm', () => null)).toEqual({ state: 'wait', why: 'api is not open' });
+  });
+
+  it('drops an entry whose card was deleted, and leaves it be when the board cannot be read', () => {
+    expect(readiness(entry('q1', { cardId: 'c' }), open, () => board())).toEqual({ state: 'drop', why: 'card c is not on the board' });
+    expect(readiness(entry('q1', { cardId: 'c' }), open, () => null)).toEqual(ready);
+  });
+
+  // Dragged into Ship, queued, then dragged back out: not shipped from Todo twenty minutes later.
+  it('drops an entry whose card left the column its move put it in', () => {
+    const shipped = entry('q1', { cardId: 'a', returnTo: { from: 'Backlog', into: 'Ship' }, work: { kind: 'ship', title: 'a' } });
+    expect(readiness(shipped, open, () => board())).toEqual({ state: 'drop', why: 'card a left Ship' });
+    expect(readiness(shipped, open, () => board({ a: 2 }))).toEqual(ready);
   });
 });
 

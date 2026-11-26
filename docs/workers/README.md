@@ -58,7 +58,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   [actions](../actions/README.md))
 - The pane pool, which holds main's workers to `workers.cap` (4) and queues a
   start past it: the decisions in `pane-pool.ts`, the queue's file
-  `pane-queue-store.ts` (`pane-queue.json` in the app's user data), the
+  `pane-queue-store.ts` (`pane-queue.json` in the app's user data), what main
+  builds it on (settings, budget, boards) `pane-pool-ports.ts`, the
   pane.start, pane.queue and pane.unqueue actions and the drain in
   `../actions/pane/queue.ts`, built and drained by `session-requests.ts`
   (`pane start`, tested in `session-requests-pool.test.ts`); a ship and a review
@@ -103,10 +104,18 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given fewer than 4 running and nothing queued, when main runs `pane start`,
   then it claims a pane and answers as `pane run` does; `pane run <id>` at the
   cap is refused, saying `pane start` queues it.
-- Given a queued ship whose card is moved into Done or Cancelled, when the queue
-  is next looked at, then the entry is dropped and its main told `q7 dropped:
-  card … is Done`. Given `board ship B --after A`, then B waits, letting later
-  entries go ahead, until A is Done or Cancelled.
+- Given a queued ship whose card is moved into Done or Cancelled, deleted, or
+  moved out of the Ship column its move queued it from, when the queue is next
+  looked at, then the entry is dropped and its main told `q7 dropped: card … is
+  Done` (`is not on the board`, `left Ship`). Given `board ship B --after A`,
+  then B waits, letting later entries go ahead, until A is Done or Cancelled.
+- Given the manager runs `board ship <id> --project crm` and the ship is queued,
+  when it starts, then the manager is told `q7 started: …`, and the manager's
+  `pane unqueue q7` withdraws it. Given api's main queued `pane start --project
+  crm` and api is closed, then the entry waits until api is open again.
+- Given `board review <id>` on a card still in Doing just after its pull request
+  opened, with review.autoLoop on, then the review starts and answers so, rather
+  than refusing itself as already queued.
 - Given main ran `board move <id> Ship` from Todo and the ship is queued as q7, when main runs
   `pane unqueue q7`, then it answers `withdrew q7; card … back in Todo` and the card is in Todo.
 - Given a card dragged on the board from Todo into Ship and the ship queued, when main withdraws
