@@ -1,8 +1,8 @@
 import type { Refused } from '../../../shared/app/bridge';
 import type { Board } from '../../../shared/board/board';
 import { failureText } from '../../../shared/errors/failure';
-import { capReached, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type NextStart, type QueueEntry } from '../../workers/pane-pool';
-import { queuedWork, type SavedQueue } from '../../workers/pane-queue-store';
+import { capReached, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, withdrawnColumn, type NextStart, type QueueEntry } from '../../workers/pane-pool';
+import { columnsBack, queuedWork, type SavedQueue } from '../../workers/pane-queue-store';
 import { action, bind, isRefused, type BoundAction } from '../action';
 import { isFilledText, isFilledTextOrNull } from './pane-input';
 
@@ -34,6 +34,8 @@ export type PaneQueuePorts = {
   board(projectPath: string): Board | null;
   // The start itself: the run's claim and run, the ship, the review. A refusal is the start's.
   begin(entry: QueueEntry): Promise<{ output: string } | Refused>;
+  // card.move, for a withdrawn card going back to the column it came from.
+  move(projectPath: string, cardId: string, column: string): Promise<{ output: string } | Refused>;
   // A notice to the main of that page, behind whatever it is doing.
   tell(dispatcherPath: string, text: string): void;
   now(): number;
@@ -42,12 +44,13 @@ export type PaneQueuePorts = {
 export type PaneStartInput = Omit<QueueEntry, 'id' | 'queuedAt'> & { first: boolean };
 
 function startInput(raw: Record<string, unknown>): PaneStartInput | Refused {
-  const { dispatcherPath, projectPath, cardId, after, first, work } = raw;
+  const { dispatcherPath, projectPath, cardId, after, first, work, returnTo = null } = raw;
   if (!isFilledText(dispatcherPath) || !isFilledText(projectPath)) return { refused: 'no project was given' };
   if (!isFilledTextOrNull(cardId) || !isFilledTextOrNull(after) || typeof first !== 'boolean') return { refused: 'the start was not one the app could read' };
   const read = queuedWork(work);
-  if (read === undefined) return { refused: 'the start was not one the app could read' };
-  return { dispatcherPath, projectPath, cardId, after, first, work: read };
+  const back = columnsBack(returnTo);
+  if (read === undefined || back === undefined) return { refused: 'the start was not one the app could read' };
+  return { dispatcherPath, projectPath, cardId, after, first, work: read, returnTo: back };
 }
 
 const taken = (ports: PaneQueuePorts) => ports.running() + ports.pool.starting.size;
@@ -131,7 +134,8 @@ export const paneQueue = action<PaneQueuePorts, Record<string, never>, { output:
   },
 });
 
-// Only by the main it would tell: another project's entry is its main's to withdraw.
+// Only by the main it would tell: another project's entry is its main's to withdraw. A card a move
+// queued goes back to the column it came from, through card.move (withdrawnColumn).
 export const paneUnqueue = action<PaneQueuePorts, { id: string; dispatcherPath: string }, { output: string }>('pane.unqueue', {
   words: [],
   input: ({ id, dispatcherPath }) => (isFilledText(id) && isFilledText(dispatcherPath) ? { id, dispatcherPath } : { refused: 'pane unqueue needs the id pane queue prints' }),
@@ -141,7 +145,11 @@ export const paneUnqueue = action<PaneQueuePorts, { id: string; dispatcherPath: 
     if (entry.dispatcherPath !== dispatcherPath) return { refused: `${id} was queued by another project's main` };
     ports.pool.entries = ports.pool.entries.filter((each) => each !== entry);
     save(ports);
-    return { output: `withdrew ${id}` };
+    const column = withdrawnColumn(entry, ports.board(entry.projectPath));
+    if (column === null || entry.cardId === null) return { output: `withdrew ${id}` };
+    if ('stays' in column) return { output: `withdrew ${id}; ${column.stays}` };
+    const moved = await ports.move(entry.projectPath, entry.cardId, column.back);
+    return { output: isRefused(moved) ? `withdrew ${id}; card ${entry.cardId} stays: ${moved.refused}` : `withdrew ${id}; card ${entry.cardId} back in ${column.back}` };
   },
 });
 

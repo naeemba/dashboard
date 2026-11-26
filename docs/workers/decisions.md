@@ -629,6 +629,14 @@ review sweep's own starts could push past a main that counted perfectly.
   unqueue and queue again. `--after <card>` holds an entry until that card is Done or Cancelled,
   letting later ones go ahead, for a card main knows would conflict with an open pull request: the
   app cannot see file overlap before the work exists.
+- **A withdrawn card goes back to the column its move took it from**, through card.move
+  (`withdrawnColumn`): main unqueues a card it moved from Todo into Ship, and the card is in Todo
+  again rather than sitting in Ship with nothing coming. Only a card still where the move put it
+  goes back, and never into Review, whose entry would start the review being withdrawn. A move made
+  on the board screen is saved before the app hears of it, so the column it came from is not known
+  and the card stays.
+- **No start goes around it**, the review sweep's retry of a review a person started included: it
+  goes through card.review, as every other review start does.
 - **The pane and worktree are picked when the entry starts, never when it is queued.** Six queued
   runs holding claimed panes would be six empty shells, and a ship takes any free shell pane.
 - **Restore, `pane send` and New Claude never queue**: they carry on work already begun or a

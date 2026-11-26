@@ -92,3 +92,5 @@ One line per merged change: date and why.
   push past it (workers-decision-11)
 - 2026-11-26 — The finished-work tests build their bare origin and clones once and copy them per
   test: building them in every test took one past vitest's 5 s on the Windows CI job
+- 2026-11-26 — A withdrawn card goes back to the column its move took it from, and a review
+  retried by hand starts through the pane pool like every other start (workers-decision-11)

@@ -10,12 +10,19 @@ import { replaceFile } from '../app/replace-file';
 import { readText } from '../app/missing-file';
 import { budgetVerdict } from '../command/budget-cli';
 import { WEEKLY_USAGE_FILE } from '../usage/weekly-usage-file';
-import { budgetHold, type CardWork, type QueueEntry, type QueuedWork } from './pane-pool';
+import { budgetHold, type CardWork, type QueueEntry, type QueuedWork, type ReturnTo } from './pane-pool';
 
 // pane-queue.json in the app's user data, next to session.json: the pane pool's queue, written on every
 // change, so an app restart never loses work a main was told is queued. Read once at launch.
 
 export type SavedQueue = { next: number; entries: QueueEntry[] };
+
+// The move a withdrawal undoes, as the file and pane.start's door both read it: null, or undefined
+// for one that does not read.
+export function columnsBack(stored: unknown): ReturnTo | null | undefined {
+  if (stored === null) return null;
+  return isRecord(stored) && isFilledText(stored.from) && isFilledText(stored.into) ? { from: stored.from, into: stored.into } : undefined;
+}
 
 // What an entry starts, as the file and pane.start's door both read it, or undefined.
 export function queuedWork(stored: unknown): QueuedWork | undefined {
@@ -30,9 +37,10 @@ export function queuedWork(stored: unknown): QueuedWork | undefined {
 function entry(stored: unknown): QueueEntry[] {
   if (!isRecord(stored)) return [];
   const { id, dispatcherPath, projectPath, cardId, after, queuedAt } = stored;
+  const returnTo = stored.returnTo === undefined ? null : columnsBack(stored.returnTo);
   const queued = queuedWork(stored.work);
-  if (!isFilledText(id) || !isFilledText(dispatcherPath) || !isFilledText(projectPath) || !isFilledTextOrNull(cardId) || !isFilledTextOrNull(after) || !isFilledText(queuedAt) || queued === undefined) return [];
-  return [{ id, dispatcherPath, projectPath, cardId, after, queuedAt, work: queued }];
+  if (!isFilledText(id) || !isFilledText(dispatcherPath) || !isFilledText(projectPath) || !isFilledTextOrNull(cardId) || !isFilledTextOrNull(after) || !isFilledText(queuedAt) || queued === undefined || returnTo === undefined) return [];
+  return [{ id, dispatcherPath, projectPath, cardId, after, queuedAt, work: queued, returnTo }];
 }
 
 // The file's queue, an entry that does not read left out. No file, or one that does not parse, is an
@@ -59,13 +67,16 @@ export const PANE_QUEUE_FILE = 'pane-queue.json';
 
 // What the pool is built on from main: the file, the live settings, the boards and the start of a ship
 // or a review, which card-actions.ts holds. The rest is the session command's (session-requests.ts).
-export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board' | 'now'> & {
+export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board' | 'now' | 'move'> & {
   saved: SavedQueue;
   beginCard(entry: QueueEntry, work: CardWork): Promise<{ output: string } | Refused>;
 };
 
+// What card-actions.ts gives the pool: a card's start, and card.move for a withdrawn card.
+export type CardPool = Pick<PoolPorts, 'beginCard' | 'move'>;
+
 export function poolPorts(
-  userData: string, settings: () => Settings, board: (projectPath: string) => Board | null, beginCard: PoolPorts['beginCard'],
+  userData: string, settings: () => Settings, board: (projectPath: string) => Board | null, cards: CardPool,
 ): PoolPorts {
   const file = path.join(userData, PANE_QUEUE_FILE);
   return {
@@ -80,7 +91,7 @@ export function poolPorts(
     cap: () => settings().workers.cap,
     budget: () => budgetHold(settings().budget, () => budgetVerdict(() => readText(WEEKLY_USAGE_FILE), settings().budget, Date.now())),
     board,
-    beginCard,
+    ...cards,
     now: Date.now,
   };
 }

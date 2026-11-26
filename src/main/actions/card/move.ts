@@ -3,6 +3,7 @@ import { columnEntry, isMoveSource, type MoveSource } from '../../../shared/boar
 import type { CardMoveResult, Refused } from '../../../shared/app/bridge';
 import { brokenFilesRefusal, runBoardCommand } from '../../board/board-cli';
 import { action, isRefused } from '../action';
+import type { ReturnTo } from '../../workers/pane-pool';
 import { cardInput, type CardInput } from './card-input';
 
 export type CardMoveInput = CardInput & { column: string; source: MoveSource };
@@ -19,8 +20,9 @@ export type CardMovePorts = {
   // Whether the folder is a project's own board, not a worktree's or the manager's.
   projectBoard(projectPath: string): boolean;
   autoLoop(): boolean;
-  ship(input: CardInput): Promise<{ output: string } | Refused>;
-  review(input: CardInput): Promise<{ output: string } | Refused>;
+  // Each with the move that started it, for a withdrawal from the pane pool's queue to undo.
+  ship(input: CardInput & { returnTo: ReturnTo | null }): Promise<{ output: string } | Refused>;
+  review(input: CardInput & { returnTo: ReturnTo | null }): Promise<{ output: string } | Refused>;
 };
 
 // Every move of a card between columns, from the board, `dashboard board move` and the review sweep:
@@ -61,7 +63,7 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
     // included: the worktree's board then shows the card where main has it. The ship itself writes no
     // board on the branch (ship-decision-3).
     await ports.published(projectPath);
-    const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id });
+    const started = await (entry === 'ship' ? ports.ship : ports.review)({ projectPath, id, returnTo: returnTo(board, id, column) });
     // The move stays written: a card refused a ship or a review is still where it was put, and the
     // refusal says why nothing started there.
     if (isRefused(started)) return { refused: `${moved.output}; ${started.refused}` };
@@ -75,4 +77,13 @@ function movedOn(board: Board, id: string, column: string): boolean {
   const at = selectionOf(board, id);
   const named = columnNamed(board, column);
   return at !== null && named !== -1 && at.column !== named;
+}
+
+// The move a withdrawal undoes: the column the card was in before this move and the one it entered,
+// or null when it was there already (the screen saves its move before it asks) or is not on the board.
+function returnTo(board: Board, id: string, column: string): ReturnTo | null {
+  const at = selectionOf(board, id);
+  const into = columnNamed(board, column);
+  if (at === null || into === -1 || at.column === into) return null;
+  return { from: board.columns[at.column].name, into: board.columns[into].name };
 }

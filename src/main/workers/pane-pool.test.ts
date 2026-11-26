@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { emptyBoard, moveCardById, type Board } from '../../shared/board/board';
 import type { Settings } from '../../shared/settings/settings';
-import { budgetHold, holdsSlot, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type QueueEntry, type Readiness } from './pane-pool';
+import { budgetHold, holdsSlot, withdrawnColumn, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type QueueEntry, type Readiness } from './pane-pool';
 
 const entry = (id: string, over: Partial<QueueEntry> = {}): QueueEntry => ({
-  id, dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, queuedAt: '2026-11-26T12:00:00.000Z',
+  id, dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, returnTo: null, queuedAt: '2026-11-26T12:00:00.000Z',
   work: { kind: 'run', project: null, prompt: 'fix the tests', card: null, worktree: true, folder: null, as: null }, ...over,
 });
 
@@ -123,5 +123,29 @@ describe('queueing', () => {
       'held: 4 running, the cap is 4',
     ]);
     expect(queueText([], null, now)).toBe('nothing queued');
+  });
+});
+
+describe('withdrawnColumn', () => {
+  const SHIP = 2;
+  const REVIEW = 4;
+  const shipped = entry('q1', { cardId: 'a', returnTo: { from: 'Backlog', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
+
+  it('puts a card the move queued back where it came from', () => {
+    expect(withdrawnColumn(shipped, board({ a: SHIP }))).toEqual({ back: 'Backlog' });
+  });
+
+  it('leaves a card moved on since, one no move queued, and one with no card', () => {
+    expect(withdrawnColumn(shipped, board({ a: DONE }))).toBeNull();
+    expect(withdrawnColumn({ ...shipped, returnTo: null }, board({ a: SHIP }))).toBeNull();
+    expect(withdrawnColumn(entry('q2'), board())).toBeNull();
+    expect(withdrawnColumn(shipped, null)).toBeNull();
+  });
+
+  // A reviewed card shipped again, withdrawn: back in Review would start the review over.
+  it('keeps a card out of a column whose entry starts something, saying so', () => {
+    const fromReview = { ...shipped, returnTo: { from: 'Review', into: 'Ship' } };
+    expect(withdrawnColumn(fromReview, board({ a: SHIP }))).toEqual({ stays: 'card a stays in Ship: back in Review would start it again' });
+    expect(withdrawnColumn({ ...shipped, returnTo: { from: 'Doing', into: 'Review' } }, board({ a: REVIEW }))).toEqual({ back: 'Doing' });
   });
 });

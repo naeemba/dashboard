@@ -22,6 +22,7 @@ import { pullRequestSweep, type PullRequestSweep } from '../../board/pull-reques
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
 import { notOpenRefusal } from '../../ship/ship';
 import type { CardWork, QueueEntry } from '../../workers/pane-pool';
+import type { CardPool } from '../../workers/pane-queue-store';
 import { bind, registerActions, type BoundAction } from '../action';
 import { cardFollow } from './follow';
 import { cardMove } from './move';
@@ -55,8 +56,9 @@ export type CardActions = {
   // card.start, for main's one place a card's agent is given its pane.
   start: BoundAction;
   actions: BoundAction[];
-  // A queued ship or review started, as the pane pool starts it: the ship itself, or the review's swap.
-  begin(entry: QueueEntry, work: CardWork): Promise<{ output: string } | Refused>;
+  // What the pane pool takes from the cards: a queued ship or review started (the ship itself, or the
+  // review's swap), and card.move for a withdrawn card.
+  pool: CardPool;
 };
 
 export function cardActions(main: CardActionsMain): CardActions {
@@ -113,10 +115,10 @@ export function cardActions(main: CardActionsMain): CardActions {
   const ship = bind(cardShip, {
     read: (projectPath) => read(projectPath).board,
     slotOf: main.slotOf,
-    ship: ({ projectPath, id, title, first, after }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after, first, work: { kind: 'ship', title } }),
+    ship: ({ projectPath, id, title, first, after, returnTo }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after, first, returnTo, work: { kind: 'ship', title } }),
   });
   const review = bind(cardReview, {
-    review: ({ projectPath, id }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after: null, first: false, work: { kind: 'review' } }),
+    review: ({ projectPath, id, returnTo }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after: null, first: false, returnTo, work: { kind: 'review' } }),
   });
   async function begin({ projectPath, cardId }: QueueEntry, work: CardWork): Promise<{ output: string } | Refused> {
     if (cardId === null) return { refused: 'no card was queued' };
@@ -161,5 +163,9 @@ export function cardActions(main: CardActionsMain): CardActions {
   // exposes. A screen that needs ship or review gets its channel in the same change.
   // action.test.ts pins both lists against what is served here.
   registerActions(main.table, [move]);
-  return { reviews, pullRequests, start, actions: [move, ship, review], begin };
+  const pool: CardPool = {
+    beginCard: begin,
+    move: (projectPath, id, column) => move.call({ projectPath, id, column, source: 'automatic' }),
+  };
+  return { reviews, pullRequests, start, actions: [move, ship, review], pool };
 }

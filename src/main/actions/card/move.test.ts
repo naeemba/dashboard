@@ -40,6 +40,20 @@ async function move(ports: CardMovePorts, column: string, source: MoveSource = '
 }
 
 describe('card.move', () => {
+  // So that withdrawing the start from the pane pool's queue can put the card back.
+  it('hands the ship and the review the move that started them', async () => {
+    const asked: unknown[] = [];
+    const { ports } = fakePorts({
+      ship: async (input) => { asked.push(input.returnTo); return { output: '' }; },
+      review: async (input) => { asked.push(input.returnTo); return { output: '' }; },
+    });
+    await move(ports, 'Ship');
+    await move(ports, 'Review');
+    // The screen has saved its own move before it asks: the card is already there.
+    await move(ports, 'Review', 'user');
+    expect(asked).toEqual([{ from: 'Todo', into: 'Ship' }, { from: 'Ship', into: 'Review' }, null]);
+  });
+
   it('writes the move, then ships a card entering Ship', async () => {
     const { ports, seen } = fakePorts();
     await expect(move(ports, 'Ship')).resolves.toEqual({ output: 'Fix login  →  Ship\nshipped on fix-login', ran: 'ship', started: 'shipped on fix-login' });

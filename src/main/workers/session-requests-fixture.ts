@@ -95,6 +95,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       board: () => null,
       now: () => Date.parse('2026-11-26T12:00:00Z'),
       beginCard: async () => ({ refused: 'no card starts here' }),
+      move: async () => ({ refused: 'no card moves here' }),
     },
     ...overrides,
   };

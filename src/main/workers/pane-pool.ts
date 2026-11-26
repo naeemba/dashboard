@@ -1,7 +1,8 @@
 import type { WorkerState } from '../../shared/app/bridge';
 import { relativeAge } from '../../shared/app/age';
 import { baseName } from '../../shared/app/base-name';
-import { selectionOf, type Board } from '../../shared/board/board';
+import { isColumnNamed, selectionOf, type Board } from '../../shared/board/board';
+import { columnEntry } from '../../shared/board/column-entry';
 import { workerAbout } from '../../shared/workers/worker-roster';
 import type { Settings } from '../../shared/settings/settings';
 import type { BudgetVerdict } from '../command/budget-cli';
@@ -20,6 +21,8 @@ export type QueuedWork =
   | { kind: 'ship'; title: string }
   | { kind: 'review' };
 
+export type ReturnTo = { from: string; into: string };
+
 export type RunWork = Extract<QueuedWork, { kind: 'run' }>;
 export type CardWork = Exclude<QueuedWork, RunWork>;
 
@@ -33,6 +36,10 @@ export type QueueEntry = {
   cardId: string | null;
   // A card that must be Done or Cancelled first (`--after`).
   after: string | null;
+  // The move into Ship or Review that queued it, for a withdrawal to undo, or null: a start no move
+  // made (`board ship`, `pane start`), or one made on the board screen, which has saved its move
+  // already when the app hears of it.
+  returnTo: ReturnTo | null;
   queuedAt: string;
   work: QueuedWork;
 };
@@ -107,6 +114,20 @@ export function nextToStart(
   if (first === undefined) return { held: `${read[0].entry.id} ${read[0].why}` };
   const over = budget();
   return over === null ? { start: first.entry } : { held: over };
+}
+
+// The column a withdrawn entry's card goes back to, or why it stays. Only a card still where the move
+// put it goes back, and never into a column whose entry starts something: back into Review would
+// start the review being withdrawn from Ship.
+export function withdrawnColumn(entry: QueueEntry, board: Board | null): { back: string } | { stays: string } | null {
+  if (entry.cardId === null || entry.returnTo === null || board === null) return null;
+  const at = selectionOf(board, entry.cardId);
+  if (at === null || !isColumnNamed(board.columns[at.column].name, entry.returnTo.into)) return null;
+  const { from, into } = entry.returnTo;
+  if (columnEntry({ column: from, source: 'command', autoLoop: false, projectBoard: true }) !== 'nothing') {
+    return { stays: `card ${entry.cardId} stays in ${into}: back in ${from} would start it again` };
+  }
+  return { back: from };
 }
 
 // Why the entry may not be queued, or null. A card queued twice would start two agents in one

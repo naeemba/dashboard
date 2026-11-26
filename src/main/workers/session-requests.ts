@@ -339,7 +339,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const { project, first, after, prompt, card, worktree, as } = command;
     const folder = command.folder === null ? null : path.resolve(directory, command.folder);
     return pool.start.call({
-      dispatcherPath: projectPath, projectPath: found?.path ?? projectPath, cardId: card, after, first,
+      dispatcherPath: projectPath, projectPath: found?.path ?? projectPath, cardId: card, after, first, returnTo: null,
       work: { kind: 'run', project, prompt, card, worktree, folder, as },
     });
   }

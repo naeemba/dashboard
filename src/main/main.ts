@@ -678,7 +678,7 @@ const sayReviewLoop = (notice: string): void => sendToRenderer('review-loop:noti
 // A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
 // card actions in actions/card/, bound here to their channels and, below, to the session socket.
 // What is handed over is only what this file knows — the records, the pages, the panes, the setting.
-const { reviews, pullRequests, start: cardStart, actions: cardActionList, begin: cardBegin } = cardActions({
+const { reviews, pullRequests, start: cardStart, actions: cardActionList, pool: cardPool } = cardActions({
   table,
   worktrees: worktrees.entries,
   slotOf: slotOfProject,
@@ -810,7 +810,7 @@ const workerAnswers = sessionRequests({
   },
   threwAway: (id, said, projectPath) => logStore.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
   realPath,
-  pool: poolPorts(app.getPath('userData'), () => settings, boardLog.latest, cardBegin),
+  pool: poolPorts(app.getPath('userData'), () => settings, boardLog.latest, cardPool),
 });
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());

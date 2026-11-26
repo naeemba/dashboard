@@ -10,6 +10,7 @@ import { panePool, type PaneQueuePorts } from './queue';
 function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueue = { next: 1, entries: [] }) {
   const counts = { running: 0 };
   const told: string[] = [];
+  const moves: string[] = [];
   const begun: string[] = [];
   const saves: SavedQueue[] = [];
   const pending = new Map<string, (result: { output: string } | Refused) => void>();
@@ -24,6 +25,7 @@ function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueu
     begin: (entry: QueueEntry) => new Promise((resolve) => { begun.push(entry.id); pending.set(entry.id, resolve); }),
     tell: (dispatcherPath, text) => { told.push(`${dispatcherPath}: ${text}`); },
     now: () => Date.parse('2026-11-26T12:00:00.000Z'),
+    move: async (_projectPath, cardId, column) => { moves.push(`${cardId} ${column}`); return { output: '' }; },
     ...over,
   });
   const finish = async (id: string, result: { output: string } | Refused = { output: `started ${id}` }) => {
@@ -35,7 +37,7 @@ function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueu
     dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, first: false,
     work: { kind: 'run', project: null, prompt: 'fix it', card: null, worktree: false, folder: null, as: null }, ...over,
   });
-  return { actions, counts, told, begun, saves, finish, start, board };
+  return { actions, counts, told, begun, saves, finish, start, board, moves };
 }
 
 describe('pane.start', () => {
@@ -119,6 +121,26 @@ describe('pane.start', () => {
 });
 
 describe('the pool\'s other doors', () => {
+  it('puts a withdrawn card back in the column its move took it from, through card.move', async () => {
+    const { actions, start, moves, board } = pool({ cap: () => 0 });
+    actions.ready();
+    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
+    board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
+    await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q1; card a back in Todo' });
+    expect(moves).toEqual(['a Todo']);
+  });
+
+  it('says so when the move back is refused, and leaves a card the move did not queue alone', async () => {
+    const { actions, start, moves, board } = pool({ cap: () => 0, move: async () => ({ refused: 'board files do not parse' }) });
+    actions.ready();
+    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
+    board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
+    await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q1; card a stays: board files do not parse' });
+    await start({ cardId: 'a', work: { kind: 'ship', title: 'A' } });
+    await expect(actions.unqueue.call({ id: 'q2', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q2' });
+    expect(moves).toEqual([]);
+  });
+
   it('refuses to withdraw an entry already starting', async () => {
     const { actions, start } = pool();
     actions.ready();
@@ -137,7 +159,7 @@ describe('the pool\'s other doors', () => {
   it('withdraws an entry for the main that queued it only, and lists an empty queue', async () => {
     const queued = { next: 8, entries: [{
       id: 'q7', dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, queuedAt: '2026-11-26T11:00:00.000Z',
-      work: { kind: 'review' as const },
+      work: { kind: 'review' as const }, returnTo: null,
     }] };
     const { actions, saves } = pool({}, queued);
     await expect(actions.unqueue.call({ id: 'q7', dispatcherPath: '/work/crm' })).resolves.toEqual({ refused: 'q7 was queued by another project\'s main' });

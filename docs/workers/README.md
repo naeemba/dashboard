@@ -107,6 +107,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   is next looked at, then the entry is dropped and its main told `q7 dropped:
   card … is Done`. Given `board ship B --after A`, then B waits, letting later
   entries go ahead, until A is Done or Cancelled.
+- Given main ran `board move <id> Ship` from Todo and the ship is queued as q7, when main runs
+  `pane unqueue q7`, then it answers `withdrew q7; card … back in Todo` and the card is in Todo.
 - Given a weekly cap set and the 7-day usage at or over it, when a slot frees,
   then nothing starts and `pane queue` says why; with no limit set, the budget
   never holds the queue.

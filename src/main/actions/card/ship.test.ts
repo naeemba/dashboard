@@ -28,7 +28,7 @@ describe('card.ship', () => {
   it('hands the card to the pane pool with its title and its place in the queue', async () => {
     const { call, asked } = ship();
     await expect(call({ projectPath: '/work/api', id: 'card', first: true, after: 'other', source: 'command' })).resolves.toEqual({ output: 'queued q1, 1st' });
-    expect(asked).toEqual([{ projectPath: '/work/api', id: 'card', first: true, after: 'other', title: 'Fix login' }]);
+    expect(asked).toEqual([{ projectPath: '/work/api', id: 'card', first: true, after: 'other', returnTo: null, title: 'Fix login' }]);
   });
 
   it('takes a move\'s ship as last in line, holding for nobody', async () => {
@@ -64,17 +64,17 @@ describe('the card actions on the pane pool', () => {
     await verb('card.ship').call({ projectPath, id: 'card', source: 'command' });
     await verb('card.review').call({ projectPath, id: 'card', source: 'command' });
     expect(started).toEqual([
-      { dispatcherPath: projectPath, projectPath, cardId: 'card', after: null, first: false, work: { kind: 'ship', title: 'Fix login' } },
-      { dispatcherPath: projectPath, projectPath, cardId: 'card', after: null, first: false, work: { kind: 'review' } },
+      { dispatcherPath: projectPath, projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'ship', title: 'Fix login' } },
+      { dispatcherPath: projectPath, projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'review' } },
     ]);
   });
 
   it('refuses to begin a ship whose project closed while queued, and a review with no worktree', async () => {
     const ship = { kind: 'ship', title: 'Fix login' } as const;
-    const entry = { id: 'q1', dispatcherPath: '/work/api', projectPath: '/work/api', cardId: 'card', after: null, queuedAt: '', work: ship };
+    const entry = { id: 'q1', dispatcherPath: '/work/api', projectPath: '/work/api', cardId: 'card', after: null, queuedAt: '', work: ship, returnTo: null };
     const { built } = cards(-1);
-    await expect(built.begin({ ...entry, cardId: null }, ship)).resolves.toEqual({ refused: 'no card was queued' });
-    await expect(built.begin(entry, ship)).resolves.toMatchObject({ refused: expect.stringContaining('Fix login') });
-    await expect(built.begin(entry, { kind: 'review' })).resolves.toEqual({ refused: 'card card has no worktree to review; ship it first' });
+    await expect(built.pool.beginCard({ ...entry, cardId: null }, ship)).resolves.toEqual({ refused: 'no card was queued' });
+    await expect(built.pool.beginCard(entry, ship)).resolves.toMatchObject({ refused: expect.stringContaining('Fix login') });
+    await expect(built.pool.beginCard(entry, { kind: 'review' })).resolves.toEqual({ refused: 'card card has no worktree to review; ship it first' });
   });
 });
