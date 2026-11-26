@@ -1,0 +1,11 @@
+{
+  "id": "d29c16d1-2b06-4fe8-8d18-9ffb9497ca34",
+  "title": "Heavy checks wait on a machine-wide lock instead of flaking under load",
+  "notes": "Retro 2026-11-26: with several panes running at once, the load average reached 22-50 on 16 cores, and full test suites timed out and failed at random: one new-crm worker ran vitest 4 times; 'all 13 suites that failed pass alone'. Seen in 3 of 5 new-crm sessions and in pragma. Give the worker panes a machine-wide lock (flock on a file under ~/.cache/dashboard, or one the app holds) that full test, build and typecheck runs wait on, wired so a worker in any project uses it without a project change. The work-card and review prompts also tell the worker to rerun only the failed files, never the whole suite, to confirm a failure is load flake.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T08:24:39.822Z",
+  "updatedAt": "2026-11-26T08:24:39.822Z",
+  "column": "Backlog",
+  "order": 73
+}
