@@ -126,7 +126,8 @@ is forced past, and only about those: an unforced remove of a clean one loses no
 forced one keeps the branch. A worktree that also holds a work change is asked about both: the
 second confirm names the changed files and the board files origin lacks. The check fetches origin
 inside the project's queue, so the second question can take up to `FETCH_TIMEOUT` to appear,
-and a ship started meanwhile waits behind it. A review's removal still forces past them unasked,
-so a card edit made offline before the merge goes with the folder. A locked worktree, or one a
+and a ship started meanwhile waits behind it. A review's removal, the swap and the clear after a
+merge, asks the same: origin lacking a file keeps the worktree and the card's line names the files,
+and the review starts once someone acts on it (since 2026-11-26). A locked worktree, or one a
 process stands in, is still kept. `ship.ts`, `board-on-origin.ts`, `finished-work.ts`,
 `leftover-worktrees.ts`, `remove.ts`. (2026-11-26)

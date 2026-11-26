@@ -28,13 +28,13 @@ export type WorktreeRemovePorts = {
 // already found nothing unfinished there, and a review never takes what an agent left uncommitted. Queued on the
 // project, as a ship is, unless the caller holds the queue already: the review runs inside its own, and
 // the queue is not re-entrant. Logged unless it is the review's, which writes its outcome on the card.
-// The dialog's unforced removal asks first whether the board edits it would let go reached origin
-// (ship-decision-7): it forces git past the board's files, and a card edit made offline went with the
-// folder on one keypress. The sweeps and a throwaway's caller have asked already; the forced one is
-// your yes to losing them.
+// The dialog's unforced removal and the review's ask first whether the board edits they would let go
+// reached origin (ship-decision-7): both force git past the board's files, and a card edit made offline
+// went with the folder on one keypress, or on the review's swap. The sweeps and a throwaway's caller
+// have asked already; the dialog's forced one is your yes to losing them.
 export function removalOf(from: RemovalFrom, force: boolean): { force: boolean; queued: boolean; logged: boolean; boardChecked: boolean } {
   return {
-    force: from === 'dialog' && force, queued: from !== 'review', logged: from !== 'review', boardChecked: from === 'dialog' && !force,
+    force: from === 'dialog' && force, queued: from !== 'review', logged: from !== 'review', boardChecked: from === 'review' || (from === 'dialog' && !force),
   };
 }
 

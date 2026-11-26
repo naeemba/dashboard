@@ -10,7 +10,7 @@ describe('removalOf', () => {
     ['throwaway', true, { force: false, queued: true, logged: true, boardChecked: false }],
     ['throwaway', false, { force: false, queued: true, logged: true, boardChecked: false }],
     ['leftover', false, { force: false, queued: true, logged: true, boardChecked: false }],
-    ['review', true, { force: false, queued: false, logged: false, boardChecked: false }],
+    ['review', true, { force: false, queued: false, logged: false, boardChecked: true }],
   ] as const)('%s asking force %s', (from, force, expected) => {
     expect(removalOf(from, force)).toEqual(expected);
   });
@@ -46,10 +46,10 @@ describe('worktree.remove', () => {
     expect(asked).toEqual([{ force: false, queued: true, checked: "/w/fix's board edits never reached origin/main" }]);
   });
 
-  it('runs the review removal in the queue it already holds, unforced and unlogged', async () => {
+  it('runs the review removal in the queue it already holds, unforced, unlogged and asked about its board edits', async () => {
     const { remove, asked, logged } = remover();
     await remove.call({ worktreePath: '/w/fix', force: true, from: 'review' });
-    expect(asked).toEqual([{ force: false, queued: false }]);
+    expect(asked).toEqual([{ force: false, queued: false, checked: "/w/fix's board edits never reached origin/main" }]);
     expect(logged).toEqual([]);
   });
 

@@ -63,3 +63,6 @@ One line per merged change: date and why.
   files: five sat in dashboard.worktrees/ for ten days (ship-decision-7)
 - 2026-11-26 — `d` in the worktree list asks before removing a worktree whose board edits never
   reached origin's default branch: one keypress lost a card edit made offline (ship-decision-7)
+- 2026-11-26 — The review's worktree removal, its swap and the clear after a merge, keeps a
+  worktree whose board edits never reached origin's default branch and names the files on the card:
+  a card edit made offline went with the folder on the swap (ship-decision-7)
