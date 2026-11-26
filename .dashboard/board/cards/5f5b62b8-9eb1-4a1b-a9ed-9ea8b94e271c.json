@@ -5,11 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-02T00:40:52.538Z",
-  "updatedAt": "2026-11-02T08:53:07.402Z",
+  "updatedAt": "2026-11-26T10:42:57.090Z",
   "comments": [
     {
       "at": "2026-11-02T08:53:07.402Z",
       "body": "Seen in use: the 'has finished its turn' prompt to main fires on every Stop of the worker, including mid-task pauses (pr-loop waiting on subagents, CI waits), and the pane is back to running moments later. Main gets woken for nothing. Report only when the worker stays stopped (a short grace period, re-checked) or when it sent its own report."
+    },
+    {
+      "at": "2026-11-26T10:42:57.090Z",
+      "body": "Rescope from main, 2026-11-26 check: (4) last message is done (doneReport, done-report.ts) and 'report only when it stays stopped' is done. (2) keyboard pane links is likely done (the link command walks every a in the entry; chat-view.ts:711-713): check by hand, only fix if not. Left: (1) it still opens in searchOverlay (chat-workers-view.ts:3), anchor it to the count; (3) no refresh on exit (ponytail note at chat-workers-view.ts:12); (5) pane claim returns the bare id (actions/pane/claim.ts:47)."
     }
   ],
   "column": "Backlog",
