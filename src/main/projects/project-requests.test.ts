@@ -1,22 +1,24 @@
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { ClosingPane } from '../../shared/panes/close-refusal';
 import { projectActions, type ProjectActionsMain } from '../actions/project/project-actions';
 import { MAIN_START_MS } from '../actions/project/open';
 import { PROJECT_REQUEST } from './project-cli';
 import { projectRequests } from './project-requests';
-import { posixPathsOnly } from '../testing/windows-skips';
 
-// The command's door and the project actions behind it, on main's ports faked.
+// The command's door and the project actions behind it, on main's ports faked. The actions resolve
+// the folder they are given, so the fake's folders are resolved too: C:\web on Windows.
 const idle = (index: number): ClosingPane => ({
   name: `terminal ${index + 1}`, index, exited: false, foreground: 'zsh', shell: '/bin/zsh', command: undefined, inWorktree: false,
 });
 
-function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], missingSlots: number[] = []) {
+function setup(written: Record<string, number>, panes: ClosingPane[] = [idle(1)], missingSlots: number[] = []) {
+  const open = Object.fromEntries(Object.entries(written).map(([folder, slot]) => [path.resolve(folder), slot]));
   const ports = {
     ready: async () => undefined,
     slotOf: (projectPath: string) => open[projectPath] ?? -1,
     missingIn: (slot: number) => missingSlots.includes(slot),
-    folderExists: (projectPath: string) => projectPath !== '/gone',
+    folderExists: (projectPath: string) => projectPath !== path.resolve('/gone'),
     place: vi.fn((projectPath: string) => open[projectPath] ?? 7),
     startMain: vi.fn(async (slot: number) => `main-${slot}`),
     isOpen: (slot: number) => Object.values(open).includes(slot),
@@ -31,7 +33,7 @@ function setup(open: Record<string, number>, panes: ClosingPane[] = [idle(1)], m
 }
 
 describe('projectRequests', () => {
-  posixPathsOnly('switches to an open project\'s page, and refuses one that is not open', async () => {
+  it('switches to an open project\'s page, and refuses one that is not open', async () => {
     const { ports, answer } = setup({ '/web': 3 });
     await expect(answer('focus', '/web', 'web')).resolves.toEqual({ ok: true, output: 'switched to web' });
     expect(ports.land).toHaveBeenCalledWith('3:0');
@@ -46,16 +48,16 @@ describe('projectRequests', () => {
   });
 
   // A manager opens a project to hand it to that project's main, which has to be running to be told.
-  posixPathsOnly('opens a folder that is not open with its main, and starts the main of one that is', async () => {
+  it('opens a folder that is not open with its main, and starts the main of one that is', async () => {
     const { ports, answer } = setup({ '/web': 0 });
     await expect(answer('open', '/api/', 'api')).resolves.toEqual({ ok: true, output: 'opened api; main-7 is running' });
-    expect(ports.place).toHaveBeenCalledWith('/api');
+    expect(ports.place).toHaveBeenCalledWith(path.resolve('/api'));
     expect(ports.startMain).toHaveBeenCalledWith(7);
     await expect(answer('open', '/web', 'web')).resolves.toEqual({ ok: true, output: 'web is already open; main-0 is running' });
     expect(ports.startMain).toHaveBeenLastCalledWith(0);
   });
 
-  posixPathsOnly('refuses when main fails to start, and when it does not answer in time', async () => {
+  it('refuses when main fails to start, and when it does not answer in time', async () => {
     const { ports, answer } = setup({});
     vi.mocked(ports.startMain).mockRejectedValueOnce(new Error('claude not found'));
     await expect(answer('open', '/api', 'api'))
@@ -73,33 +75,33 @@ describe('projectRequests', () => {
 
   // Restored while its drive was unmounted, it sits in its slot reading Directory not found; answering
   // "already open" would leave it dead with the command reporting success.
-  posixPathsOnly('opens over a dead page whose folder is back, as the picker does', async () => {
+  it('opens over a dead page whose folder is back, as the picker does', async () => {
     const { ports, answer } = setup({ '/api': 2 }, [idle(1)], [2]);
     await expect(answer('open', '/api', 'api')).resolves.toEqual({ ok: true, output: 'opened api; main-2 is running' });
-    expect(ports.place).toHaveBeenCalledWith('/api');
+    expect(ports.place).toHaveBeenCalledWith(path.resolve('/api'));
   });
 
-  posixPathsOnly('refuses a dead page whose folder is still gone', async () => {
+  it('refuses a dead page whose folder is still gone', async () => {
     const { ports, answer } = setup({ '/gone': 2 }, [idle(1)], [2]);
-    await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: "gone's folder, /gone, does not exist" });
+    await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: `gone's folder, ${path.resolve('/gone')}, does not exist` });
     expect(ports.place).not.toHaveBeenCalled();
     expect(ports.startMain).not.toHaveBeenCalled();
   });
 
   // Opened anyway, it would be a dead page reading Directory not found.
-  posixPathsOnly('refuses to open a folder that is not there', async () => {
+  it('refuses to open a folder that is not there', async () => {
     const { ports, answer } = setup({});
-    await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: "gone's folder, /gone, does not exist" });
+    await expect(answer('open', '/gone', 'gone')).resolves.toEqual({ ok: false, output: `gone's folder, ${path.resolve('/gone')}, does not exist` });
     expect(ports.place).not.toHaveBeenCalled();
   });
 
-  posixPathsOnly('closes a quiet project with no question', async () => {
+  it('closes a quiet project with no question', async () => {
     const { ports, answer } = setup({ '/web': 3 });
     await expect(answer('close', '/web', 'web')).resolves.toEqual({ ok: true, output: 'closed web' });
     expect(ports.close).toHaveBeenCalledWith(3);
   });
 
-  posixPathsOnly('refuses to close while a pane is running something, naming it as the close key does', async () => {
+  it('refuses to close while a pane is running something, naming it as the close key does', async () => {
     const { ports, answer } = setup({ '/web': 3 }, [idle(1), { ...idle(2), foreground: 'npm' }]);
     await expect(answer('close', '/web', 'web'))
       .resolves.toEqual({ ok: false, output: 'web is still running in terminal 3 npm — stop it and close again' });

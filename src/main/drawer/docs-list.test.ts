@@ -3,7 +3,6 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
 import { temporaryFolder } from '../testing/temporary-folder';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {
@@ -65,11 +64,13 @@ describe('listDocs', () => {
 describe('docScope', () => {
   const ROOTS = ['/h/.dashboard', '/h/.claude'];
 
-  posixPathsOnly('takes only markdown, YAML and JSON under the docs folder', () => {
-    expect(docScope('/p', '/p/docs/board/README.md', [])).toEqual({ root: '/p/docs', images: '/p' });
-    expect(docScope('/p', '/p/docs/board/cards.yml', [])).toEqual({ root: '/p/docs', images: '/p' });
-    expect(docScope('/p', '/p/docs/shot.png', [])).toBeNull();
-    expect(docScope('/p', '/h/.claude/CLAUDE.md', ROOTS)).toBeNull();
+  it('takes only markdown, YAML and JSON under the docs folder', () => {
+    const project = path.resolve('/p');
+    const docs = { root: path.join(project, 'docs'), images: project };
+    expect(docScope(project, path.join(project, 'docs', 'board', 'README.md'), [])).toEqual(docs);
+    expect(docScope(project, path.join(project, 'docs', 'board', 'cards.yml'), [])).toEqual(docs);
+    expect(docScope(project, path.join(project, 'docs', 'shot.png'), [])).toBeNull();
+    expect(docScope(project, '/h/.claude/CLAUDE.md', ROOTS)).toBeNull();
   });
 
   it('refuses a file outside the docs folder', () => {
@@ -88,17 +89,18 @@ describe('docScope', () => {
 });
 
 describe('imageUrls', () => {
-  const read = new Map([['/p/docs/screenshots/board.png', Buffer.from('png')]]);
+  const project = path.resolve('/p');
+  const read = new Map([[path.join(project, 'docs', 'screenshots', 'board.png'), Buffer.from('png')]]);
   const url = `data:image/png;base64,${Buffer.from('png').toString('base64')}`;
 
-  posixPathsOnly("carries an image inside the project inline, by its address, relative to the doc's folder", () => {
-    expect(imageUrls('See ![the board](../screenshots/board.png "t").', '/p/docs/board/README.md', '/p', read))
+  it("carries an image inside the project inline, by its address, relative to the doc's folder", () => {
+    expect(imageUrls('See ![the board](../screenshots/board.png "t").', path.join(project, 'docs', 'board', 'README.md'), project, read))
       .toEqual({ '../screenshots/board.png': url });
   });
 
   it('leaves out one outside the project, from the web, missing, of another type or badly escaped', () => {
     for (const text of ['![a](../../../etc/x.png)', '![a](https://x.example/a.png)', '![a](gone.png)', '![a](notes.svg)', '![a](50%.png)']) {
-      expect(imageUrls(text, '/p/docs/board/README.md', '/p', read)).toEqual({});
+      expect(imageUrls(text, path.join(project, 'docs', 'board', 'README.md'), project, read)).toEqual({});
     }
   });
 });

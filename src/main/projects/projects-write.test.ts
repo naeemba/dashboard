@@ -1,8 +1,8 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readProjects } from './projects-file';
 import { firstProjectsFile } from './projects-first';
 import { addProject, removeProject, setProject, withOpenedProject, type ProjectsWrite } from './projects-write';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 const FILE = `# Every project I work on.
 - name: new-crm   # the big one
@@ -18,7 +18,8 @@ const FILE = `# Every project I work on.
   path: /work/screensaver
 `;
 
-const HOME = '/home/me';
+const HOME = path.resolve('/home/me');
+const CRM = path.join(HOME, 'Workspace', 'new-crm');
 const asWritten = (folder: string) => folder;
 
 function text(result: ProjectsWrite): string {
@@ -33,40 +34,40 @@ function project(written: string, name: string) {
 }
 
 describe('addProject', () => {
-  posixPathsOnly('appends an entry, path from ~, keeping comments and order', () => {
-    const written = text(addProject(FILE, 'projects.yaml', '/home/me/api', { aka: ['backend'], site: 'https://api.example.com' }, HOME, asWritten));
-    expect(written).toBe(`${FILE}- name: api\n  aka: [backend]\n  path: ~/api\n  site: https://api.example.com\n`);
+  it('appends an entry, path from ~, keeping comments and order', () => {
+    const written = text(addProject(FILE, 'projects.yaml', path.join(HOME, 'api'), { aka: ['backend'], site: 'https://api.example.com' }, HOME, asWritten));
+    expect(written).toBe(`${FILE}- name: api\n  aka: [backend]\n  path: ${path.join('~', 'api')}\n  site: https://api.example.com\n`);
   });
 
-  posixPathsOnly('leaves hand formatting and a long about as written', () => {
+  it('leaves hand formatting and a long about as written', () => {
     const original = `- name:    other\n  aka: [ c, sales ]\n  path: /other\n  about: ${'a long line about the project '.repeat(5)}\n  deploy:\n      - name: box\n        role: test\n        address: http://box`;
     const written = text(addProject(original, 'projects.yaml', '/new', {}, HOME, asWritten));
     expect(written).toBe(`${original}\n- name: new\n  path: /new\n`);
   });
 
-  posixPathsOnly('takes the folder\'s name with -2 after it when it is taken, unless a name is asked for', () => {
+  it('takes the folder\'s name with -2 after it when it is taken, unless a name is asked for', () => {
     expect(text(addProject('- name: api\n  path: /x/api\n', 'p.yaml', '/y/api', {}, HOME, asWritten))).toContain('- name: api-2\n  path: /y/api\n');
     expect(addProject('- name: api\n  path: /x/api\n', 'p.yaml', '/y/z', { name: 'API' }, HOME, asWritten))
       .toMatchObject({ ok: false, message: expect.stringContaining('"API" already names api') });
   });
 
-  posixPathsOnly('refuses a folder listed already, by its real path, and a name taken', () => {
-    expect(addProject(FILE, 'projects.yaml', '/home/me/Workspace/new-crm', {}, HOME, asWritten))
-      .toEqual({ ok: false, message: '/home/me/Workspace/new-crm is already listed, as new-crm' });
-    const throughLink = (folder: string) => folder.replace('/home/me/ws/', '/home/me/Workspace/');
-    expect(addProject(FILE, 'projects.yaml', '/home/me/ws/new-crm', {}, HOME, throughLink))
+  it('refuses a folder listed already, by its real path, and a name taken', () => {
+    expect(addProject(FILE, 'projects.yaml', CRM, {}, HOME, asWritten))
+      .toEqual({ ok: false, message: `${CRM} is already listed, as new-crm` });
+    const throughLink = (folder: string) => folder.replace(path.join(HOME, 'ws'), path.join(HOME, 'Workspace'));
+    expect(addProject(FILE, 'projects.yaml', path.join(HOME, 'ws', 'new-crm'), {}, HOME, throughLink))
       .toMatchObject({ ok: false, message: expect.stringContaining('already listed, as new-crm') });
     expect(addProject(FILE, 'projects.yaml', '/home/me/other', { name: 'CRM' }, HOME, asWritten))
       .toMatchObject({ ok: false, message: expect.stringContaining('"CRM" already names new-crm') });
   });
 
-  posixPathsOnly('starts a file when there is none, and refuses to edit one that does not read', () => {
+  it('starts a file when there is none, and refuses to edit one that does not read', () => {
     expect(text(addProject(null, 'projects.yaml', '/work/api', {}, HOME, asWritten))).toBe('- name: api\n  path: /work/api\n');
     expect(addProject('- name: a\n', 'projects.yaml', '/work/api', {}, HOME, asWritten))
       .toEqual({ ok: false, message: 'projects.yaml:1: project a has no path\nnothing was written; fix the file first' });
   });
 
-  posixPathsOnly('reprints a list the appended text would break: indented, or ended with ...', () => {
+  it('reprints a list the appended text would break: indented, or ended with ...', () => {
     for (const file of ['  - name: a\n    path: /a\n', '- name: a\n  path: /a\n...\n']) {
       const written = text(addProject(file, 'p.yaml', '/b', {}, HOME, asWritten));
       expect(written).toContain('- name: b\n  path: /b\n');
@@ -74,7 +75,7 @@ describe('addProject', () => {
     }
   });
 
-  posixPathsOnly('writes a block list again once remove has emptied the file to []', () => {
+  it('writes a block list again once remove has emptied the file to []', () => {
     const emptied = text(removeProject('# header\n- name: a\n  path: /a\n', 'p.yaml', 'a'));
     expect(text(addProject(emptied, 'p.yaml', '/b', { aka: ['x'] }, HOME, asWritten))).toBe('# header\n\n- name: b\n  aka: [x]\n  path: /b\n');
   });
@@ -153,13 +154,13 @@ describe('removeProject', () => {
 });
 
 describe('withOpenedProject', () => {
-  posixPathsOnly('appends a folder the file lacks, under a name nobody has', () => {
-    const written = withOpenedProject(FILE, '/home/me/forks/crm', HOME, asWritten);
-    expect(written?.endsWith('- name: crm-2\n  path: ~/forks/crm\n')).toBe(true);
+  it('appends a folder the file lacks, under a name nobody has', () => {
+    const written = withOpenedProject(FILE, path.join(HOME, 'forks', 'crm'), HOME, asWritten);
+    expect(written?.endsWith(`- name: crm-2\n  path: ${path.join('~', 'forks', 'crm')}\n`)).toBe(true);
     expect(written).toContain('# Side projects below.');
   });
 
-  posixPathsOnly('writes nothing for a listed folder, no file, or a file that does not read', () => {
+  it('writes nothing for a listed folder, no file, or a file that does not read', () => {
     expect(withOpenedProject(FILE, '/work/screensaver', HOME, asWritten)).toBeNull();
     expect(withOpenedProject(null, '/work/api', HOME, asWritten)).toBeNull();
     expect(withOpenedProject('- name: a\n', '/work/api', HOME, asWritten)).toBeNull();

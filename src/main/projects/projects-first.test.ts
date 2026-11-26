@@ -1,16 +1,19 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { firstProjectsFile } from './projects-first';
 import { readProjects } from './projects-file';
-import { posixPathsOnly } from '../testing/windows-skips';
 
 describe('firstProjectsFile', () => {
-  posixPathsOnly('writes a file readProjects reads back, open and recent folders once each, ~ for home', () => {
-    const file = firstProjectsFile(['/home/me/Workspace/crm', '/srv/api', '/home/me/Workspace/crm', '/home/me'], '/home/me');
+  it('writes a file readProjects reads back, open and recent folders once each, ~ for home', () => {
+    const home = path.resolve('/home/me');
+    const crm = path.join(home, 'Workspace', 'crm');
+    const api = path.resolve('/srv/api');
+    const file = firstProjectsFile([crm, api, crm, home], home);
     expect(readProjects(file.file)).toEqual({
       ok: true,
       projects: [
-        { name: 'crm', aka: [], path: '~/Workspace/crm', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
-        { name: 'api', aka: [], path: '/srv/api', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
+        { name: 'crm', aka: [], path: path.join('~', 'Workspace', 'crm'), site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
+        { name: 'api', aka: [], path: api, site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
         { name: 'me', aka: [], path: '~', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
       ],
     });
