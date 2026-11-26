@@ -5,13 +5,17 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T10:15:49.913Z",
-  "updatedAt": "2026-11-26T11:19:22.410Z",
+  "updatedAt": "2026-11-26T11:32:18.187Z",
   "branch": "name-the-five-suite-level-windows-skips-aft",
   "pullRequest": 395,
   "comments": [
     {
       "at": "2026-11-26T11:19:22.381Z",
       "body": "Pull request #395 opened: Name the five suite-level Windows skips after their reason https://github.com/naeemba/dashboard/pull/395"
+    },
+    {
+      "at": "2026-11-26T11:32:18.187Z",
+      "body": "Converged, ready to merge. pr-loop: 1 round, floor-addressed. 1 nit fixed in aaf8ac78 (describe skips called suite-level skips, not twins); final check accepted it. Nothing open, nothing blocked on a person, no conflict with main. CI passed on aaf8ac78. screenHostSuite (!hasScreenHost, which is platform !== 'win32') still runs on Linux CI: 12 tests ran there."
     }
   ],
   "column": "Review",
