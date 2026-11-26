@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { docOrder, docScope, imageUrls, listDocs, readDoc } from './docs-list';
 import { temporaryFolder } from '../testing/temporary-folder';
 
+const project = path.resolve('/p');
+
 describe('docOrder', () => {
   it("puts the index first and each folder's README before the rest of the folder", () => {
     const names = ['board/decisions.md', 'app/README.md', 'board/README.md', 'README.md', 'app/history.md'];
@@ -65,7 +67,6 @@ describe('docScope', () => {
   const ROOTS = ['/h/.dashboard', '/h/.claude'];
 
   it('takes only markdown, YAML and JSON under the docs folder', () => {
-    const project = path.resolve('/p');
     const docs = { root: path.join(project, 'docs'), images: project };
     expect(docScope(project, path.join(project, 'docs', 'board', 'README.md'), [])).toEqual(docs);
     expect(docScope(project, path.join(project, 'docs', 'board', 'cards.yml'), [])).toEqual(docs);
@@ -89,18 +90,18 @@ describe('docScope', () => {
 });
 
 describe('imageUrls', () => {
-  const project = path.resolve('/p');
+  const readme = path.join(project, 'docs', 'board', 'README.md');
   const read = new Map([[path.join(project, 'docs', 'screenshots', 'board.png'), Buffer.from('png')]]);
   const url = `data:image/png;base64,${Buffer.from('png').toString('base64')}`;
 
   it("carries an image inside the project inline, by its address, relative to the doc's folder", () => {
-    expect(imageUrls('See ![the board](../screenshots/board.png "t").', path.join(project, 'docs', 'board', 'README.md'), project, read))
+    expect(imageUrls('See ![the board](../screenshots/board.png "t").', readme, project, read))
       .toEqual({ '../screenshots/board.png': url });
   });
 
   it('leaves out one outside the project, from the web, missing, of another type or badly escaped', () => {
     for (const text of ['![a](../../../etc/x.png)', '![a](https://x.example/a.png)', '![a](gone.png)', '![a](notes.svg)', '![a](50%.png)']) {
-      expect(imageUrls(text, path.join(project, 'docs', 'board', 'README.md'), project, read)).toEqual({});
+      expect(imageUrls(text, readme, project, read)).toEqual({});
     }
   });
 });

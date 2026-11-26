@@ -4,9 +4,7 @@ import { sessionRequests } from './session-requests';
 import { project } from './session-requests-fixture';
 
 // `pane run --in <folder>`: a worker in a folder the caller keeps, and the worktree it is in. The command
-// resolves the folder, so a folder it resolved is `at` one here: C:\work\api-mr174 on Windows.
-
-const at = (folder: string) => path.resolve(folder);
+// resolves the folder, so one it resolved is path.resolve'd here: C:\work\api-mr174 on Windows.
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
@@ -19,8 +17,8 @@ describe('sessionRequests run --in', () => {
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '../api-mr174', 'review it'] }))
-      .toMatchObject({ ok: true, output: expect.stringContaining(`in ${at('/work/api-mr174')}`) });
-    expect(started).toMatchObject([{ id: '2:1', directory: at('/work/api-mr174'), cardId: null }]);
+      .toMatchObject({ ok: true, output: expect.stringContaining(`in ${path.resolve('/work/api-mr174')}`) });
+    expect(started).toMatchObject([{ id: '2:1', directory: path.resolve('/work/api-mr174'), cardId: null }]);
     expect(await answer({ directory: '/work/api', args: ['release', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
     expect(removed).toEqual([]);
   });
@@ -80,7 +78,7 @@ describe('sessionRequests run --in', () => {
 
   // An agent in a worktree nested below the one asked for is at work in its own.
   it('takes --in a worktree whose only agent is in a worktree nested below it', async () => {
-    const { ports } = project({ directoryOf: (id) => (id === '2:1' ? at('/work/api-mr174/.claude/worktrees/y') : '/work/api') });
+    const { ports } = project({ directoryOf: (id) => (id === '2:1' ? path.resolve('/work/api-mr174/.claude/worktrees/y') : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['claim'] });
@@ -90,13 +88,13 @@ describe('sessionRequests run --in', () => {
 
   // Two agents in one worktree write over each other's work; main's own checkout is not one.
   it('refuses --in a worktree another agent is at work in', async () => {
-    const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? at('/work/api-mr174/src') : '/work/api') });
+    const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? path.resolve('/work/api-mr174/src') : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '../api-mr174', 'one'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:2', '--in', '../api-mr174', 'two'] }))
-      .toEqual({ ok: false, output: `2:1 already has an agent at work in ${at('/work/api-mr174')}` });
+      .toEqual({ ok: false, output: `2:1 already has an agent at work in ${path.resolve('/work/api-mr174')}` });
     expect(await answer({ directory: '/work/api', args: ['run', '2:2', '--in', 'packages/web', 'two'] })).toMatchObject({ ok: true });
     expect(started.map((each) => each.id)).toEqual(['2:1', '2:2']);
   });
@@ -106,7 +104,7 @@ describe('sessionRequests run --in', () => {
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '/elsewhere', 'go'] }))
-      .toEqual({ ok: false, output: `${at('/elsewhere')} is not a folder` });
+      .toEqual({ ok: false, output: `${path.resolve('/elsewhere')} is not a folder` });
     expect(started).toEqual([]);
   });
 });

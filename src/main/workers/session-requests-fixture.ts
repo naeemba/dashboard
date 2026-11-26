@@ -69,9 +69,8 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     // api-mr174 is a sibling worktree, x one nested in the checkout, packages/web a folder of it.
     // The command resolves --in against the caller's folder, so on Windows these are C:\work\... too.
     checkRunFolder: async (_projectPath, folder) => {
-      const worktree = ['/work/api-mr174', '/work/api.worktrees/card-one', '/work/api/.claude/worktrees/x']
-        .map((each) => path.resolve(each)).find((each) => each === folder);
-      if (worktree !== undefined) return { worktree };
+      const worktrees = ['/work/api-mr174', '/work/api.worktrees/card-one', '/work/api/.claude/worktrees/x'].map((each) => path.resolve(each));
+      if (worktrees.includes(folder)) return { worktree: folder };
       return folder === path.resolve('/work/api/packages/web') ? { worktree: undefined } : { refused: `${folder} is not a folder` };
     },
     holdsWorktree: (folder) => /[\\/](api-mr174|api\.worktrees[\\/][^\\/]+|\.claude[\\/]worktrees[\\/][^\\/]+)$/.test(folder),
