@@ -108,7 +108,7 @@ export function budgetPercentage(value: unknown): number | null {
 // Below this a window is too faint to find the text in, and nothing on screen would turn it back.
 const LEAST_OPACITY = 0.2;
 
-export function isWindowOpacity(value: unknown): value is number {
+function isWindowOpacity(value: unknown): value is number {
   return typeof value === 'number' && value >= LEAST_OPACITY && value <= 1;
 }
 
@@ -116,6 +116,16 @@ export function isWindowOpacity(value: unknown): value is number {
 // (app/appearance.ts).
 export function isSeeThrough(settings: Settings): boolean {
   return settings.opacity < 1;
+}
+
+// The colour the window's first frame paints, before the renderer has run a line. See-through, it is
+// the theme's background at the opacity the root will paint it (index.css), in the #AARRGGBB form
+// Electron reads for a transparent window, so the window does not open as an empty hole.
+export function windowBackground(settings: Settings): string {
+  const { background } = settings.theme;
+  if (!isSeeThrough(settings)) return background;
+  const alpha = Math.round(settings.opacity * 255).toString(16).padStart(2, '0');
+  return `#${alpha}${background.slice(1)}`;
 }
 
 // See-through, xterm's background is cleared so the pane's, see-through with the rest of the window,

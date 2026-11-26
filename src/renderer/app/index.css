@@ -25,8 +25,12 @@ html.see-through {
   background: color-mix(in srgb, var(--background) calc(var(--window-opacity) * 100%), transparent);
 }
 
-html.see-through body {
+html.see-through body,
+html.see-through .view {
   background: transparent;
+}
+
+html.see-through body {
   --layer-background: transparent;
 }
 

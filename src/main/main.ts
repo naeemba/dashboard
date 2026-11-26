@@ -77,7 +77,7 @@ import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
 import { settingsActions } from './actions/settings/settings-actions';
 import { browserActions } from './actions/browser/browser-actions';
-import { isSeeThrough, type Settings } from '../shared/settings/settings';
+import { isSeeThrough, windowBackground, type Settings } from '../shared/settings/settings';
 import { oneAtATime } from './ship/ship';
 import {
   freePane,
@@ -828,7 +828,7 @@ const sessions = listenForSessions(
 
 function createWindow(): void {
   mainWindow = openAppWindow({
-    background: settings.theme.background,
+    background: windowBackground(settings),
     seeThrough: isSeeThrough(settings),
     // One last reading before the shells die, so a conversation started or cleared since the last sweep
     // is the one the next launch resumes. A reading that fails still quits, on the last sweep's. Then the

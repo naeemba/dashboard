@@ -8,7 +8,7 @@ import { TITLE_BAR_HEIGHT } from '../../shared/app/theme';
 // reached its 600-line ceiling; nothing here decides anything a test could reach.
 
 export type AppWindowOptions = {
-  // The first frame's colour, painted before the renderer has run a line.
+  // The first frame's colour, painted before the renderer has run a line (windowBackground).
   background: string;
   // A window below opacity 1 is made transparent, and the renderer's root paints the theme's background
   // see-through on it (docs/settings). Electron takes this only as it makes the window: the next launch.
@@ -65,7 +65,7 @@ export function openAppWindow(options: AppWindowOptions): BrowserWindow {
     height: 900,
     // Transparent on Linux only under a compositor; without one the desktop does not show through.
     transparent: options.seeThrough,
-    backgroundColor: options.seeThrough ? '#00000000' : options.background,
+    backgroundColor: options.background,
     // The renderer draws its own title row, so the window chrome is dark all the way up, the way Ghostty
     // looks. macOS keeps its traffic lights over that row; their frame is 16px tall, so this centres them.
     // Windows and Linux draw no buttons once the title bar is hidden, so they keep the system one.

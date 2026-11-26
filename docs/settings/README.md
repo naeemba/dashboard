@@ -62,11 +62,14 @@ typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 
-The window's opacity (`opacity`, default 1) is written in the file by hand
-only: 0.7 lets the desktop show through behind the text, from 0.2 up; anything
-else reads as 1. Text stays solid and only the background thins. Electron makes
-a window transparent only as it opens it, so turning it on waits for the next
-launch; turning it back to 1 takes at once. On Linux it needs a compositor. The
+The window's opacity (`opacity`, default 1) is written in the file by hand only:
+0.7 lets the desktop show through behind the text, from 0.2 up; anything else
+reads as 1, and stays in the file as you wrote it. Text stays solid and only the
+background thins. Electron makes a window transparent only as it opens it, so
+turning it on waits for the next launch; turning it back to 1 takes at once. On
+Linux it needs a compositor. Electron lists more limits of a transparent window:
+on Windows double-clicking the title bar does not maximize it, on macOS it has
+no shadow, and on some platforms a resizable one can stop being transparent. The
 title and status bars, dialogs, the ink page and a zoomed pane stay opaque, and
 so does the project's browser, a native view the page cannot paint through.
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bindingName, bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, isSeeThrough, resetAll, parseSettings, resetKeys,
-  terminalTheme, withoutShipped,
+  terminalTheme, windowBackground, withoutShipped,
 } from './settings';
 import { ACTIONS, scopesOverlap } from '../keys/actions';
 import { THEME } from '../app/theme';
@@ -313,9 +313,14 @@ describe('the window opacity', () => {
     expect(isSeeThrough(parseSettings({}, false))).toBe(false);
   });
 
-  it('leaves the shipped 1 out of the file and keeps a chosen one', () => {
-    expect(withoutShipped({ opacity: 1 }, false)).toEqual({});
-    expect(withoutShipped({ opacity: 0.7 }, false)).toEqual({ opacity: 0.7 });
+  it('keeps an out-of-range opacity in the file, though it reads as 1', () => {
+    expect(withoutShipped({ opacity: 0.1 }, false)).toEqual({ opacity: 0.1 });
+    expect(parseSettings({ opacity: 0.1 }, false).opacity).toBe(1);
+  });
+
+  it('opens a see-through window on the background at its opacity, an opaque one on the background', () => {
+    expect(windowBackground(parseSettings({ opacity: 0.7, theme: { background: '#282c34' } }, false))).toBe('#b3282c34');
+    expect(windowBackground(parseSettings({ theme: { background: '#282c34' } }, false))).toBe('#282c34');
   });
 
   it('clears the terminal background only when see-through, so the pane behind paints it', () => {
