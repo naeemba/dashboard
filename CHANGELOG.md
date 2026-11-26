@@ -1,5 +1,72 @@
 # Changelog
 
+## v2.59.0 (2026-11-26)
+
+### What's new
+
+- Board card writes never leave the main checkout dirty
+- Review workers run their set-up and wrap-up inside pr-loop
+- pane run --worktree survives one failed git fetch
+- pr wait refuses a draft PR; pr create, ready and comment retry GitHub 5xx safely
+- dashboard status: one call for panes, cards, PRs and CI
+- Heavy checks wait on a machine-wide lock instead of flaking under load
+- browser eval's script-file read gets a tested decision
+- pr land hands its conflicts to the branch's worker and lands again
+- Card ship's fetch gets the same timeout as the throwaway's
+- Name the nine bare Windows skips
+- Running-app guard: match the mac install path case-insensitively
+- Split board-view.ts along its drag-and-drop seam
+- Check exact dependency pins with a test
+- Name the five suite-level Windows skips after their reason
+- The manager page gets a browser of its own
+- Workers popup follow-ups: anchor it to the count, keyboard pane links, live refresh
+- Worktree sweeps treat board-only leftovers as nothing to keep
+- One conversation port per slot in chat-sessions.ts
+- Research: an app-held pane pool with a queue and a 4-running cap
+- Make the POSIX path-literal tests portable instead of skipping them on Windows
+- Deleting a board-only worktree from the list asks first when its board edits never reached GitHub
+- Cache the usage sweep's per-file counts so a launch rereads only changed session logs
+- Keep less terminal scrollback once a heap snapshot shows it dominates
+- Experiment: keep the hidden manager page painted so Ctrl+1 skips the GPU repaint
+- Window transparency setting (for example 0.7 opacity)
+- The review's worktree removal (swap/clear) asks first when board edits never reached GitHub
+- finished-work tests time out on the Windows CI job
+- App-held pane pool: a 4-running cap and a queue, through one action
+- Browser tabs are closed by asking the agent that owns them, never silently
+
+### What's Changed
+* Fast-forward the checkout past untracked files after a board sync by @naeemba in https://github.com/naeemba/dashboard/pull/379
+* Review workers run the loop's set-up and wrap-up in two fixed calls by @naeemba in https://github.com/naeemba/dashboard/pull/382
+* pane run --worktree survives one failed git fetch by @naeemba in https://github.com/naeemba/dashboard/pull/378
+* pr wait refuses a draft; pr create, ready and comment retry GitHub 5xx safely by @naeemba in https://github.com/naeemba/dashboard/pull/380
+* pane status: panes, cards, PRs and CI in one call by @naeemba in https://github.com/naeemba/dashboard/pull/383
+* Heavy checks wait on a machine-wide lock instead of flaking under load by @naeemba in https://github.com/naeemba/dashboard/pull/384
+* browser eval's script-file read gets a tested decision by @naeemba in https://github.com/naeemba/dashboard/pull/386
+* pr land hands its conflicts to the branch's worker and lands again by @naeemba in https://github.com/naeemba/dashboard/pull/385
+* Card ship's fetch gets the same timeout as the throwaway's by @naeemba in https://github.com/naeemba/dashboard/pull/387
+* Name the bare Windows skips after their reason by @naeemba in https://github.com/naeemba/dashboard/pull/388
+* Running-app guard: match the mac install path in any case by @naeemba in https://github.com/naeemba/dashboard/pull/390
+* Move the board's drag and drop out of board-view.ts by @naeemba in https://github.com/naeemba/dashboard/pull/392
+* Fail a test when a held dependency loses its exact pin by @naeemba in https://github.com/naeemba/dashboard/pull/394
+* Name the five suite-level Windows skips after their reason by @naeemba in https://github.com/naeemba/dashboard/pull/395
+* The manager page gets a browser of its own by @naeemba in https://github.com/naeemba/dashboard/pull/391
+* Open the workers popup above the count, and refresh it when a worker's agent exits by @naeemba in https://github.com/naeemba/dashboard/pull/396
+* Worktree sweeps treat board-only leftovers as nothing to keep by @naeemba in https://github.com/naeemba/dashboard/pull/393
+* Read a slot's conversation in one place by @naeemba in https://github.com/naeemba/dashboard/pull/399
+* Make the POSIX path-literal tests portable instead of skipping them on Windows by @naeemba in https://github.com/naeemba/dashboard/pull/398
+* Ask before d removes a worktree whose board edits never reached origin by @naeemba in https://github.com/naeemba/dashboard/pull/400
+* Build the finished-work tests' git repository once and copy it per test by @naeemba in https://github.com/naeemba/dashboard/pull/404
+* Save the usage sweep's per-file counts so a launch rereads only changed logs by @naeemba in https://github.com/naeemba/dashboard/pull/401
+* Give a worker 5000 lines of scrollback, half of the editor's by @naeemba in https://github.com/naeemba/dashboard/pull/403
+* Record that keeping the hidden manager painted does not speed up Ctrl+1 by @naeemba in https://github.com/naeemba/dashboard/pull/402
+* Window opacity setting: a see-through window behind solid text by @naeemba in https://github.com/naeemba/dashboard/pull/407
+* Keep a reviewed worktree whose board edits never reached origin by @naeemba in https://github.com/naeemba/dashboard/pull/405
+* Hold main's workers to a cap of 4 and queue starts past it by @naeemba in https://github.com/naeemba/dashboard/pull/408
+* Browser tabs are closed by asking the agent that holds them, never on a timer by @naeemba in https://github.com/naeemba/dashboard/pull/406
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.58.0...v2.59.0
+
 ## v2.58.0 (2026-11-25)
 
 ### What's new
