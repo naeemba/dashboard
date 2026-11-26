@@ -42,7 +42,8 @@ export function poolPorts(userData: string, settings: () => Settings, cards: Car
     // Off the disk, not the move log's last read: a `board move` into Ship is written plainly and read
     // back by the watcher later, and the drain right after it would see the card where it was before.
     // ponytail: a board read per project per drain while card entries are queued; keep the move log's copy fresh if that shows.
-    board: peekBoard,
+    // Null while a card file does not parse (a conflict mid-pull), so its queued start waits, not drops.
+    board: (projectPath) => peekBoard(projectPath, true),
     ...cards,
     now: Date.now,
   };

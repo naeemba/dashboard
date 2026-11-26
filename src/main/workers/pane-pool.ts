@@ -99,7 +99,8 @@ export type Readiness = { state: 'ready' | 'wait' | 'drop'; why: string };
 // What an entry's start waits on, given the facts about it now. A card already Done or Cancelled is
 // dropped, so one cancelled while queued never starts an hour later, and so is a card deleted, or moved
 // out of the column whose move queued it: dragged back out of Ship, it is not shipped twenty minutes
-// later. A board that cannot be read drops nothing. A closed project waits, unless the start opens it
+// later. A board that cannot be read drops nothing, and holds a ship or a review, which only starts
+// for a card it can find: a card file mid-conflict comes back once it parses. A closed project waits, unless the start opens it
 // (--project, as `pane claim --project` does), and so does a closed page of the main that queued it,
 // which is the one told how the start went. An --after card waits until it is finished. A waiting
 // entry never holds up the ones behind it. The board is read only for an entry with a card or an
@@ -111,6 +112,7 @@ export function readiness(entry: QueueEntry, open: (path: string) => boolean, bo
   const opensItself = entry.work.kind === 'run' && entry.work.project !== null;
   if (!open(entry.projectPath) && !opensItself) return { state: 'wait', why: `${baseName(entry.projectPath)} is not open` };
   if (!open(entry.dispatcherPath)) return { state: 'wait', why: `${baseName(entry.dispatcherPath)} is not open` };
+  if (entry.work.kind !== 'run' && board === null) return { state: 'wait', why: `the board of ${baseName(entry.projectPath)} cannot be read` };
   if (entry.after !== null && finishedColumnOf(board, entry.after) === null) return { state: 'wait', why: `waits on card ${entry.after}` };
   return { state: 'ready', why: '' };
 }
