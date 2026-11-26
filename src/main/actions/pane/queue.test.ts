@@ -109,12 +109,23 @@ describe('pane.start', () => {
 
   it('refuses what it cannot read', async () => {
     const { actions } = pool();
+    await expect(actions.start.call({ dispatcherPath: '', projectPath: '/work/api' })).resolves.toEqual({ refused: 'no project was given' });
+    await expect(actions.start.call({ dispatcherPath: '/work/api', projectPath: '/work/api', cardId: 3, after: null, first: false, work: { kind: 'review' } }))
+      .resolves.toEqual({ refused: 'the start was not one the app could read' });
+    await expect(actions.unqueue.call({ id: '' })).resolves.toEqual({ refused: 'pane unqueue needs the id pane queue prints' });
     await expect(actions.start.call({ dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, first: false, work: { kind: 'sing' } }))
       .resolves.toEqual({ refused: 'the start was not one the app could read' });
   });
 });
 
 describe('the pool\'s other doors', () => {
+  it('refuses to withdraw an entry already starting', async () => {
+    const { actions, start } = pool();
+    actions.ready();
+    void start();
+    await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ refused: 'q1 is already starting' });
+  });
+
   it('says why a start that never queues is refused at the cap', async () => {
     const { actions, start } = pool({ cap: () => 1 });
     actions.ready();

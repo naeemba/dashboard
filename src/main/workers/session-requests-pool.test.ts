@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project } from './session-requests-fixture';
@@ -53,6 +54,13 @@ describe('pane start', () => {
     const { ask, closed } = capped(1);
     expect(await ask(['start', '--card', 'card-9', 'work it'])).toEqual({ ok: false, output: 'card card-9 has no worktree — moving it to Ship makes one' });
     expect(closed).toEqual(['2:1']);
+  });
+
+  it('refuses a --project projects.yaml does not have, and resolves --in from the asking folder', async () => {
+    const { ask, started } = capped(1);
+    expect(await ask(['start', '--project', 'nowhere', 'look'])).toEqual({ ok: false, output: 'no project is called nowhere' });
+    await ask(['start', '--in', 'packages/web', 'look']);
+    expect(started).toMatchObject([{ id: '2:1', directory: path.resolve('/work/api/packages/web') }]);
   });
 
   it('withdraws what this project queued', async () => {
