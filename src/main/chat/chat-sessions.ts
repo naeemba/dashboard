@@ -246,7 +246,7 @@ export function registerChatSessions(
 
   // The slot's conversation as it stands now (slot-conversation.ts), in the folder the caller already
   // has: looked up again after an await, a page closed meanwhile would read as having none.
-  function conversationAt(slot: number, projectPath = host.projectPath(slot)): SlotConversation {
+  function conversation(slot: number, projectPath = host.projectPath(slot)): SlotConversation {
     if (projectPath === undefined) return slotConversation(host.worker(slot), undefined, undefined);
     return slotConversation(host.worker(slot), remembered[projectPath], rewound.get(projectPath));
   }
@@ -270,7 +270,7 @@ export function registerChatSessions(
     // Read while the shell's PATH and the scope are awaited; it never rejects.
     const chrome = chromeArgumentsFor(host.environment, homedir());
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
-    const opened = conversationAt(slot, projectPath);
+    const opened = conversation(slot, projectPath);
     const worker = opened.screen;
     // The pane the session is, as every terminal pane is told: a page's main is its place 0.
     const environment = withPaneId(
@@ -473,7 +473,7 @@ export function registerChatSessions(
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
     const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
     return {
-      current: onScreen(conversationAt(slot, projectPath)),
+      current: onScreen(conversation(slot, projectPath)),
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
   });
@@ -506,7 +506,7 @@ export function registerChatSessions(
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     const { getSessionMessages, listSessions } = await import('@anthropic-ai/claude-agent-sdk');
-    const { live } = conversationAt(slot, projectPath);
+    const { live } = conversation(slot, projectPath);
     const found = (await listSessions({ dir: projectPath, includeWorktrees: false, limit: HISTORY_CONVERSATIONS }))
       .filter(({ sessionId }) => sessionId !== live);
     const kept = promptsRead.get(projectPath) ?? new Map<string, PromptsRead>();
@@ -581,10 +581,10 @@ export function registerChatSessions(
 
   // The conversation this page would resume, read back from its transcript, as far as a /rewind left it.
   // A worker screen's, once it has one on disk.
-  async function conversation(slot: number): Promise<Record<string, unknown>[]> {
+  async function transcript(slot: number): Promise<Record<string, unknown>[]> {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
-    const { live, cut } = conversationAt(slot, projectPath);
+    const { live, cut } = conversation(slot, projectPath);
     if (live === undefined) return [];
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
     return rewoundTo(await getSessionMessages(live, { dir: projectPath }), cut);
@@ -593,7 +593,7 @@ export function registerChatSessions(
   // What a screen opening this page needs to catch up: the conversation it would resume, the
   // questions the session is waiting on, and the choices made so far.
   table.handle('chat:read', async (_screen, slot: number): Promise<ChatState> => {
-    const messages = await conversation(slot);
+    const messages = await transcript(slot);
     // Taken after the read, so a question answered on another screen while it ran is not handed back
     // as still waiting.
     const running = await sessions.get(slot)?.catch(() => undefined);
@@ -656,7 +656,7 @@ export function registerChatSessions(
 
   // The prompts /rewind lists. Refused on main's worker screen before either sheet opens.
   table.handle('chat-prompts:read', async (_screen, slot: number): Promise<RewindPoint[] | { refused: string }> => (
-    conversationAt(slot).keeps ? { refused: WORKER_KEEPS_ITS_CONVERSATION } : rewindPoints(await conversation(slot))
+    conversation(slot).keeps ? { refused: WORKER_KEEPS_ITS_CONVERSATION } : rewindPoints(await transcript(slot))
   ));
 
   // The session's MCP servers for /mcp, and the one picked reconnected, disabled or enabled. Both start
@@ -697,7 +697,7 @@ export function registerChatSessions(
     actionPorts: {
       start: startMain,
       projectPath: host.projectPath,
-      conversation: conversationAt,
+      conversation,
       stop,
       change: changeConversation,
       runningInPane: host.runningInPane,
@@ -705,7 +705,7 @@ export function registerChatSessions(
       rewindFiles: async (slot, projectPath, pointId, dryRun) => (
         (await running(slot, projectPath)).query.rewindFiles(pointId, dryRun ? { dryRun } : undefined)
       ),
-      onScreen: (slot) => onScreen(conversationAt(slot)),
+      onScreen: (slot) => onScreen(conversation(slot)),
       choose(slot, change) {
         preferences.set(slot, { ...preferences.get(slot), ...change });
         if (change.fast !== undefined) reportedFast.delete(slot);
