@@ -45,6 +45,26 @@ describe('reviewLoopMissing', () => {
     expect(reviewLoopMissing(claude)).toContain('./install.sh');
     expect(reviewLoopMissing(temporaryFolder('no-claude-'))).toContain('/pr-loop is not installed');
   });
+
+  // The review calls the workflow copy by path, so a stale one would run old rounds unnoticed.
+  it('refuses a workflow copy that differs from the checkout\'s or is missing, naming install.sh', () => {
+    const { claude, checkout } = installed();
+    writeFileSync(path.join(checkout, 'workflows', 'pr-loop.js'), 'v2');
+    expect(reviewLoopMissing(claude)).toContain(`cd '${checkout}' && ./install.sh`);
+    rmSync(path.join(claude, 'workflows', 'pr-loop.js'));
+    expect(reviewLoopMissing(claude)).toContain('is missing or differs');
+  });
+
+  it('asks a copied install, with no checkout to compare with, only that the workflow is there', () => {
+    const claude = temporaryFolder('copied-');
+    for (const name of ['commands/pr-loop.md', 'workflows/pr-loop.js']) {
+      mkdirSync(path.dirname(path.join(claude, name)), { recursive: true });
+      writeFileSync(path.join(claude, name), name);
+    }
+    expect(reviewLoopMissing(claude)).toBeNull();
+    rmSync(path.join(claude, 'workflows', 'pr-loop.js'));
+    expect(reviewLoopMissing(claude)).toContain('git clone');
+  });
 });
 
 describe('reviewLoopStaleness', () => {

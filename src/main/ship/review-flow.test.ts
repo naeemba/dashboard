@@ -15,7 +15,7 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Review');
     expect(log.removed).toEqual([entry.worktreePath]);
     expect(log.added).toEqual(['ship-it']);
-    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(log.started[0].prompt).toContain('args `"12"`');
     expect(log.started[0].prompt).not.toContain('pr land');
   });
 
@@ -36,7 +36,7 @@ describe('reviewSweep', () => {
     writeBoard(projectPath, intoReview(boardWithCard(15), CARD) as Board);
     const { ports: made, log } = ports(entry);
     await sweepWith(made).run();
-    expect(log.started[0].prompt).toContain('/pr-loop 15');
+    expect(log.started[0].prompt).toContain('args `"15"`');
   });
 
   // A re-ship after #12 closed unmerged: the project's card back out of Review still carries 12, and the
@@ -99,7 +99,7 @@ describe('reviewSweep', () => {
     expect(log.started).toEqual([]);
     current = { ...entry, pane: null };
     await sweep.run();
-    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(log.started[0].prompt).toContain('args `"12"`');
     expect(columnOfCard(projectPath)).toBe('Review');
   });
 
@@ -112,7 +112,7 @@ describe('reviewSweep', () => {
     await sweep.run();
     expect(log.started).toEqual([]);
     await sweep.run();
-    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(log.started[0].prompt).toContain('args `"12"`');
   });
 
   // Cancelled while the sweep's move waits: refused, and unmarked, so moving it back reviews it.
@@ -135,7 +135,7 @@ describe('reviewSweep', () => {
     expect(log.started).toEqual([]);
     writeBoard(projectPath, intoReview(boardWithCard(null), CARD) as Board);
     await sweep.run();
-    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(log.started[0].prompt).toContain('args `"12"`');
   });
 
   // Merging off: the loop finished and the card waits in Review for the user. A restart wiped the
@@ -278,7 +278,7 @@ describe('reviewSweep', () => {
     committed = true;
     await sweep.run();
     expect(log.added).toEqual(['ship-it']);
-    expect(log.started[0].prompt).toContain('/pr-loop 12');
+    expect(log.started[0].prompt).toContain('args `"12"`');
     expect(columnOfCard(projectPath)).toBe('Review');
   });
 

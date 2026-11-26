@@ -1,10 +1,12 @@
 // Whether a pull request's review loop already finished at its head commit: what keeps the sweep from
 // starting a second review of a card that waits in Review because merging is off (ship-decision-1).
 // The sweep's own mark lasts one run, so without this every app restart re-cut the worktree and ran
-// /pr-loop again at a pull request whose loop had converged hours before.
+// the review loop again at a pull request whose loop had converged hours before.
 //
-// The signal is the comment /pr-loop leaves on the pull request when it ends, `Review loop finished:
-// <status>`, read off GitHub rather than the card: the card's line is the review agent's own words.
+// The signal is the comment the review worker leaves on the pull request when the loop ends, `Review
+// loop finished: <status>`: on GitHub it is posted from the close in review.ts's pullRequestSteps,
+// whose heading has to stay this one. It is read off GitHub rather than the card: the card's line is
+// the review agent's own words.
 // A commit dated after that comment is work the loop has not seen, so it is reviewed again. The date
 // is the commit's own committer date, not when it reached the pull request: a commit made before the
 // comment and pushed after it reads as seen. On GitLab (forge.ts) /mr-loop leaves the same comment as
@@ -18,7 +20,7 @@ function reviewViewArguments(pullRequest: number): string[] {
   return ['pr', 'view', String(pullRequest), '--json', 'comments,commits'];
 }
 
-const FINISHED = 'Review loop finished:';
+export const FINISHED = 'Review loop finished:';
 
 type View = { comments?: { body?: unknown; createdAt?: unknown }[]; commits?: { committedDate?: unknown }[] };
 
