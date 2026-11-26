@@ -103,9 +103,10 @@ Neither door holds any of the logic; each only asks.
   page's main starts before anyone looks at it (`startsAtOpen`, only for a
   restart's); the command's answers once main can be reached.
 - **session.reset**, **.resume**, **.branch**, **.rewind** (/clear, /resume,
-  /branch, /rewind): `keepsItsConversation` refuses all four on main's worker
-  screen. A resume of a conversation a pane runs, or main's on a screen opened
-  by hand, is refused; a rewind counts the code back by a dry run first.
+  /branch, /rewind): the slot's conversation (`chat/slot-conversation.ts`)
+  says `keeps` on main's worker screen, which refuses all four. A resume of a
+  conversation a pane runs, or main's on a screen opened by hand, is refused; a
+  rewind counts the code back by a dry run first.
 - **session.rename** (/rename, the drawer's F2): the conversation's one name,
   written as its transcript's title and its drawer row's label from either door
   (actions-decision-7).
@@ -222,7 +223,7 @@ Folder: `src/main/actions/`.
   `session/branch.ts`, `session/rewind.ts`, `session/rename.ts`,
   `session/configure.ts`
 - `session/conversation-ports.ts` — what reset, resume, branch and rewind ask of
-  the session, and `keepsItsConversation`
+  the session: the slot's conversation, never which kind of slot it is
 - `settings/settings-actions.ts` — main's wiring: settings.write and the screen's `settings:write`
 - `settings/write.ts`, `settings/adopt.ts`, `settings/budget.ts`
 - `src/shared/board/column-entry.ts` — the transition table

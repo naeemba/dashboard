@@ -252,7 +252,8 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   its systemd scope), `chat-commands.ts`, `chat-permission.ts`,
   `chat-elicitation.ts`, `chat-transcript.ts`, `chat-pdf.ts`, `chat-notices.ts`,
   `chat-export-target.ts`, `chat-start.ts`, `chat-chrome.ts` (whether a session
-  gets `--chrome`)
+  gets `--chrome`), `slot-conversation.ts` (where a slot's conversation lives:
+  the page's remembered one with its cut, or a worker screen's own)
 - What is drawn: `chat-view.ts`, `chat-entries.ts`, `chat-markdown.ts`,
   `chat-tools.ts`, `chat-diff.ts`, `chat-events.ts`, `chat-fold.ts`,
   `chat-tags.ts`, `chat-reveal.ts`, `chat-live-view.ts`, `chat-live-cut.ts`,

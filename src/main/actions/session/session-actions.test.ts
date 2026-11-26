@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ChannelHandler, Channels } from '../../app/channels';
+import { slotConversation } from '../../chat/slot-conversation';
 import { registerSessionChannels, sessionActions, type ChatActionPorts } from './session-actions';
 
 const { renameSession } = vi.hoisted(() => ({ renameSession: vi.fn(async () => undefined) }));
@@ -10,7 +11,7 @@ function wired(start: (slot: number) => Promise<string> = async () => 'api-1') {
     start,
     onScreen: () => 'abc',
     projectPath: (slot: number) => (slot === 1 ? '/api' : undefined),
-    worker: () => undefined,
+    conversation: () => slotConversation(undefined, 'abc', undefined),
     stop: () => undefined,
     change: async () => undefined,
     rewindFiles: async () => ({ canRewind: false, error: 'nothing to restore' }),
