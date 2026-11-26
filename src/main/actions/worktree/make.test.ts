@@ -92,10 +92,13 @@ describe('worktree.make', () => {
     expect(made).toMatchObject({ warning: expect.stringMatching(/may be stale: fatal: couldn't find remote ref develop$/) });
   });
 
-  it('reads a failed fetch as one line: the time limit, the fatal line, or the error\'s first line', () => {
+  it('reads a failed fetch as one line: the time limit, the line naming the cause, or the error\'s first line', () => {
     expect(fetchFailure(Object.assign(new Error('Command failed: git fetch gitlab develop\n'), { killed: true, stderr: '' }))).toBe('stopped after 60 seconds');
     const refused = 'git@host: Permission denied (publickey).\nfatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\n';
     expect(fetchFailure(Object.assign(new Error('Command failed'), { stderr: refused }))).toBe('git@host: Permission denied (publickey).');
+    const dropped = 'warning: redirecting\nConnection closed by 1.2.3.4 port 22\nfatal: Could not read from remote repository.\n';
+    expect(fetchFailure(Object.assign(new Error('Command failed'), { stderr: dropped }))).toBe('Connection closed by 1.2.3.4 port 22');
+    expect(fetchFailure(Object.assign(new Error('Command failed'), { stderr: 'fatal: unable to access \'https://host/\': timeout\n' }))).toBe('fatal: unable to access \'https://host/\': timeout');
     expect(fetchFailure(Object.assign(new Error('Command failed: git fetch\nwarning: odd'), { stderr: '' }))).toBe('Command failed: git fetch');
   });
 
