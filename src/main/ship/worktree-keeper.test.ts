@@ -98,6 +98,17 @@ describe('remove', () => {
       expect(await keeper.remove(worktreePath, false, project, async () => null)).toMatchObject({ ok: true });
       expect(existsSync(worktreePath)).toBe(false);
     });
+
+    it('does not ask about a clean worktree, whose unforced remove loses no commit', async () => {
+      const { project, worktreePath } = boardOnlyWorktree();
+      git(worktreePath, 'commit', '--quiet', '-am', 'board: move a1');
+      const { keeper } = keeperWith([], new Map());
+      let asked = false;
+      const check = async () => { asked = true; return 'never reached origin/main'; };
+      expect(await keeper.remove(worktreePath, false, project, check)).toMatchObject({ ok: true });
+      expect(existsSync(worktreePath)).toBe(false);
+      expect(asked).toBe(false);
+    });
   });
 
   it('answers yes for a path with no record and no project', async () => {
