@@ -4,7 +4,7 @@
   "notes": "board-view.ts sits at 597 of 600 code lines. Move beginDrag, endDrag, dropOnColumn (and clickCard if it fits) beside drop-marker.ts so the next board change does not have to split it first. Raised on PR #171.",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-26T11:11:29.664Z",
+  "updatedAt": "2026-11-26T11:12:07.767Z",
   "branch": "split-board-view-ts-along-its-drag-and-drop",
   "pullRequest": 392,
   "comments": [
@@ -19,8 +19,12 @@
     {
       "at": "2026-11-26T11:11:29.664Z",
       "body": "Review loop on #392: converged, ready to merge. 1 round, floor-addressed: a low (endDrag comment named change(); now names ports.move) and a nit (createCardDragging param host -> ports), both fixed, final check accepted both. No conflicts. CI passed on c4b3c633. No change to scope or design."
+    },
+    {
+      "at": "2026-11-26T11:12:07.708Z",
+      "body": "Pull request #392 merged: Move the board's drag and drop out of board-view.ts https://github.com/naeemba/dashboard/pull/392"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 318
 }
