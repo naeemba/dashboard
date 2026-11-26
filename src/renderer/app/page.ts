@@ -21,7 +21,7 @@ import { writeFlow } from '../panes/write-flow';
 import { pauseSelectionRedraws } from '../panes/paused-selection';
 import type { SectionStrip } from '../manager/section-strip';
 import type { MarketsView } from '../markets/markets-view';
-import { bindingName, type Settings } from '../../shared/settings/settings';
+import { bindingName, terminalTheme, type Settings } from '../../shared/settings/settings';
 import { droppedPathsText } from '../../shared/panes/shell';
 import { EDITOR_INDEX, MAIN_INDEX, isWorker, paneFromId, paneLabel, paneName, terminalId } from '../../shared/panes/terminals';
 import { icon, type IconName } from './icons';
@@ -253,10 +253,11 @@ function fontFamily(settings: Settings): string {
 // background while the shell beside it sits on another. Here because this is where the panes are, and
 // a second map of them somewhere else is one that could come to hold a pane this one has let go of.
 export function restylePanes(settings: Settings): void {
+  const theme = terminalTheme(settings) as ITheme;
   for (const pane of panesById.values()) {
     // A plain record of hex strings on the way in; xterm names the colours it knows. parseSettings
     // has already dropped anything that is not one of them, so the shapes agree.
-    pane.terminal.options.theme = settings.theme as ITheme;
+    pane.terminal.options.theme = theme;
     pane.terminal.options.fontFamily = fontFamily(settings);
     pane.terminal.options.fontSize = settings.font.size;
   }
@@ -365,7 +366,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       cursorBlink: false,
       fontSize: options.settings().font.size,
       fontFamily: fontFamily(options.settings()),
-      theme: options.settings().theme as ITheme,
+      theme: terminalTheme(options.settings()) as ITheme,
       drawBoldTextInBrightColors: false,
       scrollback: paneScrollbackLines(index),
       // Option+key sends Esc+key, the way every terminal on macOS does. Without it xterm hands the pane

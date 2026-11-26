@@ -13,6 +13,21 @@ html, body {
   --section-strip-height: 40px;
   /* The status bar's height, which the which-key panel above it is placed from. */
   --status-bar-height: 30px;
+  /* What a view, a pane or the board paints under itself: the colour the root has already painted. */
+  --layer-background: var(--background);
+}
+
+/* See-through (an opacity under 1 in settings.json): the root alone paints the background, at that
+   opacity, and the body and every layer under it paint nothing. Each layer at 0.7 over the last would
+   thicken it, two to 0.91. What covers other content keeps the opaque colour: the ink page over the
+   notes text, a zoomed pane over its neighbours. */
+html.see-through {
+  background: color-mix(in srgb, var(--background) calc(var(--window-opacity) * 100%), transparent);
+}
+
+html.see-through body {
+  background: transparent;
+  --layer-background: transparent;
 }
 
 body {
@@ -180,7 +195,7 @@ body *:not(.xterm, .xterm *) {
   justify-items: center;
   padding: 32px 24px;
   box-sizing: border-box;
-  background: var(--background);
+  background: var(--layer-background);
 }
 
 /* A column a line of prose can be read across, the way a document is set rather than a terminal. */
@@ -263,7 +278,7 @@ body *:not(.xterm, .xterm *) {
 .view-log {
   padding: 20px 24px;
   overflow-y: auto;
-  background: var(--background);
+  background: var(--layer-background);
 }
 
 .view-manager:focus,
@@ -567,14 +582,14 @@ body *:not(.xterm, .xterm *) {
   align-items: center;
   justify-content: center;
   color: var(--red);
-  background: var(--background);
+  background: var(--layer-background);
 }
 
 .pane {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: var(--background);
+  background: var(--layer-background);
   padding: 2px;
 }
 
@@ -603,6 +618,7 @@ body *:not(.xterm, .xterm *) {
   position: absolute;
   inset: 0;
   z-index: 1;
+  background: var(--background);
 }
 
 .pane .xterm {
