@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T09:55:56.820Z",
-  "updatedAt": "2026-11-26T09:55:56.820Z",
-  "column": "Backlog",
-  "order": 78
+  "updatedAt": "2026-11-26T09:56:36.569Z",
+  "branch": "name-the-nine-bare-windows-skips",
+  "column": "Doing",
+  "order": 0
 }
