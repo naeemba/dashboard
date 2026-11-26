@@ -35,3 +35,5 @@ One line per merged change: date and why.
 - 2026-11-25 — An app launched without `SSH_AUTH_SOCK`, or with a stale one, takes the agent's
   socket from the systemd user environment, else the login shell, so agents' pushes over SSH work;
   the `.env` read moved with it into `launch-environment.ts`
+- 2026-11-26 — `package-pins.test.ts` fails when a held dependency loses its exact version: a bump
+  had turned electron, the SDK and marked back into caret ranges with CI green
