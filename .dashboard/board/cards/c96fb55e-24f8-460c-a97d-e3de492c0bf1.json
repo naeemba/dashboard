@@ -5,8 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:06.521Z",
-  "updatedAt": "2026-11-26T08:25:26.149Z",
+  "updatedAt": "2026-11-26T08:27:14.249Z",
   "branch": "pr-wait-refuses-a-draft-pr-pr-create-ready",
+  "comments": [
+    {
+      "at": "2026-11-26T08:27:14.248Z",
+      "body": "Overlap: card dbec2149 (Review workers run their set-up and wrap-up inside pr-loop, branch review-workers-run-their-set-up-and-wrap-up, no commits yet) moves the review worker's gh pr ready --undo, start/finish comments and CI wait into pr-loop or the review dispatch. This card points the review prompts at new pr ready / pr comment verbs. Both touch src/main/ship/review.ts (the review prompt, lines ~170-200) and the same draft/comment steps; this card also changes src/main/command/pull-request-cli.ts and src/main/skills/work-card-skill.ts. Waiting on main for go on / stop."
+    }
+  ],
   "column": "Doing",
   "order": 0
 }
