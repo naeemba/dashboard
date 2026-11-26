@@ -76,3 +76,6 @@ One line per merged change: date and why.
 - 2026-11-26 — The running-app guard matches `/Applications/Dashboard.app` in any case: a mac's
   disk ignores case by default, so `rm -rf /applications/dashboard.app` deleted the installed
   build and the guard let it through (workflow-rule-1)
+- 2026-11-26 — The five suites that skipped Windows with a bare `describe.skipIf` take a named
+  suite-level skip from `windows-skips.ts` instead (`posixCommandsSuite`, `socketFilesSuite`,
+  `screenHostSuite`): four said nowhere why they skipped (workflow-rule-6)

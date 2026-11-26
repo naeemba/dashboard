@@ -9,6 +9,7 @@ import { acceptApps } from '../panes/host-socket';
 import { screenHostServer, type StartSession } from './screen-host-server';
 import { screenHostSocket, type FromScreenHost, type ToScreenHost } from './screen-host-protocol';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { screenHostSuite } from '../testing/windows-skips';
 
 const KEY = 'ccaaf965-c864-48db-8044-30bf27d93087';
 const signal = new AbortController().signal;
@@ -72,7 +73,7 @@ function appSession(heard: string[]) {
   return { prompt, options };
 }
 
-describe.skipIf(process.platform === 'win32')('the screen host', () => {
+screenHostSuite('the screen host', () => {
   it('starts the session in the scope the app chose for it', async () => {
     const sdk = fakeSdk();
     const app = screenHost({ socket: await host(sdk.start), launch: () => undefined });

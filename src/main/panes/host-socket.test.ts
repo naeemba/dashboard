@@ -1,11 +1,12 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 import { claimHostSocket } from './host-socket';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { socketFilesSuite } from '../testing/windows-skips';
 
-describe.skipIf(process.platform === 'win32')('claimHostSocket', () => {
+socketFilesSuite('claimHostSocket', () => {
   it('leaves the socket to a host that answers on it, and takes one nothing answers on', async () => {
     const socket = path.join(temporaryFolder('host-socket-'), 'screen-host', 'screens-1.sock');
     let before = 0;
