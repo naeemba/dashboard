@@ -24,8 +24,10 @@ export async function connect(port, pick = (target) => target.type === 'page' ||
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   let next = 1;
   const waiting = new Map();
+  const listeners = new Map();
   socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
+    if (message.method) listeners.get(message.method)?.(message.params);
     const pending = waiting.get(message.id);
     if (!pending) return;
     waiting.delete(message.id);
@@ -42,7 +44,9 @@ export async function connect(port, pick = (target) => target.type === 'page' ||
     if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails).slice(0, 800));
     return result.result.value;
   };
-  return { send, evaluate, close: () => socket.close() };
+  // One handler per event method, such as the chunks a heap snapshot arrives in; it returns the off switch.
+  const on = (method, handler) => { listeners.set(method, handler); return () => listeners.delete(method); };
+  return { send, evaluate, on, close: () => socket.close() };
 }
 
 export const connectRenderer = () => connect(RENDERER_PORT, (target) => target.type === 'page');
