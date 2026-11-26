@@ -1,0 +1,11 @@
+{
+  "id": "59ab38aa-532c-484c-b3cf-07e1c6161689",
+  "title": "Card ship's fetch gets the same timeout as the throwaway's",
+  "notes": "GitHub issue #381 (gh issue view 381); the PR body says Closes #381. src/main/ship/ship-flow.ts:52 runs the ship's git fetch with the project's queue held and no timeout, so a stalled connection blocks every later pane run --worktree, ship and review in that project. Give it the 60 s cap #378 gave the throwaway's fetch (fetchedBase in src/main/actions/worktree/make.ts); reuse that code rather than copying it.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T09:55:46.211Z",
+  "updatedAt": "2026-11-26T09:55:46.211Z",
+  "column": "Backlog",
+  "order": 77
+}
