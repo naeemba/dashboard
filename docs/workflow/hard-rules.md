@@ -113,7 +113,7 @@ file: `posixPathsOnly` for POSIX path literals (#370's review loop added such a 
 it failed Windows CI), `posixModesOnly` for file modes, `posixCommandsOnly` for a shell script or
 POSIX command, `halfOpenSocketsOnly` for a socket read after its half-close, and a new export there
 for the rest; never a bare `it.skipIf` with its reason in a comment (#375 named nine). A `describe`
-whose every test shares the reason takes the suite-level twin from the same file:
+whose every test shares the reason takes a suite-level skip from the same file:
 `posixCommandsSuite`, `socketFilesSuite` for a stale socket file to claim, `screenHostSuite` where
 there is no screen host; never a bare `describe.skipIf` (#389 named five). CI's Windows
 job holds it, after review. No lint or test holds it earlier: 24 of the 40 test files with a

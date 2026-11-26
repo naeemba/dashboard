@@ -18,7 +18,7 @@ export const posixCommandsOnly = it.skipIf(process.platform === 'win32');
 // leaving nobody to read what the other side sends back.
 export const halfOpenSocketsOnly = it.skipIf(process.platform === 'win32');
 
-// The suite-level twins, for a describe whose every test shares the reason. A suite that runs a POSIX
+// Suite-level skips, for a describe whose every test shares the reason. A suite that runs a POSIX
 // shell or command (`sh -c`, a login `/bin/sh`, `zip` and `unzip`) skips on Windows, as above.
 export const posixCommandsSuite = describe.skipIf(process.platform === 'win32');
 
