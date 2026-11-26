@@ -1,0 +1,11 @@
+{
+  "id": "26f1e38e-d2c4-4754-b6ca-68496dab0a0e",
+  "title": "Research: an app-held pane pool with a queue and a 4-running cap",
+  "notes": "Research, no branch. The user's idea: main asks the app to launch a pane; the app keeps a pool, runs at most 4 at once, queues the rest and starts the next the moment one frees, so main no longer tracks slots.\n\nReview it thoroughly against the code (pane claim/run, board ship, pr land release, pane finish, worker states running/paused/done in src/main/workers, budget) and propose a design. Questions to settle with examples: what holds a slot (a paused worker waiting on CI, a review loop, a done-but-kept pane); queue order and how main reorders or withdraws an entry, including file-overlap between a queued card and an open PR; global across projects or per project; budget gating before each start; what the queued caller gets back (an id now, a notice at start); what happens to the queue across an app restart; how the cap is set (settings file). Say what can be deleted from main's instructions once it exists.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T12:06:45.517Z",
+  "updatedAt": "2026-11-26T12:06:45.517Z",
+  "column": "Backlog",
+  "order": 49
+}
