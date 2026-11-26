@@ -30,7 +30,7 @@ about 17 MB of renderer private memory before and 9 MB after. A wider pane costs
 more in proportion: at 200 columns it is about 24 MB of cells before.
 
 - **Fixed: a worker's scrollback is 5000 lines** (`WORKER_SCROLLBACK`,
-  `src/renderer/panes/pane.ts`). Main's terminal and the editor keep 10000;
+  `src/renderer/panes/pane.ts`). The editor keeps 10000;
   the scrollback key hands a worker's last 5000 lines to nvim. Small.
 - **Not measured: the 569 MB itself.** The installed app is never probed
   (workflow-rule-1), so how many of its panes were full is not known; the demo

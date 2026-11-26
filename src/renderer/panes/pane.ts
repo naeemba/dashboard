@@ -34,12 +34,13 @@ import { isWorker } from '../../shared/panes/terminals';
 // scrollback key paragraph), so a change here changes that line too.
 export const PANE_SCROLLBACK = 10000;
 // A worker keeps half. xterm holds every remembered line at its full width, 12 bytes a cell whatever
-// was printed, so a worker that has filled its scrollback holds about 10 MB at 78 columns, and a
-// day's work is dozens of them: the window held 569 MB after 21 hours, and a heap snapshot of the
+// was printed, so a worker that filled the old 10000 lines held about 10 MB of cells at 78 columns,
+// and a day's work is dozens of them: the window held 569 MB after 21 hours, and a heap snapshot of the
 // demo had full worker buffers as its largest part (docs/performance/history.md).
 export const WORKER_SCROLLBACK = PANE_SCROLLBACK / 2;
 
-// The scrollback a pane is built with: a worker's half, main's and the editor's the whole.
+// The scrollback a pane is built with: a worker's half, the editor's the whole. Main is a chat view
+// with no terminal, so it never asks.
 export function paneScrollbackLines(index: number): number {
   return isWorker(index) ? WORKER_SCROLLBACK : PANE_SCROLLBACK;
 }

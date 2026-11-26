@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Bell } from '../../shared/panes/waiting';
-import { EDITOR_INDEX, MAIN_INDEX } from '../../shared/panes/terminals';
+import { EDITOR_INDEX } from '../../shared/panes/terminals';
 import {
   PANE_SCROLLBACK, WORKER_SCROLLBACK, cellColumn, paneLastLine, paneLooksBusy, paneScreen, paneScrollback, paneScrollbackLines, type PaneTerminal,
 } from './pane';
@@ -127,10 +127,9 @@ describe('cellColumn', () => {
 });
 
 describe('paneScrollbackLines', () => {
-  it('gives a worker half of what main and the editor keep', () => {
+  it('gives a worker half of what the editor keeps', () => {
     expect(paneScrollbackLines(1)).toBe(WORKER_SCROLLBACK);
     expect(paneScrollbackLines(7)).toBe(WORKER_SCROLLBACK);
-    expect(paneScrollbackLines(MAIN_INDEX)).toBe(PANE_SCROLLBACK);
     expect(paneScrollbackLines(EDITOR_INDEX)).toBe(PANE_SCROLLBACK);
   });
 });
