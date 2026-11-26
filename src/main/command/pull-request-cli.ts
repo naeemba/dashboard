@@ -8,10 +8,13 @@ import { failureLine } from './failure-line';
 import { isWriteVerb, parseWriteCommand, type WriteCommand, WRITE_HELP, WRITE_LINES } from './pull-request-write-cli';
 import { type GitHubPorts, isNetworkError, type ProgramAnswer, retried, RETRY_MINUTES, RETRY_WAITS_MS } from './gh-answer';
 
-// How many times one land hands a conflict to the branch's agent, and how long it waits on each push.
+// How many times one land hands a conflict to the branch's agent, and how long it waits on pushes in all,
+// across every hand-off: well inside the two-hour background run (LONGEST_BACKGROUND_RUN), so the land
+// prints its own verdict before it is stopped and rerun, which would send /pr-conflicts again.
+// ponytail: counts only the push waits, not CI between them; a clock deadline if CI eats the margin.
 export const HAND_OFFS = 3;
 export const NEW_HEAD_POLL_MS = 60_000;
-export const NEW_HEAD_WAIT_MS = 60 * 60_000;
+export const NEW_HEAD_WAIT_MS = 90 * 60_000;
 
 export const PULL_REQUEST_USAGE = `pr — open, mark, comment on, wait on or land a pull request of the project you are in
 
@@ -28,10 +31,10 @@ anywhere else it is refused, since its CI did not start on that commit (a push, 
 hand, if it never will). A pull request GitHub says conflicts with its base is refused at once,
 naming the files, since CI does not run on it. A merge call that fails is checked against the pull
 request: merged at that commit is merged. A land that finds a conflict first sends /pr-conflicts to
-the agent working its branch (pane conflicted), prints \`sent /pr-conflicts <n> to <pane>\`, waits up
-to an hour for a new head commit and lands again, at most ${HAND_OFFS} times; with no agent on the
-branch it stops at the conflict. A network error on any gh call is tried again for about
-${RETRY_MINUTES} minutes, waiting longer each time. The last line is the verdict: \`merged <n> at
+the agent working its branch (pane conflicted), prints \`sent /pr-conflicts <n> to <pane>\`, waits for
+a new head commit and lands again, at most ${HAND_OFFS} times and ${NEW_HEAD_WAIT_MS / 60_000} minutes of waiting in
+all; with no agent on the branch it stops at the conflict. A network error on any gh call is tried
+again for about ${RETRY_MINUTES} minutes, waiting longer each time. The last line is the verdict: \`merged <n> at
 <sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or why not. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; one stopped at that
 limit has not failed, run it again. Once merged, the checkout on the base branch (the project's own,
@@ -149,20 +152,23 @@ export async function waitOnPullRequest(ports: GitHubPorts, target: string): Pro
 export type HandOff = (branch: string, target: string) => Promise<boolean>;
 
 // A conflict handed to the branch's agent is waited out: once its merge is pushed (a new head, or the
-// pull request no longer open) the land starts over. No agent, no push within the hour, or HAND_OFFS
-// spent, and the conflict is the answer, as without a hand-off.
+// pull request no longer open) the land starts over. No agent, NEW_HEAD_WAIT_MS spent waiting, or
+// HAND_OFFS spent, and the conflict is the answer, as without a hand-off.
 export async function landPullRequest(ports: GitHubPorts, target: string, handOff?: HandOff): Promise<LandAnswer> {
+  const budget = { left: NEW_HEAD_WAIT_MS };
   for (let handedOff = 0; ; handedOff += 1) {
     const answer = await landOnce(ports, target);
     const { conflicts } = answer;
-    if (conflicts === undefined || handOff === undefined || handedOff === HAND_OFFS || conflicts.branch === '') return answer;
-    if (!(await handOff(conflicts.branch, target)) || !(await newHead(ports, target, conflicts.sha))) return answer;
+    if (conflicts === undefined || handOff === undefined || handedOff === HAND_OFFS || conflicts.branch === '' || budget.left <= 0) return answer;
+    if (!(await handOff(conflicts.branch, target)) || !(await newHead(ports, target, conflicts.sha, budget))) return answer;
   }
 }
 
-async function newHead(ports: GitHubPorts, target: string, sha: string): Promise<boolean> {
-  for (let waited = 0; waited < NEW_HEAD_WAIT_MS; waited += NEW_HEAD_POLL_MS) {
+// Polls for the head to move, drawing each minute from the land's one budget.
+async function newHead(ports: GitHubPorts, target: string, sha: string, budget: { left: number }): Promise<boolean> {
+  while (budget.left > 0) {
     await ports.wait(NEW_HEAD_POLL_MS);
+    budget.left -= NEW_HEAD_POLL_MS;
     const head = await patiently(ports, stateAndHead(target));
     const now = readHead(head);
     if (head.ok && (now.sha !== sha || now.state !== 'OPEN')) return true;

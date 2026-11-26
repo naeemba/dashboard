@@ -249,11 +249,22 @@ describe('landPullRequest handing off a conflict', () => {
     expect(github.waited).toEqual([]);
   });
 
-  it('stops at the conflict when no push comes within the hour', async () => {
+  it('stops at the conflict when no push comes within the budget', async () => {
     const github = fakeGitHub({ 'pr view': Array.from({ length: 100 }, () => branchConflicting) });
     const { handOff } = handOffs(true);
     expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: 'abc123' } });
     expect(github.waited).toHaveLength(NEW_HEAD_WAIT_MS / NEW_HEAD_POLL_MS);
+  });
+
+  // One budget for the whole land, so it ends inside the background run rather than an hour per hand-off.
+  it('draws every hand-off\'s wait from one budget', async () => {
+    const again = { ok: true, output: 'OPEN def456 main CONFLICTING https://github.com/acme/api/pull/12 fix-it false' };
+    const minutes = NEW_HEAD_WAIT_MS / NEW_HEAD_POLL_MS;
+    const github = fakeGitHub({ 'pr view': [branchConflicting, ...Array.from({ length: minutes - 11 }, () => branchConflicting), again, again, ...Array.from({ length: 100 }, () => again)] });
+    const { asked, handOff } = handOffs(true);
+    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: 'def456' } });
+    expect(asked).toHaveLength(2);
+    expect(github.waited).toHaveLength(minutes);
   });
 
   // Each push came to conflict again: the land gives up rather than loop.

@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import { conflictedWords, landedLine, landedWords, outsidePaneRefusal, retriesInOlderWords, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
+import { conflictedLine, conflictedWords, landedLine, landedWords, outsidePaneRefusal, retriesInOlderWords, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
 import { appUserDataFolder, clearSocketPointer, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
@@ -156,7 +156,7 @@ export async function askLanded(by: 'branch' | 'card', name: string, directory: 
 export async function askConflicted(branch: string, pullRequest: string, directory: string): Promise<{ handed: boolean; line: string }> {
   const reply = await askFromLand({ kind: 'conflicted', branch, pullRequest, from: null }, conflictedWords(branch, pullRequest, process.env.DASHBOARD_PANE), directory);
   if (reply === null) return { handed: false, line: '' };
-  return reply.ok ? { handed: reply.output !== '', line: reply.output } : { handed: false, line: `conflict not handed on: ${reply.output.split('\n')[0]}` };
+  return conflictedLine(reply);
 }
 
 // The app asked on behalf of a command whose own work is done without it: null outside a pane, a

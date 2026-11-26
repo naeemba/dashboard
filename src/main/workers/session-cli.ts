@@ -345,6 +345,13 @@ export function landedLine(reply: SessionReply): string {
   return reply.ok ? reply.output : `no worker released: ${reply.output.split('\n')[0]}`;
 }
 
+// What `pr land` makes of the app's answer to `pane conflicted`: handed when an agent was sent
+// /pr-conflicts (a line naming it), not when no agent is on the branch (''), and the first line of
+// why not when the app refused, as an app from before `pane conflicted` does with its usage.
+export function conflictedLine(reply: SessionReply): { handed: boolean; line: string } {
+  return reply.ok ? { handed: reply.output !== '', line: reply.output } : { handed: false, line: `conflict not handed on: ${reply.output.split('\n')[0]}` };
+}
+
 // Whether the words say which project they act on without a folder to go by: a pane id names its own
 // project, claim --project and list --all name theirs. The app reads it for a command from a folder in
 // no open project (session-requests.ts), and outsidePaneRefusal for one from outside every pane.

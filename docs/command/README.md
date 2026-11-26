@@ -38,11 +38,14 @@ the project's remote's base and the head commit, touching no checkout. A failed 
 a refused merge exits 1 and merges nothing. The last line is always the
 verdict, a failure's detail above it: `merged 12 at <sha>`, or `conflicts with main: <files> — merge
 origin/main into the branch, …`. Before that verdict, a land hands the conflict on: it asks the app
-`pane conflicted`, which sends `/pr-conflicts <n>` to the first agent on the branch (never the pane
-the land runs in), prints `sent /pr-conflicts 12 to 2:1`, then reads the pull request every minute
-for up to an hour (`NEW_HEAD_WAIT_MS`) until its head moves, and lands that, at most `HAND_OFFS`
-times. With no agent on the branch, or no push within the hour, the conflict line is the verdict and
-main sends it on. `pr wait <n>` is the same wait,
+`pane conflicted`, which sends `Run /pr-conflicts <n>.` to the first agent on the branch (never the
+pane the land runs in; a prompt, since the report ask after a bare command would be its
+arguments), prints `sent /pr-conflicts 12 to 2:1`, then reads the pull request every minute until
+its head moves, and lands that, at most `HAND_OFFS` times. The minutes come from one budget
+of 90 for the whole land (`NEW_HEAD_WAIT_MS`), not per hand-off, so the land prints its verdict
+inside the two-hour background run instead of being stopped and rerun into a second
+`/pr-conflicts`. With no agent on the branch, or the budget spent, the conflict line is the verdict
+and main sends it on. `pr wait <n>` is the same wait,
 retries and conflict check without the merge, ending `checks passed on <sha>`; both refuse a draft
 no checks start on, since a repository's CI may skip one, and wait on a draft whose checks run, as
 this repository's do; a worker waiting on

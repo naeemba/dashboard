@@ -444,13 +444,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // `pr land` found the branch conflicts with its base: the first of the asker's agents on it is sent
   // /pr-conflicts, as main's own send would hand it, never the pane the land runs in. One only, since
-  // two agents resolving in one worktree write over each other.
+  // two agents resolving in one worktree write over each other. Sent as a prompt asking for the
+  // command, not the command itself: send ends it with the report ask, which after a bare slash
+  // command would become the command's arguments.
   async function conflicted(slot: number, projectPath: string, branch: string, pullRequest: string, from: string | null): Promise<SessionReply> {
     for (const id of openPaneIds()) {
       if (!ports.agentIn(id) || !(await askersOn(id, slot, projectPath, 'branch', branch, from))) continue;
-      const text = `/pr-conflicts ${pullRequest}`;
-      const sent = await send(id, slot, projectPath, text);
-      if (!isRefused(sent)) return answered(`sent ${text} to ${id}`);
+      const command = `/pr-conflicts ${pullRequest}`;
+      const sent = await send(id, slot, projectPath, `Run ${command}.`);
+      if (!isRefused(sent)) return answered(`sent ${command} to ${id}`);
     }
     return answered('');
   }

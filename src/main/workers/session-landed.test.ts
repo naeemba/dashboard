@@ -125,7 +125,8 @@ describe('pane conflicted', () => {
     const { ask, typed } = await finished();
     expect(await ask(['conflicted', 'card-one', '12', '--from', '2:0'])).toEqual({ ok: true, output: 'sent /pr-conflicts 12 to 2:1' });
     expect(typed).toHaveLength(1);
-    expect(typed[0]).toMatch(/^2:1 \/pr-conflicts 12/);
+    // A prompt naming the command: the report ask send appends would be a bare command's arguments.
+    expect(typed[0]).toBe('2:1 Run /pr-conflicts 12.');
   });
 
   // A review pane's own land is waiting on this answer, and the land alone is on the branch.

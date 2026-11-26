@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conflictedWords, hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
+import { conflictedLine, conflictedWords, hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -215,5 +215,12 @@ describe('conflictedWords', () => {
   it('asks from the land\'s pane when there is one, and parses back', () => {
     expect(conflictedWords('fix-it', '12', '2:0')).toEqual(['conflicted', 'fix-it', '12', '--from', '2:0']);
     expect(parseSessionCommand(conflictedWords('fix-it', '12', undefined))).toEqual({ ok: true, command: { kind: 'conflicted', branch: 'fix-it', pullRequest: '12', from: null } });
+  });
+
+  // Handed only when the app named an agent: an empty answer or an older app's refusal waits on no push.
+  it('reads the app\'s answer as handed, nobody on the branch, or refused', () => {
+    expect(conflictedLine({ ok: true, output: 'sent /pr-conflicts 12 to 2:1' })).toEqual({ handed: true, line: 'sent /pr-conflicts 12 to 2:1' });
+    expect(conflictedLine({ ok: true, output: '' })).toEqual({ handed: false, line: '' });
+    expect(conflictedLine({ ok: false, output: 'no such command: conflicted\n\npane — the Dashboard panes' })).toEqual({ handed: false, line: 'conflict not handed on: no such command: conflicted' });
   });
 });
