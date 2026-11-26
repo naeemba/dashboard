@@ -27,3 +27,8 @@ One line per merged change: date and why.
 - 2026-11-24 — `budget` holds the usage to a weekly cap, a daily pace since the weekly reset, or
   none (`--cap none` exits 0); the app writes the reset time into the reading: a fixed cap went
   stale every day for a user spreading the week evenly (command-decision-10)
+- 2026-11-26 — `pr wait` and `pr land` refuse a draft no checks start on, saying to mark it
+  ready, since a repository's CI may skip a draft; a draft whose checks run is waited on.
+  `pr create`, `pr ready` and `pr comment` look at the pull request before trying again after a
+  GitHub 5xx or lost answer, and `create` and `ready` look first: workers retried `gh pr create`
+  by hand after a 502 that had opened it (command-decision-11)

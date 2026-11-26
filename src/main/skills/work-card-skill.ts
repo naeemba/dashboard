@@ -154,7 +154,12 @@ conflict after review, and one of them is thrown away.
   the whole check again. A file left on that line with neither is the
   review's first round of work.
 - Commit in small pieces with messages that say what changed and why.
-- Push the branch to \`$3\` and open the pull request with \`gh pr create\`; on
+- Push the branch to \`$3\` and open the pull request with \`node
+  "$DASHBOARD_COMMAND" pr create\` and \`gh pr create\`'s flags, never \`gh pr
+  create\` itself: it rides out a GitHub 5xx and prints the branch's pull
+  request when one is open already, where a retry by hand opened a second or
+  met \`a pull request already exists\`. Its \`pr ready\` and \`pr comment\`
+  stand in for \`gh pr ready\` and \`gh pr comment\` the same way. On
   GitLab, \`glab mr create --target-branch $2 --title "<title>" --description
   "<body>" --push=false --yes\`, which the board records the same way.
 - Once the pull request is open, the review: $4.

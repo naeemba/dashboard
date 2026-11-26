@@ -1,22 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { conflictedFiles, conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
-
-// A gh that answers each command's first two words from the table, in order when a row has several.
-function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {
-  const asked: string[] = [];
-  const waited: number[] = [];
-  return {
-    asked,
-    waited,
-    ports: {
-      gh: async (words: string[]) => {
-        asked.push(words.join(' '));
-        return answers[words.slice(0, 2).join(' ')].shift() ?? { ok: false, output: 'asked too often' };
-      },
-      wait: async (milliseconds: number) => { waited.push(milliseconds); },
-    },
-  };
-}
+import { fakeGitHub } from '../testing/fake-github';
+import { isNetworkError, RETRY_WAITS_MS } from './gh-answer';
+import { conflictedFiles, conflictLine, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 
 const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' };
 const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
@@ -36,6 +21,7 @@ describe('parsePullRequestCommand', () => {
     expect(parsePullRequestCommand(['land', '12', '--keep'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
     expect(parsePullRequestCommand(['land', '--keep', '12'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
     expect(parsePullRequestCommand(['wait', '12', '--keep'])).toMatchObject({ ok: false });
+    expect(parsePullRequestCommand(['ready', '12', '--undo'])).toEqual({ ok: true, write: { verb: 'ready', target: '12', undo: true } });
   });
 
   it('answers no verb with the usage and refuses anything else', () => {
@@ -196,10 +182,24 @@ describe('landPullRequest', () => {
 });
 
 describe('waitOnPullRequest', () => {
+  const draft = { ok: true, output: `${open.output} true` };
+
   it('waits on the head commit\'s checks and merges nothing', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: 'all green' }] });
     expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'checks passed on abc123' });
     expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
+  });
+
+  // This repository's CI runs on a draft: refusing every draft refused checks that had passed.
+  it('waits on a draft whose checks run', async () => {
+    const github = fakeGitHub({ 'pr view': [draft], 'pr checks': [{ ok: true, output: 'all green' }] });
+    expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'checks passed on abc123' });
+  });
+
+  it('refuses a draft no checks start on, asking for none of the repository\'s', async () => {
+    const github = fakeGitHub({ 'pr view': [draft, draft], 'pr checks': [none, none] });
+    expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: false, output: expect.stringContaining('12 is a draft') });
+    expect(github.asked.some((each) => each.startsWith('pr list'))).toBe(false);
   });
 
   it('says what failed, as land does', async () => {
