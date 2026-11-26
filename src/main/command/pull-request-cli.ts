@@ -6,9 +6,7 @@
 
 import { failureLine } from './failure-line';
 import { isWriteVerb, parseWriteCommand, type WriteCommand, WRITE_HELP, WRITE_LINES } from './pull-request-write-cli';
-import { type GitHubPorts, isNetworkError, type ProgramAnswer, RETRY_MINUTES, RETRY_WAITS_MS } from './gh-answer';
-
-export { isNetworkError, type ProgramAnswer, RETRY_WAITS_MS } from './gh-answer';
+import { type GitHubPorts, isNetworkError, type ProgramAnswer, retried, RETRY_MINUTES, RETRY_WAITS_MS } from './gh-answer';
 
 export const PULL_REQUEST_USAGE = `pr — open, mark, comment on, wait on or land a pull request of the project you are in
 
@@ -69,16 +67,8 @@ const reportsNoChecks = (answer: ProgramAnswer) => !answer.ok && answer.output.i
 
 const lost = (answer: ProgramAnswer, doing: string): ProgramAnswer => ({ ok: false, output: `${answer.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes ${doing}; nothing is merged, run it again` });
 
-// A gh call tried again on a network error, as long as RETRY_WAITS_MS lasts.
-async function patiently(ports: GitHubPorts, words: string[]): Promise<ProgramAnswer> {
-  let answer = await ports.gh(words);
-  for (const milliseconds of RETRY_WAITS_MS) {
-    if (!isNetworkError(answer)) return answer;
-    await ports.wait(milliseconds);
-    answer = await ports.gh(words);
-  }
-  return answer;
-}
+// A gh call that only reads, tried again on a network error as long as RETRY_WAITS_MS lasts.
+const patiently = (ports: GitHubPorts, words: string[]) => retried(ports, words);
 
 // The pull request's state, head commit, base branch, mergeability, url, head branch and whether it is
 // a draft, as `OPEN <sha> main MERGEABLE https://... fix-it false`.

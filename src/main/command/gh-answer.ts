@@ -16,3 +16,21 @@ export const isNetworkError = (answer: ProgramAnswer) => !answer.ok && answer.ou
 // minute of GitHub trouble is outlasted, where one try five seconds on was not.
 export const RETRY_WAITS_MS = [5_000, 10_000, 20_000, 40_000, 60_000, 60_000, 60_000];
 export const RETRY_MINUTES = Math.round(RETRY_WAITS_MS.reduce((sum, each) => sum + each, 0) / 60_000);
+
+// What GitHub says after a lost try: done, with the line to print; not done, so try again; or unknown,
+// a read lost too, so wait another round rather than act twice.
+export type Look = { done: string } | 'not done' | 'unknown';
+
+// `words` once, and again after each network error as long as RETRY_WAITS_MS lasts. `look`, asked
+// before each try again, says whether the lost one went through: a call that only reads never did.
+export async function retried(ports: GitHubPorts, words: string[], look: () => Promise<Look> = async () => 'not done'): Promise<ProgramAnswer> {
+  let answer = await ports.gh(words);
+  for (const milliseconds of RETRY_WAITS_MS) {
+    if (!isNetworkError(answer)) return answer;
+    await ports.wait(milliseconds);
+    const looked = await look();
+    if (typeof looked === 'object') return { ok: true, output: looked.done };
+    if (looked === 'not done') answer = await ports.gh(words);
+  }
+  return answer;
+}

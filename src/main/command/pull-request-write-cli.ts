@@ -2,7 +2,7 @@
 // GitHub 5xx or lost answer only once GitHub says the lost try did not go through. A worker retrying
 // `gh pr create` by hand after a 502 met `a pull request already exists`, since the 502 had opened it.
 
-import { type GitHubPorts, isNetworkError, type ProgramAnswer, RETRY_MINUTES, RETRY_WAITS_MS } from './gh-answer';
+import { type GitHubPorts, isNetworkError, type Look, type ProgramAnswer, retried, RETRY_MINUTES } from './gh-answer';
 
 export const WRITE_LINES = `  pr create <gh pr create's flags> [--project <name|aka>]
   pr ready <number|url|branch> [--undo] [--project <name|aka>]
@@ -13,8 +13,9 @@ pull request when it has one, and ready says when it is ready already (a draft a
 --undo). On a network error or a 5xx from GitHub each looks at the pull request before trying again,
 for about four minutes, so a lost answer never opens a second pull request or posts a comment twice.`;
 
-export type WriteVerb = 'create' | 'ready' | 'comment';
-export const isWriteVerb = (verb: string): verb is WriteVerb => verb === 'create' || verb === 'ready' || verb === 'comment';
+const WRITE_VERBS = ['create', 'ready', 'comment'] as const;
+export type WriteVerb = typeof WRITE_VERBS[number];
+export const isWriteVerb = (verb: string): verb is WriteVerb => (WRITE_VERBS as readonly string[]).includes(verb);
 export type WriteCommand =
   | { verb: 'create'; words: string[] }
   | { verb: 'ready'; target: string; undo: boolean }
@@ -31,25 +32,14 @@ export function parseWriteCommand(verb: WriteVerb, words: readonly string[]): Pa
   }
   const at = words.findIndex((word) => word === '--body' || word === '-b');
   const body = at === -1 ? undefined : words[at + 1];
-  const targets = words.filter((_, index) => at === -1 || (index !== at && index !== at + 1));
+  const targets = words.filter((_, index) => index !== at && index !== at + 1);
   if (body === undefined || targets.length !== 1 || targets[0].startsWith('-')) return { ok: false, message: 'pr comment takes one pull request and --body <text>' };
   return { ok: true, write: { verb, target: targets[0], body } };
 }
 
-// What GitHub says after a lost try: done, with the line to print; not done, so try again; or unknown,
-// a read lost too, so wait another round rather than act twice.
-type Look = { done: string } | 'not done' | 'unknown';
-
 // `words` once, and again after a network error only when `look` finds the lost try did not go through.
 async function safely(ports: GitHubPorts, words: string[], look: () => Promise<Look>, doing: string): Promise<ProgramAnswer> {
-  let answer = await ports.gh(words);
-  for (const milliseconds of RETRY_WAITS_MS) {
-    if (!isNetworkError(answer)) return answer;
-    await ports.wait(milliseconds);
-    const looked = await look();
-    if (typeof looked === 'object') return { ok: true, output: looked.done };
-    if (looked === 'not done') answer = await ports.gh(words);
-  }
+  const answer = await retried(ports, words, look);
   return isNetworkError(answer)
     ? { ok: false, output: `${answer.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes ${doing}; look before running it again` }
     : answer;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { conflictedFiles, conflictLine, type ProgramAnswer, isNetworkError, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, RETRY_WAITS_MS, waitOnPullRequest } from './pull-request-cli';
+import { isNetworkError, type ProgramAnswer, RETRY_WAITS_MS } from './gh-answer';
+import { conflictedFiles, conflictLine, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 
 // A gh that answers each command's first two words from the table, in order when a row has several.
 function fakeGitHub(answers: Record<string, ProgramAnswer[]>) {

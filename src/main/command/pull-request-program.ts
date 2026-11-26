@@ -7,7 +7,8 @@ import { projectNamedInFile } from '../projects/project-named';
 import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
-import { conflictedFiles, landPullRequest, parsePullRequestCommand, type ProgramAnswer, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import type { ProgramAnswer } from './gh-answer';
+import { conflictedFiles, landPullRequest, parsePullRequestCommand, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 import { writePullRequest } from './pull-request-write-cli';
 import { askLanded } from '../workers/session-socket';
 
