@@ -4,6 +4,13 @@
   "notes": "The global instructions and the work-card skill say Done; the project CLAUDE.md says Review. Have the skill read the project's rule. Change lives in dotfiles. (docs/review/2026-11-01.md W5)",
   "priority": "low",
   "parent": null,
+  "updatedAt": "2026-11-26T10:39:19.423Z",
+  "comments": [
+    {
+      "at": "2026-11-26T10:39:19.423Z",
+      "body": "Settled by board-decision-6: the app moves cards by PR state."
+    }
+  ],
   "column": "Backlog",
   "order": 5
 }
