@@ -62,7 +62,11 @@ export function followWorkers(bridge: DashboardBridge, slot: number, drawn: (wor
 // shows without closing it.
 export async function showWorkers(bridge: DashboardBridge, slot: number, anchor: HTMLElement, goToPane: (id: string) => void): Promise<boolean> {
   const id = await anchoredPopup({
-    name: 'chat-workers', anchor, heading: () => `${workerCount(ofSlot(slot)) || 'No worker is open'} · Enter goes to one`,
+    name: 'chat-workers', anchor,
+    heading: () => {
+      const count = workerCount(ofSlot(slot));
+      return count ? `${count} · Enter goes to one` : 'No worker is open';
+    },
     sections: () => [{
       title: null,
       rows: workerRows(ofSlot(slot), caches, Date.now()).map((row) => ({
