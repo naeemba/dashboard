@@ -5,6 +5,7 @@ import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/ap
 import { git, runProgram } from '../../app/git';
 import { baseBranch } from '../../app/base-branch';
 import { loginShellPath } from '../../app/shell-path';
+import { boardNotOnOrigin } from '../../ship/board-on-origin';
 import { startLeftoverSweep } from '../../ship/leftover-sweep';
 import { bind, isRefused, type BoundAction } from '../action';
 import { INSTALL_TIMEOUT_MS, worktreeMake, type MadeWorktree, type ShipWorktree, type ShipWorktreeRequest } from './make';
@@ -38,11 +39,13 @@ async function install(program: string, programArguments: string[], cwd: string)
   return runProgram(program, programArguments, cwd, { timeout: INSTALL_TIMEOUT_MS, environment });
 }
 
-export function worktreeActions(main: WorktreeRemovePorts) {
+export function worktreeActions(main: Omit<WorktreeRemovePorts, 'boardNotOnOrigin'>) {
   const make = bind(worktreeMake, {
     git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install, pause,
   });
-  const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
+  const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, {
+    ...main, boardNotOnOrigin: (worktreePath) => boardNotOnOrigin(runProgram, worktreePath),
+  });
   // What a throwaway's worker is asked before it is let go of, and what letting go of it takes
   // (throwaway.ts), as the session command's ports and the sweep's take them.
   const throwawayPorts = {

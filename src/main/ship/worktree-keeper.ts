@@ -18,6 +18,9 @@ import {
 } from './worktree-store';
 import type { WorktreeEntry, WorktreeList, WorktreeRemoval } from '../../shared/app/bridge';
 
+// Why a folder stays though it has nothing uncommitted past the board, or null to remove it.
+export type KeptCheck = (worktreePath: string) => Promise<string | null>;
+
 // What the keeper needs from main: the record file and what was read from it at launch, the panes and
 // the shells running in them, and the way to tell every screen the list changed.
 type WorktreeKeeperPorts = {
@@ -144,7 +147,11 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
   //
   // `projectPath` is for a worktree the app has no record of — one the manager found through git — and
   // is the project to ask git from. A recorded worktree is asked from the project its record names.
-  async function remove(worktreePath: string, force: boolean, projectPath?: string): Promise<WorktreeRemoval> {
+  //
+  // `kept`, when given, is asked when board files are all that is in the way, so forcing git past them
+  // would lose them; a reason from it refuses the removal in those words (removalOf in remove.ts says
+  // which door gives one). A clean worktree is not asked: an unforced remove loses no commit.
+  async function remove(worktreePath: string, force: boolean, projectPath?: string, kept?: KeptCheck): Promise<WorktreeRemoval> {
     const entry = entryForPath(entries, worktreePath);
     const project = entry?.projectPath ?? projectPath;
     // A path with no record and no project is the removal having already happened — the sweep dropped it
@@ -163,6 +170,8 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
       const status = existsSync(worktreePath) ? await git([...WORK_STATUS], worktreePath) : '';
       const { dirty, forced } = removalChanges(status, force);
       if (dirty.length > 0) return { ok: false, message: '', dirty };
+      const reason = forced && kept ? await kept(worktreePath) : null;
+      if (reason !== null) return { ok: false, message: reason, dirty: [] };
       await git(['worktree', 'remove', ...(forced ? ['--force'] : []), worktreePath], project);
       forgetSize(worktreePath);
       // A worktree with no record has no agent of the app's in it, so a shell of yours standing there is
