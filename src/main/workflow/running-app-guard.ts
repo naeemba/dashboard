@@ -171,7 +171,7 @@ export function stopsRunningApp(command: string, listProcesses: ProcessList): bo
       return pids === 'everything' || pids.some((pid) => appProcesses()?.some((process) => process.pid === pid) ?? false);
     }
     return (invocation(part, 'osascript') !== null && /\bquit\b/.test(part) && /dashboard/i.test(part))
-      || (invocation(part, 'open') !== null && /-a\s+["']?Dashboard\b|Dashboard\.app/.test(part))
+      || (invocation(part, 'open') !== null && /-a\s+["']?Dashboard\b|Dashboard\.app/i.test(part))
       || (invocation(part, FILE_VERBS) !== null && INSTALLED.test(part))
       || (invocation(part, 'find') !== null && /\s-(?:delete|exec(?:dir)?)\b/.test(part) && INSTALLED.test(part))
       || (invocation(part, 'systemctl') !== null && /\b(?:stop|kill|restart)\b/.test(part) && /\b(?:agents|panes)\.slice\b/.test(part))

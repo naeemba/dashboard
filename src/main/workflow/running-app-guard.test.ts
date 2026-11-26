@@ -50,6 +50,7 @@ describe('stopsRunningApp', () => {
     'open -a Dashboard',
     'open -a "Dashboard"',
     'open /Applications/Dashboard.app',
+    'open /applications/dashboard.app',
     'rm -rf ~/.local/opt/dashboard',
     'cp -a out/Dashboard-linux-x64 "$HOME/.local/opt/dashboard"',
     'mv /tmp/build /home/me/.local/opt/dashboard',
