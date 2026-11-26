@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:06:32.539Z",
-  "updatedAt": "2026-11-26T12:21:30.756Z",
+  "updatedAt": "2026-11-26T13:16:31.333Z",
   "branch": "deleting-a-board-only-worktree-from-the-lis",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 400,
+  "comments": [
+    {
+      "at": "2026-11-26T13:16:31.287Z",
+      "body": "Pull request #400 opened: Ask before d removes a worktree whose board edits never reached origin https://github.com/naeemba/dashboard/pull/400"
+    }
+  ],
+  "column": "Review",
+  "order": 0
 }
