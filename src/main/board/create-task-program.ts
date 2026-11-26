@@ -159,8 +159,8 @@ function run(commandArguments: readonly string[], directory: string): number {
   }
 }
 
-// Synchronous, like the rest of this program.
-function sleep(milliseconds: number): void {
+// Synchronous, like the rest of this program, and the `board guard --wait` poll (board-program.ts).
+export function sleep(milliseconds: number): void {
   if (milliseconds > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 

@@ -22,7 +22,13 @@ export const GUARD_COMMAND = 'node "$HOME/.claude/dashboard/board.js" guard';
 // (dispatch.ts) and a Claude screen's (chat-sessions.ts), beside the user's own hooks.
 export const GUARD_ENTRY = { matcher: GUARDED_TOOLS, hooks: [{ type: 'command' as const, command: GUARD_COMMAND }] };
 
-export const BOARD_GUARD_HOOKS = { PreToolUse: [GUARD_ENTRY] };
+// The pane's own entry, only in the settings the app gives its sessions: the same guards, then the
+// heavy-run wait (heavy-run-wait.ts) for a call they let through. A command of its own, so it is not
+// merged with the user's entry, and a timeout, in seconds, that the wait stops under (LONGEST_WAIT).
+export const GUARD_TIMEOUT = 600;
+const WAIT_ENTRY = { matcher: 'Bash', hooks: [{ type: 'command' as const, command: `${GUARD_COMMAND} --wait`, timeout: GUARD_TIMEOUT }] };
+
+export const BOARD_GUARD_HOOKS = { PreToolUse: [GUARD_ENTRY, WAIT_ENTRY] };
 
 // A card file, the columns file, or the older board.json, at any depth and with either separator.
 // `.dashboard/notes.md` and `.dashboard/CLAUDE.md` are not the board and stay editable.

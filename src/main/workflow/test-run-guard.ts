@@ -22,20 +22,28 @@ const TEST_SCRIPT = /^(?:t|test|check)$|^test:/;
 // are vitest, pnpm and npm.
 const programName = (word: string) => basename(word).replace(/\.[mc]?js$/, '').replace(/-cli$/, '');
 
+// The program the words run, past LAUNCHER and SKIPPED, the words after it (`after`) and those of
+// them that are no flag (`rest`), or null when they run none. `runner` is a test runner's name and
+// `manager` a package manager's, for heavy-run-wait.ts too.
+export function commandProgram(words: readonly string[]) {
+  let index = 0;
+  while (index < words.length && (SKIPPED.test(words[index]) || LAUNCHER.test(basename(words[index])))) index += 1;
+  if (index >= words.length) return null;
+  const name = programName(words[index]);
+  const after = words.slice(index + 1);
+  return { name, after, rest: after.filter((word) => !word.startsWith('-')), runner: RUNNER.test(name), manager: MANAGER.test(name) };
+}
+
 // Whether these words, a command typed or a process's argv, run tests: a runner (vitest, jest,
 // pytest), a package manager's test or check script (`pnpm test`, `npm run test:unit`, `bun test`), a
 // runner through one (`pnpm vitest`, `pnpm exec jest`), or `cargo test` and `go test`.
 export function runsTests(words: readonly string[]): boolean {
-  let index = 0;
-  while (index < words.length && (SKIPPED.test(words[index]) || LAUNCHER.test(basename(words[index])))) {
-    index += 1;
-  }
-  if (index >= words.length) return false;
-  const name = programName(words[index]);
-  const rest = words.slice(index + 1).filter((word) => !word.startsWith('-'));
-  if (RUNNER.test(name)) return true;
+  const program = commandProgram(words);
+  if (program === null) return false;
+  const { name, rest } = program;
+  if (program.runner) return true;
   if (name === 'cargo' || name === 'go') return rest[0] === 'test';
-  if (!MANAGER.test(name) || rest.length === 0) return false;
+  if (!program.manager || rest.length === 0) return false;
   if (rest[0] === 'run' || rest[0] === 'run-script') return TEST_SCRIPT.test(rest[1] ?? '');
   return TEST_SCRIPT.test(rest[0]) || runsTests(rest);
 }
@@ -78,6 +86,9 @@ export type TestRunMachine = { listProcesses: ProcessList; workingFolder: Workin
 
 const LONGEST_SHOWN = 160;
 
+// A process's command line as a message names it, cut at LONGEST_SHOWN.
+export const shownCommand = ({ commandLine }: RunningProcess) => (commandLine.length > LONGEST_SHOWN ? `${commandLine.slice(0, LONGEST_SHOWN)}…` : commandLine);
+
 // The hook's answer, as `board guard` prints it on stdout; undefined lets the call through. The command
 // is read before the process table, so a call that runs no tests reads nothing.
 export function testRunGuard(toolName: string, toolInput: unknown, folder: string | undefined, machine: TestRunMachine) {
@@ -85,9 +96,8 @@ export function testRunGuard(toolName: string, toolInput: unknown, folder: strin
   const folders = [...new Set(testRunFolders(textField(toolInput, 'command'), folder))];
   const running = folders.map((each) => runningTestRun(each, machine)).find((each) => each !== undefined);
   if (running === undefined) return undefined;
-  const shown = running.commandLine.length > LONGEST_SHOWN ? `${running.commandLine.slice(0, LONGEST_SHOWN)}…` : running.commandLine;
   return hookRefusal(
-    `A test run is already going in this worktree (pid ${running.pid}: ${shown}). `
+    `A test run is already going in this worktree (pid ${running.pid}: ${shownCommand(running)}). `
     + 'Wait for it to end, then run yours: two at once in one worktree have filled the machine\'s memory. '
     + 'Never run tests in parallel.',
   );

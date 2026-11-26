@@ -16,9 +16,13 @@ import { runningAppGuard, runningProcess, type RunningProcess } from '../workflo
 import { packageManagerGuard } from '../workflow/package-manager-guard';
 import { testRunGuard, type TestRunMachine } from '../workflow/test-run-guard';
 import { worktreeGuard, type WorktreeList } from '../workflow/worktree-guard';
+import { claimFile, waitForHeavyRuns, type HeavyRunMachine } from '../workflow/heavy-run-wait';
+import { sleep } from './create-task-program';
 import { gitNow } from '../app/git';
 import { parseEveryWorktree } from '../../shared/ship/git-worktrees';
 import { existsSync, readdirSync, readFileSync, readlinkSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 // The whole of the `board` program outside board-cli.ts: the current directory and the words in, a
 // file and a line of output out, and the exit code back. Every decision it could make is made there
@@ -140,8 +144,13 @@ function answer(result: CommandResult): number {
 // What the guards read of the machine, passed in so a test can stand in for it.
 export type GuardMachine = TestRunMachine & { listWorktrees: WorktreeList };
 
-export function guardAnswer(inputText: string, boardVariable: string | undefined, programPath: string, machine: GuardMachine, startFolder: string | undefined): string {
-  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown; cwd?: unknown };
+// `heavyRuns` is the pane's entry, `board guard --wait`: a call let through then waits its turn for a
+// heavy run (heavy-run-wait.ts).
+export function guardAnswer(
+  inputText: string, boardVariable: string | undefined, programPath: string, machine: GuardMachine, startFolder: string | undefined,
+  heavyRuns?: HeavyRunMachine,
+): string {
+  const input = JSON.parse(inputText) as { tool_name?: unknown; tool_input?: unknown; cwd?: unknown; tool_use_id?: unknown };
   const toolName = String(input.tool_name);
   const command = boardVariable === undefined ? programPath : '$DASHBOARD_BOARD';
   const folder = typeof input.cwd === 'string' ? input.cwd : undefined;
@@ -150,7 +159,8 @@ export function guardAnswer(inputText: string, boardVariable: string | undefined
     ?? packageManagerGuard(toolName, input.tool_input, folder, machine.exists)
     ?? testRunGuard(toolName, input.tool_input, folder, machine)
     ?? worktreeGuard(toolName, input.tool_input, folder ?? '', machine.listWorktrees, startFolder);
-  return refused === undefined ? '' : JSON.stringify(refused);
+  if (refused !== undefined) return JSON.stringify(refused);
+  return heavyRuns === undefined ? '' : waitForHeavyRuns(toolName, input.tool_input, String(input.tool_use_id), heavyRuns);
 }
 
 // Every process /proc shows, or null where there is no /proc (a mac). Read only when a command could
@@ -191,9 +201,10 @@ function gitWorktrees(folder: string): string[] | null {
   }
 }
 
-function guard(): number {
+function guard(wait: boolean): number {
   const machine = { listProcesses: procProcesses, workingFolder, exists: existsSync, listWorktrees: gitWorktrees };
-  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], machine, process.env.CLAUDE_PROJECT_DIR));
+  const heavyRuns = wait ? { listProcesses: procProcesses, claim: claimFile(path.join(os.homedir(), '.cache', 'dashboard', 'heavy-run.claim')), now: Date.now, sleep } : undefined;
+  process.stdout.write(guardAnswer(readFileSync(0, 'utf8'), process.env.DASHBOARD_BOARD, process.argv[1], machine, process.env.CLAUDE_PROJECT_DIR, heavyRuns));
   return 0;
 }
 
@@ -204,7 +215,7 @@ function guard(): number {
 // command/failure-line.ts, shared by every program the dashboard command runs.
 export async function runBoardProgram(commandArguments: readonly string[]): Promise<number> {
   try {
-    if (commandArguments[0] === 'guard') return guard();
+    if (commandArguments[0] === 'guard') return guard(commandArguments.includes('--wait'));
     return await run(commandArguments);
   } catch (error: unknown) {
     process.stderr.write(`${failureLine(error)}\n`);

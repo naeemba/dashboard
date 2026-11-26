@@ -207,6 +207,25 @@ describe('board guard', () => {
     expect(guardAnswer(install, undefined, 'board.js', nothing, undefined)).toBe('');
   });
 
+  it('waits for a heavy run only as the pane\'s entry, and only for a call it lets through', () => {
+    let now = 0;
+    const heavyRuns = {
+      listProcesses: () => (now < 4_000 ? [runningProcess(4300, 'node', ['pnpm', 'test'])] : []),
+      claim: () => true,
+      now: () => now,
+      sleep: (milliseconds: number) => { now += milliseconds; },
+    };
+    const build = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'pnpm build' }, tool_use_id: 'call-1' });
+    expect(guardAnswer(build, undefined, 'board.js', nothing, undefined)).toBe('');
+    expect(now).toBe(0);
+    expect(guardAnswer(build, '/app/board.js', 'board.js', nothing, undefined, heavyRuns)).toBe('');
+    expect(now).toBe(4_000);
+    now = 0;
+    const write = JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'pnpm build > .dashboard/board/cards/a.json' } });
+    expect(guardAnswer(write, '/app/board.js', 'board.js', nothing, undefined, heavyRuns)).toContain('deny');
+    expect(now).toBe(0);
+  });
+
   it("refuses an edit in another worktree, read from the hook's cwd", () => {
     const edit = JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: '/p/src/a.ts' }, cwd: '/p.worktrees/card' });
     const reason = JSON.parse(guardAnswer(edit, undefined, 'board.js', { ...nothing, listWorktrees: () => ['/p', '/p.worktrees/card'] }, undefined));
