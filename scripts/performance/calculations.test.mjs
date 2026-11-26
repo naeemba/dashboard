@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bytesPerSource, decodeSegment, isDemoProcess, keyEvent, ownerOf, spread } from './calculations.mjs';
+import { bytesPerSource, decodeSegment, heapKinds, isDemoProcess, keyEvent, ownerOf, spread } from './calculations.mjs';
 
 describe('isDemoProcess', () => {
   const demo = { group: 500, home: '/tmp/perf/home', userData: '/tmp/perf/userdata' };
@@ -67,5 +67,25 @@ describe('source maps', () => {
     // Line 1: source 1 again (the index runs on) from 0 to 3.
     const bytes = bytesPerSource('AAAA,I,ECAA;AAAA', [10, 3]);
     expect(Object.fromEntries(bytes)).toEqual({ 0: 4, '-1': 2, 1: 7 });
+  });
+});
+
+describe('heapKinds', () => {
+  // Fields: type, name, self_size. Types: 0 object, 1 string, 2 native.
+  const snapshot = {
+    snapshot: { meta: { node_fields: ['type', 'name', 'self_size'], node_types: [['object', 'string', 'native']] } },
+    strings: ['BufferLine', 'some text', 'system / JSArrayBufferData', 'other text'],
+    nodes: [0, 0, 1048576, 1, 1, 524288, 2, 2, 3145728, 0, 0, 1048576, 1, 3, 524288],
+  };
+
+  it('sums objects by constructor and strings by type alone, biggest first', () => {
+    expect(heapKinds(snapshot)).toEqual({
+      totalMB: 6,
+      kindsMB: { 'system / JSArrayBufferData': 3, BufferLine: 2, '(string)': 1 },
+    });
+  });
+
+  it('keeps only the biggest kinds asked for', () => {
+    expect(Object.keys(heapKinds(snapshot, 1).kindsMB)).toEqual(['system / JSArrayBufferData']);
   });
 });

@@ -13,7 +13,7 @@ import type { Mode, ProjectMode } from '../../shared/keys/modes';
 import { createInkView, type InkView } from '../notes/ink-view';
 import { createNotesView, type NotesView } from '../notes/notes-view';
 import type { Pane } from '../panes/pane';
-import { PANE_SCROLLBACK, paneScreen } from '../panes/pane';
+import { paneScreen, paneScrollbackLines } from '../panes/pane';
 import { dismissViewerFromFrame } from './overlay';
 import { erasedLine, printWidths } from '../panes/print-widths';
 import { linksTouching } from '../panes/wrapped-links';
@@ -367,7 +367,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       fontFamily: fontFamily(options.settings()),
       theme: options.settings().theme as ITheme,
       drawBoldTextInBrightColors: false,
-      scrollback: PANE_SCROLLBACK,
+      scrollback: paneScrollbackLines(index),
       // Option+key sends Esc+key, the way every terminal on macOS does. Without it xterm hands the pane
       // the composed character instead — Option+L arrives as "Â¬", and nvim's <A-l> never fires. The
       // cost is that Option no longer types accented characters into a pane.

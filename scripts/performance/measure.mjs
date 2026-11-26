@@ -6,7 +6,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { bytesPerSource, ownerOf } from './calculations.mjs';
+import { bytesPerSource, heapKinds, ownerOf } from './calculations.mjs';
 import {
   connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, paneHostFolder, paneHostPids, press, retry, run, wait, withInstance,
 } from './demo-instance.mjs';
@@ -26,10 +26,13 @@ async function openWorkers(page, count = 1) {
   await keys(page, 'Alt+2');
 }
 
-// A build log in each of the first <count> workers, <rate> lines a second each.
-async function startStreams(page, count, rate) {
-  for (let position = 2; position < 2 + count; position++) { await keys(page, `Alt+${position}`); await run(page, `${stream} ${rate}`); }
+// <command> run in each of the first <count> workers.
+async function inWorkers(page, count, command) {
+  for (let position = 2; position < 2 + count; position++) { await keys(page, `Alt+${position}`); await run(page, command); }
 }
+
+// A build log in each of the first <count> workers, <rate> lines a second each.
+const startStreams = (page, count, rate) => inWorkers(page, count, `${stream} ${rate}`);
 
 // The highest line number each worker on screen has drawn: build-log-stream.sh numbers its lines, so a
 // pane that came back showing what it printed while hidden reads higher than when it left. A worker
@@ -55,6 +58,15 @@ async function heldMemory(page, main) {
     mainHeapMB: +((await main.evaluate('process.memoryUsage().heapUsed')) / 1048576).toFixed(1),
     nodes: counters.nodes, listeners: counters.jsEventListeners,
   };
+}
+
+// A heap snapshot of the renderer, as its biggest kinds of object by self size.
+async function heapSplit(page) {
+  let text = '';
+  const off = page.on('HeapProfiler.addHeapSnapshotChunk', ({ chunk }) => { text += chunk; });
+  await page.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false });
+  off();
+  return heapKinds(JSON.parse(text));
 }
 
 const measurements = {
@@ -283,6 +295,22 @@ const measurements = {
   memory: () => withInstance(demo, {}, async ({ page }) => {
     await openWorkers(page, 4); await wait(1500);
     print('memory', await memory());
+  }),
+
+  // What a full scrollback costs: four workers on alpha each print <lines> lines, and the renderer is
+  // read before and after, with a heap snapshot's biggest kinds.
+  scrollback: (lines = '12000') => withInstance(demo, {}, async ({ page }) => {
+    const main = await connectMain();
+    try {
+      await keys(page, 'Ctrl+2'); await openWorkers(page, 4); await wait(1500);
+      await page.send('HeapProfiler.enable'); await main.send('HeapProfiler.enable');
+      const terminals = await page.evaluate("document.querySelectorAll('.xterm').length");
+      print('empty', { terminals, ...(await heldMemory(page, main)) });
+      await inWorkers(page, 4, `seq 1 ${lines}`);
+      await wait(5000);
+      print('filled', await heldMemory(page, main));
+      print('heap', await heapSplit(page));
+    } finally { main.close(); }
   }),
 };
 

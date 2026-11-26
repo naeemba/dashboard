@@ -79,3 +79,25 @@ export function bytesPerSource(mappings, lineLengths) {
   });
   return bytes;
 }
+
+// A V8 heap snapshot's self sizes summed per kind, in MB, biggest first: an object by its constructor,
+// a native or hidden node (an ArrayBuffer's backing store is `system / JSArrayBufferData`) by its name,
+// and anything whose name is its contents (strings, code, numbers) by its type alone.
+export function heapKinds(snapshot, count = 12) {
+  const { node_fields: fields, node_types: [types] } = snapshot.snapshot.meta;
+  const [typeAt, nameAt, sizeAt] = ['type', 'name', 'self_size'].map((field) => fields.indexOf(field));
+  const byTypeAlone = types.map((type) => /string|code|number|regexp/.test(type) && `(${type})`);
+  const bySize = new Map();
+  let total = 0;
+  for (let at = 0; at < snapshot.nodes.length; at += fields.length) {
+    const size = snapshot.nodes[at + sizeAt];
+    const kind = byTypeAlone[snapshot.nodes[at + typeAt]] || snapshot.strings[snapshot.nodes[at + nameAt]];
+    bySize.set(kind, (bySize.get(kind) ?? 0) + size);
+    total += size;
+  }
+  const mb = (bytes) => +(bytes / 1048576).toFixed(1);
+  return {
+    totalMB: mb(total),
+    kindsMB: Object.fromEntries([...bySize].sort((a, b) => b[1] - a[1]).slice(0, count).map(([kind, bytes]) => [kind, mb(bytes)])),
+  };
+}
