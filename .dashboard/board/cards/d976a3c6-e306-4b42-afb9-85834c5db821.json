@@ -5,14 +5,19 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-26T13:39:16.572Z",
-  "updatedAt": "2026-11-26T13:43:28.587Z",
+  "updatedAt": "2026-11-26T13:54:22.964Z",
   "branch": "finished-work-tests-time-out-on-the-windows",
+  "pullRequest": 404,
   "comments": [
     {
       "at": "2026-11-26T13:43:15.029Z",
       "body": "Not flaky: the windows re-run of 45830087851 failed the same test again at 5019 ms: finished-work.test.ts > unfinishedWork, with the board a stale copy of origin's > lets go of a worktree whose only change is its own card file, once origin has held it. It blocks #402 and every PR's windows job."
+    },
+    {
+      "at": "2026-11-26T13:54:22.922Z",
+      "body": "Pull request #404 opened: Build the finished-work tests' git repository once and copy it per test https://github.com/naeemba/dashboard/pull/404"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 4
 }
