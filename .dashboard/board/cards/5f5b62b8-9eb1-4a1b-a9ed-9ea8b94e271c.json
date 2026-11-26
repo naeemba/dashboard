@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-02T00:40:52.538Z",
-  "updatedAt": "2026-11-26T11:39:23.505Z",
+  "updatedAt": "2026-11-26T12:00:59.281Z",
   "branch": "workers-popup-follow-ups-anchor-it-to-the-c",
   "pullRequest": 396,
   "comments": [
@@ -20,6 +20,10 @@
     {
       "at": "2026-11-26T11:39:23.476Z",
       "body": "Pull request #396 opened: Open the workers popup above the count, and refresh it when a worker's agent exits https://github.com/naeemba/dashboard/pull/396"
+    },
+    {
+      "at": "2026-11-26T12:00:59.281Z",
+      "body": "Review loop: converged, ready to merge. 1 round, 3 nits fixed (popup row highlight colour, empty-list heading hint, chat-decision-10 wording), final check accepted all 3. CI passed on efab3ce9. Scope: (1) anchored popup and (3) refresh on exit done; (2) already worked, unchanged; (5) not done on purpose, workers-decision-3 keeps pane claim's bare id. Open: spawn-failure catch in pane-shells.ts skips main.ended (out of scope, #397)."
     }
   ],
   "column": "Review",
