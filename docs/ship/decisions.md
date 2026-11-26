@@ -123,10 +123,10 @@ such a worktree stays until someone looks. `d` on one in the list asks the same 
 its first confirm. When origin lacks a file, a second confirm names it and removes the worktree
 anyway (`removalOf`'s `boardChecked`). It is asked only when uncommitted board files are what git
 is forced past, and only about those: an unforced remove of a clean one loses no commit, and a
-forced one keeps the branch. A worktree that also holds a work change is asked only about that
-change, so an unsynced card edit goes with it unnamed. The check fetches origin inside the
-project's queue, so the second question can take up to `FETCH_TIMEOUT` to appear, and a ship
-started meanwhile waits behind it. A review's removal still forces past them
-unasked, so a card edit made offline before the merge goes with the folder. A locked worktree,
-or one a process stands in, is still kept. `ship.ts`, `board-on-origin.ts`, `finished-work.ts`,
+forced one keeps the branch. A worktree that also holds a work change is asked about both: the
+second confirm names the changed files and the board files origin lacks. The check fetches origin
+inside the project's queue, so the second question can take up to `FETCH_TIMEOUT` to appear,
+and a ship started meanwhile waits behind it. A review's removal still forces past them unasked,
+so a card edit made offline before the merge goes with the folder. A locked worktree, or one a
+process stands in, is still kept. `ship.ts`, `board-on-origin.ts`, `finished-work.ts`,
 `leftover-worktrees.ts`, `remove.ts`. (2026-11-26)

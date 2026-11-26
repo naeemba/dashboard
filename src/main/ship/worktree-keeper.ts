@@ -148,9 +148,10 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
   // `projectPath` is for a worktree the app has no record of — one the manager found through git — and
   // is the project to ask git from. A recorded worktree is asked from the project its record names.
   //
-  // `kept`, when given, is asked when board files are all that is in the way, so forcing git past them
-  // would lose them; a reason from it refuses the removal in those words (removalOf in remove.ts says
-  // which door gives one). A clean worktree is not asked: an unforced remove loses no commit.
+  // `kept`, when given, is asked whenever forcing git past the board's files would lose them; a reason
+  // from it refuses the removal in those words, beside the work changes when there are any too, so the
+  // second question names both (removalOf in remove.ts says which door gives one). A clean worktree is
+  // not asked: an unforced remove loses no commit.
   async function remove(worktreePath: string, force: boolean, projectPath?: string, kept?: KeptCheck): Promise<WorktreeRemoval> {
     const entry = entryForPath(entries, worktreePath);
     const project = entry?.projectPath ?? projectPath;
@@ -169,9 +170,8 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
       // folder has vanished, so the question is skipped rather than asked and lost.
       const status = existsSync(worktreePath) ? await git([...WORK_STATUS], worktreePath) : '';
       const { dirty, forced } = removalChanges(status, force);
-      if (dirty.length > 0) return { ok: false, message: '', dirty };
       const reason = forced && kept ? await kept(worktreePath) : null;
-      if (reason !== null) return { ok: false, message: reason, dirty: [] };
+      if (dirty.length > 0 || reason !== null) return { ok: false, message: reason ?? '', dirty };
       await git(['worktree', 'remove', ...(forced ? ['--force'] : []), worktreePath], project);
       forgetSize(worktreePath);
       // A worktree with no record has no agent of the app's in it, so a shell of yours standing there is

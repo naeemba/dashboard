@@ -99,6 +99,15 @@ describe('remove', () => {
       expect(existsSync(worktreePath)).toBe(false);
     });
 
+    it('gives the reason beside the work changes when both are in the way', async () => {
+      const { project, worktreePath } = boardOnlyWorktree();
+      writeFileSync(join(worktreePath, 'a.ts'), 'work');
+      const { keeper } = keeperWith([], new Map());
+      const reason = 'its board edits of .dashboard/board/cards/a1.json never reached origin/main';
+      expect(await keeper.remove(worktreePath, false, project, async () => reason)).toEqual({ ok: false, message: reason, dirty: ['a.ts'] });
+      expect(existsSync(worktreePath)).toBe(true);
+    });
+
     it('does not ask about a clean worktree, whose unforced remove loses no commit', async () => {
       const { project, worktreePath } = boardOnlyWorktree();
       git(worktreePath, 'commit', '--quiet', '-am', 'board: move a1');
