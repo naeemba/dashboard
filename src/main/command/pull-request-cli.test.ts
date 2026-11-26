@@ -267,6 +267,17 @@ describe('landPullRequest handing off a conflict', () => {
     expect(github.waited).toHaveLength(minutes);
   });
 
+  // A push on the budget's last minute that conflicts again is the answer, not a second hand-off.
+  it('hands off no more once the budget is spent', async () => {
+    const again = { ok: true, output: 'OPEN def456 main CONFLICTING https://github.com/acme/api/pull/12 fix-it false' };
+    const minutes = NEW_HEAD_WAIT_MS / NEW_HEAD_POLL_MS;
+    const github = fakeGitHub({ 'pr view': [branchConflicting, ...Array.from({ length: minutes - 1 }, () => branchConflicting), again, again, again] });
+    const { asked, handOff } = handOffs(true);
+    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: 'def456' } });
+    expect(asked).toHaveLength(1);
+    expect(github.waited).toHaveLength(minutes);
+  });
+
   // Each push came to conflict again: the land gives up rather than loop.
   it('hands off at most HAND_OFFS times', async () => {
     const heads = Array.from({ length: HAND_OFFS + 1 }, (_, round) => `OPEN sha${round} main CONFLICTING https://github.com/acme/api/pull/12 fix-it false`);
