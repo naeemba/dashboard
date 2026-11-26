@@ -5,7 +5,7 @@ import { baseBranch, type BaseBranch } from '../app/base-branch';
 import { isManagerPath } from '../../shared/manager/manager';
 import { blockingChanges, uncommittedCount, workPrompt } from './ship';
 import { entryForCard } from './worktree-store';
-import { FETCH_TIMEOUT_MS, fetchFailure, type ShipWorktree, type ShipWorktreeRequest } from '../actions/worktree/make';
+import { fetchBaseOnce, fetchFailure, type ShipWorktree, type ShipWorktreeRequest } from '../actions/worktree/make';
 
 // A card moved into Ship: the worktree, the branch and the pane. Out of main.ts because
 // main had reached its 600-line ceiling; what it needs from there is the records and the panes, handed
@@ -52,7 +52,7 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
     // Capped like the throwaway's, since the queue is held: a stalled connection would otherwise keep
     // every later ship, review and `pane run --worktree` in this project waiting with no answer.
     try {
-      await git(['fetch', base.remote, base.branch], projectPath, { timeout: FETCH_TIMEOUT_MS });
+      await fetchBaseOnce(git, projectPath, base);
     } catch (error) {
       return { ok: false, message: `fetching ${base.remote} ${base.branch} failed: ${fetchFailure(error)}` };
     }
