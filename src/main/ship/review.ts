@@ -201,8 +201,10 @@ function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
     close: [
       `   When it returns, whatever its ending, close the run in one Bash call run in the background (${LONGEST_BACKGROUND_RUN}),`,
       '   with step 2\'s wait or land as its last command when step 2 has one:',
-      `   \`gh pr comment ${pullRequest} --body "Review loop finished: <status> ..."; gh pr ready ${pullRequest} && <step 2's command>\`.`,
-      '   The comment keeps that first line, which the app reads, then gives the rounds run, the findings addressed',
+      `   \`gh pr comment ${pullRequest} --body-file - <<'END'\`, the body, a line \`END\`, then`,
+      `   \`gh pr ready ${pullRequest} && <step 2's command>\`. The body goes in that quoted heredoc, never a quoted \`--body\`:`,
+      '   a thread\'s text in double quotes is run by the shell. Its first line is `Review loop finished: <status>`,',
+      '   which the app reads, then it gives the rounds run, the findings addressed',
       '   and rejected, the commits from `commitShas`, the final check\'s outcome, and any `floorThreads` or',
       `   \`blockedOnHuman\` left open. \`gh pr ready ${pullRequest}\` only when step 1 printed \`was ready\`: it runs CI once, on the`,
       '   final commit. A pull request that was a draft stays one, with no CI to wait on or land: skip step 2 and say so.',
