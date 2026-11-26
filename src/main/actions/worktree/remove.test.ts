@@ -17,20 +17,24 @@ describe('removalOf', () => {
 });
 
 describe('worktree.remove', () => {
-  function remover() {
+  function remover({ dirty = [] as string[], onOrigin = false } = {}) {
     const asked: { force: boolean; queued: boolean; checked?: string | null }[] = [];
+    let fetched = 0;
     const logged: LogDraft[] = [];
     let inQueue = false;
     const remove = bind(worktreeRemove, {
       remove: async (worktreePath, force, _projectPath, kept) => {
-        asked.push({ force, queued: inQueue, checked: await kept?.(worktreePath) });
+        asked.push({ force, queued: inQueue, checked: await kept?.(worktreePath, dirty) });
         return { ok: true, message: 'removed fix', dirty: [] };
       },
       queue: async (_projectPath, run) => { inQueue = true; try { return await run(); } finally { inQueue = false; } },
       log: (draft) => logged.push(draft),
-      boardNotOnOrigin: async (worktreePath) => `${worktreePath}'s board edits never reached origin/main`,
+      boardNotOnOrigin: async (worktreePath) => {
+        fetched += 1;
+        return onOrigin ? null : `${worktreePath}'s board edits never reached origin/main`;
+      },
     });
-    return { remove, asked, logged };
+    return { remove, asked, logged, fetched: () => fetched };
   }
 
   it('runs the dialog removal on the project queue, forced as asked, and logs it', async () => {
@@ -49,8 +53,21 @@ describe('worktree.remove', () => {
   it('runs the review removal in the queue it already holds, unforced, unlogged and asked about its board edits', async () => {
     const { remove, asked, logged } = remover();
     await remove.call({ worktreePath: '/w/fix', force: true, from: 'review' });
-    expect(asked).toEqual([{ force: false, queued: false, checked: "/w/fix's board edits never reached origin/main; keep the edit elsewhere, then git restore .dashboard/board in /w/fix" }]);
+    expect(asked).toEqual([{ force: false, queued: false, checked: "/w/fix's board edits never reached origin/main; keep the edit elsewhere, then git restore .dashboard/board and git clean -f .dashboard/board in /w/fix" }]);
     expect(logged).toEqual([]);
+  });
+
+  it('lets the review remove a worktree whose board edits all reached origin', async () => {
+    const { remove, asked } = remover({ onOrigin: true });
+    await remove.call({ worktreePath: '/w/fix', force: false, from: 'review' });
+    expect(asked).toEqual([{ force: false, queued: false, checked: null }]);
+  });
+
+  it('does not ask origin about a review removal its work changes refuse anyway', async () => {
+    const { remove, asked, fetched } = remover({ dirty: ['src/a.ts'] });
+    await remove.call({ worktreePath: '/w/fix', force: false, from: 'review' });
+    expect(asked).toEqual([{ force: false, queued: false, checked: null }]);
+    expect(fetched()).toBe(0);
   });
 
   it('refuses a door it does not know', async () => {

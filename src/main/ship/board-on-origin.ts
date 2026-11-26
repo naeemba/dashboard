@@ -23,6 +23,10 @@ import { WORK_STATUS, changedFiles, isBoardPath, pastRemotes } from './ship';
 // A fetch or git that fails keeps it too: silence is not "already there".
 type RunProgram = typeof runProgram;
 
+// The commands that drop a worktree's uncommitted board files, tracked and untracked alike, so this
+// check passes: what the review's refusal tells you to run once the edit is kept elsewhere.
+export const BOARD_DISCARD_STEPS = ['git restore .dashboard/board', 'git clean -f .dashboard/board'] as const;
+
 const version = (path: string, blob: string) => `${path}\0${blob}`;
 
 // `git log --raw` lines (`:100644 100644 <old> <new> M\t<path>`) as the versions they wrote.

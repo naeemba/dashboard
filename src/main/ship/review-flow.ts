@@ -163,7 +163,7 @@ async function swapWorktree(
   if (!removed.ok) {
     // Not tried again: a lock or a board edit origin lacks does not pass by itself, so the line on the
     // card says how the review starts once it is dealt with.
-    if (removed.dirty.length === 0) return { message: `${removed.message}; then board review ${entry.cardId}`, again: false };
+    if (removed.dirty.length === 0) return { message: `${removed.message}; board review ${entry.cardId} starts the review once that is dealt with`, again: false };
     // Uncommitted files are usually the agent's own last commit still being made: the pull request is
     // open, and the agent goes on committing fixes to it, so there is always a window where a change
     // is on disk and its commit is not — and git will not give up a worktree with a change in it. A
@@ -204,7 +204,11 @@ async function clearWorktree(ports: ReviewPorts, entry: WorktreeEntry): Promise<
     .queue(entry.projectPath, () => ports.removeWorktree(entry.worktreePath))
     .catch((error: unknown) => ({ ok: false, message: failureText(error), dirty: [] as string[] }));
   if (removed.ok) return;
-  const reason = refusal(entry, removed, 'remove it from the worktree list');
+  // Asked once per card per run, so a refusal that is not a work change says where the removal goes
+  // from here too.
+  const reason = removed.dirty.length > 0
+    ? refusal(entry, removed, 'remove it from the worktree list')
+    : `${removed.message}; remove it from the worktree list once that is dealt with`;
   editProjectBoard(ports, entry.projectPath, (board) => worktreeKept(board, entry.cardId, reason));
 }
 

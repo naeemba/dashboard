@@ -1,6 +1,7 @@
 import type { WorktreeRemoval } from '../../../shared/app/bridge';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import { removalEntry } from '../../../shared/app/log-entry';
+import { BOARD_DISCARD_STEPS } from '../../ship/board-on-origin';
 import type { KeptCheck } from '../../ship/worktree-keeper';
 import { action } from '../action';
 import { isFilledText } from '../pane/pane-input';
@@ -51,11 +52,12 @@ export const worktreeRemove = action<WorktreeRemovePorts, WorktreeRemoveInput, W
   input: (raw) => read(raw) ?? { refused: 'the worktree to remove was not one the app could read' },
   async run(ports, { worktreePath, projectPath, force, from }) {
     // The review's reason lands on the card with nobody asked, so it names the way out; the dialog's
-    // second confirm is the way out.
+    // second confirm is the way out. The review is not asked while work changes refuse it anyway: its
+    // swap tries again every tick, and each ask fetches origin inside the queue.
     const kept: KeptCheck = from === 'review'
-      ? async (path) => {
-        const reason = await ports.boardNotOnOrigin(path);
-        return reason && `${reason}; keep the edit elsewhere, then git restore .dashboard/board in ${path}`;
+      ? async (path, dirty) => {
+        const reason = dirty.length > 0 ? null : await ports.boardNotOnOrigin(path, dirty);
+        return reason && `${reason}; keep the edit elsewhere, then ${BOARD_DISCARD_STEPS.join(' and ')} in ${path}`;
       }
       : ports.boardNotOnOrigin;
     const how = removalOf(from, force);

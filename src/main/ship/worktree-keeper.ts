@@ -18,8 +18,9 @@ import {
 } from './worktree-store';
 import type { WorktreeEntry, WorktreeList, WorktreeRemoval } from '../../shared/app/bridge';
 
-// Why a folder stays though it has nothing uncommitted past the board, or null to remove it.
-export type KeptCheck = (worktreePath: string) => Promise<string | null>;
+// Why a folder stays though it has nothing uncommitted past the board, or null to remove it. `dirty`
+// is the work changes already refusing the removal, so a door nobody shows both lists can skip asking.
+export type KeptCheck = (worktreePath: string, dirty: readonly string[]) => Promise<string | null>;
 
 // What the keeper needs from main: the record file and what was read from it at launch, the panes and
 // the shells running in them, and the way to tell every screen the list changed.
@@ -170,7 +171,7 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
       // folder has vanished, so the question is skipped rather than asked and lost.
       const status = existsSync(worktreePath) ? await git([...WORK_STATUS], worktreePath) : '';
       const { dirty, forced } = removalChanges(status, force);
-      const reason = forced && kept ? await kept(worktreePath) : null;
+      const reason = forced && kept ? await kept(worktreePath, dirty) : null;
       if (dirty.length > 0 || reason !== null) return { ok: false, message: reason ?? '', dirty };
       await git(['worktree', 'remove', ...(forced ? ['--force'] : []), worktreePath], project);
       forgetSize(worktreePath);

@@ -128,8 +128,11 @@ second confirm names the changed files and the board files origin lacks. The che
 inside the project's queue, so the second question can take up to `FETCH_TIMEOUT` to appear,
 and a ship started meanwhile waits behind it. A review's removal, the swap and the clear after a
 merge, asks the same: origin lacking a file keeps the worktree, and the card's line names the files
-and the way out, `git restore .dashboard/board` in the worktree once the edit is kept, then, for a
-swap, `board review <id>` (since 2026-11-26). The `board` command has written nothing to a worktree
+and the way out: once the edit is kept, `git restore .dashboard/board` and `git clean -f
+.dashboard/board` in the worktree, an added card file being untracked, then `board review <id>`
+for a swap or `d` in the worktree list for a clear, which is asked once a run (since 2026-11-26). A
+review removal that work changes refuse anyway is not asked, so the swap's retry every tick does not
+fetch origin each time. The `board` command has written nothing to a worktree
 since 2026-11-17, so these are card files a script or tool wrote past it, or ones in an older
 worktree. A locked worktree, or one a
 process stands in, is still kept. `ship.ts`, `board-on-origin.ts`, `finished-work.ts`,

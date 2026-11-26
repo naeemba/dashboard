@@ -167,8 +167,9 @@ Whether its loop already finished is read off the merge request's notes through 
   (ship-decision-7, `ship.test.ts`, `remove.test.ts`, `worktree-keeper.test.ts`).
 - Given a reviewed card whose worktree holds a board edit origin's default branch never held, when
   the review swaps or clears it, then the worktree is kept and the card's line names the files,
-  `git restore .dashboard/board` there and, for a swap, `board review <id>` (ship-decision-7,
-  `remove.test.ts`, `review-flow.test.ts`).
+  `git restore` and `git clean -f` of `.dashboard/board` there, and `board review <id>` for a swap
+  or the worktree list for a clear (ship-decision-7, `remove.test.ts`, `board-on-origin.test.ts`,
+  `review-flow.test.ts`).
 - Given a card whose review the sweep started, when the card reaches Done in the same run, then its
   worktree is removed without a restart (`review-flow-clearing.test.ts`).
 - Given a worktree under `<project>.worktrees/` that the app has no record of and no throwaway
