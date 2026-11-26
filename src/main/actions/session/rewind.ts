@@ -3,7 +3,8 @@ import { isRecord } from '../../../shared/app/is-record';
 import { conversationAfterRewind, type RewindChoice, type RewindPoint } from '../../../shared/chat/chat-rewind';
 import { action } from '../action';
 import { isFilledText, isSlot } from '../pane/pane-input';
-import { keepsItsConversation, WORKER_KEEPS_ITS_CONVERSATION, type ConversationPorts } from './conversation-ports';
+import { WORKER_KEEPS_ITS_CONVERSATION } from '../../chat/slot-conversation';
+import type { ConversationPorts } from './conversation-ports';
 
 // A prompt picked in /rewind. The code goes back first, counted by a dry run, and a rewind that cannot
 // put it back leaves the conversation alone too. The conversation goes back by closing the session and
@@ -31,8 +32,8 @@ export const sessionRewind = action<SessionRewindPorts, SessionRewindInput, { ou
   input: (raw) => read(raw) ?? { refused: 'the prompt to rewind to was not one the app could read' },
   async run(ports, { slot, point, choice }) {
     const projectPath = ports.projectPath(slot);
-    const worker = ports.worker(slot);
-    if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
+    const conversation = ports.conversation(slot);
+    if (conversation.keeps) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
     if (projectPath === undefined) return { refused: 'the page has no project to rewind' };
     let restored: RewindFilesResult | null = null;
     if (choice.code) {
@@ -41,7 +42,7 @@ export const sessionRewind = action<SessionRewindPorts, SessionRewindInput, { ou
     }
     const conversationRewind = conversationAfterRewind(point, choice, restored);
     if (conversationRewind !== 'keep') {
-      await ports.change(slot, projectPath, worker, conversationRewind === 'forget' ? undefined : conversationRewind);
+      await ports.change(slot, projectPath, conversation, conversationRewind === 'forget' ? undefined : conversationRewind);
     }
     return { output: `rewound to ${point.id}`, restored };
   },

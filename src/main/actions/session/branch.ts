@@ -1,19 +1,15 @@
-import type { ScreenSession } from '../../chat/chat-sessions';
 import { action } from '../action';
 import { isSlot } from '../pane/pane-input';
-import { keepsItsConversation, WORKER_KEEPS_ITS_CONVERSATION, type ConversationPorts } from './conversation-ports';
+import { WORKER_KEEPS_ITS_CONVERSATION, type SlotConversation } from '../../chat/slot-conversation';
+import type { ConversationPorts } from './conversation-ports';
 
 // /branch: the conversation is copied into a new one and the page goes on in the copy the way /resume
 // goes on in a picked one, so the original is left as it was and stays in /resume's list. A rewind not
 // yet carried on is kept: the copy stops at its cut.
 
 export type SessionBranchPorts = ConversationPorts & {
-  // The conversation running under the key: a worker screen's own, or the page's remembered one.
-  conversationOf(slot: number, projectPath: string): string | undefined;
-  // The message a /rewind of the page's conversation resumes up to, until its next prompt.
-  cutPending(projectPath: string): string | undefined;
-  // `from` copied, up to `cutAt` when given, and the page or screen going on in the copy.
-  fork(slot: number, projectPath: string, worker: ScreenSession | undefined, from: string, cutAt: string | undefined, title: string): Promise<void>;
+  // `from`'s live conversation copied, up to `cutAt` when given, and the page or screen going on in the copy.
+  fork(slot: number, projectPath: string, from: SlotConversation, cutAt: string | undefined, title: string): Promise<void>;
 };
 
 // Why /branch is refused before the page has a conversation to copy.
@@ -25,13 +21,11 @@ export const sessionBranch = action<SessionBranchPorts, { slot: number; title: s
     isSlot(slot) && typeof title === 'string' ? { slot, title } : { refused: 'the conversation to branch was not one the app could read' }
   ),
   async run(ports, { slot, title }) {
-    const worker = ports.worker(slot);
-    if (keepsItsConversation(worker)) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
+    const conversation = ports.conversation(slot);
+    if (conversation.keeps) return { refused: WORKER_KEEPS_ITS_CONVERSATION };
     const projectPath = ports.projectPath(slot);
-    if (projectPath === undefined) return { refused: NOTHING_TO_BRANCH };
-    const current = ports.conversationOf(slot, projectPath);
-    if (current === undefined) return { refused: NOTHING_TO_BRANCH };
-    await ports.fork(slot, projectPath, worker, current, worker ? undefined : ports.cutPending(projectPath), title);
-    return { output: `branched ${current}` };
+    if (projectPath === undefined || conversation.live === undefined) return { refused: NOTHING_TO_BRANCH };
+    await ports.fork(slot, projectPath, conversation, conversation.cut, title);
+    return { output: `branched ${conversation.live}` };
   },
 });
