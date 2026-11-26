@@ -49,7 +49,7 @@ describe('worktree.remove', () => {
   it('runs the review removal in the queue it already holds, unforced, unlogged and asked about its board edits', async () => {
     const { remove, asked, logged } = remover();
     await remove.call({ worktreePath: '/w/fix', force: true, from: 'review' });
-    expect(asked).toEqual([{ force: false, queued: false, checked: "/w/fix's board edits never reached origin/main" }]);
+    expect(asked).toEqual([{ force: false, queued: false, checked: "/w/fix's board edits never reached origin/main; keep the edit elsewhere, then git restore .dashboard/board in /w/fix" }]);
     expect(logged).toEqual([]);
   });
 

@@ -315,7 +315,7 @@ describe('reviewSweep', () => {
     await sweep.run();
     await sweep.run();
     expect(log.removed).toEqual([]);
-    expect(commentsOnCard(projectPath)).toEqual(['No review worktree: not removed: locked']);
+    expect(commentsOnCard(projectPath)).toEqual([`No review worktree: not removed: locked; then board review ${CARD}`]);
   });
 
   // Shipping the card again is a new pull request, and it has to be reviewable.

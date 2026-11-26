@@ -161,7 +161,9 @@ async function swapWorktree(
   // line on it names the branch to go and look at.
   const removed = await ports.removeWorktree(entry.worktreePath);
   if (!removed.ok) {
-    if (removed.dirty.length === 0) return { message: removed.message, again: false };
+    // Not tried again: a lock or a board edit origin lacks does not pass by itself, so the line on the
+    // card says how the review starts once it is dealt with.
+    if (removed.dirty.length === 0) return { message: `${removed.message}; then board review ${entry.cardId}`, again: false };
     // Uncommitted files are usually the agent's own last commit still being made: the pull request is
     // open, and the agent goes on committing fixes to it, so there is always a window where a change
     // is on disk and its commit is not — and git will not give up a worktree with a change in it. A
