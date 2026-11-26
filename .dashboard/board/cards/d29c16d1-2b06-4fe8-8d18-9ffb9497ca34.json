@@ -5,14 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:39.822Z",
-  "updatedAt": "2026-11-26T08:59:41.586Z",
+  "updatedAt": "2026-11-26T09:17:00.736Z",
   "branch": "heavy-checks-wait-on-a-machine-wide-lock-in",
+  "pullRequest": 384,
   "comments": [
     {
       "at": "2026-11-26T08:59:31.133Z",
       "body": "From main: PR #380 (open) changes src/main/skills/work-card-skill.ts to open PRs with pr create; #382 (merged) rewrote the review prompt in src/main/ship/review.ts. Keep your edits to those files small and merge origin/main in if #380 lands first."
+    },
+    {
+      "at": "2026-11-26T09:17:00.715Z",
+      "body": "Pull request #384 opened: Heavy checks wait on a machine-wide lock instead of flaking under load https://github.com/naeemba/dashboard/pull/384"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 5
 }
