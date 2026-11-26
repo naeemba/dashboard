@@ -22,7 +22,7 @@ function board(columns: Record<string, number> = {}): Board {
 const DONE = 5;
 const CANCELLED = 6;
 
-const ready: Readiness = { state: 'ready' };
+const ready: Readiness = { state: 'ready', why: '' };
 
 describe('holdsSlot', () => {
   const look = { mainsWorker: true, state: undefined, paused: false, workIn: false };
@@ -61,17 +61,17 @@ describe('budgetHold', () => {
 
 describe('readiness', () => {
   it('drops an entry whose card is finished, and waits on a closed project or an unfinished --after card', () => {
-    expect(readiness(entry('q1', { cardId: 'a' }), true, board({ a: DONE }))).toEqual({ state: 'drop', why: 'card a is Done' });
-    expect(readiness(entry('q1', { cardId: 'a' }), true, board({ a: CANCELLED })).state).toBe('drop');
-    expect(readiness(entry('q1'), false, null)).toEqual({ state: 'wait', why: 'api is not open' });
-    expect(readiness(entry('q1', { after: 'b' }), true, board())).toEqual({ state: 'wait', why: 'waits on card b' });
-    expect(readiness(entry('q1', { after: 'b' }), true, board({ b: DONE }))).toEqual(ready);
-    expect(readiness(entry('q1', { cardId: 'a' }), true, board())).toEqual(ready);
+    expect(readiness(entry('q1', { cardId: 'a' }), true, () => board({ a: DONE }))).toEqual({ state: 'drop', why: 'card a is Done' });
+    expect(readiness(entry('q1', { cardId: 'a' }), true, () => board({ a: CANCELLED })).state).toBe('drop');
+    expect(readiness(entry('q1'), false, () => null)).toEqual({ state: 'wait', why: 'api is not open' });
+    expect(readiness(entry('q1', { after: 'b' }), true, () => board())).toEqual({ state: 'wait', why: 'waits on card b' });
+    expect(readiness(entry('q1', { after: 'b' }), true, () => board({ b: DONE }))).toEqual(ready);
+    expect(readiness(entry('q1', { cardId: 'a' }), true, () => board())).toEqual(ready);
   });
 
   it('does not wait on a closed project the start opens itself', () => {
     const elsewhere = entry('q1', { work: { kind: 'run', project: 'crm', prompt: 'p', card: null, worktree: false, folder: null, as: null } });
-    expect(readiness(elsewhere, false, null)).toEqual(ready);
+    expect(readiness(elsewhere, false, () => null)).toEqual(ready);
   });
 });
 
@@ -94,7 +94,7 @@ describe('nextToStart', () => {
   it('drops a finished entry whatever the slots, and has nothing to do for an empty queue', () => {
     const finished = (each: QueueEntry): Readiness => (each.id === 'q2' ? { state: 'drop', why: 'card a is Done' } : ready);
     expect(nextToStart([entry('q1'), entry('q2')], 4, 4, free, finished)).toEqual({ drop: entry('q2'), why: 'card a is Done' });
-    expect(nextToStart([], 0, 4, free, () => ready)).toBeNull();
+    expect(nextToStart([], 0, 4, free, () => ready)).toEqual({ held: null });
   });
 });
 

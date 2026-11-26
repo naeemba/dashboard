@@ -130,15 +130,12 @@ function paneId(word: string | undefined, command: string): string | Parsed {
   return PANE_ID.test(word) ? word : refuse(`${word} is not a pane id — claim prints one, like 2:3`);
 }
 
-// run's words after its id, and start's: start also takes --project, --first and --after.
-function parseRunWords(words: readonly string[], verb: 'run' | 'start'): { run: RunWords; project: string | null; first: boolean; after: string | null } | Parsed {
+// run's words after its id, which start takes too.
+function parseRunWords(words: readonly string[], verb: 'run' | 'start'): RunWords | Parsed {
   let card: string | null = null;
   let worktree = false;
   let folder: string | null = null;
   let as: PaneKind | null = null;
-  let project: string | null = null;
-  let first = false;
-  let after: string | null = null;
   const prompt: string[] = [];
   for (let at = 0; at < words.length; at++) {
     const word = words[at];
@@ -154,34 +151,41 @@ function parseRunWords(words: readonly string[], verb: 'run' | 'start'): { run: 
     } else if (word === '--in') {
       folder = words[++at] ?? '';
       if (folder.trim() === '') return refuse('--in needs the folder the worker runs in');
-    } else if (verb === 'start' && word === '--first') first = true;
-    else if (verb === 'start' && word === '--project') {
-      project = (words[++at] ?? '').trim();
-      if (project === '') return refuse('--project needs a project\'s name or aka');
-    } else if (verb === 'start' && word === '--after') {
-      after = words[++at] ?? '';
-      if (after === '') return refuse('--after needs the card id, the one `board list` prints');
     } else prompt.push(word);
   }
   if ([card !== null, worktree, folder !== null].filter(Boolean).length > 1) {
     return refuse('a task runs in its card\'s worktree, a throwaway one or a folder you name with --in, only one of them');
   }
   if (prompt.join(' ').trim() === '') return refuse(`pane ${verb} needs a prompt for the worker`);
-  return { run: { prompt: prompt.join(' '), card, worktree, folder, as }, project, first, after };
+  return { prompt: prompt.join(' '), card, worktree, folder, as };
 }
 
 function parseRun(words: readonly string[]): Parsed {
   const id = paneId(words[0], 'run');
   if (typeof id !== 'string') return id;
   const read = parseRunWords(words.slice(1), 'run');
-  return 'ok' in read ? read : { ok: true, command: { kind: 'run', id, ...read.run } };
+  return 'ok' in read ? read : { ok: true, command: { kind: 'run', id, ...read } };
 }
 
+// start's own --project, --first and --after taken out, the rest read as run's.
 function parseStart(words: readonly string[]): Parsed {
-  const read = parseRunWords(words, 'start');
-  if ('ok' in read) return read;
-  const { run, project, first, after } = read;
-  return { ok: true, command: { kind: 'start', ...run, project, first, after } };
+  let project: string | null = null;
+  let first = false;
+  let after: string | null = null;
+  const rest: string[] = [];
+  for (let at = 0; at < words.length; at++) {
+    const word = words[at];
+    if (word === '--first') first = true;
+    else if (word === '--project') {
+      project = (words[++at] ?? '').trim();
+      if (project === '') return refuse('--project needs a project\'s name or aka');
+    } else if (word === '--after') {
+      after = words[++at] ?? '';
+      if (after === '') return refuse('--after needs the card id, the one `board list` prints');
+    } else rest.push(word);
+  }
+  const run = parseRunWords(rest, 'start');
+  return 'ok' in run ? run : { ok: true, command: { kind: 'start', ...run, project, first, after } };
 }
 
 const COUNT = /^\d+$/;

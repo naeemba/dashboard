@@ -1,8 +1,8 @@
 import type { Refused } from '../../../shared/app/bridge';
 import type { Board } from '../../../shared/board/board';
 import { failureText } from '../../../shared/errors/failure';
-import { capReached, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type NextStart, type QueueEntry, type QueuedWork } from '../../workers/pane-pool';
-import type { SavedQueue } from '../../workers/pane-queue-store';
+import { capReached, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type NextStart, type QueueEntry } from '../../workers/pane-pool';
+import { queuedWork, type SavedQueue } from '../../workers/pane-queue-store';
 import { action, bind, isRefused, type BoundAction } from '../action';
 import { isFilledText, isFilledTextOrNull } from './pane-input';
 
@@ -41,26 +41,26 @@ export type PaneQueuePorts = {
 
 export type PaneStartInput = Omit<QueueEntry, 'id' | 'queuedAt'> & { first: boolean };
 
-const KINDS: readonly QueuedWork['kind'][] = ['run', 'ship', 'review'];
-
 function startInput(raw: Record<string, unknown>): PaneStartInput | Refused {
   const { dispatcherPath, projectPath, cardId, after, first, work } = raw;
   if (!isFilledText(dispatcherPath) || !isFilledText(projectPath)) return { refused: 'no project was given' };
   if (!isFilledTextOrNull(cardId) || !isFilledTextOrNull(after) || typeof first !== 'boolean') return { refused: 'the start was not one the app could read' };
-  const kind = (work as { kind?: unknown } | null)?.kind;
-  if (!KINDS.includes(kind as QueuedWork['kind'])) return { refused: 'the start was not one the app could read' };
-  return { dispatcherPath, projectPath, cardId, after, first, work: work as QueuedWork };
+  const read = queuedWork(work);
+  if (read === undefined) return { refused: 'the start was not one the app could read' };
+  return { dispatcherPath, projectPath, cardId, after, first, work: read };
 }
 
 const taken = (ports: PaneQueuePorts) => ports.running() + ports.pool.starting.size;
 const save = (ports: PaneQueuePorts) => ports.save({ next: ports.pool.next, entries: ports.pool.entries });
 
-// What would start next, as it stands.
+// What would start next, as it stands. An empty queue asks nothing: a drain runs on every hook's
+// notify, and counting the slots walks every open pane.
 function next(ports: PaneQueuePorts): NextStart {
-  if (!ports.pool.ready) return ports.pool.entries.length === 0 ? null : { held: 'the panes a restart brings back are not all back yet' };
+  if (ports.pool.entries.length === 0) return { held: null };
+  if (!ports.pool.ready) return { held: 'the panes a restart brings back are not all back yet' };
   return nextToStart(
     ports.pool.entries, taken(ports), ports.cap(), ports.budget,
-    (entry) => readiness(entry, ports.open(entry.projectPath), ports.board(entry.projectPath)),
+    (entry) => readiness(entry, ports.open(entry.projectPath), () => ports.board(entry.projectPath)),
   );
 }
 
@@ -79,16 +79,20 @@ function begin(ports: PaneQueuePorts, entry: QueueEntry, quiet: boolean): Promis
 
 export type Drained = { own?: Promise<{ output: string } | Refused>; held: string | null };
 
-// Every entry the free slots allow started, and every dropped one taken out with its main told. `own`
-// is the start or drop of the entry the caller is answering for, which is told nothing.
-export function drainQueue(ports: PaneQueuePorts, answering: string | null = null): Drained {
+// Every entry the free slots allow started, and every dropped one taken out with its main told, then
+// the queue saved once if anything changed, `changed` saying the caller changed it first. `own` is the
+// start or drop of the entry the caller is answering for, which is told nothing.
+export function drainQueue(ports: PaneQueuePorts, answering: string | null = null, changed = false): Drained {
   let own: Drained['own'];
   for (;;) {
     const step = next(ports);
-    if (step === null || 'held' in step) return { own, held: step?.held ?? null };
+    if ('held' in step) {
+      if (changed) save(ports);
+      return { own, held: step.held };
+    }
     const entry = 'drop' in step ? step.drop : step.start;
     ports.pool.entries = ports.pool.entries.filter((each) => each !== entry);
-    save(ports);
+    changed = true;
     const quiet = entry.id === answering;
     if ('drop' in step) {
       if (quiet) own = Promise.resolve({ refused: step.why });
@@ -111,8 +115,7 @@ export const paneStart = action<PaneQueuePorts, PaneStartInput, { output: string
     if (refusal !== null) return { refused: refusal };
     ports.pool.next += 1;
     ports.pool.entries = placed(ports.pool.entries, entry, first);
-    save(ports);
-    const { own, held } = drainQueue(ports, entry.id);
+    const { own, held } = drainQueue(ports, entry.id, true);
     if (own !== undefined) return own;
     const at = ports.pool.entries.indexOf(entry);
     return { output: `queued ${entry.id}, ${ordinal(at + 1)}${held === null ? '' : `: ${held}`}` };
@@ -124,7 +127,7 @@ export const paneQueue = action<PaneQueuePorts, Record<string, never>, { output:
   input: () => ({}),
   run: async (ports) => {
     const step = next(ports);
-    return { output: queueText(ports.pool.entries, step !== null && 'held' in step ? step.held : null, ports.now()) };
+    return { output: queueText(ports.pool.entries, 'held' in step ? step.held : null, ports.now()) };
   },
 });
 

@@ -22,7 +22,7 @@ import { worktreeWithin } from './run-folder';
 import { letGoAndSay, type Throwaway } from '../actions/worktree/throwaway';
 import { statusText, type PaneStatus } from './status-lines';
 import type { OpenPullRequest } from '../board/merge-request';
-import { holdsSlot, type QueueEntry } from './pane-pool';
+import { holdsSlot, type RunWork } from './pane-pool';
 import { panePool, type PanePoolActions } from '../actions/pane/queue';
 import type { PoolPorts } from './pane-queue-store';
 // For main.ts, at its line ceiling, which builds SessionPorts' `pool` with it.
@@ -346,8 +346,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // A queued `pane start`, started: a pane claimed for it as claim would, and run in it. A pane claimed
   // for a run that is refused is released again.
-  async function startRun({ dispatcherPath, work }: QueueEntry): Promise<{ output: string } | Refused> {
-    if (work.kind !== 'run') return { refused: 'not a run' };
+  async function startRun(dispatcherPath: string, work: RunWork): Promise<{ output: string } | Refused> {
     const slot = ports.slotOf(dispatcherPath);
     if (slot === -1) return { refused: `${dispatcherPath} is not open` };
     const claimed = await claim.call({ slot, project: work.project });
@@ -379,7 +378,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       handedWork(id);
       const throwaway = throwaways.get(id);
       throwaways.delete(id);
-      pool.drain();
       return throwaway;
     },
   });
@@ -506,7 +504,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     ...ports.pool,
     running: holding,
     open: (projectPath) => ports.slotOf(projectPath) !== -1,
-    begin: (entry) => (entry.work.kind === 'run' ? startRun(entry) : ports.pool.beginCard(entry)),
+    begin: (entry) => (entry.work.kind === 'run' ? startRun(entry.dispatcherPath, entry.work) : ports.pool.beginCard(entry, entry.work)),
     tell(dispatcherPath, text) {
       const slot = ports.slotOf(dispatcherPath);
       if (slot !== -1) ports.tell(slot, text);
@@ -641,6 +639,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
+    } finally {
+      // Whatever the command changed may have freed a slot: a release, a finish, `landed` keeping a
+      // worker with its work in.
+      pool.drain();
     }
   }, {
     workers,

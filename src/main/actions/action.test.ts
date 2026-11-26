@@ -35,12 +35,14 @@ describe('the action registry', () => {
     await expect(answer({ directory: '/', args: ['claim'] })).resolves.toEqual({ ok: true, output: 'the session command' });
   });
 
-  it('reads an action\'s flags from anywhere after the folder, and gives a stray one the usage', async () => {
+  it('reads an action\'s flags after its words, and refuses one it cannot read with the usage', async () => {
     const flagged = { ...bind(echo, null), name: 'card.ship', words: ['id'], flags: { first: 'switch', after: 'value' } } as const;
     const answer = actionRequests([flagged], otherwise);
-    const reply = await answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', 'card', '--after', 'other', '--first'] });
+    const reply = await answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', 'card', '--after=other', '--first'] });
     expect(JSON.parse(reply.output)).toEqual({ projectPath: '/work/api', id: 'card', after: 'other', first: true, source: 'command' });
-    await expect(answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', 'card', '--last'] }))
+    await expect(answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', 'card', '--after'] }))
+      .resolves.toEqual({ ok: false, output: '--after needs a value\nusage: board ship <id> [--first] [--after <after>]' });
+    await expect(answer({ directory: '/', args: [BOARD_REQUEST, 'ship', '/work/api', '--first'] }))
       .resolves.toEqual({ ok: false, output: 'usage: board ship <id> [--first] [--after <after>]' });
   });
 

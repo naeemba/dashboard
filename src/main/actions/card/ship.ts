@@ -2,6 +2,7 @@ import { cardById, type Board } from '../../../shared/board/board';
 import type { Refused } from '../../../shared/app/bridge';
 import { notOpenRefusal } from '../../ship/ship';
 import { action, isRefused } from '../action';
+import { isFilledTextOrNull } from '../pane/pane-input';
 import { cardInput, type CardInput } from './card-input';
 
 export type CardShipInput = CardInput & { first: boolean; after: string | null };
@@ -25,7 +26,7 @@ export const cardShip = action<CardShipPorts, CardShipInput, { output: string }>
     const card = cardInput(raw);
     if (isRefused(card)) return card;
     const { first = false, after = null } = raw;
-    if (typeof first !== 'boolean' || (after !== null && (typeof after !== 'string' || after.trim() === ''))) {
+    if (typeof first !== 'boolean' || !isFilledTextOrNull(after)) {
       return { refused: 'ship takes --first, and --after with a card id' };
     }
     return { ...card, first, after };

@@ -69,12 +69,12 @@ describe('the card actions on the pane pool', () => {
     ]);
   });
 
-  it('refuses to begin a run, a ship whose project closed while queued, and a review with no worktree', async () => {
-    const entry = { id: 'q1', dispatcherPath: '/work/api', projectPath: '/work/api', cardId: 'card', after: null, queuedAt: '' };
+  it('refuses to begin a ship whose project closed while queued, and a review with no worktree', async () => {
+    const ship = { kind: 'ship', title: 'Fix login' } as const;
+    const entry = { id: 'q1', dispatcherPath: '/work/api', projectPath: '/work/api', cardId: 'card', after: null, queuedAt: '', work: ship };
     const { built } = cards(-1);
-    await expect(built.begin({ ...entry, work: { kind: 'run', project: null, prompt: 'p', card: null, worktree: false, folder: null, as: null } }))
-      .resolves.toEqual({ refused: 'not a card\'s start' });
-    await expect(built.begin({ ...entry, work: { kind: 'ship', title: 'Fix login' } })).resolves.toMatchObject({ refused: expect.stringContaining('Fix login') });
-    await expect(built.begin({ ...entry, work: { kind: 'review' } })).resolves.toEqual({ refused: 'card card has no worktree to review; ship it first' });
+    await expect(built.begin({ ...entry, cardId: null }, ship)).resolves.toEqual({ refused: 'no card was queued' });
+    await expect(built.begin(entry, ship)).resolves.toMatchObject({ refused: expect.stringContaining('Fix login') });
+    await expect(built.begin(entry, { kind: 'review' })).resolves.toEqual({ refused: 'card card has no worktree to review; ship it first' });
   });
 });

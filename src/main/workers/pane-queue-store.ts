@@ -5,34 +5,33 @@ import type { Board } from '../../shared/board/board';
 import { isPaneKindOrNull } from '../../shared/panes/pane-kind';
 import type { Settings } from '../../shared/settings/settings';
 import type { PaneQueuePorts } from '../actions/pane/queue';
+import { isFilledText, isFilledTextOrNull } from '../actions/pane/pane-input';
 import { replaceFile } from '../app/replace-file';
 import { readText } from '../app/missing-file';
 import { budgetVerdict } from '../command/budget-cli';
 import { WEEKLY_USAGE_FILE } from '../usage/weekly-usage-file';
-import { budgetHold, type QueueEntry, type QueuedWork } from './pane-pool';
+import { budgetHold, type CardWork, type QueueEntry, type QueuedWork } from './pane-pool';
 
 // pane-queue.json in the app's user data, next to session.json: the pane pool's queue, written on every
 // change, so an app restart never loses work a main was told is queued. Read once at launch.
 
 export type SavedQueue = { next: number; entries: QueueEntry[] };
 
-const text = (value: unknown): value is string => typeof value === 'string' && value !== '';
-const textOrNull = (value: unknown): value is string | null => value === null || text(value);
-
-function work(stored: unknown): QueuedWork | undefined {
+// What an entry starts, as the file and pane.start's door both read it, or undefined.
+export function queuedWork(stored: unknown): QueuedWork | undefined {
   if (!isRecord(stored)) return undefined;
   if (stored.kind === 'review') return { kind: 'review' };
-  if (stored.kind === 'ship') return text(stored.title) ? { kind: 'ship', title: stored.title } : undefined;
+  if (stored.kind === 'ship') return isFilledText(stored.title) ? { kind: 'ship', title: stored.title } : undefined;
   const { project, prompt, card, worktree, folder, as } = stored;
-  if (stored.kind !== 'run' || !text(prompt) || !textOrNull(project) || !textOrNull(card) || typeof worktree !== 'boolean' || !textOrNull(folder) || !isPaneKindOrNull(as)) return undefined;
+  if (stored.kind !== 'run' || !isFilledText(prompt) || !isFilledTextOrNull(project) || !isFilledTextOrNull(card) || typeof worktree !== 'boolean' || !isFilledTextOrNull(folder) || !isPaneKindOrNull(as)) return undefined;
   return { kind: 'run', project, prompt, card, worktree, folder, as };
 }
 
 function entry(stored: unknown): QueueEntry[] {
   if (!isRecord(stored)) return [];
   const { id, dispatcherPath, projectPath, cardId, after, queuedAt } = stored;
-  const queued = work(stored.work);
-  if (!text(id) || !text(dispatcherPath) || !text(projectPath) || !textOrNull(cardId) || !textOrNull(after) || !text(queuedAt) || queued === undefined) return [];
+  const queued = queuedWork(stored.work);
+  if (!isFilledText(id) || !isFilledText(dispatcherPath) || !isFilledText(projectPath) || !isFilledTextOrNull(cardId) || !isFilledTextOrNull(after) || !isFilledText(queuedAt) || queued === undefined) return [];
   return [{ id, dispatcherPath, projectPath, cardId, after, queuedAt, work: queued }];
 }
 
@@ -62,7 +61,7 @@ export const PANE_QUEUE_FILE = 'pane-queue.json';
 // or a review, which card-actions.ts holds. The rest is the session command's (session-requests.ts).
 export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board' | 'now'> & {
   saved: SavedQueue;
-  beginCard(entry: QueueEntry): Promise<{ output: string } | Refused>;
+  beginCard(entry: QueueEntry, work: CardWork): Promise<{ output: string } | Refused>;
 };
 
 export function poolPorts(

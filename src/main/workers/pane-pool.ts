@@ -2,10 +2,11 @@ import type { WorkerState } from '../../shared/app/bridge';
 import { relativeAge } from '../../shared/app/age';
 import { baseName } from '../../shared/app/base-name';
 import { selectionOf, type Board } from '../../shared/board/board';
-import type { PaneKind } from '../../shared/panes/pane-kind';
+import { workerAbout } from '../../shared/workers/worker-roster';
 import type { Settings } from '../../shared/settings/settings';
 import type { BudgetVerdict } from '../command/budget-cli';
 import { finishedColumnOf } from './auto-release';
+import type { RunWords } from './session-cli';
 
 // The app-held pane pool's decisions (workers-decision-11): which workers hold one of the cap's
 // slots, which queued entry starts next or why the queue is held, and what a pool answers. The pool
@@ -15,9 +16,12 @@ import { finishedColumnOf } from './auto-release';
 // makes its worktree at the start, a review swaps its worktree at the start.
 export type QueuedWork =
   // `pane start`'s words: --project, then run's. `folder` is --in's, already resolved.
-  | { kind: 'run'; project: string | null; prompt: string; card: string | null; worktree: boolean; folder: string | null; as: PaneKind | null }
+  | { kind: 'run'; project: string | null } & RunWords
   | { kind: 'ship'; title: string }
   | { kind: 'review' };
+
+export type RunWork = Extract<QueuedWork, { kind: 'run' }>;
+export type CardWork = Exclude<QueuedWork, RunWork>;
 
 export type QueueEntry = {
   // q7: the counter's, never reused, so a main's stale id never withdraws somebody else's entry.
@@ -62,19 +66,22 @@ export function budgetHold(budget: Settings['budget'], verdict: () => BudgetVerd
   return read.exitCode === 0 ? null : read.line;
 }
 
-export type Readiness = { state: 'ready' } | { state: 'wait' | 'drop'; why: string };
+// `why` is empty for ready.
+export type Readiness = { state: 'ready' | 'wait' | 'drop'; why: string };
 
 // What an entry's start waits on, given the facts about it now. A card already Done or Cancelled is
 // dropped, so one cancelled while queued never starts an hour later. A closed project waits, unless
 // the start opens it (--project, as `pane claim --project` does). An --after card waits until it is
-// finished. A waiting entry never holds up the ones behind it.
-export function readiness(entry: QueueEntry, open: boolean, board: Board | null): Readiness {
+// finished. A waiting entry never holds up the ones behind it. The board is read only for an entry
+// with a card or an --after card.
+export function readiness(entry: QueueEntry, open: boolean, boardOf: () => Board | null): Readiness {
+  const board = entry.cardId === null && entry.after === null ? null : boardOf();
   const finished = entry.cardId === null ? null : finishedColumnOf(board, entry.cardId);
   if (finished !== null) return { state: 'drop', why: `card ${entry.cardId} is ${finished}` };
   const opensItself = entry.work.kind === 'run' && entry.work.project !== null;
   if (!open && !opensItself) return { state: 'wait', why: `${baseName(entry.projectPath)} is not open` };
   if (entry.after !== null && finishedColumnOf(board, entry.after) === null) return { state: 'wait', why: `waits on card ${entry.after}` };
-  return { state: 'ready' };
+  return { state: 'ready', why: '' };
 }
 
 // Why nothing more may start, the cap reached, or null. `running` counts the slots held and the starts
@@ -83,24 +90,21 @@ export function capReached(running: number, cap: number | null): string | null {
   return cap !== null && running >= cap ? `${running} running, the cap is ${cap}` : null;
 }
 
-export type NextStart = { start: QueueEntry } | { drop: QueueEntry; why: string } | { held: string } | null;
+export type NextStart = { start: QueueEntry } | { drop: QueueEntry; why: string } | { held: string | null };
 
-// The entry to start next, first in first out, or one to drop, or why the queue is held, or null for an
+// The entry to start next, first in first out, or one to drop, or why the queue is held, null for an
 // empty queue. The budget is read last, and only when something would start.
 export function nextToStart(
   entries: readonly QueueEntry[], running: number, cap: number | null, budget: () => string | null, readinessOf: (entry: QueueEntry) => Readiness,
 ): NextStart {
-  if (entries.length === 0) return null;
-  const read = entries.map((entry) => ({ entry, ready: readinessOf(entry) }));
-  const dropped = read.find(({ ready }) => ready.state === 'drop');
-  if (dropped !== undefined && dropped.ready.state === 'drop') return { drop: dropped.entry, why: dropped.ready.why };
+  if (entries.length === 0) return { held: null };
+  const read = entries.map((entry) => ({ entry, ...readinessOf(entry) }));
+  const dropped = read.find(({ state }) => state === 'drop');
+  if (dropped !== undefined) return { drop: dropped.entry, why: dropped.why };
   const full = capReached(running, cap);
   if (full !== null) return { held: full };
-  const first = read.find(({ ready }) => ready.state === 'ready');
-  if (first === undefined) {
-    const [head] = read;
-    return { held: `${head.entry.id} ${head.ready.state === 'ready' ? '' : head.ready.why}` };
-  }
+  const first = read.find(({ state }) => state === 'ready');
+  if (first === undefined) return { held: `${read[0].entry.id} ${read[0].why}` };
   const over = budget();
   return over === null ? { start: first.entry } : { held: over };
 }
@@ -129,8 +133,7 @@ export function ordinal(position: number): string {
 function entryAbout(entry: QueueEntry): string {
   if (entry.work.kind === 'ship') return `ship ${entry.cardId} "${entry.work.title}"`;
   if (entry.work.kind === 'review') return `review ${entry.cardId}`;
-  const prompt = entry.work.prompt.split('\n')[0];
-  return `run ${prompt.length > 60 ? `${prompt.slice(0, 59)}…` : prompt}`;
+  return `run ${workerAbout(entry.work.prompt)}`;
 }
 
 // `pane queue`: a line per entry in the order they start, then why the queue is held, if it is.

@@ -21,7 +21,7 @@ import { followedBranch, type PullRequest } from '../../board/pull-request-colum
 import { pullRequestSweep, type PullRequestSweep } from '../../board/pull-request-sweep';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
 import { notOpenRefusal } from '../../ship/ship';
-import type { QueueEntry } from '../../workers/pane-pool';
+import type { CardWork, QueueEntry } from '../../workers/pane-pool';
 import { bind, registerActions, type BoundAction } from '../action';
 import { cardFollow } from './follow';
 import { cardMove } from './move';
@@ -56,7 +56,7 @@ export type CardActions = {
   start: BoundAction;
   actions: BoundAction[];
   // A queued ship or review started, as the pane pool starts it: the ship itself, or the review's swap.
-  begin(entry: QueueEntry): Promise<{ output: string } | Refused>;
+  begin(entry: QueueEntry, work: CardWork): Promise<{ output: string } | Refused>;
 };
 
 export function cardActions(main: CardActionsMain): CardActions {
@@ -114,8 +114,8 @@ export function cardActions(main: CardActionsMain): CardActions {
   const review = bind(cardReview, {
     review: ({ projectPath, id }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after: null, first: false, work: { kind: 'review' } }),
   });
-  async function begin({ projectPath, cardId, work }: QueueEntry): Promise<{ output: string } | Refused> {
-    if (cardId === null || work.kind === 'run') return { refused: 'not a card\'s start' };
+  async function begin({ projectPath, cardId }: QueueEntry, work: CardWork): Promise<{ output: string } | Refused> {
+    if (cardId === null) return { refused: 'no card was queued' };
     if (work.kind === 'review') return reviews.review(cardId);
     // The page it is on now: a project closed and opened again since it was queued has a new one.
     const slot = main.slotOf(projectPath);
