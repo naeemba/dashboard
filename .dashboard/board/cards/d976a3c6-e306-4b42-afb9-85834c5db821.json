@@ -1,0 +1,11 @@
+{
+  "id": "d976a3c6-e306-4b42-afb9-85834c5db821",
+  "title": "finished-work tests time out on the Windows CI job",
+  "notes": "Two tests in src/main/workers/finished-work.test.ts hit vitest's 5 s timeout on the windows job of PR #402 (a docs-only PR, run 45830087851), and main's CI failed then passed on 79dd5def today. Suspect: #393 made these tests run against a real bare origin (git init, push, fetch), and git process spawns are several times slower on Windows runners. Do: find which tests time out from the run's log, then make them fast (share one bare origin per file, or fewer git calls) rather than only raising the timeout; if a raise is the honest fix, raise it for those tests alone and say why. Confirm by a green windows job on two runs.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T13:39:16.572Z",
+  "updatedAt": "2026-11-26T13:39:16.572Z",
+  "column": "Backlog",
+  "order": 53
+}
