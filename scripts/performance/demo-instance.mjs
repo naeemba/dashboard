@@ -27,7 +27,8 @@ export async function connect(port, pick = (target) => target.type === 'page' ||
   const listeners = new Map();
   socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
-    if (message.method) listeners.get(message.method)?.(message.params);
+    const handler = message.method && listeners.get(message.method);
+    if (typeof handler === 'function') handler(message.params);
     const pending = waiting.get(message.id);
     if (!pending) return;
     waiting.delete(message.id);
