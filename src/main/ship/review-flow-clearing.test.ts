@@ -138,4 +138,17 @@ describe('reviewSweep clearing a finished worktree', () => {
       'Worktree kept: uncommitted changes in ship-it, remove it from the worktree list',
     ]);
   });
+
+  it('names the worktree list as the way out of a kept finished worktree with no work change', async () => {
+    const { entry, projectPath } = flight(12);
+    writeBoard(projectPath, inDone(12));
+    const { ports: made } = ports(entry, {
+      removeWorktree: async () => ({ ok: false, message: 'its board edits of a.json never reached origin/main', dirty: [] }),
+    });
+    await sweepWith(made).run();
+    const card = readBoard(projectPath).board.columns[5].cards[0];
+    expect(card.comments?.map((comment) => comment.body)).toEqual([
+      'Worktree kept: its board edits of a.json never reached origin/main; remove it from the worktree list once that is dealt with',
+    ]);
+  });
 });

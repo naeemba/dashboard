@@ -117,8 +117,8 @@ Whether its loop already finished is read off the merge request's notes through 
 - Given a project whose remote is a GitLab host, when its card's merge request opens, then the
   review runs `/mr-loop` on it and waits and merges through glab, never `pr wait`, `pr land` or gh
   (`review.test.ts`, `review-finished.test.ts`).
-- Given an agent set a pull request number, when the review cannot take the worktree yet, then it
-  tries again instead of giving up.
+- Given an agent set a pull request number, when the review cannot take the worktree yet for its
+  uncommitted work changes, then it tries again instead of giving up.
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it
   stopped for its background agents), then nothing is marked and a later tick starts the review,
   after its pane closes too (#300, #313; `review-flow.test.ts`).
@@ -165,6 +165,11 @@ Whether its loop already finished is read off the merge request's notes through 
   without asking once origin's default branch holds them, its board a stale copy of origin's, and
   otherwise asks again naming the files origin lacks, a failed fetch counting as lacking
   (ship-decision-7, `ship.test.ts`, `remove.test.ts`, `worktree-keeper.test.ts`).
+- Given a reviewed card whose worktree holds a board edit origin's default branch never held, when
+  the review swaps or clears it, then the worktree is kept and the card's line names the files,
+  `git restore` and `git clean -f` of `.dashboard/board` there, and `board review <id>` for a swap
+  or the worktree list for a clear (ship-decision-7, `remove.test.ts`, `board-on-origin.test.ts`,
+  `review-flow.test.ts`).
 - Given a card whose review the sweep started, when the card reaches Done in the same run, then its
   worktree is removed without a restart (`review-flow-clearing.test.ts`).
 - Given a worktree under `<project>.worktrees/` that the app has no record of and no throwaway
