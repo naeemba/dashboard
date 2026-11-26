@@ -27,3 +27,6 @@ One line per merged change: date and why.
   starts a review on it, since that review waits on CI and killed a worker's own wait with the
   report after it; with `review.autoLoop` off it still waits on CI itself. A file on the checks'
   coverage line gets a test or a reason in the pull request's body
+- 2026-11-26 — `/work-card` opens the pull request with `pr create` and names `pr ready` and
+  `pr comment`, not raw gh: workers retried `gh pr create` by hand after a GitHub 502 and met
+  `a pull request already exists`

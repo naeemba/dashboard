@@ -6,6 +6,7 @@ import { branchNameFor, worktreePathFor } from '../../ship/ship';
 import { nearestLockfile } from '../../workflow/package-manager-guard';
 import { isFilledText } from '../pane/pane-input';
 import type { BaseBranch } from '../../app/base-branch';
+import type { GitOptions } from '../../app/git';
 
 // Every worktree the app makes, in the folder beside the project where they all go, made only here, so a ship, a dispatched task and a review cannot come to put their work in different
 // places. Three kinds:
@@ -15,7 +16,9 @@ import type { BaseBranch } from '../../app/base-branch';
 // - throwaway: `pane run --worktree`'s, named after its prompt with a fresh id. Not recorded with the
 //   cards' worktrees, since there is no card to show it on; the manager's list finds it through git, and
 //   it goes with its pane unless it holds work (throwaway.ts). Nothing holds the queue for it, so it
-//   takes the queue and fetches itself.
+//   takes the queue and fetches itself, a second later once more if the first fails (an SSH key the
+//   agent lost for a moment); after a second failure it is cut from the remote-tracking ref as the last
+//   fetch left it, with a warning that it may be stale, rather than refused.
 // - again: a reviewed card's branch checked out at the same path once more. No new branch and no base:
 //   the branch is there with the pull request on it. The review holds the queue already.
 //
@@ -29,7 +32,7 @@ export type WorktreeMakeInput =
   | { kind: 'again'; projectPath: string; worktreePath: string; branch: string };
 
 export type WorktreeMakePorts = {
-  git(gitArguments: string[], cwd: string): Promise<string>;
+  git(gitArguments: string[], cwd: string, options?: GitOptions): Promise<string>;
   baseBranch(projectPath: string): Promise<BaseBranch>;
   newId(): string;
   queue<T>(projectPath: string, run: () => Promise<T>): Promise<T>;
@@ -37,9 +40,12 @@ export type WorktreeMakePorts = {
   // The install program, run in the worktree. Throws when it fails, as execFile does.
   install(program: string, programArguments: string[], cwd: string): Promise<unknown>;
   log(draft: LogDraft): void;
+  // Resolves after `milliseconds`: setTimeout's, instant in a test.
+  pause(milliseconds: number): Promise<void>;
 };
 
-export type MadeWorktree = { output: string; branch: string; worktreePath: string };
+// `warning`: what the caller should say beside the path, as the throwaway's stale base.
+export type MadeWorktree = { output: string; branch: string; worktreePath: string; warning?: string };
 
 // What card.ship asks for and gets back: the card kind of the input and the answer, so a field added
 // here reaches the ship's port without another copy to keep in step.
@@ -113,6 +119,44 @@ async function newBranch(ports: WorktreeMakePorts, projectPath: string, title: s
   return made(ports, projectPath, branch, worktreePath);
 }
 
+// Each try at the base's fetch is stopped at this, so a dead network holds the queue two minutes, not
+// two of however long ssh waits.
+export const FETCH_TIMEOUT_MS = 60_000;
+export const FETCH_RETRY_PAUSE_MS = 1_000;
+
+// Whether a failed fetch is worth a second try: anything but a branch the remote does not have, which
+// fails the same way every time. Unlike the board sync's droppedConnection, a refused key is tried
+// again (workers-decision-10).
+function fetchWorthRetrying(error: unknown): boolean {
+  return !/couldn't find remote ref/i.test(fetchFailure(error));
+}
+
+// Why a fetch failed, on one line: the time limit when it stopped it, else the stderr line naming the
+// error (`fatal:`, `denied`), else stderr's first line, else the error itself.
+export function fetchFailure(error: unknown): string {
+  if (!isRecord(error)) return failureText(error);
+  if (error.killed === true) return `stopped after ${FETCH_TIMEOUT_MS / 1000} seconds`;
+  const lines = String(error.stderr ?? '').split('\n').map((line) => line.trim()).filter((line) => line !== '');
+  return lines.find((line) => /fatal:|denied/i.test(line)) ?? lines[0] ?? failureText(error).split('\n')[0];
+}
+
+// The base fetched, a pause later once more if the first try fails; the warning to give when neither worked.
+async function fetchedBase(ports: WorktreeMakePorts, projectPath: string, base: BaseBranch): Promise<string | undefined> {
+  const fetchBase = () => ports.git(['fetch', base.remote, base.branch], projectPath, { timeout: FETCH_TIMEOUT_MS });
+  try {
+    await fetchBase().catch(async (error: unknown) => {
+      if (!fetchWorthRetrying(error)) throw error;
+      await ports.pause(FETCH_RETRY_PAUSE_MS);
+      return fetchBase();
+    });
+    return undefined;
+  } catch (error) {
+    const warning = `fetching ${base.remote} ${base.branch} failed, so the worktree is cut from ${base.remote}/${base.branch} as last fetched and may be stale: ${fetchFailure(error)}`;
+    ports.log({ level: 'warn', kind: 'worktree', project: projectPath, message: warning });
+    return warning;
+  }
+}
+
 export const worktreeMake = action<WorktreeMakePorts, WorktreeMakeInput, MadeWorktree>('worktree.make', {
   words: [],
   input: (raw) => read(raw) ?? { refused: 'the worktree to make was not one the app could read' },
@@ -124,8 +168,9 @@ export const worktreeMake = action<WorktreeMakePorts, WorktreeMakeInput, MadeWor
       // re-entrant: the ship's and the review's taking it again would wait on themselves.
       return ports.queue(projectPath, async () => {
         const base = await ports.baseBranch(projectPath);
-        await ports.git(['fetch', base.remote, base.branch], projectPath);
-        return newBranch(ports, projectPath, input.title, ports.newId(), base);
+        const warning = await fetchedBase(ports, projectPath, base);
+        const worktree = await newBranch(ports, projectPath, input.title, ports.newId(), base);
+        return warning === undefined ? worktree : { ...worktree, warning };
       });
     }
     await ports.git(['worktree', 'add', input.worktreePath, input.branch], projectPath);

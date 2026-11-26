@@ -73,9 +73,10 @@ Neither door holds any of the logic; each only asks.
 
 - **worktree.make** (a ship, a review, `pane run --worktree`): a card's branch off origin's base, a
   reviewed card's branch checked out again, or a throwaway named after its prompt, each made only
-  there. Only the throwaway takes the project's queue and fetches; the ship and the review hold the
-  queue already, and it is not re-entrant. Each then gets the frozen install its lockfile names; a
-  failed one is logged, not undone.
+  there. Only the throwaway takes the project's queue and fetches, twice, then from the
+  remote-tracking ref with a warning; the ship and the review hold the queue already, and it is
+  not re-entrant. Each then gets the frozen install its lockfile names; a failed one is logged,
+  not undone.
 - **worktree.sweep** (launch, after pane.reap): every throwaway worktree on disk, found by its
   marker, given back to a pane standing in it, otherwise removed unless it holds work no remote
   has; one log line says each.

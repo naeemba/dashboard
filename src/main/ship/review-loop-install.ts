@@ -24,11 +24,38 @@ function loopCommand(claudeFolder: string): string {
   return path.join(commandsFolder(claudeFolder), 'pr-loop.md');
 }
 
+// The workflow a GitHub review calls by path (review.ts), the copy install.sh leaves.
+export function loopWorkflow(claudeFolder: string): string {
+  return path.join(claudeFolder, 'workflows', 'pr-loop.js');
+}
+
 // Why a review cannot start for want of `/pr-loop`, or null when the command is there. A link whose
 // checkout has gone counts as missing: the session would read nothing. review-flow.ts refuses on it.
+// So does a workflow copy that is missing or differs from its checkout's: the review calls the copy
+// directly, and an old one runs old rounds next to new command files. This is the `cmp` /pr-loop's
+// own first step makes, made here so no review worker spends a turn on it.
 export function reviewLoopMissing(claudeFolder: string): string | null {
-  if (existsSync(loopCommand(claudeFolder))) return null;
-  return `/pr-loop is not installed (no ${loopCommand(claudeFolder)}); install it with \`${REVIEW_LOOP_INSTALL}\`, then start the review again`;
+  const command = loopCommand(claudeFolder);
+  if (!existsSync(command)) {
+    return `/pr-loop is not installed (no ${command}); install it with \`${REVIEW_LOOP_INSTALL}\`, then start the review again`;
+  }
+  const checkout = loopCheckout(claudeFolder);
+  const installed = loopWorkflow(claudeFolder);
+  const stale = `${installed} is missing or differs from the checkout's; run`;
+  if (checkout === null) return existsSync(installed) ? null : `${stale} \`${REVIEW_LOOP_INSTALL}\`, then start the review again`;
+  if (sameFile(installed, loopWorkflow(checkout))) return null;
+  return `${stale} \`${installLine(checkout, false)}\`, then start the review again`;
+}
+
+// The checkout `pr-loop.md` links into, or null for a command that is a plain file.
+function loopCheckout(claudeFolder: string): string | null {
+  const target = linkTarget(loopCommand(claudeFolder));
+  return target === null ? null : path.dirname(path.dirname(target));
+}
+
+// What to run in the checkout to bring ~/.claude up to it.
+function installLine(checkout: string, pull: boolean): string {
+  return `cd ${posixQuoted(checkout)} && ${pull ? 'git pull && ' : ''}./install.sh`;
 }
 
 // Where a link points, resolved the way the file system does, or null for a file that is not a link.
@@ -79,10 +106,8 @@ export type ReviewLoopGit = (programArguments: string[], cwd: string) => Promise
 // Fetches at most once a day, read off FETCH_HEAD, so a relaunch does not reach GitHub again; a fetch
 // or count that fails (offline, no origin/HEAD) counts as not behind.
 export async function reviewLoopStaleness(claudeFolder: string, git: ReviewLoopGit, now: number): Promise<ReviewLoopStaleness | null> {
-  const target = linkTarget(loopCommand(claudeFolder));
-  if (target === null) return null;
-  const checkout = path.dirname(path.dirname(target));
-  if (!existsSync(checkout)) return null;
+  const checkout = loopCheckout(claudeFolder);
+  if (checkout === null || !existsSync(checkout)) return null;
   let fetched = 0;
   try {
     // ponytail: assumes .git is a folder; a checkout that is itself a worktree fetches on every check.
@@ -122,8 +147,7 @@ export function reviewLoopNotice(staleness: ReviewLoopStaleness | null): string 
     dangling.length > 0 ? `${dangling.map((name) => `~/.claude/${name}`).join(', ')} links to nothing` : '',
   ].filter((problem) => problem !== '');
   if (problems.length === 0) return null;
-  const run = `cd ${posixQuoted(checkout)} && ${behind > 0 ? 'git pull && ' : ''}./install.sh`;
-  return `/pr-loop is out of date: ${problems.join('; ')}. Run \`${run}\``;
+  return `/pr-loop is out of date: ${problems.join('; ')}. Run \`${installLine(checkout, behind > 0)}\``;
 }
 
 // The check main runs at launch and at each review start, its line handed to `say`, or '' to take a

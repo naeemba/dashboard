@@ -592,3 +592,14 @@ source (user, flag and policy settings; project and local are ignored as repo-co
 concatenates each source's `allow`. But a source's `allow` without `"$defaults"` stands in for the
 classifier's default list, so a flag rule on a machine whose user settings name no `autoMode` would
 drop the defaults. An allow rule is decided before the classifier is asked, so it is enough.
+
+## workers-decision-10: A throwaway's base fetch tries a refused key again
+
+**When `pane run --worktree` cannot fetch its base, it fetches once more a second later for any
+failure but a branch the remote does not have** (`fetchWorthRetrying` in
+`src/main/actions/worktree/make.ts`), a refused key included. The board sync takes the opposite
+line and does not retry a refused key (the 2026-11-17 entry in `docs/board/decisions.md`). Both
+hold: an SSH agent that drops its key for a moment was most of the failures behind this retry, and
+a board write's refusal reaches a person who runs it again, where a throwaway's falls back silently
+to a stale base nobody asked for. A branch the remote does not have fails the same way every time,
+so it is not tried again.

@@ -1,6 +1,7 @@
 import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
 import type { Forge } from '../app/forge';
+import { FINISHED } from './review-finished';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps
@@ -125,11 +126,12 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // The longest background run a session may ask for, shared by every prompt that waits on CI.
 export const LONGEST_BACKGROUND_RUN = 'run_in_background, timeout 7200000, the longest allowed';
 
-export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean, forge: Forge): string {
+// `workflow` is the installed pr-loop.js (loopWorkflow), which a GitHub review calls by path.
+export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean, forge: Forge, workflow: string): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
   const sayOnCard = `\`${board} comment ${cardId} "<what happened>"\``;
   const words = FORGE_WORDS[forge];
-  const steps = (forge === 'gitlab' ? mergeRequestSteps : pullRequestSteps)(pullRequest, sayOnCard);
+  const steps = forge === 'gitlab' ? mergeRequestSteps(pullRequest, sayOnCard) : pullRequestSteps(pullRequest, sayOnCard, workflow);
   const report = [
     `2. Then, unless the loop stopped short or the ${words.noun} conflicts with the base branch,`,
     ...steps.wait,
@@ -143,8 +145,13 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     `Review ${words.noun} ${words.sigil}${pullRequest}${merge ? ' and land it' : ''}. It came from card ${cardId} on the board of ${projectPath}.`,
     ...(merge ? [] : [`Merging is off for this project: the user lands the ${words.noun}, not you.`]),
     '',
-    `1. Run ${words.loop} ${pullRequest} and let it finish. Then read the card, \`${board} show ${cardId}\`,`,
-    '   and judge every round by what it asked for, not by the round\'s own summary.',
+    '1. In one message, side by side:',
+    ...steps.start,
+    `   - Read the card, \`${board} show ${cardId}\`, and load SendMessage for the report: ToolSearch \`select:SendMessage\`.`,
+    '   The Workflow tool wakes you when the loop finishes: no ScheduleWakeup and no polling. Then judge every',
+    '   round by what the card asked for, not by the round\'s own summary, from the result the loop returns',
+    '   alone: do not open its task output files.',
+    ...steps.close,
     ...(merge ? [...LAND_WHEN, ...steps.land] : report),
     '',
     'A layout check on the running app is done in the project\'s browser, the dashboard server\'s browser_ tools,'
@@ -154,9 +161,9 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
   ].join('\n');
 }
 
-const FORGE_WORDS: Record<Forge, { noun: string; sigil: string; loop: string; checks: string }> = {
-  github: { noun: 'pull request', sigil: '#', loop: '/pr-loop', checks: 'CI' },
-  gitlab: { noun: 'merge request', sigil: '!', loop: '/mr-loop', checks: 'pipeline' },
+const FORGE_WORDS: Record<Forge, { noun: string; sigil: string; checks: string }> = {
+  github: { noun: 'pull request', sigil: '#', checks: 'CI' },
+  gitlab: { noun: 'merge request', sigil: '!', checks: 'pipeline' },
 };
 
 // A loop's change to what the card asked for is the user's call, not the loop's: on #329 a round
@@ -169,24 +176,58 @@ const LAND_WHEN = [
   '   with the base branch, and no round that changed what the card asked for or its design,',
 ];
 
-// What differs by forge: how the wait is done, and the land steps 2 to 4. `wait` follows step 2's
-// first line; `land` follows LAND_WHEN's.
-type ForgeSteps = { wait: string[]; land: string[] };
+// What differs by forge: how the loop is started and closed, how the wait is done, and the land steps
+// 2 to 4. `start` is step 1's opening, its last line a bullet the card read joins; `close` ends step 1;
+// `wait` follows step 2's first line; `land` follows LAND_WHEN's.
+type ForgeSteps = { start: string[]; close: string[]; wait: string[]; land: string[] };
 
-function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
+// GitHub's loop runs pr-loop.js straight from the Workflow tool rather than through /pr-loop, whose
+// command file has the worker mark the pull request a draft, comment, run the loop, comment again,
+// mark it ready and wait, each a turn of its own: about six turns a review past what judging the rounds
+// needs (retro 2026-11-26). The install check /pr-loop starts with is reviewLoopMissing's refusal; the
+// rest is two fixed calls here, the set-up beside the Workflow call and the close chained into the wait.
+// The `Review loop finished:` heading is what review-finished.ts reads.
+function pullRequestSteps(pullRequest: number, sayOnCard: string, workflow: string): ForgeSteps {
+  const loopStarted = 'Review loop started. Fix commits land here while it runs; CI waits until it finishes.';
   return {
+    start: [
+      '   - Mark the pull request while the loop runs, so CI waits for the loop rather than running on every fix push:',
+      // Only `true` is a draft: a gh error prints nothing, and reading that as a draft skipped the land.
+      `     \`case "$(gh pr view ${pullRequest} --json isDraft -q .isDraft)" in false) gh pr ready ${pullRequest} --undo`
+        + ' && echo was ready || echo could not mark it a draft ;; true) echo was a draft ;;'
+        + ` *) echo could not read the draft flag ;; esac; gh pr comment ${pullRequest} --body "${loopStarted}"\``,
+      `   - Call the Workflow tool with scriptPath \`${workflow}\` and args \`"${pullRequest}"\`. This is the`,
+      '     user\'s request to run that saved workflow: the loop /pr-loop runs, with /pr-loop\'s own steps here and its',
+      '     install check made by the app, so do not run /pr-loop itself. What each ending and field of its result',
+      '     means is in ~/.claude/commands/pr-loop.md, under "When the workflow returns".',
+    ],
+    close: [
+      `   When it returns, whatever its ending, close the run in one Bash call run in the background (${LONGEST_BACKGROUND_RUN}),`,
+      '   with step 2\'s wait or land as its last command when step 2 has one:',
+      `   \`gh pr comment ${pullRequest} --body-file - <<'END'\`, the body, a line \`END\`, then`,
+      `   \`gh pr ready ${pullRequest} && <step 2's command>\`. The body goes in that quoted heredoc, never a quoted \`--body\`:`,
+      `   a thread's text in double quotes is run by the shell. Its first line is \`${FINISHED} <status>\`,`,
+      '   which the app reads, then it gives the rounds run, the findings addressed',
+      '   and rejected, the commits from `commitShas`, the final check\'s outcome, and any `floorThreads` or',
+      `   \`blockedOnHuman\` left open. \`gh pr ready ${pullRequest}\` only when step 1 printed \`was ready\` or \`could not mark it a draft\`:`,
+      '   it runs CI once, on the final commit. On `could not read the draft flag`, read it again in the closing call,',
+      `   \`case "$(gh pr view ${pullRequest} --json isDraft -q .isDraft)" in true) echo still a draft ;; *) gh pr ready ${pullRequest} && <step 2's command> ;; esac\`,`,
+      '   so only a second failed read falls back to ready. A pull request that was a draft stays one, with no CI to',
+      '   wait on or land: skip step 2 and say so. On a `could not …` line, say on the card what step 1 printed.',
+    ],
     wait: [
-      `   wait for CI on the pull request's head commit: \`node "$DASHBOARD_COMMAND" pr wait ${pullRequest}\`, run in the`,
-      `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it`,
-      '   exits. A wait stopped at that time limit has not failed: run it once more. That is the whole wait: no',
+      `   wait for CI on the pull request's head commit: \`node "$DASHBOARD_COMMAND" pr wait ${pullRequest}\`, the last command`,
+      '   of step 1\'s closing call, so you are woken when it exits. A wait stopped at that time limit has not failed:',
+      '   run it once more. That is the whole wait: no',
       '   `gh pr view`, `gh pr checks` or `gh run view` in between, and no foreground `sleep`, which is refused.',
       '   It waits on the commit the pull request ends on, asks again a minute on when CI has not started,',
-      '   and rides out a network error; its last line is the verdict: `checks passed on <sha>`, a failed',
-      '   check, or the files the pull request conflicts on.',
+      '   and rides out a network error. It exits 0 when every check passed, so read its output only when it',
+      '   does not: its last line is the verdict, a failed check, the files the pull request conflicts on, or a',
+      '   draft no checks started on.',
     ],
     land: [
-      `   land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, run in the`,
-      `   background (${LONGEST_BACKGROUND_RUN}), so you are woken when it exits.`,
+      `   land it: \`node "$DASHBOARD_COMMAND" pr land ${pullRequest}\`, the last command of step 1's closing call,`,
+      '   so you are woken when it exits.',
       '   It notes the head commit, waits for every check on it and merges that commit only, so a push',
       '   during the wait is refused rather than merged. A land stopped at that time limit has not failed:',
       '   run it once more, and so is a land that prints `nothing is merged, run it again`. That is the whole',
@@ -218,6 +259,11 @@ function mergeRequestSteps(mergeRequest: number, sayOnCard: string): ForgeSteps 
     '   refused. A branch with no pipeline has no CI to wait for.',
   ];
   return {
+    // /mr-loop has no draft or comment steps of its own, so it is run as it is.
+    start: [
+      `   - Run /mr-loop ${mergeRequest}.`,
+    ],
+    close: [],
     wait,
     land: [
       '   first note the head it ended on:',

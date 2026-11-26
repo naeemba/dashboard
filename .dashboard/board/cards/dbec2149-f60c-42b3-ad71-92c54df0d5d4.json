@@ -5,15 +5,23 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:23:58.303Z",
-  "updatedAt": "2026-11-26T08:40:04.620Z",
+  "updatedAt": "2026-11-26T09:00:26.270Z",
   "branch": "review-workers-run-their-set-up-and-wrap-up",
   "pullRequest": 382,
   "comments": [
     {
       "at": "2026-11-26T08:40:04.585Z",
       "body": "Pull request #382 opened: Review workers run the loop's set-up and wrap-up in two fixed calls https://github.com/naeemba/dashboard/pull/382"
+    },
+    {
+      "at": "2026-11-26T08:58:23.948Z",
+      "body": "Review loop: converged, ready to merge. 2 rounds (floor-addressed at low), 4 findings fixed, 0 rejected, none open: set-up read a failed draft-flag lookup as 'was a draft' (now only a true flag counts); an unread flag is read again at close before gh pr ready; comments still said /pr-loop posts the finish comment; a test variable named any. Commits 38b17f56, df3dfb45 (final check accepted). No conflict with main. CI passed on df3dfb45. Scope unchanged from the card."
+    },
+    {
+      "at": "2026-11-26T09:00:26.242Z",
+      "body": "Pull request #382 merged: Review workers run the loop's set-up and wrap-up in two fixed calls https://github.com/naeemba/dashboard/pull/382"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 308
 }

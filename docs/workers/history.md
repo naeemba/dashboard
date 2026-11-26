@@ -80,3 +80,6 @@ One line per merged change: date and why.
 - 2026-11-26 — `pane status`: each pane with its card, branch, pull request, CI and last message,
   then open pull requests no pane holds, in one call: main made about 250 status calls rebuilding
   its state after its compactions (pane list, board list, gh pr list in turn)
+- 2026-11-26 — `pane run --worktree` fetches its base twice and, failing both, starts on the last
+  fetched base with a warning: one session met nine transient `Permission denied (publickey)`
+  refusals and its agent wrote retry loops by hand

@@ -89,3 +89,17 @@ Matching "gitlab" in the host was the other rule and was not taken: `git.arr.lan
 The host alone is read, so a GitLab path such as `acme/github-sync` stays GitLab. A GitHub
 Enterprise host without "github" in its name would read as GitLab. `pr wait` and `pr land` stay
 gh's. `forge.ts`, `merge-request.ts`. (2026-11-24)
+
+## ship-decision-6: A GitHub review runs pr-loop.js, not /pr-loop
+
+**On GitHub the review prompt calls `~/.claude/workflows/pr-loop.js` with the Workflow tool and
+does `/pr-loop`'s fixed steps itself: the draft flag and `Review loop started` in one call beside
+the Workflow call, and `Review loop finished: <status>`, the ready flag and the wait or land chained
+in one background call after it. `/pr-loop`'s install `cmp` is the review start's refusal
+(`reviewLoopMissing`).** Through `/pr-loop` each of those steps was a turn: on 2026-11-26 twelve
+review workers ran the same sequence by hand, about six turns a review past judging the rounds, and
+seven armed a ScheduleWakeup nobody asked for. Changing `pr-loop.md` in claude-pr-loop was the other
+option and was not taken here: that command is used on its own too, where nothing else marks the
+pull request. The cost is a copy of its draft and comment steps in `review.ts`, which has to follow
+a change to them there; `review-finished.ts` already reads the finish heading. GitLab's `/mr-loop`
+has no such steps and is run as it is. `review.ts`, `review-loop-install.ts`. (2026-11-26)

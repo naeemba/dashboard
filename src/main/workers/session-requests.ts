@@ -71,7 +71,8 @@ export type SessionPorts = {
   withdraw(slot: number, messageId: string): void;
   // The worktree a card was shipped into, if it still has one, and whether an agent is at work in it.
   cardWorktree(projectPath: string, cardId: string): { worktreePath: string; working: boolean } | undefined;
-  makeWorktree(projectPath: string, title: string): Promise<string>;
+  // A warning is what the answer says beside the path: a base that could not be fetched.
+  makeWorktree(projectPath: string, title: string): Promise<{ worktreePath: string; warning?: string }>;
   // Marks the worktree a throwaway on disk, for the launch's sweep to find (throwaway-marker.ts).
   markThrowaway(worktreePath: string): Promise<void>;
   // Why `run --in` may not start a worker in the folder, or the worktree of the repository it is in,
@@ -274,7 +275,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const held = throwaways.get(id);
     if (worktree && held !== undefined) return refused(`${id} still holds ${held.worktreePath} — release it first`);
     let directory = projectPath;
-    let unmarked = '';
+    let caveats = '';
     if (card !== null) {
       const found = ports.cardWorktree(projectPath, card);
       if (found === undefined) return refused(`card ${card} has no worktree — moving it to Ship makes one`);
@@ -284,11 +285,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (working !== undefined) return refused(`${working} already has an agent at work in ${found.worktreePath}`);
       directory = found.worktreePath;
     } else if (worktree) {
-      directory = await ports.makeWorktree(projectPath, prompt);
+      const made = await ports.makeWorktree(projectPath, prompt);
+      directory = made.worktreePath;
+      if (made.warning !== undefined) caveats = ` (${made.warning})`;
       throwaways.set(id, { worktreePath: directory, projectPath });
       // Marked only once held here, so the sweep never takes one still being made for a pane. A mark
       // that fails costs only the sweep finding it after a restart, so the worker starts anyway.
-      unmarked = await ports.markThrowaway(directory).then(
+      caveats += await ports.markThrowaway(directory).then(
         () => '',
         (error: unknown) => ` (not marked a throwaway, so a restart will not sweep it: ${failureText(error)})`,
       );
@@ -314,7 +317,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     handedWork(id);
     // As its hooks would say it, so a status line counting the asker's workers counts this one now.
     ports.mark(id, 'running');
-    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}${unmarked} ${paneLink(id)}`);
+    return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}${caveats} ${paneLink(id)}`);
   }
 
   const release = bind(paneRelease, {

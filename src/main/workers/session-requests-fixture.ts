@@ -63,7 +63,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       'card-1': { worktreePath: '/work/api.worktrees/card-one', working: false },
       'card-3': { worktreePath: '/work/api.worktrees/card-three', working: true },
     })[cardId],
-    makeWorktree: async () => '/work/api.worktrees/fix-the-tests',
+    makeWorktree: async () => ({ worktreePath: '/work/api.worktrees/fix-the-tests' }),
     markThrowaway: async () => undefined,
     // api-mr174 is a sibling worktree, x one nested in the checkout, packages/web a folder of it.
     checkRunFolder: async (_projectPath, folder) => (

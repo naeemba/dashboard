@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:29.163Z",
-  "updatedAt": "2026-11-26T08:39:20.645Z",
+  "updatedAt": "2026-11-26T08:40:17.746Z",
   "branch": "board-card-writes-never-leave-the-main-chec",
   "pullRequest": 379,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-26T08:39:20.645Z",
       "body": "Review loop on #379: converged, ready to merge. 1 round, review found nothing, no fix commits, no conflict with main. CI passed on 0d4eac01. Scope matches the card: checkoutStep now ignores untracked files, so a checkout with an untracked .claude/ fast-forwards after a board write instead of keeping the card edit uncommitted. Still dirty by design: a checkout on another branch, one ahead of origin, or one with a tracked change outside .dashboard/."
+    },
+    {
+      "at": "2026-11-26T08:40:17.709Z",
+      "body": "Pull request #379 merged: Fast-forward the checkout past untracked files after a board sync https://github.com/naeemba/dashboard/pull/379"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 307
 }
