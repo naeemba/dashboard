@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bind } from '../action';
 import type { LogDraft } from '../../../shared/app/log-entry';
-import { frozenInstall, installFailure, worktreeMake } from './make';
+import { FETCH_RETRY_PAUSE_MS, FETCH_TIMEOUT_MS, fetchFailure, frozenInstall, installFailure, worktreeMake } from './make';
 
 // An error shaped like execFile's for a failed pnpm: the reason on stdout, the message only stderr's.
 const PNPM_FAILURE = Object.assign(new Error('Command failed: pnpm install --frozen-lockfile\n(node) [DEP0169] DeprecationWarning'), {
@@ -11,13 +11,16 @@ const PNPM_FAILURE = Object.assign(new Error('Command failed: pnpm install --fro
 
 // `files` are the paths that exist, read with `/` since the lockfile lookup joins with the platform's
 // separator and on Windows asks for `\code\api.worktrees\fix\.git`; an install of `failing` throws. Each install is noted with whether
-// the queue was held while it ran. The first `fetchFailures` fetches fail as a lost SSH key does.
-function maker(files: string[] = [], failing?: string, fetchFailures = 0) {
+// the queue was held while it ran. The first `fetchFailures` fetches fail with `fetchError`, a lost SSH
+// key's by default; each fetch's time limit and each pause are noted.
+function maker(files: string[] = [], failing?: string, fetchFailures = 0, fetchError = 'Permission denied (publickey).') {
   let fetchesLeftToFail = fetchFailures;
   const ran: string[] = [];
   const queued: string[] = [];
   const installed: string[] = [];
   const logged: LogDraft[] = [];
+  const fetchTimeouts: (number | undefined)[] = [];
+  const paused: number[] = [];
   let queueHeld = false;
   const make = bind(worktreeMake, {
     exists: (path) => files.includes(path.replaceAll('\\', '/')),
@@ -26,20 +29,22 @@ function maker(files: string[] = [], failing?: string, fetchFailures = 0) {
       if (program === failing) throw PNPM_FAILURE;
     },
     log: (draft) => logged.push(draft),
-    async git(gitArguments) {
+    async git(gitArguments, _cwd, options) {
       ran.push(gitArguments.join(' '));
-      if (gitArguments[0] === 'fetch' && fetchesLeftToFail-- > 0) throw new Error('Permission denied (publickey).');
+      if (gitArguments[0] === 'fetch') fetchTimeouts.push(options?.timeout);
+      if (gitArguments[0] === 'fetch' && fetchesLeftToFail-- > 0) throw Object.assign(new Error(`Command failed: git ${gitArguments.join(' ')}\n${fetchError}\n`), { stderr: `${fetchError}\n` });
       return gitArguments[0] === 'for-each-ref' ? 'main\n' : '';
     },
     baseBranch: async () => ({ remote: 'gitlab', branch: 'develop' }),
     newId: () => 'fresh-id',
+    async pause(milliseconds) { paused.push(milliseconds); },
     async queue(projectPath, run) {
       queued.push(projectPath);
       queueHeld = true;
       try { return await run(); } finally { queueHeld = false; }
     },
   });
-  return { make, ran, queued, installed, logged };
+  return { make, ran, queued, installed, logged, fetchTimeouts, paused };
 }
 
 describe('worktree.make', () => {
@@ -61,10 +66,12 @@ describe('worktree.make', () => {
     expect(ran.at(-1)).toMatch(/^worktree add -b \S*try-a-thing\S* \S+ gitlab\/develop$/);
   });
 
-  it('fetches a throwaway\'s base once more when the first fetch fails, and says nothing', async () => {
-    const { make, ran, logged } = maker([], undefined, 1);
+  it('fetches a throwaway\'s base once more a pause after the first fetch fails, and says nothing', async () => {
+    const { make, ran, logged, fetchTimeouts, paused } = maker([], undefined, 1);
     const made = await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
     expect(ran.slice(0, 2)).toEqual(['fetch gitlab develop', 'fetch gitlab develop']);
+    expect(fetchTimeouts).toEqual([FETCH_TIMEOUT_MS, FETCH_TIMEOUT_MS]);
+    expect(paused).toEqual([FETCH_RETRY_PAUSE_MS]);
     expect(made).not.toHaveProperty('warning');
     expect(logged).toEqual([]);
   });
@@ -73,8 +80,23 @@ describe('worktree.make', () => {
     const { make, ran, logged } = maker([], undefined, 2);
     const made = await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
     expect(ran.at(-1)).toMatch(/^worktree add -b \S*try-a-thing\S* \S+ gitlab\/develop$/);
-    expect(made).toMatchObject({ warning: expect.stringMatching(/gitlab\/develop as last fetched and may be stale: .*publickey/) });
+    expect(made).toMatchObject({ warning: expect.stringMatching(/gitlab\/develop as last fetched and may be stale: Permission denied \(publickey\)\.$/) });
     expect(logged).toEqual([expect.objectContaining({ level: 'warn', kind: 'worktree', message: expect.stringContaining('may be stale') })]);
+  });
+
+  it('does not fetch a branch the remote does not have a second time', async () => {
+    const { make, ran, paused } = maker([], undefined, 2, "fatal: couldn't find remote ref develop");
+    const made = await make.call({ kind: 'throwaway', projectPath: '/code/api', title: 'try a thing' });
+    expect(ran.filter((line) => line.startsWith('fetch'))).toEqual(['fetch gitlab develop']);
+    expect(paused).toEqual([]);
+    expect(made).toMatchObject({ warning: expect.stringMatching(/may be stale: fatal: couldn't find remote ref develop$/) });
+  });
+
+  it('reads a failed fetch as one line: the time limit, the fatal line, or the error\'s first line', () => {
+    expect(fetchFailure(Object.assign(new Error('Command failed: git fetch gitlab develop\n'), { killed: true, stderr: '' }))).toBe('stopped after 60 seconds');
+    const refused = 'git@host: Permission denied (publickey).\nfatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\n';
+    expect(fetchFailure(Object.assign(new Error('Command failed'), { stderr: refused }))).toBe('git@host: Permission denied (publickey).');
+    expect(fetchFailure(Object.assign(new Error('Command failed: git fetch\nwarning: odd'), { stderr: '' }))).toBe('Command failed: git fetch');
   });
 
   it('checks a reviewed card branch out again at its own path, with no new branch', async () => {

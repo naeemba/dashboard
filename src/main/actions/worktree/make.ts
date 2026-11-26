@@ -16,9 +16,9 @@ import type { GitOptions } from '../../app/git';
 // - throwaway: `pane run --worktree`'s, named after its prompt with a fresh id. Not recorded with the
 //   cards' worktrees, since there is no card to show it on; the manager's list finds it through git, and
 //   it goes with its pane unless it holds work (throwaway.ts). Nothing holds the queue for it, so it
-//   takes the queue and fetches itself, twice if the first fails (an SSH key the agent lost for a
-//   moment); after a second failure it is cut from the remote-tracking ref as the last fetch left it,
-//   with a warning that it may be stale, rather than refused.
+//   takes the queue and fetches itself, a second later once more if the first fails (an SSH key the
+//   agent lost for a moment); after a second failure it is cut from the remote-tracking ref as the last
+//   fetch left it, with a warning that it may be stale, rather than refused.
 // - again: a reviewed card's branch checked out at the same path once more. No new branch and no base:
 //   the branch is there with the pull request on it. The review holds the queue already.
 //
@@ -40,6 +40,8 @@ export type WorktreeMakePorts = {
   // The install program, run in the worktree. Throws when it fails, as execFile does.
   install(program: string, programArguments: string[], cwd: string): Promise<unknown>;
   log(draft: LogDraft): void;
+  // Resolves after `milliseconds`: setTimeout's, instant in a test.
+  pause(milliseconds: number): Promise<void>;
 };
 
 // `warning`: what the caller should say beside the path, as the throwaway's stale base.
@@ -120,15 +122,38 @@ async function newBranch(ports: WorktreeMakePorts, projectPath: string, title: s
 // Each try at the base's fetch is stopped at this, so a dead network holds the queue two minutes, not
 // two of however long ssh waits.
 export const FETCH_TIMEOUT_MS = 60_000;
+export const FETCH_RETRY_PAUSE_MS = 1_000;
 
-// The base fetched, once more if the first try fails; the warning to give when neither worked.
+// Whether a failed fetch is worth a second try: anything but a branch the remote does not have, which
+// fails the same way every time. Unlike the board sync's droppedConnection, a refused key is tried
+// again: an SSH agent that drops its key for a moment was most of the failures behind this retry, and
+// a board write's refusal reaches a person who runs it again, where a throwaway's falls back to a
+// stale base nobody asked for.
+export function fetchWorthRetrying(error: unknown): boolean {
+  return !/couldn't find remote ref/i.test(fetchFailure(error));
+}
+
+// Why a fetch failed, on one line: the time limit when it stopped it, else the stderr line naming the
+// error (`fatal:`, `denied`), else stderr's first line, else the error itself.
+export function fetchFailure(error: unknown): string {
+  if (!isRecord(error)) return failureText(error);
+  if (error.killed === true) return `stopped after ${FETCH_TIMEOUT_MS / 1000} seconds`;
+  const lines = String(error.stderr ?? '').split('\n').map((line) => line.trim()).filter((line) => line !== '');
+  return lines.find((line) => /fatal:|denied/i.test(line)) ?? lines[0] ?? failureText(error).split('\n')[0];
+}
+
+// The base fetched, a pause later once more if the first try fails; the warning to give when neither worked.
 async function fetchedBase(ports: WorktreeMakePorts, projectPath: string, base: BaseBranch): Promise<string | undefined> {
-  const fetch = () => ports.git(['fetch', base.remote, base.branch], projectPath, { timeout: FETCH_TIMEOUT_MS });
+  const fetchBase = () => ports.git(['fetch', base.remote, base.branch], projectPath, { timeout: FETCH_TIMEOUT_MS });
   try {
-    await fetch().catch(fetch);
+    await fetchBase().catch(async (error: unknown) => {
+      if (!fetchWorthRetrying(error)) throw error;
+      await ports.pause(FETCH_RETRY_PAUSE_MS);
+      return fetchBase();
+    });
     return undefined;
   } catch (error) {
-    const warning = `fetching ${base.remote} ${base.branch} failed twice, so the worktree is cut from ${base.remote}/${base.branch} as last fetched and may be stale: ${failureText(error)}`;
+    const warning = `fetching ${base.remote} ${base.branch} failed, so the worktree is cut from ${base.remote}/${base.branch} as last fetched and may be stale: ${fetchFailure(error)}`;
     ports.log({ level: 'warn', kind: 'worktree', project: projectPath, message: warning });
     return warning;
   }

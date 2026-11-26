@@ -250,7 +250,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   runs, then the worker starts anyway and the reply says a restart will not
   sweep that folder.
 - Given fetching the base fails (an SSH key lost for a moment), when `pane run
-  --worktree` runs, then it fetches once more; if that fails too, the worktree
+  --worktree` runs, then it fetches once more a second later (not for a branch
+  the remote does not have); if that fails too, the worktree
   is cut from the remote-tracking ref as the last fetch left it, and the reply
   and the log warn that it may be stale.
 - Given a throwaway worktree a merge already removed

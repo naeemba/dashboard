@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { setTimeout as pause } from 'node:timers/promises';
 import type { Refused, WorktreeEntry, WorktreeRemoval } from '../../../shared/app/bridge';
 import { git, runProgram } from '../../app/git';
 import { baseBranch } from '../../app/base-branch';
@@ -39,7 +40,7 @@ async function install(program: string, programArguments: string[], cwd: string)
 
 export function worktreeActions(main: WorktreeRemovePorts) {
   const make = bind(worktreeMake, {
-    git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install,
+    git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install, pause,
   });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, main);
   // What a throwaway's worker is asked before it is let go of, and what letting go of it takes
