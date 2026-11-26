@@ -137,11 +137,14 @@ export function totalsOf(files: Iterable<FileUsage>, now: number): Totals {
 
 // Whether a session ran in a project. Its own checkout, anything underneath it, and the worktrees the
 // ship makes beside it — which are a sibling folder, not a child, so a plain prefix test would drop
-// every card an agent worked. worktreesRoot in ship.ts is the one spelling of where they go.
+// every card an agent worked. worktreesRoot in ship.ts is the one spelling of where they go. Either
+// separator ends the folder: on Windows C:\work\api\src is under C:\work\api.
 export function ranInProject(directory: string, projectPath: string, worktrees: string): boolean {
-  return directory === projectPath
-    || directory.startsWith(`${projectPath}/`)
-    || directory.startsWith(`${worktrees}/`);
+  return directory === projectPath || isUnder(directory, projectPath) || isUnder(directory, worktrees);
+}
+
+function isUnder(directory: string, folder: string): boolean {
+  return directory.startsWith(folder) && /[\\/]/.test(directory.charAt(folder.length));
 }
 
 const UNITS = [
