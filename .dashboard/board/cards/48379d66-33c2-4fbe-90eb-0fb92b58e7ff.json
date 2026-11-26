@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T14:49:26.436Z",
-  "updatedAt": "2026-11-26T14:28:58.809Z",
+  "updatedAt": "2026-11-26T14:29:26.378Z",
   "branch": "experiment-keep-the-hidden-manager-page-pai",
   "pullRequest": 402,
   "comments": [
@@ -28,8 +28,12 @@
     {
       "at": "2026-11-26T14:28:58.809Z",
       "body": "Merged origin/main twice more (#401, then #403, both editing docs/performance/history.md; merged cleanly, every section kept). Head e491c3aa: all checks passed. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:29:26.280Z",
+      "body": "Pull request #402 merged: Record that keeping the hidden manager painted does not speed up Ctrl+1 https://github.com/naeemba/dashboard/pull/402"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 331
 }
