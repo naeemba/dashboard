@@ -51,9 +51,10 @@ Every project also carries three token figures at the end of its row, each with
 its name: the last five hours, this week counting from Monday, and all time. A
 pane running a Claude Code agent carries what that agent has cost, in its Tokens
 column. They are read out of Claude Code's own logs on this machine and refresh
-every half minute. The first reading after a launch goes through every log there
-is, so with years of them the figures can take twenty seconds to appear; the
-panes and typing do not wait for it. The four figures along the top add every
+every half minute. A first reading with nothing saved goes through every log
+there is, so with years of them the figures can take twenty seconds to appear;
+later launches start from the counts saved last time and read only the logs
+that changed. The panes and typing do not wait for it. The four figures along the top add every
 open project up — the three windows, the week as one bar a day with its letter
 under it, and how many worktrees are out, how many of those hold uncommitted
 work, and how many git could not answer for.
