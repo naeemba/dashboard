@@ -304,12 +304,14 @@ parser reads past a flag it does not know, so the retry is for apps from before 
 flag a hook grows takes a value: the parser reads the words in pairs and refuses an odd number of
 them.
 
-**`pane list`, `pane report` and `pane release` are answered from any stamped build of the same
-major version** (2026-11-24). After an install main still runs them before anyone restarts, and the
-refusal cost main every pane until the restart. Their words are a verb and a pane id or a flag or
-two, an older parser refuses a flag it does not know in words the person can read, a read changes
-nothing, and a release is the one thing main needs to tidy up before restarting. Every other verb is
-still refused across builds: `run`, `send` and `claim` are where the shape of a request has changed.
+**`pane list`, `pane report`, `pane status` and `pane release` are answered from any stamped
+build of the same major version** (2026-11-24). After an install main still runs them before anyone
+restarts, and the refusal cost main every pane until the restart. Their words are a verb and a pane
+id or a flag or two, or for `status` nothing past the verb, so an older parser has nothing to
+misread; an older parser refuses a flag it does not know in words the person can read, a read
+changes nothing, and a release is the one thing main needs to tidy up before restarting. Every
+other verb is still refused across builds: `run`, `send` and `claim` are where the shape of a
+request has changed.
 
 **The app accepts a request before answering it, and only the acceptance is timed.** An app from
 before the stamp cannot refuse anything; it hung waiting for a half close the command no longer

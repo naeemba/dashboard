@@ -35,8 +35,9 @@ export function unacceptedLine(milliseconds: number): string {
 //
 // A read, and release, are let through from a stamped build of the same major version: after an
 // install main runs `pane list` and `pane release` before anyone restarts, and refusing them lost it
-// every pane until the restart. Their words are a verb and a pane id or two flags, an old parser refuses
-// a flag it does not know, and a wrong answer to a read changes nothing (workers-decision-4).
+// every pane until the restart. Their words are a verb and a pane id or two flags, or for status the
+// verb alone, an old parser refuses a flag it does not know, and a wrong answer to a read changes
+// nothing (workers-decision-4).
 const ACROSS_BUILDS = ['list', 'report', 'status', 'release'];
 const major = (version: string) => version.split('.')[0];
 
