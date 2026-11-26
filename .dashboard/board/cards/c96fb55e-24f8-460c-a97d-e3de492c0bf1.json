@@ -1,0 +1,11 @@
+{
+  "id": "c96fb55e-24f8-460c-a97d-e3de492c0bf1",
+  "title": "pr wait refuses a draft PR; pr create, ready and comment retry GitHub 5xx safely",
+  "notes": "Retro 2026-11-26. (1) pr wait on a draft PR can wait forever: CI skips drafts, and pull-request-cli.ts never mentions drafts. It should refuse straight away, saying the PR is a draft. (2) Workers retry GitHub 502 and GraphQL errors by hand, and the retries are unsafe: 17 errors across 6 sessions; one gh pr create failed 5 times and then hit 'a pull request already exists'. Add pr create, pr ready and pr comment verbs to the dashboard command (src/main/command/pull-request-cli.ts) that retry 5xx with backoff and check state first (an existing PR for the branch, ready already). Point work-card and the review prompts at them instead of raw gh.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T08:24:06.521Z",
+  "updatedAt": "2026-11-26T08:24:06.522Z",
+  "column": "Backlog",
+  "order": 70
+}
