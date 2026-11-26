@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:29.163Z",
-  "updatedAt": "2026-11-26T08:25:31.239Z",
+  "updatedAt": "2026-11-26T08:34:23.842Z",
   "branch": "board-card-writes-never-leave-the-main-chec",
-  "column": "Doing",
+  "pullRequest": 379,
+  "comments": [
+    {
+      "at": "2026-11-26T08:34:23.821Z",
+      "body": "Pull request #379 opened: Fast-forward the checkout past untracked files after a board sync https://github.com/naeemba/dashboard/pull/379"
+    }
+  ],
+  "column": "Review",
   "order": 1
 }
