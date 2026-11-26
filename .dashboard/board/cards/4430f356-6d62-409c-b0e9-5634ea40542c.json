@@ -1,0 +1,11 @@
+{
+  "id": "4430f356-6d62-409c-b0e9-5634ea40542c",
+  "title": "pane run --worktree survives one failed git fetch",
+  "notes": "Retro 2026-11-26: in the hermes session, pane run --worktree failed 9 times with 'session run failed: Command failed: git fetch origin master ... Permission denied (publickey)', a transient SSH failure, and the agent wrote retry loops by hand. The fetch is in src/main/actions/worktree/make.ts (~line 127). Retry the fetch once; if it still fails, cut the worktree from the local remote-tracking ref and print a warning that it may be stale, rather than refusing.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T08:24:17.573Z",
+  "updatedAt": "2026-11-26T08:24:17.573Z",
+  "column": "Backlog",
+  "order": 71
+}
