@@ -148,10 +148,10 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
   // `projectPath` is for a worktree the app has no record of — one the manager found through git — and
   // is the project to ask git from. A recorded worktree is asked from the project its record names.
   //
-  // `kept`, when given, is asked whenever forcing git past the board's files would lose them; a reason
-  // from it refuses the removal in those words, beside the work changes when there are any too, so the
-  // second question names both (removalOf in remove.ts says which door gives one). A clean worktree is
-  // not asked: an unforced remove loses no commit.
+  // `kept`, when given, is asked whenever forcing git past the board's files would lose them; a
+  // reason from it refuses the removal in those words, beside the work changes when there are any
+  // too, so the second question names both (removalOf in remove.ts says which door gives one). A
+  // clean worktree is not asked: an unforced remove loses no commit.
   async function remove(worktreePath: string, force: boolean, projectPath?: string, kept?: KeptCheck): Promise<WorktreeRemoval> {
     const entry = entryForPath(entries, worktreePath);
     const project = entry?.projectPath ?? projectPath;

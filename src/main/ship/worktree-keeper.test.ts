@@ -104,7 +104,8 @@ describe('remove', () => {
       writeFileSync(join(worktreePath, 'a.ts'), 'work');
       const { keeper } = keeperWith([], new Map());
       const reason = 'its board edits of .dashboard/board/cards/a1.json never reached origin/main';
-      expect(await keeper.remove(worktreePath, false, project, async () => reason)).toEqual({ ok: false, message: reason, dirty: ['a.ts'] });
+      const refused = await keeper.remove(worktreePath, false, project, async () => reason);
+      expect(refused).toEqual({ ok: false, message: reason, dirty: ['a.ts'] });
       expect(existsSync(worktreePath)).toBe(true);
     });
 
