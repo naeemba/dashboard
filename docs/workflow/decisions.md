@@ -177,7 +177,8 @@ line an agent had to remember; now a PreToolUse Bash hook refuses the call. It r
 - a `cp`, `mv`, `rm`, `rsync`, `ditto`, `ln`, `tar`, `unzip`, `install`, `unlink`, PowerShell's
   `Remove-Item`, `Move-Item`, `Copy-Item`, `Rename-Item` and their aliases, cmd's `del`, `rd`,
   `move`, `copy`, `xcopy`, `robocopy`, `ren`, or `find` with `-delete` or `-exec`, naming the
-  installed build (on Windows `%LOCALAPPDATA%\Programs\Dashboard`, matched by its
+  installed build (on a mac `/Applications/Dashboard.app` in any case, since its disk ignores
+  case by default; on Windows `%LOCALAPPDATA%\Programs\Dashboard`, matched by its
   `Programs/Dashboard` tail in any case so any spelling of `%LOCALAPPDATA%`, quoted or through
   `cygpath`, and either slash, but not the Start menu's `Programs` folder; and the Squirrel install
   `%LOCALAPPDATA%\Dashboard`, matched behind `AppData/Local` or the variable's name, since a bare

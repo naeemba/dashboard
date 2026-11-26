@@ -73,3 +73,6 @@ One line per merged change: date and why.
   `create-task-install.test.ts`, take a name from `windows-skips.ts`, new
   `posixCommandsOnly` and `halfOpenSocketsOnly` among them, so each skip says why in its name
   rather than a comment the next copy drops (workflow-rule-6)
+- 2026-11-26 — The running-app guard matches `/Applications/Dashboard.app` in any case: a mac's
+  disk ignores case by default, so `rm -rf /applications/dashboard.app` deleted the installed
+  build and the guard let it through (workflow-rule-1)
