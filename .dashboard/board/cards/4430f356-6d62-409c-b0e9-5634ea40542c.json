@@ -5,8 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:17.573Z",
-  "updatedAt": "2026-11-26T08:25:36.041Z",
+  "updatedAt": "2026-11-26T08:31:56.851Z",
   "branch": "pane-run-worktree-survives-one-failed-git-f",
+  "comments": [
+    {
+      "at": "2026-11-26T08:31:56.851Z",
+      "body": "Follow-up, not in #378: a card ship's own fetch (ship-flow.ts:52) still refuses on the same transient SSH failure."
+    }
+  ],
   "column": "Doing",
   "order": 2
 }
