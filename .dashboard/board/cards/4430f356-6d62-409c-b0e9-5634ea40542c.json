@@ -5,7 +5,19 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:17.573Z",
-  "updatedAt": "2026-11-26T08:24:17.573Z",
-  "column": "Backlog",
-  "order": 71
+  "updatedAt": "2026-11-26T08:31:57.629Z",
+  "branch": "pane-run-worktree-survives-one-failed-git-f",
+  "pullRequest": 378,
+  "comments": [
+    {
+      "at": "2026-11-26T08:31:56.851Z",
+      "body": "Follow-up, not in #378: a card ship's own fetch (ship-flow.ts:52) still refuses on the same transient SSH failure."
+    },
+    {
+      "at": "2026-11-26T08:31:57.579Z",
+      "body": "Pull request #378 opened: pane run --worktree survives one failed git fetch https://github.com/naeemba/dashboard/pull/378"
+    }
+  ],
+  "column": "Review",
+  "order": 0
 }

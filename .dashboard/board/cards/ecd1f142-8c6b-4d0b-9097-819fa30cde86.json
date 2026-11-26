@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:29.163Z",
-  "updatedAt": "2026-11-26T08:24:29.163Z",
-  "column": "Backlog",
-  "order": 72
+  "updatedAt": "2026-11-26T08:25:31.239Z",
+  "branch": "board-card-writes-never-leave-the-main-chec",
+  "column": "Doing",
+  "order": 1
 }
