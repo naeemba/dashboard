@@ -1,0 +1,11 @@
+{
+  "id": "3322bc6c-8356-4a06-aaf6-d7183f72245b",
+  "title": "Name the five suite-level Windows skips after their reason",
+  "notes": "workflow-rule-6 now says never a bare it.skipIf with its reason in a comment, but five suites still skip with a bare describe.skipIf(process.platform === 'win32'), four with no reason: src/main/app/shell-path.test.ts:11, src/main/update/install.test.ts:69, src/main/panes/host-socket.test.ts:8, src/main/processes/launch-scopes.test.ts:8, src/main/workers/screen-host.test.ts:75. Cost: nobody can tell whether a suite could now run on Windows without rediscovering why it skips, and new suites copy the bare form. Fix: suite-level named skips in src/main/testing/windows-skips.ts, one per reason, plus a line in workflow-rule-6. Issue: https://github.com/naeemba/dashboard/issues/389 Review: https://github.com/naeemba/dashboard/pull/388#discussion_r4706819053",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-26T10:15:49.913Z",
+  "updatedAt": "2026-11-26T10:15:49.913Z",
+  "column": "Backlog",
+  "order": 77
+}
