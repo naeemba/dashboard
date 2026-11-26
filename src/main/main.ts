@@ -214,7 +214,7 @@ const boards = boardWatchers((projectPath) => {
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
 // Each project's browser tabs, beside the window: browser-actions.ts.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: (pane, text) => workerScreens.send(pane, text), working: (pane) => workerScreens.working(pane) === true, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
@@ -601,8 +601,8 @@ function forgetPane(id: string): void {
 // One pane let go of for good.
 function dropPane(id: string): void {
   workerScreens.drop(id);
-  mainsWorkers.delete(id);
   forgetPane(id);
+  mainsWorkers.delete(id);
   panes.drop(id);
   terminalCommands.delete(id);
   paneScreens.drop(id);

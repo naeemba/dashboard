@@ -5,7 +5,7 @@ import type { Channels } from '../../app/channels';
 import { browserFileFolder, browserPage } from '../../browser/browser-page';
 import { browserRequests, type BrowserRequestPorts } from '../../browser/browser-requests';
 import { browserViews, type BrowserViewsMain } from '../../browser/browser-views';
-import { idleTellings, tabClock } from '../../browser/tab-idle';
+import { idleQuestion, tabClock } from '../../browser/tab-idle';
 import { firstFile } from '../../nvim/file-open';
 import type { SessionReply, SessionRequest } from '../../workers/session-cli';
 import { bind, registerActions } from '../action';
@@ -24,14 +24,11 @@ import { browserFocus, browserHide, browserReset, browserShow } from './view';
 // `panes` is what the browser command's door asks main of the panes and pages (browser-requests.ts).
 type PaneLookups = Omit<BrowserRequestPorts, 'actions' | 'reads' | 'used'>;
 
-// How the app asks a tab's agent, and when: a main through its chat, queued behind its turn; a worker
-// through its Claude screen, while `working` (tab-idle.ts's idleTellings). A pane with none never
-// hears, which is the same as not answering. `idleMinutes` is the setting, null never asking.
-// `mainOf` is the main a worker reports to, told of the tabs it still held when let go of.
+// How the app asks a tab's agent, and when: a main through its chat, queued behind its turn. A worker
+// is never asked (tab-idle.ts). `idleMinutes` is the setting, null never asking. `mainOf` is the main
+// a worker reports to, told of the tabs it still held when let go of.
 export type TabAsking = {
   tellMain(slot: number, text: string): void;
-  tellWorker(pane: string, text: string): void;
-  working(pane: string): boolean;
   mainOf(pane: string): number;
   idleMinutes(): number | null;
 };
@@ -59,10 +56,7 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
   setInterval(() => {
     const minutes = asking.idleMinutes();
     const questions = clock.due(views.ports.allBrowsers(), Date.now(), views.shown(), minutes);
-    for (const telling of idleTellings(questions, minutes ?? 0, asking.working)) {
-      if ('main' in telling) asking.tellMain(telling.main, telling.text);
-      else asking.tellWorker(telling.worker, telling.text);
-    }
+    for (const { main: slot, tabs } of questions) asking.tellMain(slot, idleQuestion(tabs, minutes ?? 0));
   }, SWEEP_MS).unref();
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);

@@ -118,8 +118,8 @@ do.
 
 Eleven open tabs held about 517 MB, but an idle tab may be a form left for you
 to submit or a page an agent comes back to, so the app never closes one on a
-timer. The agent that holds it decides. An agent's tab unused for
-`browser.idleMinutes` gets one question to that agent; its answer is
+timer. The agent that holds it decides. A main's tab unused for
+`browser.idleMinutes` gets one question to that main; its answer is
 `browser close`, and silence keeps the tab and is not asked again until the tab
 is used and idles again. A tab you opened or are looking at is never asked
 about: the screen counts as use, and a claim of your tab does not make it the
@@ -132,10 +132,13 @@ it to close or release its tabs before it finishes instead, and a pane let go of
 still holding tabs hands them to you open, with the main it reports to told
 which.
 
-A worker that has finished is not asked either. The question would start a turn
+A worker is not asked either, finished or at work. The question starts a turn
 whose stop overwrites its report, so `pane report` would print "Closed tab 4."
-in place of what it did, and main would get a second done notice. Main lets it
-go once it has read the report, and that release names the tabs it left open.
+in place of what it did. Asked when finished, main gets a second done notice;
+asked at work, the question queued behind its turn calls off the notice of the
+turn that did the work and is itself held back as a prompt of yours, so main
+never hears the worker stopped. Main lets it go once it has read the report, and
+that release names the tabs it left open.
 
 Only the tab on screen counts as looked at, not each project's active tab: an
 agent's first tab in a project you never opened a tab in becomes its active one,

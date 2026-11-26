@@ -8,7 +8,7 @@ import { browserProject, browserRequests, livePane, paneIsOpen, type BrowserRequ
 // Each action and read as a record of what it was called with.
 function fakeDoor() {
   const calls: string[] = [];
-  const used: number[] = [];
+  const used: string[] = [];
   const bound = (name: string): BoundAction => ({
     name, words: [], call: async (raw) => { calls.push(`${name} ${JSON.stringify(raw)}`); return { output: `${name} done` }; },
   });
@@ -26,7 +26,7 @@ function fakeDoor() {
       tabs: (pane, projectPath) => `tabs of ${projectPath} for ${pane}`,
       read: read('read'), screenshot: read('screenshot'), snapshot: read('snapshot'), console: read('console'), network: read('network'),
     },
-    used: (_pane, tab) => { used.push(tab); },
+    used: (pane, tab) => { used.push(`${pane} ${tab}`); },
   };
   const ask = browserRequests(ports, async () => answered('otherwise'));
   return {
@@ -54,7 +54,7 @@ describe('browserRequests', () => {
     await door.ask('2:1', { verb: 'press', tab: 4, key: 'Enter', ref: null });
     await door.ask('2:1', { verb: 'eval', tab: 4, script: 'document.title', waitFor: 'main' });
     await door.ask('2:1', { verb: 'close', tab: 5 });
-    expect(door.used).toEqual([4, 4, 4, 4, 5]);
+    expect(door.used).toEqual(['2:1 4', '2:1 4', '2:1 4', '2:1 4', '2:1 5']);
     expect(door.calls).toEqual([
       'step {"pane":"2:1","tab":4,"step":"back"}',
       'resize {"pane":"2:1","tab":4}',

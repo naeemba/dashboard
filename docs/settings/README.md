@@ -52,7 +52,7 @@ bar raises a desktop notification while the window is not in front. Enter turns
 it over (docs/errors).
 
 `browser.idleMinutes` (default 30, written in the file by hand only, `null` for
-never) is how long an agent's browser tab goes unused before its agent is asked
+never) is how long a main's browser tab goes unused before that main is asked
 whether it may close it (docs/browser).
 
 The Budget rows say what `dashboard budget` holds the 7-day usage to. The limit

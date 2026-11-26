@@ -149,15 +149,14 @@ A pane acts only on the tabs it holds, reads included (browser-rule-3). Its tabs
 go back to you, still open, when its pane is released, finished or closed, its
 agent exits, or another agent starts in it, and the main the pane reports to,
 another project's for one claimed with `--project`, is told which were left
-open. A tab is never closed for being idle (browser-decision-10). One an agent
-opened that sees no browser call from its holder and is not the tab on screen
-for `browser.idleMinutes` (30 by default, `null` never) gets one question to its
-holder, a main through its chat and a worker through its Claude screen while it
-works: may it be closed? A worker that finished is not asked, since its answer
-would replace its report; its tabs reach main when it is let go of. The agent
-answers with `browser close`; saying nothing keeps it, and it is not asked again
-until it is used and goes unused again. A tab you opened or are looking at is
-never asked about, even once an agent claims it.
+open. A tab is never closed for being idle (browser-decision-10). One a main
+opened that sees no browser call from it and is not the tab on screen for
+`browser.idleMinutes` (30 by default, `null` never) gets one question to that
+main through its chat: may it be closed? A worker is never asked, since its
+answer would replace its report; its tabs reach main when it is let go of. The
+main answers with `browser close`; saying nothing keeps it, and it is not asked
+again until it is used and goes unused again. A tab you opened or are looking at
+is never asked about, even once an agent claims it.
 
 A tab handed back, those and the one you take back, is laid out at its own size
 again, whatever size an agent gave it. The protocol is each tab's own
@@ -192,7 +191,7 @@ Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser
   on the window or taken off it
 - `browser-placement.ts`: where the page goes, and what counts as floating over it
 - `browser-holds.ts`: who may act on a tab, claim it or have it taken back
-- `tab-idle.ts`: which agent tabs are asked about and when, and the notice when a
+- `tab-idle.ts`: which tabs a main is asked about and when, and the notice when a
   pane is let go of still holding tabs
 - `claims.ts`, `page.ts`, `target.ts` (actions): claim, release and revoke;
   resize, click, type, press, upload and eval; which tab an action means for each door

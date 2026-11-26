@@ -37,6 +37,6 @@ One line per merged change: date and why.
   `browser-cli.ts`, with a test, because it sat untested in `browser-program.ts`
 - 2026-11-26 — the manager has a browser of its own: the door refused its panes with "name a
   project with --project", so its agents named one and drove that project's tabs and sign-ins
-- 2026-11-26 — an agent's tab unused for 30 minutes gets one question to its agent, which closes it
+- 2026-11-26 — a main's tab unused for 30 minutes gets one question to that main, which closes it
   with the new `browser close` or keeps it, and main is told the tabs a pane let go of left open,
   because 11 open tabs held about 517 MB and the user wants the agent, never a timer, to close one

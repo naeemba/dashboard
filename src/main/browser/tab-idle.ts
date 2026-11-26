@@ -2,14 +2,16 @@ import type { BrowserState, BrowserTab } from '../../shared/browser/browser';
 import { MAIN_INDEX, paneFromId } from '../../shared/panes/terminals';
 import { tabLine } from './browser-holds';
 
-// When an agent's tab is asked about, never closed for being idle (browser-decision-10). Only a tab an
-// agent opened is ever asked about: one the user opened stays theirs to close, whoever claims it later.
-// Its clock restarts on every browser call its holder makes on it and whenever it is the tab on screen,
-// the one the user is looking at or typing in: the placed project's shown tab, not each project's
-// active one, which stays set while its browser is hidden. Unused for the setting's minutes, its holder is asked once, and not
-// again until the tab is used and goes unused again: an agent that says nothing keeps it.
+// When an agent's tab is asked about, never closed for being idle (browser-decision-10). Only a tab a
+// main opened is ever asked about: one the user opened stays theirs to close, whoever claims it later,
+// and a worker is never asked, its tabs reaching main when it is let go of (leftOpenNotice). Its clock
+// restarts on every browser call its holder makes on it and whenever it is the tab on screen, the one
+// the user is looking at or typing in: the placed project's shown tab, not each project's active one,
+// which stays set while its browser is hidden. Unused for the setting's minutes, its holder is asked
+// once, and not again until the tab is used and goes unused again: an agent that says nothing keeps it.
 
-export type TabQuestion = { pane: string; tabs: BrowserTab[] };
+// The main to ask, by its page, and the tabs it holds that went unused.
+export type TabQuestion = { main: number; tabs: BrowserTab[] };
 
 type Use = { usedAt: number; asked: boolean };
 
@@ -33,25 +35,28 @@ export function tabClock() {
     calledOn(browsers: ReadonlyMap<string, BrowserState>, pane: string, tab: number, now: number): void {
       if ([...browsers.values()].some((state) => state.tabs.some((each) => each.id === tab && each.holder === pane))) used(tab, now);
     },
-    // The agents to ask now, a question each naming its tabs, those marked asked, for the setting's
-    // minutes, null never asking. `shown` is the tab on screen, or null. A tab gone is forgotten.
+    // The mains to ask now, a question each naming its tabs, those marked asked, for the setting's
+    // minutes, null never asking. `shown` is the tab on screen, or null. A tab gone is forgotten. A
+    // worker's tab is never marked: a worker is never asked, since the question would start a turn
+    // that replaces its report and reaches main as one, whether it had finished or not.
     due(browsers: ReadonlyMap<string, BrowserState>, now: number, shown: number | null, minutes: number | null): TabQuestion[] {
       const open = new Set<number>();
-      const byPane = new Map<string, BrowserTab[]>();
+      const byMain = new Map<number, BrowserTab[]>();
       if (shown !== null) used(shown, now);
       for (const state of browsers.values()) {
         for (const tab of state.tabs) {
           open.add(tab.id);
           const use = uses.get(tab.id);
-          if (!use || use.asked || minutes === null || tab.holder === 'user' || now - use.usedAt < minutes * MINUTE_MS) continue;
+          const main = tab.holder === 'user' ? null : mainSlotOf(tab.holder);
+          if (!use || use.asked || minutes === null || main === null || now - use.usedAt < minutes * MINUTE_MS) continue;
           use.asked = true;
-          const tabs = byPane.get(tab.holder) ?? [];
+          const tabs = byMain.get(main) ?? [];
           tabs.push(tab);
-          byPane.set(tab.holder, tabs);
+          byMain.set(main, tabs);
         }
       }
       for (const id of uses.keys()) if (!open.has(id)) uses.delete(id);
-      return [...byPane].map(([pane, tabs]) => ({ pane, tabs }));
+      return [...byMain].map(([main, tabs]) => ({ main, tabs }));
     },
   };
 }
@@ -72,21 +77,6 @@ export function idleQuestion(tabs: readonly BrowserTab[], minutes: number): stri
 export function mainSlotOf(pane: string): number | null {
   const { slot, index } = paneFromId(pane);
   return index === MAIN_INDEX ? slot : null;
-}
-
-export type Telling = { main: number; text: string } | { worker: string; text: string };
-
-// Who hears each question. A main hears through its chat. A worker hears through its Claude screen,
-// queued behind its turn, only while it works: asking one that finished starts a turn whose stop
-// would replace its report and reach main as a second one, and main letting it go tells main of the
-// tabs anyway (leftOpenNotice).
-export function idleTellings(questions: readonly TabQuestion[], minutes: number, working: (pane: string) => boolean): Telling[] {
-  return questions.flatMap(({ pane, tabs }): Telling[] => {
-    const text = idleQuestion(tabs, minutes);
-    const main = mainSlotOf(pane);
-    if (main !== null) return [{ main, text }];
-    return working(pane) ? [{ worker: pane, text }] : [];
-  });
 }
 
 // Who is told, and what, when a pane is let go of still holding tabs: `main`, the main the worker
