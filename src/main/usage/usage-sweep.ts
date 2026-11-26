@@ -22,6 +22,8 @@ import { worktreesRoot } from '../ship/ship';
 // usage-sweep.test.ts pins.
 
 export type UsageSweepPorts = {
+  // Where each log's counts are saved between launches, in userData, which only main can name.
+  countsFile: string;
   // The process id of every pane's shell, by terminal id. The one thing that says which pane a Claude
   // Code session is running in, and only main holds the ptys.
   panePids(): ReadonlyMap<number, string>;
@@ -89,6 +91,7 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
     if (placement !== null) ports.placed(placement);
     const next = await sweep({
       root: claudeLogs,
+      counts: ports.countsFile,
       now,
       projects: ports.openProjects().map((projectPath) => ({ path: projectPath, worktrees: worktreesRoot(projectPath) })),
       paneSessions: new Map([...(placement?.byPane ?? [])].map(([pane, live]) => [pane, live.session])),

@@ -9,6 +9,8 @@ import { unpacked } from '../app/unpacked';
 
 export type SweepRequest = {
   root: string;
+  // The file in userData the thread keeps each log's counts in between launches (usage-counts.ts).
+  counts: string;
   now: number;
   projects: { path: string; worktrees: string }[];
   paneSessions: Map<string, string>;

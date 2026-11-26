@@ -6,6 +6,7 @@ describe('usageSweep placeNow', () => {
   // answer of "no sessions anywhere" would be saved over the last reading that knew better.
   it('answers with no reading at all when the process tree is not there', async () => {
     const sweep = usageSweep({
+      countsFile: '/counts.json',
       panePids: () => new Map([[51152, '0:1']]),
       openProjects: () => [],
       processTree: async () => null,

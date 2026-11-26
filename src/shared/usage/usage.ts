@@ -72,6 +72,9 @@ export function retainFrom(now: number): number {
 export type FileUsage = {
   // Bytes of the file already counted. The store reads from here on the next sweep.
   size: number;
+  // The file's mtime when `size` was counted. A launch takes a saved count only for a file whose mtime
+  // has not moved since (usage-counts.ts).
+  modified?: number;
   // The folder the session ran in, taken from the log's own `cwd` rather than from the folder name
   // Claude Code stores it under: that name is the path with every slash turned into a dash, which
   // cannot be turned back on a path that has a dash in it.
