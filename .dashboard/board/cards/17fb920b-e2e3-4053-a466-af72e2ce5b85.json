@@ -1,0 +1,11 @@
+{
+  "id": "17fb920b-e2e3-4053-a466-af72e2ce5b85",
+  "title": "Browser tabs are closed by asking the agent that owns them, never silently",
+  "notes": "From the Rust review (/tmp/rust-review.md): 11 open project-browser tabs held about 517 MB. The user's rule: never close a tab just because it is idle; the agent responsible for it decides.\n\nEach tab already has an owner (the session that opened or claimed it). Two triggers:\n1. An agent ending: when its pane is released or finished, or its session ends, and it still owns open tabs, the app asks that agent first (a message naming the tabs: keep or close) and closes only those it lets go. A tab whose owner is gone with no answer is left open and listed, not closed.\n2. Idle tabs: a tab that sees no browser_* call and no user input for 30 minutes (a setting) gets one question to its owning pane: may it be closed? Yes closes it; no or no answer keeps it, and it is not asked again until it has been used and gone idle again.\n\nA tab the user opened or is looking at is never asked about. Decision modules with tests (who to ask, when the idle timer resets), the dashboard-browser skill and the browser docs updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T12:12:57.428Z",
+  "updatedAt": "2026-11-26T12:12:57.428Z",
+  "column": "Backlog",
+  "order": 50
+}
