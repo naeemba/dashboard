@@ -21,8 +21,8 @@ export type BrowserRequestPorts = {
   slotOf(projectPath: string): number;
   actions: Record<'open' | 'claim' | 'release' | 'close' | 'navigate' | 'step' | 'resize' | 'click' | 'type' | 'press' | 'upload' | 'eval', BoundAction>;
   reads: BrowserReads;
-  // A browser call named the tab: its idle clock starts over (tab-idle.ts).
-  used(tab: number): void;
+  // The pane's browser call named the tab: its idle clock starts over if the pane holds it (tab-idle.ts).
+  used(pane: string, tab: number): void;
 };
 
 const UNREADABLE = 'the browser request was not one the app could read';
@@ -66,7 +66,7 @@ async function answer(ports: BrowserRequestPorts, pane: string, command: Browser
     return sessionReply(await actions.open.call({ projectPath, url: command.url, pane }));
   }
   const onTab = { pane, tab: command.tab };
-  ports.used(command.tab);
+  ports.used(pane, command.tab);
   switch (command.verb) {
     case 'claim': return sessionReply(await actions.claim.call(onTab));
     case 'release': return sessionReply(await actions.release.call(onTab));

@@ -26,7 +26,7 @@ function fakeDoor() {
       tabs: (pane, projectPath) => `tabs of ${projectPath} for ${pane}`,
       read: read('read'), screenshot: read('screenshot'), snapshot: read('snapshot'), console: read('console'), network: read('network'),
     },
-    used: (tab) => { used.push(tab); },
+    used: (_pane, tab) => { used.push(tab); },
   };
   const ask = browserRequests(ports, async () => answered('otherwise'));
   return {

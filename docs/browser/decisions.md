@@ -114,7 +114,6 @@ the corner while an agent holds the tab. Only agent-held tabs pay it, and a page
 that does not change draws no frames, so many tabs cost no more than their pages
 do.
 
-
 ## browser-decision-10: A tab is closed by the agent holding it, never for being idle
 
 Eleven open tabs held about 517 MB, but an idle tab may be a form left for you
@@ -130,4 +129,14 @@ An agent that is ending is not asked at the release. The release kills it, so
 waiting on an answer would hold `pane release`, `pane finish` and every sweep
 that lets a pane go until the agent replied. The dashboard-browser skill tells
 it to close or release its tabs before it finishes instead, and a pane let go of
-still holding tabs hands them to you open, with its page's main told which.
+still holding tabs hands them to you open, with the main it reports to told
+which.
+
+A worker that has finished is not asked either. The question would start a turn
+whose stop overwrites its report, so `pane report` would print "Closed tab 4."
+in place of what it did, and main would get a second done notice. Main lets it
+go once it has read the report, and that release names the tabs it left open.
+
+Only the tab on screen counts as looked at, not each project's active tab: an
+agent's first tab in a project you never opened a tab in becomes its active one,
+and counting that would have kept it from ever being asked.

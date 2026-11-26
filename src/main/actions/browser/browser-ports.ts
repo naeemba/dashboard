@@ -37,6 +37,9 @@ export type BrowserPorts = {
   fileInputOf(id: number, node: number): Promise<{ multiple: boolean } | null>;
   // A message into that page's main session, queued behind its turn: the tabs a pane let go of left open.
   tellMain(slot: number, text: string): void;
+  // The page whose main a worker pane reports to: the one that dispatched it, which may be another
+  // project's (session-requests.ts's mainOf).
+  mainOf(pane: string): number;
   // Whether a file is there to upload: a regular file this user can see.
   isFile(file: string): Promise<boolean>;
   // The script run in the page once `waitFor` matches, if one is given: the line saying where its

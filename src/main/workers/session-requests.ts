@@ -142,6 +142,8 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // The main session in `slot` read a message from the session called `sender`: when that is a worker
   // that main dispatched, its next stop needs no notice.
   heard(slot: number, sender: string): void;
+  // The page whose main hears the worker's report: the one that dispatched it, else its own.
+  mainOf(id: string): number;
   // The main session in `slot` began a turn, or ended one after its result was read: a worker's stop
   // notice due in between waits for the end, so the report that turn read drops it.
   mainTurn(slot: number, running: boolean): void;
@@ -582,6 +584,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }, {
     workers,
     notify,
+    mainOf,
     async dropped(id: string) {
       const throwaway = throwaways.get(id);
       if (throwaway === undefined || releasing.has(id)) return;

@@ -214,7 +214,7 @@ const boards = boardWatchers((projectPath) => {
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
 // Each project's browser tabs, beside the window: browser-actions.ts.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: (pane, text) => workerScreens.send(pane, text), idleMinutes: () => settings.browser.idleMinutes });
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: (pane, text) => workerScreens.send(pane, text), working: (pane) => workerScreens.working(pane) === true, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
@@ -296,8 +296,8 @@ function agentWorksIn(slot: number, pane: number | null): boolean {
 // worktree, because that is where the work is. Left alone, Enter would start the agent over instead
 // of giving you a prompt, and the pane would stay counted as in use with nothing running in it.
 function releaseAgentPane(id: string): void {
-  mainsWorkers.delete(id);
   browser.letGo(id);
+  mainsWorkers.delete(id);
   const command = terminalCommands.get(id);
   if (!runsAnAgent(command)) return;
   terminalCommands.set(id, { args: [], directory: command.directory });
@@ -591,10 +591,11 @@ function setPaneCommand(id: string, command: PaneCommand): void {
   if (opening) panesChanged();
 }
 
-// A pane that stopped being its worker's: what the session command and the browser hold for it.
+// A pane that stopped being its worker's: what the session command and the browser hold for it. The
+// browser first, while the session command still knows the main the pane reports to.
 function forgetPane(id: string): void {
-  workerAnswers.forget(id);
   browser.letGo(id);
+  workerAnswers.forget(id);
 }
 
 // One pane let go of for good.

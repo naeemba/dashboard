@@ -67,9 +67,9 @@ time:
    close or release every tab you opened: one you still hold goes back to the
    person, still open, when your pane is released or your agent exits, laid out
    at its own size again, and your main is told it was left open. An open tab
-   costs memory, so close it rather than leave it. A tab of yours unused for 30
-   minutes gets one question from the app: close it if you are done with it,
-   or leave it and it stays; nothing closes it for you.
+   costs memory, so close it rather than leave it. A tab of yours unused for a
+   while gets one question from the app: close it if you are done with it, or
+   leave it and it stays; nothing closes it for you.
 
 ## A page that asks you to sign in
 

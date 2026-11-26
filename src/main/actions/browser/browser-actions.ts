@@ -5,7 +5,7 @@ import type { Channels } from '../../app/channels';
 import { browserFileFolder, browserPage } from '../../browser/browser-page';
 import { browserRequests, type BrowserRequestPorts } from '../../browser/browser-requests';
 import { browserViews, type BrowserViewsMain } from '../../browser/browser-views';
-import { idleQuestion, mainSlotOf, tabClock } from '../../browser/tab-idle';
+import { idleTellings, tabClock } from '../../browser/tab-idle';
 import { firstFile } from '../../nvim/file-open';
 import type { SessionReply, SessionRequest } from '../../workers/session-cli';
 import { bind, registerActions } from '../action';
@@ -25,11 +25,14 @@ import { browserFocus, browserHide, browserReset, browserShow } from './view';
 type PaneLookups = Omit<BrowserRequestPorts, 'actions' | 'reads' | 'used'>;
 
 // How the app asks a tab's agent, and when: a main through its chat, queued behind its turn; a worker
-// through its Claude screen. A pane with none never hears, which is the same as not answering.
-// `idleMinutes` is the setting, null never asking.
+// through its Claude screen, while `working` (tab-idle.ts's idleTellings). A pane with none never
+// hears, which is the same as not answering. `idleMinutes` is the setting, null never asking.
+// `mainOf` is the main a worker reports to, told of the tabs it still held when let go of.
 export type TabAsking = {
   tellMain(slot: number, text: string): void;
   tellWorker(pane: string, text: string): void;
+  working(pane: string): boolean;
+  mainOf(pane: string): number;
   idleMinutes(): number | null;
 };
 
@@ -51,17 +54,15 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
     views.ports.keep(projectPath, state);
     clock.seen(state, Date.now());
   };
-  const ports: BrowserPorts = { ...views.ports, ...page.ports, isFile, keep, tellMain: asking.tellMain };
-  const tell = (pane: string, text: string): void => {
-    const main = mainSlotOf(pane);
-    if (main === null) asking.tellWorker(pane, text);
-    else asking.tellMain(main, text);
-  };
+  const ports: BrowserPorts = { ...views.ports, ...page.ports, isFile, keep, tellMain: asking.tellMain, mainOf: asking.mainOf };
   // An agent that does not answer keeps its tab: a question is asked once and nothing closes on a timer.
   setInterval(() => {
     const minutes = asking.idleMinutes();
-    const questions = clock.due(views.ports.allBrowsers(), Date.now(), minutes === null ? null : minutes * 60_000);
-    if (minutes !== null) for (const { pane, tabs } of questions) tell(pane, idleQuestion(tabs, minutes));
+    const questions = clock.due(views.ports.allBrowsers(), Date.now(), views.shown(), minutes);
+    for (const telling of idleTellings(questions, minutes ?? 0, asking.working)) {
+      if ('main' in telling) asking.tellMain(telling.main, telling.text);
+      else asking.tellWorker(telling.worker, telling.text);
+    }
   }, SWEEP_MS).unref();
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);
@@ -87,7 +88,7 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
     // finished, its agent exited, or another agent started in it.
     letGo: (pane: string): void => void release.call({ pane }),
     requests: (otherwise: (request: SessionRequest) => Promise<SessionReply>) => browserRequests({
-      ...panes, actions, reads: page.reads, used: (tab) => clock.used(tab, Date.now()),
+      ...panes, actions, reads: page.reads, used: (pane, tab) => clock.calledOn(views.ports.allBrowsers(), pane, tab, Date.now()),
     }, otherwise),
   };
 }
