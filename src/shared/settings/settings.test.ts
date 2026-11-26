@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  bindingName, bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, resetAll, parseSettings, resetKeys,
+  bindingName, bindKey, defaultSettings, holderOfBinding, isFontSize, isHexColor, isPort, isSeeThrough, resetAll, parseSettings, resetKeys,
+  terminalTheme, withoutShipped,
 } from './settings';
 import { ACTIONS, scopesOverlap } from '../keys/actions';
 import { THEME } from '../app/theme';
@@ -294,6 +295,34 @@ describe('host and remote', () => {
     const settings = parseSettings({ host: { token: 'abc' }, remote: { address: '10.0.0.2:7777', token: 'xyz' } }, true);
     expect(settings.host.token).toBe('abc');
     expect(settings.remote).toEqual({ address: '10.0.0.2:7777', token: 'xyz' });
+  });
+});
+
+describe('the window opacity', () => {
+  it('reads a number from 0.2 to 1, and anything else as the shipped 1', () => {
+    expect(parseSettings({ opacity: 0.7 }, false).opacity).toBe(0.7);
+    expect(parseSettings({ opacity: 0.2 }, false).opacity).toBe(0.2);
+    for (const opacity of [0.1, 0, 1.5, -1, '0.7', null, Number.NaN]) {
+      expect(parseSettings({ opacity }, false).opacity).toBe(1);
+    }
+    expect(parseSettings({}, false).opacity).toBe(1);
+  });
+
+  it('makes the window see-through below 1 only', () => {
+    expect(isSeeThrough(parseSettings({ opacity: 0.7 }, false))).toBe(true);
+    expect(isSeeThrough(parseSettings({}, false))).toBe(false);
+  });
+
+  it('leaves the shipped 1 out of the file and keeps a chosen one', () => {
+    expect(withoutShipped({ opacity: 1 }, false)).toEqual({});
+    expect(withoutShipped({ opacity: 0.7 }, false)).toEqual({ opacity: 0.7 });
+  });
+
+  it('clears the terminal background only when see-through, so the pane behind paints it', () => {
+    const theme = terminalTheme(parseSettings({ opacity: 0.7, theme: { background: '#101010' } }, false));
+    expect(theme.background).toBe('#10101000');
+    expect(theme.foreground).toBe(THEME.foreground);
+    expect(terminalTheme(parseSettings({}, false)).background).toBe(THEME.background);
   });
 });
 

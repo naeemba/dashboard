@@ -12,6 +12,9 @@ export type Settings = {
   shellCommand: string;
   font: { name: string; size: number };
   theme: Record<string, string>;
+  // How much of the theme's background the window paints over the desktop: 1 paints all of it, 0.7
+  // lets the desktop show through behind the text. Written in the file by hand only (docs/settings).
+  opacity: number;
   keys: Record<string, string | null>;
   // Where the manager's date card reads today's weather for. A name, looked up by Open-Meteo's
   // geocoder whenever it changes, so it is never blank.
@@ -102,6 +105,27 @@ export function budgetPercentage(value: unknown): number | null {
   return String(value).trim() !== '' && Number.isFinite(percentage) && percentage > 0 && percentage <= 100 ? percentage : null;
 }
 
+// Below this a window is too faint to find the text in, and nothing on screen would turn it back.
+const LEAST_OPACITY = 0.2;
+
+export function isWindowOpacity(value: unknown): value is number {
+  return typeof value === 'number' && value >= LEAST_OPACITY && value <= 1;
+}
+
+// Whether the window is made transparent (app-window.ts) and its layers painted see-through
+// (app/appearance.ts).
+export function isSeeThrough(settings: Settings): boolean {
+  return settings.opacity < 1;
+}
+
+// See-through, xterm's background is cleared so the pane's, see-through with the rest of the window,
+// is the one a terminal shows. Opaque, it is left alone: a clear layer costs a blend on every repaint.
+// xterm still draws reverse video in the opaque colour, so a status line stays readable.
+export function terminalTheme(settings: Settings): Record<string, string> {
+  if (!isSeeThrough(settings)) return settings.theme;
+  return { ...settings.theme, background: `${settings.theme.background}00` };
+}
+
 // The same range parseSettings holds a stored port to. Exported for the settings screen's message.
 export function isPort(value: string | number): boolean {
   const port = Number(value);
@@ -113,6 +137,7 @@ export function defaultSettings(isMac: boolean): Settings {
     shellCommand: '',
     font: { ...DEFAULT_FONT },
     theme: Object.fromEntries(THEME_COLORS.map((name) => [name, String(THEME[name as keyof typeof THEME])])),
+    opacity: 1,
     keys: Object.fromEntries(ACTIONS.map((entry) => [entry.name, defaultBinding(entry, isMac)])),
     weatherPlace: DEFAULT_WEATHER_PLACE,
     host: { port: null, token: '', bind: DEFAULT_HOST_BIND },
@@ -206,6 +231,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     theme: Object.fromEntries(THEME_COLORS.map((name) => [
       name, isHexColor(storedTheme[name]) ? storedTheme[name] : defaults.theme[name],
     ])),
+    opacity: isWindowOpacity(raw.opacity) ? raw.opacity : defaults.opacity,
     keys: Object.fromEntries(bindings.map(({ entry, binding }) => [entry.name, binding])),
     weatherPlace: typeof raw.weatherPlace === 'string' && raw.weatherPlace.trim() !== ''
       ? raw.weatherPlace.trim() : defaults.weatherPlace,
