@@ -5,13 +5,14 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T14:49:26.436Z",
-  "updatedAt": "2026-11-26T10:43:18.634Z",
+  "updatedAt": "2026-11-26T12:17:14.814Z",
+  "branch": "experiment-keep-the-hidden-manager-page-pai",
   "comments": [
     {
       "at": "2026-11-26T10:43:18.634Z",
       "body": "Rescope from main, 2026-11-26 check: scripts/performance/measure.mjs has no manager-switch mode any more (removed with #314); its keys step's tab-switch line (measure.mjs:183) already times Ctrl+1. Measure with that, record the result in docs/performance/history.md, and only change the app if the numbers show a gain."
     }
   ],
-  "column": "Backlog",
-  "order": 45
+  "column": "Doing",
+  "order": 0
 }
