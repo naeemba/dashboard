@@ -1,7 +1,7 @@
 import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
 import type { Forge } from '../app/forge';
-import { CLAUDE_FOLDER, loopWorkflow } from './review-loop-install';
+import { FINISHED } from './review-finished';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps
@@ -126,11 +126,12 @@ function commentOnce(board: Board, cardId: string, line: string): Board | null {
 // The longest background run a session may ask for, shared by every prompt that waits on CI.
 export const LONGEST_BACKGROUND_RUN = 'run_in_background, timeout 7200000, the longest allowed';
 
-export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean, forge: Forge): string {
+// `workflow` is the installed pr-loop.js (loopWorkflow), which a GitHub review calls by path.
+export function reviewPrompt(cardId: string, pullRequest: number, projectPath: string, merge: boolean, forge: Forge, workflow: string): string {
   const board = `cd ${posixQuoted(projectPath)} && node "$DASHBOARD_BOARD"`;
   const sayOnCard = `\`${board} comment ${cardId} "<what happened>"\``;
   const words = FORGE_WORDS[forge];
-  const steps = (forge === 'gitlab' ? mergeRequestSteps : pullRequestSteps)(pullRequest, sayOnCard);
+  const steps = forge === 'gitlab' ? mergeRequestSteps(pullRequest, sayOnCard) : pullRequestSteps(pullRequest, sayOnCard, workflow);
   const report = [
     `2. Then, unless the loop stopped short or the ${words.noun} conflicts with the base branch,`,
     ...steps.wait,
@@ -144,6 +145,7 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     `Review ${words.noun} ${words.sigil}${pullRequest}${merge ? ' and land it' : ''}. It came from card ${cardId} on the board of ${projectPath}.`,
     ...(merge ? [] : [`Merging is off for this project: the user lands the ${words.noun}, not you.`]),
     '',
+    '1. In one message, side by side:',
     ...steps.start,
     `   - Read the card, \`${board} show ${cardId}\`, and load SendMessage for the report: ToolSearch \`select:SendMessage\`.`,
     '   The Workflow tool wakes you when the loop finishes: no ScheduleWakeup and no polling. Then judge every',
@@ -185,15 +187,14 @@ type ForgeSteps = { start: string[]; close: string[]; wait: string[]; land: stri
 // needs (retro 2026-11-26). The install check /pr-loop starts with is reviewLoopMissing's refusal; the
 // rest is two fixed calls here, the set-up beside the Workflow call and the close chained into the wait.
 // The `Review loop finished:` heading is what review-finished.ts reads.
-function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
+function pullRequestSteps(pullRequest: number, sayOnCard: string, workflow: string): ForgeSteps {
   const loopStarted = 'Review loop started. Fix commits land here while it runs; CI waits until it finishes.';
   return {
     start: [
-      '1. In one message, side by side:',
       '   - Mark the pull request while the loop runs, so CI waits for the loop rather than running on every fix push:',
       `     \`if [ "$(gh pr view ${pullRequest} --json isDraft -q .isDraft)" = false ]; then gh pr ready ${pullRequest} --undo && echo was ready;`
         + ` else echo was a draft; fi; gh pr comment ${pullRequest} --body "${loopStarted}"\``,
-      `   - Call the Workflow tool with scriptPath \`${loopWorkflow(CLAUDE_FOLDER)}\` and args \`"${pullRequest}"\`. This is the`,
+      `   - Call the Workflow tool with scriptPath \`${workflow}\` and args \`"${pullRequest}"\`. This is the`,
       '     user\'s request to run that saved workflow: the loop /pr-loop runs, with /pr-loop\'s own steps here and its',
       '     install check made by the app, so do not run /pr-loop itself. What each ending and field of its result',
       '     means is in ~/.claude/commands/pr-loop.md, under "When the workflow returns".',
@@ -203,7 +204,7 @@ function pullRequestSteps(pullRequest: number, sayOnCard: string): ForgeSteps {
       '   with step 2\'s wait or land as its last command when step 2 has one:',
       `   \`gh pr comment ${pullRequest} --body-file - <<'END'\`, the body, a line \`END\`, then`,
       `   \`gh pr ready ${pullRequest} && <step 2's command>\`. The body goes in that quoted heredoc, never a quoted \`--body\`:`,
-      '   a thread\'s text in double quotes is run by the shell. Its first line is `Review loop finished: <status>`,',
+      `   a thread's text in double quotes is run by the shell. Its first line is \`${FINISHED} <status>\`,`,
       '   which the app reads, then it gives the rounds run, the findings addressed',
       '   and rejected, the commits from `commitShas`, the final check\'s outcome, and any `floorThreads` or',
       `   \`blockedOnHuman\` left open. \`gh pr ready ${pullRequest}\` only when step 1 printed \`was ready\`: it runs CI once, on the`,
@@ -254,7 +255,6 @@ function mergeRequestSteps(mergeRequest: number, sayOnCard: string): ForgeSteps 
   return {
     // /mr-loop has no draft or comment steps of its own, so it is run as it is.
     start: [
-      '1. In one message, side by side:',
       `   - Run /mr-loop ${mergeRequest}.`,
     ],
     close: [],

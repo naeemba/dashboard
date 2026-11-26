@@ -18,7 +18,7 @@ function reviewViewArguments(pullRequest: number): string[] {
   return ['pr', 'view', String(pullRequest), '--json', 'comments,commits'];
 }
 
-const FINISHED = 'Review loop finished:';
+export const FINISHED = 'Review loop finished:';
 
 type View = { comments?: { body?: unknown; createdAt?: unknown }[]; commits?: { committedDate?: unknown }[] };
 

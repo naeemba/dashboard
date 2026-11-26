@@ -65,6 +65,8 @@ export type ReviewPorts = {
   // Why `/pr-loop` cannot run, or null when it is installed (reviewLoopMissing). Asked at each start, so
   // installing it lets the next start through without a restart.
   loopMissing: () => string | null;
+  // The installed pr-loop.js a GitHub review calls by path (loopWorkflow).
+  workflow: string;
   // A start under way: the installed `/pr-loop` asked whether it is current, and the status bar told
   // when it is not (review-loop-install.ts). Not awaited; it never refuses.
   loopChecked: () => void;
@@ -187,7 +189,7 @@ async function swapWorktree(
   const started = await ports.startReview(
     { ...entry, pane: null, reviewing: true },
     slot,
-    reviewPrompt(entry.cardId, pullRequest, entry.projectPath, ports.landsPullRequest(entry.projectPath), await ports.forgeOf(entry.projectPath)),
+    reviewPrompt(entry.cardId, pullRequest, entry.projectPath, ports.landsPullRequest(entry.projectPath), await ports.forgeOf(entry.projectPath), ports.workflow),
   );
   return { message: started.ok ? '' : started.message, again: false };
 }

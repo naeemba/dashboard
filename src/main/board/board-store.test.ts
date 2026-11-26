@@ -20,12 +20,11 @@ vi.mock('node:fs', async (importOriginal) => {
 afterEach(() => { renames.failure = undefined; });
 
 // Lets one test stand in a fake home directory without touching the real one, since Vitest cannot
-// spy on a named ESM export directly. Hoisted with the mock: a module that asks homedir() as it is
-// imported (review-loop-install.ts's CLAUDE_FOLDER) reads it before a plain `let` here exists.
-const fakeHome = vi.hoisted(() => ({ path: undefined as string | undefined }));
+// spy on a named ESM export directly.
+let homedirOverride: string | undefined;
 vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:os')>();
-  return { ...actual, homedir: () => fakeHome.path ?? actual.homedir() };
+  return { ...actual, homedir: () => homedirOverride ?? actual.homedir() };
 });
 import { DASHBOARD_FOLDER_NAME } from '../app/dashboard-folder';
 import {
@@ -51,11 +50,11 @@ import { temporaryFolder } from '../testing/temporary-folder';
 // the .dashboard of whoever runs the tests.
 function inFakeHome(test: (home: string) => void): void {
   const home = project();
-  fakeHome.path = home;
+  homedirOverride = home;
   try {
     test(home);
   } finally {
-    fakeHome.path = undefined;
+    homedirOverride = undefined;
   }
 }
 
