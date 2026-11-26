@@ -120,9 +120,10 @@ version of each board file it changed, so a card's Review that origin has since 
 counts. A board write whose sync failed is never lost to a sweep: a version origin never held, or a
 fetch that fails, keeps the worktree, and the throwaway sweep's reason names the files. The cost:
 such a worktree stays until someone looks. `d` on one in the list asks the same question after
-its first confirm, and names the files origin lacks in a second one, which removes it anyway
-(`removalOf`'s `boardChecked`), only when uncommitted board files are what git is forced past:
-an unforced remove of a clean one loses no commit. A review's removal still forces past them
+its first confirm. When origin lacks a file, a second confirm names it and removes the worktree
+anyway (`removalOf`'s `boardChecked`). It is asked only when uncommitted board files are what git
+is forced past, and only about those: an unforced remove of a clean one loses no commit, and a
+forced one keeps the branch. A review's removal still forces past them
 unasked, so a card edit made offline before the merge goes with the folder. A locked worktree,
 or one a process stands in, is still kept. `ship.ts`, `board-on-origin.ts`, `finished-work.ts`,
 `leftover-worktrees.ts`, `remove.ts`. (2026-11-26)
