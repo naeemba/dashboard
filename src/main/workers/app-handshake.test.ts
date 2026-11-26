@@ -29,7 +29,7 @@ describe('versionRefusal', () => {
   });
   // After an install main still lists and releases its panes before the restart.
   it('lets a read and release through from another build of the same major version', () => {
-    for (const verb of ['list', 'report', 'release']) {
+    for (const verb of ['list', 'report', 'status', 'release']) {
       expect(versionRefusal('2.53.0+372685450abc', '2.54.0+aaaaaaaaaaaa', [verb, '2:3'])).toBeUndefined();
     }
     expect(versionRefusal('2.53.0+372685450abc', '3.0.0+aaaaaaaaaaaa', ['list'])).toContain('restart the app');

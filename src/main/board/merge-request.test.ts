@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { answeringPrograms, remoteAt } from '../testing/answering-programs';
-import { branchPullRequest, latestMergeRequest } from './merge-request';
+import { branchPullRequest, latestMergeRequest, openPullRequests } from './merge-request';
 import { pullRequestStatus } from './pull-request-status';
 
 const mergeRequest = (iid: number, state: string, status = 'not_open') => ({
@@ -43,5 +43,20 @@ describe('branchPullRequest', () => {
   it('asks glab on a GitLab project and gh on a GitHub one', async () => {
     expect((await branchPullRequest(run('git@git.arr.lan:fe/app.git'), '/w', 'fix-it', 1000))?.number).toBe(3);
     expect((await branchPullRequest(run('git@github.com:me/app.git'), '/w', 'fix-it', 1000))?.number).toBe(4);
+  });
+});
+
+describe('openPullRequests', () => {
+  const run = (url: string) => answeringPrograms({
+    ...remoteAt(url),
+    'glab mr list --output json --per-page 100': JSON.stringify([{ ...mergeRequest(3, 'opened'), source_branch: 'fix-it' }]),
+    'gh pr list': JSON.stringify([{ number: 4, state: 'OPEN', title: 'x', url: 'u', headRefName: 'other' }, { number: 'junk' }]),
+  });
+
+  it('names each open one by its branch, from glab or gh', async () => {
+    expect((await openPullRequests(run('git@git.arr.lan:fe/app.git'), '/w', 1000)).map(({ branch, pull }) => [branch, pull.number]))
+      .toEqual([['fix-it', 3]]);
+    expect((await openPullRequests(run('git@github.com:me/app.git'), '/w', 1000)).map(({ branch, pull }) => [branch, pull.number]))
+      .toEqual([['other', 4]]);
   });
 });

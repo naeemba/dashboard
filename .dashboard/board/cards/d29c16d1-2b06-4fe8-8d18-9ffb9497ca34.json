@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:39.822Z",
-  "updatedAt": "2026-11-26T09:17:00.736Z",
+  "updatedAt": "2026-11-26T09:46:30.550Z",
   "branch": "heavy-checks-wait-on-a-machine-wide-lock-in",
   "pullRequest": 384,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-26T09:17:00.715Z",
       "body": "Pull request #384 opened: Heavy checks wait on a machine-wide lock instead of flaking under load https://github.com/naeemba/dashboard/pull/384"
+    },
+    {
+      "at": "2026-11-26T09:46:30.550Z",
+      "body": "Review loop: floor-addressed in 2 rounds, nothing left open. R1 fixed 5 findings in 6f4ade23 (a bare vitest on a terminal is watch mode, so it no longer holds every pane; pnpm/npm -w is the workspace flag, not watch; LONGEST_WAIT comment; sleep moved to its own module; ship and skills history lines). R2 fixed 1 low in 31cf0bd4 (vitest --run / --watch=false on a terminal now waits); the final check accepted it. Neither round changed the card's design. NOT ready to merge: after #380 landed, GitHub reports the PR CONFLICTING/dirty against main 97f7ec8c, but a local git merge-tree of origin/main and 31cf0bd4 merges cleanly, so pr wait could not name the files. CI did not run. Next: merge origin/main into the branch and push, which also makes GitHub recompute, then run pr wait 384 again."
     }
   ],
   "column": "Review",

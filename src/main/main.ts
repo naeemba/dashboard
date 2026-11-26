@@ -7,7 +7,7 @@ import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, remem
 import { baseName } from '../shared/app/base-name';
 import { holdProjectName, readProjectNames } from './workers/project-names';
 import { runProgram } from './app/git';
-import { branchPullRequest } from './board/merge-request';
+import { branchPullRequest, openPullRequests } from './board/merge-request';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
 import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
 import { realPath } from './app/real-path';
@@ -46,6 +46,7 @@ import { memorySweep, recordedUnits, userServiceCgroup } from './processes/memor
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
 import { finishedCardIn } from './workers/auto-release';
+import { paneCardIn } from './workers/status-lines';
 import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
@@ -796,6 +797,11 @@ const workerAnswers = sessionRequests({
     const { slot, index } = paneFromId(id);
     return finishedCardIn(worktrees.entries(), projectIn(slot)?.path, index, boardLog.latest);
   },
+  paneCard(id) {
+    const { slot, index } = paneFromId(id);
+    return paneCardIn(worktrees.entries(), projectIn(slot)?.path, index, boardLog.latest);
+  },
+  openPullRequests: (projectPath) => openPullRequests(runProgram, projectPath, 20_000),
   released(id, reason, output) {
     logStore.log({ level: 'info', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `${output}: ${reason}` });
     sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);

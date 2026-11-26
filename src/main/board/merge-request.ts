@@ -1,6 +1,6 @@
 import { projectForge } from '../app/forge';
 import type { runProgram } from '../app/git';
-import { latestListed, latestPullRequest, pullRequestListArguments, type PullRequest } from './pull-request-column';
+import { latestListed, latestPullRequest, listedPullRequests, openPullRequestListArguments, pullRequestListArguments, type PullRequest } from './pull-request-column';
 
 // A branch's pull request asked of the project's forge (forge.ts): `gh pr list`, or on GitLab `glab mr
 // list`, whose merge requests are read into gh's shape here so the card records one the way it records
@@ -19,9 +19,10 @@ const STATES: Record<string, string> = { opened: 'OPEN', merged: 'MERGED', close
 // is dropped by latestListed, as an unknown gh state is.
 function asPullRequest(value: unknown): unknown {
   if (typeof value !== 'object' || value === null) return value;
-  const { iid, state, title, web_url: url, sha, detailed_merge_status: status } = value as Record<string, unknown>;
+  const { iid, state, title, web_url: url, sha, detailed_merge_status: status, source_branch: branch } = value as Record<string, unknown>;
   return {
     number: iid,
+    headRefName: branch,
     state: typeof state === 'string' && Object.hasOwn(STATES, state) ? STATES[state] : null,
     title,
     url,
@@ -33,8 +34,12 @@ function asPullRequest(value: unknown): unknown {
 
 // The merge request a branch stands for, from `glab mr list`'s JSON, picked as latestPullRequest picks.
 export function latestMergeRequest(json: string): PullRequest | null {
+  return latestListed(asPullRequests(json));
+}
+
+function asPullRequests(json: string): unknown[] {
   const listed: unknown = JSON.parse(json);
-  return latestListed(Array.isArray(listed) ? listed.map(asPullRequest) : []);
+  return Array.isArray(listed) ? listed.map(asPullRequest) : [];
 }
 
 // Throws when the forge's CLI cannot answer, as `gh pr list` alone did.
@@ -43,4 +48,15 @@ export async function branchPullRequest(run: typeof runProgram, folder: string, 
     return latestMergeRequest(await run('glab', mergeRequestListArguments(branch), folder, { timeout }));
   }
   return latestPullRequest(await run('gh', pullRequestListArguments(branch), folder, { timeout }));
+}
+
+// A pull request open on the forge and the branch it is from, for `pane status`.
+export type OpenPullRequest = { branch: string; pull: PullRequest };
+
+// Every open pull request of the project, newest first, in one call. Throws as branchPullRequest does.
+export async function openPullRequests(run: typeof runProgram, folder: string, timeout: number): Promise<OpenPullRequest[]> {
+  const listed = (await projectForge(folder, run)) === 'gitlab'
+    ? asPullRequests(await run('glab', ['mr', 'list', '--output', 'json', '--per-page', '100'], folder, { timeout }))
+    : JSON.parse(await run('gh', openPullRequestListArguments(), folder, { timeout }));
+  return listedPullRequests(listed).map((pull) => ({ branch: String(pull.headRefName ?? ''), pull }));
 }

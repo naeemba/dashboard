@@ -20,6 +20,8 @@ import { paneRelease } from '../actions/pane/release';
 import { releaseVerdict, type WorkerLook } from './auto-release';
 import { worktreeWithin } from './run-folder';
 import { letGoAndSay, type Throwaway } from '../actions/worktree/throwaway';
+import { statusText, type PaneStatus } from './status-lines';
+import type { OpenPullRequest } from '../board/merge-request';
 
 // What main does with a `session` command: who is asking and what they may touch, against what main.ts
 // hands over. Every change to a pane is a pane action (actions/pane/): claim and release are bound here,
@@ -92,6 +94,10 @@ export type SessionPorts = {
   // `pane finish` releases on and `pane list` marks.
   hasKeyboard(id: string): boolean;
   finishedCard(id: string): string | null;
+  // `pane status`: the card whose worktree record names the pane, with the column it is in, and the
+  // project's open pull requests, which throws when the forge cannot answer.
+  paneCard(id: string): PaneStatus['card'];
+  openPullRequests(projectPath: string): Promise<readonly OpenPullRequest[]>;
   // A worker closed by `pane landed`, why, and what pane.release answered: logged and shown.
   released(id: string, reason: string, output: string): void;
   // What became of the throwaway of a pane that went without a release: logged under its project.
@@ -449,8 +455,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return refusal === null ? sessionReply(await act()) : refused(refusal);
   }
 
+  // The id, label and state that lead both pane list's line and pane status's.
+  function paneHead(id: string): string {
+    return `${id}\t${paneLabel(paneFromId(id).index)}\t${stateOf(id)}`;
+  }
+
   function paneLine(id: string, prefix = ''): string {
-    return `${prefix}${id}\t${paneLabel(paneFromId(id).index)}\t${stateOf(id)}\t${ports.directoryOf(id) ?? ''}`;
+    return `${prefix}${paneHead(id)}\t${ports.directoryOf(id) ?? ''}`;
   }
 
   // With reports, a fifth column: the end of the worker's last message, empty for one that has said none.
@@ -467,6 +478,20 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const refusal = worker(id, slot);
     if (refusal !== null) return refused(refusal);
     return answered(`${paneLine(id)}\n\n${lastMessages.get(id) ?? 'It has not ended a turn since it was started.'}`);
+  }
+
+  async function status(slot: number, projectPath: string): Promise<SessionReply> {
+    const panes = ports.openPanes(slot).map((index): PaneStatus => {
+      const id = terminalId(slot, index);
+      return {
+        head: paneHead(id),
+        directory: ports.directoryOf(id) ?? '',
+        card: ports.paneCard(id),
+        report: oneLineTail(lastMessages.get(id) ?? ''),
+      };
+    });
+    const pulls = await ports.openPullRequests(projectPath).catch((error: unknown) => failureText(error));
+    return answered(statusText(panes, pulls));
   }
 
   // --all puts the project's name first on each line, so the lines of two projects tell apart.
@@ -539,6 +564,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'release': return await onWorker(command.id, slot, () => release.call({ id: command.id }));
         case 'finish': return await onWorker(command.id, slot, () => finish(command.id));
         case 'report': return report(command.id, slot);
+        case 'status': return await status(slot, projectPath ?? '');
         case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name, command.from);
         case 'conflicted': return await conflicted(slot, projectPath ?? '', command.branch, command.pullRequest, command.from);
       }

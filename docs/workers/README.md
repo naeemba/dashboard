@@ -228,6 +228,16 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   each pane's line ends with a fifth column, the last 200 characters of its
   worker's last message on one line, empty for a pane that has said nothing;
   `pane report <id>` still prints the whole kept message.
+- Given workers on cards and open pull requests, when `pane status` (the
+  `pane_status` tool) runs, then each pane's line is `pane list --reports`'s
+  with its card's id, column and title, its branch, and its open pull request
+  with its CI state (`passed` when every check passed but the glyph has
+  nothing to say: waiting on a review, or it cannot merge) before the
+  report, then the open pull requests no pane holds follow, all from one
+  `gh pr list` (or `glab mr list`); a forge that cannot answer leaves the
+  panes printed, a card pane's pull request `pr unknown`, and says why. It is
+  let through across builds of one major version, as list is
+  (workers-decision-4).
 - Given main dispatches a worker or a card is shipped, when its Claude starts,
   then it starts with `--session-id` the app chose and the app's session index
   has its row first (drawer-decision-1).
