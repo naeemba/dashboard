@@ -87,6 +87,15 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     released: (id, reason, output) => { released.push(`${id} ${reason}: ${output}`); },
     threwAway: (id, said, projectPath) => { released.push(`${id} dropped: ${said} (${projectPath})`); },
     realPath: (folder) => folder,
+    pool: {
+      saved: { next: 1, entries: [] },
+      save: () => undefined,
+      cap: () => 4,
+      budget: () => null,
+      board: () => null,
+      now: () => Date.parse('2026-11-26T12:00:00Z'),
+      beginCard: async () => ({ refused: 'no card starts here' }),
+    },
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });

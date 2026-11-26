@@ -22,6 +22,11 @@ import { worktreeWithin } from './run-folder';
 import { letGoAndSay, type Throwaway } from '../actions/worktree/throwaway';
 import { statusText, type PaneStatus } from './status-lines';
 import type { OpenPullRequest } from '../board/merge-request';
+import { holdsSlot, type QueueEntry } from './pane-pool';
+import { panePool, type PanePoolActions } from '../actions/pane/queue';
+import type { PoolPorts } from './pane-queue-store';
+// For main.ts, at its line ceiling, which builds SessionPorts' `pool` with it.
+export { poolPorts } from './pane-queue-store';
 
 // What main does with a `session` command: who is asking and what they may touch, against what main.ts
 // hands over. Every change to a pane is a pane action (actions/pane/): claim and release are bound here,
@@ -102,6 +107,9 @@ export type SessionPorts = {
   released(id: string, reason: string, output: string): void;
   // What became of the throwaway of a pane that went without a release: logged under its project.
   threwAway(id: string, said: string, projectPath: string): void;
+  // What the pane pool (actions/pane/queue.ts) is built on beside what is held here: its file, the
+  // settings and the boards, and the start of a ship or a review.
+  pool: PoolPorts;
   // Where a path really is (real-path.ts): git lists a throwaway by it, a pane's folder keeps the
   // spelling its project was opened by.
   realPath(path: string): string;
@@ -153,6 +161,10 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // The open pane standing in a throwaway found on disk at launch, which holds it from now on, or
   // undefined (worktree.sweep).
   hold(throwaway: Throwaway): string | undefined;
+  // The pane pool, built here on the slots these workers hold: `pane start`, `queue` and `unqueue` are
+  // its, `run` asks it whether the cap is reached, and every state change here that may free a slot
+  // drains it. A ship and a review start through its `start` too.
+  pool: PanePoolActions;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -320,6 +332,33 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered(`started ${workerSessionName(projectPath, index)} in ${id}, in ${directory}${caveats} ${paneLink(id)}`);
   }
 
+  // `pane start`: its --project and --in read here, where the asker is known, then the pool's.
+  function start(command: Extract<SessionCommand, { kind: 'start' }>, projectPath: string, directory: string): Promise<{ output: string } | Refused> | Refused {
+    const found = command.project === null ? null : ports.findProject(command.project);
+    if (found !== null && !found.ok) return { refused: found.message };
+    const { project, first, after, prompt, card, worktree, as } = command;
+    const folder = command.folder === null ? null : path.resolve(directory, command.folder);
+    return pool.start.call({
+      dispatcherPath: projectPath, projectPath: found?.path ?? projectPath, cardId: card, after, first,
+      work: { kind: 'run', project, prompt, card, worktree, folder, as },
+    });
+  }
+
+  // A queued `pane start`, started: a pane claimed for it as claim would, and run in it. A pane claimed
+  // for a run that is refused is released again.
+  async function startRun({ dispatcherPath, work }: QueueEntry): Promise<{ output: string } | Refused> {
+    if (work.kind !== 'run') return { refused: 'not a run' };
+    const slot = ports.slotOf(dispatcherPath);
+    if (slot === -1) return { refused: `${dispatcherPath} is not open` };
+    const claimed = await claim.call({ slot, project: work.project });
+    if (isRefused(claimed)) return claimed;
+    const id = claimed.output;
+    const ran = await run(id, slot, dispatcherPath, work.prompt, work.card, work.worktree, work.folder, work.as);
+    if (ran.ok) return { output: ran.output };
+    await release.call({ id });
+    return { refused: ran.output };
+  }
+
   const release = bind(paneRelease, {
     ...ports,
     mainsWorker,
@@ -340,6 +379,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       handedWork(id);
       const throwaway = throwaways.get(id);
       throwaways.delete(id);
+      pool.drain();
       return throwaway;
     },
   });
@@ -457,6 +497,22 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered('');
   }
 
+  // The open panes holding one of the pool's slots.
+  const holding = () => openPaneIds().filter((id) => {
+    const said = states.get(id);
+    return holdsSlot({ mainsWorker: mainsWorker(id), state: said?.state, paused: isPaused(said?.waiting), workIn: workIn(id) });
+  }).length;
+  const pool = panePool(ports.pool.saved, {
+    ...ports.pool,
+    running: holding,
+    open: (projectPath) => ports.slotOf(projectPath) !== -1,
+    begin: (entry) => (entry.work.kind === 'run' ? startRun(entry) : ports.pool.beginCard(entry)),
+    tell(dispatcherPath, text) {
+      const slot = ports.slotOf(dispatcherPath);
+      if (slot !== -1) ports.tell(slot, text);
+    },
+  });
+
   // Send and release are refused a pane the asker may not touch before the action is asked.
   async function onWorker(id: string, slot: number, act: () => Promise<{ output: string } | Refused>): Promise<SessionReply> {
     const refusal = worker(id, slot);
@@ -541,6 +597,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     } else states.set(id, { state, waiting });
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
+    pool.drain();
     return answered('');
   }
 
@@ -564,7 +621,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'claim': return sessionReply(await claim.call({ slot, project: command.project }));
         case 'list': return list(slot, command.all, command.reports);
         case 'send': return await onWorker(command.id, slot, () => send(command.id, slot, projectPath ?? '', command.text));
+        case 'start': return sessionReply(await start(command, projectPath ?? '', request.directory));
+        case 'queue': return sessionReply(await pool.queue.call({}));
+        case 'unqueue': return sessionReply(await pool.unqueue.call({ id: command.id, dispatcherPath: projectPath }));
         case 'run': {
+          // The cap holds for a pane main already holds as well; pane start queues past it.
+          const full = pool.full();
+          if (full !== null) return refused(full);
           // --in is typed relative to where the command ran, main's own folder most often.
           const folder = command.folder === null ? null : path.resolve(request.directory, command.folder);
           return await run(command.id, slot, projectPath ?? '', command.prompt, command.card, command.worktree, folder, command.as);
@@ -582,7 +645,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }, {
     workers,
     notify,
+    pool,
     async dropped(id: string) {
+      pool.drain();
       const throwaway = throwaways.get(id);
       if (throwaway === undefined || releasing.has(id)) return;
       throwaways.delete(id);
@@ -599,7 +664,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (id !== undefined && !throwaways.has(id)) throwaways.set(id, throwaway);
       return id;
     },
-    forget: (id: string) => { dispatched.delete(id); handedWork(id); forgetWorker(id); },
+    forget: (id: string) => { dispatched.delete(id); handedWork(id); forgetWorker(id); pool.drain(); },
     // Every open pane, not only `dispatched`: a worker resumed at launch was never dispatched.
     // Only a pane whose notice would go to the main that read it, by the rule `notice` uses: two
     // projects in folders of one name give their workers one name.
@@ -621,6 +686,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       busyMains.get(slot)?.stop();
       busyMains.delete(slot);
       notices.turnOver();
+      // A turn's end writes a fresh budget reading.
+      pool.drain();
     },
   });
 }

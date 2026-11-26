@@ -1,0 +1,138 @@
+import { describe, expect, it } from 'vitest';
+import type { Refused } from '../../../shared/app/bridge';
+import { emptyBoard, type Board } from '../../../shared/board/board';
+import type { QueueEntry } from '../../workers/pane-pool';
+import type { SavedQueue } from '../../workers/pane-queue-store';
+import { panePool, type PaneQueuePorts } from './queue';
+
+// One open project, api, with `running` workers holding slots under a cap of 2. A start settles when
+// the test says: `finish(id)` resolves the start of that queue id.
+function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueue = { next: 1, entries: [] }) {
+  const counts = { running: 0 };
+  const told: string[] = [];
+  const begun: string[] = [];
+  const saves: SavedQueue[] = [];
+  const pending = new Map<string, (result: { output: string } | Refused) => void>();
+  const board: Board = { columns: emptyBoard().columns.map((column, at) => (at === 0 ? { ...column, cards: [{ id: 'a', title: 'A', notes: '', priority: 'medium' as const, parent: null }] } : column)) };
+  const actions = panePool(saved, {
+    save: (each) => { saves.push(structuredClone(each)); },
+    running: () => counts.running,
+    cap: () => 2,
+    budget: () => null,
+    open: () => true,
+    board: () => board,
+    begin: (entry: QueueEntry) => new Promise((resolve) => { begun.push(entry.id); pending.set(entry.id, resolve); }),
+    tell: (dispatcherPath, text) => { told.push(`${dispatcherPath}: ${text}`); },
+    now: () => Date.parse('2026-11-26T12:00:00.000Z'),
+    ...over,
+  });
+  const finish = async (id: string, result: { output: string } | Refused = { output: `started ${id}` }) => {
+    pending.get(id)?.(result);
+    // The settle's own then, and the drain it runs.
+    await new Promise((resolve) => setImmediate(resolve));
+  };
+  const start = (over: Record<string, unknown> = {}) => actions.start.call({
+    dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, first: false,
+    work: { kind: 'run', project: null, prompt: 'fix it', card: null, worktree: false, folder: null, as: null }, ...over,
+  });
+  return { actions, counts, told, begun, saves, finish, start, board };
+}
+
+describe('pane.start', () => {
+  it('queues everything until the restored panes are counted', async () => {
+    const { actions, start, begun } = pool();
+    await expect(start()).resolves.toEqual({ output: 'queued q1, 1st: the panes a restart brings back are not all back yet' });
+    actions.ready();
+    expect(begun).toEqual(['q1']);
+  });
+
+  it('starts at once under the cap and answers what the start answers, telling its main nothing', async () => {
+    const { actions, start, finish, told } = pool();
+    actions.ready();
+    const answer = start();
+    await finish('q1');
+    await expect(answer).resolves.toEqual({ output: 'started q1' });
+    expect(told).toEqual([]);
+  });
+
+  // The slot is taken before the start's first await: a ship's worktree takes minutes before its agent
+  // is in a pane to count.
+  it('holds a slot for each start under way, queues past the cap and starts the next when one settles', async () => {
+    const { actions, start, finish, told, begun, counts, saves } = pool();
+    actions.ready();
+    void start();
+    void start();
+    await expect(start({ first: false })).resolves.toEqual({ output: 'queued q3, 1st: 2 running, the cap is 2' });
+    expect(begun).toEqual(['q1', 'q2']);
+    expect(saves.at(-1)?.entries.map((each) => each.id)).toEqual(['q3']);
+    // q1's agent is in its pane now, still holding the slot its start held.
+    counts.running = 1;
+    await finish('q1');
+    expect(begun).toEqual(['q1', 'q2']);
+    counts.running = 0;
+    await finish('q2', { refused: 'card a has no worktree' });
+    expect(begun).toEqual(['q1', 'q2', 'q3']);
+    await finish('q3');
+    expect(told).toEqual(['/work/api: q3 started: started q3']);
+    expect(saves.at(-1)).toEqual({ next: 4, entries: [] });
+  });
+
+  it('puts --first at the head of the queue', async () => {
+    const { actions, start } = pool({ cap: () => 0 });
+    actions.ready();
+    await start();
+    await expect(start({ first: true })).resolves.toEqual({ output: 'queued q2, 1st: 0 running, the cap is 0' });
+    const listed = await actions.queue.call({});
+    expect('output' in listed && listed.output.split('\n').map((line) => line.split('\t')[0])).toEqual(['q2', 'q1', 'held: 0 running, the cap is 0']);
+  });
+
+  it('tells a queued start\'s main when it did not start, and refuses a card queued twice', async () => {
+    const { actions, start, finish, told } = pool({ cap: () => 1 });
+    actions.ready();
+    void start();
+    await start({ cardId: 'a', work: { kind: 'ship', title: 'A' } });
+    await expect(start({ cardId: 'a', work: { kind: 'review' } })).resolves.toEqual({ refused: 'card a is already queued as q2' });
+    await finish('q1');
+    await finish('q2', { refused: 'commit or stash them first' });
+    expect(told).toEqual(['/work/api: q2 did not start: commit or stash them first']);
+  });
+
+  it('drops a card finished while it waited, and tells its main', async () => {
+    const { actions, start, told, board, begun } = pool({ cap: () => 0 });
+    actions.ready();
+    await start({ cardId: 'a', work: { kind: 'ship', title: 'A' } });
+    board.columns[5].cards.push(board.columns[0].cards.splice(0, 1)[0]);
+    actions.drain();
+    expect(told).toEqual(['/work/api: q1 dropped: card a is Done']);
+    expect(begun).toEqual([]);
+  });
+
+  it('refuses what it cannot read', async () => {
+    const { actions } = pool();
+    await expect(actions.start.call({ dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, first: false, work: { kind: 'sing' } }))
+      .resolves.toEqual({ refused: 'the start was not one the app could read' });
+  });
+});
+
+describe('the pool\'s other doors', () => {
+  it('says why a start that never queues is refused at the cap', async () => {
+    const { actions, start } = pool({ cap: () => 1 });
+    actions.ready();
+    expect(actions.full()).toBeNull();
+    void start();
+    expect(actions.full()).toBe('1 running, the cap is 1: pane start queues the work until a worker frees');
+  });
+
+  it('withdraws an entry for the main that queued it only, and lists an empty queue', async () => {
+    const queued = { next: 8, entries: [{
+      id: 'q7', dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, queuedAt: '2026-11-26T11:00:00.000Z',
+      work: { kind: 'review' as const },
+    }] };
+    const { actions, saves } = pool({}, queued);
+    await expect(actions.unqueue.call({ id: 'q7', dispatcherPath: '/work/crm' })).resolves.toEqual({ refused: 'q7 was queued by another project\'s main' });
+    await expect(actions.unqueue.call({ id: 'q9', dispatcherPath: '/work/api' })).resolves.toEqual({ refused: 'nothing queued as q9' });
+    await expect(actions.unqueue.call({ id: 'q7', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q7' });
+    expect(saves).toEqual([{ next: 8, entries: [] }]);
+    await expect(actions.queue.call({})).resolves.toEqual({ output: 'nothing queued' });
+  });
+});
