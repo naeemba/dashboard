@@ -5,7 +5,13 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-24T20:14:02.968Z",
-  "updatedAt": "2026-11-24T20:14:02.969Z",
+  "updatedAt": "2026-11-26T10:38:42.777Z",
+  "comments": [
+    {
+      "at": "2026-11-26T10:38:42.776Z",
+      "body": "Already done by 4e0208d0 (shellBody reads Windows shell bodies)."
+    }
+  ],
   "column": "Backlog",
   "order": 66
 }
