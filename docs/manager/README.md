@@ -133,6 +133,8 @@ Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
   old and new)
 - Terminals: `manager-terminals.ts` (main's half; the view is the panes
   feature's `page.ts`)
+- Browser: the view is the browser feature's `browser-view.ts`, filed under
+  `MANAGER_BROWSER_PATH` in `manager.ts`
 
 ## Scenarios
 
@@ -167,6 +169,10 @@ Folders: `src/main/manager/`, `src/shared/manager/`, `src/renderer/manager/`.
 - Given the manager's terminals, when you press a key that opens something in
   nvim (the scrollback, Ctrl+G, a path a pane printed), then the status bar says
   at once that the manager has no nvim.
+- Given the manager page, when you press the browser key or click `browser` on
+  its strip, then its own browser is on screen, signed in apart from every
+  project's, and `dashboard browser open` from its main or a worker opens a tab
+  there.
 - Given the manager's main dispatched a worker, when the app restarts, then the
   worker comes back on the manager page resumed as `main-manager`'s, and the
   workers popup lists it under `main-manager` (manager-decision-2).

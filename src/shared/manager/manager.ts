@@ -25,6 +25,11 @@ export const MANAGER_SLOT = -2;
 // whose path is empty, so the manager cannot reach a saved layout even if something else lets it.
 export const MANAGER_PROJECT: Project = { name: 'manager', path: '', missing: false };
 
+// What the manager's browser is filed under, where a project's is filed under its folder: its tabs, and
+// the partition its sign-ins are kept in. Not the page's empty path, which every browser action refuses
+// as no project given. A project's folder is absolute, so this names no project's browser.
+export const MANAGER_BROWSER_PATH = 'manager';
+
 // The workers a page has open, out of main's list: a project's by its slot, the manager's on a field of
 // its own, since it holds no place in the list of projects. A host built before the manager had
 // terminals sends no such field, and the manager there has none.

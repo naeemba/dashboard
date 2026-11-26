@@ -72,12 +72,14 @@ export function createPageSync(ports: PageSyncPorts): PageSync {
       }
       // The manager is never removed or rebuilt as a project is, so on a host change its terminals are
       // emptied and drawn again here: otherwise its main keeps this machine's conversation while its
-      // prompt goes to the host's, and its workers draw the host's output over this machine's.
+      // prompt goes to the host's, and its workers draw the host's output over this machine's. Its tabs
+      // go too, since they were opened by this machine's panes, which are no longer the ones on screen.
       // The rebuilt Claude screen is a new one, never shown: on the page in front it is shown now, which
       // measures it and starts the host's session, as landing on it would.
       for (const page of replacing ? pages : []) {
         if (isProjectPage(page) || !page.views.terminals) continue;
         ports.addTerminals(page);
+        page.browser?.reset();
         if (page === pages[ports.activeIndex()] && page.mode === 'terminals') page.chat?.shown();
       }
       // A worker opening or closing changes no page, only what is on one. Every page is asked, the

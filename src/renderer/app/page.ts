@@ -147,7 +147,7 @@ export type Page = {
   // The Claude screen. Null where the board is: the manager and a dead project have no folder to run
   // a session in.
   chat: ChatView | null;
-  // The project's browser tabs. A project's alone: the manager has no browser mode.
+  // The page's browser tabs: a project's, or the manager's own (manager-page.ts).
   browser: BrowserView | null;
 };
 
@@ -296,7 +296,7 @@ export function toggleZoom(page: Page): void {
 }
 
 // One view of a page, hidden unless it is the mode the page shows.
-function makeView(mode: Mode, shown: Mode): HTMLElement {
+export function makeView(mode: Mode, shown: Mode): HTMLElement {
   const view = document.createElement('div');
   view.className = `view view-${mode}`;
   view.hidden = mode !== shown;
