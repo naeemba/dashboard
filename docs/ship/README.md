@@ -67,7 +67,8 @@ steps itself in two calls: one, beside the Workflow call, marks the pull request
 a draft (when it was ready) and posts `Review loop started`; the other, after the
 loop, posts `Review loop finished: <status>`, marks it ready again and runs the
 wait or land, all in one background call. Only a draft flag gh reads as `true`
-skips the wait or land: a gh error there is treated as ready. The worker reads the card and loads
+skips the wait or land: a flag gh could not read is read again at the close,
+and only a second failed read is treated as ready. The worker reads the card and loads
 SendMessage in that first message too, and arms no wakeup: the Workflow tool
 says when the loop ends. GitLab's `/mr-loop` has no such steps and runs as it is
 (ship-decision-6).

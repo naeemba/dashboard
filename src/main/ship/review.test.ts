@@ -164,6 +164,8 @@ describe('reviewPrompt', () => {
       expect(github).toContain("gh pr comment 12 --body-file - <<'END'");
       expect(github).toContain('Its first line is `Review loop finished: <status>`');
       expect(github).toContain('gh pr ready 12 && <step 2\'s command>');
+      // An unread flag is read again at the close: a person's draft is never landed on a gh error.
+      expect(github).toContain('true) echo still a draft ;; *) gh pr ready 12 && <step 2\'s command> ;; esac');
       expect(github).toContain(merge ? 'pr land 12`, the last command of step 1\'s closing call' : 'pr wait 12`, the last command');
       expect(github).toContain('do not run /pr-loop itself');
       expect(github).not.toMatch(/cmp -s|tail /);
