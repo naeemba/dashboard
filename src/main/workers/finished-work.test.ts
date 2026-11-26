@@ -83,9 +83,11 @@ describe('unfinishedWork, with the board a stale copy of origin\'s', () => {
     expect(await unfinishedWork(gitOnly, folder)).toBe('1 of its commits are on no remote');
   });
 
-  it('lets go of a detached HEAD already on origin/main', async () => {
+  it('lets go of a detached HEAD whose only commit past origin/main touches only the board', async () => {
     const { folder, run } = checkout();
     run('checkout', '--quiet', '--detach', 'origin/main');
+    writeFileSync(join(folder, CARD), '{"column":"Ship"}');
+    run('commit', '--quiet', '-am', 'board: ship "a1"');
     expect(await unfinishedWork(gitOnly, folder)).toBeNull();
   });
 });

@@ -160,7 +160,7 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
       // read as the reason your removal was refused and told you nothing you could act on. Nothing is at
       // risk in a folder that is gone, and git's own unforced remove is happy to prune a worktree whose
       // folder has vanished, so the question is skipped rather than asked and lost.
-      const status = existsSync(worktreePath) ? await git(['status', '--porcelain'], worktreePath) : '';
+      const status = existsSync(worktreePath) ? await git(['status', '--porcelain', '--untracked-files=normal'], worktreePath) : '';
       const { dirty, forced } = removalChanges(status, force);
       if (dirty.length > 0) return { ok: false, message: '', dirty };
       await git(['worktree', 'remove', ...(forced ? ['--force'] : []), worktreePath], project);

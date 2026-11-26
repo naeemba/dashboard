@@ -15,7 +15,7 @@ import { FETCH_TIMEOUT } from '../board/board-sync';
 type RunProgram = typeof runProgram;
 
 export async function unfinishedWork(run: RunProgram, worktreePath: string): Promise<string | null> {
-  if (workChanges(await run('git', ['status', '--porcelain'], worktreePath)).length > 0) {
+  if (workChanges(await run('git', ['status', '--porcelain', '--untracked-files=normal'], worktreePath)).length > 0) {
     return 'it has uncommitted changes';
   }
   const missing = await unpushedWork(run, worktreePath);

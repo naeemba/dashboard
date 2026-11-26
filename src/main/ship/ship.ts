@@ -140,7 +140,7 @@ export function workChanges(porcelain: string): string[] {
 // blockingChanges: the rest of .dashboard/ is still asked about.
 export function removalChanges(porcelain: string, force: boolean): { dirty: string[]; forced: boolean } {
   const changed = changedFiles(porcelain);
-  return { dirty: force ? [] : changed.filter((path) => !isBoardPath(path)), forced: force || changed.length > 0 };
+  return { dirty: force ? [] : workChanges(porcelain), forced: force || changed.length > 0 };
 }
 
 // How many of them there are, for the ship's refusal — the one place a count is worth printing,

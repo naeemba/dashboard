@@ -19,15 +19,16 @@ The predicates live in `board.ts`, `settings.ts`, `ship.ts`, `pane-reading.ts`,
 `notes-state.ts` and `board-state.ts`. A refusal worth a message reuses one or
 adds another — never a second copy of the condition. This lists them:
 
-    grep -rhn "^export function \(has\|is\|may\|blocking\|changed\)[A-Za-z]*(" src/shared/board/board.ts src/shared/settings/settings.ts src/main/ship/ship.ts src/shared/panes/pane-reading.ts src/renderer/notes/notes-state.ts src/renderer/board/board-state.ts
+    grep -rhn "^export function \(has\|is\|may\|blocking\|changed\|work\|removal\)[A-Za-z]*(" src/shared/board/board.ts src/shared/settings/settings.ts src/main/ship/ship.ts src/shared/panes/pane-reading.ts src/renderer/notes/notes-state.ts src/renderer/board/board-state.ts
 
 A predicate is only worth anything if it asks the same question as the thing
 doing the refusing. `blockingChanges` skips `.dashboard/` on purpose, so a ship
 does not refuse itself over the Ship move that started it. Ask it before
 `git worktree remove` and it answers "nothing in the way" about a worktree git is about to refuse:
 the app's own message never prints and a raw `fatal: ... contains modified or untracked files` lands
-on the card instead. `changedFiles` is the same list without the exemption, and that is the one the
-worktree list and the review ask.
+on the card instead. `changedFiles` is the same list without the exemption. The worktree list asks
+`workChanges`, and every removal, the review's included, asks `removalChanges`: both leave out only
+the board's files, which git is forced past.
 
 The prose counts too. A comment that restates a rule living in another file is a
 second copy no test can catch — the code stays right while the sentence goes
