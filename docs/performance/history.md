@@ -5,6 +5,37 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-26: a worker keeps 5000 lines of scrollback
+
+The window's renderer held 569 MB private after 21 hours of real use, and every
+pane kept 10000 lines. Same machine, compositor and tooling as the first
+profile, `measure.mjs scrollback <demo> 12000`: four workers on alpha each print
+12000 lines, so every worker's scrollback is full. "Before" is this branch
+built with workers at 10000, "after" at 5000, two runs each; the runs agreed to
+within a megabyte. Workers are 78 columns wide in the demo.
+
+| | Before | After |
+|---|---|---|
+| Renderer private, workers empty | 61 MB | 62 MB |
+| Renderer private, four workers full | 131 MB | 99 MB |
+| Renderer heap snapshot, total | 64.4 MB | 40.7 MB |
+| Of it, xterm buffer lines | 46.9 MB | 24.0 MB |
+
+The buffer lines are `system / JSArrayBufferData` (the cells) plus their
+`Uint32Array`, `ArrayBuffer` and `Object` wrappers, the four biggest kinds that
+grow with the fill. Full worker scrollback was 73% of the heap and the largest
+thing in it; nothing else grows with the lines printed. xterm keeps each line
+at the full width, 12 bytes a cell whatever was printed, so a full worker cost
+about 17 MB of renderer private memory before and 9 MB after. A wider pane costs
+more in proportion: at 200 columns it is about 24 MB of cells before.
+
+- **Fixed: a worker's scrollback is 5000 lines** (`WORKER_SCROLLBACK`,
+  `src/renderer/panes/pane.ts`). Main's terminal and the editor keep 10000;
+  the scrollback key hands a worker's last 5000 lines to nvim. Small.
+- **Not measured: the 569 MB itself.** The installed app is never probed
+  (workflow-rule-1), so how many of its panes were full is not known; the demo
+  shows each full one is the cost above.
+
 ## 2026-11-16: a shown terminal skips the selection redraw when nothing is selected
 
 Same machine, compositor and tooling as the first profile, `measure.mjs

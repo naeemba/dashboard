@@ -5,6 +5,7 @@ import type { WriteFlow } from './write-flow';
 import type { ChatView } from '../chat/chat-view';
 import { isPrinted, tailLines } from '../../shared/manager/manager';
 import { isRinging, looksBusy, type Bell } from '../../shared/panes/waiting';
+import { isWorker } from '../../shared/panes/terminals';
 
 // One pane: what it is, and what can be read off it. xterm has already laid the bytes out by the time
 // anything here runs, so the escape codes, the redraws and the spinner overwriting itself are all
@@ -29,9 +30,19 @@ import { isRinging, looksBusy, type Bell } from '../../shared/panes/waiting';
 // because paneScrollback is what the size is for: the scrollback key hands the whole buffer to nvim,
 // and an agent that has been working for an hour is well past a thousand lines — at the default the
 // file opens with the top silently missing and nothing saying where it was cut. page.ts builds the
-// terminal with it. docs/panes/README.md repeats the number by hand (the scrollback key paragraph,
-// "the last 10000 lines"), so a change here changes that line too.
+// terminal with paneScrollbackLines. docs/panes/README.md repeats both numbers by hand (the
+// scrollback key paragraph), so a change here changes that line too.
 export const PANE_SCROLLBACK = 10000;
+// A worker keeps half. xterm holds every remembered line at its full width, 12 bytes a cell whatever
+// was printed, so a worker that has filled its scrollback holds about 10 MB at 78 columns, and a
+// day's work is dozens of them: the window held 569 MB after 21 hours, and a heap snapshot of the
+// demo had full worker buffers as its largest part (docs/performance/history.md).
+export const WORKER_SCROLLBACK = PANE_SCROLLBACK / 2;
+
+// The scrollback a pane is built with: a worker's half, main's and the editor's the whole.
+export function paneScrollbackLines(index: number): number {
+  return isWorker(index) ? WORKER_SCROLLBACK : PANE_SCROLLBACK;
+}
 
 // `index` is which pane this is — main, a worker's number, or the editor's — since workers come and go
 // and a page's list of panes has gaps. `element` is the box it is drawn in, which a worker that closes

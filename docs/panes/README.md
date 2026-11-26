@@ -92,8 +92,9 @@ pane has on screen, so an agent that rings on its way past something and keeps
 working is left alone.
 
 The scrollback key takes you to the nvim screen with the pane you are looking at
-open there as a file — the last 10000 lines it printed, scrollback and screen
-alike, which is as far back as a pane remembers. The pane keeps running
+open there as a file — the last 5000 lines a worker printed, 10000 for main and
+the editor, scrollback and screen alike, which is as far back as a pane
+remembers. The pane keeps running
 meanwhile, and the file is a copy: editing it changes nothing in the pane it
 came from.
 

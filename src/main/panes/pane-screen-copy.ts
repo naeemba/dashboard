@@ -13,9 +13,9 @@ import { Terminal } from '@xterm/headless';
 // goes when the shell it belongs to does, with no bookkeeping of its own: a screen joining after a
 // shell died is told so, rather than shown a pane that looks alive and swallows every key.
 //
-// The replay keeps a tenth of the lines a pane on screen keeps (pane.ts's PANE_SCROLLBACK). Every live
-// pane has one of these in main for as long as it runs, at about 12 bytes a cell: ten thousand lines
-// of a 200-column pane is some 24 MB, times six panes a project. A screen joining, or this window
+// The replay keeps a tenth of the lines main keeps on screen (pane.ts's PANE_SCROLLBACK; a worker keeps
+// half that). Every live pane has one of these in main for as long as it runs, at about 12 bytes a
+// cell: ten thousand lines of a 200-column pane is some 24 MB, times six panes a project. A screen joining, or this window
 // coming home from another host, starts a pane at most this far back from its end.
 const REPLAY_SCROLLBACK = 1000;
 const RESET = '\x1bc';
