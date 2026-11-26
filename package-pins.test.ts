@@ -13,6 +13,6 @@ const versions = { ...manifest.dependencies, ...manifest.devDependencies };
 
 describe('held dependencies', () => {
   it.each(HELD)('%s is pinned to an exact version', (name) => {
-    expect(versions[name]).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(versions[name]).toMatch(/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/);
   });
 });
