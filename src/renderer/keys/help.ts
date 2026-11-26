@@ -70,8 +70,8 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'so `error ship` is the ships that failed. An entry opens formatted, or copies as JSON. Kept in dashboard.log in the app\'s data folder, '
     + LOG_FILE_COUNT + ' files of ' + LOG_FILE_LIMIT_SHOWN + '. Never what you type in a pane.',
   app: 'Hold Ctrl, Cmd or Alt alone and a panel names every key that modifier can still start here. '
-    + 'Settings live in ~/.config/dashboard/settings.json, only what you changed, applied live. The worktree list holds shipped cards\' worktrees. What\'s new '
-    + 'lists what an update brought. The updates key checks for and installs a release. Bar messages fade; '
+    + 'Settings live in ~/.config/dashboard/settings.json, only what you changed, applied live. The worktree list asks before deleting board edits origin lacks. What\'s new '
+    + 'lists what an update brought. The updates key installs a release. Bar messages fade; '
     + 'Escape or a click clears one.',
 };
 

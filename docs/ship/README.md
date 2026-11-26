@@ -162,7 +162,9 @@ Whether its loop already finished is read off the merge request's notes through 
   opens empty (`worktree-store.test.ts`).
 - Given a worktree with modified files, when you remove it from the list, then the app says so
   instead of git's raw `fatal:`; one whose only changes are to `.dashboard/board/` is removed
-  without asking, its board a stale copy of origin's (ship-decision-7, `ship.test.ts`).
+  without asking once origin's default branch holds them, its board a stale copy of origin's, and
+  otherwise asks again naming the files origin lacks, a failed fetch counting as lacking
+  (ship-decision-7, `ship.test.ts`, `remove.test.ts`, `worktree-keeper.test.ts`).
 - Given a card whose review the sweep started, when the card reaches Done in the same run, then its
   worktree is removed without a restart (`review-flow-clearing.test.ts`).
 - Given a worktree under `<project>.worktrees/` that the app has no record of and no throwaway
