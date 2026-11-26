@@ -130,6 +130,10 @@ export function blockingChanges(porcelain: string): string[] {
 // BEYOND_THE_BOARD (finished-work.ts) says the same for git, from the same board-store spelling.
 const isBoardPath = (path: string) => path.startsWith(BOARD_FOLDER_PATH);
 
+// The status every workChanges caller asks: untracked files named outright, whatever
+// status.showUntrackedFiles says, or a worktree holding only an untracked file reads as clean.
+export const WORK_STATUS: readonly string[] = ['status', '--porcelain', '--untracked-files=normal'];
+
 export function workChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !isBoardPath(path));
 }

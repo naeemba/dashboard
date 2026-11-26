@@ -11,7 +11,7 @@ import { throwawaysOf } from '../workers/throwaway-marker';
 import { isRefused, type BoundAction } from '../actions/action';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 import { leftoverSweep } from './leftover-worktrees';
-import { workChanges } from './ship';
+import { WORK_STATUS, workChanges } from './ship';
 import { listWorktrees } from './worktree-scan';
 
 // Main's wiring for the leftover sweep (leftover-worktrees.ts): a minute after launch, once the
@@ -50,9 +50,8 @@ export function startLeftoverSweep(main: {
     recorded: () => main.records().map((entry) => entry.worktreePath),
     throwaways: throwawaysOf,
     list: listWorktrees,
-    // Untracked files named outright, whatever status.showUntrackedFiles says. A git that cannot
-    // answer throws, which keeps the worktree.
-    dirty: async (worktreePath) => workChanges(await git(['status', '--porcelain', '--untracked-files=normal'], worktreePath)).length > 0,
+    // A git that cannot answer throws, which keeps the worktree.
+    dirty: async (worktreePath) => workChanges(await git([...WORK_STATUS], worktreePath)).length > 0,
     mergedHead: (worktreePath, branch) => mergedHead(runProgram, worktreePath, branch),
     unpushed: async (worktreePath, mergedAt) => (await unpushedWork(runProgram, worktreePath, mergedAt)) !== 0,
     modifiedAt,

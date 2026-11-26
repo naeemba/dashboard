@@ -5,7 +5,7 @@ import { realPath } from '../app/real-path';
 import {
   diskUsageBytes, distinctWorktrees, parseWorktreeList, type GitWorktree, type ScannedWorktree, type WorktreeRecord,
 } from '../../shared/ship/git-worktrees';
-import { workChanges } from './ship';
+import { WORK_STATUS, workChanges } from './ship';
 import { createWorktreeSizes } from './worktree-sizes';
 
 // The manager's scan: every worktree git knows of in each project, the ones a ship made and every other
@@ -21,7 +21,7 @@ const runFile = promisify(execFile);
 // worktree git cannot read comes back unreadable rather than clean: silence is not no changes.
 export async function worktreeState(worktreePath: string): Promise<{ dirty: boolean; unreadable: boolean }> {
   try {
-    return { dirty: workChanges(await git(['status', '--porcelain', '--untracked-files=normal'], worktreePath)).length > 0, unreadable: false };
+    return { dirty: workChanges(await git([...WORK_STATUS], worktreePath)).length > 0, unreadable: false };
   } catch {
     return { dirty: false, unreadable: true };
   }

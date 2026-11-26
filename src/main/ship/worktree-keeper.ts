@@ -3,7 +3,7 @@ import { baseName } from '../../shared/app/base-name';
 import { failureText } from '../../shared/errors/failure';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
 import { git } from '../app/git';
-import { removalChanges } from './ship';
+import { WORK_STATUS, removalChanges } from './ship';
 import { forgetSize } from './worktree-scan';
 import {
   claimsPane,
@@ -160,7 +160,7 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
       // read as the reason your removal was refused and told you nothing you could act on. Nothing is at
       // risk in a folder that is gone, and git's own unforced remove is happy to prune a worktree whose
       // folder has vanished, so the question is skipped rather than asked and lost.
-      const status = existsSync(worktreePath) ? await git(['status', '--porcelain', '--untracked-files=normal'], worktreePath) : '';
+      const status = existsSync(worktreePath) ? await git([...WORK_STATUS], worktreePath) : '';
       const { dirty, forced } = removalChanges(status, force);
       if (dirty.length > 0) return { ok: false, message: '', dirty };
       await git(['worktree', 'remove', ...(forced ? ['--force'] : []), worktreePath], project);
