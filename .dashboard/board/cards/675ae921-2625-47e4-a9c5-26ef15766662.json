@@ -1,0 +1,11 @@
+{
+  "id": "675ae921-2625-47e4-a9c5-26ef15766662",
+  "title": "Name the nine bare Windows skips",
+  "notes": "GitHub issue #375 (gh issue view 375); the PR body says Closes #375. Nine bare it.skipIf(process.platform === 'win32') calls carry their reason only in a comment, against workflow-rule-6: create-task-program.test.ts:212,222, board-sync-git.test.ts:200,208, session-socket.test.ts:63,93,141, claude-process.test.ts:14,28. Replace them with named skips shared from src/main/testing/windows-skips.ts, like posixPathsOnly. Line numbers may have moved since the issue was filed.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T09:55:56.820Z",
+  "updatedAt": "2026-11-26T09:55:56.820Z",
+  "column": "Backlog",
+  "order": 78
+}
