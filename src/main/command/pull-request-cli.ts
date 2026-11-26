@@ -5,22 +5,26 @@
 // is the same wait without the merge, so nobody hand-rolls a sleep and gh loop around CI.
 
 import { failureLine } from './failure-line';
+import { isWriteVerb, parseWriteCommand, type WriteCommand, WRITE_HELP, WRITE_LINES } from './pull-request-write-cli';
+import { type GitHubPorts, isNetworkError, type ProgramAnswer, retried, RETRY_MINUTES, RETRY_WAITS_MS } from './gh-answer';
 
-export const PULL_REQUEST_USAGE = `pr — wait on or land a pull request of the project you are in
+export const PULL_REQUEST_USAGE = `pr — open, mark, comment on, wait on or land a pull request of the project you are in
 
   pr wait <number|url|branch> [--project <name|aka>]
   pr land <number|url|branch> [--keep] [--project <name|aka>]
+${WRITE_LINES}
 
 wait notes the pull request's head commit and waits for every check on it (gh pr checks --watch),
 merging nothing. land waits the same, then merges that commit: gh pr merge --merge
 --match-head-commit <sha>, so a push during the wait is refused rather than merged unchecked. No
-checks reported a minute after asking passes only in a repository whose recently merged pull
-requests reported no check; anywhere else it is refused, since its CI did not start on that commit (a
-push, or gh pr merge by hand, if it never will). A pull request GitHub says conflicts with its base is
-refused at once, naming the files, since CI does not run on it. A merge call that fails is checked
-against the pull request: merged at that commit is merged. A network error on any gh call is tried
-again for about four minutes, waiting longer each time. The last line is the verdict: \`merged <n>
-at <sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or why not. The wait is as
+checks reported a minute after asking is refused on a draft, since a repository's CI may skip one,
+and otherwise passes only in a repository whose recently merged pull requests reported no check;
+anywhere else it is refused, since its CI did not start on that commit (a push, or gh pr merge by
+hand, if it never will). A pull request GitHub says conflicts with its base is refused at once,
+naming the files, since CI does not run on it. A merge call that fails is checked against the pull
+request: merged at that commit is merged. A network error on any gh call is tried again for about
+${RETRY_MINUTES} minutes, waiting longer each time. The last line is the verdict: \`merged <n> at
+<sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or why not. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; one stopped at that
 limit has not failed, run it again. Once merged, the checkout on the base branch (the project's own,
 or the worktree that has it) is fast-forwarded when it has nothing uncommitted, so no git pull is
@@ -28,10 +32,15 @@ needed after, and the worker pane on its branch is released, unless it is the pa
 in: a line before the verdict says \`released <pane>\` or \`kept <pane>: <why>\` (the keyboard, a
 question, mid-turn, typed into by you, or no main handed it work). --keep merges without releasing
 it. It runs in the project of the folder you are in, or with --project in that project's folder
-from ~/.dashboard/projects.yaml.`;
+from ~/.dashboard/projects.yaml.
+
+${WRITE_HELP}`;
 
 export type PullRequestVerb = 'wait' | 'land';
-type Parsed = { ok: true; verb: PullRequestVerb; target: string; keep: boolean } | { ok: false; message: string };
+type Parsed =
+  | { ok: true; verb: PullRequestVerb; target: string; keep: boolean }
+  | { ok: true; write: WriteCommand }
+  | { ok: false; message: string };
 
 // The words after `pr`, with --project already taken out by boardTarget, as `board` takes it.
 export function parsePullRequestCommand(commandArguments: readonly string[]): Parsed {
@@ -39,6 +48,7 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
   const keep = verb === 'land' && words.includes('--keep');
   const targets = words.filter((word) => !keep || word !== '--keep');
   if (verb === undefined) return { ok: false, message: PULL_REQUEST_USAGE };
+  if (isWriteVerb(verb)) return parseWriteCommand(verb, words);
   if (verb !== 'land' && verb !== 'wait') return { ok: false, message: `no such command: ${verb}\n\n${PULL_REQUEST_USAGE}` };
   // `pr land --help`, or any flag where the pull request goes, would reach gh as the pull request.
   if (targets.some((target) => target.startsWith('-'))) return { ok: false, message: PULL_REQUEST_USAGE };
@@ -46,48 +56,27 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
   return { ok: true, verb, target: targets[0], keep };
 }
 
-// What gh or git answered: whether it exited 0, and what it printed on either stream.
-export type ProgramAnswer = { ok: boolean; output: string };
 // A landed pull request says the branch it merged into, for the fast-forward after (fast-forward-checkout.ts).
 // One that conflicts says its base and head, for the files it conflicts on (conflictLine).
 // A landed one says its head branch too, whose worker pane the app is asked to release (releaseLanded).
 export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: { base: string; sha: string } };
-export type LandPorts = { gh(words: string[]): Promise<ProgramAnswer>; wait(milliseconds: number): Promise<void> };
 
 // gh's words for a pull request whose CI has not started, or that runs none.
 const NO_CHECKS = 'no checks reported';
 export const NO_CHECKS_WAIT_MS = 60_000;
 const reportsNoChecks = (answer: ProgramAnswer) => !answer.ok && answer.output.includes(NO_CHECKS);
 
-// gh's words when the request or its answer was lost on the way, not refused by GitHub: Go's
-// `Post "https://...": unexpected EOF`, a reset or timed-out connection, gh's own line when it cannot
-// reach the API at all, a 5xx from the API. Only gh's own lines are read: a check row of `gh pr checks`
-// is tab-separated and carries the check's description, which may well say `error connecting to postgres`.
-const NETWORK_ERROR = /\b(?:Get|Post) "?https?:\/\/|unexpected EOF|connection (?:reset|refused)|i\/o timeout|TLS handshake timeout|error connecting to|HTTP 5\d\d/;
-export const isNetworkError = (answer: ProgramAnswer) => !answer.ok && answer.output.split('\n').some((line) => !line.includes('\t') && NETWORK_ERROR.test(line));
-// The waits before each try again, about four minutes in all: a Wi-Fi rejoin, a VPN reconnect or a
-// minute of GitHub trouble is outlasted, where one try five seconds on was not.
-export const RETRY_WAITS_MS = [5_000, 10_000, 20_000, 40_000, 60_000, 60_000, 60_000];
-const RETRY_MINUTES = Math.round(RETRY_WAITS_MS.reduce((sum, each) => sum + each, 0) / 60_000);
 const lost = (answer: ProgramAnswer, doing: string): ProgramAnswer => ({ ok: false, output: `${answer.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes ${doing}; nothing is merged, run it again` });
 
-// A gh call tried again on a network error, as long as RETRY_WAITS_MS lasts.
-async function patiently(ports: LandPorts, words: string[]): Promise<ProgramAnswer> {
-  let answer = await ports.gh(words);
-  for (const milliseconds of RETRY_WAITS_MS) {
-    if (!isNetworkError(answer)) return answer;
-    await ports.wait(milliseconds);
-    answer = await ports.gh(words);
-  }
-  return answer;
-}
+// A gh call that only reads, tried again on a network error as long as RETRY_WAITS_MS lasts.
+const patiently = (ports: GitHubPorts, words: string[]) => retried(ports, words);
 
-// The pull request's state, head commit, base branch, mergeability, url and head branch, as
-// `OPEN <sha> main MERGEABLE https://... fix-it`.
-const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName,mergeable,url,headRefName', '-q', '.state + " " + .headRefOid + " " + .baseRefName + " " + .mergeable + " " + .url + " " + .headRefName'];
+// The pull request's state, head commit, base branch, mergeability, url, head branch and whether it is
+// a draft, as `OPEN <sha> main MERGEABLE https://... fix-it false`.
+const stateAndHead = (target: string) => ['pr', 'view', target, '--json', 'state,headRefOid,baseRefName,mergeable,url,headRefName,isDraft', '-q', '.state + " " + .headRefOid + " " + .baseRefName + " " + .mergeable + " " + .url + " " + .headRefName + " " + (.isDraft | tostring)'];
 const readHead = (answer: ProgramAnswer) => {
-  const [state = '', sha = '', base = '', mergeable = '', url = '', branch = ''] = answer.output.trim().split(' ');
-  return { state, sha, base, mergeable, url, branch };
+  const [state = '', sha = '', base = '', mergeable = '', url = '', branch = '', draft = ''] = answer.output.trim().split(' ');
+  return { state, sha, base, mergeable, url, branch, draft: draft === 'true' };
 };
 const conflicting = (answer: ProgramAnswer) => answer.ok && readHead(answer).mergeable === 'CONFLICTING';
 // The program prints the files in place of the output (conflictLine), so the output is only a fallback.
@@ -107,11 +96,11 @@ function recentCheckCount(url: string): string[] | undefined {
 // detail comes first and its verdict last, so the last line is always the one to read.
 type Checked = { ok: true; sha: string; base: string; branch: string; noChecks: boolean } | LandAnswer;
 
-async function checksPassed(ports: LandPorts, target: string): Promise<Checked> {
+async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked> {
   const head = await patiently(ports, stateAndHead(target));
   if (isNetworkError(head)) return lost(head, `reading ${target}`);
   if (!head.ok) return head;
-  const { state, sha, base, url, branch } = readHead(head);
+  const { state, sha, base, url, branch, draft } = readHead(head);
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
   // CI does not run on a pull request that conflicts: waiting on it would end in "no checks reported".
   if (conflicting(head)) return conflictAnswer(target, base, sha);
@@ -129,6 +118,8 @@ async function checksPassed(ports: LandPorts, target: string): Promise<Checked> 
   // commit, or a pull request that came to conflict after the first look.
   if (noChecks) {
     if (conflicting(await patiently(ports, stateAndHead(target)))) return conflictAnswer(target, base, sha);
+    // Some repositories' CI skips a draft and some runs on it, so only a draft with no checks is refused.
+    if (draft) return { ok: false, output: `no checks reported on ${sha}, and ${target} is a draft, which CI may skip; mark it ready (pr ready ${target}) and run it again if it should run` };
     const checkCount = recentCheckCount(url);
     if (checkCount === undefined) return { ok: false, output: `no checks reported on ${sha}, and gh gave no repository for ${target} to ask whether it has CI; ${target} is not merged` };
     const checksBefore = await patiently(ports, checkCount);
@@ -139,13 +130,13 @@ async function checksPassed(ports: LandPorts, target: string): Promise<Checked> 
   return { ok: true, sha, base, branch, noChecks };
 }
 
-export async function waitOnPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {
+export async function waitOnPullRequest(ports: GitHubPorts, target: string): Promise<LandAnswer> {
   const checked = await checksPassed(ports, target);
   if (!('sha' in checked)) return checked;
   return { ok: true, output: checked.noChecks ? `no checks to wait on at ${checked.sha}, a repository with no CI` : `checks passed on ${checked.sha}` };
 }
 
-export async function landPullRequest(ports: LandPorts, target: string): Promise<LandAnswer> {
+export async function landPullRequest(ports: GitHubPorts, target: string): Promise<LandAnswer> {
   const checked = await checksPassed(ports, target);
   if (!('sha' in checked)) return checked;
   const { sha, base, branch, noChecks } = checked;
@@ -166,7 +157,7 @@ export async function releaseLanded(landed: (branch: string) => Promise<string>,
 // A merge whose answer was lost may have gone through: a failed call is read back from the
 // pull request, merged at the noted commit is merged, conflicting is said as that, and a network
 // error is tried again as long as RETRY_WAITS_MS lasts.
-async function mergeAt(ports: LandPorts, target: string, sha: string, tries = 0): Promise<ProgramAnswer & { conflicting?: true }> {
+async function mergeAt(ports: GitHubPorts, target: string, sha: string, tries = 0): Promise<ProgramAnswer & { conflicting?: true }> {
   const merged = await ports.gh(['pr', 'merge', target, '--merge', '--match-head-commit', sha]);
   if (merged.ok) return merged;
   // One read per try: the tries around it are the retry, and nesting patiently here would make an
@@ -179,7 +170,7 @@ async function mergeAt(ports: LandPorts, target: string, sha: string, tries = 0)
   return mergeAt(ports, target, sha, tries + 1);
 }
 
-// git in a folder, as gh is in LandPorts: the conflicts here and the fast-forward after (fast-forward-checkout.ts).
+// git in a folder, as gh is in GitHubPorts: the conflicts here and the fast-forward after (fast-forward-checkout.ts).
 export type GitPort = (folder: string, words: string[]) => Promise<ProgramAnswer>;
 
 // The files a conflicting pull request conflicts on, merged in git's own memory (merge-tree), so no

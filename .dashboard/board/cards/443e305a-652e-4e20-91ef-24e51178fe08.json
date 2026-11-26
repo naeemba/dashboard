@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:25:04.092Z",
-  "updatedAt": "2026-11-26T08:51:17.357Z",
+  "updatedAt": "2026-11-26T09:47:10.238Z",
   "branch": "dashboard-status-one-call-for-panes-cards-p",
   "pullRequest": 383,
   "comments": [
@@ -16,6 +16,14 @@
     {
       "at": "2026-11-26T08:51:17.329Z",
       "body": "Pull request #383 opened: pane status: panes, cards, PRs and CI in one call https://github.com/naeemba/dashboard/pull/383"
+    },
+    {
+      "at": "2026-11-26T09:26:19.315Z",
+      "body": "Review loop on #383: floor-addressed after 2 rounds. Round 1 fixed 9 findings in 315bdb73: pr unknown when the forge fails, report always the last column, passed CI for a pull request waiting on a review, pane status crosses builds, entryForPane moved to worktree-store, plus nits. Round 2 fixed 2 in d37e1eb1 and b19132aa: workers-decision-4 names pane status, README passed wording. Final check accepted both. Nothing rejected, nothing waiting on a person, and the card's scope and design are unchanged. Not ready to merge: CI did not run because pr wait stopped on a conflict. GitHub reports head b19132aa as CONFLICTING (DIRTY) against main 2dfbb3ae, while git merge-tree of the same two commits is clean and names no files. Next: merge origin/main into the branch and push. That clears GitHub's state and starts CI."
+    },
+    {
+      "at": "2026-11-26T09:47:10.237Z",
+      "body": "Converged, ready to merge. Merged origin/main (with #380, d6cbc2a3) into the branch with no conflicts and pushed it as a2c76670. Local pnpm check passed (4035 tests, typecheck, lint), and CI checks passed on a2c76670."
     }
   ],
   "column": "Review",

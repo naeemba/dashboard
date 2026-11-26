@@ -29,3 +29,6 @@ One line per merged change: date and why.
   coverage line gets a test or a reason in the pull request's body
 - 2026-11-26 — `/work-card` says to rerun only the failed files to tell a failure from load, since
   a full run now waits while another runs on the machine (workflow-decision-14)
+- 2026-11-26 — `/work-card` opens the pull request with `pr create` and names `pr ready` and
+  `pr comment`, not raw gh: workers retried `gh pr create` by hand after a GitHub 502 and met
+  `a pull request already exists`

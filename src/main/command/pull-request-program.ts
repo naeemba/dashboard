@@ -7,7 +7,9 @@ import { projectNamedInFile } from '../projects/project-named';
 import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
-import { conflictedFiles, landPullRequest, parsePullRequestCommand, type ProgramAnswer, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import type { ProgramAnswer } from './gh-answer';
+import { conflictedFiles, landPullRequest, parsePullRequestCommand, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import { writePullRequest } from './pull-request-write-cli';
 import { askLanded } from '../workers/session-socket';
 
 // gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
@@ -33,9 +35,15 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
     process.stderr.write(`${parsed.ok ? '' : parsed.message}\n`);
     return 1;
   }
+  const gh = (words: string[]) => answering('gh')(project.project, words);
   try {
+    if ('write' in parsed) {
+      const written = await writePullRequest({ gh, wait: delay }, parsed.write);
+      (written.ok ? process.stdout : process.stderr).write(`${written.output}\n`);
+      return written.ok ? 0 : 1;
+    }
     const verb = parsed.verb === 'land' ? landPullRequest : waitOnPullRequest;
-    const answer = await verb({ gh: (words) => answering('gh')(project.project, words), wait: delay }, parsed.target);
+    const answer = await verb({ gh, wait: delay }, parsed.target);
     // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
     const { conflicts } = answer;
     const verdict = conflicts === undefined

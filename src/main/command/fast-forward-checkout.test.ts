@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fastForwardCheckout } from './fast-forward-checkout';
-import type { ProgramAnswer } from './pull-request-cli';
+import type { ProgramAnswer } from './gh-answer';
 
 const WORKTREES = [
   'worktree /work/api', 'HEAD 1111', 'branch refs/heads/main', '',

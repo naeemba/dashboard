@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:06.521Z",
-  "updatedAt": "2026-11-26T08:37:04.378Z",
+  "updatedAt": "2026-11-26T09:40:55.990Z",
   "branch": "pr-wait-refuses-a-draft-pr-pr-create-ready",
   "pullRequest": 380,
   "comments": [
@@ -16,8 +16,16 @@
     {
       "at": "2026-11-26T08:37:04.342Z",
       "body": "Pull request #380 opened: pr wait refuses a draft; pr create, ready and comment retry GitHub 5xx safely https://github.com/naeemba/dashboard/pull/380"
+    },
+    {
+      "at": "2026-11-26T09:18:12.295Z",
+      "body": "Review loop converged in 3 rounds, ready to merge. Checks passed on d6cbc2a3. 9 findings fixed, 0 rejected, nothing left open, no conflict with main. Design change in round 1 (5b94bd38): pr wait no longer refuses a draft at once. This repository's ci.yml runs on drafts, so a draft is now refused only when no checks start on it within the minute pr wait already waits. The wait still never runs forever. Round 1 also made pr comment count comments before posting and look only at newer ones, and made pr create check the right branch. Round 2 (cd168c78): pr create refuses --repo without --head, and a lost comment count is reported as nothing posted. d6cbc2a3 merges main."
+    },
+    {
+      "at": "2026-11-26T09:40:55.962Z",
+      "body": "Pull request #380 merged: pr wait refuses a draft; pr create, ready and comment retry GitHub 5xx safely https://github.com/naeemba/dashboard/pull/380"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 310
 }

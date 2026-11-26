@@ -136,6 +136,10 @@ export const COMMAND_ONLY: Record<string, string> = {
   'project remove': 'rare, and asked for by a person',
   'pr land': LAND_IN_BASH,
   'pr wait': WAIT_IN_BASH,
+  // A GitHub outage holds each for as long as RETRY_WAITS_MS lasts, longer than a tool call should.
+  'pr create': 'run in Bash, with gh pr create\'s flags',
+  'pr ready': 'run in Bash',
+  'pr comment': 'run in Bash',
 };
 
 // The key that shows the project's browser, as the keys table binds it before any settings file.

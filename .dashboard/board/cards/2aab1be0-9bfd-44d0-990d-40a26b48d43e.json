@@ -5,7 +5,18 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:51.911Z",
-  "updatedAt": "2026-11-26T08:24:51.911Z",
-  "column": "Backlog",
-  "order": 74
+  "updatedAt": "2026-11-26T09:45:23.493Z",
+  "branch": "pr-land-hands-its-conflicts-to-the-branch-s",
+  "comments": [
+    {
+      "at": "2026-11-26T09:41:23.084Z",
+      "body": "From main: #380 (merged) added pr create/ready/comment in src/main/command/pull-request-write-cli.ts and the shared retry in gh-answer.ts; reuse them. #383 (open, pane status) and #384 (open, heavy-run wait) are in flight; #384 touches work-card-skill.ts and review.ts."
+    },
+    {
+      "at": "2026-11-26T09:45:23.493Z",
+      "body": "Overlap check: #383 (pane status, open) also changes src/main/workers/session-cli.ts, src/main/workers/session-requests.ts and src/main/command/mcp-tools.ts, which this card needs for a new 'pane conflicted <branch> <pr> [--from <id>]' verb (the app sends /pr-conflicts to the agent on the branch). Rest of this card: src/main/command/pull-request-cli.ts and pull-request-program.ts, session-socket.ts, workers/dispatch.ts, docs/command. #384 does not touch these. Plan: additive changes only in the #383 files (a new SessionCommand kind, a usage line, a COMMAND_ONLY row, one function beside landed), so a conflict there is a small merge."
+    }
+  ],
+  "column": "Doing",
+  "order": 0
 }
