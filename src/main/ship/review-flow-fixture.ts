@@ -85,6 +85,7 @@ export function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { 
       workflow: '/home/u/.claude/workflows/pr-loop.js',
       loopChecked: () => undefined,
       follow: async () => ({ output: 'ship-it has no pull request' }),
+      retry: async () => undefined,
       ...over,
     },
   };

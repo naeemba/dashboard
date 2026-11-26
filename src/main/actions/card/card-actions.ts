@@ -32,7 +32,7 @@ import { cardStart } from './start';
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
 export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
-  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished' | 'forgeOf' | 'loopMissing' | 'workflow' | 'follow'> & {
+  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished' | 'forgeOf' | 'loopMissing' | 'workflow' | 'follow' | 'retry'> & {
     table: Channels;
     boardLog: BoardChanges;
     // Every board write here goes to origin behind it (board-sync-queue.ts).
@@ -87,6 +87,10 @@ export function cardActions(main: CardActionsMain): CardActions {
     loopMissing: () => reviewLoopMissing(CLAUDE_FOLDER),
     workflow: loopWorkflow(CLAUDE_FOLDER),
     follow: (projectPath, id) => follow.call({ projectPath, id }),
+    retry: (id) => {
+      const entry = entryForCard(main.worktrees(), id);
+      return entry === undefined ? Promise.resolve() : review.call({ projectPath: entry.projectPath, id });
+    },
   });
   const shipCard = shipFlow({
     ...main,

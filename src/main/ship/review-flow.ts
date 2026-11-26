@@ -71,6 +71,9 @@ export type ReviewPorts = {
   // A start under way: the installed review loop asked whether it is current, and the status bar told
   // when it is not (review-loop-install.ts). Not awaited; it never refuses.
   loopChecked: () => void;
+  // card.review for a review a person started that was only early: the start again, through the pane
+  // pool, which calls `review` below once a worker slot is free.
+  retry: (cardId: string) => Promise<unknown>;
   // card.follow for one card: the project's forge (forge.ts) asked for the pull request on its
   // branch, the number recorded and the card moved into Review when one is open, as the pull request
   // sweep does on its next tick. Throws when the forge's CLI cannot answer.
@@ -319,15 +322,13 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // again for a card that was only early: its agent back at work, its project closed, or its
     // worktree dirty.
     //
-    // A card a person started by hand that was only early goes back to `review` directly: through
-    // card.move it is the sweep's move, and with the loop off that starts nothing, so the review the
-    // person asked for would say "waiting for the commit" and never come.
+    // A card a person started by hand that was only early is started again through card.review, not
+    // card.move: through card.move it is the sweep's move, and with the loop off that starts nothing,
+    // so the review the person asked for would say "waiting for the commit" and never come. Through
+    // card.review it takes a slot of the pane pool like any other start.
     reviewed.add(entry.cardId);
-    // ponytail: this retry of a start the pool already let through goes around the pool, so a slot
-    // filled in between makes one worker over the cap until one finishes; route it through
-    // card.review if that is ever seen.
     if (byHand.delete(entry.cardId)) {
-      await review(entry.cardId);
+      await ports.retry(entry.cardId);
       return;
     }
     // A loop that already finished at the pull request's head, which a card waiting in Review with

@@ -388,10 +388,13 @@ describe('reviewSweep', () => {
         ? { ok: true, message: '', dirty: [] }
         : { ok: false, message: '', dirty: ['.dashboard/board.json'] }),
     });
-    const sweep = reviewSweep(made);
+    // card.review's pane.start, which starts it at once with a slot free.
+    const retried: string[] = [];
+    const sweep: ReviewSweep = reviewSweep({ ...made, retry: (id) => { retried.push(id); return sweep.review(id); } });
     await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
     committed = true;
     await sweep.run();
+    expect(retried).toEqual([CARD]);
     expect(log.started).toHaveLength(1);
     expect(columnOfCard(projectPath)).toBe('Review');
   });
