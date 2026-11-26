@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:51.911Z",
-  "updatedAt": "2026-11-26T09:52:22.497Z",
+  "updatedAt": "2026-11-26T10:31:31.374Z",
   "branch": "pr-land-hands-its-conflicts-to-the-branch-s",
   "pullRequest": 385,
   "comments": [
@@ -20,6 +20,10 @@
     {
       "at": "2026-11-26T09:52:22.476Z",
       "body": "Pull request #385 opened: pr land hands its conflicts to the branch's worker and lands again https://github.com/naeemba/dashboard/pull/385"
+    },
+    {
+      "at": "2026-11-26T10:31:31.374Z",
+      "body": "Review loop: converged, ready to merge. 2 rounds (floor-addressed), 3 fix commits (0f52f4e0, 57f582d7, 66edb18e), 0 rejected, final check accepted both last commits, nothing open, no conflict with main. CI passed on 66edb18e. Round 1 refined the design within scope: one 90-minute wait budget per land across all hand-offs (was an hour per hand-off), and the conflict is sent as the prompt 'Run /pr-conflicts <n>.' so the report ask is not appended to the slash command's arguments."
     }
   ],
   "column": "Review",

@@ -1,0 +1,12 @@
+{
+  "id": "9239a943-2ddb-4c27-87bd-fea0164891b6",
+  "title": "The manager page gets a browser of its own",
+  "notes": "Reported by the user 2026-11-26: the manager page (the first tab, its own main session in ~/.dashboard) has no browser of its own; its session's browser commands land in new-crm's browser (another project's tabs and sign-ins). Find how a browser command picks its project when the asker is the manager's session or pane (browserActions in src/main/main.ts:217, projectPath/slotOf; MANAGER_SLOT in src/shared/manager/manager.ts; the session/pane id the command carries) and why it resolves to new-crm. Fix: the manager gets its own browser, with its own partition and sign-ins, shown on the manager page the way a project's is (Ctrl+Shift+B), and the manager's agents' browser commands use it. Keyboard-first and help-dialog rules apply (CLAUDE.md). Hand check in the app after a rebuild; say so in the report.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T10:27:36.542Z",
+  "updatedAt": "2026-11-26T10:28:23.128Z",
+  "branch": "the-manager-page-gets-a-browser-of-its-own",
+  "column": "Doing",
+  "order": 0
+}

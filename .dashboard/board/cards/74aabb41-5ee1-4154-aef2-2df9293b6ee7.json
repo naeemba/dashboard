@@ -5,15 +5,23 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T09:56:15.018Z",
-  "updatedAt": "2026-11-26T10:05:34.038Z",
+  "updatedAt": "2026-11-26T10:27:34.593Z",
   "branch": "browser-eval-s-script-file-read-gets-a-test",
   "pullRequest": 386,
   "comments": [
     {
       "at": "2026-11-26T10:05:34.006Z",
       "body": "Pull request #386 opened: browser eval's script-file read gets a tested decision https://github.com/naeemba/dashboard/pull/386"
+    },
+    {
+      "at": "2026-11-26T10:26:12.578Z",
+      "body": "Converged, ready to merge. pr-loop ran 1 round (floor-addressed): 3 findings at or below low; fixed 2 (06a8bb35 narrows evalRequest's success type to the eval request, c7b89821 removes the blank line splitting docs/browser/history.md's list), rejected 1 low ({ file, ...rest } fails no-unused-vars; a future eval flag adds its field to the evalRequest test fixture). Final check accepted both. No conflict with main. CI passed on c7b89821. The card's ask (pure, tested evalRequest in browser-cli.ts) unchanged."
+    },
+    {
+      "at": "2026-11-26T10:27:34.538Z",
+      "body": "Pull request #386 merged: browser eval's script-file read gets a tested decision https://github.com/naeemba/dashboard/pull/386"
     }
   ],
-  "column": "Review",
-  "order": 7
+  "column": "Done",
+  "order": 313
 }
