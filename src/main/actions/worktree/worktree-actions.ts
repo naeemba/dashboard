@@ -44,7 +44,7 @@ export function worktreeActions(main: Omit<WorktreeRemovePorts, 'boardNotOnOrigi
     git, baseBranch, newId: randomUUID, queue: main.queue, exists: existsSync, log: main.log, install, pause,
   });
   const remove: BoundAction<WorktreeRemoval & { output: string }> = bind(worktreeRemove, {
-    ...main, boardNotOnOrigin: (worktreePath) => boardNotOnOrigin(runProgram, worktreePath),
+    ...main, boardNotOnOrigin: (worktreePath) => boardNotOnOrigin(runProgram, worktreePath, undefined, false),
   });
   // What a throwaway's worker is asked before it is let go of, and what letting go of it takes
   // (throwaway.ts), as the session command's ports and the sweep's take them.
