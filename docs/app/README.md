@@ -294,8 +294,11 @@ on Windows `localhost` bound to `::1` alone while the window asked
 ## Open questions
 
 - `main.ts` is at the 600-line ceiling, at 600 code lines, its split owed: the
-  pane pool's ports moved to `pane-pool-ports.ts` and the import line is paid
-  by packing `realPath` beside `pool` in the session requests. `renderer.ts` is
+  pane pool's ports moved to `pane-pool-ports.ts`, and two lines were packed to
+  fit, `realPath` beside `pool` in the session requests and `seeThrough` beside
+  `background` in `createWindow`. Packing a line to fit is the same as an
+  `eslint-disable`; the split (the `sessionRequests` port wiring is the seam)
+  unpacks both, and nothing packs a third. `renderer.ts` is
   at 583, after the pane listeners moved into `pane-output-wiring.ts`, the
   board's file listener into `board-wiring.ts` and the notes' into
   `notes-wiring.ts`. A feature that adds code to `main.ts` or `renderer.ts`
