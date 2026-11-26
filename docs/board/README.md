@@ -248,10 +248,12 @@ or the `board` command, goes through `syncBoard` in `board-sync-git.ts`:
    changed; the app's board read, and the `board` command printing its usage,
    ask for a sync when they rewrote one;
 4. bring the project's checkout up to it: on the default branch, only behind,
-   and nothing changed outside `.dashboard/`, the board's files are put back to
-   HEAD (and a tracked explanation file holding the app's text; an edit to one
-   is carried through), the checkout fast-forwarded (no stash, hooks off), and
-   its own board edits laid back on top. Otherwise it is left where it is, and
+   and no tracked file changed outside `.dashboard/` (an untracked one is no
+   bar; a fast-forward that would write over it fails and stays), the board's
+   files are put back to HEAD (and a tracked explanation file holding the
+   app's text; an edit to one is carried through), the checkout
+   fast-forwarded (no stash, hooks off), and its own board edits laid back on
+   top. Otherwise it is left where it is, and
    the `board` command writes the same edit there as well, timestamps and all,
    so the next sync does not publish it a second time.
 

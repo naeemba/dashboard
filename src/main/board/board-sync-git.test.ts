@@ -224,6 +224,33 @@ describe('syncBoard', { timeout: 60_000 }, () => {
     expect(git(checkout, 'rev-parse', 'HEAD')).toBe(head);
   });
 
+  // kamandsystem's untracked .claude/ left every board write uncommitted there, and `git pull` refused.
+  it('fast-forwards a checkout with an untracked file outside .dashboard and leaves no board file changed', async () => {
+    const { bare, checkout } = project();
+    pushFromElsewhere(bare, command('move', 'b', 'Done'));
+    writeFileSync(join(checkout, 'scratch.txt'), 'mine\n');
+    const outcome = await syncBoard(checkout, command('move', 'a', 'Doing'));
+    expect(outcome).toMatchObject({ synced: true, checkout: 'current' });
+    expect(git(checkout, 'rev-parse', 'HEAD')).toBe(git(bare, 'rev-parse', 'main'));
+    expect(git(checkout, 'status', '--porcelain')).toBe('?? scratch.txt');
+  });
+
+  it('leaves a checkout where it is when the fast-forward would write over an untracked file', async () => {
+    const { bare, checkout } = project();
+    const other = cloneOf(bare);
+    writeFileSync(join(other, 'scratch.txt'), 'theirs\n');
+    git(other, 'add', '-A');
+    git(other, 'commit', '--quiet', '-m', 'add scratch');
+    git(other, 'push', '--quiet', 'origin', 'HEAD:main');
+    writeFileSync(join(checkout, 'scratch.txt'), 'mine\n');
+    const head = git(checkout, 'rev-parse', 'HEAD');
+    const outcome = await syncBoard(checkout, command('move', 'a', 'Doing'));
+    expect(outcome).toMatchObject({ synced: true, checkout: 'stale' });
+    expect(git(checkout, 'rev-parse', 'HEAD')).toBe(head);
+    expect(readFileSync(join(checkout, 'scratch.txt'), 'utf8')).toBe('mine\n');
+    expect(columns(boardOn(bare))).toEqual({ a: 'Doing', b: 'Todo' });
+  });
+
   // A card whose file does not parse is missing from the checkout's board, and publishing that board
   // would delete the card on main for everyone.
   it('publishes nothing from a checkout with a board file that does not parse, in place or set aside', async () => {
