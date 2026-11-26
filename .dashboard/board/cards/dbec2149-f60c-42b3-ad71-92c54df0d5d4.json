@@ -1,0 +1,11 @@
+{
+  "id": "dbec2149-f60c-42b3-ad71-92c54df0d5d4",
+  "title": "Review workers run their set-up and wrap-up inside pr-loop",
+  "notes": "Retro 2026-11-26: all 12 kamandsystem review workers ran the same fixed sequence by hand around the loop: cmp check of the installed workflow copy, gh pr ready --undo plus a 'Review loop started' comment, board show, Workflow, git fetch plus diff, 'Review loop finished' comment, pr wait, a tail of its output, board comment, a lookup to load SendMessage, then SendMessage. 7 of 12 also armed a fallback ScheduleWakeup nobody asked for (one fired early and re-armed). About 6 avoidable turns per review, ~70 across the 12. Move the deterministic steps (draft toggle, start and finish comments, the CI wait) into pr-loop.js or the review dispatch, so the worker only judges the rounds against the card. pr wait prints its verdict as its last line, so no tail is needed. The review prompt says the Workflow notifies on completion, so no ScheduleWakeup. Evidence: /tmp/retro2/29-*.txt lines 26-52, 04-*.txt 32-35.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T08:23:58.303Z",
+  "updatedAt": "2026-11-26T08:23:58.303Z",
+  "column": "Backlog",
+  "order": 69
+}
