@@ -33,4 +33,5 @@ One line per merged change: date and why.
   a worker's `browser open` or `go` took the caret out of main's prompt; and an agent's tab is drawn
   one pixel into the window's corner, because a hidden tab reported `hidden`, painted nothing and
   an agent measuring performance got its first contentful paint only from a screenshot
-
+- 2026-11-26 — `browser eval`'s refusal of a script file it cannot read is `evalRequest` in
+  `browser-cli.ts`, with a test, because it sat untested in `browser-program.ts`

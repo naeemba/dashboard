@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { failureText } from '../../shared/errors/failure';
 import { projectNamedInFile } from '../projects/project-named';
 import { askRunningApp } from '../workers/session-socket';
-import { BROWSER_REQUEST, OUTSIDE_PANE, parseBrowserCommand, wholeFiles, type BrowserRequest } from './browser-cli';
+import { BROWSER_REQUEST, evalRequest, OUTSIDE_PANE, parseBrowserCommand, wholeFiles, type BrowserRequest } from './browser-cli';
 
 // The whole of the `browser` program outside browser-cli.ts and the app: the words parsed, a project
 // name found in ~/.dashboard/projects.yaml, and the command sent for the pane it runs in. `dashboard
@@ -23,13 +23,13 @@ export async function runBrowserProgram(words: readonly string[]): Promise<numbe
   }
   let command: BrowserRequest;
   if (parsed.command.verb === 'eval') {
-    const { file, ...rest } = parsed.command;
-    const script = await readFile(file, 'utf8').catch((error: unknown) => ({ failed: failureText(error) }));
-    if (typeof script !== 'string') {
-      process.stderr.write(`the script file could not be read: ${script.failed}\n`);
+    const read = await readFile(parsed.command.file, 'utf8').catch((error: unknown) => ({ failed: failureText(error) }));
+    const evaluated = evalRequest(parsed.command, read);
+    if (!evaluated.ok) {
+      process.stderr.write(`${evaluated.message}\n`);
       return 1;
     }
-    command = { ...rest, script };
+    command = evaluated.request;
   } else if (parsed.command.verb === 'upload') {
     command = { ...parsed.command, files: wholeFiles(parsed.command.files, homedir(), process.cwd()) };
   } else command = parsed.command;
