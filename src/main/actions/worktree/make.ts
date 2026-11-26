@@ -131,15 +131,13 @@ function fetchWorthRetrying(error: unknown): boolean {
   return !/couldn't find remote ref/i.test(fetchFailure(error));
 }
 
-// Why a fetch failed, on one line: the time limit when it stopped it, else stderr's first line that is
-// neither a `warning:` nor git's generic `Could not read from remote repository`, which follows ssh's
-// own line naming the cause; else stderr's first line, else the error itself.
+// Why a fetch failed, on one line: the time limit when it stopped it, else the stderr line naming the
+// error (`fatal:`, `denied`), else stderr's first line, else the error itself.
 export function fetchFailure(error: unknown): string {
   if (!isRecord(error)) return failureText(error);
   if (error.killed === true) return `stopped after ${FETCH_TIMEOUT_MS / 1000} seconds`;
   const lines = String(error.stderr ?? '').split('\n').map((line) => line.trim()).filter((line) => line !== '');
-  const telling = lines.find((line) => !/^warning:|^fatal: could not read from remote repository/i.test(line));
-  return telling ?? lines[0] ?? failureText(error).split('\n')[0];
+  return lines.find((line) => /fatal:|denied/i.test(line)) ?? lines[0] ?? failureText(error).split('\n')[0];
 }
 
 // The base fetched, a pause later once more if the first try fails; the warning to give when neither worked.
