@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T14:49:26.436Z",
-  "updatedAt": "2026-11-26T14:12:49.813Z",
+  "updatedAt": "2026-11-26T14:28:58.809Z",
   "branch": "experiment-keep-the-hidden-manager-page-pai",
   "pullRequest": 402,
   "comments": [
@@ -24,6 +24,10 @@
     {
       "at": "2026-11-26T14:12:49.813Z",
       "body": "Merged origin/main (with #404's Windows test fix) into #402 as 9df1b331, no conflicts. All checks passed on 9df1b331, windows included. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:28:58.809Z",
+      "body": "Merged origin/main twice more (#401, then #403, both editing docs/performance/history.md; merged cleanly, every section kept). Head e491c3aa: all checks passed. Converged, ready to merge."
     }
   ],
   "column": "Review",
