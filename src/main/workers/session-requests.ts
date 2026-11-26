@@ -415,6 +415,12 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return (await ports.branch(worktree).catch(() => '')).trim() === name;
   }
 
+  // Whether the pane is the asker's, on that branch or card, and not the pane the command ran in, which
+  // is waiting on the answer: whom `pane landed` and `pane conflicted` act on.
+  async function askersOn(id: string, slot: number, projectPath: string, by: 'branch' | 'card', name: string, from: string | null): Promise<boolean> {
+    return id !== from && worker(id, slot) === null && worksOn(id, projectPath, by, name);
+  }
+
   // Main's own command put the work in: each of the asker's panes on that branch or card released, or
   // kept for what auto-release.ts says, a line each. One at a time, so two releases never race over one
   // throwaway worktree. Nothing on it answers nothing. The pane the command ran in is never one: its
@@ -422,7 +428,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   async function landed(slot: number, projectPath: string, by: 'branch' | 'card', name: string, from: string | null): Promise<SessionReply> {
     const lines: string[] = [];
     for (const id of openPaneIds()) {
-      if (id === from || worker(id, slot) !== null || !(await worksOn(id, projectPath, by, name))) continue;
+      if (!(await askersOn(id, slot, projectPath, by, name, from))) continue;
       const verdict = releaseVerdict(look(id));
       const released = verdict.release ? await release.call({ id }) : { refused: verdict.why };
       if (isRefused(released)) {
@@ -434,6 +440,21 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       lines.push(`released ${id}`);
     }
     return answered(lines.join('\n'));
+  }
+
+  // `pr land` found the branch conflicts with its base: the first of the asker's agents on it is sent
+  // /pr-conflicts, as main's own send would hand it, never the pane the land runs in. One only, since
+  // two agents resolving in one worktree write over each other. Sent as a prompt asking for the
+  // command, not the command itself: send ends it with the report ask, which after a bare slash
+  // command would become the command's arguments.
+  async function conflicted(slot: number, projectPath: string, branch: string, pullRequest: string, from: string | null): Promise<SessionReply> {
+    for (const id of openPaneIds()) {
+      if (!ports.agentIn(id) || !(await askersOn(id, slot, projectPath, 'branch', branch, from))) continue;
+      const command = `/pr-conflicts ${pullRequest}`;
+      const sent = await send(id, slot, projectPath, `Run ${command}.`);
+      if (!isRefused(sent)) return answered(`sent ${command} to ${id}`);
+    }
+    return answered('');
   }
 
   // Send and release are refused a pane the asker may not touch before the action is asked.
@@ -553,6 +574,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'report': return report(command.id, slot);
         case 'status': return await status(slot, projectPath ?? '');
         case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name, command.from);
+        case 'conflicted': return await conflicted(slot, projectPath ?? '', command.branch, command.pullRequest, command.from);
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);

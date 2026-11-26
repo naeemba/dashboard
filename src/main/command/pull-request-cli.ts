@@ -8,6 +8,14 @@ import { failureLine } from './failure-line';
 import { isWriteVerb, parseWriteCommand, type WriteCommand, WRITE_HELP, WRITE_LINES } from './pull-request-write-cli';
 import { type GitHubPorts, isNetworkError, type ProgramAnswer, retried, RETRY_MINUTES, RETRY_WAITS_MS } from './gh-answer';
 
+// How many times one land hands a conflict to the branch's agent, and how long it waits on pushes in all,
+// across every hand-off: well inside the two-hour background run (LONGEST_BACKGROUND_RUN), so the land
+// prints its own verdict before it is stopped and rerun, which would send /pr-conflicts again.
+// ponytail: counts only the push waits, not CI between them; a clock deadline if CI eats the margin.
+export const HAND_OFFS = 3;
+export const NEW_HEAD_POLL_MS = 60_000;
+export const NEW_HEAD_WAIT_MS = 90 * 60_000;
+
 export const PULL_REQUEST_USAGE = `pr — open, mark, comment on, wait on or land a pull request of the project you are in
 
   pr wait <number|url|branch> [--project <name|aka>]
@@ -22,8 +30,11 @@ and otherwise passes only in a repository whose recently merged pull requests re
 anywhere else it is refused, since its CI did not start on that commit (a push, or gh pr merge by
 hand, if it never will). A pull request GitHub says conflicts with its base is refused at once,
 naming the files, since CI does not run on it. A merge call that fails is checked against the pull
-request: merged at that commit is merged. A network error on any gh call is tried again for about
-${RETRY_MINUTES} minutes, waiting longer each time. The last line is the verdict: \`merged <n> at
+request: merged at that commit is merged. A land that finds a conflict first sends /pr-conflicts to
+the agent working its branch (pane conflicted), prints \`sent /pr-conflicts <n> to <pane>\`, waits for
+a new head commit and lands again, at most ${HAND_OFFS} times and ${NEW_HEAD_WAIT_MS / 60_000} minutes of waiting in
+all; with no agent on the branch it stops at the conflict. A network error on any gh call is tried
+again for about ${RETRY_MINUTES} minutes, waiting longer each time. The last line is the verdict: \`merged <n> at
 <sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or why not. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; one stopped at that
 limit has not failed, run it again. Once merged, the checkout on the base branch (the project's own,
@@ -59,7 +70,8 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
 // A landed pull request says the branch it merged into, for the fast-forward after (fast-forward-checkout.ts).
 // One that conflicts says its base and head, for the files it conflicts on (conflictLine).
 // A landed one says its head branch too, whose worker pane the app is asked to release (releaseLanded).
-export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: { base: string; sha: string } };
+// Its head branch is the one whose worker is handed the conflict (HandOff).
+export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: { base: string; sha: string; branch: string } };
 
 // gh's words for a pull request whose CI has not started, or that runs none.
 const NO_CHECKS = 'no checks reported';
@@ -80,7 +92,7 @@ const readHead = (answer: ProgramAnswer) => {
 };
 const conflicting = (answer: ProgramAnswer) => answer.ok && readHead(answer).mergeable === 'CONFLICTING';
 // The program prints the files in place of the output (conflictLine), so the output is only a fallback.
-const conflictAnswer = (target: string, base: string, sha: string): LandAnswer => ({ ok: false, output: `${target} conflicts with ${base}`, conflicts: { base, sha } });
+const conflictAnswer = (target: string, base: string, sha: string, branch: string): LandAnswer => ({ ok: false, output: `${target} conflicts with ${base}`, conflicts: { base, sha, branch } });
 
 // How many checks the last few merged pull requests of the pull request's own repository reported (read
 // from its url, since a url target may name another repository than the folder's): none is a repository
@@ -103,7 +115,7 @@ async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked
   const { state, sha, base, url, branch, draft } = readHead(head);
   if (state !== 'OPEN') return { ok: false, output: `pull request ${target} is ${state.toLowerCase()}, not open` };
   // CI does not run on a pull request that conflicts: waiting on it would end in "no checks reported".
-  if (conflicting(head)) return conflictAnswer(target, base, sha);
+  if (conflicting(head)) return conflictAnswer(target, base, sha, branch);
   const watch = () => patiently(ports, ['pr', 'checks', target, '--watch']);
   let checks = await watch();
   // Right after a push CI may not have started: ask once more a minute on.
@@ -117,7 +129,7 @@ async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked
   // Still none a minute on is a repository without CI on pull requests, CI that never started on this
   // commit, or a pull request that came to conflict after the first look.
   if (noChecks) {
-    if (conflicting(await patiently(ports, stateAndHead(target)))) return conflictAnswer(target, base, sha);
+    if (conflicting(await patiently(ports, stateAndHead(target)))) return conflictAnswer(target, base, sha, branch);
     // Some repositories' CI skips a draft and some runs on it, so only a draft with no checks is refused.
     if (draft) return { ok: false, output: `no checks reported on ${sha}, and ${target} is a draft, which CI may skip; mark it ready (pr ready ${target}) and run it again if it should run` };
     const checkCount = recentCheckCount(url);
@@ -136,12 +148,40 @@ export async function waitOnPullRequest(ports: GitHubPorts, target: string): Pro
   return { ok: true, output: checked.noChecks ? `no checks to wait on at ${checked.sha}, a repository with no CI` : `checks passed on ${checked.sha}` };
 }
 
-export async function landPullRequest(ports: GitHubPorts, target: string): Promise<LandAnswer> {
+// Who resolves a conflict while the land waits: true when an agent on the branch was sent /pr-conflicts.
+export type HandOff = (branch: string, target: string) => Promise<boolean>;
+
+// A conflict handed to the branch's agent is waited out: once its merge is pushed (a new head, or the
+// pull request no longer open) the land starts over. No agent, NEW_HEAD_WAIT_MS spent waiting, or
+// HAND_OFFS spent, and the conflict is the answer, as without a hand-off.
+export async function landPullRequest(ports: GitHubPorts, target: string, handOff?: HandOff): Promise<LandAnswer> {
+  const budget = { left: NEW_HEAD_WAIT_MS };
+  for (let handedOff = 0; ; handedOff += 1) {
+    const answer = await landOnce(ports, target);
+    const { conflicts } = answer;
+    if (conflicts === undefined || handOff === undefined || handedOff === HAND_OFFS || conflicts.branch === '' || budget.left <= 0) return answer;
+    if (!(await handOff(conflicts.branch, target)) || !(await newHead(ports, target, conflicts.sha, budget))) return answer;
+  }
+}
+
+// Polls for the head to move, drawing each minute from the land's one budget.
+async function newHead(ports: GitHubPorts, target: string, sha: string, budget: { left: number }): Promise<boolean> {
+  while (budget.left > 0) {
+    await ports.wait(NEW_HEAD_POLL_MS);
+    budget.left -= NEW_HEAD_POLL_MS;
+    const head = await patiently(ports, stateAndHead(target));
+    const now = readHead(head);
+    if (head.ok && (now.sha !== sha || now.state !== 'OPEN')) return true;
+  }
+  return false;
+}
+
+async function landOnce(ports: GitHubPorts, target: string): Promise<LandAnswer> {
   const checked = await checksPassed(ports, target);
   if (!('sha' in checked)) return checked;
   const { sha, base, branch, noChecks } = checked;
   const merged = await mergeAt(ports, target, sha);
-  if (merged.conflicting === true) return conflictAnswer(target, base, sha);
+  if (merged.conflicting === true) return conflictAnswer(target, base, sha, branch);
   if (isNetworkError(merged)) return { ok: false, output: `${merged.output}\n\nlost gh's answer merging ${target} at ${sha}; it may have merged, check before running it again` };
   if (!merged.ok) return { ok: false, output: `${merged.output}\n\ngh refused to merge ${target} at ${sha}` };
   return { ok: true, output: `merged ${target} at ${sha}${noChecks ? ', a repository with no CI' : ''}`, base, branch };
