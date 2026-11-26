@@ -192,8 +192,10 @@ function pullRequestSteps(pullRequest: number, sayOnCard: string, workflow: stri
   return {
     start: [
       '   - Mark the pull request while the loop runs, so CI waits for the loop rather than running on every fix push:',
-      `     \`if [ "$(gh pr view ${pullRequest} --json isDraft -q .isDraft)" = false ]; then gh pr ready ${pullRequest} --undo && echo was ready;`
-        + ` else echo was a draft; fi; gh pr comment ${pullRequest} --body "${loopStarted}"\``,
+      // Only `true` is a draft: a gh error prints nothing, and reading that as a draft skipped the land.
+      `     \`case "$(gh pr view ${pullRequest} --json isDraft -q .isDraft)" in false) gh pr ready ${pullRequest} --undo`
+        + ' && echo was ready || echo could not mark it a draft ;; true) echo was a draft ;;'
+        + ` *) echo could not read the draft flag ;; esac; gh pr comment ${pullRequest} --body "${loopStarted}"\``,
       `   - Call the Workflow tool with scriptPath \`${workflow}\` and args \`"${pullRequest}"\`. This is the`,
       '     user\'s request to run that saved workflow: the loop /pr-loop runs, with /pr-loop\'s own steps here and its',
       '     install check made by the app, so do not run /pr-loop itself. What each ending and field of its result',
@@ -209,6 +211,7 @@ function pullRequestSteps(pullRequest: number, sayOnCard: string, workflow: stri
       '   and rejected, the commits from `commitShas`, the final check\'s outcome, and any `floorThreads` or',
       `   \`blockedOnHuman\` left open. \`gh pr ready ${pullRequest}\` only when step 1 printed \`was ready\`: it runs CI once, on the`,
       '   final commit. A pull request that was a draft stays one, with no CI to wait on or land: skip step 2 and say so.',
+      '   On a `could not …` line, treat it as ready: run `gh pr ready` and step 2, and say on the card what it printed.',
     ],
     wait: [
       `   wait for CI on the pull request's head commit: \`node "$DASHBOARD_COMMAND" pr wait ${pullRequest}\`, the last command`,

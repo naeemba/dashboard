@@ -156,7 +156,9 @@ describe('reviewPrompt', () => {
     for (const merge of [true, false]) {
       const github = reviewPrompt(CARD, 12, '/work/api', merge, 'github', WORKFLOW);
       expect(github).toContain('In one message, side by side');
-      expect(github).toContain('gh pr ready 12 --undo && echo was ready');
+      expect(github).toContain('false) gh pr ready 12 --undo && echo was ready');
+      // A gh error prints nothing, which is not a draft: only `true` skips the land.
+      expect(github).toContain('true) echo was a draft ;; *) echo could not read the draft flag');
       expect(github).toContain('gh pr comment 12 --body "Review loop started.');
       // The heading review-finished.ts reads to skip a loop already run at the head.
       expect(github).toContain("gh pr comment 12 --body-file - <<'END'");
@@ -167,9 +169,9 @@ describe('reviewPrompt', () => {
       expect(github).not.toMatch(/cmp -s|tail /);
     }
     for (const forge of ['github', 'gitlab'] as const) {
-      const any = reviewPrompt(CARD, 12, '/work/api', false, forge, WORKFLOW);
-      expect(any).toContain('no ScheduleWakeup');
-      expect(any).toContain('ToolSearch `select:SendMessage`');
+      const forgePrompt = reviewPrompt(CARD, 12, '/work/api', false, forge, WORKFLOW);
+      expect(forgePrompt).toContain('no ScheduleWakeup');
+      expect(forgePrompt).toContain('ToolSearch `select:SendMessage`');
     }
     expect(reviewPrompt(CARD, 7, '/work/insta', false, 'gitlab', WORKFLOW)).toContain('Run /mr-loop 7.');
   });

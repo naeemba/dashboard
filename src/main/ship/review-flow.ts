@@ -62,12 +62,13 @@ export type ReviewPorts = {
   reviewFinished: (projectPath: string, pullRequest: number) => Promise<boolean>;
   // GitHub or GitLab (forge.ts), for which loop the prompt runs and how it waits and lands.
   forgeOf: (projectPath: string) => Promise<Forge>;
-  // Why `/pr-loop` cannot run, or null when it is installed (reviewLoopMissing). Asked at each start, so
-  // installing it lets the next start through without a restart.
+  // Why the review loop (pr-loop.js on GitHub, /mr-loop on GitLab) cannot run, or null when it is
+  // installed and current (reviewLoopMissing). Asked at each start, so installing it lets the next
+  // start through without a restart.
   loopMissing: () => string | null;
   // The installed pr-loop.js a GitHub review calls by path (loopWorkflow).
   workflow: string;
-  // A start under way: the installed `/pr-loop` asked whether it is current, and the status bar told
+  // A start under way: the installed review loop asked whether it is current, and the status bar told
   // when it is not (review-loop-install.ts). Not awaited; it never refuses.
   loopChecked: () => void;
   // card.follow for one card: the project's forge (forge.ts) asked for the pull request on its
@@ -97,7 +98,7 @@ export type ReviewPorts = {
 // request's: card.follow keeps it on a card it sends back to Doing, and a re-ship cuts the worktree from
 // a base that carries it. For the same reason, on a card before Review, a worktree number equal to the
 // project card's own is not counted: nobody writes one there, so it can only be that closed pull
-// request, and reviewing it would run `/pr-loop` at it in the window before card.follow sees the new
+// request, and reviewing it would run the review loop at it in the window before card.follow sees the new
 // one. A card in Review or past it never reaches that check: followedPullRequest answers for it.
 // `project` is the project's board as the caller already read it, or null.
 function finishedIn(entry: WorktreeEntry, project: Board | null): number | null {
@@ -375,8 +376,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       return isRefused(answer) || answer.ran === 'review' ? answer : review(id, true);
     }
     // The guard sweepOne runs before its own start, which intoReview below relies on: a card past
-    // Review has been reviewed, and starting again would drag it back from Done and run /pr-loop at a
-    // pull request that merged.
+    // Review has been reviewed, and starting again would drag it back from Done and run the review
+    // loop at a pull request that merged.
     // Null is refused as well, as sweepOne leaves it alone: a card the project's board does not show,
     // or a board that could not be read, has nowhere to land in Review and nobody to say so to.
     const awaits = board === null ? null : awaitsReview(board, id);
