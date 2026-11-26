@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T12:13:33.277Z",
-  "updatedAt": "2026-11-26T14:00:34.326Z",
+  "updatedAt": "2026-11-26T14:21:27.337Z",
   "branch": "keep-less-terminal-scrollback-once-a-heap-s",
   "pullRequest": 403,
   "comments": [
@@ -16,8 +16,20 @@
     {
       "at": "2026-11-26T14:00:34.326Z",
       "body": "Review loop ran 2 rounds and stopped at the low floor. Round 1 fixed 3 findings: main is a chat view with no terminal, so the docs and comments now say the editor keeps 10000 lines and the MAIN_INDEX test case is gone. Round 2 rewrapped the history lines (nit). The final check accepted 66cd61ea. The design is unchanged: workers get 5000 lines, the editor keeps 10000. CI on 66cd61ea: checks, windows and both Analyze jobs pass. The CodeQL gate fails on one alert, 'unvalidated dynamic method call' at scripts/performance/demo-instance.mjs:30. It is a false positive: listeners is a Map that only holds handlers the script registered. Still open: someone has to dismiss that alert in code scanning. After that it is ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:06:52.093Z",
+      "body": "bddd3931 makes scripts/performance/demo-instance.mjs:30 check that the listener is a function before calling it, which clears the CodeQL alert. Every check passed on bddd3931, the CodeQL gate included. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:20:22.339Z",
+      "body": "Merged origin/main as 37e0ef80. The one conflict, in docs/performance/README.md, keeps both the scrollback row and #401's usage-sweep row. pnpm check passed and every CI check passed on 37e0ef80. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:21:27.316Z",
+      "body": "Pull request #403 merged: Give a worker 5000 lines of scrollback, half of the editor's https://github.com/naeemba/dashboard/pull/403"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 330
 }

@@ -34,3 +34,5 @@ One line per merged change: date and why.
   and so are an older host's
 - 2026-11-16 #313 — A shown terminal skips xterm's selection redraw on scroll when nothing is
   selected
+- 2026-11-26 — A worker keeps 5000 lines of scrollback, half of the editor's: full worker buffers
+  were the largest part of the window's heap

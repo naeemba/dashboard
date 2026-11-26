@@ -22,6 +22,8 @@ import { worktreesRoot } from '../ship/ship';
 // usage-sweep.test.ts pins.
 
 export type UsageSweepPorts = {
+  // Where each log's counts are saved between launches, in userData, which only main can name.
+  countsFile: string;
   // The process id of every pane's shell, by terminal id. The one thing that says which pane a Claude
   // Code session is running in, and only main holds the ptys.
   panePids(): ReadonlyMap<number, string>;
@@ -50,8 +52,9 @@ const claudeSessions = path.join(homedir(), '.claude', 'sessions');
 
 // Every half minute, which is the rate the manager's rows already redraw themselves at.
 const USAGE_SWEEP_MS = 30_000;
-// The first sweep waits: it is the only one that reads every log there has ever been, and a launch has
-// five shells and a window to get on screen first.
+// The first sweep waits: it is the one that starts the thread and reads every log written since the
+// last run (every log there has ever been, with nothing saved), and a launch has five shells and a
+// window to get on screen first.
 const FIRST_SWEEP_MS = 3_000;
 
 export type UsageSweep = {
@@ -89,6 +92,7 @@ export function usageSweep(ports: UsageSweepPorts): UsageSweep {
     if (placement !== null) ports.placed(placement);
     const next = await sweep({
       root: claudeLogs,
+      countsFile: ports.countsFile,
       now,
       projects: ports.openProjects().map((projectPath) => ({ path: projectPath, worktrees: worktreesRoot(projectPath) })),
       paneSessions: new Map([...(placement?.byPane ?? [])].map(([pane, live]) => [pane, live.session])),

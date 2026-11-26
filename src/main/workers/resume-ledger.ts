@@ -14,7 +14,7 @@ import type { SavedPage } from '../app/session';
 export const RESUME_GRACE_MS = 30_000;
 
 // One reading of where every live session is, by pane, and when the reading was taken. Taken, not
-// arrived: the sweep reads the panes before it reads every log on the machine, and what it found is as
+// arrived: the sweep reads the panes before it reads the logs, and what it found is as
 // old as the moment it looked.
 export type SessionPlacement = { byPane: ReadonlyMap<string, PaneConversation>; takenAt: number };
 

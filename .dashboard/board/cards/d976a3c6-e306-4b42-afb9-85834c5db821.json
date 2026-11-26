@@ -5,7 +5,7 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-26T13:39:16.572Z",
-  "updatedAt": "2026-11-26T13:54:22.964Z",
+  "updatedAt": "2026-11-26T14:15:33.762Z",
   "branch": "finished-work-tests-time-out-on-the-windows",
   "pullRequest": 404,
   "comments": [
@@ -16,8 +16,16 @@
     {
       "at": "2026-11-26T13:54:22.922Z",
       "body": "Pull request #404 opened: Build the finished-work tests' git repository once and copy it per test https://github.com/naeemba/dashboard/pull/404"
+    },
+    {
+      "at": "2026-11-26T14:03:47.169Z",
+      "body": "Review loop converged in 1 round: the review posted no findings and the loop pushed no commits. CI passed on b646b4b9, the windows job included. Ready to merge. Still open: the card asks for a green windows job on two runs, and this is one."
+    },
+    {
+      "at": "2026-11-26T14:15:33.732Z",
+      "body": "Pull request #404 merged: Build the finished-work tests' git repository once and copy it per test https://github.com/naeemba/dashboard/pull/404"
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 329
 }

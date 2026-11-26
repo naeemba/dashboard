@@ -5,6 +5,88 @@ number, where in the code, what you notice, and a fix sized small, medium or
 large. Findings are ranked by what you notice. Commands are in
 [README.md](README.md).
 
+## 2026-11-26: keeping the hidden manager painted does not speed up Ctrl+1 (finding 8)
+
+The question was whether Ctrl+1 gets faster if the hidden manager page stays
+painted under the page in front, rather than moved off screen
+(`.page-manager[hidden] { visibility: visible; translate: none }`). This was
+the experiment #314 left open. #314 was closed without merging, so its
+`measure.mjs manager-switch` step and its row-keeping change are not on
+`main`; the numbers below quoted from it come from its description. Same
+machine and headless compositor, both builds of `main` from the same day.
+Two counts:
+
+- the `keys` step's tab-switch line, 5 runs each, one Ctrl+1 per run;
+- an unsaved script running 15 trips of Ctrl+1 then Ctrl+2, each press
+  timed alone, 3 runs each. One variant run is left out: machine load
+  pushed every press, both ways, to 0.1–13 s.
+
+| | moved off screen (now) | left painted |
+|---|---|---|
+| `keys`: Ctrl+1 to the manager | 120, 128, 144, 160, 160 ms | 112, 136, 144, 160, 272 ms |
+| `keys`: project tabs, median per run | 32–40 ms | 32–64 ms |
+| 15 trips: Ctrl+1, median per run | 32, 40, 48 ms | 56, 64 ms |
+| 15 trips: Ctrl+2 to alpha, median per run | 32 ms | 24, 32 ms |
+
+- No gain, so the change is not made and pages still hide by moving off
+  screen. The `keys` rows alone carry that: Ctrl+1 has the same 144 ms
+  median both ways. The trips, which cannot be rerun, only add that the
+  painted manager is the slower one.
+- The gap the experiment was for, finding 8, has mostly closed on `main`.
+  In #314's description, Ctrl+1 took 88 ms against 48 ms for alpha. It
+  now takes 32–48 ms against 32 ms. What is left is the `keys` step's
+  single Ctrl+1 at 120–160 ms. It is the manager's first arrival in that
+  run, and it pays the board re-read (`BOARD_STALE_MS`) that #314's
+  description puts at 64–128 ms. Neither way of hiding the page moves it.
+## 2026-11-26: a worker keeps 5000 lines of scrollback
+
+The window's renderer held 569 MB private after 21 hours of real use, and every
+pane kept 10000 lines. Same machine, compositor and tooling as the first
+profile, `measure.mjs scrollback <demo> 12000`: four workers on alpha each print
+12000 lines, so every worker's scrollback is full. "Before" is this branch
+built with workers at 10000, "after" at 5000, two runs each; the runs agreed to
+within a megabyte. Workers are 78 columns wide in the demo.
+
+| | Before | After |
+|---|---|---|
+| Renderer private, workers empty | 61 MB | 62 MB |
+| Renderer private, four workers full | 131 MB | 99 MB |
+| Renderer heap snapshot, total | 64.4 MB | 40.7 MB |
+| Of it, xterm buffer lines | 46.9 MB | 24.0 MB |
+
+The buffer lines are `system / JSArrayBufferData` (the cells) plus their
+`Uint32Array`, `ArrayBuffer` and `Object` wrappers, the four biggest kinds that
+grow with the fill. Full worker scrollback was 73% of the heap and the largest
+thing in it; nothing else grows with the lines printed. xterm keeps each line
+at the full width, 12 bytes a cell whatever was printed, so a full worker cost
+about 17 MB of renderer private memory before and 9 MB after. A wider pane costs
+more in proportion: at 200 columns it is about 24 MB of cells before.
+
+- **Fixed: a worker's scrollback is 5000 lines** (`WORKER_SCROLLBACK`,
+  `src/renderer/panes/pane.ts`). The editor keeps 10000; the scrollback key
+  hands a worker's last 5000 lines to nvim. Small.
+- **Not measured: the 569 MB itself.** The installed app is never probed
+  (workflow-rule-1), so how many of its panes were full is not known; the demo
+  shows each full one is the cost above.
+## 2026-11-26: a launch reads only the logs written since the last run
+
+Fixes the "Not done" of the 2026-11-02 usage sweep below. The sweep's thread
+saves each log's counts in userData (`src/main/usage/usage-counts.ts`), keyed
+by path, counted size and mtime, and a launch's first sweep takes a saved count
+for every log whose mtime has not moved; one whose mtime moved is read whole.
+
+`measure.mjs usage-sweep ~/.claude/projects`, 8,674 files, 6.26 GB, two runs.
+The logs have grown since the run below, so the full read costs more than it
+did then.
+
+| | before (every log read) | after (from saved counts) |
+|---|---|---|
+| A launch's first sweep | 28.3–35.8 s | 0.2–0.3 s |
+| Its CPU | 36.5–40.3 CPU-s | 0.2–0.3 CPU-s |
+
+Both runs' all-time totals from the saved counts equal the full read's to the
+token.
+
 ## 2026-11-16: a shown terminal skips the selection redraw when nothing is selected
 
 Same machine, compositor and tooling as the first profile, `measure.mjs
@@ -351,6 +433,7 @@ installed app was never touched.
      also fires `board:peek` and `worktree:scan` when stale.
    - You notice: Ctrl+1 hesitates, where every other tab key is instant.
    - Fix (small): build the rows once and update the ones whose data changed.
+   - Now: mostly closed on `main` without that fix; see the 2026-11-26 entry.
 
 ### Ruled out, by measurement
 

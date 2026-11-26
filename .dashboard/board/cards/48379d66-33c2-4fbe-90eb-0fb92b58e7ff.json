@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-16T14:49:26.436Z",
-  "updatedAt": "2026-11-26T13:37:05.843Z",
+  "updatedAt": "2026-11-26T14:29:26.378Z",
   "branch": "experiment-keep-the-hidden-manager-page-pai",
   "pullRequest": 402,
   "comments": [
@@ -20,8 +20,20 @@
     {
       "at": "2026-11-26T13:37:05.842Z",
       "body": "Review loop on #402: floor-addressed in 1 round. 2 docs threads (low, nit) fixed in 20ba6295 and 945274d2, final check accepted both, nothing open on the review side and no conflict with main. CI on 945274d2: the checks job and CodeQL passed; the windows job failed on 2 finished-work.test.ts tests that hit the 5 s timeout. The PR only changes docs/performance/history.md, and main's same workflow failed then passed today, so this looks like a flaky Windows test, not this PR. Re-run the windows job before merging."
+    },
+    {
+      "at": "2026-11-26T14:12:49.813Z",
+      "body": "Merged origin/main (with #404's Windows test fix) into #402 as 9df1b331, no conflicts. All checks passed on 9df1b331, windows included. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:28:58.809Z",
+      "body": "Merged origin/main twice more (#401, then #403, both editing docs/performance/history.md; merged cleanly, every section kept). Head e491c3aa: all checks passed. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:29:26.280Z",
+      "body": "Pull request #402 merged: Record that keeping the hidden manager painted does not speed up Ctrl+1 https://github.com/naeemba/dashboard/pull/402"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 331
 }

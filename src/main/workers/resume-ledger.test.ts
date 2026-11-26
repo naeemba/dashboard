@@ -61,7 +61,7 @@ describe('resumeLedger', () => {
     expect(ledger.held()).toEqual(new Map([['0:1', conversation(ID)]]));
   });
 
-  // The first sweep reads every log there is and can take longer than the grace. What it found was
+  // The first sweep reads the logs and can take longer than the grace. What it found was
   // found before the resumed Claude wrote its session file, so it must not count as "nothing there".
   it('holds a resumed pane for a reading taken inside the grace, however late it arrives', () => {
     const ledger = resumeLedger(pages, everywhere);

@@ -2,10 +2,11 @@
 // instance, printed as one JSON line per step. docs/performance/README.md lists them and what each found.
 /* global process, performance, console, URL, setInterval, clearInterval */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
-import { bytesPerSource, ownerOf } from './calculations.mjs';
+import { bytesPerSource, heapKinds, ownerOf } from './calculations.mjs';
 import {
   connectMain, cpuWindow, echoLatency, keys, keyToPaint, memory, paneHostFolder, paneHostPids, press, retry, run, wait, withInstance,
 } from './demo-instance.mjs';
@@ -25,10 +26,13 @@ async function openWorkers(page, count = 1) {
   await keys(page, 'Alt+2');
 }
 
-// A build log in each of the first <count> workers, <rate> lines a second each.
-async function startStreams(page, count, rate) {
-  for (let position = 2; position < 2 + count; position++) { await keys(page, `Alt+${position}`); await run(page, `${stream} ${rate}`); }
+// <command> run in each of the first <count> workers.
+async function inWorkers(page, count, command) {
+  for (let position = 2; position < 2 + count; position++) { await keys(page, `Alt+${position}`); await run(page, command); }
 }
+
+// A build log in each of the first <count> workers, <rate> lines a second each.
+const startStreams = (page, count, rate) => inWorkers(page, count, `${stream} ${rate}`);
 
 // The highest line number each worker on screen has drawn: build-log-stream.sh numbers its lines, so a
 // pane that came back showing what it printed while hidden reads higher than when it left. A worker
@@ -54,6 +58,15 @@ async function heldMemory(page, main) {
     mainHeapMB: +((await main.evaluate('process.memoryUsage().heapUsed')) / 1048576).toFixed(1),
     nodes: counters.nodes, listeners: counters.jsEventListeners,
   };
+}
+
+// A heap snapshot of the renderer, as its biggest kinds of object by self size.
+async function heapSplit(page) {
+  let text = '';
+  const off = page.on('HeapProfiler.addHeapSnapshotChunk', ({ chunk }) => { text += chunk; });
+  await page.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false });
+  off();
+  return heapKinds(JSON.parse(text));
 }
 
 const measurements = {
@@ -283,6 +296,22 @@ const measurements = {
     await openWorkers(page, 4); await wait(1500);
     print('memory', await memory());
   }),
+
+  // What a full scrollback costs: four workers on alpha each print <lines> lines, and the renderer is
+  // read before and after, with a heap snapshot's biggest kinds.
+  scrollback: (lines = '12000') => withInstance(demo, {}, async ({ page }) => {
+    const main = await connectMain();
+    try {
+      await keys(page, 'Ctrl+2'); await openWorkers(page, 4); await wait(1500);
+      await page.send('HeapProfiler.enable'); await main.send('HeapProfiler.enable');
+      const terminals = await page.evaluate("document.querySelectorAll('.xterm').length");
+      print('empty', { terminals, ...(await heldMemory(page, main)) });
+      await inWorkers(page, 4, `seq 1 ${lines}`);
+      await wait(5000);
+      print('filled', await heldMemory(page, main));
+      print('heap', await heapSplit(page));
+    } finally { main.close(); }
+  }),
 };
 
 // How late a 10 ms timer on this thread fires, which is how long the whole loop was held. Stop it
@@ -304,6 +333,8 @@ async function timed(work) {
 
 // No demo instance: the app's own sweepUsage (src/main/usage/usage-store.ts), loaded through vite, on a
 // real log folder, read-only. Twice: the first sweep reads everything, the second what a later one costs.
+// Then a launch: the counts saved (usage-counts.ts) to a folder of its own, read back, and a first sweep
+// started from them, which is what every launch after the first one costs.
 // Then the first sweep again the way the app runs it, on the built usage-worker.js thread
 // (pnpm run package first), where main's hold is only waiting. A project of '' takes in every log that
 // named a folder, since ranInProject asks for `${path}/` as a prefix, and its tokens are checked against
@@ -313,6 +344,7 @@ async function usageSweep(root) {
   const { createServer } = await import('vite');
   const server = await createServer({ configFile: false, root: path.join(here, '..', '..'), logLevel: 'error', server: { middlewareMode: true, hmr: false } });
   const { sweepUsage } = await server.ssrLoadModule('/src/main/usage/usage-store.ts');
+  const { loadCounts, saveCounts } = await server.ssrLoadModule('/src/main/usage/usage-counts.ts');
   const { snapshotOf } = await server.ssrLoadModule('/src/shared/usage/usage.ts');
   const { requestSweep } = await server.ssrLoadModule('/src/main/usage/usage-thread.ts');
   await server.close();
@@ -328,13 +360,25 @@ async function usageSweep(root) {
     firstSweepSeconds: first.seconds, firstSweepCpuSeconds: first.cpuSeconds,
     longestHoldMs: Math.round(longest), laterSweepMs: Math.round(later.seconds * 1000),
   });
+  const counts = path.join(mkdtempSync(path.join(tmpdir(), 'usage-counts-')), 'usage-counts.json');
+  saveCounts(counts, known);
+  const launched = await timed(() => sweepUsage(root, new Map(), Date.now(), loadCounts(counts)));
+  rmSync(path.dirname(counts), { recursive: true, force: true });
+  print('usage-sweep-launch', {
+    savedSweepSeconds: launched.seconds, savedSweepCpuSeconds: launched.cpuSeconds,
+    allTimeTokens: snapshotOf(launched.result.values(), everything, new Map(), Date.now()).projects[''].allTime,
+    inProcessAllTimeTokens: snapshotOf(known.values(), everything, new Map(), Date.now()).projects[''].allTime,
+  });
   const file = path.join(here, '..', '..', '.vite', 'build', 'usage-worker.js');
   if (!existsSync(file)) return print('usage-sweep-thread', { skipped: `${file} not built` });
   const worker = new Worker(file);
+  // A counts file that is not there, so this run starts with nothing saved, as a first launch does.
+  const countsFile = path.join(mkdtempSync(path.join(tmpdir(), 'usage-counts-')), 'missing.json');
   stop = holdTimer();
-  const threaded = await timed(() => requestSweep(worker, { root, now: Date.now(), projects: everything, paneSessions: new Map() }));
+  const threaded = await timed(() => requestSweep(worker, { root, countsFile, now: Date.now(), projects: everything, paneSessions: new Map() }));
   const mainLongest = stop();
   await worker.terminate();
+  rmSync(path.dirname(countsFile), { recursive: true, force: true });
   print('usage-sweep-thread', {
     firstSweepSeconds: threaded.seconds, firstSweepCpuSeconds: threaded.cpuSeconds, mainLongestHoldMs: Math.round(mainLongest),
     allTimeTokens: threaded.result.projects[''].allTime,

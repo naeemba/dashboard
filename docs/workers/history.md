@@ -90,3 +90,5 @@ One line per merged change: date and why.
 - 2026-11-26 — The app holds main's workers to a cap of 4 and queues a start past it (`pane
   start`, `board ship`, the review sweep), since only main kept count and the review sweep could
   push past it (workers-decision-11)
+- 2026-11-26 — The finished-work tests build their bare origin and clones once and copy them per
+  test: building them in every test took one past vitest's 5 s on the Windows CI job

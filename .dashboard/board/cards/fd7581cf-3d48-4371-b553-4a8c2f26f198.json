@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:06:32.539Z",
-  "updatedAt": "2026-11-26T14:03:13.376Z",
+  "updatedAt": "2026-11-26T14:04:25.181Z",
   "branch": "deleting-a-board-only-worktree-from-the-lis",
   "pullRequest": 400,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-26T14:03:13.375Z",
       "body": "Sent back for one fix, now done: a worktree with both work changes and uncommitted board edits not on origin now gets a second d question naming both (e.g. 'x has uncommitted changes: src/a.ts, and its board edits of .dashboard/board/cards/a1.json never reached origin/main.'). committedToo=false kept. Tests for the mixed case in worktree-keeper.test.ts and worktree-removal.test.ts; ship-decision-7 no longer lists the edge case. Commits 8c74627e, 97c929c5. pnpm check passes; CI passed on 97c929c5, windows included. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-26T14:04:25.149Z",
+      "body": "Pull request #400 merged: Ask before d removes a worktree whose board edits never reached origin https://github.com/naeemba/dashboard/pull/400"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 327
 }

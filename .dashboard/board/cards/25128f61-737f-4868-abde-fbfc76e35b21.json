@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T11:58:48.183Z",
-  "updatedAt": "2026-11-26T11:58:48.183Z",
-  "column": "Backlog",
-  "order": 47
+  "updatedAt": "2026-11-26T14:30:00.431Z",
+  "branch": "window-transparency-setting-for-example-0-7",
+  "column": "Doing",
+  "order": 2
 }

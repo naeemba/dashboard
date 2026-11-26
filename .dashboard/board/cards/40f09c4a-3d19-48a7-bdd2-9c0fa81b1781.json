@@ -5,7 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T13:17:56.865Z",
-  "updatedAt": "2026-11-26T13:17:56.866Z",
-  "column": "Backlog",
-  "order": 52
+  "updatedAt": "2026-11-26T14:28:18.921Z",
+  "branch": "the-review-s-worktree-removal-swap-clear-as",
+  "pullRequest": 405,
+  "comments": [
+    {
+      "at": "2026-11-26T14:28:18.894Z",
+      "body": "Pull request #405 opened: Keep a reviewed worktree whose board edits never reached origin https://github.com/naeemba/dashboard/pull/405"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }

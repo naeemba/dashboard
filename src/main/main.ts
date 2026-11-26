@@ -447,6 +447,7 @@ const openProjectPaths = (): string[] => projects.flatMap((project) => (project 
 // Claude Code's own session logs, read for what each project and each pane has cost. What it reads and
 // when is usage-sweep.ts's; what is handed over here is the four things only main can answer.
 const tokenUsage = usageSweep({
+  countsFile: path.join(app.getPath('userData'), 'usage-counts.json'),
   panePids: () => new Map([...shells].map(([id, terminalProcess]) => [terminalProcess.pid, id])),
   openProjects: openProjectPaths,
   processTree,
