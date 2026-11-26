@@ -140,9 +140,14 @@ export function fetchFailure(error: unknown): string {
   return lines.find((line) => /fatal:|denied/i.test(line)) ?? lines[0] ?? failureText(error).split('\n')[0];
 }
 
+// One try at the base's fetch, capped. The ship calls it too, so neither can leave the cap out.
+export function fetchBaseOnce(run: WorktreeMakePorts['git'], projectPath: string, base: BaseBranch): Promise<string> {
+  return run(['fetch', base.remote, base.branch], projectPath, { timeout: FETCH_TIMEOUT_MS });
+}
+
 // The base fetched, a pause later once more if the first try fails; the warning to give when neither worked.
 async function fetchedBase(ports: WorktreeMakePorts, projectPath: string, base: BaseBranch): Promise<string | undefined> {
-  const fetchBase = () => ports.git(['fetch', base.remote, base.branch], projectPath, { timeout: FETCH_TIMEOUT_MS });
+  const fetchBase = () => fetchBaseOnce(ports.git, projectPath, base);
   try {
     await fetchBase().catch(async (error: unknown) => {
       if (!fetchWorthRetrying(error)) throw error;

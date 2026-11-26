@@ -5,7 +5,7 @@ import { baseBranch, type BaseBranch } from '../app/base-branch';
 import { isManagerPath } from '../../shared/manager/manager';
 import { blockingChanges, uncommittedCount, workPrompt } from './ship';
 import { entryForCard } from './worktree-store';
-import type { ShipWorktree, ShipWorktreeRequest } from '../actions/worktree/make';
+import { fetchBaseOnce, fetchFailure, type ShipWorktree, type ShipWorktreeRequest } from '../actions/worktree/make';
 
 // A card moved into Ship: the worktree, the branch and the pane. Out of main.ts because
 // main had reached its 600-line ceiling; what it needs from there is the records and the panes, handed
@@ -49,7 +49,13 @@ export function shipFlow(ports: ShipPorts): (request: ShipRequest) => Promise<Sh
     }
 
     const base = await baseBranch(projectPath);
-    await git(['fetch', base.remote, base.branch], projectPath);
+    // Capped like the throwaway's, since the queue is held: a stalled connection would otherwise keep
+    // every later ship, review and `pane run --worktree` in this project waiting with no answer.
+    try {
+      await fetchBaseOnce(git, projectPath, base);
+    } catch (error) {
+      return { ok: false, message: `fetching ${base.remote} ${base.branch} failed: ${fetchFailure(error)}` };
+    }
     // The checkout itself is only fast-forwarded when it is sitting on the base branch and can be.
     // A checkout on some other branch is left alone — the worktree comes off <remote>/<base> either
     // way, so it does not need the local branch to have caught up.

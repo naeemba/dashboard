@@ -97,3 +97,15 @@ describe('the prompt a ship starts its agent on', () => {
     expect(prompts).toEqual([`/work-card card ${BUMP_VERSION} trunk origin ${NO_REVIEW_LOOP}`]);
   });
 });
+
+// A failed fetch stops the ship before any worktree, with the line naming why, not git's whole stderr.
+describe('a ship whose fetch fails', () => {
+  it('stops before the worktree and says which fetch failed and why', async () => {
+    const projectPath = project();
+    git(projectPath, 'remote', 'set-url', 'origin', temporaryFolder('ship-gone-') + '/missing');
+    const { shipCard, prompts } = ports(projectPath, []);
+    const result = await shipCard(request(projectPath));
+    expect(result).toEqual({ ok: false, message: expect.stringMatching(/^fetching origin trunk failed: fatal: [^\n]+$/) });
+    expect(prompts).toEqual([]);
+  });
+});
