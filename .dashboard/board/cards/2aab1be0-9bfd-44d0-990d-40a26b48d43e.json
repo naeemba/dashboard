@@ -1,0 +1,11 @@
+{
+  "id": "2aab1be0-9bfd-44d0-990d-40a26b48d43e",
+  "title": "pr land hands its conflicts to the branch's worker and lands again",
+  "notes": "Retro 2026-11-26: after pr land existed, it was refused for merge conflicts 6 times in the dashboard main session (parallel PRs touching work-card-skill.ts, dispatch.ts, docs decisions ids). Each time main relayed the conflict to the worker by hand, about 10-15 minutes and a full CI run each. When pr land finds conflicts with its base, it sends /pr-conflicts <n> to the pane working that branch (or starts one on the card) and, once its new head is green, lands it, without a main turn. Also consider board ship warning when a card in Doing already changes the same files.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-26T08:24:51.911Z",
+  "updatedAt": "2026-11-26T08:24:51.911Z",
+  "column": "Backlog",
+  "order": 74
+}
