@@ -5,13 +5,14 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T13:03:26.403Z",
-  "updatedAt": "2026-11-26T10:43:54.420Z",
+  "updatedAt": "2026-11-26T10:48:10.674Z",
+  "branch": "worktree-sweeps-treat-board-only-leftovers",
   "comments": [
     {
       "at": "2026-11-26T10:43:54.420Z",
       "body": "From main, 2026-11-26: dirty and pushed count any change or unpushed commit (leftover-sweep.ts:55,58; leftover-worktrees.ts:59); nothing exempts .dashboard/board/. blockingChanges (ship/ship.ts:119) already exempts .dashboard/ for the change check; the unpushed board-only commit case needs a new check. Five such worktrees have sat in dashboard.worktrees/ since Nov 16."
     }
   ],
-  "column": "Backlog",
-  "order": 64
+  "column": "Doing",
+  "order": 3
 }

@@ -5,13 +5,14 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-18T11:10:00.874Z",
-  "updatedAt": "2026-11-26T10:43:44.303Z",
+  "updatedAt": "2026-11-26T10:48:04.445Z",
+  "branch": "running-app-guard-match-the-mac-install-pat",
   "comments": [
     {
       "at": "2026-11-26T10:43:44.303Z",
       "body": "From main, 2026-11-26: INSTALLED in running-app-guard.ts:56 puts anyCase() on the Windows parts but leaves /Applications/Dashboard.app case-sensitive; tests use only the capitalised path."
     }
   ],
-  "column": "Backlog",
-  "order": 47
+  "column": "Doing",
+  "order": 2
 }
