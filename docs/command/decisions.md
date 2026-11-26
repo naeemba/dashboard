@@ -196,3 +196,17 @@ input has `rate_limits.seven_day.resets_at` (the installed CLI builds it as
 guessing: a reading the statusline wrote without it, until the statusline adds
 it, says so. A weekday-and-time setting would be a second copy of a time the
 account already says, and wrong for every user whose reset is elsewhere.
+
+## command-decision-11: A gh call that changes a pull request looks before it tries again
+
+`pr wait` and `pr land` only read until the merge, so a lost answer is safely
+asked again. `gh pr create`, `gh pr ready` and `gh pr comment` change the pull
+request, and a 502 from GitHub often means the change went through and only the
+answer was lost: a worker's `gh pr create`, retried by hand five times, ended
+on `a pull request already exists`. So each of the three, as a `pr` verb, reads
+the pull request after a lost answer and tries again only when the change is not
+there, and a read that is lost too waits another round rather than act on a
+guess. `create` and `ready` look first as well, since running either again is
+always a mistake; `comment` does not, since the same words posted a round apart
+on purpose are two comments. They are Bash runs, not MCP tools: a GitHub outage
+holds each for about four minutes of tries.

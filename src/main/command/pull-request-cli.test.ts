@@ -36,6 +36,7 @@ describe('parsePullRequestCommand', () => {
     expect(parsePullRequestCommand(['land', '12', '--keep'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
     expect(parsePullRequestCommand(['land', '--keep', '12'])).toEqual({ ok: true, verb: 'land', target: '12', keep: true });
     expect(parsePullRequestCommand(['wait', '12', '--keep'])).toMatchObject({ ok: false });
+    expect(parsePullRequestCommand(['ready', '12', '--undo'])).toEqual({ ok: true, write: { verb: 'ready', target: '12', undo: true } });
   });
 
   it('answers no verb with the usage and refuses anything else', () => {
@@ -200,6 +201,13 @@ describe('waitOnPullRequest', () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: 'all green' }] });
     expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'checks passed on abc123' });
     expect(github.asked.some((each) => each.startsWith('pr merge'))).toBe(false);
+  });
+
+  // CI skips a draft, so a wait on one waited forever.
+  it('refuses a draft at once, asking for no checks', async () => {
+    const github = fakeGitHub({ 'pr view': [{ ok: true, output: `${open.output} true` }] });
+    expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: false, output: expect.stringContaining('12 is a draft') });
+    expect(github.asked.some((each) => each.startsWith('pr checks'))).toBe(false);
   });
 
   it('says what failed, as land does', async () => {

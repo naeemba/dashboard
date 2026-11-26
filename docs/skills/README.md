@@ -71,11 +71,13 @@ a `check` script that runs them all and prints a summary is run once, its log re
 Each changed file `pnpm check`'s coverage line lists gets a test for what it leaves unrun, or a
 line in the pull request's body saying why not (workflow-decision-13): workers that left them there
 handed the review loop the tests to write. Each new test file is run on its own, then the
-type-check and lint once. With `review-loop` (settings `review.autoLoop` on) it reports the pull
-request's number to main once it opens and ends its turn, without waiting on CI: the review the
-app starts waits on CI, and kills a wait the worker left running, with any report promised after
-it. With `no-review-loop` nothing starts a review, so it waits on CI itself, with `pr wait` in the
-background at the longest timeout and run again if stopped there, and reports the verdict.
+type-check and lint once. It opens the pull request with `pr create`, never `gh pr create`,
+which a worker retried by hand after a 502 that had opened it (command-decision-11). With
+`review-loop` (settings `review.autoLoop` on) it reports the pull request's number to main once it
+opens and ends its turn, without waiting on CI: the review the app starts waits on CI, and kills a
+wait the worker left running, with any report promised after it. With `no-review-loop` nothing
+starts a review, so it waits on CI itself, with `pr wait` in the background at the longest timeout
+and run again if stopped there, and reports the verdict.
 The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
 `bump-version` tells it to bump last, from `<remote>/<base branch>` (the fourth and third words:
