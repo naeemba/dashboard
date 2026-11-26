@@ -5,8 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T10:15:49.913Z",
-  "updatedAt": "2026-11-26T11:12:20.005Z",
+  "updatedAt": "2026-11-26T11:19:22.410Z",
   "branch": "name-the-five-suite-level-windows-skips-aft",
-  "column": "Doing",
-  "order": 0
+  "pullRequest": 395,
+  "comments": [
+    {
+      "at": "2026-11-26T11:19:22.381Z",
+      "body": "Pull request #395 opened: Name the five suite-level Windows skips after their reason https://github.com/naeemba/dashboard/pull/395"
+    }
+  ],
+  "column": "Review",
+  "order": 5
 }
