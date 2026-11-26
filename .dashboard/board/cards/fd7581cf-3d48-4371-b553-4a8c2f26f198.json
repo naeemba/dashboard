@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:06:32.539Z",
-  "updatedAt": "2026-11-26T13:16:31.333Z",
+  "updatedAt": "2026-11-26T13:39:01.009Z",
   "branch": "deleting-a-board-only-worktree-from-the-lis",
   "pullRequest": 400,
   "comments": [
     {
       "at": "2026-11-26T13:16:31.287Z",
       "body": "Pull request #400 opened: Ask before d removes a worktree whose board edits never reached origin https://github.com/naeemba/dashboard/pull/400"
+    },
+    {
+      "at": "2026-11-26T13:39:01.009Z",
+      "body": "Review loop: converged, ready to merge. 1 round, floor-addressed: 6 low/nit findings fixed in 6 commits, all accepted by the final check; checks passed on 5f8da625. One fix narrows the ask: d now asks only about uncommitted board files, since a forced removal keeps the branch and a committed card edit survives on it. Same boardNotOnOrigin predicate, with committedToo=false. Also recorded in ship-decision-7: a worktree with work changes is asked only about those, and the removal waits up to 10 s on a fetch. Nothing open."
     }
   ],
   "column": "Review",
