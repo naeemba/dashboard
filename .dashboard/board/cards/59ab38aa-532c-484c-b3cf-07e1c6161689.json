@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T09:55:46.211Z",
-  "updatedAt": "2026-11-26T10:05:52.968Z",
+  "updatedAt": "2026-11-26T10:39:30.299Z",
   "branch": "card-ship-s-fetch-gets-the-same-timeout-as",
   "pullRequest": 387,
   "comments": [
     {
       "at": "2026-11-26T10:05:52.945Z",
       "body": "Pull request #387 opened: Card ship's fetch gets the same timeout as the throwaway's https://github.com/naeemba/dashboard/pull/387"
+    },
+    {
+      "at": "2026-11-26T10:39:30.299Z",
+      "body": "Converged, ready to merge. Review loop: 1 round, floor-addressed. Its one low finding (no test failed if the ship's 60 s cap was dropped) was fixed in c3bcfaa1: ship and worktree.make now share fetchBaseOnce, so make.test.ts's timeout assertion covers both. The final check accepted it. No conflicts; checks passed on c3bcfaa1."
     }
   ],
   "column": "Review",
