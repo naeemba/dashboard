@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:12:57.428Z",
-  "updatedAt": "2026-11-26T14:39:20.156Z",
+  "updatedAt": "2026-11-26T16:46:30.296Z",
   "branch": "browser-tabs-are-closed-by-asking-the-agent",
   "pullRequest": 406,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-26T14:39:20.118Z",
       "body": "Pull request #406 opened: Browser tabs are closed by asking the agent that holds them, never on a timer https://github.com/naeemba/dashboard/pull/406"
+    },
+    {
+      "at": "2026-11-26T16:46:30.296Z",
+      "body": "Review loop: 4 rounds, floor-addressed, 0 rejected, final check accepted. Round 2 changed the design: workers were never asked (the question turn overwrote their report and swallowed main's done notice); only mains got the idle question. Per main's decision, 1a90dca0 restores asking the worker: once its turn ends with nothing running while it holds tabs it opened, it gets one prompt (Claude screen or typed into a terminal worker). That turn opens with 'The Dashboard app asks:' and is kept out of its report, main's notice and auto-release (app-question.ts). Asked once per holding; a release afterwards hands leftovers to the user and tells main. browser-decision-10 updated. 253c5a64 keeps main.ts under 600 lines merged with main. CI passed on 253c5a64. Converged, ready to merge."
     }
   ],
   "column": "Review",
