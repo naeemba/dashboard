@@ -76,7 +76,8 @@ Done or Cancelled, or the branch of the worktree it is in has a merged pull requ
 otherwise. report prints the pane's line from list and the last
 message its worker ended a turn with. status prints each pane's line with its card, branch, open
 pull request and CI state and the end of its last message, then the open pull requests no pane
-holds, in one call: the one to make after a compaction. landed is what pr land runs once it merged, and a board
+holds, in one call: the one to make after a compaction.
+landed is what pr land runs once it merged, and a board
 move into Done or Cancelled: it releases the worker on that branch or in that card's worktree,
 never the pane --from names, and prints \`released <id>\`, or \`kept <id>: <why>\` for one
 something keeps (the keyboard, a question, mid-turn, typed into by you, or no main handed it work).

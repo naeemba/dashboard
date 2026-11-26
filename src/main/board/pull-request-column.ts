@@ -24,12 +24,12 @@ export const DONE_FOLLOWED_MS = 24 * 60 * 60 * 1000;
 // the app knows it has said one already, so they never change: the title after them may.
 const SAID = { OPEN: 'opened', MERGED: 'merged', CLOSED: 'closed without merging' } as const;
 
-// `gh pr list` for one branch, every state, newest first, with what the comments name and what the
-// card's glyph is read from (pull-request-status.ts), and the head commit a merged one ended on
-// (mergedHead in finished-work.ts).
-// pane status names each open one by its branch, headRefName.
+// What `gh pr list` asks for: what the comments name, what the card's glyph is read from
+// (pull-request-status.ts), the head commit a merged one ended on (mergedHead in finished-work.ts),
+// and the branch pane status names each open one by (headRefName).
 const PULL_REQUEST_FIELDS = 'number,state,title,url,statusCheckRollup,reviewDecision,mergeable,headRefOid,headRefName';
 
+// `gh pr list` for one branch, every state, newest first.
 export function pullRequestListArguments(branch: string): string[] {
   return ['pr', 'list', '--head', branch, '--state', 'all', '--json', PULL_REQUEST_FIELDS, '--limit', '20'];
 }

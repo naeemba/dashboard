@@ -25,6 +25,14 @@ export function pullRequestStatus(pull: PullRequest): PullRequestStatus | null {
   return mergeable === 'MERGEABLE' ? 'mergeable' : null;
 }
 
+// At least one check ran and every one passed: what pane status says of an open pull request the
+// glyph has nothing for.
+export function checksPassed(pull: PullRequest): boolean {
+  const { statusCheckRollup } = pull;
+  return Array.isArray(statusCheckRollup) && statusCheckRollup.length > 0
+    && statusCheckRollup.every((check) => checkState(check) === 'passed');
+}
+
 // A check run says `status` and, once completed, `conclusion`; a commit status says only `state`.
 function checkState(check: unknown): 'failed' | 'running' | 'passed' {
   const { status, conclusion, state } = (typeof check === 'object' && check !== null ? check : {}) as Record<string, unknown>;

@@ -37,7 +37,7 @@ export function unacceptedLine(milliseconds: number): string {
 // install main runs `pane list` and `pane release` before anyone restarts, and refusing them lost it
 // every pane until the restart. Their words are a verb and a pane id or two flags, an old parser refuses
 // a flag it does not know, and a wrong answer to a read changes nothing (workers-decision-4).
-const ACROSS_BUILDS = ['list', 'report', 'release'];
+const ACROSS_BUILDS = ['list', 'report', 'status', 'release'];
 const major = (version: string) => version.split('.')[0];
 
 export function versionRefusal(appVersion: string, commandVersion: unknown, commandArguments: readonly string[]): string | undefined {

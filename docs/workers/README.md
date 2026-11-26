@@ -226,11 +226,14 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   worker's last message on one line, empty for a pane that has said nothing;
   `pane report <id>` still prints the whole kept message.
 - Given workers on cards and open pull requests, when `pane status` (the
-  `pane_status` tool) runs, then each pane's line names its card's id, column
-  and title, its branch, its open pull request with its CI state, and the end
-  of its last message, then the open pull requests no pane holds follow, all
-  from one `gh pr list` (or `glab mr list`); a forge that cannot answer leaves
-  the panes printed and says why.
+  `pane_status` tool) runs, then each pane's line is `pane list --reports`'s
+  with its card's id, column and title, its branch, and its open pull request
+  with its CI state (`passed` when every check passed but it waits on a
+  review) before the report, then the open pull requests no pane holds follow,
+  all from one `gh pr list` (or `glab mr list`); a forge that cannot answer
+  leaves the panes printed, a card pane's pull request `pr unknown`, and says
+  why. It is let through across builds of one major version, as list is
+  (workers-decision-4).
 - Given main dispatches a worker or a card is shipped, when its Claude starts,
   then it starts with `--session-id` the app chose and the app's session index
   has its row first (drawer-decision-1).

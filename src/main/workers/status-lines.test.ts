@@ -9,8 +9,8 @@ const pull = (number: number, branch: string, checks: unknown[]): OpenPullReques
 });
 
 const card = { id: '443e305a-652e', title: 'Status', column: 'Doing', branch: 'status-branch' };
-const cardPane: PaneStatus = { line: '1:2\tW2\trunning', directory: '/w/a', card, report: 'pushed' };
-const shellPane: PaneStatus = { line: '1:3\tW3\tidle', directory: '/project', report: '' };
+const cardPane: PaneStatus = { head: '1:2\tW2\trunning', directory: '/w/a', card, report: 'pushed' };
+const shellPane: PaneStatus = { head: '1:3\tW3\tidle', directory: '/project', report: '' };
 
 describe('statusText', () => {
   it('puts each card pane beside its pull request and lists the ones no pane holds', () => {
@@ -19,8 +19,8 @@ describe('statusText', () => {
       pull(4, 'other', [{ status: 'COMPLETED', conclusion: 'FAILURE' }]),
     ]);
     expect(text).toBe([
-      '1:2\tW2\trunning\t443e305a Doing "Status"\tstatus-branch\t#5 running\tpushed',
-      '1:3\tW3\tidle\t/project',
+      '1:2\tW2\trunning\t/w/a\t443e305a Doing "Status"\tstatus-branch\t#5 running\tpushed',
+      '1:3\tW3\tidle\t/project\t',
       '',
       'open pull requests no pane holds:',
       '#4 failed\tother\ttitle 4',
@@ -29,13 +29,24 @@ describe('statusText', () => {
 
   it('says a card has no open pull request, and adds no section when every one is held', () => {
     const text = statusText([cardPane], [pull(5, 'status-branch', [])]);
-    expect(text).toBe('1:2\tW2\trunning\t443e305a Doing "Status"\tstatus-branch\t#5 open\tpushed');
+    expect(text).toBe('1:2\tW2\trunning\t/w/a\t443e305a Doing "Status"\tstatus-branch\t#5 open\tpushed');
     expect(statusText([{ ...cardPane, card: { ...card, column: null } }], [])).toContain('off the board');
     expect(statusText([cardPane], [])).toContain('no open pr');
   });
 
-  it('still prints the panes when the forge could not answer', () => {
-    expect(statusText([shellPane], 'gh: not logged in')).toBe('1:3\tW3\tidle\t/project\n\nopen pull requests unknown: gh: not logged in');
+  it('says passed for an open one whose checks all passed but which waits on a review', () => {
+    const waiting = pull(5, 'status-branch', [{ status: 'COMPLETED', conclusion: 'SUCCESS' }]);
+    waiting.pull.reviewDecision = 'REVIEW_REQUIRED';
+    expect(statusText([cardPane], [waiting])).toContain('#5 passed');
+  });
+
+  it('still prints the panes when the forge could not answer, a card pane\'s pull request as unknown', () => {
+    expect(statusText([cardPane, shellPane], 'gh: not logged in')).toBe([
+      '1:2\tW2\trunning\t/w/a\t443e305a Doing "Status"\tstatus-branch\tpr unknown\tpushed',
+      '1:3\tW3\tidle\t/project\t',
+      '',
+      'open pull requests unknown: gh: not logged in',
+    ].join('\n'));
   });
 });
 

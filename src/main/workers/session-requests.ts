@@ -468,7 +468,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const panes = ports.openPanes(slot).map((index): PaneStatus => {
       const id = terminalId(slot, index);
       return {
-        line: paneHead(id),
+        head: paneHead(id),
         directory: ports.directoryOf(id) ?? '',
         card: ports.paneCard(id),
         report: oneLineTail(lastMessages.get(id) ?? ''),
