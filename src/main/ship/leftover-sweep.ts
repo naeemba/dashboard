@@ -6,12 +6,12 @@ import { processTree } from '../panes/process-tree';
 import { directoriesOf } from '../panes/shell-directory-lookup';
 import { isInside } from '../panes/shell-directory';
 import { parentProcesses } from '../workers/pane-sessions';
-import { mergedHead } from '../workers/finished-work';
+import { mergedHead, unpushedWork } from '../workers/finished-work';
 import { throwawaysOf } from '../workers/throwaway-marker';
 import { isRefused, type BoundAction } from '../actions/action';
 import type { WorktreeEntry } from '../../shared/app/bridge';
 import { leftoverSweep } from './leftover-worktrees';
-import { changedFiles } from './ship';
+import { workChanges } from './ship';
 import { listWorktrees } from './worktree-scan';
 
 // Main's wiring for the leftover sweep (leftover-worktrees.ts): a minute after launch, once the
@@ -52,10 +52,9 @@ export function startLeftoverSweep(main: {
     list: listWorktrees,
     // Untracked files named outright, whatever status.showUntrackedFiles says. A git that cannot
     // answer throws, which keeps the worktree.
-    dirty: async (worktreePath) => changedFiles(await git(['status', '--porcelain', '--untracked-files=normal'], worktreePath)).length > 0,
-    head: (worktreePath) => git(['rev-parse', 'HEAD'], worktreePath),
+    dirty: async (worktreePath) => workChanges(await git(['status', '--porcelain', '--untracked-files=normal'], worktreePath)).length > 0,
     mergedHead: (worktreePath, branch) => mergedHead(runProgram, worktreePath, branch),
-    pushed: async (worktreePath) => (await git(['rev-list', 'HEAD', '--not', '--remotes'], worktreePath)).trim() === '',
+    unpushed: async (worktreePath, mergedAt) => (await unpushedWork(runProgram, worktreePath, mergedAt)) !== 0,
     modifiedAt,
     now: Date.now,
     processIn,

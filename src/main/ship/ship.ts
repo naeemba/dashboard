@@ -120,6 +120,29 @@ export function blockingChanges(porcelain: string): string[] {
   return changedFiles(porcelain).filter((path) => !path.startsWith(`${DASHBOARD_FOLDER_NAME}/`));
 }
 
+// What removing a worktree would lose: its changed files less the board's. Every board write, from a
+// worktree too, lands on origin's default branch (board-decision-5), so a worktree's own
+// .dashboard/board/ is a stale copy, and an edit of it, or a commit of nothing else, is not work. Five
+// worktrees sat a week in dashboard.worktrees/ on no more than that (2026-11-24). Every removal and
+// both sweeps ask this, so what a sweep lets go of, git is not left to refuse. The board's files and
+// no more of .dashboard/, unlike blockingChanges: the rest is written in the project, not a worktree.
+const isBoardPath = (path: string) => path.startsWith(`${DASHBOARD_FOLDER_NAME}/board`);
+
+export function workChanges(porcelain: string): string[] {
+  return changedFiles(porcelain).filter((path) => !isBoardPath(path));
+}
+
+// What a removal is refused on, and whether git is forced: the board's files alone are forced past
+// git's own refusal, which would otherwise land on the card in its raw `fatal:` words. Forced from the
+// dialog, after you said yes to losing what is in it, nothing is refused. workChanges, not
+// blockingChanges: the rest of .dashboard/ is still asked about.
+export function removalChanges(porcelain: string, force: boolean): { dirty: string[]; forced: boolean } {
+  return { dirty: force ? [] : workChanges(porcelain), forced: force || changedFiles(porcelain).length > 0 };
+}
+
+// The same for commits: what limits `git rev-list` to the ones touching anything but the board.
+export const BEYOND_THE_BOARD = ['--', `:(exclude)${DASHBOARD_FOLDER_NAME}/board*`] as const;
+
 // How many of them there are, for the ship's refusal — the one place a count is worth printing,
 // because somebody pressed a key and is waiting on the answer in the status bar. The refusals nobody
 // is watching say it without a number: the review's line lands on a card and is written again on

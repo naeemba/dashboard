@@ -83,3 +83,5 @@ One line per merged change: date and why.
 - 2026-11-26 — `pane run --worktree` fetches its base twice and, failing both, starts on the last
   fetched base with a warning: one session met nine transient `Permission denied (publickey)`
   refusals and its agent wrote retry loops by hand
+- 2026-11-26 — A throwaway worktree whose only changes or unpushed commits are the board's is
+  removed when its worker goes, the board being a stale copy of origin's (ship-decision-7)

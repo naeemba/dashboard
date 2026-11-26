@@ -3,7 +3,7 @@ import { baseName } from '../../shared/app/base-name';
 import { failureText } from '../../shared/errors/failure';
 import type { PaneCommand } from '../../shared/panes/pane-reading';
 import { git } from '../app/git';
-import { changedFiles } from './ship';
+import { removalChanges } from './ship';
 import { forgetSize } from './worktree-scan';
 import {
   claimsPane,
@@ -160,15 +160,10 @@ export function worktreeKeeper({ file, entries: recordAtLaunch, commands, shells
       // read as the reason your removal was refused and told you nothing you could act on. Nothing is at
       // risk in a folder that is gone, and git's own unforced remove is happy to prune a worktree whose
       // folder has vanished, so the question is skipped rather than asked and lost.
-      //
-      // changedFiles, not blockingChanges: this refusal exists to ask before git does, and git counts
-      // .dashboard/ like any other folder. Ask the ship's narrower question here and a worktree holding
-      // nothing but an uncommitted board move sails past, straight into git saying no in its own words.
-      const dirty = existsSync(worktreePath)
-        ? changedFiles(await git(['status', '--porcelain'], worktreePath))
-        : [];
-      if (dirty.length > 0 && !force) return { ok: false, message: '', dirty };
-      await git(['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath], project);
+      const status = existsSync(worktreePath) ? await git(['status', '--porcelain'], worktreePath) : '';
+      const { dirty, forced } = removalChanges(status, force);
+      if (dirty.length > 0) return { ok: false, message: '', dirty };
+      await git(['worktree', 'remove', ...(forced ? ['--force'] : []), worktreePath], project);
       forgetSize(worktreePath);
       // A worktree with no record has no agent of the app's in it, so a shell of yours standing there is
       // left alone.

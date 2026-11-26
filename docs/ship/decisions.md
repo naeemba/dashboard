@@ -103,3 +103,17 @@ option and was not taken here: that command is used on its own too, where nothin
 pull request. The cost is a copy of its draft and comment steps in `review.ts`, which has to follow
 a change to them there; `review-finished.ts` already reads the finish heading. GitLab's `/mr-loop`
 has no such steps and is run as it is. `review.ts`, `review-loop-install.ts`. (2026-11-26)
+
+## ship-decision-7: A worktree's board files are nothing to keep
+
+**A change or a commit that touches only `.dashboard/board/` does not keep a worktree: not from
+the throwaway sweep (`unfinishedWork`), the leftover sweep, or a removal, which forces git past
+those files alone (`workChanges`, `removalChanges`, `unpushedWork`).** Every board write, from a
+worktree too, lands on origin's default branch (board-decision-5), so the worktree's copy is stale.
+Until 2026-11-26 both sweeps counted any change or unpushed commit as work, and five worktrees sat
+in dashboard.worktrees/ from 2026-11-16: two on an uncommitted edit of their own card file, two on
+an unpushed `board: ship "…"` commit, one a detached HEAD already on origin/main, which now answers
+to the agents' rule (a day quiet, nothing unpushed). The rest of `.dashboard/` (notes) still counts.
+The cost: a board write whose sync to origin failed is lost with its worktree, and `d` on a worktree
+holding only board changes removes it without asking. A locked worktree, or one a process stands
+in, is still kept. `ship.ts`, `finished-work.ts`, `leftover-worktrees.ts`. (2026-11-26)
