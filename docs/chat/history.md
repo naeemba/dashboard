@@ -69,3 +69,5 @@ One line per merged change: date and why.
   working line
 - 2026-11-16 — A log at its end goes to its end when its screen is shown again, so a reply that
   arrived out of sight is not left below the prompt
+- 2026-11-26 — A slot's conversation is read in one place, `slot-conversation.ts`, so the session
+  actions and `chat-sessions.ts` stop asking whether a slot is a page or a worker screen to find it

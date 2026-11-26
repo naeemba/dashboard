@@ -154,7 +154,7 @@ One row per noun.verb, and what it decides that its callers do not.
 | project.close | `closeRefusal`, once, for the key and the command; only a check before the key's question; every pane's scope stopped after the close |
 | project.focus | which pane to land on: main, or the banner's |
 | session.start | whether a main starts at a restart (`startsAtOpen`); the command's start answers once main can be reached |
-| session.reset, .resume, .branch, .rewind | `keepsItsConversation`: refused on main's worker screen; a resume of a conversation running elsewhere (`runningElsewhere`); a rewind's dry run before the code goes back |
+| session.reset, .resume, .branch, .rewind | the slot conversation's `keeps`: refused on main's worker screen; a resume of a conversation running elsewhere (`runningElsewhere`); a rewind's dry run before the code goes back |
 | session.rename | one label for the chat and the drawer: both doors write the transcript's title and the drawer's row |
 | session.configure | the choice kept for the next start, and the running session moved onto it |
 | settings.write | the one writer of settings.json in the app, and the shell it picks |
