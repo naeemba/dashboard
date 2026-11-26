@@ -5,13 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:24:51.911Z",
-  "updatedAt": "2026-11-26T09:41:23.085Z",
+  "updatedAt": "2026-11-26T09:41:33.358Z",
+  "branch": "pr-land-hands-its-conflicts-to-the-branch-s",
   "comments": [
     {
       "at": "2026-11-26T09:41:23.084Z",
       "body": "From main: #380 (merged) added pr create/ready/comment in src/main/command/pull-request-write-cli.ts and the shared retry in gh-answer.ts; reuse them. #383 (open, pane status) and #384 (open, heavy-run wait) are in flight; #384 touches work-card-skill.ts and review.ts."
     }
   ],
-  "column": "Backlog",
-  "order": 74
+  "column": "Doing",
+  "order": 0
 }
