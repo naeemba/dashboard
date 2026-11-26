@@ -26,7 +26,7 @@ export type CardDragging = {
 // events: Chromium draws the card under the cursor, ends the drag when you let go anywhere, and gives
 // up on Escape, none of which is worth writing again. The listeners and the drop's lookup live here;
 // which gap a pointer names is decided in board-drag.ts, and the move itself is board.ts's dropCard.
-export function createCardDragging(host: CardDraggingPorts): CardDragging {
+export function createCardDragging(ports: CardDraggingPorts): CardDragging {
   // The line that says where a dragged card would land.
   const dropMarker = createDropMarker();
 
@@ -41,7 +41,7 @@ export function createCardDragging(host: CardDraggingPorts): CardDragging {
   function beginDrag(event: DragEvent, card: Card): void {
     // Nothing to drag: refusing the gesture outright is better than a card that follows the cursor and
     // then will not be let go of anywhere.
-    if (!host.grab(card)) return event.preventDefault();
+    if (!ports.grab(card)) return event.preventDefault();
     if (!event.dataTransfer) return;
     // Chromium cancels a drag that carries nothing, and the id is what the drop looks the card up by.
     event.dataTransfer.setData('text/plain', card.id);
@@ -50,11 +50,11 @@ export function createCardDragging(host: CardDraggingPorts): CardDragging {
     event.dataTransfer.effectAllowed = 'move';
   }
 
-  // However the drag ended. A drop has already redrawn through host.move; this is what puts the
+  // However the drag ended. A drop has already redrawn through ports.move; this is what puts the
   // highlight on the grabbed card when you let go over nothing, or press Escape.
   function endDrag(): void {
     dropMarker.clear();
-    host.ended();
+    ports.ended();
   }
 
   // Letting go. The same move Shift+Arrow makes, including the one into Ship that hands the card to an
@@ -64,7 +64,7 @@ export function createCardDragging(host: CardDraggingPorts): CardDragging {
     event.preventDefault();
     // Before the row is read, so the line is gone whether or not this board has the card.
     dropMarker.clear();
-    if (host.busy()) return;
+    if (ports.busy()) return;
     // Found by id rather than taken from this board's selection: the manager stacks every open
     // project's board in one scroller, so the card let go of here may belong to another one of them.
     const id = event.dataTransfer?.getData('text/plain') ?? '';
@@ -72,11 +72,11 @@ export function createCardDragging(host: CardDraggingPorts): CardDragging {
     // it. A dragover cannot read the id, so the column drew a line promising this drop would land —
     // the one refusal you can reach with the mouse, and the only place that knows it was refused.
     if (id === '') return;
-    const board = host.board();
+    const board = ports.board();
     const at = selectionOf(board, id);
-    if (!at) return host.onNotice('That card belongs to another project — a card stays on the board it was made on');
-    const row = realRow(host.visible(), columnIndex, dropMarker.rowUnder(list, event.clientY), board.columns[columnIndex].cards.length);
-    host.move(at, dropCard(board, at, columnIndex, row));
+    if (!at) return ports.onNotice('That card belongs to another project — a card stays on the board it was made on');
+    const row = realRow(ports.visible(), columnIndex, dropMarker.rowUnder(list, event.clientY), board.columns[columnIndex].cards.length);
+    ports.move(at, dropCard(board, at, columnIndex, row));
   }
 
   function card(item: HTMLElement, card: Card): void {
@@ -96,7 +96,7 @@ export function createCardDragging(host: CardDraggingPorts): CardDragging {
       // the drop however this one returns. dropEffect is read after that and does turn the cursor
       // into the one that says no. Without it the card snaps back off dropOnColumn's own busy check
       // with nothing on screen having said the column would not take it.
-      if (host.busy()) {
+      if (ports.busy()) {
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
         // A board can go busy mid-drag — a board:change from the command line starts a read — and the
         // line drawn a moment ago would sit there saying the card lands here while the cursor says no.
