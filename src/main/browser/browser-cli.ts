@@ -34,6 +34,15 @@ export type BrowserRequest =
   | Exclude<BrowserCommand, { verb: 'eval' }>
   | ({ verb: 'eval'; script: string; waitFor: string | null } & OnTab);
 
+// eval's request once its file is read: the script it holds, or the read's failure as the refusal.
+export const evalRequest = (
+  { tab, waitFor }: Extract<BrowserCommand, { verb: 'eval' }>,
+  read: string | { failed: string },
+): { ok: true; request: BrowserRequest } | { ok: false; message: string } =>
+  typeof read === 'string'
+    ? { ok: true, request: { verb: 'eval', tab, waitFor, script: read } }
+    : { ok: false, message: `the script file could not be read: ${read.failed}` };
+
 // Each file to upload as the agent meant it: from `~`, whole, or from the folder the command runs in.
 export const wholeFiles = (files: readonly string[], home: string, folder: string): string[] =>
   files.map((file) => wholePath(file, home) ?? path.resolve(folder, file));

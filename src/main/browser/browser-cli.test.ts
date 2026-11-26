@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBrowserCommand, wholeFiles } from './browser-cli';
+import { evalRequest, parseBrowserCommand, wholeFiles } from './browser-cli';
 import { posixPathsOnly } from '../testing/windows-skips';
 
 const command = (...words: string[]) => {
@@ -57,5 +57,18 @@ describe('wholeFiles', () => {
   posixPathsOnly('reads a file from home, whole, or from the folder the command runs in', () => {
     expect(wholeFiles(['~/cv.pdf', '/tmp/a.pdf', 'docs/b.pdf'], '/home/me', '/work/api'))
       .toEqual(['/home/me/cv.pdf', '/tmp/a.pdf', '/work/api/docs/b.pdf']);
+  });
+});
+
+describe('evalRequest', () => {
+  const evaluate = { verb: 'eval', tab: 3, file: 'jobs.js', waitFor: '.job' } as const;
+
+  it('sends the script the file holds, in place of its path', () => {
+    expect(evalRequest(evaluate, 'document.title')).toEqual({ ok: true, request: { verb: 'eval', tab: 3, waitFor: '.job', script: 'document.title' } });
+  });
+
+  it('refuses with the read\'s failure when the file cannot be read', () => {
+    expect(evalRequest(evaluate, { failed: 'ENOENT: no such file' }))
+      .toEqual({ ok: false, message: 'the script file could not be read: ENOENT: no such file' });
   });
 });
