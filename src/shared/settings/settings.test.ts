@@ -41,6 +41,15 @@ describe('parseSettings', () => {
     expect(parseSettings({ budget: { limit: 'daily' } }, false).budget.limit).toBe('cap');
   });
 
+  it('caps the workers at 4 unless the file names a whole number or none', () => {
+    expect(parseSettings({}, false).workers).toEqual({ cap: 4 });
+    expect(parseSettings({ workers: { cap: 6 } }, false).workers).toEqual({ cap: 6 });
+    expect(parseSettings({ workers: { cap: 'none' } }, false).workers).toEqual({ cap: null });
+    // How a save from the screen writes none back.
+    expect(parseSettings({ workers: { cap: null } }, false).workers).toEqual({ cap: null });
+    for (const rubbish of [0, -1, 2.5, '6']) expect(parseSettings({ workers: { cap: rubbish } }, false).workers).toEqual({ cap: 4 });
+  });
+
   it('checks for updates unless the file turns it off', () => {
     expect(parseSettings({}, false).updates).toEqual({ check: true });
     expect(parseSettings({ updates: { check: false } }, false).updates).toEqual({ check: false });

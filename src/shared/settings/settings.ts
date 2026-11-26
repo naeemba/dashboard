@@ -38,6 +38,9 @@ export type Settings = {
   // reset, a seventh of the week when null; 'none' is no limit, and budget answers under. Set on the
   // settings screen or with `budget --cap` and `budget --pace`.
   budget: { limit: BudgetLimit; weeklyCap: number | null; dailyShare: number | null };
+  // cap: how many of main's workers run at once across the app, null for no cap ("none" in the file).
+  // A start past it waits in the pane pool's queue (docs/workers).
+  workers: { cap: number | null };
 };
 
 // The on/off settings: each a boolean in a section of the file, named as [section, field], read by
@@ -84,6 +87,15 @@ export function isFontSize(value: string): boolean {
   return value.trim() !== '' && Number.isFinite(size) && size >= 6 && size <= 72;
 }
 
+export const DEFAULT_WORKER_CAP = 4;
+
+// A whole number of workers, at least 1, or null for "none": no cap. Null reads as none too, since that
+// is how a save from the screen writes it back. Undefined for anything else, which reads as the default.
+export function workerCap(stored: unknown): number | null | undefined {
+  if (stored === 'none' || stored === null) return null;
+  return typeof stored === 'number' && Number.isInteger(stored) && stored >= 1 ? stored : undefined;
+}
+
 export const BUDGET_LIMITS = ['cap', 'pace', 'none'] as const;
 export type BudgetLimit = typeof BUDGET_LIMITS[number];
 
@@ -121,6 +133,7 @@ export function defaultSettings(isMac: boolean): Settings {
     updates: { check: true },
     errors: { notify: true },
     budget: { limit: 'cap', weeklyCap: null, dailyShare: null },
+    workers: { cap: DEFAULT_WORKER_CAP },
   };
 }
 
@@ -179,6 +192,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
   const storedBudget = asRecord(raw.budget);
+  const storedCap = workerCap(asRecord(raw.workers).cap);
   // A number only: the file never holds a percentage as text.
   const percentage = (stored: unknown): number | null => (typeof stored === 'number' ? budgetPercentage(stored) : null);
   // A toggle the file holds as a boolean, or the shipped one.
@@ -226,6 +240,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
       weeklyCap: percentage(storedBudget.weeklyCap),
       dailyShare: percentage(storedBudget.dailyShare),
     },
+    workers: { cap: storedCap === undefined ? defaults.workers.cap : storedCap },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 
