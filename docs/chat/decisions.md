@@ -192,8 +192,8 @@ one of the app's theme colours instead.
 
 The popup is drawn above what opened it, lined up with whichever of its edges faces the middle of
 the window (`popup-placement.ts`). The context meter sits on the right of the foot, so its popup
-grows leftwards; the workers count on the left would grow rightwards from the same code, so the two
-never cover each other's anchor. The workers popup is the same popup, opened from the count.
+grows leftwards; the workers popup, opened from the count on the left, grows rightwards from the
+same code, so the two never cover each other's anchor.
 
 ## chat-decision-11: A streaming reply is cut at a paragraph break, and drawn whole when it cannot be
 
