@@ -4,7 +4,7 @@
   "notes": "Claude Code: /permissions views and edits allow/ask/deny rules. SDK: list_permission_rules (sdk.d.ts:4873) is internal; updateSettings allowlist is narrow (3049). Pane: rules come only from \"do not ask again\" (chat-permission.ts:48). If not feasible through the SDK, comment on the card and stop without a PR. Size M.",
   "priority": "low",
   "parent": "7f82c3d3-15b5-4694-a7bd-66031ee615d7",
-  "updatedAt": "2026-11-26T10:40:02.897Z",
+  "updatedAt": "2026-11-26T10:40:22.224Z",
   "comments": [
     {
       "at": "2026-10-31T22:51:28.176Z",
@@ -15,6 +15,6 @@
       "body": "Still blocked: SDK 0.3.316 has no public listPermissionRules; re-add when it does."
     }
   ],
-  "column": "Backlog",
-  "order": 0
+  "column": "Cancelled",
+  "order": 30
 }
