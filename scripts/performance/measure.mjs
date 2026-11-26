@@ -2,7 +2,8 @@
 // instance, printed as one JSON line per step. docs/performance/README.md lists them and what each found.
 /* global process, performance, console, URL, setInterval, clearInterval */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { bytesPerSource, ownerOf } from './calculations.mjs';
@@ -304,6 +305,8 @@ async function timed(work) {
 
 // No demo instance: the app's own sweepUsage (src/main/usage/usage-store.ts), loaded through vite, on a
 // real log folder, read-only. Twice: the first sweep reads everything, the second what a later one costs.
+// Then a launch: the counts saved (usage-counts.ts) to a folder of its own, read back, and a first sweep
+// started from them, which is what every launch after the first one costs.
 // Then the first sweep again the way the app runs it, on the built usage-worker.js thread
 // (pnpm run package first), where main's hold is only waiting. A project of '' takes in every log that
 // named a folder, since ranInProject asks for `${path}/` as a prefix, and its tokens are checked against
@@ -313,6 +316,7 @@ async function usageSweep(root) {
   const { createServer } = await import('vite');
   const server = await createServer({ configFile: false, root: path.join(here, '..', '..'), logLevel: 'error', server: { middlewareMode: true, hmr: false } });
   const { sweepUsage } = await server.ssrLoadModule('/src/main/usage/usage-store.ts');
+  const { loadCounts, saveCounts } = await server.ssrLoadModule('/src/main/usage/usage-counts.ts');
   const { snapshotOf } = await server.ssrLoadModule('/src/shared/usage/usage.ts');
   const { requestSweep } = await server.ssrLoadModule('/src/main/usage/usage-thread.ts');
   await server.close();
@@ -327,6 +331,15 @@ async function usageSweep(root) {
     files: known.size, gigabytes: +(bytes / 1073741824).toFixed(2),
     firstSweepSeconds: first.seconds, firstSweepCpuSeconds: first.cpuSeconds,
     longestHoldMs: Math.round(longest), laterSweepMs: Math.round(later.seconds * 1000),
+  });
+  const counts = path.join(mkdtempSync(path.join(tmpdir(), 'usage-counts-')), 'usage-counts.json');
+  saveCounts(counts, known);
+  const launched = await timed(() => sweepUsage(root, new Map(), Date.now(), loadCounts(counts)));
+  rmSync(path.dirname(counts), { recursive: true, force: true });
+  print('usage-sweep-launch', {
+    savedSweepSeconds: launched.seconds, savedSweepCpuSeconds: launched.cpuSeconds,
+    allTimeTokens: snapshotOf(launched.result.values(), everything, new Map(), Date.now()).projects[''].allTime,
+    inProcessAllTimeTokens: snapshotOf(known.values(), everything, new Map(), Date.now()).projects[''].allTime,
   });
   const file = path.join(here, '..', '..', '.vite', 'build', 'usage-worker.js');
   if (!existsSync(file)) return print('usage-sweep-thread', { skipped: `${file} not built` });
