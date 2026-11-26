@@ -5,8 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T08:25:04.092Z",
-  "updatedAt": "2026-11-26T08:40:27.523Z",
+  "updatedAt": "2026-11-26T08:41:59.316Z",
   "branch": "dashboard-status-one-call-for-panes-cards-p",
+  "comments": [
+    {
+      "at": "2026-11-26T08:41:59.316Z",
+      "body": "Overlap check: #378 (pane run --worktree) edits src/main/workers/session-requests.ts in run()/SessionPorts.makeWorktree; this card adds a verb beside list()/report() there (file at 575 lines, so the status logic goes in a new module, only wiring in session-requests.ts). #380 (pr wait/create) edits src/main/command/mcp-tools.ts COMMAND_ONLY; this card adds one DASHBOARD_TOOLS row. Different hunks, no shared lines expected."
+    }
+  ],
   "column": "Doing",
   "order": 0
 }
