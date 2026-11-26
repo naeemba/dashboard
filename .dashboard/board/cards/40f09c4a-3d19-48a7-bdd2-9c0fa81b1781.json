@@ -5,13 +5,17 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T13:17:56.865Z",
-  "updatedAt": "2026-11-26T14:28:18.921Z",
+  "updatedAt": "2026-11-26T15:36:10.861Z",
   "branch": "the-review-s-worktree-removal-swap-clear-as",
   "pullRequest": 405,
   "comments": [
     {
       "at": "2026-11-26T14:28:18.894Z",
       "body": "Pull request #405 opened: Keep a reviewed worktree whose board edits never reached origin https://github.com/naeemba/dashboard/pull/405"
+    },
+    {
+      "at": "2026-11-26T15:36:10.861Z",
+      "body": "Review loop converged, ready to merge. 3 rounds, 10 findings fixed, 0 rejected, nothing open. Commits 31b11c68 e5a28977 c1d7813e bb9f9bcd; CI passed on bb9f9bcd. No conflict with main. Scope matches the card: the swap and clear removals now go through the kept board-on-origin check and name the files. Wording changed from the card's own example: the docs now describe the case as a card file written past the board command or in an older worktree, not an offline edit. A refused review also no longer fetches origin when work changes already block it."
     }
   ],
   "column": "Review",
