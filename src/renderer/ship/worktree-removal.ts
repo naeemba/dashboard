@@ -16,14 +16,16 @@ export async function notify(message: string, refocus: () => void): Promise<void
   refocus();
 }
 
-// What the second question says: the files when main refused on uncommitted changes, main's own
-// words for every other refusal. main decides what counts as dirty and hands the list back, so
-// the question on screen cannot name one thing while the removal refuses on another.
+// What the second question says: the files when main refused on uncommitted changes, with main's
+// words beside them when board edits would go too, and main's own words for every other refusal.
+// main decides what counts as dirty and hands the list back, so the question on screen cannot name
+// one thing while the removal refuses on another.
 function forcedQuestion(entry: WorktreeTarget, attempt: { message: string; dirty: string[] }): string {
   if (attempt.dirty.length === 0) return `${entry.branch} was not removed: ${attempt.message}`;
   const files = attempt.dirty.slice(0, 3).join(', ');
   const more = attempt.dirty.length > 3 ? ` and ${attempt.dirty.length - 3} more` : '';
-  return `${entry.branch} has uncommitted changes: ${files}${more}.`;
+  const board = attempt.message === '' ? '' : `, and ${attempt.message}`;
+  return `${entry.branch} has uncommitted changes: ${files}${more}${board}.`;
 }
 
 // Asked twice, and the forced removal is offered whatever the first one failed on — not only on
