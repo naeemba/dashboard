@@ -37,7 +37,12 @@ is refused, is not waited on, since CI does not run on it: the files come from `
 the project's remote's base and the head commit, touching no checkout. A failed check, a conflict or
 a refused merge exits 1 and merges nothing. The last line is always the
 verdict, a failure's detail above it: `merged 12 at <sha>`, or `conflicts with main: <files> — merge
-origin/main into the branch, …`, the line main sends the worker. `pr wait <n>` is the same wait,
+origin/main into the branch, …`. Before that verdict, a land hands the conflict on: it asks the app
+`pane conflicted`, which sends `/pr-conflicts <n>` to the first agent on the branch (never the pane
+the land runs in), prints `sent /pr-conflicts 12 to 2:1`, then reads the pull request every minute
+for up to an hour (`NEW_HEAD_WAIT_MS`) until its head moves, and lands that, at most `HAND_OFFS`
+times. With no agent on the branch, or no push within the hour, the conflict line is the verdict and
+main sends it on. `pr wait <n>` is the same wait,
 retries and conflict check without the merge, ending `checks passed on <sha>`; both refuse a draft
 no checks start on, since a repository's CI may skip one, and wait on a draft whose checks run, as
 this repository's do; a worker waiting on
@@ -289,9 +294,12 @@ Folders: `src/main/command/`.
   verdict last.
 - Given gh answers `error connecting to api.github.com` for a minute, when `pr land` asks, then it
   asks again 5, 10 and 20 seconds on and lands once GitHub answers.
-- Given a pull request that conflicts with main on `src/a.ts`, when `pr land` or `pr wait` runs,
-  then it waits on nothing and its last line is `conflicts with main: src/a.ts — merge origin/main
-  into the branch, resolve, push, and run it again`, exit 1.
+- Given a pull request whose branch a worker pane is on conflicts with main, when `pr land 12`
+  runs, then it prints `sent /pr-conflicts 12 to <pane>`, and once the worker pushes its merge it
+  waits on that commit's checks and merges it, with no turn of main's.
+- Given a pull request no agent's branch is on conflicts with main on `src/a.ts`, when `pr land`
+  or `pr wait` runs, then it waits on nothing and its last line is `conflicts with main: src/a.ts
+  — merge origin/main into the branch, resolve, push, and run it again`, exit 1.
 - Given an open pull request whose checks pass, when `pr wait 12` runs, then it prints
   `checks passed on <sha>`, exits 0, and merges nothing.
 - Given a repository whose merged pull requests reported checks (from a

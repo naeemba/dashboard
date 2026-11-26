@@ -10,7 +10,7 @@ import { failureLine } from './failure-line';
 import type { ProgramAnswer } from './gh-answer';
 import { conflictedFiles, landPullRequest, parsePullRequestCommand, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 import { writePullRequest } from './pull-request-write-cli';
-import { askLanded } from '../workers/session-socket';
+import { askConflicted, askLanded } from '../workers/session-socket';
 
 // gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
 // failure. One that could not start (none installed) has no exit code, and still throws. gh runs as
@@ -42,8 +42,15 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
       (written.ok ? process.stdout : process.stderr).write(`${written.output}\n`);
       return written.ok ? 0 : 1;
     }
-    const verb = parsed.verb === 'land' ? landPullRequest : waitOnPullRequest;
-    const answer = await verb({ gh, wait: delay }, parsed.target);
+    // A land's conflict goes to the agent on its branch, said at once, since the land then waits on it.
+    const handOff = async (branch: string, target: string) => {
+      const line = await askConflicted(branch, target, project.project);
+      if (line !== '') process.stdout.write(`${line}\n`);
+      return line !== '';
+    };
+    const answer = parsed.verb === 'land'
+      ? await landPullRequest({ gh, wait: delay }, parsed.target, handOff)
+      : await waitOnPullRequest({ gh, wait: delay }, parsed.target);
     // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
     const { conflicts } = answer;
     const verdict = conflicts === undefined

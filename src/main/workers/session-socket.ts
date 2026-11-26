@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import { landedLine, landedWords, outsidePaneRefusal, retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
+import { conflictedWords, landedLine, landedWords, outsidePaneRefusal, retriesInOlderWords, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
 import { appUserDataFolder, clearSocketPointer, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
@@ -151,6 +151,16 @@ export async function askLanded(by: 'branch' | 'card', name: string, directory: 
   const reply = await runningAppReply(words, directory, words, false)
     .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }));
   return landedLine(reply);
+}
+
+// What `pr land` asks of `pane conflicted` once a pull request conflicts: the app's line when an agent
+// on the branch was sent /pr-conflicts, '' when none was (none on it, outside a pane, or a refusal).
+export async function askConflicted(branch: string, pullRequest: string, directory: string): Promise<string> {
+  if (process.env.DASHBOARD_SOCKET === undefined && outsidePaneRefusal({ kind: 'conflicted', branch, pullRequest, from: null }) !== null) return '';
+  const words = conflictedWords(branch, pullRequest, process.env.DASHBOARD_PANE);
+  const reply = await runningAppReply(words, directory, words, false)
+    .catch((error: unknown): SessionReply => ({ ok: false, output: failureText(error) }));
+  return reply.ok ? reply.output : '';
 }
 
 // The command's half: the request out as one line, with the connection left open for the answer, and

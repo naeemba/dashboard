@@ -36,6 +36,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   asked by `pr land` (`../command/pull-request-cli.ts`) and a board move into
   Done or Cancelled (`../board/board-cli.ts`), the keyboard's pane from
   `../app/session-store.ts` (workers-decision-1)
+- A conflicting pull request's `/pr-conflicts` sent to the agent on its branch:
+  `pane conflicted` in `session-requests.ts` (tested in `session-landed.test.ts`),
+  asked by `pr land`
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 - What each main dispatched, as its status line and workers popup read it:
   `worker-roster.ts`, `pane-link.ts`

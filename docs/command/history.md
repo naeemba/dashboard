@@ -32,3 +32,6 @@ One line per merged change: date and why.
   `pr create`, `pr ready` and `pr comment` look at the pull request before trying again after a
   GitHub 5xx or lost answer, and `create` and `ready` look first: workers retried `gh pr create`
   by hand after a 502 that had opened it (command-decision-11)
+- 2026-11-26 — `pr land` sends a conflict to the agent on the branch (`pane conflicted`, which
+  sends `/pr-conflicts <n>`), waits up to an hour for its push and lands it: six lands in a day
+  were refused for conflicts, each relayed by main by hand at 10-15 minutes and a CI run

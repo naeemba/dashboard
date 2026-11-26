@@ -430,6 +430,19 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered(lines.join('\n'));
   }
 
+  // `pr land` found the branch conflicts with its base: the first of the asker's agents on it is sent
+  // /pr-conflicts, as main's own send would hand it, never the pane the land runs in. One only, since
+  // two agents resolving in one worktree write over each other.
+  async function conflicted(slot: number, projectPath: string, branch: string, pullRequest: string, from: string | null): Promise<SessionReply> {
+    for (const id of openPaneIds()) {
+      if (id === from || worker(id, slot) !== null || !ports.agentIn(id) || !(await worksOn(id, projectPath, 'branch', branch))) continue;
+      const text = `/pr-conflicts ${pullRequest}`;
+      const sent = await send(id, slot, projectPath, text);
+      if (!isRefused(sent)) return answered(`sent ${text} to ${id}`);
+    }
+    return answered('');
+  }
+
   // Send and release are refused a pane the asker may not touch before the action is asked.
   async function onWorker(id: string, slot: number, act: () => Promise<{ output: string } | Refused>): Promise<SessionReply> {
     const refusal = worker(id, slot);
@@ -527,6 +540,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'finish': return await onWorker(command.id, slot, () => finish(command.id));
         case 'report': return report(command.id, slot);
         case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name, command.from);
+        case 'conflicted': return await conflicted(slot, projectPath ?? '', command.branch, command.pullRequest, command.from);
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);

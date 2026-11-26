@@ -119,6 +119,37 @@ describe('pane landed', () => {
   });
 });
 
+// What `pr land` asks when its pull request conflicts with the base.
+describe('pane conflicted', () => {
+  it('sends /pr-conflicts to the agent on the branch, as main\'s work', async () => {
+    const { ask, typed } = await finished();
+    expect(await ask(['conflicted', 'card-one', '12', '--from', '2:0'])).toEqual({ ok: true, output: 'sent /pr-conflicts 12 to 2:1' });
+    expect(typed).toHaveLength(1);
+    expect(typed[0]).toMatch(/^2:1 \/pr-conflicts 12/);
+  });
+
+  // A review pane's own land is waiting on this answer, and the land alone is on the branch.
+  it('sends nothing to the pane the land runs in, or for a branch no agent is on', async () => {
+    const { ask, typed } = await finished();
+    expect(await ask(['conflicted', 'card-one', '12', '--from', '2:1'])).toEqual({ ok: true, output: '' });
+    expect(await ask(['conflicted', 'other', '12'])).toEqual({ ok: true, output: '' });
+    expect(typed).toEqual([]);
+  });
+
+  it('sends nothing to a shell on the branch, which would run it', async () => {
+    const { ask, agents, typed } = await finished();
+    agents.delete('2:1');
+    expect(await ask(['conflicted', 'card-one', '12'])).toEqual({ ok: true, output: '' });
+    expect(typed).toEqual([]);
+  });
+
+  it('is refused words it does not take', async () => {
+    const { ask } = await finished();
+    expect(await ask(['conflicted', 'card-one'])).toMatchObject({ ok: false });
+    expect(await ask(['conflicted', 'card-one', '12', '--from', 'main'])).toMatchObject({ ok: false });
+  });
+});
+
 describe('a worker whose work is in', () => {
   it('is listed as done with its work in once its card is finished, until main sends it work', async () => {
     const { ask, finishedCards } = await finished();

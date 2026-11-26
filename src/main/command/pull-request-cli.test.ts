@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeGitHub } from '../testing/fake-github';
 import { isNetworkError, RETRY_WAITS_MS } from './gh-answer';
-import { conflictedFiles, conflictLine, landPullRequest, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, conflictLine, HAND_OFFS, landPullRequest, NEW_HEAD_POLL_MS, NEW_HEAD_WAIT_MS, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 
 const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' };
 const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
@@ -152,7 +152,7 @@ describe('landPullRequest', () => {
   // CI does not run on a pull request that conflicts: the land says so instead of "no checks reported".
   it('says a pull request conflicts before waiting on it', async () => {
     const github = fakeGitHub({ 'pr view': [conflicting] });
-    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: '12 conflicts with main', conflicts: { base: 'main', sha: 'abc123' } });
+    expect(await landPullRequest(github.ports, '12')).toEqual({ ok: false, output: '12 conflicts with main', conflicts: { base: 'main', sha: 'abc123', branch: '' } });
     expect(github.asked).toHaveLength(1);
   });
 
@@ -213,6 +213,46 @@ describe('waitOnPullRequest', () => {
   });
 });
 
+describe('landPullRequest handing off a conflict', () => {
+  const branchConflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12 fix-it false' };
+  const pushed = { ok: true, output: 'OPEN def456 main MERGEABLE https://github.com/acme/api/pull/12 fix-it false' };
+  const handOffs = (taken: boolean) => {
+    const asked: string[] = [];
+    return { asked, handOff: async (branch: string, target: string) => { asked.push(`${branch} ${target}`); return taken; } };
+  };
+
+  it('hands the conflict to the branch\'s agent, waits for its push and lands that', async () => {
+    const github = fakeGitHub({ 'pr view': [branchConflicting, branchConflicting, pushed, pushed], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
+    const { asked, handOff } = handOffs(true);
+    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: true, output: 'merged 12 at def456' });
+    expect(asked).toEqual(['fix-it 12']);
+    expect(github.asked).toContain('pr merge 12 --merge --match-head-commit def456');
+  });
+
+  it('stops at the conflict when no agent took it', async () => {
+    const github = fakeGitHub({ 'pr view': [branchConflicting] });
+    const { handOff } = handOffs(false);
+    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { branch: 'fix-it', sha: 'abc123' } });
+    expect(github.waited).toEqual([]);
+  });
+
+  it('stops at the conflict when no push comes within the hour', async () => {
+    const github = fakeGitHub({ 'pr view': Array.from({ length: 100 }, () => branchConflicting) });
+    const { handOff } = handOffs(true);
+    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: 'abc123' } });
+    expect(github.waited).toHaveLength(NEW_HEAD_WAIT_MS / NEW_HEAD_POLL_MS);
+  });
+
+  // Each push came to conflict again: the land gives up rather than loop.
+  it('hands off at most HAND_OFFS times', async () => {
+    const heads = Array.from({ length: HAND_OFFS + 1 }, (_, round) => `OPEN sha${round} main CONFLICTING https://github.com/acme/api/pull/12 fix-it false`);
+    const github = fakeGitHub({ 'pr view': heads.flatMap((head, round) => [{ ok: true, output: head }, ...(round < HAND_OFFS ? [{ ok: true, output: heads[round + 1] }] : [])]) });
+    const { asked, handOff } = handOffs(true);
+    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: `sha${HAND_OFFS}` } });
+    expect(asked).toHaveLength(HAND_OFFS);
+  });
+});
+
 describe('conflictLine', () => {
   it('names the files merge-tree found conflicted, and what the worker does', () => {
     const tree = { ok: false, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec\nsrc/a.ts\ndocs/b.md\n' };
@@ -227,7 +267,7 @@ describe('conflictLine', () => {
 });
 
 describe('conflictedFiles', () => {
-  const conflicts = { base: 'main', sha: 'abc123' };
+  const conflicts = { base: 'main', sha: 'abc123', branch: 'fix-it' };
   const tree = { ok: false, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec\nsrc/a.ts\n' };
 
   it('fetches from the project\'s remote, then merges the fetched base with the head', async () => {
