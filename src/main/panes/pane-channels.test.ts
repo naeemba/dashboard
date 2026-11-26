@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { PaneShell } from './pane-shell';
-import { resizeShellsToScreens } from './pane-channels';
+import { panePrompts, resizeShellsToScreens } from './pane-channels';
 import { screens } from '../../shared/remote-host/screens';
 
 function shell(cols: number, rows: number) {
@@ -32,5 +32,24 @@ describe('resizeShellsToScreens', () => {
     const one = shell(80, 24);
     resizeShellsToScreens(new Map([['0:0', one.fake]]), screens());
     expect(one.resizes).toEqual([]);
+  });
+});
+
+describe('panePrompts', () => {
+  it('prompts a Claude screen, and types into the shell of a pane that is none, Enter a moment after', () => {
+    vi.useFakeTimers();
+    const written: string[] = [];
+    const prompted: string[] = [];
+    const { promptPane } = panePrompts(
+      (id) => (id === '2:2' ? { write: (data) => { written.push(data); } } : undefined),
+      (id, text) => id === '2:1' && prompted.push(`${id} ${text}`) > 0,
+    );
+    promptPane('2:1', 'close it');
+    promptPane('2:2', 'close it');
+    promptPane('2:9', 'close it');
+    vi.runAllTimers();
+    vi.useRealTimers();
+    expect(prompted).toEqual(['2:1 close it']);
+    expect(written).toEqual(['close it', '\r']);
   });
 });

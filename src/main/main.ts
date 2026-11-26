@@ -51,7 +51,7 @@ import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
-import { landOnPane, raiseWindow, registerPaneChannels, typeIntoPane } from './panes/pane-channels';
+import { landOnPane, panePrompts, raiseWindow, registerPaneChannels } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
 import { registerSessionChannels, sessionActions } from './actions/session/session-actions';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
@@ -213,10 +213,7 @@ const boards = boardWatchers((projectPath) => {
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
-// Text typed into a pane's shell, Enter after it; with a Claude screen's prompt first, how a worker is
-// prompted in either kind of pane (pane.send, and the browser's question about a worker's tabs).
-const typeIntoShell = (id: string, text: string): void => typeIntoPane((data) => shells.get(id)?.write(data), text);
-const promptPane = (id: string, text: string): void => { if (!workerScreens.send(id, text)) typeIntoShell(id, text); };
+const { typeIntoShell, promptPane } = panePrompts((id) => shells.get(id), (id, text) => workerScreens.send(id, text));
 // Each project's browser tabs, beside the window: browser-actions.ts.
 const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
