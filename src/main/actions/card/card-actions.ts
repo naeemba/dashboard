@@ -1,5 +1,5 @@
 import type { Channels } from '../../app/channels';
-import type { ShipResult, WorktreeEntry } from '../../../shared/app/bridge';
+import type { Refused, WorktreeEntry } from '../../../shared/app/bridge';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import { shipEntry } from '../../../shared/app/log-entry';
 import { REVIEW_COLUMN, type Board } from '../../../shared/board/board';
@@ -20,6 +20,8 @@ import { entryForCard } from '../../ship/worktree-store';
 import { followedBranch, type PullRequest } from '../../board/pull-request-column';
 import { pullRequestSweep, type PullRequestSweep } from '../../board/pull-request-sweep';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
+import { notOpenRefusal } from '../../ship/ship';
+import type { QueueEntry } from '../../workers/pane-pool';
 import { bind, registerActions, type BoundAction } from '../action';
 import { cardFollow } from './follow';
 import { cardMove } from './move';
@@ -42,6 +44,8 @@ export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
     log(draft: LogDraft): void;
     // The branch's pull request, asked of the project's forge (branchPullRequest in merge-request.ts).
     pullRequestOf(projectPath: string, branch: string): Promise<PullRequest | null>;
+    // pane.start (actions/pane/queue.ts): a ship's or a review's start, now or once a worker slot frees.
+    startWork(raw: Record<string, unknown>): Promise<{ output: string } | Refused>;
   };
 
 export type CardActions = {
@@ -51,6 +55,8 @@ export type CardActions = {
   // card.start, for main's one place a card's agent is given its pane.
   start: BoundAction;
   actions: BoundAction[];
+  // A queued ship or review started, as the pane pool starts it: the ship itself, or the review's swap.
+  begin(entry: QueueEntry): Promise<{ output: string } | Refused>;
 };
 
 export function cardActions(main: CardActionsMain): CardActions {
@@ -99,16 +105,26 @@ export function cardActions(main: CardActionsMain): CardActions {
     ship: (input) => ship.call(input),
     review: (input) => review.call(input),
   });
+  // Both start through the pane pool, which calls `begin` below when a slot is free.
   const ship = bind(cardShip, {
     read: (projectPath) => read(projectPath).board,
     slotOf: main.slotOf,
-    ship: async (request): Promise<ShipResult> => {
-      const result = await shipCard(request);
-      main.log(shipEntry(request, result));
-      return result;
-    },
+    ship: ({ projectPath, id, title, first, after }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after, first, work: { kind: 'ship', title } }),
   });
-  const review = bind(cardReview, { review: ({ id }) => reviews.review(id) });
+  const review = bind(cardReview, {
+    review: ({ projectPath, id }) => main.startWork({ dispatcherPath: projectPath, projectPath, cardId: id, after: null, first: false, work: { kind: 'review' } }),
+  });
+  async function begin({ projectPath, cardId, work }: QueueEntry): Promise<{ output: string } | Refused> {
+    if (cardId === null || work.kind === 'run') return { refused: 'not a card\'s start' };
+    if (work.kind === 'review') return reviews.review(cardId);
+    // The page it is on now: a project closed and opened again since it was queued has a new one.
+    const slot = main.slotOf(projectPath);
+    if (slot === -1) return { refused: notOpenRefusal(work.title) };
+    const request = { projectPath, cardId, title: work.title, slot };
+    const result = await shipCard(request);
+    main.log(shipEntry(request, result));
+    return result.ok ? { output: `"${work.title}" shipped on ${result.entry.branch}` } : { refused: result.message };
+  }
   const start = bind(cardStart, { read, write: writeShown });
   const worktreeBranch = (projectPath: string, id: string) => {
     const entry = entryForCard(main.worktrees(), id);
@@ -141,5 +157,5 @@ export function cardActions(main: CardActionsMain): CardActions {
   // exposes. A screen that needs ship or review gets its channel in the same change.
   // action.test.ts pins both lists against what is served here.
   registerActions(main.table, [move]);
-  return { reviews, pullRequests, start, actions: [move, ship, review] };
+  return { reviews, pullRequests, start, actions: [move, ship, review], begin };
 }

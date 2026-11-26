@@ -311,8 +311,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     }
     if (reviewed.has(entry.cardId)) return;
     // A review already running for it. Asked here rather than first, so the card reaching Done is
-    // still seen above and its worktree cleared. There is no waiting for a pane: a review that finds
-    // every worker busy opens a new one.
+    // still seen above and its worktree cleared. No pane is waited for here: the move's review starts
+    // through card.review, whose pane.start queues it while every worker slot is held.
     if (entry.reviewing) return;
     // Marked whatever the move goes on to do. With review.autoLoop off the card waits in Review, and
     // unmarked the sweep would move it there again every five seconds; `review` takes the mark off
@@ -323,6 +323,9 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // card.move it is the sweep's move, and with the loop off that starts nothing, so the review the
     // person asked for would say "waiting for the commit" and never come.
     reviewed.add(entry.cardId);
+    // ponytail: this retry of a start the pool already let through goes around the pool, so a slot
+    // filled in between makes one worker over the cap until one finishes; route it through
+    // card.review if that is ever seen.
     if (byHand.delete(entry.cardId)) {
       await review(entry.cardId);
       return;
