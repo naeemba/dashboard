@@ -147,10 +147,11 @@ function editProjectBoard(ports: ReviewPorts, projectPath: string, edit: (board:
 // every other refusal: it is not a review that failed, it is a review that is early.
 type Swap = { message: string; again: boolean };
 
-// What a refused removal says on the card: the branch when git refused on uncommitted files, git's own
-// words otherwise. `then` is what happens next, which is all that differs between the two callers.
-function refusal(entry: WorktreeEntry, removed: WorktreeRemoval, then: string): string {
-  return removed.dirty.length > 0 ? `uncommitted changes in ${entry.branch}, ${then}` : removed.message;
+// What a refused removal says on the card: the branch when git refused on uncommitted files, the
+// removal's own words otherwise. `then` and `otherwise` are what happens next in each case, which is
+// all that differs between the two callers.
+function refusal(entry: WorktreeEntry, removed: WorktreeRemoval, then: string, otherwise: string): string {
+  return removed.dirty.length > 0 ? `uncommitted changes in ${entry.branch}, ${then}` : `${removed.message}; ${otherwise}`;
 }
 
 async function swapWorktree(
@@ -164,7 +165,9 @@ async function swapWorktree(
   // line on it names the branch to go and look at.
   const removed = await ports.removeWorktree(entry.worktreePath);
   if (!removed.ok) {
-    if (removed.dirty.length === 0) return { message: removed.message, again: false };
+    // Not tried again: a lock or a board edit origin lacks does not pass by itself, so the line on the
+    // card says how the review starts once it is dealt with.
+    //
     // Uncommitted files are usually the agent's own last commit still being made: the pull request is
     // open, and the agent goes on committing fixes to it, so there is always a window where a change
     // is on disk and its commit is not — and git will not give up a worktree with a change in it. A
@@ -187,7 +190,8 @@ async function swapWorktree(
     // only recognises a repeat by matching the whole sentence — so a count would make `2 uncommitted
     // files` and `3 uncommitted files` two different lines and stack both on the card as the agent
     // saves. The branch is named; the files are a `git status` away.
-    return { message: refusal(entry, removed, 'waiting for the commit'), again: true };
+    const message = refusal(entry, removed, 'waiting for the commit', `board review ${entry.cardId} starts the review once that is dealt with`);
+    return { message, again: removed.dirty.length > 0 };
   }
   await ports.addWorktree(entry);
   const started = await ports.startReview(
@@ -205,7 +209,9 @@ async function clearWorktree(ports: ReviewPorts, entry: WorktreeEntry): Promise<
     .queue(entry.projectPath, () => ports.removeWorktree(entry.worktreePath))
     .catch((error: unknown) => ({ ok: false, message: failureText(error), dirty: [] as string[] }));
   if (removed.ok) return;
-  const reason = refusal(entry, removed, 'remove it from the worktree list');
+  // Asked once per card per run, so a refusal that is not a work change says where the removal goes
+  // from here too.
+  const reason = refusal(entry, removed, 'remove it from the worktree list', 'remove it from the worktree list once that is dealt with');
   editProjectBoard(ports, entry.projectPath, (board) => worktreeKept(board, entry.cardId, reason));
 }
 

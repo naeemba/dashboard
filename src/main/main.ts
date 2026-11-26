@@ -78,7 +78,7 @@ import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
 import { settingsActions } from './actions/settings/settings-actions';
 import { browserActions } from './actions/browser/browser-actions';
-import type { Settings } from '../shared/settings/settings';
+import { isSeeThrough, windowBackground, type Settings } from '../shared/settings/settings';
 import { oneAtATime } from './ship/ship';
 import {
   freePane,
@@ -153,8 +153,9 @@ readProjectNames(path.join(app.getPath('userData'), 'project-names.json'));
 // stops the launch on a record it cannot read.
 const { entries: recordAtLaunch, panes: agentPanesBeforeLaunch } = worktreeRecordAtLaunch(worktreesFile);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
-// Read before the window exists: the background colour paints the first frame, and the shell command
-// spawns the first pane. Both are needed before the renderer has run a line.
+// Read before the window exists: the background colour paints the first frame, the opacity is how the
+// window is made, and the shell command spawns the first pane. All are needed before the renderer has
+// run a line.
 const isMac = process.platform === 'darwin';
 const shellFor = (chosen: Settings) => pickShell(chosen, process.env, process.platform);
 let settings = readSettings(settingsFile, isMac);
@@ -829,7 +830,7 @@ const sessions = listenForSessions(
 
 function createWindow(): void {
   mainWindow = openAppWindow({
-    background: settings.theme.background,
+    background: windowBackground(settings), seeThrough: isSeeThrough(settings),
     // One last reading before the shells die, so a conversation started or cleared since the last sweep
     // is the one the next launch resumes. A reading that fails still quits, on the last sweep's. Then the
     // update Restart armed, if it was what asked to quit.

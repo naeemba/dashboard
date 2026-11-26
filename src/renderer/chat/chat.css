@@ -8,7 +8,7 @@
      hint made it wider than the window: the whole window scrolled sideways, the Terminals view with
      it. The column is the view's width, whatever is in it. */
   grid-template-columns: minmax(0, 1fr);
-  background: var(--background);
+  background: var(--layer-background);
 }
 
 .chat {

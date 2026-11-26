@@ -76,5 +76,5 @@
 
 .browser-page {
   min-height: 0;
-  background: var(--background);
+  background: var(--layer-background);
 }

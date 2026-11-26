@@ -1,0 +1,11 @@
+{
+  "id": "cfd56f18-3333-4044-9665-1e59cf369255",
+  "title": "Workers popup shows the pane queue, with a withdraw key",
+  "notes": "Second card of the pane pool (95a08d4a, #408, workers-decision-11). The popup lists queued entries under the running workers, in queue order with their position; a row key withdraws one through pane.unqueue (a new row in src/shared/keys/actions.ts, help.ts updated), and the settings screen gets a workers.cap row. Start after #408 merges.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T14:56:18.200Z",
+  "updatedAt": "2026-11-26T14:56:18.200Z",
+  "column": "Backlog",
+  "order": 54
+}

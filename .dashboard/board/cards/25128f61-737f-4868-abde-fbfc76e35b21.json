@@ -5,8 +5,23 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T11:58:48.183Z",
-  "updatedAt": "2026-11-26T14:30:00.431Z",
+  "updatedAt": "2026-11-26T15:16:18.088Z",
   "branch": "window-transparency-setting-for-example-0-7",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 407,
+  "comments": [
+    {
+      "at": "2026-11-26T14:48:31.924Z",
+      "body": "Pull request #407 opened: Window opacity setting: a see-through window behind solid text https://github.com/naeemba/dashboard/pull/407"
+    },
+    {
+      "at": "2026-11-26T15:15:33.493Z",
+      "body": "Review loop converged in 2 rounds, ready to merge. Round 1 found 5 (1 high, 2 low, 2 nit) and fixed all 5 in 4d463d6f. The high one: every .view still painted opaque --black, so the terminals page never showed the desktop. Also: the first frame opens on the background at the chosen opacity instead of fully clear, the docs list Electron's other transparent-window limits, isWindowOpacity is no longer exported, and a test that pinned nothing was replaced with an out-of-range case. Round 2 re-review was clean. CI passed on 4d463d6f. Scope and design match the card. Still to check by hand: opacity 0.7 on Linux under a compositor, after a rebuild and restart."
+    },
+    {
+      "at": "2026-11-26T15:16:18.061Z",
+      "body": "Pull request #407 merged: Window opacity setting: a see-through window behind solid text https://github.com/naeemba/dashboard/pull/407"
+    }
+  ],
+  "column": "Done",
+  "order": 332
 }
