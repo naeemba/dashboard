@@ -3,7 +3,7 @@ import { isCardSetAside } from '../board/board-files';
 import { awaitsReview, followedPullRequest, intoReview, isCancelled, reviewPrompt, reviewRefused, worktreeKept } from './review';
 import { failureText } from '../../shared/errors/failure';
 import { allCards, cardById, type Board } from '../../shared/board/board';
-import type { Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
+import type { CardMoveAnswer, Refused, ShipResult, WorktreeRemoval, WorktreeEntry } from '../../shared/app/bridge';
 import { isRefused } from '../actions/action';
 import type { CardFollowAnswer } from '../actions/card/follow';
 import { entryForCard } from './worktree-store';
@@ -53,7 +53,7 @@ export type ReviewPorts = {
   writeBoard: (projectPath: string, board: Board) => void;
   // A finished card noticed: card.move into Review with source 'automatic', which starts the loop
   // through `review` below only when settings review.autoLoop is on (column-entry.ts).
-  arrived: (entry: WorktreeEntry) => Promise<unknown>;
+  arrived: (entry: WorktreeEntry) => Promise<CardMoveAnswer>;
   // Whether the review may merge its pull request (landsPullRequest), read at each start so a change on
   // the settings screen or in projects.yaml holds for the next review.
   landsPullRequest: (projectPath: string) => boolean;
@@ -71,6 +71,9 @@ export type ReviewPorts = {
   // A start under way: the installed review loop asked whether it is current, and the status bar told
   // when it is not (review-loop-install.ts). Not awaited; it never refuses.
   loopChecked: () => void;
+  // card.review for a review a person started that was only early: the start again, through the pane
+  // pool, which calls `review` below once a worker slot is free.
+  retry: (cardId: string) => Promise<unknown>;
   // card.follow for one card: the project's forge (forge.ts) asked for the pull request on its
   // branch, the number recorded and the card moved into Review when one is open, as the pull request
   // sweep does on its next tick. Throws when the forge's CLI cannot answer.
@@ -223,6 +226,9 @@ export type ReviewSweep = {
   // The review loop for one shipped card, started now: card.review's whole job. Refused, with why,
   // for a card with no worktree, no pull request yet, an agent still working, or a review running.
   review: (cardId: string) => Promise<{ output: string } | Refused>;
+  // This card's queued review was dropped or withdrawn, so the sweep's mark on it comes off: left on,
+  // the next review a person starts would be taken for the sweep's.
+  unqueued: (cardId: string) => void;
 };
 
 export function reviewSweep(ports: ReviewPorts): ReviewSweep {
@@ -317,31 +323,35 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     }
     if (reviewed.has(entry.cardId)) return;
     // A review already running for it. Asked here rather than first, so the card reaching Done is
-    // still seen above and its worktree cleared. There is no waiting for a pane: a review that finds
-    // every worker busy opens a new one.
+    // still seen above and its worktree cleared. No pane is waited for here: the move's review starts
+    // through card.review, whose pane.start queues it while every worker slot is held.
     if (entry.reviewing) return;
     // Marked whatever the move goes on to do. With review.autoLoop off the card waits in Review, and
     // unmarked the sweep would move it there again every five seconds; `review` takes the mark off
     // again for a card that was only early: its agent back at work, its project closed, or its
     // worktree dirty.
     //
-    // A card a person started by hand that was only early goes back to `review` directly: through
-    // card.move it is the sweep's move, and with the loop off that starts nothing, so the review the
-    // person asked for would say "waiting for the commit" and never come.
+    // A card a person started by hand that was only early is started again through card.review, not
+    // card.move: through card.move it is the sweep's move, and with the loop off that starts nothing,
+    // so the review the person asked for would say "waiting for the commit" and never come. Through
+    // card.review it takes a slot of the pane pool like any other start.
     reviewed.add(entry.cardId);
     if (byHand.delete(entry.cardId)) {
-      await review(entry.cardId);
+      await ports.retry(entry.cardId);
       return;
     }
     // A loop that already finished at the pull request's head, which a card waiting in Review with
     // merging off is after a restart wipes the mark (review-finished.ts). It stays marked: a fix pushed
     // later comes through a worker, whose start forgets the mark.
     if (await ports.reviewFinished(entry.projectPath, pullRequest)) return;
+    // Kept past the move for a review it queued, which begins once a worker slot frees.
     arriving.add(entry.cardId);
+    let queued = false;
     try {
-      await ports.arrived(entry);
+      const moved = await ports.arrived(entry);
+      queued = !isRefused(moved) && moved.ran === 'review';
     } finally {
-      arriving.delete(entry.cardId);
+      if (!queued) arriving.delete(entry.cardId);
     }
   }
 
@@ -352,11 +362,14 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // stopped on a dirty worktree, so the sweep retries that same start rather than its own move once the
   // mark comes off. A start the sweep's move made comes back through that move, which asks the setting.
   const byHand = new Set<string>();
-  // Cards the sweep's own move is under way for right now: card.move awaits the start it makes.
+  // Cards whose review the sweep's own move started, until that start begins here: at once inside the
+  // awaited move, or later, when the pane pool's queue starts it. Taken off by the start that reads it,
+  // or by `unqueued` when the queue lets it go without starting.
   const arriving = new Set<string>();
 
   // `followed` is whether card.follow has been asked once already in this start.
   async function review(id: string, followed = false): Promise<{ output: string } | Refused> {
+    const bySweep = arriving.delete(id);
     const entry = entryForCard(ports.worktrees(), id);
     if (entry === undefined) return { refused: `card ${id} has no worktree to review; ship it first` };
     if (entry.reviewing || starting.has(id)) return { refused: `"${entry.title}" is already being reviewed` };
@@ -416,7 +429,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       // the card carries the line saying so until somebody acts on it.
       if (swap.again) {
         reviewed.delete(id);
-        if (!arriving.has(id)) byHand.add(id);
+        if (!bySweep) byHand.add(id);
       }
       if (swap.message === '') return { output: `review started for "${entry.title}", pull request #${pullRequest}` };
       // On the card as well as in the answer. A review the sweep started has nobody waiting on the
@@ -448,7 +461,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     reviewed.delete(cardId);
     settled.delete(cardId);
     byHand.delete(cardId);
+    arriving.delete(cardId);
   }
 
-  return { run, forget, review };
+  return { run, forget, review, unqueued: (cardId) => { arriving.delete(cardId); } };
 }

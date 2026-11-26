@@ -75,13 +75,15 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
   const manager = projectPath === MANAGER_FOLDER;
   // The manager's folder is in no project, so the board and pr commands are told which.
   const projectFlag = manager ? ' --project <name|aka>' : '';
-  // What a plain run starts on this platform, so main is told: pane.dispatch's default.
-  const runUsage = defaultPaneKind(platform) === 'screen'
-    ? ['  run <id> [--card <card id> | --worktree | --in <folder>] [--terminal] "<prompt>"',
-      '                         start Claude in that pane with the prompt, as a Claude screen;',
+  // What a plain start runs on this platform, so main is told: pane.dispatch's default.
+  const startUsage = defaultPaneKind(platform) === 'screen'
+    ? ['  start [--project <name|aka>] [--card <card id> | --worktree | --in <folder>] [--terminal]',
+      '        [--first] [--after <card id>] "<prompt>"',
+      '                         start Claude on the task in a worker pane, as a Claude screen;',
       '                         --terminal runs Claude Code in its terminal instead']
-    : ['  run <id> [--card <card id> | --worktree | --in <folder>] [--screen] "<prompt>"',
-      '                         start Claude Code in that pane\'s terminal with the prompt;',
+    : ['  start [--project <name|aka>] [--card <card id> | --worktree | --in <folder>] [--screen]',
+      '        [--first] [--after <card id>] "<prompt>"',
+      '                         start Claude Code on the task in a worker pane\'s terminal;',
       '                         --screen runs it as a Claude screen instead'];
   return [
     `You are the main session of ${manager ? 'the Dashboard manager' : baseName(projectPath)}, in the Dashboard`
@@ -94,18 +96,23 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' need mid-task; those stay inline or in the Agent tool.',
     '',
     'Every command below except pr land, pr wait, budget --cap and budget --pace is also a tool of the dashboard MCP server, named for its words'
-      + ' (mcp__dashboard__pane_claim, board_ship, browser_screenshot) and taking them as parameters: call the'
+      + ' (mcp__dashboard__pane_start, board_ship, browser_screenshot) and taking them as parameters: call the'
       + ' tool where there is one.',
     '',
     'Dispatch with the pane command, `node "$DASHBOARD_COMMAND" pane`:',
-    '  claim [--project <name|aka>]',
-    '                         open a worker pane; prints its id. --project opens it on the page of',
-    '                         the project of that name, opening the project if it is closed.',
-    '                         Work in a repository that is not a project yet goes on its own page:',
+    ...startUsage,
+    '                         The app holds the workers to a cap (settings workers.cap, 4 by default)',
+    '                         and queues a start past it, answering `queued <queue id>, <position>`;',
+    '                         you are told when it starts. --project puts the pane on the page of',
+    '                         the project of that name, opening it if it is closed. Work in a',
+    '                         repository that is not a project yet goes on its own page:',
     '                         `node "$DASHBOARD_COMMAND" project add <path> --name <name>`, then',
-    '                         `pane claim --project <name>`; never a pane on this page working in',
-    '                         another repository.',
-    ...runUsage,
+    '                         `pane start --project <name>`; never a pane on this page working in',
+    '                         another repository. --first queues it at the head; --after holds it',
+    '                         until that card is Done or Cancelled, for a card that would conflict',
+    '                         with another\'s open pull request.',
+    '  queue                  what is queued, in order, and why it is held',
+    '  unqueue <queue id>     withdraw a queued start',
     '  list [--all] [--reports]',
     '                         every pane, and whether its worker is running, blocked or done;',
     '                         --all across every open project, --reports with the end of each',
@@ -115,9 +122,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '  finish <id>            release a worker once its card is Done or its branch merged',
     '',
     `A card is dispatched with \`node "$DASHBOARD_BOARD" ship <id>${projectFlag}\`: it makes the card's worktree, a worker`
-      + ' pane and its agent. run --card is for a shipped card whose agent has stopped. Any'
+      + ' pane and its agent, queued like start past the cap and taking the same --first and --after.'
+      + ' start --card is for a shipped card whose agent has stopped. Any'
       + ' other change takes --worktree: a throwaway worktree, removed when its pane goes unless it holds'
-      + ' uncommitted changes or commits no remote has. run --worktree, like ship (see the'
+      + ' uncommitted changes or commits no remote has. start --worktree, like ship (see the'
       + ' board\'s usage), answers only once the new worktree\'s packages are installed: give it the same'
       + ' ten-minute timeout (600000 ms). A worktree that is already'
       + ' there, one of this repository\'s on a branch you keep, takes --in <folder>: nothing makes or'
@@ -137,11 +145,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' When a worker\'s report says its review loop changed what the card asked for, or its design,'
       + ' ask me before landing it rather than relaying the change.',
     '',
-    'Check the 7-day usage with `node "$DASHBOARD_COMMAND" budget` before each round of a long unattended'
-      + ' loop: it exits 0 under the limit I set once (a weekly cap, or a daily pace that grows each day'
-      + ' since the weekly reset; it prints today\'s figure), 1 at or over it, 2 when the reading is missing'
-      + ' or stale. Stop on anything but 0, and never ask me for the limit again; `budget --cap <n>` and'
-      + ' `budget --pace even` set it.',
+    'The queue also holds while the 7-day usage is at or over the limit I set once, and `pane queue` says'
+      + ' so; never ask me for the limit again: `budget --cap <n>` and `budget --pace even` set it.',
     '',
     'The installed build is `node "$DASHBOARD_COMMAND" --version`; run it before saying which build I am on.',
     '',

@@ -606,3 +606,52 @@ hold: an SSH agent that drops its key for a moment was most of the failures behi
 a board write's refusal reaches a person who runs it again, where a throwaway's falls back silently
 to a stale base nobody asked for. A branch the remote does not have fails the same way every time,
 so it is not tried again.
+
+## workers-decision-11: The app holds main's workers to a cap, through one queue
+
+**Every start of new work, `pane start`, a ship and a review, goes through pane.start, which starts
+it when fewer than `workers.cap` (4) of main's workers hold a slot and queues it otherwise**
+(`src/main/workers/pane-pool.ts`, `src/main/actions/pane/queue.ts`). Before it, the 4 lived only in
+what the user told main, and main was the only thing counting: on 2026-11-09 eight workers ran
+tests at once, earlyoom killed the screen host, and panes came back with two sessions each. The
+review sweep's own starts could push past a main that counted perfectly.
+
+- **A slot is held by a worker running, blocked on a question, or paused on its own background
+  work** (`holdsSlot`). Blocked carries on the moment it is answered, and the Stop hook reports only
+  counts, so a pause on CI cannot be told from one on a test run: freeing it would make five
+  working when the wake-up comes. Done frees it, so does a pause whose work is in, and a Claude
+  opened by hand or main itself never holds one. The cost: a review loop waiting 15 minutes on CI
+  keeps a queued card waiting 15 minutes, and a question asked at night holds its slot until
+  morning.
+- **One cap for the whole app**, since everything it guards is machine- or account-wide: memory,
+  the one-heavy-run lock (workflow-decision-14), the 7-day usage.
+- **First in, first out**, with `--first` for the head and `pane unqueue` to withdraw; reordering is
+  unqueue and queue again. `--after <card>` holds an entry until that card is Done or Cancelled,
+  letting later ones go ahead, for a card main knows would conflict with an open pull request: the
+  app cannot see file overlap before the work exists.
+- **A withdrawn card goes back to the column its move took it from**, through card.move
+  (`withdrawnColumn`): main unqueues a card it moved from Todo into Ship, and the card is in Todo
+  again rather than sitting in Ship with nothing coming. Only a card still where the move put it
+  goes back, and never into Review, whose entry would start the review being withdrawn. A move made
+  on the board screen is saved before the app hears of it, so the screen names the column it came
+  from (`from` on card:move), and a drag or key move goes back the same as the command's.
+- **An entry starts only while its card is still where it was queued from**: a card Done,
+  Cancelled, deleted, or moved out of the column whose move queued it is dropped (`readiness`), so
+  a card dragged back out of Ship is not shipped from Todo later. The board is read off the disk at
+  each look, since a `board move` is written plainly and the move log hears of it only later. An
+  entry also waits while the page of the main that queued it is closed: that main is the one told.
+- **A queued ship or review is its asker's**: the `board` door hands on the folder the command ran
+  in, so the manager's `board ship --project` is told to and withdrawn by the manager.
+- **No start goes around it**, the review sweep's retry of a review a person started included: it
+  goes through card.review, as every other review start does.
+- **The pane and worktree are picked when the entry starts, never when it is queued.** Six queued
+  runs holding claimed panes would be six empty shells, and a ship takes any free shell pane.
+- **Restore, `pane send` and New Claude never queue**: they carry on work already begun or a
+  person's own screen. Lowering the cap stops nothing running; starts wait until fewer run.
+- **The budget holds the queue only with a limit set** (`budgetHold`): a fresh install's settings
+  make `budget` exit 2, and a gate on that alone would never start its first queued worker.
+- **The queue is saved in `pane-queue.json` on every change**: a main told `queued` never dispatches
+  the work again, so a lost queue is planned work gone without a word.
+- **Under the cap a start answers what its start answers**, `pane run`'s line for a run and the
+  ship's for a ship, as the board screen's status bar needs; queued, it answers at once.
+

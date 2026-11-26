@@ -47,7 +47,7 @@ export const cardFollow = action<CardFollowPorts, CardInput, CardFollowAnswer>('
     const step = followStep(board, id, branch, pull);
     if (step.board !== null) ports.write(projectPath, step.board);
     if (step.column === null) return { output: pull === null ? `${branch} has no pull request` : `"${card.title}" follows ${pullRequestLabel(pull.number)}` };
-    const moved = await ports.move({ projectPath, id, column: step.column, source: 'automatic' });
+    const moved = await ports.move({ projectPath, id, column: step.column, source: 'automatic', askedFrom: null });
     return isRefused(moved) ? moved : { output: moved.output, ran: moved.ran };
   },
 });

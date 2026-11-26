@@ -99,8 +99,9 @@ The rollout is the manager's, run by hand from the manager session; nothing in t
 (skills-decision-1).
 For each project in `~/.dashboard/projects.yaml` other than `dashboard`:
 
-    node "$DASHBOARD_COMMAND" pane claim --project <name>
-    node "$DASHBOARD_COMMAND" pane run <pane> '/adopt-docs'
+    node "$DASHBOARD_COMMAND" pane start --project <name> '/adopt-docs'
+
+The pane pool runs 4 at a time and queues the rest (workers-decision-11).
 
 Each worker runs `/adopt-docs` in its project and ends on one of three lines: that project's pull
 request URL, "already in the docs pattern", or "earlier run: docs/adopt-docs exists". Its hook tells

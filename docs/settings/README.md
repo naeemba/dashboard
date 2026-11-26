@@ -62,6 +62,11 @@ typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 
+`workers.cap` (default 4) is how many of main's workers run at once across the
+app; a start past it waits in the pane pool's queue (docs/workers,
+workers-decision-11). A whole number, or `"none"` for no cap. It has no row
+yet and is written in settings.json by hand; a change is taken at once.
+
 The window's opacity (`opacity`, default 1) is written in the file by hand only:
 0.7 lets the desktop show through behind the text, from 0.2 up; anything else
 reads as 1, and stays in the file as you wrote it. Text stays solid and only the

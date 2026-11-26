@@ -8,7 +8,7 @@ export const USAGE = `board — the Dashboard board of the project you are in
   board show <id>
   board add "<title>" [--column <name>] [--priority <level>] [--notes "<text>"]
   board move <id> <column>
-  board ship <id>
+  board ship <id> [--first] [--after <card id>]
   board review <id>
   board set <id> [--branch <name>] [--pull-request <number>] [--priority <level>] [--notes "<text>"]
   board comment <id> "<text>"
@@ -25,8 +25,11 @@ ship, review and a move into Ship or Review ask the running app, starting it whe
 into Ship ships the card to an agent in a worktree, and one into Review starts its review loop. ship
 and review start them without a move; review is how to start a loop with the review.autoLoop setting
 off. Each answers only once the project's packages are installed in the card's worktree, which can
-take minutes: give those Bash calls a ten-minute timeout (600000 ms). On a worktree's board a move is
-only a move. Everything else edits the board's files alone.
+take minutes: give those Bash calls a ten-minute timeout (600000 ms). With the worker cap full
+(settings workers.cap, 4 running) each is queued instead, answering \`queued <queue id>, <position>\`
+at once, and the project's main is told when it starts. ship --first puts it at the head of the
+queue; --after holds it, letting later ones go ahead, until that card is Done or Cancelled. On a
+worktree's board a move is only a move. Everything else edits the board's files alone.
 
 A board git tracks is read and written on the default branch of the project's remote (origin when
 there is one, else the only remote, else the one the local main, then master, tracks), from the

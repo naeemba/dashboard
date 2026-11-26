@@ -59,7 +59,7 @@ describe('the tools against the usages', () => {
     return lines.slice(start, end === -1 ? undefined : end).join('\n');
   };
   // Flags a usage states in prose rather than on the verb's line.
-  const statedInProse = new Set(['board --project', 'pane run --screen']);
+  const statedInProse = new Set(['board --project', 'pane run --screen', 'pane start --screen']);
 
   it('names only verbs and flags the usages have', () => {
     for (const each of DASHBOARD_TOOLS.filter((one) => one.name !== 'version' && one.name !== 'budget')) {

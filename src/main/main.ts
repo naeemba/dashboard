@@ -29,6 +29,7 @@ import { projectActions, registerProjectChannels } from './actions/project/proje
 import { actionRequests, isRefused } from './actions/action';
 import { updateActions } from './actions/update/update-actions';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { poolPorts } from './workers/pane-pool-ports';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
 import { projectNamedInFile } from './projects/project-named';
@@ -679,7 +680,7 @@ const sayReviewLoop = (notice: string): void => sendToRenderer('review-loop:noti
 // A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
 // card actions in actions/card/, bound here to their channels and, below, to the session socket.
 // What is handed over is only what this file knows — the records, the pages, the panes, the setting.
-const { reviews, pullRequests, start: cardStart, actions: cardActionList } = cardActions({
+const { reviews, pullRequests, start: cardStart, actions: cardActionList, pool: cardPool } = cardActions({
   table,
   worktrees: worktrees.entries,
   slotOf: slotOfProject,
@@ -699,6 +700,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList } = car
   boardSync,
   autoLoop: () => settings.review.autoLoop,
   autoMerge: () => settings.review.autoMerge,
+  startWork: (start) => workerAnswers.startCard(start),
   log: (draft) => logStore.log(draft),
   pullRequestOf: async (projectPath, branch) => {
     const pull = await branchPullRequest(runProgram, projectPath, branch, 20_000);
@@ -809,7 +811,7 @@ const workerAnswers = sessionRequests({
     sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
   },
   threwAway: (id, said, projectPath) => logStore.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
-  realPath,
+  realPath, pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
 });
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
@@ -828,8 +830,7 @@ const sessions = listenForSessions(
 
 function createWindow(): void {
   mainWindow = openAppWindow({
-    background: windowBackground(settings),
-    seeThrough: isSeeThrough(settings),
+    background: windowBackground(settings), seeThrough: isSeeThrough(settings),
     // One last reading before the shells die, so a conversation started or cleared since the last sweep
     // is the one the next launch resumes. A reading that fails still quits, on the last sweep's. Then the
     // update Restart armed, if it was what asked to quit.
@@ -860,8 +861,9 @@ const remote = registerRemote(held, {
 // Before registerWithIpc, which only answers the channels already in the table.
 // A second launch is read the way this one was, once it has brought the window forward.
 // Once the window has reopened its projects, and after the manager's restore (registered on managerBack
-// first), the kept shells no page took back are ended: pane.reap.
-table.on('session:restored', () => void managerBack.then(() => pane.reap.call({}))
+// first), the pane pool counts the workers that came back and may start what they leave room for, and
+// the kept shells no page took back are ended: pane.reap.
+table.on('session:restored', () => void managerBack.then(() => { workerAnswers.pool.ready(); return pane.reap.call({}); })
   .then((result) => { if ('output' in result && result.output !== '') sendToRenderer('pane:released', result.output); })
   // Then the throwaways a restart left on disk: worktree.sweep.
   .then(() => worktree.sweep({ projects: openProjectPaths, hold: workerAnswers.hold }).call({})));

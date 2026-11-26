@@ -293,7 +293,9 @@ on Windows `localhost` bound to `::1` alone while the window asked
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling, at 595 code lines, and `renderer.ts` is
+- `main.ts` is at the 600-line ceiling, at 600 code lines, its split owed: the
+  pane pool's ports moved to `pane-pool-ports.ts` and the import line is paid
+  by packing `realPath` beside `pool` in the session requests. `renderer.ts` is
   at 583, after the pane listeners moved into `pane-output-wiring.ts`, the
   board's file listener into `board-wiring.ts` and the notes' into
   `notes-wiring.ts`. A feature that adds code to `main.ts` or `renderer.ts`

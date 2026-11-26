@@ -33,7 +33,7 @@ describe('card.follow', () => {
   it('records the pull request and moves the card through card.move as the app', async () => {
     const { ports, seen, board } = fakePorts(boardWith('Doing', { branch: 'fix-login' }));
     await expect(cardFollow.run(ports, input)).resolves.toEqual({ output: 'moved to Review', ran: 'nothing' });
-    expect(seen.moves).toEqual([{ projectPath: '/work/api', id: 'card', column: 'Review', source: 'automatic' }]);
+    expect(seen.moves).toEqual([{ projectPath: '/work/api', id: 'card', column: 'Review', source: 'automatic', askedFrom: null }]);
     expect(cardById(board(), 'card')?.pullRequest).toBe(12);
   });
 
