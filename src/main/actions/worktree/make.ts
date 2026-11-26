@@ -126,10 +126,8 @@ export const FETCH_RETRY_PAUSE_MS = 1_000;
 
 // Whether a failed fetch is worth a second try: anything but a branch the remote does not have, which
 // fails the same way every time. Unlike the board sync's droppedConnection, a refused key is tried
-// again: an SSH agent that drops its key for a moment was most of the failures behind this retry, and
-// a board write's refusal reaches a person who runs it again, where a throwaway's falls back to a
-// stale base nobody asked for.
-export function fetchWorthRetrying(error: unknown): boolean {
+// again (workers-decision-10).
+function fetchWorthRetrying(error: unknown): boolean {
   return !/couldn't find remote ref/i.test(fetchFailure(error));
 }
 
