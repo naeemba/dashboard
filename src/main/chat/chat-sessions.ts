@@ -244,9 +244,9 @@ export function registerChatSessions(
     host.remembered(projectPath, id);
   }
 
-  // The slot's conversation as it stands now (slot-conversation.ts).
-  function conversationAt(slot: number): SlotConversation {
-    const projectPath = host.projectPath(slot);
+  // The slot's conversation as it stands now (slot-conversation.ts), in the folder the caller already
+  // has: looked up again after an await, a page closed meanwhile would read as having none.
+  function conversationAt(slot: number, projectPath = host.projectPath(slot)): SlotConversation {
     if (projectPath === undefined) return slotConversation(host.worker(slot), undefined, undefined);
     return slotConversation(host.worker(slot), remembered[projectPath], rewound.get(projectPath));
   }
@@ -270,7 +270,7 @@ export function registerChatSessions(
     // Read while the shell's PATH and the scope are awaited; it never rejects.
     const chrome = chromeArgumentsFor(host.environment, homedir());
     shellPath ??= loginShellPath(host.environment.PATH ?? '');
-    const opened = conversationAt(slot);
+    const opened = conversationAt(slot, projectPath);
     const worker = opened.screen;
     // The pane the session is, as every terminal pane is told: a page's main is its place 0.
     const environment = withPaneId(
@@ -473,7 +473,7 @@ export function registerChatSessions(
     const { listSessions } = await import('@anthropic-ai/claude-agent-sdk');
     const found = await listSessions({ dir: projectPath, includeWorktrees: false, limit: 50 });
     return {
-      current: onScreen(conversationAt(slot)),
+      current: onScreen(conversationAt(slot, projectPath)),
       sessions: found.map(({ sessionId, summary, lastModified, gitBranch }) => ({ sessionId, summary, lastModified, gitBranch })),
     };
   });
@@ -506,7 +506,7 @@ export function registerChatSessions(
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
     const { getSessionMessages, listSessions } = await import('@anthropic-ai/claude-agent-sdk');
-    const { live } = conversationAt(slot);
+    const { live } = conversationAt(slot, projectPath);
     const found = (await listSessions({ dir: projectPath, includeWorktrees: false, limit: HISTORY_CONVERSATIONS }))
       .filter(({ sessionId }) => sessionId !== live);
     const kept = promptsRead.get(projectPath) ?? new Map<string, PromptsRead>();
@@ -584,7 +584,7 @@ export function registerChatSessions(
   async function conversation(slot: number): Promise<Record<string, unknown>[]> {
     const projectPath = host.projectPath(slot);
     if (projectPath === undefined) return [];
-    const { live, cut } = conversationAt(slot);
+    const { live, cut } = conversationAt(slot, projectPath);
     if (live === undefined) return [];
     const { getSessionMessages } = await import('@anthropic-ai/claude-agent-sdk');
     return rewoundTo(await getSessionMessages(live, { dir: projectPath }), cut);
