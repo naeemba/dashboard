@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-24T13:03:26.403Z",
-  "updatedAt": "2026-11-26T11:10:07.549Z",
+  "updatedAt": "2026-11-26T11:44:17.076Z",
   "branch": "worktree-sweeps-treat-board-only-leftovers",
   "pullRequest": 393,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-26T11:10:07.519Z",
       "body": "Pull request #393 opened: Worktree sweeps treat board-only leftovers as nothing to keep https://github.com/naeemba/dashboard/pull/393"
+    },
+    {
+      "at": "2026-11-26T11:44:17.076Z",
+      "body": "Review loop converged, ready to merge. 2 rounds, 6 findings fixed, 0 rejected, nothing open. Round 1 (e563dbbb): removals ask git status with --untracked-files=normal, so the board-only force never takes untracked files a showUntrackedFiles=no config hid; removalChanges reuses workChanges; errors-rule-1 doc names both predicates. Round 2 (f828feae, d3b6eca0): one exported status argument list in ship.ts for all four callers; a test pins the untracked flag. The final check accepted both. No conflicts. CI passed on d3b6eca0. Scope and design unchanged."
     }
   ],
   "column": "Review",
