@@ -79,3 +79,7 @@ One line per merged change: date and why.
 - 2026-11-26 — The five suites that skipped Windows with a bare `describe.skipIf` take a named
   suite-level skip from `windows-skips.ts` instead (`posixCommandsSuite`, `socketFilesSuite`,
   `screenHostSuite`): four said nowhere why they skipped (workflow-rule-6)
+- 2026-11-26 — The 45 tests that skipped Windows for their POSIX path literals build their paths
+  with `path.resolve` and `path.join` and run there; `posixPathsOnly` is gone. Run with Windows
+  paths, they showed `ranInProject` taking `/` as the only separator, so on Windows no folder under
+  a project counted as in it (workflow-rule-6)

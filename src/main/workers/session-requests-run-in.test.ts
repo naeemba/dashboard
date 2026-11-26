@@ -1,9 +1,10 @@
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project } from './session-requests-fixture';
-import { posixPathsOnly } from '../testing/windows-skips';
 
-// `pane run --in <folder>`: a worker in a folder the caller keeps, and the worktree it is in.
+// `pane run --in <folder>`: a worker in a folder the caller keeps, and the worktree it is in. The command
+// resolves the folder, so one it resolved is path.resolve'd here: C:\work\api-mr174 on Windows.
 
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
@@ -11,13 +12,13 @@ afterEach(() => { vi.useRealTimers(); });
 describe('sessionRequests run --in', () => {
   // The caller's own worktree, typed from main's folder: the worker starts there, and release closes the
   // pane and leaves the folder, which no run made.
-  posixPathsOnly('runs a worker in a folder named with --in and leaves the folder on release', async () => {
+  it('runs a worker in a folder named with --in and leaves the folder on release', async () => {
     const { ports, started, removed } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '../api-mr174', 'review it'] }))
-      .toMatchObject({ ok: true, output: expect.stringContaining('in /work/api-mr174') });
-    expect(started).toMatchObject([{ id: '2:1', directory: '/work/api-mr174', cardId: null }]);
+      .toMatchObject({ ok: true, output: expect.stringContaining(`in ${path.resolve('/work/api-mr174')}`) });
+    expect(started).toMatchObject([{ id: '2:1', directory: path.resolve('/work/api-mr174'), cardId: null }]);
     expect(await answer({ directory: '/work/api', args: ['release', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
     expect(removed).toEqual([]);
   });
@@ -64,7 +65,7 @@ describe('sessionRequests run --in', () => {
   });
 
   // The other order of the --in refusal below: the --in agent is in no card's record.
-  posixPathsOnly('refuses --card a worktree an --in agent is at work in', async () => {
+  it('refuses --card a worktree an --in agent is at work in', async () => {
     const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api.worktrees/card-one' : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
@@ -76,8 +77,8 @@ describe('sessionRequests run --in', () => {
   });
 
   // An agent in a worktree nested below the one asked for is at work in its own.
-  posixPathsOnly('takes --in a worktree whose only agent is in a worktree nested below it', async () => {
-    const { ports } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api-mr174/.claude/worktrees/y' : '/work/api') });
+  it('takes --in a worktree whose only agent is in a worktree nested below it', async () => {
+    const { ports } = project({ directoryOf: (id) => (id === '2:1' ? path.resolve('/work/api-mr174/.claude/worktrees/y') : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['claim'] });
@@ -86,24 +87,24 @@ describe('sessionRequests run --in', () => {
   });
 
   // Two agents in one worktree write over each other's work; main's own checkout is not one.
-  posixPathsOnly('refuses --in a worktree another agent is at work in', async () => {
-    const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? '/work/api-mr174/src' : '/work/api') });
+  it('refuses --in a worktree another agent is at work in', async () => {
+    const { ports, started } = project({ directoryOf: (id) => (id === '2:1' ? path.resolve('/work/api-mr174/src') : '/work/api') });
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['claim'] });
     await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '../api-mr174', 'one'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:2', '--in', '../api-mr174', 'two'] }))
-      .toEqual({ ok: false, output: '2:1 already has an agent at work in /work/api-mr174' });
+      .toEqual({ ok: false, output: `2:1 already has an agent at work in ${path.resolve('/work/api-mr174')}` });
     expect(await answer({ directory: '/work/api', args: ['run', '2:2', '--in', 'packages/web', 'two'] })).toMatchObject({ ok: true });
     expect(started.map((each) => each.id)).toEqual(['2:1', '2:2']);
   });
 
-  posixPathsOnly('refuses --in for a folder the check refuses, and starts nothing', async () => {
+  it('refuses --in for a folder the check refuses, and starts nothing', async () => {
     const { ports, started } = project();
     const answer = sessionRequests(ports);
     await answer({ directory: '/work/api', args: ['claim'] });
     expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--in', '/elsewhere', 'go'] }))
-      .toEqual({ ok: false, output: '/elsewhere is not a folder' });
+      .toEqual({ ok: false, output: `${path.resolve('/elsewhere')} is not a folder` });
     expect(started).toEqual([]);
   });
 });

@@ -20,11 +20,12 @@ const HEADER = `# Every project the manager can be asked about. Written by \`das
 #   autoMerge: true     # a review merges its pull request; settings review.autoMerge when left out
 `;
 
-// A path under home is written from ~, the way a person would write it.
+// A path under home is written from ~/, the way a person would write it, with / between the parts on
+// every platform: wholePath reads only `~/`, so `~\Workspace` written on Windows would never read back.
 export function writtenPath(path: string, home: string): string {
   if (path === home) return '~';
   if (!path.startsWith(home + sep)) return path;
-  return `~${path.slice(home.length)}`;
+  return `~/${path.slice(home.length + 1).split(sep).join('/')}`;
 }
 
 // The folder's name, or with -2, -3 after it when a word in `taken` (lowercased) already has it:
