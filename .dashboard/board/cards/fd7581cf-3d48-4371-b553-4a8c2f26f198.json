@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:06:32.539Z",
-  "updatedAt": "2026-11-26T13:39:01.009Z",
+  "updatedAt": "2026-11-26T14:03:13.376Z",
   "branch": "deleting-a-board-only-worktree-from-the-lis",
   "pullRequest": 400,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-26T13:39:01.009Z",
       "body": "Review loop: converged, ready to merge. 1 round, floor-addressed: 6 low/nit findings fixed in 6 commits, all accepted by the final check; checks passed on 5f8da625. One fix narrows the ask: d now asks only about uncommitted board files, since a forced removal keeps the branch and a committed card edit survives on it. Same boardNotOnOrigin predicate, with committedToo=false. Also recorded in ship-decision-7: a worktree with work changes is asked only about those, and the removal waits up to 10 s on a fetch. Nothing open."
+    },
+    {
+      "at": "2026-11-26T14:03:13.375Z",
+      "body": "Sent back for one fix, now done: a worktree with both work changes and uncommitted board edits not on origin now gets a second d question naming both (e.g. 'x has uncommitted changes: src/a.ts, and its board edits of .dashboard/board/cards/a1.json never reached origin/main.'). committedToo=false kept. Tests for the mixed case in worktree-keeper.test.ts and worktree-removal.test.ts; ship-decision-7 no longer lists the edge case. Commits 8c74627e, 97c929c5. pnpm check passes; CI passed on 97c929c5, windows included. Converged, ready to merge."
     }
   ],
   "column": "Review",
