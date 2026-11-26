@@ -1,0 +1,11 @@
+{
+  "id": "d9f6d734-9373-475c-87fb-2226c18795b9",
+  "title": "ship-flow tests build their git repository once, like finished-work's",
+  "notes": "Found while fixing d976a3c6 (#404). src/main/ship/ship-flow.test.ts project() starts about 7 git processes per test with no raised timeout; on the Windows runner each spawn costs a few hundred ms, so these can hit vitest's 5 s limit the way finished-work.test.ts did. Do the same as #404: build the repository once in beforeAll and cpSync a copy per test. Only if the windows job shows these near the limit; check its timings first and cancel this card if they are far under.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-26T13:57:28.395Z",
+  "updatedAt": "2026-11-26T13:57:28.395Z",
+  "column": "Backlog",
+  "order": 53
+}
