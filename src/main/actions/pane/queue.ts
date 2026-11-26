@@ -6,7 +6,7 @@ import type { SavedQueue } from '../../workers/pane-queue-store';
 import { action, bind, isRefused, type BoundAction } from '../action';
 import { isFilledText, isFilledTextOrNull } from './pane-input';
 
-// The app-held pane pool (workers-decision-next): every start of new work, from `pane start`, a ship
+// The app-held pane pool (workers-decision-11): every start of new work, from `pane start`, a ship
 // and a review, goes through pane.start, which starts it now when a slot is free and nothing is queued
 // ahead of it, or queues it. pane.queue lists the queue and pane.unqueue withdraws an entry. drainQueue
 // starts what the slots freed allow; the state changes that free one call it (session-requests.ts),

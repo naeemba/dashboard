@@ -62,6 +62,11 @@ typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 
+`workers.cap` (default 4) is how many of main's workers run at once across the
+app; a start past it waits in the pane pool's queue (docs/workers,
+workers-decision-11). A whole number, or `"none"` for no cap. It has no row
+yet and is written in settings.json by hand; a change is taken at once.
+
 The Host rows make this Dashboard reachable from another: a port, read at the
 next launch, and the token the other machine pastes once. The port opens on
 127.0.0.1 only, so the other machine reaches it through an SSH tunnel (ssh -L

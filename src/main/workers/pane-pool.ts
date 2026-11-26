@@ -7,7 +7,7 @@ import type { Settings } from '../../shared/settings/settings';
 import type { BudgetVerdict } from '../command/budget-cli';
 import { finishedColumnOf } from './auto-release';
 
-// The app-held pane pool's decisions (workers-decision-next): which workers hold one of the cap's
+// The app-held pane pool's decisions (workers-decision-11): which workers hold one of the cap's
 // slots, which queued entry starts next or why the queue is held, and what a pool answers. The pool
 // itself, its file and its doors are pane.start, pane.queue and pane.unqueue (actions/pane/queue.ts).
 

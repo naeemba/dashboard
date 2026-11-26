@@ -87,3 +87,6 @@ One line per merged change: date and why.
   removed when its worker goes, the board being a stale copy of origin's (ship-decision-7)
 - 2026-11-26 — The workers popup opens just above the count, and the count shows a worker idle as
   soon as its agent exits rather than at the next hook mark
+- 2026-11-26 — The app holds main's workers to a cap of 4 and queues a start past it (`pane
+  start`, `board ship`, the review sweep), since only main kept count and the review sweep could
+  push past it (workers-decision-11)
