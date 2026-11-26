@@ -526,13 +526,14 @@ export function createBoardView(options: BoardOptions): BoardView {
     const landed = cardAt(state.board, state.selection);
     if (!moving || !landed) return;
     const column = state.board.columns[state.selection.column].name;
+    const fromColumn = state.board.columns[from.column].name;
     // Which moves ask main at all, and what the screen does while main works: the notice and the home
     // a shipped card walks back to. Main still says no for a worktree's board.
     const entry = screenMoveEntry(options.projectPath, column, from.column, state.selection.column);
     if (entry === 'nothing') return;
     const shipping = entry === 'ship';
     void written.then((saved) => {
-      if (saved) askMove(moving, landed, home, column, shipping);
+      if (saved) askMove(moving, landed, home, column, fromColumn, shipping);
     });
   }
 
@@ -674,10 +675,10 @@ export function createBoardView(options: BoardOptions): BoardView {
     return { ...moved, selection: selectionOf(moved.board, editingId) ?? moved.selection };
   }
 
-  function askMove(before: Card, landed: Card, home: ShipHome, column: string, shipping: boolean): void {
+  function askMove(before: Card, landed: Card, home: ShipHome, column: string, from: string, shipping: boolean): void {
     if (shipping) options.onNotice(`shipping "${before.title}"…`);
     const forgetHome = shipping ? shipsAway.leave(options.projectPath, home) : () => undefined;
-    options.bridge.moveCard({ projectPath: options.projectPath, id: before.id, column }).then(
+    options.bridge.moveCard({ projectPath: options.projectPath, id: before.id, column, from }).then(
       async (answer) => {
         forgetHome();
         // A notice, not a failure, because main has already logged a failed ship as the `ship` entry:

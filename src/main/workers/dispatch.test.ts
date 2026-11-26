@@ -65,23 +65,35 @@ describe('mainPrompt verbs', () => {
   // Main once told the user they were on an older build than the one installed.
   // Main once ran another repository's work in a pane on its own page, not knowing project add.
   // Main once landed a loop that swapped the card's rule for its own, relaying the change.
-  it('dispatches a card with board ship and names finish, pr land, budget, --version and project add', () => {
+  it('dispatches a card with board ship and names finish, pr land, the budget limit, --version and project add', () => {
     const prompt = mainPrompt('/work/api');
     expect(prompt).toContain('`node "$DASHBOARD_BOARD" ship <id>`');
     expect(prompt).toContain('finish <id>');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr land <n>`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" pr wait <n>`');
     expect(prompt).toContain('On a conflict it sends /pr-conflicts to the agent on the branch');
-    expect(prompt).toContain('`node "$DASHBOARD_COMMAND" budget`');
+    // The queue holds over the limit, so main no longer runs budget before each round.
+    expect(prompt).toContain('The queue also holds while the 7-day usage is at or over the limit');
+    expect(prompt).toContain('`budget --cap <n>`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" --version`');
     expect(prompt).toContain('`node "$DASHBOARD_COMMAND" project add <path> --name <name>`');
     expect(prompt).toContain('ask me before landing it rather than relaying the change');
   });
 
   // A cold install outlasts Bash's two-minute default, and main retried a worker that had started.
-  it('tells main to wait ten minutes for ship and run --worktree', () => {
-    expect(mainPrompt('/work/api')).toContain('run --worktree, like ship');
+  it('tells main to wait ten minutes for ship and start --worktree', () => {
+    expect(mainPrompt('/work/api')).toContain('start --worktree, like ship');
     expect(mainPrompt('/work/api')).toContain('ten-minute timeout (600000 ms)');
+  });
+
+  // The app counts the slots: main starts work and is told when a queued start starts.
+  it('dispatches with pane start, never claim then run', () => {
+    const prompt = mainPrompt('/work/api');
+    expect(prompt).toContain('  start [--project <name|aka>]');
+    expect(prompt).toContain('queues a start past it, answering `queued <queue id>, <position>`');
+    expect(prompt).toContain('  unqueue <queue id>');
+    expect(prompt).not.toContain('  claim [');
+    expect(prompt).not.toContain('  run <id>');
   });
 
   // ~/.dashboard is in no project: both commands refuse there without --project.

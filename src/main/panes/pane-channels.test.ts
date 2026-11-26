@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { PaneShell } from './pane-shell';
-import { panePrompts, resizeShellsToScreens } from './pane-channels';
+import { panePrompt, resizeShellsToScreens } from './pane-channels';
 import { screens } from '../../shared/remote-host/screens';
 
 function shell(cols: number, rows: number) {
@@ -35,12 +35,12 @@ describe('resizeShellsToScreens', () => {
   });
 });
 
-describe('panePrompts', () => {
+describe('panePrompt', () => {
   it('prompts a Claude screen, and types into the shell of a pane that is none, Enter a moment after', () => {
     vi.useFakeTimers();
     const written: string[] = [];
     const prompted: string[] = [];
-    const { promptPane } = panePrompts(
+    const promptPane = panePrompt(
       (id) => (id === '2:2' ? { write: (data) => { written.push(data); } } : undefined),
       (id, text) => id === '2:1' && prompted.push(`${id} ${text}`) > 0,
     );

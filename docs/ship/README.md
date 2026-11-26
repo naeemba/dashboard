@@ -20,9 +20,11 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
   `worktree-removal.ts`, `worktrees.css`, `leftover-worktrees.ts`, `leftover-sweep.ts`
 
 Started by the card.ship and card.review actions (docs/actions), which are what a move into Ship or
-Review, and `dashboard board ship` and `review`, call. The agent itself, and the review's, is
-started by pane.dispatch: a Claude screen off Windows, Claude Code in the terminal on it
-(workers-decision-8). Every worktree, a ship's, a review's or a throwaway's, is made by
+Review, and `dashboard board ship` and `review`, call. Both start through the pane pool's
+pane.start: with `workers.cap` workers running the ship or review is queued, and its worktree is
+made, or swapped for the review's, only when it starts (workers-decision-11). The agent itself, and
+the review's, is started by pane.dispatch: a Claude screen off Windows, Claude Code in the terminal
+on it (workers-decision-8). Every worktree, a ship's, a review's or a throwaway's, is made by
 worktree.make and removed by worktree.remove; the record naming a card's pane is written by the
 keeper's `givePane`, whichever door started the agent. Once the worktree is added, worktree.make
 runs the project's frozen install, picked by its lockfile (`pnpm install --frozen-lockfile`,
@@ -100,6 +102,9 @@ Whether its loop already finished is read off the merge request's notes through 
 
 - Given a card in Todo, when you move it into Ship, then a branch off origin's base and a worktree
   are made and an agent starts in a free pane, on a Claude screen off Windows.
+- Given 4 of main's workers running, when you move a card into Ship, then the status bar says
+  `queued q7, 1st`, the card waits in Ship with no worktree, and the ship runs, from a fresh base,
+  once a worker is done.
 - Given a ship, when it is done, then main's `board.json` is the way it found it.
 - Given a project with a lockfile, when a worktree is made for it, then the frozen install its
   lockfile names has run there, and a failed one is logged with the worktree kept (`make.test.ts`).
@@ -117,8 +122,8 @@ Whether its loop already finished is read off the merge request's notes through 
 - Given a project whose remote is a GitLab host, when its card's merge request opens, then the
   review runs `/mr-loop` on it and waits and merges through glab, never `pr wait`, `pr land` or gh
   (`review.test.ts`, `review-finished.test.ts`).
-- Given an agent set a pull request number, when the review cannot take the worktree yet, then it
-  tries again instead of giving up.
+- Given an agent set a pull request number, when the review cannot take the worktree yet for its
+  uncommitted work changes, then it tries again instead of giving up.
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it
   stopped for its background agents), then nothing is marked and a later tick starts the review,
   after its pane closes too (#300, #313; `review-flow.test.ts`).
@@ -165,6 +170,11 @@ Whether its loop already finished is read off the merge request's notes through 
   without asking once origin's default branch holds them, its board a stale copy of origin's, and
   otherwise asks again naming the files origin lacks, a failed fetch counting as lacking
   (ship-decision-7, `ship.test.ts`, `remove.test.ts`, `worktree-keeper.test.ts`).
+- Given a reviewed card whose worktree holds a board edit origin's default branch never held, when
+  the review swaps or clears it, then the worktree is kept and the card's line names the files,
+  `git restore` and `git clean -f` of `.dashboard/board` there, and `board review <id>` for a swap
+  or the worktree list for a clear (ship-decision-7, `remove.test.ts`, `board-on-origin.test.ts`,
+  `review-flow.test.ts`).
 - Given a card whose review the sweep started, when the card reaches Done in the same run, then its
   worktree is removed without a restart (`review-flow-clearing.test.ts`).
 - Given a worktree under `<project>.worktrees/` that the app has no record of and no throwaway

@@ -5,7 +5,7 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-26T13:39:16.572Z",
-  "updatedAt": "2026-11-26T14:15:33.762Z",
+  "updatedAt": "2026-11-26T16:50:55.841Z",
   "branch": "finished-work-tests-time-out-on-the-windows",
   "pullRequest": 404,
   "comments": [
@@ -24,6 +24,10 @@
     {
       "at": "2026-11-26T14:15:33.732Z",
       "body": "Pull request #404 merged: Build the finished-work tests' git repository once and copy it per test https://github.com/naeemba/dashboard/pull/404"
+    },
+    {
+      "at": "2026-11-26T16:50:55.841Z",
+      "body": "Still flaky after #404: #408's first windows run failed finished-work.test.ts at 5018 ms against 5000 ms; a re-run passed. The shared-origin fix cut the margin but did not remove it."
     }
   ],
   "column": "Done",

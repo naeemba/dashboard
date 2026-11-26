@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { runProgram } from '../app/git';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
-import { boardNotOnOrigin } from './board-on-origin';
+import { BOARD_DISCARD_STEPS, boardNotOnOrigin } from './board-on-origin';
 
 describe('boardNotOnOrigin', () => {
   useGitTestEnvironment();
@@ -26,5 +26,14 @@ describe('boardNotOnOrigin', () => {
 
   it('keeps a committed card file origin cannot be asked about', async () => {
     expect(await boardNotOnOrigin(runProgram, committedCardOnly())).not.toBeNull();
+  });
+
+  it('passes a worktree once the steps the review names drop an untracked card file', async () => {
+    const project = committedCardOnly();
+    writeFileSync(join(project, '.dashboard/board/cards/a1.json'), '{"column":"Done"}');
+    writeFileSync(join(project, '.dashboard/board/cards/b2.json'), '{"column":"Ready"}');
+    expect(await boardNotOnOrigin(runProgram, project, undefined, false)).not.toBeNull();
+    for (const step of BOARD_DISCARD_STEPS) git(project, ...step.split(' ').slice(1));
+    expect(await boardNotOnOrigin(runProgram, project, undefined, false)).toBeNull();
   });
 });

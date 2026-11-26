@@ -57,6 +57,15 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `pane-actions.ts`, the default `pane-kind.ts`, the kind's type in
   `src/shared/panes/pane-kind.ts` (workers-decision-8,
   [actions](../actions/README.md))
+- The pane pool, which holds main's workers to `workers.cap` (4) and queues a
+  start past it: the decisions in `pane-pool.ts`, the queue's file
+  `pane-queue-store.ts` (`pane-queue.json` in the app's user data), what main
+  builds it on (settings, budget, boards) `pane-pool-ports.ts`, the
+  pane.start, pane.queue and pane.unqueue actions and the drain in
+  `../actions/pane/queue.ts`, built and drained by `session-requests.ts`
+  (`pane start`, tested in `session-requests-pool.test.ts`); a ship and a review
+  start through it from `../actions/card/card-actions.ts`
+  (workers-decision-11)
 - The screen host a worker screen's session runs in, so it outlives the app:
   `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`,
   `screen-host-protocol.ts`, `dead-host.ts`, `../chat/input-queue.ts`
@@ -87,6 +96,37 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   (worktree.make, [ship](../ship/README.md)), minutes for a cold `npm ci`, so main's prompt and its
   usage tell main to give the call a ten-minute timeout (600000 ms) rather than Bash's two-minute
   default, which would report a failure for a worker that then starts anyway.
+- Given 4 of main's workers running, blocked on a question or paused on their own
+  background work, when main runs `pane start "<task>"` or `board ship <id>`, or
+  the review sweep starts a review, then it answers `queued q7, 1st: 4 running,
+  the cap is 4` at once, claims no pane and makes no worktree; when one of the 4
+  is done, released or gone, q7 starts, its pane and worktree picked then, and
+  the main that queued it is told `q7 started: …` (workers-decision-11).
+- Given fewer than 4 running and nothing queued, when main runs `pane start`,
+  then it claims a pane and answers as `pane run` does; `pane run <id>` at the
+  cap is refused, saying `pane start` queues it.
+- Given a queued ship whose card is moved into Done or Cancelled, deleted, or
+  moved out of the Ship column its move queued it from, when the queue is next
+  looked at, then the entry is dropped and its main told `q7 dropped: card … is
+  Done` (`is not on the board`, `left Ship`). Given `board ship B --after A`,
+  then B waits, letting later entries go ahead, until A is Done or Cancelled.
+- Given the manager runs `board ship <id> --project crm` and the ship is queued,
+  when it starts, then the manager is told `q7 started: …`, and the manager's
+  `pane unqueue q7` withdraws it. Given api's main queued `pane start --project
+  crm` and api is closed, then the entry waits until api is open again.
+- Given `board review <id>` on a card still in Doing just after its pull request
+  opened, with review.autoLoop on, then the review starts and answers so, rather
+  than refusing itself as already queued.
+- Given main ran `board move <id> Ship` from Todo and the ship is queued as q7, when main runs
+  `pane unqueue q7`, then it answers `withdrew q7; card … back in Todo` and the card is in Todo.
+- Given a card dragged on the board from Todo into Ship and the ship queued, when main withdraws
+  it, then the card is back in Todo, the same as a move made with the command.
+- Given a weekly cap set and the 7-day usage at or over it, when a slot frees,
+  then nothing starts and `pane queue` says why; with no limit set, the budget
+  never holds the queue.
+- Given the app quits with 3 queued, when it starts again, then the 3 are still
+  queued in order, and none starts until the panes the restart brings back are
+  back and counted.
 - Given the pane shell is Windows PowerShell, when main dispatches a task whose
   prompt holds double quotes, then the worker starts with its --settings JSON
   and its prompt exactly as they were written.
@@ -164,7 +204,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   any other project but the pane's own is refused it.
 - Given main has work in a repository that is not a project yet, when it
   dispatches it, then its prompt says to run `project add <path> --name <name>`
-  and `pane claim --project <name>`, never a pane on its own page in that
+  and `pane start --project <name>`, never a pane on its own page in that
   repository.
 - Given main runs a worker, when `pane run` answers, then the line ends with
   `dashboard://pane/<id>`, which the Claude screen draws as a link to the pane;

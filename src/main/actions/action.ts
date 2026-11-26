@@ -3,6 +3,7 @@ import { isRecord } from '../../shared/app/is-record';
 import type { Refused } from '../../shared/app/bridge';
 import type { MoveSource } from '../../shared/board/column-entry';
 import { BOARD_REQUEST } from '../board/board-cli';
+import { readFlagList } from '../command/flags';
 import { answered, refused, type SessionReply, type SessionRequest } from '../workers/session-cli';
 
 // What an action is, and the one place each is bound to its two doors: an IPC channel for the screen
@@ -12,10 +13,14 @@ import { answered, refused, type SessionReply, type SessionRequest } from '../wo
 // An action is named `<noun>.<verb>`. Its channel is `<noun>:<verb>` (app-rule-1) and its command is
 // `dashboard board <verb> <id> ...`, the words after the verb named in `words`, in order.
 
+// A board verb's flags, after its words: a switch reads as true, a value as its word (readFlagList).
+export type ActionFlags = Readonly<Record<string, 'switch' | 'value'>>;
+
 export type Action<Ports, Input, Result extends { output: string }> = {
   name: string;
   // The command's positional words after the project folder, read into the input under these names.
   words: readonly string[];
+  flags?: ActionFlags;
   // The one check of what came in, at the edge, whichever door it came through. `source` is set by
   // the door, never by the caller: the screen is always 'user' and the command always 'command'.
   input(raw: Record<string, unknown>): Input | Refused;
@@ -33,6 +38,7 @@ export function action<Ports, Input, Result extends { output: string }>(
 export type BoundAction<Result extends { output: string } = { output: string }> = {
   name: string;
   words: readonly string[];
+  flags?: ActionFlags;
   call(raw: Record<string, unknown>): Promise<Result | Refused>;
 };
 
@@ -43,6 +49,7 @@ export function bind<Ports, Input, Result extends { output: string }>(
   return {
     name: definition.name,
     words: definition.words,
+    flags: definition.flags,
     // Nothing is awaited before `run` starts, so everything a run does before its own first await is
     // done when `call` returns. pane.dispatch and pane.restore are written to it: a restart goes on to
     // start the mains its workers report to off what they set. So is browser.open's popup: the view
@@ -83,9 +90,26 @@ export function registerActions(table: Channels, actions: readonly BoundAction[]
   }
 }
 
+function usage(verb: string, bound: BoundAction): string {
+  const flags = Object.entries(bound.flags ?? {}).map(([name, takes]) => (takes === 'switch' ? ` [--${name}]` : ` [--${name} <${name}>]`));
+  return `usage: board ${verb} ${bound.words.map((name) => `<${name}>`).join(' ')}${flags.join('')}`;
+}
+
+// The words before the first flag, then the action's flags as readFlagList reads them (--name value
+// or --name=value), or why they do not read.
+function readFlags(words: readonly string[], flags: ActionFlags): { positional: string[]; flagged: Record<string, unknown> } | { message: string } {
+  const first = words.findIndex((word) => word.startsWith('--'));
+  const positional = first === -1 ? [...words] : words.slice(0, first);
+  if (first === -1) return { positional, flagged: {} };
+  const names = Object.keys(flags);
+  const read = readFlagList(words.slice(first), names.filter((name) => flags[name] === 'value'), names.filter((name) => flags[name] === 'switch'));
+  if ('message' in read) return read;
+  return { positional, flagged: Object.fromEntries(read.flags.map(([name, value]) => [name, flags[name] === 'switch' ? true : value])) };
+}
+
 // The command's door, on the session socket: [BOARD_REQUEST, verb, folder, ...words], the folder
-// already resolved by the command the way every other board verb resolves it. Anything else is
-// `otherwise`'s.
+// already resolved by the command the way every other board verb resolves it, and `askedFrom` the
+// folder it ran in, whose main a ship or a review it queues tells. Anything else is `otherwise`'s.
 export function actionRequests(
   actions: readonly BoundAction[],
   otherwise: (request: SessionRequest) => Promise<SessionReply>,
@@ -97,10 +121,11 @@ export function actionRequests(
     if (bound === undefined || folder === undefined) {
       return refused('the board request was not one the app could read');
     }
-    if (rest.length !== bound.words.length) {
-      return refused(`usage: board ${verb} ${bound.words.map((name) => `<${name}>`).join(' ')}`);
-    }
-    const raw = { projectPath: folder, ...Object.fromEntries(bound.words.map((name, index) => [name, rest[index]])) };
+    const read = readFlags(rest, bound.flags ?? {});
+    if ('message' in read) return refused(`${read.message}\n${usage(verb, bound)}`);
+    const { positional, flagged } = read;
+    if (positional.length !== bound.words.length) return refused(usage(verb, bound));
+    const raw = { projectPath: folder, askedFrom: request.directory, ...flagged, ...Object.fromEntries(bound.words.map((name, index) => [name, positional[index]])) };
     const result = await bound.call(withSource(raw, 'command'));
     return sessionReply(result);
   };

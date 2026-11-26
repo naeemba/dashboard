@@ -60,12 +60,21 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
     word('title', 'title'), flag('column', 'column, Backlog when left out'), PRIORITY, NOTES, PROJECT]),
   tool('board move', 'Move a card; into Ship ships it, into Review starts its review, Cancelled for one not to be done', [
     CARD, word('column', 'column name'), PROJECT]),
-  tool('board ship', 'Ship a card to an agent in its own worktree; answers once packages are installed, minutes', [CARD, PROJECT]),
+  tool('board ship', 'Ship a card to an agent in its own worktree, or queue it while the worker cap is full; a ship answers once packages are installed, minutes', [
+    CARD, flag('first', 'at the head of the queue', 'boolean'), flag('after', 'held until this card (whole id) is Done or Cancelled'), PROJECT]),
   tool('board review', 'Start a card\'s review loop', [CARD, PROJECT]),
   tool('board set', 'Change a card\'s fields; an empty branch or pull-request clears it', [
     CARD, flag('branch', 'branch'), flag('pull-request', 'pull request number'), PRIORITY, NOTES, PROJECT]),
   tool('board comment', 'Append to a card\'s trail; the way to record what you found', [CARD, word('text', 'the comment'), PROJECT]),
 
+  tool('pane start', 'Start Claude on the task in a worker pane it claims, now, or queued while the worker cap is full; card and worktree answer once packages are installed', [
+    word('prompt', 'the task'), flag('project', 'on that project\'s page, opening the project'), flag('card', 'run in the worktree this card was shipped into'),
+    flag('worktree', 'run in a throwaway worktree', 'boolean'), flag('in', 'run in this existing folder'),
+    flag('terminal', 'Claude Code in the pane\'s terminal rather than a screen', 'boolean'),
+    flag('screen', 'a Claude screen, where the terminal is the default', 'boolean'),
+    flag('first', 'at the head of the queue', 'boolean'), flag('after', 'held until this card (whole id) is Done or Cancelled')]),
+  tool('pane queue', 'What is queued for a worker slot, in order, and why the queue is held', []),
+  tool('pane unqueue', 'Withdraw a queued start', [word('id', 'queue id, as pane_start or pane_queue prints it')]),
   tool('pane claim', 'Open a worker pane; prints its id', [flag('project', 'open it on that project\'s page, opening the project')]),
   tool('pane run', 'Start Claude in a claimed pane with the prompt; worktree and card answer once packages are installed', [
     PANE, word('prompt', 'the task'), flag('card', 'run in the worktree this card was shipped into'),

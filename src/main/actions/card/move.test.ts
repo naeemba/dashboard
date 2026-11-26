@@ -33,13 +33,35 @@ function columnOf(board: Board): string | undefined {
   return board.columns.find((column) => column.cards.some((card) => card.id === 'card'))?.name;
 }
 
-async function move(ports: CardMovePorts, column: string, source: MoveSource = 'command') {
-  const input = cardMove.input({ projectPath: PROJECT, id: 'card', column, source });
+async function move(ports: CardMovePorts, column: string, source: MoveSource = 'command', from?: string) {
+  const input = cardMove.input({ projectPath: PROJECT, id: 'card', column, source, from });
   if ('refused' in input) throw new Error(input.refused);
   return cardMove.run(ports, input);
 }
 
 describe('card.move', () => {
+  // So that withdrawing the start from the pane pool's queue can put the card back.
+  it('hands the ship and the review the move that started them', async () => {
+    const asked: unknown[] = [];
+    const { ports } = fakePorts({
+      ship: async (input) => { asked.push(input.returnTo); return { output: '' }; },
+      review: async (input) => { asked.push(input.returnTo); return { output: '' }; },
+    });
+    await move(ports, 'Ship');
+    await move(ports, 'Review');
+    // The screen has saved its own move before it asks: the card is already there, and only the
+    // column the screen names says where it came from.
+    await move(ports, 'Review', 'user');
+    await move(ports, 'Review', 'user', 'Doing');
+    await move(ports, 'Review', 'user', 'Review');
+    await move(ports, 'Review', 'user', 'Nowhere');
+    expect(asked).toEqual([{ from: 'Todo', into: 'Ship' }, { from: 'Ship', into: 'Review' }, null, { from: 'Doing', into: 'Review' }, null, null]);
+  });
+
+  it('refuses a from that is not a column name', () => {
+    expect(cardMove.input({ projectPath: PROJECT, id: 'card', column: 'Ship', source: 'user', from: 3 })).toEqual({ refused: 'a move\'s from must be a column name' });
+  });
+
   it('writes the move, then ships a card entering Ship', async () => {
     const { ports, seen } = fakePorts();
     await expect(move(ports, 'Ship')).resolves.toEqual({ output: 'Fix login  →  Ship\nshipped on fix-login', ran: 'ship', started: 'shipped on fix-login' });

@@ -36,6 +36,27 @@ describe('parseSessionCommand', () => {
     });
   });
 
+  // start is run with no pane: the pool claims one when it starts.
+  it('reads a start with run\'s words, its project and its place in the queue', () => {
+    expect(parseSessionCommand(['start', '--worktree', 'fix', 'it'])).toEqual({
+      ok: true, command: { kind: 'start', prompt: 'fix it', card: null, worktree: true, folder: null, as: null, project: null, first: false, after: null },
+    });
+    expect(parseSessionCommand(['start', '--project', 'crm', '--first', '--after', 'abc', '--card', 'def', 'work it'])).toMatchObject({
+      ok: true, command: { kind: 'start', project: 'crm', first: true, after: 'abc', card: 'def', prompt: 'work it' },
+    });
+    expect(parseSessionCommand(['start', '--after'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['start', '--first'])).toEqual({ ok: false, message: 'pane start needs a prompt for the worker' });
+    // run takes neither: its pane is the one given.
+    expect(parseSessionCommand(['run', '2:3', '--first', 'go'])).toMatchObject({ ok: true, command: { prompt: '--first go' } });
+  });
+
+  it('reads queue and unqueue', () => {
+    expect(parseSessionCommand(['queue'])).toEqual({ ok: true, command: { kind: 'queue' } });
+    expect(parseSessionCommand(['queue', 'x'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['unqueue', 'q7'])).toEqual({ ok: true, command: { kind: 'unqueue', id: 'q7' } });
+    expect(parseSessionCommand(['unqueue'])).toMatchObject({ ok: false });
+  });
+
   // Only what was asked for: which one a plain run gets is pane.dispatch's (paneKind).
   it('reads --screen and --terminal as asked for, and neither as the default\'s', () => {
     expect(parseSessionCommand(['run', '2:3', '--terminal', 'go'])).toMatchObject({ ok: true, command: { as: 'terminal', prompt: 'go' } });

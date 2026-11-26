@@ -1,0 +1,11 @@
+{
+  "id": "99b304cb-d4df-4802-a76f-bfa70e41114b",
+  "title": "Split main.ts along its seams before it takes more",
+  "notes": "src/main/main.ts is at exactly 600 code lines after #408 (the file-size limit), so the next change that wires a port into it cannot land. Split along its natural seams (for example the ports each feature hands its actions, window/app lifecycle, IPC registration) into files named for what they are; no behaviour change, no file named main-part2. Start after #406, #407 and #408 merge, since they all touch main.ts.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-26T14:56:25.263Z",
+  "updatedAt": "2026-11-26T14:56:25.264Z",
+  "column": "Backlog",
+  "order": 55
+}

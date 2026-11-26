@@ -93,9 +93,10 @@ export function typeIntoPane(write: (data: string) => void, text: string): void 
 }
 
 // How a worker is prompted in either kind of pane, for pane.send and the browser's question about a
-// worker's tabs: typed into its shell, or a Claude screen's prompt when `screenPrompt` takes it. The
+// worker's tabs: a Claude screen's prompt when `screenPrompt` takes it, else typed into its shell. The
 // two are looked up when typed, since main makes the panes after the browser that asks.
-export function panePrompts(shellOf: (id: string) => { write(data: string): void } | undefined, screenPrompt: (id: string, text: string) => boolean) {
-  const typeIntoShell = (id: string, text: string): void => typeIntoPane((data) => shellOf(id)?.write(data), text);
-  return { typeIntoShell, promptPane: (id: string, text: string): void => { if (!screenPrompt(id, text)) typeIntoShell(id, text); } };
+export function panePrompt(shellOf: (id: string) => { write(data: string): void } | undefined, screenPrompt: (id: string, text: string) => boolean) {
+  return (id: string, text: string): void => {
+    if (!screenPrompt(id, text)) typeIntoPane((data) => shellOf(id)?.write(data), text);
+  };
 }

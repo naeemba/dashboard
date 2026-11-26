@@ -13,7 +13,12 @@ export type SessionCommand =
   | { kind: 'claim'; project: string | null }
   // `as` is --screen or --terminal, or null for neither: pane.dispatch picks then (workers-decision-5).
   // `folder` is --in's, as typed: the app resolves it from the folder the command ran in.
-  | { kind: 'run'; id: string; prompt: string; card: string | null; worktree: boolean; folder: string | null; as: PaneKind | null }
+  | { kind: 'run'; id: string } & RunWords
+  // run's words with no pane: the pool claims one when the start comes (actions/pane/queue.ts). `first`
+  // puts it at the head of the queue, `after` holds it until that card is Done or Cancelled.
+  | { kind: 'start'; project: string | null; first: boolean; after: string | null } & RunWords
+  | { kind: 'queue' }
+  | { kind: 'unqueue'; id: string }
   // `reports` adds the end of each worker's last message to its line, so main reads them all in one call.
   | { kind: 'list'; all: boolean; reports: boolean }
   | { kind: 'send'; id: string; text: string }
@@ -36,6 +41,8 @@ export type SessionCommand =
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold };
 
+export type RunWords = { prompt: string; card: string | null; worktree: boolean; folder: string | null; as: PaneKind | null };
+
 // What a worker's hooks say beside its state: a Stop hook its last message, a prompt hook who put the
 // prompt in (UserPromptSubmit's `source`) and whether the prompt is one main handed the worker, ending
 // with the line asking for a report (both read by prompt-source.ts), and whether it is the app's own
@@ -53,6 +60,10 @@ export const refused = (output: string): SessionReply => ({ ok: false, output })
 
 export const SESSION_USAGE = `pane — the Dashboard panes of the project you are in
 
+  pane start [--project <name|aka>] [--card <card id> | --worktree | --in <folder>] [--terminal]
+             [--first] [--after <card id>] "<prompt>"
+  pane queue
+  pane unqueue <queue id>
   pane claim [--project <name|aka>]
   pane run <id> [--card <card id> | --worktree | --in <folder>] [--terminal] "<prompt>"
   pane list [--all] [--reports]
@@ -65,9 +76,17 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane conflicted <branch> <pull request> [--from <id>]
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
+start starts a worker now when fewer than the cap (settings workers.cap, 4) are running and nothing
+is queued, answering as run does, or queues it and answers \`queued <queue id>, <position>\`; its main
+is told when a queued one starts. Its pane is claimed, as claim --project would, when it starts, and
+its other words are run's. --first puts it at the head of the queue; --after holds it, letting later
+ones go ahead, until that card is Done or Cancelled. The queue also holds while the 7-day usage is at
+or over the budget limit. queue lists what is queued, in order, and why it is held; unqueue
+withdraws one. A worker running, blocked on a question or paused on its own background work holds
+its place; done frees it.
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
-in it with the prompt as its argument: --card runs it in the worktree the card was shipped into,
+in it with the prompt as its argument, refused at the cap: --card runs it in the worktree the card was shipped into,
 --worktree in a throwaway one removed when its pane goes, unless it holds work not on a remote
 (run answers once the project's packages are installed there, which can take minutes: give it a
 ten-minute timeout, 600000 ms),
@@ -112,34 +131,62 @@ function paneId(word: string | undefined, command: string): string | Parsed {
   return PANE_ID.test(word) ? word : refuse(`${word} is not a pane id — claim prints one, like 2:3`);
 }
 
-function parseRun(words: readonly string[]): Parsed {
-  const id = paneId(words[0], 'run');
-  if (typeof id !== 'string') return id;
+// run's words after its id, which start takes too.
+function parseRunWords(words: readonly string[], verb: 'run' | 'start'): RunWords | Parsed {
   let card: string | null = null;
   let worktree = false;
   let folder: string | null = null;
   let as: PaneKind | null = null;
   const prompt: string[] = [];
-  for (let at = 1; at < words.length; at++) {
-    if (words[at] === '--worktree') worktree = true;
-    else if (words[at] === '--screen' || words[at] === '--terminal') {
-      const asked = words[at] === '--screen' ? 'screen' : 'terminal';
+  for (let at = 0; at < words.length; at++) {
+    const word = words[at];
+    if (word === '--worktree') worktree = true;
+    else if (word === '--screen' || word === '--terminal') {
+      const asked = word === '--screen' ? 'screen' : 'terminal';
       if (as !== null && as !== asked) return refuse('a worker runs as a Claude screen or in the terminal, not both');
       as = asked;
     }
-    else if (words[at] === '--card') {
+    else if (word === '--card') {
       card = words[++at] ?? '';
       if (card === '') return refuse('--card needs the card id, the one `board list` prints');
-    } else if (words[at] === '--in') {
+    } else if (word === '--in') {
       folder = words[++at] ?? '';
       if (folder.trim() === '') return refuse('--in needs the folder the worker runs in');
-    } else prompt.push(words[at]);
+    } else prompt.push(word);
   }
   if ([card !== null, worktree, folder !== null].filter(Boolean).length > 1) {
     return refuse('a task runs in its card\'s worktree, a throwaway one or a folder you name with --in, only one of them');
   }
-  if (prompt.join(' ').trim() === '') return refuse('pane run needs a prompt for the worker');
-  return { ok: true, command: { kind: 'run', id, prompt: prompt.join(' '), card, worktree, folder, as } };
+  if (prompt.join(' ').trim() === '') return refuse(`pane ${verb} needs a prompt for the worker`);
+  return { prompt: prompt.join(' '), card, worktree, folder, as };
+}
+
+function parseRun(words: readonly string[]): Parsed {
+  const id = paneId(words[0], 'run');
+  if (typeof id !== 'string') return id;
+  const read = parseRunWords(words.slice(1), 'run');
+  return 'ok' in read ? read : { ok: true, command: { kind: 'run', id, ...read } };
+}
+
+// start's own --project, --first and --after taken out, the rest read as run's.
+function parseStart(words: readonly string[]): Parsed {
+  let project: string | null = null;
+  let first = false;
+  let after: string | null = null;
+  const rest: string[] = [];
+  for (let at = 0; at < words.length; at++) {
+    const word = words[at];
+    if (word === '--first') first = true;
+    else if (word === '--project') {
+      project = (words[++at] ?? '').trim();
+      if (project === '') return refuse('--project needs a project\'s name or aka');
+    } else if (word === '--after') {
+      after = words[++at] ?? '';
+      if (after === '') return refuse('--after needs the card id, the one `board list` prints');
+    } else rest.push(word);
+  }
+  const run = parseRunWords(rest, 'start');
+  return 'ok' in run ? run : { ok: true, command: { kind: 'start', ...run, project, first, after } };
 }
 
 const COUNT = /^\d+$/;
@@ -288,6 +335,9 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     }
     case 'status': return rest.length === 0 ? { ok: true, command: { kind: 'status' } } : refuse('pane status takes nothing');
     case 'run': return parseRun(rest);
+    case 'start': return parseStart(rest);
+    case 'queue': return rest.length === 0 ? { ok: true, command: { kind: 'queue' } } : refuse('pane queue takes nothing');
+    case 'unqueue': return rest.length === 1 && rest[0].trim() !== '' ? { ok: true, command: { kind: 'unqueue', id: rest[0] } } : refuse('pane unqueue takes the queue id pane queue prints, like q7');
     case 'send': {
       const id = paneId(rest[0], 'send');
       if (typeof id !== 'string') return id;

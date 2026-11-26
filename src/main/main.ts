@@ -29,6 +29,7 @@ import { projectActions, registerProjectChannels } from './actions/project/proje
 import { actionRequests, isRefused } from './actions/action';
 import { updateActions } from './actions/update/update-actions';
 import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { poolPorts } from './workers/pane-pool-ports';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
 import { projectNamedInFile } from './projects/project-named';
@@ -51,7 +52,7 @@ import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
 import { dropWrittenFiles } from './nvim/nvim-remote';
-import { landOnPane, panePrompts, raiseWindow, registerPaneChannels } from './panes/pane-channels';
+import { landOnPane, panePrompt, raiseWindow, registerPaneChannels } from './panes/pane-channels';
 import { registerChatSessions } from './chat/chat-sessions';
 import { registerSessionChannels, sessionActions } from './actions/session/session-actions';
 import { startHost, type HeldByMain } from './remote-host/host-wiring';
@@ -77,7 +78,7 @@ import { keepHostToken } from './remote-host/host-token';
 import { readSettings, settingsFilePath, tidySettingsFile, writeSettings } from './settings/settings-store';
 import { settingsActions } from './actions/settings/settings-actions';
 import { browserActions } from './actions/browser/browser-actions';
-import type { Settings } from '../shared/settings/settings';
+import { isSeeThrough, windowBackground, type Settings } from '../shared/settings/settings';
 import { oneAtATime } from './ship/ship';
 import {
   freePane,
@@ -152,8 +153,9 @@ readProjectNames(path.join(app.getPath('userData'), 'project-names.json'));
 // stops the launch on a record it cannot read.
 const { entries: recordAtLaunch, panes: agentPanesBeforeLaunch } = worktreeRecordAtLaunch(worktreesFile);
 const settingsFile = settingsFilePath(app.getPath('home'), process.env.XDG_CONFIG_HOME);
-// Read before the window exists: the background colour paints the first frame, and the shell command
-// spawns the first pane. Both are needed before the renderer has run a line.
+// Read before the window exists: the background colour paints the first frame, the opacity is how the
+// window is made, and the shell command spawns the first pane. All are needed before the renderer has
+// run a line.
 const isMac = process.platform === 'darwin';
 const shellFor = (chosen: Settings) => pickShell(chosen, process.env, process.platform);
 let settings = readSettings(settingsFile, isMac);
@@ -213,7 +215,7 @@ const boards = boardWatchers((projectPath) => {
 // editorArguments(shellCommand) in here would freeze it at the shell the project opened with — change
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
-const { typeIntoShell, promptPane } = panePrompts((id) => shells.get(id), (id, text) => workerScreens.send(id, text));
+const promptPane = panePrompt((id) => shells.get(id), (id, text) => workerScreens.send(id, text));
 // Each project's browser tabs, beside the window: browser-actions.ts.
 const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
@@ -505,9 +507,8 @@ const pane = paneActions({
   log: (draft) => logStore.log(draft),
   project: projectIn, openPanes, drop: dropPane, changed: () => panesChanged(), scopeOf: (id) => panes.scopeUnits.get(id), stopScope,
   endClaim: (projectPath, index) => worktrees.takePane(projectPath, index, ''),
-  agentIn, screenIn: workerScreens.has, screenPrompt: workerScreens.send,
+  agentIn, screenIn: workerScreens.has, prompt: promptPane,
   programRunsIn: (id) => runsAProgram(panes.foregroundOf(id), panes.startedWith.get(id)),
-  typeIntoShell,
   kept: shellHost.adopt, listenTo: panes.listenTo, screensBack: workerScreens.comeBack,
   unclaimed: shellHost.unclaimed, keep: shellHost.keep, killKept: shellHost.killKept, inSession: (projectPath) => projectPath === MANAGER_FOLDER || claudeSessions.launchedWith(projectPath),
   takeResume: claudeSessions.takeResume, owedResumes: claudeSessions.owedResumes, moveResume: claudeSessions.moveResume,
@@ -680,7 +681,7 @@ const sayReviewLoop = (notice: string): void => sendToRenderer('review-loop:noti
 // A card moved, shipped or reviewed, from the board, the command or the sweep on the tick above: the
 // card actions in actions/card/, bound here to their channels and, below, to the session socket.
 // What is handed over is only what this file knows — the records, the pages, the panes, the setting.
-const { reviews, pullRequests, start: cardStart, actions: cardActionList } = cardActions({
+const { reviews, pullRequests, start: cardStart, actions: cardActionList, pool: cardPool } = cardActions({
   table,
   worktrees: worktrees.entries,
   slotOf: slotOfProject,
@@ -700,6 +701,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList } = car
   boardSync,
   autoLoop: () => settings.review.autoLoop,
   autoMerge: () => settings.review.autoMerge,
+  startWork: (start) => workerAnswers.startCard(start),
   log: (draft) => logStore.log(draft),
   pullRequestOf: async (projectPath, branch) => {
     const pull = await branchPullRequest(runProgram, projectPath, branch, 20_000);
@@ -810,7 +812,7 @@ const workerAnswers = sessionRequests({
     sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
   },
   threwAway: (id, said, projectPath) => logStore.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
-  realPath,
+  realPath, pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
 });
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
@@ -829,7 +831,7 @@ const sessions = listenForSessions(
 
 function createWindow(): void {
   mainWindow = openAppWindow({
-    background: settings.theme.background,
+    background: windowBackground(settings), seeThrough: isSeeThrough(settings),
     // One last reading before the shells die, so a conversation started or cleared since the last sweep
     // is the one the next launch resumes. A reading that fails still quits, on the last sweep's. Then the
     // update Restart armed, if it was what asked to quit.
@@ -860,8 +862,9 @@ const remote = registerRemote(held, {
 // Before registerWithIpc, which only answers the channels already in the table.
 // A second launch is read the way this one was, once it has brought the window forward.
 // Once the window has reopened its projects, and after the manager's restore (registered on managerBack
-// first), the kept shells no page took back are ended: pane.reap.
-table.on('session:restored', () => void managerBack.then(() => pane.reap.call({}))
+// first), the pane pool counts the workers that came back and may start what they leave room for, and
+// the kept shells no page took back are ended: pane.reap.
+table.on('session:restored', () => void managerBack.then(() => { workerAnswers.pool.ready(); return pane.reap.call({}); })
   .then((result) => { if ('output' in result && result.output !== '') sendToRenderer('pane:released', result.output); })
   // Then the throwaways a restart left on disk: worktree.sweep.
   .then(() => worktree.sweep({ projects: openProjectPaths, hold: workerAnswers.hold }).call({})));

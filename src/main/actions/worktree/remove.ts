@@ -1,6 +1,7 @@
 import type { WorktreeRemoval } from '../../../shared/app/bridge';
 import type { LogDraft } from '../../../shared/app/log-entry';
 import { removalEntry } from '../../../shared/app/log-entry';
+import { BOARD_DISCARD_STEPS } from '../../ship/board-on-origin';
 import type { KeptCheck } from '../../ship/worktree-keeper';
 import { action } from '../action';
 import { isFilledText } from '../pane/pane-input';
@@ -28,13 +29,14 @@ export type WorktreeRemovePorts = {
 // already found nothing unfinished there, and a review never takes what an agent left uncommitted. Queued on the
 // project, as a ship is, unless the caller holds the queue already: the review runs inside its own, and
 // the queue is not re-entrant. Logged unless it is the review's, which writes its outcome on the card.
-// The dialog's unforced removal asks first whether the board edits it would let go reached origin
-// (ship-decision-7): it forces git past the board's files, and a card edit made offline went with the
-// folder on one keypress. The sweeps and a throwaway's caller have asked already; the forced one is
-// your yes to losing them.
+// The dialog's unforced removal and the review's ask first whether the board edits they would let go
+// reached origin (ship-decision-7): both force git past the board's files. The `board` command has
+// written nothing to a worktree since 2026-11-17, so what this keeps is a card file a script or tool
+// wrote past it, or one in a worktree older than that. The sweeps and a throwaway's caller have asked
+// already; the dialog's forced one is your yes to losing them.
 export function removalOf(from: RemovalFrom, force: boolean): { force: boolean; queued: boolean; logged: boolean; boardChecked: boolean } {
   return {
-    force: from === 'dialog' && force, queued: from !== 'review', logged: from !== 'review', boardChecked: from === 'dialog' && !force,
+    force: from === 'dialog' && force, queued: from !== 'review', logged: from !== 'review', boardChecked: from === 'review' || (from === 'dialog' && !force),
   };
 }
 
@@ -49,8 +51,17 @@ export const worktreeRemove = action<WorktreeRemovePorts, WorktreeRemoveInput, W
   words: [],
   input: (raw) => read(raw) ?? { refused: 'the worktree to remove was not one the app could read' },
   async run(ports, { worktreePath, projectPath, force, from }) {
+    // The review's reason lands on the card with nobody asked, so it names the way out; the dialog's
+    // second confirm is the way out. The review is not asked while work changes refuse it anyway: its
+    // swap tries again every tick, and each ask fetches origin inside the queue.
+    const kept: KeptCheck = from === 'review'
+      ? async (path, dirty) => {
+        const reason = dirty.length > 0 ? null : await ports.boardNotOnOrigin(path, dirty);
+        return reason && `${reason}; keep the edit elsewhere, then ${BOARD_DISCARD_STEPS.join(' and ')} in ${path}`;
+      }
+      : ports.boardNotOnOrigin;
     const how = removalOf(from, force);
-    const remove = () => ports.remove(worktreePath, how.force, projectPath, how.boardChecked ? ports.boardNotOnOrigin : undefined);
+    const remove = () => ports.remove(worktreePath, how.force, projectPath, how.boardChecked ? kept : undefined);
     const removal = how.queued && projectPath !== undefined ? await ports.queue(projectPath, remove) : await remove();
     if (how.logged && projectPath !== undefined) ports.log(removalEntry(projectPath, worktreePath, removal));
     return { ...removal, output: removal.message };
