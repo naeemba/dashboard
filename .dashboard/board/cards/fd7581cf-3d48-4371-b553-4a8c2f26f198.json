@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T12:06:32.539Z",
-  "updatedAt": "2026-11-26T12:06:32.539Z",
-  "column": "Backlog",
-  "order": 48
+  "updatedAt": "2026-11-26T12:21:30.756Z",
+  "branch": "deleting-a-board-only-worktree-from-the-lis",
+  "column": "Doing",
+  "order": 2
 }
