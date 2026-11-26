@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T12:29:21.713Z",
-  "updatedAt": "2026-11-26T14:55:26.526Z",
+  "updatedAt": "2026-11-26T16:50:17.499Z",
   "branch": "app-held-pane-pool-a-4-running-cap-and-a-qu",
   "pullRequest": 408,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-26T14:55:26.506Z",
       "body": "Pull request #408 opened: Hold main's workers to a cap of 4 and queue starts past it https://github.com/naeemba/dashboard/pull/408"
+    },
+    {
+      "at": "2026-11-26T16:50:17.499Z",
+      "body": "Review loop on #408: floor-addressed after 2 rounds. Main's from-column change landed first (b7e31783: the board screen names the column on card:move, so a drag or key move goes back when withdrawn). Round 1 fixed 7 findings (c8509b32: queued starts dropped when their card leaves its column, owned by the folder's main, a review's own follow goes on in place) and merged main. Round 2: 98b7c919 clears the sweep mark on a dropped review; 4485d81e and 0bd6c1ee were rejected by the final check and reverted. Still open, both low: pane-pool.ts:123 drops a queued entry as 'not on the board' while a card file is briefly unparseable (fix belongs in the drain's readiness read only); main.ts packs two lines to stay at 600 code lines, owes a split of the sessionRequests wiring. CI passed on e2d37b5d (Windows finished-work timeout re-run once). Ready to merge apart from those two lows; no round changed the card's scope or design."
     }
   ],
   "column": "Review",
