@@ -156,7 +156,8 @@ export function reviewPrompt(cardId: string, pullRequest: number, projectPath: s
     '',
     'A layout check on the running app is done in the project\'s browser, the dashboard server\'s browser_ tools,'
       + ' never Playwright or Claude in Chrome.',
-    'Never run tests in parallel, or start a second run while one is going.',
+    'Never run tests in parallel, or start a second run while one is going. To tell a failure from load, rerun'
+      + ' only the failed files, never the whole suite.',
     'Do not quit, kill or rebuild any running app.',
   ].join('\n');
 }
