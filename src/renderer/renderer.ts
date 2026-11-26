@@ -39,6 +39,7 @@ import { NO_USAGE, type UsageSnapshot } from '../shared/usage/usage';
 import type { MemorySnapshot } from '../shared/processes/scope-memory';
 import { bindingName, defaultSettings, type Settings } from '../shared/settings/settings';
 import { openSettings } from './settings/settings-view';
+import { publishAppearance } from './app/appearance';
 import { OVERLAY_SELECTOR, confirmOverlay, promptOverlay } from './app/overlay';
 import { anyWaiting, questionBell, waitingNames } from '../shared/panes/waiting';
 import {
@@ -83,16 +84,10 @@ let shellCommand = '';
 
 document.documentElement.style.setProperty('--title-bar-height', `${TITLE_BAR_HEIGHT}px`);
 
-// Every colour as a CSS custom property, which index.css styles the chrome from. Published for the
-// shipped theme immediately, at module load, before start() has awaited anything — a status bar
-// reporting a failed start needs its colours already on the document, since nothing later is
-// guaranteed to run.
-function publishTheme(theme: Settings['theme']): void {
-  for (const [name, value] of Object.entries(theme)) {
-    document.documentElement.style.setProperty(`--${name}`, value);
-  }
-}
-publishTheme(settings.theme);
+// Published for the shipped theme immediately, at module load, before start() has awaited anything — a
+// status bar reporting a failed start needs its colours already on the document, since nothing later
+// is guaranteed to run.
+publishAppearance(settings);
 
 // Only macOS overlays traffic lights on the title row, so only there does the title indent for them.
 document.documentElement.classList.toggle('mac', isMac);
@@ -323,7 +318,7 @@ function applySettings(loaded: LoadedSettings): void {
 }
 
 function applyAppearance(): void {
-  publishTheme(settings.theme);
+  publishAppearance(settings);
   restylePanes(settings);
   // The cell size changes with the font, so every pane has to be measured again or the grid keeps the
   // old one and the last row is cut off.

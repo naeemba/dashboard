@@ -62,6 +62,17 @@ typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 
+The window's opacity (`opacity`, default 1) is written in the file by hand only:
+0.7 lets the desktop show through behind the text, from 0.2 up; anything else
+reads as 1, and stays in the file as you wrote it. Text stays solid and only the
+background thins. Electron makes a window transparent only as it opens it, so
+turning it on waits for the next launch; turning it back to 1 takes at once. On
+Linux it needs a compositor. Electron lists more limits of a transparent window:
+on Windows double-clicking the title bar does not maximize it, on macOS it has
+no shadow, and on some platforms a resizable one can stop being transparent. The
+title and status bars, dialogs, the ink page and a zoomed pane stay opaque, and
+so does the project's browser, a native view the page cannot paint through.
+
 The Host rows make this Dashboard reachable from another: a port, read at the
 next launch, and the token the other machine pastes once. The port opens on
 127.0.0.1 only, so the other machine reaches it through an SSH tunnel (ssh -L
@@ -104,6 +115,8 @@ Folders: `src/main/settings/`, `src/shared/settings/`, `src/renderer/settings/`.
 - Given a setting left at its shipped default, when the file is saved, then the line is left out.
 - Given an old file holding a shipped default, when the app launches, then the
   launch tidy removes the line.
+- Given an opacity under 0.2 or over 1, when the file is read, then the window
+  is opaque.
 - Given a font size the screen accepts, when the file is read back, then the
   same range check keeps it (errors-decision-1).
 - Given the app running, when `dashboard budget --cap 60` writes the file, then
