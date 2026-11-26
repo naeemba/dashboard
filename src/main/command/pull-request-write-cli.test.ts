@@ -17,6 +17,8 @@ describe('parseWriteCommand', () => {
     expect(parseWriteCommand('ready', ['--help'])).toMatchObject({ ok: false });
     expect(parseWriteCommand('comment', ['12'])).toMatchObject({ ok: false });
     expect(parseWriteCommand('comment', ['12', '13', '-b', 'hi'])).toMatchObject({ ok: false });
+    expect(parseWriteCommand('create', ['-R', 'acme/api', '--fill'])).toMatchObject({ ok: false });
+    expect(parseWriteCommand('create', ['--repo=acme/api', '-H', 'fix-it'])).toMatchObject({ ok: true });
   });
 });
 
@@ -98,6 +100,12 @@ describe('pr comment', () => {
   it('posts nothing when the comments cannot be counted', async () => {
     const github = fakeGitHub({ 'pr view': [{ ok: false, output: 'no pull requests found' }] });
     expect(await writePullRequest(github.ports, { verb: 'comment', target: '12', body: 'hi' })).toEqual({ ok: false, output: 'no pull requests found' });
+    expect(tries(github, 'comment')).toBe(0);
+  });
+
+  it('says nothing is posted when the count is lost', async () => {
+    const github = fakeGitHub({ 'pr view': Array.from({ length: 10 }, () => lost) });
+    expect(await writePullRequest(github.ports, { verb: 'comment', target: '12', body: 'hi' })).toMatchObject({ ok: false, output: expect.stringContaining('nothing is posted, run it again') });
     expect(tries(github, 'comment')).toBe(0);
   });
 });

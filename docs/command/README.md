@@ -55,7 +55,8 @@ in the rules the app allows every session (command-decision-5). It needs gh, nev
 `pr create`, `pr ready <n> [--undo]` and `pr comment <n> --body <text>` are gh's verbs made safe
 to run again (command-decision-11). `create` passes `gh pr create`'s flags through, and prints the
 branch's open pull request instead when it has one (its `--head` branch, in its `--repo`); it runs
-in the folder it is called in, never with `--project`, whose folder is the main checkout's. `ready`
+in the folder it is called in, never with `--project`, whose folder is the main checkout's, and
+refuses `--repo` without `--head`, since `gh pr view --repo` needs a branch to look up. `ready`
 says a pull request is ready already (a draft already, with `--undo`) without asking gh to mark it.
 On a lost answer or a 5xx, GraphQL's `non-200 OK status code: 502` and `Something went wrong while
 executing your query` among them, each reads the pull request before trying again, as long as

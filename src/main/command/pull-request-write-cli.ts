@@ -13,7 +13,8 @@ pull request when it has one (its --head branch, in its --repo), and ready says 
 already (a draft already, with --undo). On a network error or a 5xx from GitHub each looks at the
 pull request before trying again, for about ${RETRY_MINUTES} minutes, so a lost answer never opens a
 second pull request or posts a comment twice. create runs in the folder you are in, never with
---project, whose folder is the project's main checkout and not the branch's worktree.`;
+--project, whose folder is the project's main checkout and not the branch's worktree, and takes
+--repo only with --head, since gh cannot look a pull request up in another repository without it.`;
 
 const WRITE_VERBS = ['create', 'ready', 'comment'] as const;
 export type WriteVerb = typeof WRITE_VERBS[number];
@@ -25,7 +26,11 @@ export type WriteCommand =
 type Parsed = { ok: true; write: WriteCommand } | { ok: false; message: string };
 
 export function parseWriteCommand(verb: WriteVerb, words: readonly string[]): Parsed {
-  if (verb === 'create') return { ok: true, write: { verb, words: [...words] } };
+  if (verb === 'create') {
+    // gh pr view refuses --repo without a target, so the look could never find the pull request.
+    if (flagValue(words, '--repo', '-R') !== undefined && flagValue(words, '--head', '-H') === undefined) return { ok: false, message: 'pr create takes --repo only with --head <branch>' };
+    return { ok: true, write: { verb, words: [...words] } };
+  }
   if (verb === 'ready') {
     const undo = words.includes('--undo');
     const targets = words.filter((word) => word !== '--undo');
@@ -40,7 +45,7 @@ export function parseWriteCommand(verb: WriteVerb, words: readonly string[]): Pa
 }
 
 // `words` once, and again after a network error only when `look` finds the lost try did not go through.
-async function safely(ports: GitHubPorts, words: string[], look: (() => Promise<Look>) | undefined, doing: string): Promise<ProgramAnswer> {
+async function safely(ports: GitHubPorts, words: string[], look: () => Promise<Look>, doing: string): Promise<ProgramAnswer> {
   const answer = await retried(ports, words, look);
   return isNetworkError(answer)
     ? { ok: false, output: `${answer.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes ${doing}; look before running it again` }
@@ -97,7 +102,8 @@ export async function writePullRequest(ports: GitHubPorts, command: WriteCommand
   // Not looked for first: the same words posted twice on purpose, a round apart, are two comments. The
   // count before is what tells this post from an earlier one with the same words.
   const { target, body } = command;
-  const count = await safely(ports, ['pr', 'view', target, '--json', 'comments', '-q', '.comments | length'], undefined, `reading ${target}'s comments`);
+  const count = await retried(ports, ['pr', 'view', target, '--json', 'comments', '-q', '.comments | length']);
+  if (isNetworkError(count)) return { ok: false, output: `${count.output}\n\nlost gh's answer for ${RETRY_MINUTES} minutes reading ${target}'s comments; nothing is posted, run it again` };
   if (!count.ok) return count;
   const before = count.output.trim();
   return safely(ports, ['pr', 'comment', target, '--body', body], () => postedSince(ports, target, body, before), `commenting on ${target}`);
