@@ -77,3 +77,6 @@ One line per merged change: date and why.
   into Done or Cancelled, never on a timer: the sweep closed a pane the user still needed, and kept
   three paused review workers with their cards Done; `workers.closeAfterMinutes` is gone
   (workers-decision-1)
+- 2026-11-26 — `pane status`: each pane with its card, branch, pull request, CI and last message,
+  then open pull requests no pane holds, in one call: main made about 250 status calls rebuilding
+  its state after its compactions (pane list, board list, gh pr list in turn)

@@ -40,11 +40,16 @@ export function finishedColumnOf(board: Board | null, cardId: string): string | 
   return board !== null && at !== null && isFinishedColumn(board, at.column) ? board.columns[at.column].name : null;
 }
 
+// The worktree record that names this pane of the project: the card the pane works on.
+export function paneEntryIn(entries: readonly WorktreeEntry[], projectPath: string | undefined, index: number): WorktreeEntry | undefined {
+  return entries.find((each) => each.pane === index && each.projectPath === projectPath);
+}
+
 // The finished column of the card whose worktree's record names this pane of the project, read off the
 // project's own board: the one a merge moves the card to Done on.
 export function finishedCardIn(
   entries: readonly WorktreeEntry[], projectPath: string | undefined, index: number, board: (projectPath: string) => Board | null,
 ): string | null {
-  const entry = entries.find((each) => each.pane === index && each.projectPath === projectPath);
+  const entry = paneEntryIn(entries, projectPath, index);
   return entry === undefined ? null : finishedColumnOf(board(entry.projectPath), entry.cardId);
 }

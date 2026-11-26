@@ -20,6 +20,9 @@ export type SessionCommand =
   // release, refused until the worker's card is Done or Cancelled or its branch's pull request merged.
   | { kind: 'finish'; id: string }
   | { kind: 'report'; id: string }
+  // Each pane with its card, branch, pull request, CI and last message, then the open pull requests no
+  // pane holds: what main rebuilds its state from after a compaction (status-lines.ts).
+  | { kind: 'status' }
   // What `pr land` and a board move into Done or Cancelled ask once the work is in: the worker on that
   // branch, or in that card's worktree, released unless something keeps it (auto-release.ts). `from`
   // is the pane the command ran in, never released by its own command: a review pane's own land, or a
@@ -53,6 +56,7 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane release <id>
   pane finish <id>
   pane report <id>
+  pane status
   pane landed --branch <branch> | --card <card id> [--from <id>]
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
@@ -70,7 +74,9 @@ app, and --screen asks for a screen. send types the text into the pane and press
 it to a Claude screen as its next prompt. finish releases a worker whose work is in: its card is
 Done or Cancelled, or the branch of the worktree it is in has a merged pull request; it refuses
 otherwise. report prints the pane's line from list and the last
-message its worker ended a turn with. landed is what pr land runs once it merged, and a board
+message its worker ended a turn with. status prints each pane's line with its card, branch, open
+pull request and CI state and the end of its last message, then the open pull requests no pane
+holds, in one call: the one to make after a compaction. landed is what pr land runs once it merged, and a board
 move into Done or Cancelled: it releases the worker on that branch or in that card's worktree,
 never the pane --from names, and prints \`released <id>\`, or \`kept <id>: <why>\` for one
 something keeps (the keyboard, a question, mid-turn, typed into by you, or no main handed it work).
@@ -267,6 +273,7 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       if (flags.size !== rest.length || rest.some((flag) => flag !== '--all' && flag !== '--reports')) return refuse('pane list takes nothing, --all, --reports or both');
       return { ok: true, command: { kind: 'list', all: flags.has('--all'), reports: flags.has('--reports') } };
     }
+    case 'status': return rest.length === 0 ? { ok: true, command: { kind: 'status' } } : refuse('pane status takes nothing');
     case 'run': return parseRun(rest);
     case 'send': {
       const id = paneId(rest[0], 'send');
