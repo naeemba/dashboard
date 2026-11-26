@@ -9,8 +9,8 @@ export const posixPathsOnly = it.skipIf(process.platform === 'win32');
 // folder against writes nor leaves a mode to read back.
 export const posixModesOnly = it.skipIf(process.platform === 'win32');
 
-// A test that runs a POSIX shell script or command (a `#!/bin/sh` hook git runs, `env`, `cat`) skips on
-// Windows, which can run none of them.
+// A test that runs a POSIX shell script or command (a `#!/bin/sh` stand-in for git's upload-pack,
+// `env`, `cat`) skips on Windows, which can run none of them.
 export const posixCommandsOnly = it.skipIf(process.platform === 'win32');
 
 // A test that half-closes a socket and reads the answer skips on Windows: a named pipe closes whole,
