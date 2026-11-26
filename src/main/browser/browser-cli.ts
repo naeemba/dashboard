@@ -77,8 +77,8 @@ export const BROWSER_USAGE = `browser — the project's browser tabs, for the ag
 You act only on the tabs you hold: the ones you opened and the ones you claimed. A tab opens behind
 the one the user is on. The user can take any tab back; your next call on it then says so, and it is
 theirs. Close each tab you are done with before you finish: your tabs go back to the user when your
-pane is released or your agent exits, and they stay open. A tab of yours unused for a while gets one
-question from the app; close it, or leave it and it stays. --project opens a tab in another open
+pane is released or your agent exits, and they stay open. A main's tab unused for a while gets one
+question from the app; close it, or leave it and it stays. A worker is never asked. --project opens a tab in another open
 project's browser. A ref is good until the page changes; take a new snapshot then. read prints its
 token estimate first, and cuts at --max-tokens (${DEFAULT_READ_TOKENS} by default).`;
 

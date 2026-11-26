@@ -57,6 +57,13 @@ export function browserProject(ports: Pick<BrowserRequestPorts, 'projectPath' | 
 }
 
 async function answer(ports: BrowserRequestPorts, pane: string, command: BrowserRequest): Promise<SessionReply> {
+  const result = await act(ports, pane, command);
+  // After the action, so a claim counts as its new holder's call and a release as nobody's.
+  if ('tab' in command) ports.used(pane, command.tab);
+  return result;
+}
+
+async function act(ports: BrowserRequestPorts, pane: string, command: BrowserRequest): Promise<SessionReply> {
   const reply = (result: string | Refused): SessionReply => (isRefused(result) ? refused(result.refused) : answered(result));
   const { actions, reads } = ports;
   if (command.verb === 'open' || command.verb === 'tabs') {
@@ -66,7 +73,6 @@ async function answer(ports: BrowserRequestPorts, pane: string, command: Browser
     return sessionReply(await actions.open.call({ projectPath, url: command.url, pane }));
   }
   const onTab = { pane, tab: command.tab };
-  ports.used(pane, command.tab);
   switch (command.verb) {
     case 'claim': return sessionReply(await actions.claim.call(onTab));
     case 'release': return sessionReply(await actions.release.call(onTab));

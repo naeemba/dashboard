@@ -9,8 +9,10 @@ import { browserProject, browserRequests, livePane, paneIsOpen, type BrowserRequ
 function fakeDoor() {
   const calls: string[] = [];
   const used: string[] = [];
+  // Actions and uses together, in the order they ran.
+  const order: string[] = [];
   const bound = (name: string): BoundAction => ({
-    name, words: [], call: async (raw) => { calls.push(`${name} ${JSON.stringify(raw)}`); return { output: `${name} done` }; },
+    name, words: [], call: async (raw) => { calls.push(`${name} ${JSON.stringify(raw)}`); order.push(name); return { output: `${name} done` }; },
   });
   const read = (name: string) => async (pane: string, tab: number, options: unknown) => {
     calls.push(`${name} ${pane} ${tab} ${JSON.stringify(options)}`);
@@ -26,12 +28,13 @@ function fakeDoor() {
       tabs: (pane, projectPath) => `tabs of ${projectPath} for ${pane}`,
       read: read('read'), screenshot: read('screenshot'), snapshot: read('snapshot'), console: read('console'), network: read('network'),
     },
-    used: (pane, tab) => { used.push(`${pane} ${tab}`); },
+    used: (pane, tab) => { used.push(`${pane} ${tab}`); order.push('used'); },
   };
   const ask = browserRequests(ports, async () => answered('otherwise'));
   return {
     calls,
     used,
+    order,
     ask: (pane: string, command: object, paneProject = '/work/api') => ask({ directory: '/', args: [BROWSER_REQUEST, pane, JSON.stringify(command), paneProject] }),
   };
 }
@@ -62,6 +65,12 @@ describe('browserRequests', () => {
       'eval {"pane":"2:1","tab":4,"script":"document.title","waitFor":"main"}',
       'close {"pane":"2:1","tab":5}',
     ]);
+  });
+
+  it('counts a call on a tab after its action, so a claim counts as its new holder\'s', async () => {
+    const door = fakeDoor();
+    await door.ask('2:1', { verb: 'claim', tab: 4 });
+    expect(door.order).toEqual(['claim', 'used']);
   });
 
   it('answers a read with what it printed, or its refusal', async () => {

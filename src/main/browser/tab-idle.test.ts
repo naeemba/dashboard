@@ -79,6 +79,13 @@ describe('tabClock', () => {
     expect(asked(clock.due(browsers([tab(1)]), 2 * IDLE, null, 30))).toEqual(['2: 1']);
   });
 
+  it('restarts a worker\'s tab clock on the call by the main that claimed it', () => {
+    const clock = tabClock();
+    clock.seen({ tabs: [tab(1, '2:3')], active: null }, 0);
+    clock.calledOn(browsers([tab(1)]), '2:0', 1, 50 * MINUTE);
+    expect(clock.due(browsers([tab(1)]), 51 * MINUTE, null, 30)).toEqual([]);
+  });
+
   it('forgets a closed tab, so an id used again starts over', () => {
     const clock = tabClock();
     clock.seen({ tabs: [tab(1, 'user')], active: null }, 0);

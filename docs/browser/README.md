@@ -234,9 +234,11 @@ The keys are in `src/shared/keys/browser-actions.ts` and
   name goes, and the worker's next `browser read` on it says you took it back.
 - Given a worker holds two tabs, one it resized to 390x844, when its pane is
   released, then both stay open, are yours, and fill the page's box.
-- Given a worker opened a tab and has not touched it for 30 minutes, then its
-  screen gets one question naming the tab; it runs `browser close 4` and the tab
-  goes, or says nothing and the tab stays, unasked until it is used again.
+- Given main opened a tab and has not touched it for 30 minutes, then its chat
+  gets one question naming the tab; it runs `browser close 4` and the tab goes,
+  or says nothing and the tab stays, unasked until it is used again.
+- Given a worker opened a tab and has not touched it for 30 minutes, then
+  nothing is asked; when main runs `pane release`, main's chat names the tab.
 - Given a worker still holds a tab when main runs `pane release`, then the tab
   stays open, is yours, and main's chat gets a line naming it.
 - Given you are typing in main's prompt, when a worker runs `browser open`,
