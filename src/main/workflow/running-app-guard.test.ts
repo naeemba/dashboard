@@ -54,6 +54,7 @@ describe('stopsRunningApp', () => {
     'cp -a out/Dashboard-linux-x64 "$HOME/.local/opt/dashboard"',
     'mv /tmp/build /home/me/.local/opt/dashboard',
     'ditto out/arm64/Dashboard.app /Applications/Dashboard.app',
+    'rm -rf /applications/dashboard.app',
     'rsync -a out/Dashboard-linux-x64/ ~/.local/opt/dashboard/',
     'tar -xf b.tar -C ~/.local/opt/dashboard',
     'unzip -o b.zip -d ~/.local/opt/dashboard',

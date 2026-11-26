@@ -51,9 +51,10 @@ const NAMES_APP = /dashboard|electron|claude|\bnode\b|(?:pane|screen)-host/i;
 // %LOCALAPPDATA%, quoted or through cygpath) is caught. The Start menu's own Programs folder, where
 // rebuild.sh puts its "Dashboard (rebuild)" shortcut, is not the build. The Squirrel install,
 // %LOCALAPPDATA%\Dashboard, is matched behind AppData\Local or the variable's name, never a bare
-// /Dashboard tail, which a checkout named dashboard has too.
+// /Dashboard tail, which a checkout named dashboard has too. A mac's disk ignores case by default, so
+// /applications/dashboard.app is the build too.
 const SQUIRREL = String.raw`(?:${anyCase('LOCALAPPDATA')}[%}"')]*|${anyCase('AppData')}[\\/]+${anyCase('Local')})[\\/]+${anyCase('Dashboard')}`;
-const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/Applications\/Dashboard\.app|(?<!${anyCase('Start Menu')})[\\/]${anyCase('Programs')}[\\/]+${anyCase('Dashboard')}|${SQUIRREL})(?![\w.-])`);
+const INSTALLED = new RegExp(String.raw`(?:\.local\/opt\/dashboard|\/${anyCase('Applications')}\/${anyCase('Dashboard.app')}|(?<!${anyCase('Start Menu')})[\\/]${anyCase('Programs')}[\\/]+${anyCase('Dashboard')}|${SQUIRREL})(?![\w.-])`);
 const WRITES_INTO = new RegExp(String.raw`${SHELL_REDIRECT}\s*["']?[^\s"']*${INSTALLED.source}`);
 
 // The flags of each process finder that take a value, so the value is not read as a name.
