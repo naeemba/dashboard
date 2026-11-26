@@ -36,7 +36,7 @@ function project(written: string, name: string) {
 describe('addProject', () => {
   it('appends an entry, path from ~, keeping comments and order', () => {
     const written = text(addProject(FILE, 'projects.yaml', path.join(HOME, 'api'), { aka: ['backend'], site: 'https://api.example.com' }, HOME, asWritten));
-    expect(written).toBe(`${FILE}- name: api\n  aka: [backend]\n  path: ${path.join('~', 'api')}\n  site: https://api.example.com\n`);
+    expect(written).toBe(`${FILE}- name: api\n  aka: [backend]\n  path: ~/api\n  site: https://api.example.com\n`);
   });
 
   it('leaves hand formatting and a long about as written', () => {
@@ -156,7 +156,7 @@ describe('removeProject', () => {
 describe('withOpenedProject', () => {
   it('appends a folder the file lacks, under a name nobody has', () => {
     const written = withOpenedProject(FILE, path.join(HOME, 'forks', 'crm'), HOME, asWritten);
-    expect(written?.endsWith(`- name: crm-2\n  path: ${path.join('~', 'forks', 'crm')}\n`)).toBe(true);
+    expect(written?.endsWith(`- name: crm-2\n  path: ~/forks/crm\n`)).toBe(true);
     expect(written).toContain('# Side projects below.');
   });
 

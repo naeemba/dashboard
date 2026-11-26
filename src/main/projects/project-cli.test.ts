@@ -59,7 +59,7 @@ describe('project open, close and focus', () => {
 
 describe('project init', () => {
   it('writes from the known folders, and never over a file that is there', () => {
-    expect(init(null, () => ({ open: [path.join(HOME, 'crm')], recent: [path.join(HOME, 'crm')] }))).toEqual({ ok: true, file: expect.stringContaining(`path: ${path.join('~', 'crm')}`), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy with "dashboard project set" or by hand' });
+    expect(init(null, () => ({ open: [path.join(HOME, 'crm')], recent: [path.join(HOME, 'crm')] }))).toEqual({ ok: true, file: expect.stringContaining(`path: ~/crm`), output: 'wrote projects.yaml with 1 project; add aka, site, about and deploy with "dashboard project set" or by hand' });
     expect(init('', NO_FOLDERS)).toEqual({ ok: false, message: 'projects.yaml already exists; init never overwrites it' });
     expect(init(null, NO_FOLDERS, ['now'])).toEqual({ ok: false, message: `init takes no words\n\n${PROJECT_USAGE}` });
   });
@@ -83,7 +83,7 @@ describe('project add, set and remove', () => {
   };
 
   it('adds a folder with its flags, the name from the folder unless given', () => {
-    expect(edit(['add', '~/api', '--aka', 'backend, server', '--about=The API'])).toMatchObject({ ok: true, output: 'added api in projects.yaml', file: expect.stringContaining(`- name: api\n  aka: [backend, server]\n  path: ${path.join('~', 'api')}\n  about: The API\n`) });
+    expect(edit(['add', '~/api', '--aka', 'backend, server', '--about=The API'])).toMatchObject({ ok: true, output: 'added api in projects.yaml', file: expect.stringContaining(`- name: api\n  aka: [backend, server]\n  path: ~/api\n  about: The API\n`) });
     expect(edit(['add', '/work/x', '--name', 'thing'])).toMatchObject({ ok: true, output: 'added thing in projects.yaml' });
     expect(edit(['add', '/crm'])).toEqual({ ok: false, message: '/crm is already listed, as new-crm' });
   });

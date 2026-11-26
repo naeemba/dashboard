@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { firstProjectsFile } from './projects-first';
+import { wholePath } from '../nvim/file-open';
+import { firstProjectsFile, writtenPath } from './projects-first';
 import { readProjects } from './projects-file';
 
 describe('firstProjectsFile', () => {
@@ -12,7 +13,7 @@ describe('firstProjectsFile', () => {
     expect(readProjects(file.file)).toEqual({
       ok: true,
       projects: [
-        { name: 'crm', aka: [], path: path.join('~', 'Workspace', 'crm'), site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
+        { name: 'crm', aka: [], path: '~/Workspace/crm', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
         { name: 'api', aka: [], path: api, site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
         { name: 'me', aka: [], path: '~', site: '', about: '', deploy: [], bumpVersion: false, autoMerge: null },
       ],
@@ -32,5 +33,14 @@ describe('firstProjectsFile', () => {
   it('does not take a sibling of home for a folder under it', () => {
     const read = readProjects(firstProjectsFile(['/home/meg/site'], '/home/me').file);
     expect(read.ok && read.projects[0].path).toBe('/home/meg/site');
+  });
+
+  // wholePath reads only `~/`, so a path written with the platform's separator would never read back.
+  it('writes a home folder that wholePath reads back to the same folder, with / on every platform', () => {
+    const home = path.resolve('/home/me');
+    const crm = path.join(home, 'Workspace', 'crm');
+    expect(writtenPath(crm, home)).toBe('~/Workspace/crm');
+    expect(wholePath(writtenPath(crm, home), home)).toBe(crm);
+    expect(wholePath(writtenPath(home, home), home)).toBe(home);
   });
 });
