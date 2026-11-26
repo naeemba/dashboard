@@ -87,3 +87,5 @@ One line per merged change: date and why.
   removed when its worker goes, the board being a stale copy of origin's (ship-decision-7)
 - 2026-11-26 — The workers popup opens just above the count, and the count shows a worker idle as
   soon as its agent exits rather than at the next hook mark
+- 2026-11-26 — The finished-work tests build their bare origin and clones once and copy them per
+  test: building them in every test took one past vitest's 5 s on the Windows CI job
