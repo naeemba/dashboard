@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-26T10:27:36.542Z",
-  "updatedAt": "2026-11-26T11:43:26.597Z",
+  "updatedAt": "2026-11-26T11:45:29.781Z",
   "branch": "the-manager-page-gets-a-browser-of-its-own",
   "pullRequest": 391,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-26T11:43:26.597Z",
       "body": "Review loop on #391: converged, ready to merge. 3 rounds, 3 findings fixed, none rejected or open. e945251e: the manager's browser tabs now close on a host change (the manager page is never discarded); two stale comments fixed. 9fbcc34d: browser README open questions record that the manager's browser stays this machine's while joined to a host. No change to what the card asked for or to its design. CI passed on 9fbcc34d. Still open: the hand check in the app after a rebuild, which the card asks for and nobody has done."
+    },
+    {
+      "at": "2026-11-26T11:45:29.752Z",
+      "body": "Pull request #391 merged: The manager page gets a browser of its own https://github.com/naeemba/dashboard/pull/391"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 321
 }
