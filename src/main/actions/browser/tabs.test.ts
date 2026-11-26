@@ -70,6 +70,15 @@ describe('browser.close', () => {
     await expect(bind(browserClose, ports).call({ projectPath: project, tab: 'three' })).resolves.toEqual({ refused: 'no tab was named' });
   });
 
+  it('closes a tab an agent holds, in whichever project it is, and refuses one it does not hold', async () => {
+    const ports = fakePorts({ [project]: { tabs: [tab(1)], active: 1 }, '/work/web': { tabs: [{ ...tab(2), holder: '3:1' }], active: null } });
+    await expect(bind(browserClose, ports).call({ pane: '3:2', tab: 2 })).resolves.toEqual({ refused: 'tab 2 is held by pane 3:1' });
+    await expect(bind(browserClose, ports).call({ pane: '3:1', tab: 1 })).resolves.toEqual({ refused: 'tab 1 is the user\'s; `browser claim 1` it first' });
+    await expect(bind(browserClose, ports).call({ pane: '3:1', tab: 2 })).resolves.toEqual({ output: 'closed tab 2' });
+    expect(ports.done).toEqual(['drop 2']);
+    expect(ports.browsers.get('/work/web')).toEqual({ tabs: [], active: null });
+  });
+
   it("refuses another project's tab", async () => {
     const ports = fakePorts({ [project]: { tabs: [tab(1)], active: 1 }, '/work/web': { tabs: [tab(2)], active: 2 } });
     await expect(bind(browserClose, ports).call({ projectPath: project, tab: 2 }))
