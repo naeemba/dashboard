@@ -83,6 +83,14 @@ describe('unfinishedWork, with the board a stale copy of origin\'s', () => {
     expect(await unfinishedWork(gitOnly, folder)).toBe('1 of its commits are on no remote');
   });
 
+  it('keeps an untracked file even where status hides untracked files', async () => {
+    const { folder, run } = checkout();
+    run('config', 'status.showUntrackedFiles', 'no');
+    writeFileSync(join(folder, CARD), '{"column":"Review"}');
+    writeFileSync(join(folder, 'scratch.md'), 'plan');
+    expect(await unfinishedWork(gitOnly, folder)).toBe('it has uncommitted changes');
+  });
+
   it('lets go of a detached HEAD whose only commit past origin/main touches only the board', async () => {
     const { folder, run } = checkout();
     run('checkout', '--quiet', '--detach', 'origin/main');
