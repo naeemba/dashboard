@@ -376,6 +376,15 @@ describe('sessionRequests', () => {
     expect(closed).toEqual(['2:2']);
   });
 
+  it('starts a throwaway on a base it could not fetch, and says it may be stale', async () => {
+    const warning = 'fetching origin main failed twice, so the worktree is cut from origin/main as last fetched and may be stale';
+    const { ports } = project({ makeWorktree: async () => ({ worktreePath: '/work/api.worktrees/go', warning }) });
+    const answer = sessionRequests(ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    expect(await answer({ directory: '/work/api', args: ['run', '2:1', '--worktree', 'go'] }))
+      .toMatchObject({ ok: true, output: expect.stringContaining(`in /work/api.worktrees/go (${warning})`) });
+  });
+
   it('says a step failed rather than throwing', async () => {
     const { ports } = project({ makeWorktree: async () => { throw new Error('git said no'); } });
     const answer = sessionRequests(ports);
