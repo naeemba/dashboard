@@ -178,6 +178,20 @@ conflict after review, and one of them is thrown away.
   between, and no foreground \`sleep\`. Its last line is the verdict; send
   main your report with the number and that verdict.
 
+## The report
+
+The report to main is short: main reads one from every worker, and the
+detail goes on the pull request. These lines, each left out when it has
+nothing to say:
+
+    Outcome: <one line: what is different now, or why you stopped>
+    Pull request: #<n>, and the CI verdict when you waited on it
+    Ids taken: <docs ids numbered, the version bumped to>
+    Caveats: <what is unchecked or partial, one line each>
+    Decision: <what needs the user, with the options and your pick>
+
+No list of files, commits or checks run: those are on the pull request.
+
 ## What not to do
 
 - Do not touch the main branch, or any file outside this worktree.

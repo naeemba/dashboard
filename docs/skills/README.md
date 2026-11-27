@@ -77,7 +77,9 @@ which a worker retried by hand after a 502 that had opened it (command-decision-
 opens and ends its turn, without waiting on CI: the review the app starts waits on CI, and kills a
 wait the worker left running, with any report promised after it. With `no-review-loop` nothing
 starts a review, so it waits on CI itself, with `pr wait` in the background at the longest timeout
-and run again if stopped there, and reports the verdict.
+and run again if stopped there, and reports the verdict. The report is a template of at most
+five lines (outcome, pull request, ids taken, caveats, a decision for the user), with the detail on
+the pull request, since main reads one from every worker.
 The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
 `bump-version` tells it to bump last, from `<remote>/<base branch>` (the fourth and third words:
