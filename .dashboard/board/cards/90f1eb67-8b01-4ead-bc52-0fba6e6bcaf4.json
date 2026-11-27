@@ -1,0 +1,18 @@
+{
+  "id": "90f1eb67-8b01-4ead-bc52-0fba6e6bcaf4",
+  "title": "Pane pool: a cap per project plus a total, and a CI wait gives its slot back",
+  "notes": "Follow-up to #408 (workers-decision-11). User decisions, 2026-11-27: the cap is per project, 4 by default, with a total across all projects of 8 by default (the 8-worker out-of-memory night is why the total stays). Both are settings: workers.cap becomes the per-project cap, plus workers.totalCap; the Settings screen rows (#414 added one for workers.cap) cover both.\n\nA worker that is only waiting on CI gives its slot back. The app can tell, because the wait is its own command: while a worker's only running work is pr wait or pr land waiting on checks, it holds no slot and the next queued entry may start. When CI finishes, pr wait or pr land asks the pool for a slot before it returns, waiting at the head of the queue if none is free, so a resuming worker never takes the running count over either cap. Builds, tests, tsc and anything else keep their slot as today.\n\nEngineering bar as for #408: the rules (per-project and total count, what holds a slot, the CI-wait release and re-acquire) in pane-pool.ts with tests; the acquire and release go through the pane actions (pane.start's pool), never counted in pr-wait code or elsewhere; the pr command calls an action to give back and reclaim. Docs: workers-decision-11 updated, workers and settings READMEs, the main session's prompt if a line changes.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-27T11:58:30.358Z",
+  "updatedAt": "2026-11-27T11:59:52.858Z",
+  "branch": "pane-pool-a-cap-per-project-plus-a-total-an",
+  "comments": [
+    {
+      "at": "2026-11-27T11:59:52.857Z",
+      "body": "Overlap check before starting: #414 (Workers popup queue, in Review) touches src/main/workers/pane-pool.ts, pane-pool-ports.ts(+test), src/main/actions/pane/queue.ts, src/renderer/settings/settings-rows.ts(+test), main.ts, docs/workers/README.md, docs/settings/README.md -- the same pool and settings-row files this card changes, and this card builds on its workers.cap row. Card 40fe0e2e (stalled worker, Doing, no PR) touches src/shared/settings/settings.ts(+test), pane-pool-ports.test.ts, session-requests.ts, docs/workers/decisions.md, docs/settings/README.md -- this card adds workers.totalCap to settings.ts and edits workers-decision-11. #412 (dispatch.ts, docs/workers) and #413 (pane-shells.ts) do not overlap in code. Waiting on main: go on now, or after #414 merges."
+    }
+  ],
+  "column": "Doing",
+  "order": 2
+}

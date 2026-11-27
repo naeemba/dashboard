@@ -101,3 +101,6 @@ One line per merged change: date and why.
 - 2026-11-27 — The workers popup lists main's queued starts under its workers and D withdraws
   one, and the settings screen has a Workers row for the cap: the queue was only `pane queue`'s
   to see, and the cap only settings.json's to change (workers-decision-11)
+- 2026-11-27 — Workers are started with permissions.denyInsteadOfPrompting, so a call that would
+  wait on a prompt is refused and shows in the report instead of holding a pool slot
+  (workers-decision-12)

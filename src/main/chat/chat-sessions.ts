@@ -307,9 +307,9 @@ export function registerChatSessions(
         // user's allow rules apply before auto mode decides (workers-decision-5).
         settingSources: ['user', 'project', 'local'],
         hooks: worker?.hooks,
-        // The board guard as a command hook, so a hosted worker's session runs it too, and the app's
-        // commands allowed (appSessionSettings).
-        settings: appSessionSettings(host.userData),
+        // The board guard as a command hook, so a hosted worker's session runs it too, the app's
+        // commands allowed, and a worker's prompts denied (appSessionSettings).
+        settings: appSessionSettings(host.userData, worker ? 'worker' : 'main'),
         env: environment,
         // The dashboard command as tools; its process inherits this environment, so it knows the pane
         // (command-decision-9).

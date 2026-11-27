@@ -1,0 +1,11 @@
+{
+  "id": "d89dfbee-cea5-496e-b694-3436d161d4af",
+  "title": "Decide idle compaction for worker sessions",
+  "notes": "From docs/research/claude-releases-2026-09-27-to-11-27.md. Claude Code 2.1.299 compacts an idle conversation over 200K tokens after about 54 minutes; \"idleCompaction\": false turns it off. A paused worker waiting on CI or a review loop can come back compacted, losing detail mid-task. Do: confirm the setting in the docs; then set idleCompaction false for worker sessions through appSessionSettings (src/main/workers/dispatch.ts, as workers-decision-12 did for denyInsteadOfPrompting), leaving main's as Claude Code's default. Test beside dispatch.test.ts; one line in the workers decision.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-27T11:54:30.473Z",
+  "updatedAt": "2026-11-27T11:54:30.473Z",
+  "column": "Backlog",
+  "order": 9
+}
