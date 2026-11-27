@@ -22,10 +22,18 @@ const WORKER = terminalId(0, 1);
 const AGENT = terminalId(0, 2);
 
 // Every scope asked for is granted as `<kind>-<id>.scope`, wrapping the command in `scoped`.
-function shells(holds = true) {
+function shells(holds = true, spawnFails = false) {
   let hostSpawned = 0;
   const requests: SpawnRequest[] = [];
-  const host = { spawn: (request: SpawnRequest) => { hostSpawned += 1; requests.push(request); return fakeShell(true); }, holds: () => holds } as unknown as PaneHost;
+  const ended: [string, number][] = [];
+  const host = {
+    spawn: (request: SpawnRequest) => {
+      hostSpawned += 1; requests.push(request);
+      if (spawnFails) throw new Error('no such file');
+      return fakeShell(true);
+    },
+    holds: () => holds,
+  } as unknown as PaneHost;
   const made = paneShells({
     host,
     commands: new Map([
@@ -34,12 +42,19 @@ function shells(holds = true) {
     ]),
     screens: screens(), environment: {}, temporary: '/nonexistent', userData: '/nonexistent-user-data', shellCommand: () => '/bin/zsh',
     scoped: (request: ScopeRequest) => ({ file: 'scoped', args: [request.file, ...request.args], unit: `${request.kind}-${request.id}.scope` }),
-    projectPath: () => '/home/me/dashboard', send: () => undefined, keepsScreens: () => false, ended: () => undefined,
+    projectPath: () => '/home/me/dashboard', send: () => undefined, keepsScreens: () => false, ended: (id, exitCode) => { ended.push([id, exitCode]); },
   });
-  return { ...made, hostSpawned: () => hostSpawned, requests };
+  return { ...made, hostSpawned: () => hostSpawned, requests, ended };
 }
 
 describe('paneShells', () => {
+  // A stale shell command: the worker's pane is released, not counted as working under exit 127.
+  it('ends a pane whose shell failed to spawn, exit 127', () => {
+    const made = shells(true, true);
+    made.spawn(WORKER);
+    expect(made.ended).toEqual([[WORKER, 127]]);
+  });
+
   // The next launch reaches a kept nvim only under a name it can work out again: the project's.
   it('spawns the editor through the host, listening under the project\'s name while the host holds it', () => {
     const made = shells();

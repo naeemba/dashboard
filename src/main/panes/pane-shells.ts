@@ -90,7 +90,9 @@ export function paneShells(main: {
     } catch {
       // The shell itself may be missing — a stale SHELL_COMMAND, say. The pane shows the same exit line
       // a dead shell shows, rather than the spawn taking the window down. A missing nvim is not this
-      // case: the shell starts, fails to find it, and exits 127 on its own.
+      // case: the shell starts, fails to find it, and exits 127 on its own. Ended the way a dead shell
+      // ends, so a worker's pane is released rather than counted as working under its exit line.
+      main.ended(id, 127);
       screenCopies.get(id)?.exit(127);
       main.send('pty:exit', id, 127);
       return;
