@@ -7,7 +7,7 @@ import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, remem
 import { baseName } from '../shared/app/base-name';
 import { holdProjectName, readProjectNames } from './workers/project-names';
 import { runProgram } from './app/git';
-import { branchPullRequest, openPullRequests } from './board/merge-request';
+import { branchPullRequest } from './board/merge-request';
 import { pullRequestStatus, pullRequestStatuses } from './board/pull-request-status';
 import { FOLLOW_TIMER_MS } from './board/pull-request-sweep';
 import { realPath } from './app/real-path';
@@ -21,24 +21,21 @@ import { diesAtQuit, paneShells } from './panes/pane-shells';
 import { pickShell } from '../shared/panes/shell';
 import { registerTasks } from './manager/task-runner';
 import { openAppWindow } from './app/app-window';
-import { EDITOR_INDEX, MAIN_INDEX, paneFromId, terminalId, workersOfSlot } from '../shared/panes/terminals';
-import { nextPaneIndex } from '../shared/panes/pane-layout';
+import { EDITOR_INDEX, MAIN_INDEX, paneFromId, terminalId } from '../shared/panes/terminals';
 import { paneActions } from './actions/pane/pane-actions';
 import { stopOrWarn } from './actions/pane/close';
 import { projectActions, registerProjectChannels } from './actions/project/project-actions';
 import { actionRequests, isRefused } from './actions/action';
 import { updateActions } from './actions/update/update-actions';
-import { projectOfFolder, sessionRequests } from './workers/session-requests';
+import { sessionRequests } from './workers/session-requests';
 import { poolPorts } from './workers/pane-pool-ports';
 import { projectRequests } from './projects/project-requests';
-import { MANAGER_FOLDER, projectInSlot, sessionSlot } from './manager/manager-terminals';
-import { projectNamedInFile } from './projects/project-named';
+import { MANAGER_FOLDER, projectInSlot } from './manager/manager-terminals';
 import { listOpenedProject } from './projects/projects-write';
 import { MANAGER_SLOT } from '../shared/manager/manager';
 import { announceSocket } from './command/app-address';
 import { environmentForPanes, paneCommands } from './command/pane-environment';
 import { closeSessionSocket, listenForSessions, sessionSocketPath } from './workers/session-socket';
-import { checkRunFolder, holdsWorktree } from './workers/run-folder';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
 import { installSkills } from './skills/install-skills';
@@ -46,8 +43,6 @@ import { launchScopes, stopMainsNow, stopScope } from './processes/launch-scopes
 import { memorySweep, recordedUnits, userServiceCgroup } from './processes/memory-sweep';
 import { boardChanges } from './board/board-changes';
 import { peekBoard } from './board/board-store';
-import { finishedCardIn } from './workers/auto-release';
-import { paneCardIn } from './workers/status-lines';
 import { readMarket } from './markets/markets-fetch';
 import { boardWatchers } from './board/board-watch';
 import { failureReporter, failureText } from '../shared/errors/failure';
@@ -80,24 +75,17 @@ import { settingsActions } from './actions/settings/settings-actions';
 import { browserActions } from './actions/browser/browser-actions';
 import { isSeeThrough, windowBackground, type Settings } from '../shared/settings/settings';
 import { oneAtATime } from './ship/ship';
-import {
-  freePane,
-  hasAnAgent,
-  paneIsBusy,
-  programIn,
-  runsAProgram,
-  runsAnAgent,
-  shipCanTake,
-  type PaneCommand, type PaneReading, type PaneUse,
-} from '../shared/panes/pane-reading';
+import { runsAProgram, runsAnAgent, type PaneCommand, type PaneUse } from '../shared/panes/pane-reading';
 import { usageSweep } from './usage/usage-sweep';
-import { entryForCard, withoutPanes } from './ship/worktree-store';
+import { withoutPanes } from './ship/worktree-store';
 import { cardActions } from './actions/card/card-actions';
 import { worktreeKeeper } from './ship/worktree-keeper';
-import type { OpenProjects, ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
+import type { ShipResult, Project, WorktreeEntry } from '../shared/app/bridge';
 import { unpacked } from './app/unpacked';
 import { readLaunchEnvironment } from './app/launch-environment';
 import { worktreeRecordAtLaunch } from './ship/worktree-record-at-launch';
+import { slotPanes } from './panes/slot-panes';
+import { sessionRequestPorts } from './workers/session-request-ports';
 
 // Packaged apps cannot ship a per-user .env inside the bundle, so read it from the home config directory.
 const environmentFile = app.isPackaged
@@ -216,8 +204,9 @@ const boards = boardWatchers((projectPath) => {
 // the shell afterwards and a project already open would still launch nvim through the old one.
 const terminalCommands = new Map<string, PaneCommand>();
 const promptPane = panePrompt((id) => shells.get(id), (id, text) => workerScreens.send(id, text));
-// Each project's browser tabs, beside the window: browser-actions.ts.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: slotOfProject }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
+// Each project's browser tabs, beside the window: browser-actions.ts. slotOf is an arrow because
+// slotOfProject is made further down, with the other pane readings.
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: (projectPath) => slotOfProject(projectPath) }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
@@ -245,21 +234,17 @@ function tellOthers(screen: string, channel: string, ...payload: unknown[]): voi
   remoteHost?.broadcast(channel, payload, screen);
 }
 
-// Whether an agent is running in this card's pane. One spelling of it, because two things ask: the ship
-// refuses a card that is already being worked, and the review sweep will not take a worktree away from
-// a shell sitting in it. Two copies drift — widen the ship's half to count a pane whose agent has
-// finished, leave the sweep's alone, and five seconds later the sweep removes the folder out from
-// under that shell.
-function agentRunsIn(slot: number, pane: number | null): boolean {
-  return pane !== null && agentIn(terminalId(slot, pane));
-}
-// A worker on a Claude screen runs no command in its pane, whose shell stays a plain one under it.
-const agentIn = (id: string): boolean => hasAnAgent({ command: terminalCommands.get(id), screen: workerScreens.has(id) });
-
 // What the renderer can see and main cannot: which panes still have an agent working in them. The
 // reports land here; what they add up to is working-panes.ts's, with the floor and the reason for it.
 const agentsAtWork = workingPanes();
 table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, Date.now()); });
+// Which page a project is on, the panes it has open, what each runs and whether an agent works in one:
+// slot-panes.ts.
+const slotReadings = slotPanes({
+  projects, commands: terminalCommands, shells, foregroundOf: panes.foregroundOf, startedWith: panes.startedWith,
+  workerScreens: () => workerScreens, agentsAtWork,
+});
+const { slotOfProject, openPanes, paneUsesIn, freePaneIn, agentIn, agentRunsIn, agentWorksIn, openProjects } = slotReadings;
 
 // The other direction, and the one thing only main can answer: the reading of a project's terminals,
 // for the two screens that also have to know what is running in a pane. pane-reading.ts holds what
@@ -268,8 +253,7 @@ table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, 
 // The reading itself, not an answer made from it, because the two ask different things of it: the pick
 // wants the worktree tie-break, and the refusal wants to name the program it found.
 //
-// `exited` is the one field a reading has no room for, and it is main's too — the shells map here is
-// what `pty:exit` is sent from, so the renderer's own flag is a copy of this one.
+// `exited` is the one field a reading has no room for, and it is main's too: slot-panes.ts says why.
 //
 // The editor is not in it. It runs nvim for as long as the project is open, so on this reading it is
 // busy from launch — a pane no command could ever land in and a project that could never be closed.
@@ -280,20 +264,6 @@ table.handle('panes:read', (_screen, projectPath: string): PaneUse[] => {
   const slot = slotOfProject(projectPath);
   return slot === -1 ? [] : paneUsesIn(slot);
 });
-function paneUsesIn(slot: number): PaneUse[] {
-  return paneReadingsIn(slot)
-    .map((pane) => ({ ...pane, exited: !shells.has(terminalId(slot, pane.index)) }));
-}
-
-// The question the review asks, which is the one above with "and has not finished" on the end. A ship
-// is a keystroke and refuses on the weaker answer: you pressed it, and the status bar you are already
-// looking at says why. The sweep runs on a five-second timer with nobody to tell, so an answer that
-// only goes false when you close the pane by hand would mean no review ever starts by itself — the
-// card sits in Ship reading `shipped · fix-login · terminal 3` all day with nothing on screen saying
-// the app is waiting on you.
-function agentWorksIn(slot: number, pane: number | null): boolean {
-  return pane !== null && agentRunsIn(slot, pane) && (workerScreens.working(terminalId(slot, pane)) ?? agentsAtWork.works(terminalId(slot, pane), Date.now()));
-}
 
 // A pane whose agent has exited. It goes back to being an ordinary pane: a plain shell, still in the
 // worktree, because that is where the work is. Left alone, Enter would start the agent over instead
@@ -557,33 +527,8 @@ try {
 const knownPullRequestStatuses = pullRequestStatuses();
 registerProjectFiles(table, boards, boardLog, boardSync, tellOthers, (projectPath) => setImmediate(() => void pullRequests.check(projectPath)), knownPullRequestStatuses.of);
 
-// Which page a project is open on, or -1. Two questions want it — opening a project that is already
-// open, and finding the panes a review can take — and two copies of the walk would answer differently
-// the day a slot means something other than an index into this array. Compared through realPath, as
-// projectOfFolder does for the session command, so a folder opened through a symlink and named in
-// projects.yaml by its real path is one project, not two pages on the same shells and board.
-function slotOfProject(projectPath: string): number {
-  const real = realPath(projectPath);
-  return projects.findIndex((project) => project !== undefined && realPath(project.path) === real);
-}
-
-// The list every screen draws its tabs from, with the terminals each one has open, so a screen arriving
-// at the session builds every worker before the replay of what they printed. Which session it is the
-// list of travels on its own, as `host:change` from remote-ipc.ts.
-const openProjects = (): OpenProjects => ({
-  projects: projects.map((project) => project ?? null),
-  panes: projects.map((_project, slot) => openPanes(slot)),
-  manager: openPanes(MANAGER_SLOT),
-  screens: workerScreens.ids(),
-  editors: projects.flatMap((_project, slot) => (shells.has(terminalId(slot, EDITOR_INDEX)) ? [slot] : [])),
-});
 // Every screen redraws its pages from the list, so a worker opening or closing is the list again.
 const panesChanged = (): void => sendToRenderer('projects:change', openProjects());
-
-// The workers a project has open, ascending: every pane main holds a command for, less the editor.
-function openPanes(slot: number): number[] {
-  return workersOfSlot(terminalCommands.keys(), slot);
-}
 
 // What a pane runs from now on. A pane is open while it has a command, so one that had none is a worker
 // opening, and every screen is told before its first byte arrives, or the byte has no pane to land in.
@@ -612,30 +557,6 @@ function dropPane(id: string): void {
 }
 
 registerWorkerChannels(table, { ...pane, openProjects });
-
-// The lowest-numbered worker of this project that nobody is using, or the number a new one would get
-// when every worker is taken: workers are opened as they are needed, so there is always one going.
-// What counts as free is shipCanTake's.
-function freePaneIn(slot: number): number {
-  return freePane(paneReadingsIn(slot), shipCanTake) ?? nextPaneIndex(openPanes(slot));
-}
-
-// Every open terminal of the project as pane-reading.ts reads them.
-function paneReadingsIn(slot: number): PaneReading[] {
-  const projectPath = projectIn(slot)?.path;
-  return openPanes(slot).map((index): PaneReading => {
-    const id = terminalId(slot, index);
-    const command = terminalCommands.get(id);
-    return {
-      index,
-      foreground: panes.foregroundOf(id),
-      shell: panes.startedWith.get(id),
-      command,
-      inWorktree: command !== undefined && command.directory !== projectPath,
-      screen: workerScreens.has(id),
-    };
-  });
-}
 
 // A card's agent given its pane, from every door that starts one (a ship, the review, `pane run
 // --card`, a restore), and the card into Doing with its branch unless it is there or past it.
@@ -746,74 +667,14 @@ registerProjectChannels(table, project, {
   },
   openProjects,
 });
-// The `session` command. Every decision is session-requests.ts's; what is handed over here is the panes
-// and the git that only main holds. Git runs on the project's queue, the one ships and reviews hold.
-// `dashboard project open`, `close` and `focus` come in on the same socket; project-requests.ts tells
-// them from the session command's and hands them to the project actions.
-const workerAnswers = sessionRequests({
-  slotOf: (directory) => sessionSlot(projectOfFolder(projects.map((project) => project?.path), directory, realPath), directory, realPath),
-  projectPath: (slot) => projectIn(slot)?.path,
-  openSlots: () => [MANAGER_SLOT, ...projects.keys()].flatMap((slot) => {
-    const project = projectIn(slot);
-    return project === undefined ? [] : [{ slot, name: project.name }];
-  }),
-  findProject: projectNamedInFile,
-  openProject: project.openForClaim,
-  openPanes,
-  agentIn,
-  busyWith(id) {
-    const { slot, index } = paneFromId(id);
-    const reading = paneReadingsIn(slot).find((pane) => pane.index === index);
-    return reading !== undefined && paneIsBusy(reading) ? programIn(reading) : null;
-  },
-  directoryOf: (id) => workerScreens.folder(id) ?? terminalCommands.get(id)?.directory,
-  dispatcherOf: (id) => mainsWorkers.get(id),
-  open: (slot) => pane.open.call({ slot }),
-  // A card's worker is the card's agent from here on, so its record names the pane, the way a ship's does,
-  // and the card's last review is over, both halves of it as a ship clears them: left marked, the fix
-  // this worker pushes would never be reviewed.
-  startWorker(id, { directory, prompt, as, cardId, dispatcherPath }) {
-    const entry = cardId === null ? undefined : entryForCard(worktrees.entries(), cardId);
-    const { slot, index } = paneFromId(id);
-    if (entry) {
-      reviews.forget(entry.cardId);
-      giveCardPane({ ...entry, reviewing: false }, index);
-    } else {
-      worktrees.takePane(projectIn(slot)?.path ?? '', index, '');
-    }
-    return pane.dispatch.call({ id, projectPath: projectIn(slot)?.path ?? directory, directory, prompt, resume: null, cardId, dispatcherPath, as });
-  },
-  close: (id) => pane.close.call({ id }),
-  send: (id, text, dispatcherPath) => pane.send.call({ id, text, dispatcherPath }),
-  mark: (id, state) => sendToRenderer('pane:mark', id, state), turnEnded: (id) => browser.turnEnded(id),
-  tell: chats.tell,
-  withdraw: (slot, messageId) => { chats.withdraw(slot, messageId).catch(() => undefined); },
-  cardWorktree(projectPath, cardId) {
-    const entry = entryForCard(worktrees.entries(), cardId);
-    if (entry?.projectPath !== projectPath) return undefined;
-    return { worktreePath: entry.worktreePath, working: agentRunsIn(slotOfProject(projectPath), entry.pane) };
-  },
-  makeWorktree: worktree.makeThrowaway,
-  checkRunFolder,
-  holdsWorktree,
-  ...worktree.throwawayPorts,
-  hasKeyboard: claudeSessions.hasKeyboard,
-  finishedCard(id) {
-    const { slot, index } = paneFromId(id);
-    return finishedCardIn(worktrees.entries(), projectIn(slot)?.path, index, boardLog.latest);
-  },
-  paneCard(id) {
-    const { slot, index } = paneFromId(id);
-    return paneCardIn(worktrees.entries(), projectIn(slot)?.path, index, boardLog.latest);
-  },
-  openPullRequests: (projectPath) => openPullRequests(runProgram, projectPath, 20_000),
-  released(id, reason, output) {
-    logStore.log({ level: 'info', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `${output}: ${reason}` });
-    sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
-  },
-  threwAway: (id, said, projectPath) => logStore.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
-  realPath, pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
-});
+// The `session` command, on ports made of the panes and the git that only main holds
+// (session-request-ports.ts). `dashboard project open`, `close` and `focus` come in on the same socket;
+// project-requests.ts tells them from the session command's and hands them to the project actions.
+const workerAnswers = sessionRequests(sessionRequestPorts({
+  projects, readings: slotReadings, commands: terminalCommands, mainsWorkers, workerScreens,
+  openProject: project.openForClaim, pane, worktrees, reviews, giveCardPane, sendToRenderer, browser, chats, worktree,
+  hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
+}));
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 const answerSession = browser.requests(projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));

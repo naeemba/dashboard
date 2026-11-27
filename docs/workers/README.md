@@ -21,7 +21,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   branch `pane landed` finds a worker by)
 - The `session` command: `session-cli.ts`, `session-cli-entry.ts`,
   `session-program.ts`, `session-socket.ts`, `session-requests.ts` (also
-  `dashboard pane`, see [command](../command/README.md))
+  `dashboard pane`, see [command](../command/README.md)), and
+  `session-request-ports.ts`, its ports built from what main holds
 - The folder `pane run --in` may start a worker in: `run-folder.ts`
 - Throwaway worktrees: `throwaway-marker.ts`, `finished-work.ts`, and
   `../actions/worktree/throwaway.ts` and `sweep.ts`

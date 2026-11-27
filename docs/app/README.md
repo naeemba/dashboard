@@ -293,11 +293,12 @@ on Windows `localhost` bound to `::1` alone while the window asked
 
 ## Open questions
 
-- `main.ts` is at the 600-line ceiling, at 600 code lines, its split owed: the
-  pane pool's ports moved to `pane-pool-ports.ts` and the import line is paid
-  by packing `realPath` beside `pool` in the session requests. `renderer.ts` is
-  at 583, after the pane listeners moved into `pane-output-wiring.ts`, the
-  board's file listener into `board-wiring.ts` and the notes' into
-  `notes-wiring.ts`. A feature that adds code to `main.ts` or `renderer.ts`
-  needs a seam split out first (workflow-decision-1); the next one in
-  `renderer.ts` is the session save and restore.
+- `main.ts` is at 494 code lines, after the readings of each project's panes
+  moved to `slot-panes.ts` and the session command's ports to
+  `session-request-ports.ts`; the next seam in it is the window and quit
+  wiring at its foot. `renderer.ts` is at 583, after the pane listeners moved
+  into `pane-output-wiring.ts`, the board's file listener into
+  `board-wiring.ts` and the notes' into `notes-wiring.ts`. A feature that
+  adds code to `main.ts` or `renderer.ts` past its ceiling needs a seam split
+  out first (workflow-decision-1); the next one in `renderer.ts` is the
+  session save and restore.
