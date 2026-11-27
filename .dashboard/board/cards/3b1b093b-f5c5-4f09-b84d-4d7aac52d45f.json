@@ -1,0 +1,11 @@
+{
+  "id": "3b1b093b-f5c5-4f09-b84d-4d7aac52d45f",
+  "title": "finished-work tests: give the stale-origin block a 60 s timeout",
+  "notes": "Still flaky after #404: main's CI on f697b7e5 (run 46014320446) failed finished-work.test.ts 'lets go of a worktree whose only change is its own card file, once origin has held it' at 5005 ms on windows, blocking the v2.60.0 release. #422 found the board-files flake was Windows runner disk stalls hitting whichever test runs, and gave its block the 60 s timeout the file's other blocks have. Do the same for this describe (and check its sibling blocks), saying why in the history line.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T14:18:57.082Z",
+  "updatedAt": "2026-11-27T14:18:57.082Z",
+  "column": "Backlog",
+  "order": 0
+}
