@@ -5,8 +5,14 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T21:54:26.377Z",
-  "updatedAt": "2026-11-27T21:55:00.808Z",
+  "updatedAt": "2026-11-27T21:55:12.043Z",
   "branch": "board-review-with-a-short-card-id-gives-the",
+  "comments": [
+    {
+      "at": "2026-11-27T21:55:12.042Z",
+      "body": "Same bug class: 'board ship 314ecc8a --after 3a1ee233' answered 'no card 3a1ee233 on the board to wait on'; the full id worked. --after should take a short id like every other id argument."
+    }
+  ],
   "column": "Doing",
   "order": 3
 }
