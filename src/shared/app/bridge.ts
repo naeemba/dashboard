@@ -219,6 +219,8 @@ export type DashboardBridge = {
   onPaneMark(listener: (id: string, state: WorkerState) => void): void;
   // The pane pool's queue changed: an entry queued, started, dropped or withdrawn.
   onWorkerQueueChange(listener: () => void): void;
+  // Main's minute sweep: a worker may have stalled, or a stalled one gone a minute more, with no hook.
+  onWorkersChange(listener: () => void): void;
   // A finished worker `pane landed` closed (session-requests.ts), or the kept shells pane.reap ended or
   // kept back: said as a passing notice main has already logged.
   onPaneReleased(listener: (text: string) => void): void;

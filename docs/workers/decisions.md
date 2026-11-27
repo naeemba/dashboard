@@ -683,9 +683,9 @@ blocked, holding a pool slot (workers-decision-11), until someone noticed the ba
 ## workers-decision-13: A worker silent past a setting is shown stalled, never stopped
 
 **Main's worker at work whose hooks have said nothing for `workers.stallMinutes` (20) is shown
-`stalled` in `pane list` and `pane status`, and its main is told once**
-(`src/main/workers/stall.ts`). Before it, a worker hung on a test that never ends sat in Doing
-holding a pool slot (workers-decision-11) with nothing to say so.
+`stalled` in `pane list`, `pane status`, the workers popup and the status line count, and its
+main is told once** (`src/main/workers/stall.ts`). Before it, a worker hung on a test that never
+ends sat in Doing holding a pool slot (workers-decision-11) with nothing to say so.
 
 - **A sign of life is any hook**: a prompt going in, a tool finishing, a stop or a question. Pane
   output is not one: Claude Code's spinner redraws its timer every second whatever the worker is
@@ -693,6 +693,9 @@ holding a pool slot (workers-decision-11) with nothing to say so.
   without running a tool is called stalled, which one look at its pane settles.
 - **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
   minute notice (workers-decision-1): their silence is waiting, not a hang.
+- **The workers popup is redrawn each minute while one is stalled**, and once on the minute after
+  the last stall ends: a stall begins with no hook to mark the pane, and a raised
+  `workers.stallMinutes` ends one with none either.
 - **Shown and told, never acted on.** It keeps its pane and its slot and is never released: a long
   build looks the same as a hang from the hooks, and killing one loses work. The user or main
   decides.

@@ -29,7 +29,7 @@ import { projectActions, registerProjectChannels } from './actions/project/proje
 import { actionRequests, isRefused } from './actions/action';
 import { updateActions } from './actions/update/update-actions';
 import { sessionRequests } from './workers/session-requests';
-import { STALL_SWEEP_MS } from './workers/stall';
+import { STALL_SWEEP_MS, stallRedraws } from './workers/stall';
 import { poolPorts } from './workers/pane-pool-ports';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot } from './manager/manager-terminals';
@@ -686,7 +686,11 @@ const workerAnswers = sessionRequests(sessionRequestPorts({
   hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool, () => sendToRenderer('workers:queue-change')),
   stallMinutes: () => settings.workers.stallMinutes,
 }));
-setInterval(() => workerAnswers.tellStalls(), STALL_SWEEP_MS).unref();
+// The stall sweep, which also redraws the workers popup when stallRedraws says (stall.ts).
+const redraws = stallRedraws();
+setInterval(() => {
+  if (redraws(workerAnswers.tellStalls())) sendToRenderer('workers:change');
+}, STALL_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 table.handle('workers:queue', () => workerAnswers.queued());
