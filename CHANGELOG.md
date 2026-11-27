@@ -1,5 +1,44 @@
 # Changelog
 
+## v2.60.0 (2026-11-27)
+
+### What's new
+
+- Pane queue keeps an entry whose card file briefly fails to parse
+- Split main.ts along its seams before it takes more
+- Worker panes deny permission prompts instead of waiting on them
+- Workers popup shows the pane queue, with a withdraw key
+- Flag a worker pane that has gone silent as stalled
+- Update every dependency: patches first, then each minor and major with its changelog
+- Project browser: send listed sites through a proxy, everything else direct
+- Workers popup marks a stalled worker
+- Decide idle compaction for worker sessions
+- Track terminal-mode workers through Claude Code's Program Status Protocol (OSC 7501)
+- Pane pool: a cap per project plus a total, and a CI wait gives its slot back
+- Count a pane whose shell failed to spawn as ended, not working
+- board-files test times out on the Windows CI job
+- finished-work tests: give the stale-origin block a 60 s timeout
+
+### What's Changed
+* docs: keep four research reports in docs/research by @naeemba in https://github.com/naeemba/dashboard/pull/409
+* Hold a queued ship while its card file does not parse by @naeemba in https://github.com/naeemba/dashboard/pull/410
+* Split main.ts along its seams before it takes more by @naeemba in https://github.com/naeemba/dashboard/pull/411
+* Workers deny a permission prompt instead of waiting on it by @naeemba in https://github.com/naeemba/dashboard/pull/412
+* Workers popup shows the pane queue, with a withdraw key by @naeemba in https://github.com/naeemba/dashboard/pull/414
+* Show a worker silent past a setting as stalled, and tell main once by @naeemba in https://github.com/naeemba/dashboard/pull/415
+* Update every dependency: patches, then each minor with its notes by @naeemba in https://github.com/naeemba/dashboard/pull/416
+* Send the hosts browser.proxy lists through a proxy, every other site direct by @naeemba in https://github.com/naeemba/dashboard/pull/417
+* Mark a stalled worker in the workers popup by @naeemba in https://github.com/naeemba/dashboard/pull/418
+* Turn idle compaction off for worker sessions by @naeemba in https://github.com/naeemba/dashboard/pull/420
+* Read Claude Code's OSC 7501 program status off each pane's pty by @naeemba in https://github.com/naeemba/dashboard/pull/421
+* Pane pool: a cap per project plus a total, and a CI wait gives its slot back by @naeemba in https://github.com/naeemba/dashboard/pull/419
+* End a pane whose shell failed to spawn, so its worker is released by @naeemba in https://github.com/naeemba/dashboard/pull/413
+* Give the folder board-files tests the 60 s timeout the other blocks have by @naeemba in https://github.com/naeemba/dashboard/pull/422
+* Give the stale-origin finished-work tests a 60 s timeout by @naeemba in https://github.com/naeemba/dashboard/pull/423
+
+
+**Full Changelog**: https://github.com/naeemba/dashboard/compare/v2.59.0...v2.60.0
+
 ## v2.59.0 (2026-11-26)
 
 ### What's new
