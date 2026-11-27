@@ -38,6 +38,15 @@ function cardId(board: Board, title: string): string {
   return card.id;
 }
 
+// A project whose folder board has no cards yet, for a test that writes its own card files by hand:
+// columns.json is the only file it flushes.
+function emptyFolderBoard(): string {
+  const path = project();
+  writeBoard(path, emptyBoard());
+  mkdirSync(cardsFolder(path), { recursive: true });
+  return path;
+}
+
 // A small board with cards in two columns, the starting point of every merge below.
 function startingBoard(): Board {
   let board = emptyBoard();
@@ -94,7 +103,8 @@ describe('the move off board.json', { timeout: 60_000 }, () => {
   });
 });
 
-describe('the folder', () => {
+// A Windows runner's disk can stall for seconds, and whichever test runs then goes past the 5s default.
+describe('the folder', { timeout: 60_000 }, () => {
   it('rewrites only the file of the card that moved', () => {
     const path = project();
     const board = startingBoard();
@@ -186,8 +196,8 @@ describe('the folder', () => {
   });
 
   it('names a board.json that does not parse on a read without salvage, and a look still finds no board', () => {
-    const path = project();
-    writeBoard(path, startingBoard());
+    // A good folder beside the broken board.json.
+    const path = emptyFolderBoard();
     writeFileSync(join(path, BOARD_FILE_PATH), '{ not json');
     for (let read = 0; read < 2; read += 1) {
       expect(readBoard(path, false).brokenFiles).toEqual([join(path, BOARD_FILE_PATH)]);
@@ -196,8 +206,7 @@ describe('the folder', () => {
   });
 
   it('keeps every damaged copy of a card that breaks twice, and names every file it sets aside', () => {
-    const path = project();
-    writeBoard(path, startingBoard());
+    const path = emptyFolderBoard();
     writeFileSync(join(cardsFolder(path), 'twice.json'), '{ first');
     writeFileSync(join(cardsFolder(path), 'other.json'), 'null');
     expect(readBoard(path).brokenFiles).toEqual([join(cardsFolder(path), 'other.json.broken'), join(cardsFolder(path), 'twice.json.broken')]);
@@ -210,8 +219,7 @@ describe('the folder', () => {
   });
 
   it('puts a hand-written card that names no column in Backlog', () => {
-    const path = project();
-    writeBoard(path, startingBoard());
+    const path = emptyFolderBoard();
     writeFileSync(join(cardsFolder(path), 'by-hand.json'), '{ "title": "by hand" }');
     const read = readBoard(path).board;
     expect(titles(read, 'Backlog')).toEqual(['by hand']);

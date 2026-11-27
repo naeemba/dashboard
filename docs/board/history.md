@@ -51,3 +51,6 @@ One line per merged change: date and why.
 - 2026-11-26 — The drag's grab, column listeners and drop moved out of `board-view.ts` into
   `card-dragging.ts`: the view sat at 599 of 600 code lines, so the next board change would have had
   to split it first
+- 2026-11-27 — The board-files tests of the folder got the 60 s timeout the file's other two blocks
+  have: a Windows CI runner's disk stalled for seconds and took whichever test was running past
+  vitest's 5 s. The three that write their own files start from an empty folder board as well
