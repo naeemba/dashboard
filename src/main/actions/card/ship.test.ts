@@ -5,11 +5,18 @@ import { writeBoard } from '../../board/board-store';
 import { temporaryFolder } from '../../testing/temporary-folder';
 import { bind } from '../action';
 import { cardActions, type CardActionsMain } from './card-actions';
+import { cardReview } from './review';
 import { cardShip, type CardShipPorts } from './ship';
 
 function boardWithCard(): Board {
   const board = emptyBoard();
   board.columns[0].cards.push({ id: 'card', title: 'Fix login', notes: '', priority: 'medium', parent: null });
+  return board;
+}
+
+function boardWithTwoCards(): Board {
+  const board = boardWithCard();
+  board.columns[0].cards.push({ id: 'cart', title: 'Cart', notes: '', priority: 'medium', parent: null });
   return board;
 }
 
@@ -35,6 +42,16 @@ describe('card.ship', () => {
     const { call, asked } = ship();
     await call({ projectPath: '/work/api', id: 'card', source: 'user' });
     expect(asked).toMatchObject([{ first: false, after: null }]);
+  });
+
+  // `board ship 314ecc8a --after 3a1ee233` was told there was no card to wait on.
+  it('makes a short id and a short --after whole against the project\'s board', async () => {
+    const { call, asked } = ship();
+    await call({ projectPath: '/work/api', id: 'ca', after: 'car', source: 'command' });
+    expect(asked).toMatchObject([{ id: 'card', after: 'card' }]);
+    for (const asked of [{ id: 'ca' }, { id: 'card', after: 'ca' }]) {
+      await expect(ship({ read: boardWithTwoCards }).call({ projectPath: '/work/api', ...asked })).resolves.toMatchObject({ refused: expect.stringContaining('more than one') });
+    }
   });
 
   it('refuses an unknown card, a closed project and flags it cannot read', async () => {
@@ -68,6 +85,15 @@ describe('the card actions on the pane pool', () => {
       { askedFrom: '/home/u/.dashboard', projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'ship', title: 'Fix login' } },
       { askedFrom: null, projectPath, cardId: 'card', after: null, first: false, returnTo: null, work: { kind: 'review' } },
     ]);
+  });
+
+  // `board review 6ad9d4f4` was told the card had no worktree, the refusal for a card nobody shipped.
+  it('starts a review asked with a short id for the whole card', async () => {
+    const { verb, started, projectPath } = cards();
+    await verb('card.review').call({ projectPath, id: 'ca', source: 'command' });
+    expect(started).toMatchObject([{ cardId: 'card', work: { kind: 'review' } }]);
+    const review = bind(cardReview, { read: boardWithTwoCards, review: async () => ({ output: 'started' }) });
+    await expect(review.call({ projectPath, id: 'ca' })).resolves.toMatchObject({ refused: expect.stringContaining('more than one') });
   });
 
   it('refuses to begin a ship whose project closed while queued, and a review with no worktree', async () => {

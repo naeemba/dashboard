@@ -137,11 +137,18 @@ function findCard(board: Board, id: string): Selection | { message: string } {
 export function withWholeId(board: Board | null, commandArguments: readonly string[]): { commandArguments: readonly string[] } | { message: string } {
   const [verb, id, ...rest] = commandArguments;
   if (board === null || id === undefined) return { commandArguments };
+  const whole = wholeId(board, id);
+  return typeof whole === 'string' ? { commandArguments: [verb, whole, ...rest] } : whole;
+}
+
+// The whole id of the card a prefix names on this board, the id as typed when it names none (the
+// caller's own lookup then refuses it in its own words), or a refusal naming every card it starts.
+// The app's card actions run it on the project's board, so a short id from any door is the card
+// before a refusal is chosen: a review of `6ad9d4f4` was told the card had no worktree.
+export function wholeId(board: Board, id: string): string | { message: string } {
   const matches = cardsNamed(board, id);
   if (matches.length > 1) return { message: ambiguousId(board, id, matches) };
-  if (matches.length === 0) return { commandArguments };
-  const [at] = matches;
-  return { commandArguments: [verb, cardAt(board, at)!.id, ...rest] };
+  return matches.length === 0 ? id : cardAt(board, matches[0])!.id;
 }
 
 // The whole id of the card a move put into Done or Cancelled, whose worker the app is then asked to
