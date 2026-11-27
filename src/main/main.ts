@@ -684,9 +684,13 @@ const workerAnswers = sessionRequests(sessionRequestPorts({
   stallMinutes: () => settings.workers.stallMinutes,
 }));
 // While a worker is stalled the sweep's minute also redraws the workers popup: a stall begins, and its
-// minutes move on, with no hook to mark it. Its end is a hook, which marks the pane.
+// minutes move on, with no hook to mark it. So does the sweep after the last one ends, which a hook
+// usually marks first but a raised `workers.stallMinutes` does not.
+let stalledLastSweep = false;
 setInterval(() => {
-  if (workerAnswers.tellStalls()) sendToRenderer('workers:change');
+  const stalled = workerAnswers.tellStalls();
+  if (stalled || stalledLastSweep) sendToRenderer('workers:change');
+  stalledLastSweep = stalled;
 }, STALL_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
