@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T11:52:19.591Z",
-  "updatedAt": "2026-11-26T11:52:19.591Z",
-  "column": "Backlog",
-  "order": 46
+  "updatedAt": "2026-11-27T11:48:50.317Z",
+  "branch": "count-a-pane-whose-shell-failed-to-spawn-as",
+  "column": "Doing",
+  "order": 1
 }
