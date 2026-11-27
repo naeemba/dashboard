@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T14:56:25.263Z",
-  "updatedAt": "2026-11-27T11:36:52.535Z",
+  "updatedAt": "2026-11-27T11:37:10.885Z",
   "branch": "split-main-ts-along-its-seams-before-it-tak",
   "pullRequest": 411,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-27T11:36:52.535Z",
       "body": "Review loop: converged, ready to merge. 1 round (floor-addressed): 2 threads, both fixed in 1d55609c and 6fe93365 (review-flow.ts pointer now names slot-panes.ts; workerScreens/browser ports typed with Pick<ReturnType<...>>). 0 rejected, nothing open, no conflicts with main, CI green on the head commit. No change to the card's ask or design."
+    },
+    {
+      "at": "2026-11-27T11:37:10.856Z",
+      "body": "Pull request #411 merged: Split main.ts along its seams before it takes more https://github.com/naeemba/dashboard/pull/411"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 337
 }
