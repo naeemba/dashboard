@@ -1,0 +1,11 @@
+{
+  "id": "8b028c7a-e1c4-4aa4-84d6-8ed41254bf49",
+  "title": "Worker panes deny permission prompts instead of waiting on them",
+  "notes": "From the Claude releases research (docs/research once #? lands; /tmp/research-keep/claude-news.md). Claude Code 2.1.319 added permissions.denyInsteadOfPrompting: a call that would wait on a permission prompt is denied and the turn goes on. Today a worker that hits a prompt sits blocked and holds a pane-pool slot (workers-decision-11) until someone notices. Do: confirm the setting's exact name and behaviour in the Claude Code docs/changelog first; then set it for worker sessions only (the settings or flags the app passes when it starts a worker; main and user-typed sessions keep prompting), so a denied call shows up in the worker's report instead of a silent stall. Decision module and test for which sessions get it; workers docs updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T11:02:28.904Z",
+  "updatedAt": "2026-11-27T11:02:28.905Z",
+  "column": "Backlog",
+  "order": 57
+}
