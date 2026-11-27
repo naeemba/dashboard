@@ -5,7 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-27T12:04:49.878Z",
-  "updatedAt": "2026-11-27T12:04:49.878Z",
-  "column": "Backlog",
-  "order": 10
+  "updatedAt": "2026-11-27T12:52:34.205Z",
+  "branch": "workers-popup-marks-a-stalled-worker",
+  "pullRequest": 418,
+  "comments": [
+    {
+      "at": "2026-11-27T12:52:34.174Z",
+      "body": "Pull request #418 opened: Mark a stalled worker in the workers popup https://github.com/naeemba/dashboard/pull/418"
+    }
+  ],
+  "column": "Review",
+  "order": 4
 }

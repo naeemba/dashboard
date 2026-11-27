@@ -50,14 +50,20 @@ describe('parseSettings', () => {
   });
 
   it('caps the workers at 4 a project and 8 in all unless the file names a whole number or none', () => {
-    expect(parseSettings({}, false).workers).toEqual({ cap: 4, totalCap: 8 });
-    expect(parseSettings({ workers: { cap: 6, totalCap: 10 } }, false).workers).toEqual({ cap: 6, totalCap: 10 });
-    expect(parseSettings({ workers: { cap: 'none', totalCap: 'none' } }, false).workers).toEqual({ cap: null, totalCap: null });
+    expect(parseSettings({}, false).workers).toMatchObject({ cap: 4, totalCap: 8 });
+    expect(parseSettings({ workers: { cap: 6, totalCap: 10 } }, false).workers).toMatchObject({ cap: 6, totalCap: 10 });
+    expect(parseSettings({ workers: { cap: 'none', totalCap: 'none' } }, false).workers).toMatchObject({ cap: null, totalCap: null });
     // How a save from the screen writes none back.
-    expect(parseSettings({ workers: { cap: null, totalCap: null } }, false).workers).toEqual({ cap: null, totalCap: null });
+    expect(parseSettings({ workers: { cap: null, totalCap: null } }, false).workers).toMatchObject({ cap: null, totalCap: null });
     for (const rubbish of [0, -1, 2.5, '6']) {
-      expect(parseSettings({ workers: { cap: rubbish, totalCap: rubbish } }, false).workers).toEqual({ cap: 4, totalCap: 8 });
+      expect(parseSettings({ workers: { cap: rubbish, totalCap: rubbish } }, false).workers).toMatchObject({ cap: 4, totalCap: 8 });
     }
+  });
+
+  it('calls a silent worker stalled after 20 minutes unless the file names a number above 0', () => {
+    expect(parseSettings({}, false).workers.stallMinutes).toBe(20);
+    expect(parseSettings({ workers: { stallMinutes: 45 } }, false).workers.stallMinutes).toBe(45);
+    for (const rubbish of [0, -5, '45', null]) expect(parseSettings({ workers: { stallMinutes: rubbish } }, false).workers.stallMinutes).toBe(20);
   });
 
   it('checks for updates unless the file turns it off', () => {

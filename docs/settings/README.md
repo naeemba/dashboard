@@ -72,6 +72,9 @@ start past either waits in the pane pool's queue (docs/workers,
 workers-decision-11). Each is a whole number, or `"none"` for no cap; on the
 screen they are the two Workers rows, a number from 1 or empty for no cap. A
 change is taken at once, and a lower cap stops nothing running.
+`workers.stallMinutes` (default 20) is how long one of them at work goes with
+no hook before it is shown stalled and main is told (docs/workers,
+workers-decision-13); any number above 0, written in settings.json by hand.
 
 The window's opacity (`opacity`, default 1) is written in the file by hand only:
 0.7 lets the desktop show through behind the text, from 0.2 up; anything else

@@ -49,9 +49,9 @@ describe('settingsRows', () => {
     const total = { kind: 'worker-cap', field: 'totalCap', label: 'Main\'s workers running at once, across the app' };
     expect(settingsRows(parseSettings({}, false))).toEqual(expect.arrayContaining([{ ...project, value: '4' }, { ...total, value: '8' }]));
     expect(settingsRows(parseSettings({ workers: { totalCap: 'none' } }, false))).toContainEqual({ ...total, value: '' });
-    const settings = parseSettings({}, false);
-    expect(withWorkerCap(settings, 'cap', '2')?.workers).toEqual({ cap: 2, totalCap: 8 });
-    expect(withWorkerCap(settings, 'totalCap', '')?.workers).toEqual({ cap: 4, totalCap: null });
+    const settings = parseSettings({ workers: { stallMinutes: 5 } }, false);
+    expect(withWorkerCap(settings, 'cap', '2')?.workers).toEqual({ cap: 2, totalCap: 8, stallMinutes: 5 });
+    expect(withWorkerCap(settings, 'totalCap', '')?.workers).toEqual({ cap: 4, totalCap: null, stallMinutes: 5 });
     expect(['0', '2.5', 'lots'].map((text) => withWorkerCap(settings, 'cap', text))).toEqual([null, null, null]);
   });
 

@@ -27,7 +27,7 @@ export function withWorkerCap(settings: Settings, field: WorkerCapField, text: s
   return cap === undefined ? null : { ...settings, workers: { ...settings.workers, [field]: cap } };
 }
 
-export type WorkerCapField = keyof Settings['workers'];
+export type WorkerCapField = 'cap' | 'totalCap';
 
 const LIMIT_NAMES: Record<BudgetLimit, string> = { cap: 'the weekly cap', pace: 'the daily pace', none: 'no limit' };
 

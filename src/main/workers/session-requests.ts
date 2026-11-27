@@ -11,8 +11,9 @@ import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type QueuedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { baseName } from '../../shared/app/base-name';
 import { paneLink } from '../../shared/workers/pane-link';
-import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
+import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
+import { stalledState, stallWatch } from './stall';
 import { isTyped, promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
@@ -112,6 +113,8 @@ export type SessionPorts = {
   // What the pane pool (actions/pane/queue.ts) is built on beside what is held here: its file, the
   // settings and the boards, and the start of a ship or a review.
   pool: PoolPorts;
+  // settings.workers.stallMinutes, read at each look (stall.ts).
+  stallMinutes(): number;
   // Where a path really is (real-path.ts): git lists a throwaway by it, a pane's folder keeps the
   // spelling its project was opened by.
   realPath(path: string): string;
@@ -176,6 +179,9 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // A ship's or a review's start, through the pool's `start`, told to the main of the page the `board`
   // command ran in, or the card's project's main for one no command asked for.
   startCard(start: CardStart): Promise<{ output: string } | Refused>;
+  // Main told, once, of each of its workers at work that has gone silent past the setting (stall.ts).
+  // Asked on a timer by main.ts.
+  tellStalls(): void;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -232,10 +238,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   const prompts = promptSources();
   // The panes on a turn the app's question started (app-question.ts), until a prompt of anyone else's.
   const appTurns = new Set<string>();
+  // When each worker's hooks last spoke, for its stall (stall.ts).
+  const stalls = stallWatch(ports.stallMinutes);
   // Every time a worker is let go of: its stop, its last message and whose turn it was on.
   const forgetWorker = (id: string) => {
     appTurns.delete(id);
     notices.forget(id);
+    stalls.forget(id);
     lastMessages.delete(id);
     prompts.forget(id);
     pool.forget(id);
@@ -272,8 +281,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     const said = states.get(id);
     if (said?.state === 'done' && mainsWorker(id) && workIn(id)) return `done, work in: pane finish ${id}`;
-    return isPaused(said?.waiting) ? `paused, ${waitingText(said.waiting)}` : said?.state ?? 'running';
+    if (isPaused(said?.waiting)) return `paused, ${waitingText(said.waiting)}`;
+    if (said !== undefined) return said.state;
+    const silent = silentAtWork(id);
+    return silent === null ? 'running' : stalledState(silent);
   }
+
+  // How long main's worker, at work by its hooks' last word, has been silent, once that is a stall. A
+  // Claude nobody handed work runs no hooks of the app's, so it is never one.
+  const silentAtWork = (id: string): number | null => (mainsWorker(id) && states.get(id) === undefined ? stalls.silentFor(id) : null);
 
   const claim = bind(paneClaim, {
     ...ports,
@@ -626,6 +642,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   function notify(id: string, state: WorkerState, waiting?: StopWaiting, told: HookTold = {}): SessionReply {
     const { slot, index } = paneFromId(id);
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
+    stalls.sign(id);
     if (onAppTurn(id, state, told)) return answered('');
     if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
     if (state === 'running') {
@@ -702,6 +719,19 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     startCard({ askedFrom, ...start }: CardStart) {
       const asker = askedFrom === null ? undefined : ports.projectPath(ports.slotOf(askedFrom));
       return pool.start.call({ ...start, dispatcherPath: asker ?? start.projectPath });
+    },
+    // Not for a turn you typed into the worker yourself, which you are watching (prompt-source.ts).
+    tellStalls() {
+      for (const id of openPaneIds()) {
+        const silent = silentAtWork(id);
+        if (silent === null || prompts.fromUser(id)) continue;
+        const slot = mainOf(id);
+        // Taken back if the worker speaks again before main reads it, as its stop notice is.
+        stalls.tell(id, () => {
+          const messageId = ports.tell(slot, stallNotice(nameOfPane(id), id, silent));
+          return () => ports.withdraw(slot, messageId);
+        });
+      }
     },
     async dropped(id: string) {
       pool.drain();

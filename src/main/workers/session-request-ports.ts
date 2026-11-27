@@ -47,6 +47,7 @@ export type SessionRequestMain = {
   boardLog: Pick<BoardChanges, 'latest'>;
   log(draft: LogDraft): void;
   pool: PoolPorts;
+  stallMinutes(): number;
 };
 
 export function sessionRequestPorts(main: SessionRequestMain): SessionPorts {
@@ -116,5 +117,6 @@ export function sessionRequestPorts(main: SessionRequestMain): SessionPorts {
     threwAway: (id, said, projectPath) => main.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
     realPath,
     pool: main.pool,
+    stallMinutes: main.stallMinutes,
   };
 }

@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T14:56:18.200Z",
-  "updatedAt": "2026-11-27T12:30:19.055Z",
+  "updatedAt": "2026-11-27T12:31:40.340Z",
   "branch": "workers-popup-shows-the-pane-queue-with-a-w",
   "pullRequest": 414,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-27T12:30:19.055Z",
       "body": "Merged origin/main (#411, #412) into the branch as 69befeed: no conflicts. pnpm check: typecheck and lint pass; one test failed only because node_modules was stale after #412's SDK bump, and passes after pnpm install. CI passed on 69befeed. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-27T12:31:40.310Z",
+      "body": "Pull request #414 merged: Workers popup shows the pane queue, with a withdraw key https://github.com/naeemba/dashboard/pull/414"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 339
 }
