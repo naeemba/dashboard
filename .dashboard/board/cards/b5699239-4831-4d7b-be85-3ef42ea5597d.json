@@ -1,0 +1,11 @@
+{
+  "id": "b5699239-4831-4d7b-be85-3ef42ea5597d",
+  "title": "board review with a short card id gives the real refusal",
+  "notes": "Retro 2026-11-28: 'board review 6ad9d4f4' answered 'has no worktree to review; ship it first', while the full id gave the real reason, 'has no pull request … yet'. A short id should be resolved to the card before the refusal is chosen, for review and any other verb that decides on the card's state. Also seen: 'board move <id> Review' exited 1 although the move was written; check and fix if it still happens.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T21:54:26.377Z",
+  "updatedAt": "2026-11-27T21:54:26.377Z",
+  "column": "Backlog",
+  "order": 4
+}
