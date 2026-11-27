@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-27T12:04:49.878Z",
-  "updatedAt": "2026-11-27T13:27:04.387Z",
+  "updatedAt": "2026-11-27T13:28:34.940Z",
   "branch": "workers-popup-marks-a-stalled-worker",
   "pullRequest": 418,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-27T13:27:04.387Z",
       "body": "Review loop: converged, ready to merge. 2 rounds (floor-addressed at low): round 1 fixed 3 threads, round 2 moved the sweep's redraw decision into stallRedraws() in workers/stall.ts with a test, and reworded a chat-workers-view comment. Commits bd6fff74, e2079c2a, 59c8fe31; final check accepted all. No threads open, no conflicts, CI passed on the head commit."
+    },
+    {
+      "at": "2026-11-27T13:28:34.908Z",
+      "body": "Pull request #418 merged: Mark a stalled worker in the workers popup https://github.com/naeemba/dashboard/pull/418"
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 343
 }
