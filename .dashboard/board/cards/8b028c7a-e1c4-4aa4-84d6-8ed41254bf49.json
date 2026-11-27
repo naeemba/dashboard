@@ -5,8 +5,9 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:02:28.904Z",
-  "updatedAt": "2026-11-27T11:37:24.523Z",
+  "updatedAt": "2026-11-27T11:44:05.895Z",
   "branch": "worker-panes-deny-permission-prompts-instea",
+  "pullRequest": 412,
   "comments": [
     {
       "at": "2026-11-27T11:04:44.549Z",
@@ -15,8 +16,12 @@
     {
       "at": "2026-11-27T11:05:27.335Z",
       "body": "Report path: docs/research/claude-releases-2026-09-27-to-11-27.md (#409), in place of the /tmp one named in the notes."
+    },
+    {
+      "at": "2026-11-27T11:44:05.874Z",
+      "body": "Pull request #412 opened: Workers deny a permission prompt instead of waiting on it https://github.com/naeemba/dashboard/pull/412"
     }
   ],
-  "column": "Doing",
-  "order": 1
+  "column": "Review",
+  "order": 0
 }
