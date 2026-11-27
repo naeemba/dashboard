@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:54:24.916Z",
-  "updatedAt": "2026-11-27T11:54:24.917Z",
-  "column": "Backlog",
-  "order": 8
+  "updatedAt": "2026-11-27T13:12:52.624Z",
+  "branch": "track-terminal-mode-workers-through-claude",
+  "column": "Doing",
+  "order": 0
 }
