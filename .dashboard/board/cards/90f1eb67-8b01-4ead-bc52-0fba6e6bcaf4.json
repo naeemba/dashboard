@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T11:58:30.358Z",
-  "updatedAt": "2026-11-27T11:58:30.358Z",
-  "column": "Backlog",
-  "order": 10
+  "updatedAt": "2026-11-27T11:59:01.275Z",
+  "branch": "pane-pool-a-cap-per-project-plus-a-total-an",
+  "column": "Doing",
+  "order": 2
 }
