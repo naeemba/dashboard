@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage } from './settings-rows';
+import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage, withWorkerCap } from './settings-rows';
 import { ACTIONS } from '../../shared/keys/actions';
 import { bindKey, defaultSettings, isOn, parseSettings } from '../../shared/settings/settings';
 
@@ -42,6 +42,16 @@ describe('settingsRows', () => {
     const row = { kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'not set', label };
     expect(settingsRows(parseSettings({}, false))).toContainEqual({ ...row, value: '' });
     expect(settingsRows(parseSettings({ budget: { weeklyCap: 74 } }, false))).toContainEqual({ ...row, value: '74' });
+  });
+
+  it('lists the workers cap, empty for none, and takes a whole number from 1 or empty', () => {
+    const label = 'Main\'s workers running at once, across the app';
+    expect(settingsRows(parseSettings({}, false))).toContainEqual({ kind: 'worker-cap', label, value: '4' });
+    expect(settingsRows(parseSettings({ workers: { cap: 'none' } }, false))).toContainEqual({ kind: 'worker-cap', label, value: '' });
+    const settings = parseSettings({}, false);
+    expect(withWorkerCap(settings, '2')?.workers).toEqual({ cap: 2 });
+    expect(withWorkerCap(settings, '')?.workers).toEqual({ cap: null });
+    expect(['0', '2.5', 'lots'].map((text) => withWorkerCap(settings, text))).toEqual([null, null, null]);
   });
 
   it('names the limit that applies, and Enter walks the cap, the pace and none in turn', () => {
