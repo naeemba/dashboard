@@ -674,7 +674,9 @@ const workerAnswers = sessionRequests(sessionRequestPorts({
   projects, readings: slotReadings, commands: terminalCommands, mainsWorkers, workerScreens,
   openProject: project.openForClaim, pane, worktrees, reviews, giveCardPane, sendToRenderer, browser, chats, worktree,
   hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
+  stallMinutes: () => settings.workers.stallMinutes,
 }));
+setInterval(() => workerAnswers.tellStalls(), 60_000).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 const answerSession = browser.requests(projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));

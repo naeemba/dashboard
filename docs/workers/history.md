@@ -98,3 +98,5 @@ One line per merged change: date and why.
   the column it came from on card:move (workers-decision-11)
 - 2026-11-27 — A queued ship or review waits while a card file does not parse, instead of being
   dropped as not on the board: only the drain reads the board that strictly (workers-decision-11)
+- 2026-11-27 — A worker at work with no hook for `workers.stallMinutes` (20) is shown stalled in
+  `pane list` and `pane status`, and main is told once; it keeps its pane (workers-decision-13)

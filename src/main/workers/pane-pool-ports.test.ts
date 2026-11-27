@@ -24,7 +24,7 @@ describe('poolPorts', () => {
     expect(readQueue(path.join(folder, 'pane-queue.json'))).toEqual({ next: 2, entries: [ship] });
     expect(ports.cap()).toBe(4);
     expect(ports.budget()).toBeNull();
-    settings = { ...settings, workers: { cap: null } };
+    settings = { ...settings, workers: { ...settings.workers, cap: null } };
     expect(ports.cap()).toBeNull();
   });
 

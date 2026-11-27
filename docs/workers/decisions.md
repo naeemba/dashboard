@@ -655,3 +655,21 @@ review sweep's own starts could push past a main that counted perfectly.
 - **Under the cap a start answers what its start answers**, `pane run`'s line for a run and the
   ship's for a ship, as the board screen's status bar needs; queued, it answers at once.
 
+## workers-decision-13: A worker silent past a setting is shown stalled, never stopped
+
+**Main's worker at work whose hooks have said nothing for `workers.stallMinutes` (20) is shown
+`stalled` in `pane list` and `pane status`, and its main is told once**
+(`src/main/workers/stall.ts`). Before it, a worker hung on a test that never ends sat in Doing
+holding a pool slot (workers-decision-11) with nothing to say so.
+
+- **A sign of life is any hook**: a prompt going in, a tool finishing, a stop or a question. Pane
+  output is not one: Claude Code's spinner redraws its timer every second whatever the worker is
+  stuck on, and a worker screen has no pane output at all. The cost: a worker thinking 20 minutes
+  without running a tool is called stalled, which one look at its pane settles.
+- **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
+  minute notice (workers-decision-1): their silence is waiting, not a hang.
+- **Shown and told, never acted on.** It keeps its pane and its slot and is never released: a long
+  build looks the same as a hang from the hooks, and killing one loses work. The user or main
+  decides.
+- **A worker no hook has spoken for since the launch** (one resumed after a restart) starts its
+  clock at the app's first look, so a restart never makes every worker stalled at once.

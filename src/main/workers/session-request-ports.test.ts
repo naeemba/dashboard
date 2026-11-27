@@ -53,6 +53,7 @@ function fakeMain() {
     boardLog: { latest: () => null },
     log: (draft) => { logged.push(draft); },
     pool: {} as PoolPorts,
+    stallMinutes: () => 20,
   };
   return { main, dispatched, taken, given, forgotten, sent, logged };
 }

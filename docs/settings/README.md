@@ -70,6 +70,9 @@ typed into either row also makes its row the limit; emptying a row does not.
 app; a start past it waits in the pane pool's queue (docs/workers,
 workers-decision-11). A whole number, or `"none"` for no cap. It has no row
 yet and is written in settings.json by hand; a change is taken at once.
+`workers.stallMinutes` (default 20) is how long one of them at work goes with
+no hook before it is shown stalled and main is told (docs/workers,
+workers-decision-13); any number above 0, by hand the same way.
 
 The window's opacity (`opacity`, default 1) is written in the file by hand only:
 0.7 lets the desktop show through behind the text, from 0.2 up; anything else
