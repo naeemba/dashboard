@@ -6,17 +6,19 @@ import { PANE_ADDRESS, paneLink } from './pane-link';
 // nobody typed it. A worker still paused on its own background work at the ceiling has not stopped,
 // and saying so would invite main to release it and kill the work it waits on. The tail of the last
 // message the worker ended a turn with says what it got to, so main need not read its session log;
-// `pane report` prints more of it.
-export function doneReport(name: string, id: string, paused = false, lastMessage?: string): string {
+// `pane report` prints more of it. `row` is the worker's line as `pane status` prints it, without its
+// report (status-lines.ts's paneRow): its state, folder, card, branch and pull request, so main need not
+// run pane list and gh pr list after every notice.
+export function doneReport(name: string, id: string, row: string, paused = false, lastMessage?: string): string {
   const what = paused ? PAUSED : STOPPED;
   const said = lastMessage === undefined ? '' : ` ${LAST_SAID}${oneLineTail(lastMessage, NOTICE_TAIL)}`;
-  return `${name} in pane ${id} (${paneLink(id)}) ${what} \`pane list\` shows where every worker stands.${said}`;
+  return `${name} in pane ${id} (${paneLink(id)}) ${what} ${ROW}${row}.${said}`;
 }
 
 // What main is told, once, of a worker at work that has gone silent (stall.ts): drawn as a status line
 // like a stop's, since nobody typed it.
-export function stallNotice(name: string, id: string, minutes: number): string {
-  return `${name} in pane ${id} (${paneLink(id)}) has shown no sign of life for ${minutes} minutes: ${STALLED} \`pane list\` shows where every worker stands.`;
+export function stallNotice(name: string, id: string, minutes: number, row: string): string {
+  return `${name} in pane ${id} (${paneLink(id)}) has shown no sign of life for ${minutes} minutes: ${STALLED} ${ROW}${row}.`;
 }
 
 // How much of a worker's last message the app keeps for `pane report`, and how much a notice carries:
@@ -40,19 +42,21 @@ export const PAUSE_CEILING_MS = 30 * 60 * 1000;
 const UNREPORTED = 'without sending you a report.';
 const IF_REPORTED = 'If it sent you a report, that says what it did;';
 const LAST_SAID = 'Its last message: ';
+const ROW = 'Its `pane status` line: ';
 const STOPPED = `has stopped ${UNREPORTED}`;
 const PAUSED = `has been paused for ${PAUSE_CEILING_MS / 60_000} minutes, waiting on its own background work, ${UNREPORTED}`;
 const STALLED = 'no prompt has gone in and no tool has finished. It may be stuck, on a test that never ends '
   + 'for one. It keeps its pane: look at it, send it word or release it.';
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// The last wording is the one main was sent at every turn end before the grace period, still in
+// The last wording is the one main was sent at every turn end before the grace period, and the
+// `pane list` tail the one every notice ended with before it carried the worker's row, both still in
 // the conversations saved then.
 const DONE_REPORT = new RegExp(`^\\S+ in pane -?\\d+:\\d+ \\(${PANE_ADDRESS.source}\\) `
   + `(?:${escape(STOPPED)}|${escape(PAUSED)}|has shown no sign of life for \\d+ minutes: ${escape(STALLED)}|`
   + `was closed by the app, [^,]+\\. ${escape(IF_REPORTED)}|`
   + `has finished its turn\\. ${escape(IF_REPORTED)})`
-  + ` \`pane list\` shows where every worker stands\\.(?: ${escape(LAST_SAID)}.*)?$`);
+  + ` (?:\`pane list\` shows where every worker stands\\.(?: ${escape(LAST_SAID)}.*)?|${escape(ROW)}.*)$`);
 
 // The line every prompt main hands a worker ends with (workerPrompt in dispatch.ts), and so what a
 // worker's prompt hook reads to tell main's prompt from one you typed (prompt-source.ts). It is

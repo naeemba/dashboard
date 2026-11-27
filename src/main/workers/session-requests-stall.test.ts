@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
-import { project } from './session-requests-fixture';
+import { project, rowOf } from './session-requests-fixture';
 import { isDoneReport, stallNotice } from '../../shared/workers/done-report';
 
 // stall.test.ts holds the clock; this is what a stall does to `pane list`, `pane status` and main.
@@ -41,10 +41,10 @@ describe('a worker gone silent', () => {
     minutes(20);
     answer.tellStalls();
     answer.tellStalls();
-    expect(told).toEqual([`2 ${stallNotice('api-terminal-2', '2:1', 20)}`]);
+    expect(told).toEqual([`2 ${stallNotice('api-terminal-2', '2:1', 20, rowOf('2:1', 'stalled, silent 20 minutes'))}`]);
     expect(closed).toEqual([]);
     // Drawn as a status line, not a prompt you typed.
-    expect(isDoneReport(stallNotice('api-terminal-2', '2:1', 20))).toBe(true);
+    expect(isDoneReport(stallNotice('api-terminal-2', '2:1', 20, rowOf('2:1', 'stalled, silent 20 minutes')))).toBe(true);
     answer.notify('2:1', 'running');
     minutes(21);
     answer.tellStalls();

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
-import { project } from './session-requests-fixture';
+import { project, rowOf } from './session-requests-fixture';
 import { doneReport } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS } from './stop-notices';
 
@@ -30,8 +30,18 @@ describe('a worker\'s turns, as main hears them', () => {
   it('tells main the tail of the worker\'s last message with its stop', async () => {
     const { answer, told } = await running();
     stop(answer, 'Opened #12.\n\nTests pass.');
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', false, 'Opened #12.\n\nTests pass.')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'), false, 'Opened #12.\n\nTests pass.')}`]);
     expect(told[0]).toMatch(/Its last message: Opened #12\. Tests pass\.$/);
+  });
+
+  it('carries a card worker\'s card and pull request, once the forge answers', async () => {
+    const card = { id: '3a1ee233-161d', title: 'Short reports', column: 'Review', branch: 'short-reports' };
+    const pull = { number: 12, state: 'OPEN' as const, title: 't', url: '', statusCheckRollup: [] };
+    const { answer, told } = await running({ paneCard: () => card, openPullRequests: () => Promise.resolve([{ branch: 'short-reports', pull }]) });
+    stop(answer, 'Opened #12.');
+    await vi.advanceTimersByTimeAsync(0);
+    const row = `${rowOf('2:1')}\t3a1ee233 Review "Short reports"\tshort-reports\t#12 open`;
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', row, false, 'Opened #12.')}`]);
   });
 
   it('tells main nothing of a turn you typed into the worker, and again once main sends it work', async () => {
@@ -80,7 +90,7 @@ describe('a worker\'s turns, as main hears them', () => {
     answer.notify('2:1', 'done', NOTHING_WAITING, { lastMessage: 'Closed tab 4.' });
     vi.advanceTimersByTime(REPORT_SETTLE_MS);
     expect(turnsEnded).toEqual(['2:1']);
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', false, 'Opened #12.')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'), false, 'Opened #12.')}`]);
     expect((await answer({ directory: '/work/api', args: ['report', '2:1'] })).output).toBe('2:1\tterminal 2\tdone\t/work/api\n\nOpened #12.');
     // Main's next prompt is the worker's own turn again.
     await answer({ directory: '/work/api', args: ['send', '2:1', 'now merge it'] });

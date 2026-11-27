@@ -23,6 +23,7 @@ import { releaseVerdict, type WorkerLook } from './auto-release';
 import { worktreeWithin } from './run-folder';
 import { letGoAndSay, type Throwaway } from '../actions/worktree/throwaway';
 import { statusText, type PaneStatus } from './status-lines';
+import { tellWithRow } from './row-notice';
 import type { OpenPullRequest } from '../board/merge-request';
 import { entryAbout, holdsSlot, ordinal, type RunWork } from './pane-pool';
 import { panePool, type PanePoolActions } from '../actions/pane/queue';
@@ -257,11 +258,18 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     notice(id, paused) {
       if (!mainsWorker(id) || prompts.fromUser(id)) return;
       if (paused && (reportsRead.has(id) || workIn(id))) return;
-      const slot = mainOf(id);
-      const messageId = ports.tell(slot, doneReport(nameOfPane(id), id, paused, lastMessages.get(id)));
-      return () => ports.withdraw(slot, messageId);
+      return tellRow(id, (row) => doneReport(nameOfPane(id), id, row, paused, lastMessages.get(id)));
     },
   });
+  // A notice to the worker's main carrying its `pane status` line (row-notice.ts), and how to take it back.
+  const tellRow = (id: string, text: (row: string) => string): (() => void) => {
+    const slot = mainOf(id);
+    return tellWithRow({
+      tell: (said) => ports.tell(slot, said),
+      withdraw: (messageId) => ports.withdraw(slot, messageId),
+      openPullRequests: () => ports.openPullRequests(paneProject(id) ?? ''),
+    }, { head: paneHead(id), directory: ports.directoryOf(id) ?? '', card: ports.paneCard(id) }, text);
+  };
 
   // A worker the asking project may run or release, open, or why it is not one: one of its own panes,
   // or one it claimed or dispatched elsewhere, the last kept across a restart. Main and the editor are
@@ -731,12 +739,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         const silent = silentAtWork(id);
         if (silent !== null) any = true;
         if (silent === null || prompts.fromUser(id)) continue;
-        const slot = mainOf(id);
         // Taken back if the worker speaks again before main reads it, as its stop notice is.
-        stalls.tell(id, () => {
-          const messageId = ports.tell(slot, stallNotice(nameOfPane(id), id, silent));
-          return () => ports.withdraw(slot, messageId);
-        });
+        stalls.tell(id, () => tellRow(id, (row) => stallNotice(nameOfPane(id), id, silent, row)));
       }
       return any;
     },
