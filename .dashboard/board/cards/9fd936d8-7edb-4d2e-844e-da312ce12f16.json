@@ -4,7 +4,7 @@
   "notes": "Four price/weather cards lead the page above what wants you. Move to the foot line or a section. Opinion. (docs/review/2026-11-01.md U4)",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-27T14:01:48.338Z",
+  "updatedAt": "2026-11-27T14:02:00.282Z",
   "branch": "move-the-market-cards-off-the-top-of-the-ma",
   "comments": [
     {
@@ -16,6 +16,6 @@
       "body": "Cancelled 2026-11-27: an opinion from the 2026-11-01 review, not a problem the user has; the user said cancel it if not relevant."
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Cancelled",
+  "order": 33
 }
