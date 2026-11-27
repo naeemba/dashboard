@@ -27,7 +27,12 @@ function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueu
     begin: (entry: QueueEntry) => new Promise((resolve) => { begun.push(entry.id); pending.set(entry.id, resolve); }),
     tell: (dispatcherPath, text) => { told.push(`${dispatcherPath}: ${text}`); },
     now: () => Date.parse('2026-11-26T12:00:00.000Z'),
-    move: async (_projectPath, cardId, column) => { moves.push(`${cardId} ${column}`); return { output: '' }; },
+    // card.move refuses while any card file does not parse, as move.ts does.
+    move: async (_projectPath, cardId, column) => {
+      if (counts.unreadable) return { refused: 'board files do not parse, nothing was written' };
+      moves.push(`${cardId} ${column}`);
+      return { output: '' };
+    },
     gone: (entry) => { gone.push(entry.id); },
     ...over,
   });
@@ -144,15 +149,15 @@ describe('pane.start', () => {
     expect(begun).toEqual(['q1']);
   });
 
-  // A withdrawal keeps its own read of the board, and puts the card back.
-  it('puts a card back when withdrawn while its card file does not parse', async () => {
+  // A withdrawal keeps its own read of the board, so its main hears why the card stays where it is.
+  it('says why a card stays when withdrawn while a card file does not parse', async () => {
     const { actions, start, counts, moves, board } = pool();
     actions.ready();
     counts.unreadable = true;
     board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
     await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'review' } });
-    await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q1; card a back in Todo' });
-    expect(moves).toEqual(['a Todo']);
+    await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q1; card a stays: board files do not parse, nothing was written' });
+    expect(moves).toEqual([]);
   });
 
   it('refuses what it cannot read', async () => {
