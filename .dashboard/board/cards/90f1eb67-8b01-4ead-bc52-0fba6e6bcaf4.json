@@ -5,7 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T11:58:30.358Z",
-  "updatedAt": "2026-11-27T11:58:30.358Z",
-  "column": "Backlog",
-  "order": 10
+  "updatedAt": "2026-11-27T11:59:52.858Z",
+  "branch": "pane-pool-a-cap-per-project-plus-a-total-an",
+  "comments": [
+    {
+      "at": "2026-11-27T11:59:52.857Z",
+      "body": "Overlap check before starting: #414 (Workers popup queue, in Review) touches src/main/workers/pane-pool.ts, pane-pool-ports.ts(+test), src/main/actions/pane/queue.ts, src/renderer/settings/settings-rows.ts(+test), main.ts, docs/workers/README.md, docs/settings/README.md -- the same pool and settings-row files this card changes, and this card builds on its workers.cap row. Card 40fe0e2e (stalled worker, Doing, no PR) touches src/shared/settings/settings.ts(+test), pane-pool-ports.test.ts, session-requests.ts, docs/workers/decisions.md, docs/settings/README.md -- this card adds workers.totalCap to settings.ts and edits workers-decision-11. #412 (dispatch.ts, docs/workers) and #413 (pane-shells.ts) do not overlap in code. Waiting on main: go on now, or after #414 merges."
+    }
+  ],
+  "column": "Doing",
+  "order": 2
 }

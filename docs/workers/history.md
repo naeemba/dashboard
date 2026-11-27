@@ -100,3 +100,6 @@ One line per merged change: date and why.
   dropped as not on the board: only the drain reads the board that strictly (workers-decision-11)
 - 2026-11-27 — A worker at work with no hook for `workers.stallMinutes` (20) is shown stalled in
   `pane list` and `pane status`, and main is told once; it keeps its pane (workers-decision-13)
+- 2026-11-27 — Workers are started with permissions.denyInsteadOfPrompting, so a call that would
+  wait on a prompt is refused and shows in the report instead of holding a pool slot
+  (workers-decision-12)
