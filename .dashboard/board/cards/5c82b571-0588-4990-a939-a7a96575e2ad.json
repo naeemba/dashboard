@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T14:57:30.723Z",
-  "updatedAt": "2026-11-27T14:57:41.127Z",
+  "updatedAt": "2026-11-27T15:13:34.027Z",
   "branch": "bring-the-readme-and-its-screenshots-up-to",
-  "column": "Doing",
+  "pullRequest": 425,
+  "comments": [
+    {
+      "at": "2026-11-27T15:13:33.998Z",
+      "body": "Pull request #425 opened: Bring the README and its screenshots up to date https://github.com/naeemba/dashboard/pull/425"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
