@@ -28,8 +28,6 @@ describe('stallWatch', () => {
   it('tells a stall once, and again only after a sign of life', () => {
     const { clock, stalls } = watch();
     stalls.sign('2:1');
-    clock.now = 19 * MINUTE;
-    expect(stalls.tellNow('2:1')).toBe(false);
     clock.now = 21 * MINUTE;
     expect(stalls.tellNow('2:1')).toBe(true);
     clock.now = 40 * MINUTE;

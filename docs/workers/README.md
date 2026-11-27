@@ -67,8 +67,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   (`pane start`, tested in `session-requests-pool.test.ts`); a ship and a review
   start through it from `../actions/card/card-actions.ts`
   (workers-decision-11)
-- A worker gone silent, shown stalled and told to main once: `stall.ts`, read
-  by `session-requests.ts` (tested in `session-requests-stall.test.ts`), asked
+- A worker gone silent, shown stalled and told to main once: `stall.ts`, its
+  notice in `done-report.ts`, read by
+  `session-requests.ts` (tested in `session-requests-stall.test.ts`), asked
   each minute by `../main.ts` (workers-decision-13)
 - The screen host a worker screen's session runs in, so it outlives the app:
   `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`,
@@ -155,7 +156,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given main's worker at work, hung on a test that never ends, when no hook of
   its has run for `workers.stallMinutes` (20), then `pane list` and
   `pane status` say `stalled, silent 20 minutes` in place of `running`, and its
-  main is told once, within a minute, naming it and its pane. It keeps its pane
+  main is told once, within a minute, naming it and its pane, which the Claude
+  screen draws as a status line. It keeps its pane
   and its slot; the next prompt or tool it finishes makes it `running` again,
   and a later stall is told again. A turn you typed into it is not told
   (workers-decision-13).

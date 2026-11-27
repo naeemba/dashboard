@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project } from './session-requests-fixture';
-import { stallNotice } from './stall';
+import { isDoneReport, stallNotice } from '../../shared/workers/done-report';
 
 // stall.test.ts holds the clock; this is what a stall does to `pane list`, `pane status` and main.
 beforeEach(() => { vi.useFakeTimers(); });
@@ -37,6 +37,8 @@ describe('a worker gone silent', () => {
     answer.tellStalls();
     expect(told).toEqual([`2 ${stallNotice('api-terminal-2', '2:1', 20)}`]);
     expect(closed).toEqual([]);
+    // Drawn as a status line, not a prompt you typed.
+    expect(isDoneReport(stallNotice('api-terminal-2', '2:1', 20))).toBe(true);
     answer.notify('2:1', 'running');
     minutes(21);
     answer.tellStalls();

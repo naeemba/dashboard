@@ -1,5 +1,3 @@
-import { paneLink } from '../../shared/workers/pane-link';
-
 // Whether a worker at work has gone silent (workers-decision-13). Its sign of life is a hook: a
 // prompt going in, a tool finishing, a stop. A worker hung on a test that never ends runs no hook, so
 // it sits in Doing holding its pool slot. Pane output is no sign: Claude Code's spinner redraws its
@@ -20,7 +18,8 @@ export type StallWatch = {
   // How long the worker has been silent, when that is a stall. The first look at a worker no hook has
   // spoken for since the launch (one resumed after a restart) starts its clock there.
   silentFor(id: string): number | null;
-  // Whether main is yet to be told of the stall the worker is in now; true once per stall.
+  // Whether main is yet to be told of the worker's stall, asked once silentFor says it is one: true
+  // once per stall.
   tellNow(id: string): boolean;
   forget(id: string): void;
 };
@@ -40,7 +39,7 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
     },
     silentFor,
     tellNow(id) {
-      if (told.has(id) || silentFor(id) === null) return false;
+      if (told.has(id)) return false;
       told.add(id);
       return true;
     },
@@ -53,10 +52,3 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
 
 // What `pane list` and `pane status` say of the worker in place of `running`.
 export const stalledState = (minutes: number) => `stalled, silent ${minutes} minutes`;
-
-// What main is told, once per stall.
-export function stallNotice(name: string, id: string, minutes: number): string {
-  return `${name} in pane ${id} (${paneLink(id)}) has shown no sign of life for ${minutes} minutes: `
-    + 'no prompt has gone in and no tool has finished. It may be stuck, on a test that never ends for one. '
-    + 'It keeps its pane: look at it, send it word or release it. `pane list` shows where every worker stands.';
-}

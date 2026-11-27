@@ -10,9 +10,9 @@ import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/pane
 import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { paneLink } from '../../shared/workers/pane-link';
-import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
+import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
-import { stalledState, stallNotice, stallWatch } from './stall';
+import { stalledState, stallWatch } from './stall';
 import { isTyped, promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
