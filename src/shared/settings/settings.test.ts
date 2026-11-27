@@ -43,10 +43,16 @@ describe('parseSettings', () => {
   });
 
   it('asks about an agent\'s tab after 30 idle minutes, the minutes the file names, or never for null', () => {
-    expect(parseSettings({}, false).browser).toEqual({ idleMinutes: 30 });
-    expect(parseSettings({ browser: { idleMinutes: 90 } }, false).browser).toEqual({ idleMinutes: 90 });
-    expect(parseSettings({ browser: { idleMinutes: null } }, false).browser).toEqual({ idleMinutes: null });
-    for (const rubbish of [0, -5, '30']) expect(parseSettings({ browser: { idleMinutes: rubbish } }, false).browser).toEqual({ idleMinutes: 30 });
+    expect(parseSettings({}, false).browser.idleMinutes).toBe(30);
+    expect(parseSettings({ browser: { idleMinutes: 90 } }, false).browser.idleMinutes).toBe(90);
+    expect(parseSettings({ browser: { idleMinutes: null } }, false).browser.idleMinutes).toBeNull();
+    for (const rubbish of [0, -5, '30']) expect(parseSettings({ browser: { idleMinutes: rubbish } }, false).browser.idleMinutes).toBe(30);
+  });
+
+  it('proxies nothing unless the file names a server and its hosts', () => {
+    expect(parseSettings({}, false).browser.proxy).toBeNull();
+    expect(parseSettings({ browser: { proxy: { server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] } } }, false).browser.proxy)
+      .toEqual({ server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] });
   });
 
   it('caps the workers at 4 unless the file names a whole number or none', () => {

@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 import { app } from 'electron';
+import type { BrowserProxy } from '../../../shared/browser/proxy';
 import type { Channels } from '../../app/channels';
 import { browserFileFolder, browserPage } from '../../browser/browser-page';
 import { browserRequests, type BrowserRequestPorts } from '../../browser/browser-requests';
@@ -12,6 +13,7 @@ import { bind, registerActions } from '../action';
 import type { BrowserPorts } from './browser-ports';
 import { browserClaim, browserRelease, browserRevoke } from './claims';
 import { browserNavigate, browserStep } from './navigate';
+import { browserProxy } from './proxy';
 import { browserClick, browserEval, browserPress, browserResize, browserType, browserUpload } from './page';
 import { browserClose, browserOpen, browserSwitch } from './tabs';
 import { browserFocus, browserHide, browserReset, browserShow } from './view';
@@ -37,7 +39,7 @@ export type TabAsking = {
 
 const SWEEP_MS = 60_000;
 
-export function browserActions(table: Channels, main: BrowserViewsMain, panes: PaneLookups, asking: TabAsking) {
+export function browserActions(table: Channels, main: BrowserViewsMain & { proxy(): BrowserProxy | null }, panes: PaneLookups, asking: TabAsking) {
   // A page's window that is no web page is denied before it opens (browser-views.ts).
   const views = browserViews(main, {
     opened: (projectPath, url, opener) => void open.call({ projectPath, url, opener }),
@@ -60,6 +62,9 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
     const questions = clock.due(views.ports.allBrowsers(), Date.now(), views.shown(), minutes);
     for (const { main: slot, tabs } of questions) asking.tellMain(slot, idleQuestion(tabs, minutes ?? 0));
   }, SWEEP_MS).unref();
+  // The settings' proxy at launch, and each change to it main keeps.
+  const proxy = bind(browserProxy, ports);
+  void proxy.call({ proxy: main.proxy() });
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);
   const reset = bind(browserReset, ports);
@@ -79,6 +84,7 @@ export function browserActions(table: Channels, main: BrowserViewsMain, panes: P
   };
   return {
     owns: views.owns,
+    useProxy: (next: BrowserProxy | null): void => void proxy.call({ proxy: next }),
     reset,
     // Every tab the pane holds back to the user, still open, and its main told which: the pane released,
     // finished, its agent exited, or another agent started in it.

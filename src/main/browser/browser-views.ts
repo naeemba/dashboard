@@ -7,6 +7,7 @@ import type { BrowserPagePorts } from './browser-page';
 import { isBrowsable } from './address';
 import { appLoad, keyboardOwner, keyboardTaken, mayAsk, partitionOf, shownTab, viewBounds, withTabChange } from './browser-tabs';
 import { pageLog, requestFailure, type PageLog } from './page-log';
+import { proxyConfig, proxyFailureTitle, type BrowserProxy } from '../../shared/browser/proxy';
 
 // The one module that holds a WebContentsView, a tab each. The browser actions reach the views only
 // through the ports below and every door reaches them only through the actions (actions-rule-1);
@@ -65,8 +66,11 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
   // that makes its tab: the next view made takes it rather than making contents of its own. That
   // happens inside `page.opened` only because `bind`'s `call` awaits nothing before `run`.
   let adopting: { contents: WebContents; opener: number } | null = null;
-  // Each partition's permission rule is set once, by its first tab.
-  const ruled = new Set<string>();
+  // Each partition's permission rule is set once, by its first tab, and its proxy then and on each
+  // change: the proxy each was last given, which its tabs' loads wait for, so a listed host's first
+  // load never goes direct.
+  const ruled = new Map<string, Promise<void>>();
+  let proxy: BrowserProxy | null = null;
   // The tabs a load no page started (the app's: an address, back, forward, reload) is on its way in,
   // which take the keyboard uninvited (keyboardTaken); each is let go once its page commits.
   const loading = new Set<number>();
@@ -157,6 +161,11 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     // `views` already.
     contents.once('destroyed', () => { if (views.has(id)) page.closed(projectPath, id, opener); });
     contents.on('page-title-updated', (_event, title) => record(projectPath, id, { title }));
+    // A page the proxy did not carry is titled with its host: its title says why instead.
+    contents.on('did-fail-load', (_event, code, _description, _url, isMainFrame) => {
+      const title = isMainFrame ? proxyFailureTitle(code, proxy) : null;
+      if (title !== null) record(projectPath, id, { title });
+    });
     contents.on('did-navigate', (_event, url) => {
       record(projectPath, id, { url });
       // After the focus the commit hands out, which comes before this.
@@ -213,8 +222,8 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
         };
         browserSession.webRequest.onCompleted((details) => failed(details.webContentsId, details.method, details.url, requestFailure(details.statusCode, null)));
         browserSession.webRequest.onErrorOccurred((details) => failed(details.webContentsId, details.method, details.url, requestFailure(null, details.error)));
+        ruled.set(partition, browserSession.setProxy(proxyConfig(proxy)).catch(() => undefined));
       }
-      ruled.add(partition);
       // No preload, so a page has no bridge to call; sandboxed and isolated like any browser tab. A
       // popup is already all that, in its opener's partition, which Electron gave it.
       const popup = adopting;
@@ -229,7 +238,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       view.setBounds(lastBounds);
       main.window()?.contentView.addChildView(view);
       views.set(id, view);
-      if (popup === null) ports.load(id, url);
+      if (popup === null) void ruled.get(partition)?.then(() => ports.load(id, url));
       return id;
     },
     dropView(id) {
@@ -241,6 +250,15 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       if (view === undefined) return;
       main.window()?.contentView.removeChildView(view);
       if (!view.webContents.isDestroyed()) view.webContents.close();
+    },
+    async useProxy(next) {
+      proxy = next;
+      const config = proxyConfig(proxy);
+      for (const partition of ruled.keys()) {
+        const browserSession = session.fromPartition(partition);
+        ruled.set(partition, browserSession.setProxy(config).then(() => browserSession.closeAllConnections()).catch(() => undefined));
+      }
+      await Promise.all(ruled.values());
     },
     // A load that fails shows Chromium's own error page in the tab, which says why better than a bar.
     load: (id, url) => { views.get(id)?.webContents.loadURL(url).catch(() => undefined); },

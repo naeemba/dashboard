@@ -152,12 +152,14 @@ const settingsDoors = settingsActions(table, {
   file: settingsFile, isMac, current: () => settings,
   writeFile: (next) => writeSettings(settingsFile, next, isMac),
   pickShell: shellFor,
-  // A raised cap starts what waits at once; compared first, since the launch's own write runs before
-  // workerAnswers exists and never changes the cap.
+  // A raised cap starts what waits at once, and a new proxy is every project browser's at once; compared
+  // first, since the launch's own write runs before workerAnswers and browser exist and changes neither.
   keep(next, shell) {
     const capChanged = next.workers.cap !== settings.workers.cap;
+    const proxyChanged = JSON.stringify(next.browser.proxy) !== JSON.stringify(settings.browser.proxy);
     settings = next; shellCommand = shell;
     if (capChanged) workerAnswers.pool.drain();
+    if (proxyChanged) browser.useProxy(next.browser.proxy);
   },
   tell: (next, shell) => liveWindow()?.webContents.send('settings:change', { settings: next, shellCommand: shell }),
 });
@@ -212,7 +214,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 const promptPane = panePrompt((id) => shells.get(id), (id, text) => workerScreens.send(id, text));
 // Each project's browser tabs, beside the window: browser-actions.ts. slotOf is an arrow because
 // slotOfProject is made further down, with the other pane readings.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: (projectPath) => slotOfProject(projectPath) }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys, proxy: () => settings.browser.proxy }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: (projectPath) => slotOfProject(projectPath) }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
