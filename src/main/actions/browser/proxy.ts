@@ -2,8 +2,8 @@ import { parseProxy, type BrowserProxy } from '../../../shared/browser/proxy';
 import { action } from '../action';
 import type { BrowserPorts } from './browser-ports';
 
-// browser.proxy: the settings' `browser.proxy` as every project's browser uses it, at launch and on
-// each change main keeps, so a change needs no restart (browser-decision-11). Main calls it only for
+// browser.proxy: each change to the settings' `browser.proxy` main keeps, given to every project's
+// browser so it needs no restart (browser-decision-11); a session's first tab reads it at launch. Main calls it only for
 // a proxy that moved, since applying one fails whatever its tabs are loading.
 export const browserProxy = action<BrowserPorts, { proxy: BrowserProxy | null }, { output: string }>('browser.proxy', {
   words: [],

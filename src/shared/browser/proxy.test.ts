@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hostPattern, pacScript, pacServer, parseProxy, proxyConfig, proxyFailureTitle } from './proxy';
+import { hostPattern, pacScript, pacServer, parseProxy, proxyConfig, proxyFailureTitle, proxyMoved } from './proxy';
 
 const matches = (pattern: string, host: string): boolean => hostPattern(pattern).test(host);
 
@@ -100,5 +100,21 @@ describe('proxyFailureTitle', () => {
   it('leaves the title for any other failure, or with no proxy', () => {
     expect(proxyFailureTitle(-105, proxy)).toBeNull();
     expect(proxyFailureTitle(-130, null)).toBeNull();
+  });
+});
+
+describe('proxyMoved', () => {
+  const proxy = { server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] };
+
+  it('is false for a save that leaves the proxy as it was, an equal copy or none either side', () => {
+    expect(proxyMoved(proxy, { ...proxy, hosts: [...proxy.hosts] })).toBe(false);
+    expect(proxyMoved(null, null)).toBe(false);
+  });
+
+  it('is true for a host added, a server changed, or the proxy set or taken away', () => {
+    expect(proxyMoved(proxy, { ...proxy, hosts: [...proxy.hosts, 'test-*.internal'] })).toBe(true);
+    expect(proxyMoved(proxy, { ...proxy, server: 'http://proxy:3128' })).toBe(true);
+    expect(proxyMoved(null, proxy)).toBe(true);
+    expect(proxyMoved(proxy, null)).toBe(true);
   });
 });

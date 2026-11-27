@@ -17,6 +17,8 @@ import { proxyConfig, proxyFailureTitle, type BrowserProxy } from '../../shared/
 export type BrowserViewsMain = {
   window(): BrowserWindow | undefined;
   keys(): Settings['keys'];
+  // The settings' browser.proxy, read live: a session is given it by its first tab and on each change.
+  proxy(): BrowserProxy | null;
 };
 
 // What browser-page.ts drives a page's content with: the DevTools protocol, the view's own size, and
@@ -70,7 +72,6 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
   // change: the proxy each was last given, which its tabs' loads wait for, so a listed host's first
   // load never goes direct.
   const ruled = new Map<string, Promise<void>>();
-  let proxy: BrowserProxy | null = null;
   // The tabs a load no page started (the app's: an address, back, forward, reload) is on its way in,
   // which take the keyboard uninvited (keyboardTaken); each is let go once its page commits.
   const loading = new Set<number>();
@@ -163,7 +164,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
     contents.on('page-title-updated', (_event, title) => record(projectPath, id, { title }));
     // A page the proxy did not carry is titled with its host: its title says why instead.
     contents.on('did-fail-load', (_event, code, _description, _url, isMainFrame) => {
-      const title = isMainFrame ? proxyFailureTitle(code, proxy) : null;
+      const title = isMainFrame ? proxyFailureTitle(code, main.proxy()) : null;
       if (title !== null) record(projectPath, id, { title });
     });
     contents.on('did-navigate', (_event, url) => {
@@ -222,7 +223,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
         };
         browserSession.webRequest.onCompleted((details) => failed(details.webContentsId, details.method, details.url, requestFailure(details.statusCode, null)));
         browserSession.webRequest.onErrorOccurred((details) => failed(details.webContentsId, details.method, details.url, requestFailure(null, details.error)));
-        ruled.set(partition, browserSession.setProxy(proxyConfig(proxy)).catch(() => undefined));
+        ruled.set(partition, browserSession.setProxy(proxyConfig(main.proxy())).catch(() => undefined));
       }
       // No preload, so a page has no bridge to call; sandboxed and isolated like any browser tab. A
       // popup is already all that, in its opener's partition, which Electron gave it.
@@ -252,8 +253,7 @@ export function browserViews(main: BrowserViewsMain, page: BrowserPageDoors) {
       if (!view.webContents.isDestroyed()) view.webContents.close();
     },
     async useProxy(next) {
-      proxy = next;
-      const config = proxyConfig(proxy);
+      const config = proxyConfig(next);
       for (const partition of ruled.keys()) {
         const browserSession = session.fromPartition(partition);
         ruled.set(partition, browserSession.setProxy(config).then(() => browserSession.closeAllConnections()).catch(() => undefined));

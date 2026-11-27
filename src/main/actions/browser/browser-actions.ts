@@ -39,7 +39,7 @@ export type TabAsking = {
 
 const SWEEP_MS = 60_000;
 
-export function browserActions(table: Channels, main: BrowserViewsMain & { proxy(): BrowserProxy | null }, panes: PaneLookups, asking: TabAsking) {
+export function browserActions(table: Channels, main: BrowserViewsMain, panes: PaneLookups, asking: TabAsking) {
   // A page's window that is no web page is denied before it opens (browser-views.ts).
   const views = browserViews(main, {
     opened: (projectPath, url, opener) => void open.call({ projectPath, url, opener }),
@@ -62,9 +62,8 @@ export function browserActions(table: Channels, main: BrowserViewsMain & { proxy
     const questions = clock.due(views.ports.allBrowsers(), Date.now(), views.shown(), minutes);
     for (const { main: slot, tabs } of questions) asking.tellMain(slot, idleQuestion(tabs, minutes ?? 0));
   }, SWEEP_MS).unref();
-  // The settings' proxy at launch, and each change to it main keeps.
+  // Each change to the settings' proxy main keeps; a session's first tab gives it the proxy at launch.
   const proxy = bind(browserProxy, ports);
-  void proxy.call({ proxy: main.proxy() });
   const open = bind(browserOpen, ports);
   const close = bind(browserClose, ports);
   const reset = bind(browserReset, ports);

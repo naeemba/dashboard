@@ -34,6 +34,12 @@ export function parseProxy(stored: unknown): BrowserProxy | null {
   return hosts.length === 0 ? null : { server, hosts };
 }
 
+// Whether a settings save moved the proxy, which is the only time main applies it: applying one fails
+// whatever every project's tabs are loading, so a save that left it alone must not (browser-decision-11).
+export function proxyMoved(before: BrowserProxy | null, after: BrowserProxy | null): boolean {
+  return JSON.stringify(before) !== JSON.stringify(after);
+}
+
 const escaped = (text: string): string => text.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
 
 // A host pattern as the regex it means, the way ZeroOmega's host wildcards read, so a rule copied

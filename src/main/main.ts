@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
+import { proxyMoved } from '../shared/browser/proxy';
 import { holdProjectName, readProjectNames } from './workers/project-names';
 import { runProgram } from './app/git';
 import { branchPullRequest } from './board/merge-request';
@@ -157,7 +158,7 @@ const settingsDoors = settingsActions(table, {
   // first, since the launch's own write runs before workerAnswers and browser exist and changes neither.
   keep(next, shell) {
     const capChanged = next.workers.cap !== settings.workers.cap;
-    const proxyChanged = JSON.stringify(next.browser.proxy) !== JSON.stringify(settings.browser.proxy);
+    const proxyChanged = proxyMoved(settings.browser.proxy, next.browser.proxy);
     settings = next; shellCommand = shell;
     if (capChanged) workerAnswers.pool.drain();
     if (proxyChanged) browser.useProxy(next.browser.proxy);
