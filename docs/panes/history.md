@@ -37,4 +37,4 @@ One line per merged change: date and why.
 - 2026-11-26 — A worker keeps 5000 lines of scrollback, half of the editor's: full worker buffers
   were the largest part of the window's heap
 - 2026-11-27 — Main answers Claude Code's OSC 7501 probe in every pane and reads its status off
-  the pty, so a terminal worker stopped on a question or a failed turn reads as blocked
+  the pty, so a terminal worker stopped on a question reads as blocked

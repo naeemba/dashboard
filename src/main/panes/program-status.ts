@@ -12,8 +12,9 @@ import type { WorkerState } from '../../shared/app/bridge';
 // `?`, so the answer is the probe itself. The states are working, blocked (kind permission, question or
 // auth), done, idle and error. A worker paused on its own background work reads working, and nothing
 // carries the prompt's source or the last message, so the hooks stay the source of running and done:
-// a status only adds what no hook says, a worker stopped on a question or a failed turn, and takes that
-// mark off again once it is working. Anything else, or a sequence this does not read, is ignored, so a
+// a status only adds what no hook says, a worker stopped on a question, and takes that mark off again
+// once it is working. A failed turn (error) is left to the stall sweep, which tells main; blocked would
+// take the pane out of it and tell nobody. Anything else, or a sequence this does not read, is ignored, so a
 // later Claude Code changing the format cannot misreport a worker.
 
 const START = '\x1b]7501;';
@@ -27,7 +28,10 @@ const LONGEST = 4096;
 export function programStatusReader(answer: (text: string) => void, tell: (state: WorkerState) => void) {
   // The start of a sequence the last chunk cut off.
   let held = '';
-  // Whether the last thing told was blocked, from a status: only then does working take it off.
+  // Whether the last thing told was blocked: only then does working tell running, whatever came between.
+  let marked = false;
+  // Whether this block was already told, so a repeated blocked status tells nothing; a done or idle
+  // ends it, and the next blocked is told again.
   let blocked = false;
 
   function heard(body: string): void {
@@ -35,10 +39,14 @@ export function programStatusReader(answer: (text: string) => void, tell: (state
       answer(PROBE_ANSWER);
       return;
     }
-    const status = statusFrom(body, blocked);
-    if (status === null) return;
-    blocked = status.blocked;
-    if (status.tell !== undefined) tell(status.tell);
+    const state = stateFrom(body);
+    if (state === 'blocked' && !blocked) {
+      blocked = marked = true;
+      tell('blocked');
+    } else if (state === 'working' && marked) {
+      blocked = marked = false;
+      tell('running');
+    } else if (state === 'over') blocked = false;
   }
 
   return {
@@ -81,9 +89,9 @@ function cutStart(text: string): string {
   return tail.startsWith('\x1b') && START.startsWith(tail) ? tail : '';
 }
 
-// What one status says: whether the worker is now blocked, and the state to tell when it is news the
-// hooks do not give; null when it is not a status this reads, which changes nothing at all.
-function statusFrom(body: string, blocked: boolean): { blocked: boolean; tell?: WorkerState } | null {
+// The state one status says, as this reads it: null when it is not a status this reads, or one it
+// leaves to the hooks or the stall sweep, which changes nothing at all.
+function stateFrom(body: string): 'blocked' | 'working' | 'over' | null {
   const fields = new Map(body.split(':').map((field) => {
     const equals = field.indexOf('=');
     return [field.slice(0, equals), field.slice(equals + 1)] as const;
@@ -91,13 +99,12 @@ function statusFrom(body: string, blocked: boolean): { blocked: boolean; tell?: 
   if (fields.get('app') !== 'claude-code') return null;
   switch (fields.get('state')) {
     case 'blocked':
-    case 'error':
-      return blocked ? { blocked } : { blocked: true, tell: 'blocked' };
+      return 'blocked';
     case 'working':
-      return blocked ? { blocked: false, tell: 'running' } : { blocked };
+      return 'working';
     case 'done':
     case 'idle':
-      return { blocked: false };
+      return 'over';
     default:
       return null;
   }

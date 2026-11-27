@@ -25,8 +25,12 @@ describe('programStatusReader', () => {
     expect(told).toEqual(['blocked', 'running']);
   });
 
-  it('tells a failed turn as blocked', () => {
-    expect(reading(status('state=working'), status('state=error:msg=eA==')).told).toEqual(['blocked']);
+  it('leaves a failed turn to the stall sweep', () => {
+    expect(reading(status('state=working'), status('state=error:msg=eA==')).told).toEqual([]);
+  });
+
+  it('takes the mark off on working after an idle, as a Claude started by hand has no hook to', () => {
+    expect(reading(TRUST, status('state=idle'), status('state=working')).told).toEqual(['blocked', 'running']);
   });
 
   it('leaves running and done to the hooks', () => {
