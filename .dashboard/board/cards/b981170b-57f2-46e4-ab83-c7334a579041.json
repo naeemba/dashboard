@@ -1,0 +1,11 @@
+{
+  "id": "b981170b-57f2-46e4-ab83-c7334a579041",
+  "title": "Track terminal-mode workers through Claude Code's Program Status Protocol (OSC 7501)",
+  "notes": "From docs/research/claude-releases-2026-09-27-to-11-27.md. Claude Code 2.1.295 added OSC 7501, the Program Status Protocol: the terminal is told working, waiting or done without parsing output. Today a worker run with --terminal is tracked through hooks only. Do: confirm the sequence's format in Claude Code's docs first; then read it in the pty path (src/main/panes) as one more signal for the worker's state, in a decision module with a test, alongside the hooks (not replacing them unless the docs show it covers every state the hooks give). Docs: panes and workers READMEs.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T11:54:24.916Z",
+  "updatedAt": "2026-11-27T11:54:24.917Z",
+  "column": "Backlog",
+  "order": 8
+}
