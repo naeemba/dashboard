@@ -674,4 +674,7 @@ blocked, holding a pool slot (workers-decision-11), until someone noticed the ba
   project or local ones, which is why it goes in the app's flag settings.
 - **The blocked mark stays**: the `permission_prompt` Notification hook and the screen's ask still
   mark a pane blocked under a Claude Code older than 2.1.319, which does not know the key.
+- **A screen runs the CLI the Agent SDK bundles**, not the installed one, so the SDK pin moved from
+  0.3.316 (Claude Code 2.1.316, which keeps the key and never reads it) to 0.3.332.
+  `package-pins.test.ts` fails if a later pin bundles a Claude Code older than 2.1.319.
 
