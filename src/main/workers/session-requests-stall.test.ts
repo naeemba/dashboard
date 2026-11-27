@@ -43,6 +43,17 @@ describe('a worker gone silent', () => {
     expect(told).toHaveLength(2);
   });
 
+  it('is listed stalled but not told on a turn you typed into the worker yourself', async () => {
+    const { answer, told, list } = await silentWorker();
+    // The first typed prompt is the one main started it on; the next is yours (prompt-source.ts).
+    answer.notify('2:1', 'running', undefined, { promptSource: 'user' });
+    answer.notify('2:1', 'running', undefined, { promptSource: 'user' });
+    minutes(20);
+    answer.tellStalls();
+    expect(await list()).toContain('stalled, silent 20 minutes');
+    expect(told).toEqual([]);
+  });
+
   it('is never a worker blocked, done or paused, whose silence is waiting', async () => {
     const { answer, told, list } = await silentWorker();
     answer.notify('2:1', 'done', { background: 1, scheduled: 0 });

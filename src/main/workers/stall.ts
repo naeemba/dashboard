@@ -29,8 +29,9 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
   const signs = new Map<string, number>();
   const told = new Set<string>();
   const silentFor = (id: string): number | null => {
-    if (!signs.has(id)) signs.set(id, now());
-    return silentMinutes(signs.get(id) ?? now(), now(), stallMinutes());
+    const last = signs.get(id) ?? now();
+    signs.set(id, last);
+    return silentMinutes(last, now(), stallMinutes());
   };
   return {
     sign(id) {
