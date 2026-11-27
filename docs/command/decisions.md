@@ -210,3 +210,21 @@ guess. `create` and `ready` look first as well, since running either again is
 always a mistake; `comment` does not, since the same words posted a round apart
 on purpose are two comments. They are Bash runs, not MCP tools: a GitHub outage
 holds each for about four minutes of tries.
+
+## command-decision-12: A pane's commands are copied into one folder under userData
+
+**At launch the app copies its board, session and dashboard command files into `commands` in its
+userData folder and hands the panes those paths** (2026-11-28). The panes used to run the files in
+the installed build, which a rebuild replaces under the running app: in one day, 16 commands were
+refused with "this command is vX and the running Dashboard is vY — restart the app", and the last
+land of a session could not release its pane until a restart.
+
+The folder is one per userData, not one per build. The pane host keeps shells through a restart
+(panes-decision-1), and their environment cannot change: a folder named for the old build would
+keep those shells on the old commands against the new app, the same refusal the other way round.
+One folder, rewritten at each launch, matches the running app in both cases: a rebuild does not
+touch it and a restart rewrites it where every kept shell already points. Each file is written
+through `replaceFileIfChanged`, so a command started mid-copy reads the old file or the new one.
+
+The version refusal stays (workers-decision-4): the `dashboard` launcher in a terminal runs the
+installed build, and a shell from before this change still points into it.

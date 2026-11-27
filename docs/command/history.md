@@ -36,3 +36,6 @@ One line per merged change: date and why.
   sends `/pr-conflicts <n>`), waits on its push, 90 minutes across every hand-off, and lands it:
   six lands in a day were refused for conflicts, each relayed by main by hand at 10-15 minutes
   and a CI run
+- 2026-11-28 — A pane's commands are a copy in userData, so a rebuild no longer reaches the panes
+  of the running app before its restart: 16 "restart the app" refusals in a day
+  (command-decision-12)

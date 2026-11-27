@@ -294,8 +294,10 @@ counting the agent, so the worker shows as idle at once.
 
 **The app answers only a command with its own build stamp, `<version>+<commit>`.** A rebuild
 replaces the command files while the old app keeps running, so a pane's command is newer than the
-app it asks until the restart. Matching the stamp exactly, not a protocol number, means nobody has
-to remember to bump one when a request changes shape: any rebuild from another commit is refused
+app it asks until the restart; the panes now run a copy a rebuild does not touch
+(command-decision-12), which leaves the launcher in a terminal and shells from before it.
+Matching the stamp exactly, not a protocol number, means nobody has to remember to bump one
+when a request changes shape: any rebuild from another commit is refused
 with a line naming both builds and saying to restart. A command older than the stamp sends none and
 is refused the same, whether it ends its request with a newline or, from before #196, by closing its
 side. `notify` is the one exception, let through from any build: it is what a worker's hooks send, a
