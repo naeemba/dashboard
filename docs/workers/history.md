@@ -107,4 +107,4 @@ One line per merged change: date and why.
   wait on a prompt is refused and shows in the report instead of holding a pool slot
   (workers-decision-12)
 - 2026-11-27 — Workers are started with idleCompaction false, so a worker paused on CI or a review
-  loop is not compacted while it waits (workers-decision-12)
+  loop is not compacted while it waits (workers-decision-14)
