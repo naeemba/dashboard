@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:02:34.752Z",
-  "updatedAt": "2026-11-27T12:06:34.361Z",
+  "updatedAt": "2026-11-27T12:42:08.303Z",
   "branch": "flag-a-worker-pane-that-has-gone-silent-as",
   "pullRequest": 415,
   "comments": [
@@ -20,8 +20,20 @@
     {
       "at": "2026-11-27T12:06:34.339Z",
       "body": "Pull request #415 opened: Show a worker silent past a setting as stalled, and tell main once https://github.com/naeemba/dashboard/pull/415"
+    },
+    {
+      "at": "2026-11-27T12:34:23.872Z",
+      "body": "Review loop on #415: floor-addressed after 2 rounds, 3 fix commits (87d56f33, b7a6c8f1, 666497cc), 0 rejected, nothing blocked on a person; final check accepted 666497cc. Marked ready for review. Not ready to merge: main moved after the loop's conflict check and #415 now conflicts on docs/settings/README.md and src/main/main.ts. CI was not waited on. Needs origin/main merged in, then pr wait 415. Popup stalled marker is the separate card 'Workers popup marks a stalled worker', not in this PR."
+    },
+    {
+      "at": "2026-11-27T12:41:45.793Z",
+      "body": "Merged origin/main (#414) into #415 as ff30416e: docs/settings/README.md and main.ts resolved keeping both sides (main.ts ~503 code lines). Fixed a merge bug the typecheck caught: the new Workers cap row (withWorkerCap) dropped workers.stallMinutes; it now keeps the other worker settings, with the test extended. pnpm check green; CI passed on ff30416e. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-27T12:42:08.259Z",
+      "body": "Pull request #415 merged: Show a worker silent past a setting as stalled, and tell main once https://github.com/naeemba/dashboard/pull/415"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 340
 }

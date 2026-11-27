@@ -56,12 +56,18 @@ describe('parseSettings', () => {
   });
 
   it('caps the workers at 4 unless the file names a whole number or none', () => {
-    expect(parseSettings({}, false).workers).toEqual({ cap: 4 });
-    expect(parseSettings({ workers: { cap: 6 } }, false).workers).toEqual({ cap: 6 });
-    expect(parseSettings({ workers: { cap: 'none' } }, false).workers).toEqual({ cap: null });
+    expect(parseSettings({}, false).workers.cap).toBe(4);
+    expect(parseSettings({ workers: { cap: 6 } }, false).workers.cap).toBe(6);
+    expect(parseSettings({ workers: { cap: 'none' } }, false).workers.cap).toBeNull();
     // How a save from the screen writes none back.
-    expect(parseSettings({ workers: { cap: null } }, false).workers).toEqual({ cap: null });
-    for (const rubbish of [0, -1, 2.5, '6']) expect(parseSettings({ workers: { cap: rubbish } }, false).workers).toEqual({ cap: 4 });
+    expect(parseSettings({ workers: { cap: null } }, false).workers.cap).toBeNull();
+    for (const rubbish of [0, -1, 2.5, '6']) expect(parseSettings({ workers: { cap: rubbish } }, false).workers.cap).toBe(4);
+  });
+
+  it('calls a silent worker stalled after 20 minutes unless the file names a number above 0', () => {
+    expect(parseSettings({}, false).workers.stallMinutes).toBe(20);
+    expect(parseSettings({ workers: { stallMinutes: 45 } }, false).workers.stallMinutes).toBe(45);
+    for (const rubbish of [0, -5, '45', null]) expect(parseSettings({ workers: { stallMinutes: rubbish } }, false).workers.stallMinutes).toBe(20);
   });
 
   it('checks for updates unless the file turns it off', () => {

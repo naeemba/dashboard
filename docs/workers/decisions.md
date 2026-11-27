@@ -680,3 +680,27 @@ blocked, holding a pool slot (workers-decision-11), until someone noticed the ba
   0.3.316 (Claude Code 2.1.316, which keeps the key and never reads it) to 0.3.332.
   `package-pins.test.ts` fails if a later pin bundles a Claude Code older than 2.1.319.
 
+## workers-decision-13: A worker silent past a setting is shown stalled, never stopped
+
+**Main's worker at work whose hooks have said nothing for `workers.stallMinutes` (20) is shown
+`stalled` in `pane list` and `pane status`, and its main is told once**
+(`src/main/workers/stall.ts`). Before it, a worker hung on a test that never ends sat in Doing
+holding a pool slot (workers-decision-11) with nothing to say so.
+
+- **A sign of life is any hook**: a prompt going in, a tool finishing, a stop or a question. Pane
+  output is not one: Claude Code's spinner redraws its timer every second whatever the worker is
+  stuck on, and a worker screen has no pane output at all. The cost: a worker thinking 20 minutes
+  without running a tool is called stalled, which one look at its pane settles.
+- **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
+  minute notice (workers-decision-1): their silence is waiting, not a hang.
+- **Shown and told, never acted on.** It keeps its pane and its slot and is never released: a long
+  build looks the same as a hang from the hooks, and killing one loses work. The user or main
+  decides.
+- **A worker no hook has spoken for since the launch is never stalled.** One resumed after a
+  restart gets no prompt, so no hook runs and it reads as at work (workers-decision-1); starting
+  its clock at the first look only told main of every resumed worker at once twenty minutes later.
+  A worker screen whose turn carried on through the restart starts its clock at its next tool. The
+  cost: one hung across a restart is never called stalled.
+- **A notice still waiting for main is taken back** when the worker's next hook comes in, or it is
+  let go of, as its stop notice is: main never reads that a worker that is working again may be
+  stuck.
