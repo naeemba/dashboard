@@ -184,10 +184,11 @@ when one is written as a range, and a new exact hold below adds its name there.
   lacks.
 - The `undici@6` and `undici@7` overrides go when node-gyp and @electron/get
   ship the patched releases themselves.
-- The `minimatch@10` override to 11 goes when its consumers (eslint,
-  @eslint/config-array, typescript-estree, glob, @electron/asar) move to 11.
-  Version 11 removed `makeRe`, `AST` and `Minimatch#matchOne`; before any bump
-  of those consumers, check that none of them calls one.
+- The `minimatch@10` override to 11 goes when @electron/asar moves to 11, both
+  directly and through the glob 13 it depends on; eslint, @eslint/config-array
+  and typescript-estree already ask for 11. Version 11 removed `makeRe`, `AST`
+  and `Minimatch#matchOne`; before any bump of @electron/asar or glob, check
+  that neither calls one.
 
 ## Content-Security-Policy
 
