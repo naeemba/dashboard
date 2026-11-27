@@ -36,3 +36,6 @@ One line per merged change: date and why.
   sends `/pr-conflicts <n>`), waits on its push, 90 minutes across every hand-off, and lands it:
   six lands in a day were refused for conflicts, each relayed by main by hand at 10-15 minutes
   and a CI run
+- 2026-11-28 — `pr wait` and `pr land` merge and push a conflict git merges cleanly themselves:
+  GitHub ignores `merge=union` on `history.md`, and in 5 sessions a clean merge-tree was reported as
+  `git could not name the files`, each costing a merge, a full check, a push and a CI run by hand

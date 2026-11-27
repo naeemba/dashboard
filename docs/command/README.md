@@ -45,7 +45,14 @@ its head moves, and lands that, at most `HAND_OFFS` times. The minutes come from
 of 90 for the whole land (`NEW_HEAD_WAIT_MS`), not per hand-off, so the land prints its verdict
 inside the two-hour background run instead of being stopped and rerun into a second
 `/pr-conflicts`. With no agent on the branch, or the budget spent, the conflict line is the verdict
-and main sends it on. `pr wait <n>` is the same wait,
+and main sends it on. A conflict `git merge-tree` merges cleanly is no conflict to git: GitHub
+ignores `.gitattributes` merge drivers, so `docs/**/history.md`'s `merge=union` reads `CONFLICTING`
+there. Both `pr wait` and `pr land` then resolve it without an agent (`pushCleanMerge`): the clean
+tree is committed onto the head with the base as second parent (`git commit-tree`, no checkout
+touched), pushed to the branch, which git refuses if anybody pushed since, and the new head waited
+on as after a hand-off, printing `merged origin/main into fix-it cleanly at <sha> and pushed it`. A
+clean merge that could not be pushed ends `GitHub says it conflicts with main, but git merges it
+cleanly — …`, never `git could not name the files`. `pr wait <n>` is the same wait,
 retries and conflict check without the merge, ending `checks passed on <sha>`; both refuse a draft
 no checks start on, since a repository's CI may skip one, and wait on a draft whose checks run, as
 this repository's do; a worker waiting on
