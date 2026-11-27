@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:09.637Z",
-  "updatedAt": "2026-11-27T21:54:09.637Z",
-  "column": "Backlog",
+  "updatedAt": "2026-11-27T21:54:48.872Z",
+  "branch": "worker-stop-notices-carry-the-worker-s-stat",
+  "column": "Doing",
   "order": 1
 }
