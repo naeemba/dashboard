@@ -39,8 +39,7 @@ function cardId(board: Board, title: string): string {
 }
 
 // A project whose folder board has no cards yet, for a test that writes its own card files by hand:
-// columns.json is one flushed write, where startingBoard's five cards are six, and six took a test past
-// 5s on a busy Windows runner.
+// columns.json is the only file it flushes.
 function emptyFolderBoard(): string {
   const path = project();
   writeBoard(path, emptyBoard());
@@ -104,7 +103,8 @@ describe('the move off board.json', { timeout: 60_000 }, () => {
   });
 });
 
-describe('the folder', () => {
+// A Windows runner's disk can stall for seconds, and whichever test runs then goes past the 5s default.
+describe('the folder', { timeout: 60_000 }, () => {
   it('rewrites only the file of the card that moved', () => {
     const path = project();
     const board = startingBoard();
