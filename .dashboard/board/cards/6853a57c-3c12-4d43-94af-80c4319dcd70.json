@@ -1,0 +1,27 @@
+{
+  "id": "6853a57c-3c12-4d43-94af-80c4319dcd70",
+  "title": "Project browser: send listed sites through a proxy, everything else direct",
+  "notes": "User's need: work sites (instacoins.travel, test servers) are reachable only through a VPN the user runs as a local proxy; in Chrome, ZeroOmega sends those hosts through it and everything else direct.\n\nUser's design, 2026-11-27: every site goes direct unless the settings file lists it, and the list takes wildcards. For example:\n  \"browser\": { \"proxy\": { \"server\": \"socks5://127.0.0.1:1080\", \"hosts\": [\"*.instacoins.travel\", \"instacoins.travel\", \"test-*.internal\"] } }\n(names are a proposal; settle them in review).\n\nReview first, write no code until main has your design: check Electron's session.setProxy in its docs (pacScript, proxyRules, proxyBypassRules) for the version we ship, and say which one gives direct-by-default with a listed set through the proxy. A generated PAC script from the host list looks right; say if not. Settle: wildcard meaning (does *.x match x itself; * inside a label), HTTP vs SOCKS servers, whether it applies to every project's browser session (partitionOf, src/main/browser/browser-tabs.ts) with a per-project override, applying a settings change without restart, and what a tab shows when the proxy is down. SendMessage main-dashboard the design, then build it: the host matching as a decision module with a test, applied through the browser action, docs/browser and docs/settings updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T12:25:14.751Z",
+  "updatedAt": "2026-11-27T13:13:35.640Z",
+  "branch": "project-browser-send-listed-sites-through-a",
+  "pullRequest": 417,
+  "comments": [
+    {
+      "at": "2026-11-27T12:45:07.834Z",
+      "body": "Pull request #417 opened: Send the hosts browser.proxy lists through a proxy, every other site direct https://github.com/naeemba/dashboard/pull/417"
+    },
+    {
+      "at": "2026-11-27T13:12:15.897Z",
+      "body": "Review loop converged in 3 rounds, CI green on the head commit: ready to merge. Fixed: a hand-written browser.proxy that did not parse is kept across app saves; proxyMoved (apply only on change) is tested; views read the proxy live from main's settings; Reset everything to defaults keeps browser.proxy. Nothing open. Design and scope unchanged."
+    },
+    {
+      "at": "2026-11-27T13:13:35.618Z",
+      "body": "Pull request #417 merged: Send the hosts browser.proxy lists through a proxy, every other site direct https://github.com/naeemba/dashboard/pull/417"
+    }
+  ],
+  "column": "Done",
+  "order": 342
+}

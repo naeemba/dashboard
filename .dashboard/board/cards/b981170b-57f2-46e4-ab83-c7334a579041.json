@@ -1,0 +1,31 @@
+{
+  "id": "b981170b-57f2-46e4-ab83-c7334a579041",
+  "title": "Track terminal-mode workers through Claude Code's Program Status Protocol (OSC 7501)",
+  "notes": "From docs/research/claude-releases-2026-09-27-to-11-27.md. Claude Code 2.1.295 added OSC 7501, the Program Status Protocol: the terminal is told working, waiting or done without parsing output. Today a worker run with --terminal is tracked through hooks only. Do: confirm the sequence's format in Claude Code's docs first; then read it in the pty path (src/main/panes) as one more signal for the worker's state, in a decision module with a test, alongside the hooks (not replacing them unless the docs show it covers every state the hooks give). Docs: panes and workers READMEs.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T11:54:24.916Z",
+  "updatedAt": "2026-11-27T13:45:36.048Z",
+  "branch": "track-terminal-mode-workers-through-claude",
+  "pullRequest": 421,
+  "comments": [
+    {
+      "at": "2026-11-27T13:16:27.841Z",
+      "body": "Format confirmed from the installed Claude Code 2.1.332 binary (no official doc page exists): Claude probes with ESC]7501;?BEL and only emits once the terminal answers with an OSC 7501 whose data starts with '?'. Status: ESC]7501;state=<working|blocked|done|idle|error>:app=claude-code[:id][:kind=permission|question|auth][:progress][:title,msg base64] BEL, plus state=clear. Paused-on-background-work reads 'working', so it does not give the Stop hook's waiting counts, prompt source or last message: it goes alongside the hooks. Plan: main answers the probe and reads the status in pane-shells.ts listenTo (new decision module src/main/panes/program-status.ts + test), feeding only what hooks miss (blocked on a question/auth/API error, and lifting that mark when working again) into session-requests notify, wired in main.ts. Overlap: #413 also edits src/main/panes/pane-shells.ts (the spawn catch, a different hunk) and docs/panes/history.md; #418 and #419 edit src/main/main.ts and docs/workers/README.md + history.md; #420 edits docs/workers/README.md + history.md."
+    },
+    {
+      "at": "2026-11-27T13:24:33.411Z",
+      "body": "Pull request #421 opened: Read Claude Code's OSC 7501 program status off each pane's pty https://github.com/naeemba/dashboard/pull/421"
+    },
+    {
+      "at": "2026-11-27T13:38:12.040Z",
+      "body": "Review loop converged in 2 rounds, 2 findings fixed (d6b5cb76), none rejected, no conflicts. CI on bc25084d: checks + CodeQL pass, windows fails on src/main/board/board-files.test.ts 'names a board.json that does not parse on a read without salvage' (6.4s, looks like a timeout; this PR does not touch board files). Still open: that windows failure, rerun or look before merging. Otherwise ready to merge."
+    },
+    {
+      "at": "2026-11-27T13:45:36.018Z",
+      "body": "Pull request #421 merged: Read Claude Code's OSC 7501 program status off each pane's pty https://github.com/naeemba/dashboard/pull/421"
+    }
+  ],
+  "column": "Done",
+  "order": 345
+}

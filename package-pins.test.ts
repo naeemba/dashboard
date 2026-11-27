@@ -17,3 +17,16 @@ describe('held dependencies', () => {
     expect(versions[name]).toMatch(/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/);
   });
 });
+
+// Claude Code 2.1.319 added permissions.denyInsteadOfPrompting, and a Claude screen runs the CLI the
+// SDK bundles, not the installed one. An older pin keeps the key and never reads it, so a screen
+// worker waits on a prompt again (workers-decision-12).
+describe('the Claude Code the Agent SDK bundles', () => {
+  it('knows denyInsteadOfPrompting', () => {
+    const sdk = JSON.parse(readFileSync(
+      new URL('./node_modules/@anthropic-ai/claude-agent-sdk/package.json', import.meta.url), 'utf8',
+    )) as { claudeCodeVersion: string };
+    const [major, minor, patch] = sdk.claudeCodeVersion.split('.').map(Number);
+    expect(major * 1e6 + minor * 1e3 + patch).toBeGreaterThanOrEqual(2_001_319);
+  });
+});

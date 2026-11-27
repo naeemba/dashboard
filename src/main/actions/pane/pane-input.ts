@@ -11,6 +11,11 @@ export function isFilledTextOrNull(value: unknown): value is string | null {
   return value === null || isFilledText(value);
 }
 
+// A process id: a CI wait's (pane.ci-wait), from the `pane ci` words or any other door.
+export function isProcessId(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
 // A page: a project's slot, or the manager's, which is negative.
 export function isSlot(value: unknown): value is number {
   return Number.isInteger(value);

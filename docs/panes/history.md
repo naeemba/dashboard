@@ -38,3 +38,5 @@ One line per merged change: date and why.
   were the largest part of the window's heap
 - 2026-11-27 — An agent pane whose shell fails to spawn (a stale shell command) ends like a dead
   shell, so its worker is released instead of counted as working under exit 127
+- 2026-11-27 — Main answers Claude Code's OSC 7501 probe in every pane and reads its status off
+  the pty, so a terminal worker stopped on a question reads as blocked

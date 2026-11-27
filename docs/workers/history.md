@@ -98,3 +98,23 @@ One line per merged change: date and why.
   the column it came from on card:move (workers-decision-11)
 - 2026-11-27 — A queued ship or review waits while a card file does not parse, instead of being
   dropped as not on the board: only the drain reads the board that strictly (workers-decision-11)
+- 2026-11-27 — A worker at work with no hook for `workers.stallMinutes` (20) is shown stalled in
+  `pane list` and `pane status`, and main is told once; it keeps its pane (workers-decision-13)
+- 2026-11-27 — The workers popup lists main's queued starts under its workers and D withdraws
+  one, and the settings screen has a Workers row for the cap: the queue was only `pane queue`'s
+  to see, and the cap only settings.json's to change (workers-decision-11)
+- 2026-11-27 — Workers are started with permissions.denyInsteadOfPrompting, so a call that would
+  wait on a prompt is refused and shows in the report instead of holding a pool slot
+  (workers-decision-12)
+- 2026-11-27 — The pane pool caps main's workers per project (`workers.cap`, 4) and in all
+  (`workers.totalCap`, 8), and a worker waiting only on CI gives its slot back until `pr wait` or
+  `pr land` asks for it again: one busy project no longer queued another's cards, and a review
+  loop's CI wait held a queued card for its whole length (workers-decision-11)
+- 2026-11-27 — A terminal worker blocked on a question is marked from its OSC 7501 status: no hook
+  fires for it, so it read as running until it stalled. A failed turn is left to the stall sweep,
+  since blocked would take it out of the sweep and tell main nothing
+- 2026-11-27 — Workers are started with idleCompaction false, so a worker paused on CI or a review
+  loop is not compacted while it waits (workers-decision-12)
+- 2026-11-27 — The workers popup and status line count mark a stalled worker, redrawn every minute:
+  only `pane list` and `pane status` said it, so the popup called a hung worker `working`
+  (workers-decision-13)

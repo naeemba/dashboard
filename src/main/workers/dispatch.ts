@@ -66,8 +66,17 @@ const appCommandPermissions = (userData: string) => ({
 
 // What every session the app starts carries in its settings, whatever else its own adds: the board
 // guard (board-guard.ts) and the app's commands allowed. One object, so a screen and a terminal worker
-// cannot drift apart.
-export const appSessionSettings = (userData: string) => ({ hooks: BOARD_GUARD_HOOKS, permissions: appCommandPermissions(userData) });
+// cannot drift apart. A worker, terminal or screen, is denied a call that would wait on a permission
+// prompt rather than sit on it holding a pool slot: the model is told and its turn goes on, so the
+// refusal is in its report (workers-decision-12). Main is asked, as a session you typed into is.
+// Claude Code reads that setting from --settings, which is what the SDK passes these as, and on a
+// screen it skips canUseTool too. A worker is never compacted while idle either (idleCompaction):
+// one paused on CI comes back with its whole conversation, where main keeps Claude Code's default.
+export const appSessionSettings = (userData: string, kind: 'main' | 'worker') => ({
+  hooks: BOARD_GUARD_HOOKS,
+  ...(kind === 'worker' && { idleCompaction: false }),
+  permissions: { ...appCommandPermissions(userData), ...(kind === 'worker' && { denyInsteadOfPrompting: true }) },
+});
 
 // The one line about what a pane is for, as the card has it, and the commands that dispatch one.
 // Appended to Claude Code's own system prompt, so main is still an ordinary session otherwise.
@@ -101,9 +110,11 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '',
     'Dispatch with the pane command, `node "$DASHBOARD_COMMAND" pane`:',
     ...startUsage,
-    '                         The app holds the workers to a cap (settings workers.cap, 4 by default)',
-    '                         and queues a start past it, answering `queued <queue id>, <position>`;',
-    '                         you are told when it starts. --project puts the pane on the page of',
+    '                         The app holds the workers to a cap (settings workers.cap, 4 a project,',
+    '                         and workers.totalCap, 8 in all, by default) and queues a start past it,',
+    '                         answering `queued <queue id>, <position>`; a worker waiting only on',
+    '                         CI in the background gives its slot back. You are told when a queued',
+    '                         start starts. --project puts the pane on the page of',
     '                         the project of that name, opening it if it is closed. Work in a',
     '                         repository that is not a project yet goes on its own page:',
     '                         `node "$DASHBOARD_COMMAND" project add <path> --name <name>`, then',
@@ -173,7 +184,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
 // worker's turn, which for a worker given one task is the task finished or given up on — so main
 // hears about a worker that crashed or forgot to write — or a pause while its own background work
 // runs, which the hook's input tells apart (stop-notices.ts). permission_prompt is the one Notification
-// that needs a person; the app marks the pane and raises a banner. A prompt submitted, or a tool that
+// that needs a person; the app marks the pane and raises a banner. Only a Claude Code older than the
+// worker's denyInsteadOfPrompting (appSessionSettings) still sends it. A prompt submitted, or a tool that
 // has run (so any permission was granted), is the worker back at work, which takes either mark off.
 // The prompt hook's input says who put the prompt in, which tells main's turns from yours
 // (prompt-source.ts).
@@ -183,7 +195,7 @@ export function workerSettings(id: string, userData: string): string {
   // The space after the brace is outside every string, which is what makes Windows PowerShell wrap the
   // word in quotes on its way to claude; every other space here is inside one, and without it the JSON
   // reached claude cut at each of them (windowsPowerShellWraps). JSON does not mind the space.
-  const shared = appSessionSettings(userData);
+  const shared = appSessionSettings(userData, 'worker');
   return '{ ' + JSON.stringify({
     ...shared,
     hooks: {

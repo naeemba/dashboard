@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage } from './settings-rows';
+import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage, withWorkerCap } from './settings-rows';
 import { ACTIONS } from '../../shared/keys/actions';
 import { bindKey, defaultSettings, isOn, parseSettings } from '../../shared/settings/settings';
 
@@ -42,6 +42,17 @@ describe('settingsRows', () => {
     const row = { kind: 'budget-percentage', field: 'weeklyCap', noun: 'cap', empty: 'not set', label };
     expect(settingsRows(parseSettings({}, false))).toContainEqual({ ...row, value: '' });
     expect(settingsRows(parseSettings({ budget: { weeklyCap: 74 } }, false))).toContainEqual({ ...row, value: '74' });
+  });
+
+  it('lists the cap per project and the total, empty for none, and takes a whole number from 1 or empty', () => {
+    const project = { kind: 'worker-cap', field: 'cap', label: 'Main\'s workers running at once, in one project' };
+    const total = { kind: 'worker-cap', field: 'totalCap', label: 'Main\'s workers running at once, across the app' };
+    expect(settingsRows(parseSettings({}, false))).toEqual(expect.arrayContaining([{ ...project, value: '4' }, { ...total, value: '8' }]));
+    expect(settingsRows(parseSettings({ workers: { totalCap: 'none' } }, false))).toContainEqual({ ...total, value: '' });
+    const settings = parseSettings({ workers: { stallMinutes: 5 } }, false);
+    expect(withWorkerCap(settings, 'cap', '2')?.workers).toEqual({ cap: 2, totalCap: 8, stallMinutes: 5 });
+    expect(withWorkerCap(settings, 'totalCap', '')?.workers).toEqual({ cap: 4, totalCap: null, stallMinutes: 5 });
+    expect(['0', '2.5', 'lots'].map((text) => withWorkerCap(settings, 'cap', text))).toEqual([null, null, null]);
   });
 
   it('names the limit that applies, and Enter walks the cap, the pace and none in turn', () => {

@@ -135,6 +135,8 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   and `vite.pane-host.config.ts` at the root
 - Output no faster than it draws: `output-pauses.ts`, and `write-flow.ts` in
   the renderer
+- What a Claude in a pane says of itself: `program-status.ts` (OSC 7501, read off
+  the pty in `pane-shells.ts`)
 - Links in output: `links.ts`, `wrapped-links.ts`, `print-widths.ts`
 - Off screen: `paused-selection.ts`, which keeps xterm from redrawing a
   terminal it has paused, or a shown one's selection when there is none;
@@ -143,6 +145,11 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
 
 ## Scenarios
 
+- Given Claude Code starts in a pane, when it probes for OSC 7501 (the Program
+  Status Protocol), then main answers before the pane sees it, and from then on
+  Claude says in the pty whether it is working, blocked, done, idle or failed.
+  The format has no document: it is read from the bytes Claude Code 2.1.332
+  writes, and a sequence it does not read changes nothing.
 - Given a pane you are not looking at, when it rings its bell, then the pane is
   marked and a notification click takes you to it.
 - Given a link wrapped onto the next row, when you click it, then the whole link

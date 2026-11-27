@@ -18,14 +18,16 @@ describe('poolPorts', () => {
   it('keeps the queue in the user data folder and reads the cap and the budget off the live settings', () => {
     const folder = temporaryFolder('dashboard-queue-');
     let settings = defaultSettings(false);
-    const ports = poolPorts(folder, () => settings, cards);
+    let told = 0;
+    const ports = poolPorts(folder, () => settings, cards, () => { told += 1; });
     expect(ports.saved).toEqual({ next: 1, entries: [] });
     ports.save({ next: 2, entries: [ship] });
     expect(readQueue(path.join(folder, 'pane-queue.json'))).toEqual({ next: 2, entries: [ship] });
-    expect(ports.cap()).toBe(4);
+    expect(told).toBe(1);
+    expect(ports.cap()).toEqual({ project: 4, total: 8 });
     expect(ports.budget()).toBeNull();
-    settings = { ...settings, workers: { cap: null } };
-    expect(ports.cap()).toBeNull();
+    settings = { ...settings, workers: { ...settings.workers, cap: null, totalCap: 6 } };
+    expect(ports.cap()).toEqual({ project: null, total: 6 });
   });
 
   // The board skips a card file that does not parse, and the drain would then drop that card's start.
@@ -34,7 +36,7 @@ describe('poolPorts', () => {
     const cardsFolder = path.join(boardFolderPath(project), 'cards');
     mkdirSync(cardsFolder, { recursive: true });
     writeFileSync(path.join(cardsFolder, 'a.json'), '{ half saved');
-    const ports = poolPorts(temporaryFolder('dashboard-queue-'), () => defaultSettings(false), cards);
+    const ports = poolPorts(temporaryFolder('dashboard-queue-'), () => defaultSettings(false), cards, () => undefined);
     expect(ports.board(project)).not.toBeNull();
     expect(ports.drainBoard(project)).toBeNull();
   });
@@ -43,7 +45,10 @@ describe('poolPorts', () => {
   it('keeps going when the file cannot be written', () => {
     const folder = temporaryFolder('dashboard-queue-');
     writeFileSync(path.join(folder, 'file'), '');
-    const ports = poolPorts(path.join(folder, 'file'), () => defaultSettings(false), cards);
+    let told = false;
+    const ports = poolPorts(path.join(folder, 'file'), () => defaultSettings(false), cards, () => { told = true; });
     expect(() => ports.save({ next: 1, entries: [] })).not.toThrow();
+    // The queue changed in this run all the same, so the popup is told.
+    expect(told).toBe(true);
   });
 });

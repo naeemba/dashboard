@@ -7,7 +7,7 @@ import {
   bindKey, DEFAULT_WEATHER_PLACE, defaultSettings, holderOfBinding, isFontSize, isHexColor, BUDGET_PERCENTAGE_RANGE, isBudgetPercentage, isPort, resetAll, resetKeys,
   type Settings,
 } from '../../shared/settings/settings';
-import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage, type SettingsRow } from './settings-rows';
+import { nextBudgetLimit, settingsRows, stepSelection, toggled, withBudgetPercentage, withWorkerCap, type SettingsRow } from './settings-rows';
 import { chatShadowPartner, isModified } from '../keys/shortcuts';
 
 // Modifier keys pressed on their own are not a binding — you are still on your way to one. Without
@@ -122,6 +122,8 @@ export function openSettings(
             value.textContent = 'not listening';
           } else if (row.kind === 'budget-percentage' && row.value === '') {
             value.textContent = row.empty;
+          } else if (row.kind === 'worker-cap' && row.value === '') {
+            value.textContent = 'no cap';
           } else {
             value.textContent = row.value === '' ? 'from the environment' : row.value;
           }
@@ -188,6 +190,11 @@ export function openSettings(
           // seventh of the week a day, 5/7 of 100 on the fifth day since the reset.
           if (text !== '' && !isBudgetPercentage(text)) say(`"${text}" is not a ${row.noun}: ${BUDGET_PERCENTAGE_RANGE}, or empty for ${row.empty}.`);
           else commit(withBudgetPercentage(settings, row.field, text === '' ? null : Number(text)));
+        } else if (row.kind === 'worker-cap') {
+          // A lower cap stops nothing running: starts wait until fewer run (workers-decision-11).
+          const next = withWorkerCap(settings, row.field, text);
+          if (next === null) say(`"${text}" is not a number of workers: a whole number from 1, or empty for no cap.`);
+          else commit(next);
         } else {
           // The shell. Empty is the file saying "work it out from the environment", which is a real
           // answer rather than a blank, so there is nothing to refuse.

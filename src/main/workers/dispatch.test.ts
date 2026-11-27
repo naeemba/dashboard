@@ -90,7 +90,7 @@ describe('mainPrompt verbs', () => {
   it('dispatches with pane start, never claim then run', () => {
     const prompt = mainPrompt('/work/api');
     expect(prompt).toContain('  start [--project <name|aka>]');
-    expect(prompt).toContain('queues a start past it, answering `queued <queue id>, <position>`');
+    expect(prompt).toContain('answering `queued <queue id>, <position>`; a worker waiting only on');
     expect(prompt).toContain('  unqueue <queue id>');
     expect(prompt).not.toContain('  claim [');
     expect(prompt).not.toContain('  run <id>');
@@ -106,6 +106,20 @@ describe('mainPrompt verbs', () => {
 });
 
 const USER_DATA = '/tmp/dash-copy';
+
+describe('appSessionSettings', () => {
+  // A worker screen is denied the prompt as a terminal worker is; main, where you are, still asks.
+  it('denies prompts to a worker only', () => {
+    expect(appSessionSettings(USER_DATA, 'worker').permissions.denyInsteadOfPrompting).toBe(true);
+    expect(appSessionSettings(USER_DATA, 'main').permissions).not.toHaveProperty('denyInsteadOfPrompting');
+  });
+
+  // A worker paused on CI must not come back compacted; main keeps Claude Code's default.
+  it('turns idle compaction off for a worker only', () => {
+    expect(appSessionSettings(USER_DATA, 'worker')).toHaveProperty('idleCompaction', false);
+    expect(appSessionSettings(USER_DATA, 'main')).not.toHaveProperty('idleCompaction');
+  });
+});
 
 describe('workerSettings', () => {
   // Stop reports done whatever the worker remembered to say; the permission prompt reports blocked.
@@ -138,7 +152,7 @@ describe('workerSettings', () => {
 
   // A terminal worker carries everything a screen does, so a key added to the shared settings reaches both.
   it('carries every app session setting', () => {
-    expect(JSON.parse(workerSettings('2:3', USER_DATA))).toMatchObject(appSessionSettings(USER_DATA));
+    expect(JSON.parse(workerSettings('2:3', USER_DATA))).toMatchObject(appSessionSettings(USER_DATA, 'worker'));
   });
 
   // Every other space in it is inside a string, and Windows PowerShell wraps a word for claude only when

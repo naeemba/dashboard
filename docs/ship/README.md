@@ -21,7 +21,8 @@ Folders: `src/main/ship/`, `src/shared/ship/`, `src/renderer/ship/`.
 
 Started by the card.ship and card.review actions (docs/actions), which are what a move into Ship or
 Review, and `dashboard board ship` and `review`, call. Both start through the pane pool's
-pane.start: with `workers.cap` workers running the ship or review is queued, and its worktree is
+pane.start: with `workers.cap` workers running in its project, or `workers.totalCap` in all, the
+ship or review is queued, and its worktree is
 made, or swapped for the review's, only when it starts (workers-decision-11). The agent itself, and
 the review's, is started by pane.dispatch: a Claude screen off Windows, Claude Code in the terminal
 on it (workers-decision-8). Every worktree, a ship's, a review's or a throwaway's, is made by

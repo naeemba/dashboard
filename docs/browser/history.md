@@ -43,3 +43,5 @@ One line per merged change: date and why.
 - 2026-11-26 — a worker is asked about the tabs it holds when its turn ends with nothing running,
   in a turn kept out of its report and main's notice, because a release kills the agent and the
   user wants the one holding a tab to decide while it still can
+- 2026-11-27 — `browser.proxy` sends the hosts it lists through a proxy and every other site
+  direct, because work sites answer only through a VPN run as a local proxy

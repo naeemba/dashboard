@@ -67,6 +67,20 @@ refused the camera, the microphone, the location, notifications and the screen,
 and a page that only checks (`Notification.permission`) is told the same; it may
 write to the clipboard.
 
+Every site goes direct unless `browser.proxy` in the settings file lists its
+host; a listed one goes through that proxy, in every project's browser
+(browser-decision-11):
+
+    "browser": { "proxy": { "server": "socks5://127.0.0.1:1080",
+      "hosts": ["*.instacoins.travel", "test-*.internal"] } }
+
+The server is `socks5://`, `socks4://`, `http://` or `https://`. A host is read
+as ZeroOmega reads it: `*` is any run of characters, dots too; `*.x` and `.x` are
+`x` and every host under it; `**.x` only the hosts under it. A change is used as
+soon as it is saved, and fails whatever a tab is loading then. A listed site
+never falls back to direct: with the proxy down its tab is titled
+`Proxy <server> did not answer`.
+
 While anything floats over the app (a dialog, the which-key strip, the file
 hints) the web page is taken off the window and comes back when it goes: a web
 page is a native view drawn over every bit of the window's HTML, so a dialog
@@ -186,6 +200,8 @@ Folders: `src/main/browser/`, `src/main/actions/browser/`, `src/renderer/browser
 - `browser-tabs.ts`: the tab list's rules, where each view is drawn, where the
   keyboard goes back to, the partition and the permissions a page gets
 - `address.ts`: what a tab may show, and what typing an address means
+- `proxy.ts` (shared), `proxy.ts` (actions): which hosts go through the proxy, the
+  PAC script that says so, and browser.proxy, which gives it to every session
 - `browser-ports.ts`, `tabs.ts`, `navigate.ts`, `view.ts`: the actions, each
   with its test against `browser-fixture.ts`
 - `browser-actions.ts`: the actions bound and their `browser:<verb>` channels

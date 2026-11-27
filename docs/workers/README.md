@@ -43,7 +43,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   asked by `pr land`
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 - What each main dispatched, as its status line and workers popup read it:
-  `worker-roster.ts`, `pane-link.ts`
+  `worker-roster.ts`, `pane-link.ts`; the pane pool's queue in the same popup,
+  `queued` and `unqueue` in `session-requests.ts`, drawn by
+  `src/renderer/chat/chat-workers-view.ts` (workers-decision-11)
 - The app's index of every Claude it started: `session-index.ts`,
   `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
 - A worker's Claude screen, the `pane run` default off Windows:
@@ -58,19 +60,27 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `pane-actions.ts`, the default `pane-kind.ts`, the kind's type in
   `src/shared/panes/pane-kind.ts` (workers-decision-8,
   [actions](../actions/README.md))
-- The pane pool, which holds main's workers to `workers.cap` (4) and queues a
-  start past it: the decisions in `pane-pool.ts`, the queue's file
+- The pane pool, which holds main's workers to `workers.cap` (4) in a project
+  and `workers.totalCap` (8) in all and queues a start past either: the
+  decisions in `pane-pool.ts`, the queue's file
   `pane-queue-store.ts` (`pane-queue.json` in the app's user data), what main
   builds it on (settings, budget, boards) `pane-pool-ports.ts`, the
   pane.start, pane.queue and pane.unqueue actions and the drain in
-  `../actions/pane/queue.ts`, built and drained by `session-requests.ts`
+  `../actions/pane/queue.ts`, the CI wait's pane.ci-wait and pane.ci-resume in
+  `../actions/pane/ci-wait.ts` (asked by `pr wait` and `pr land` around their
+  wait on the checks, `../command/pull-request-cli.ts`), built and drained by
+  `session-requests.ts`
   (`pane start`, tested in `session-requests-pool.test.ts`); a ship and a review
   start through it from `../actions/card/card-actions.ts`
   (workers-decision-11)
+- A worker gone silent, shown stalled and told to main once: `stall.ts`, its
+  notice in `done-report.ts`, read by
+  `session-requests.ts` (tested in `session-requests-stall.test.ts`), asked
+  each minute by `../main.ts` (workers-decision-13)
 - The screen host a worker screen's session runs in, so it outlives the app:
   `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`,
-  `screen-host-protocol.ts`, `dead-host.ts`, `../chat/input-queue.ts`
-  (workers-decision-6)
+  `screen-host-protocol.ts`, `dead-host.ts` (with `../app/process-alive.ts`),
+  `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios
 
@@ -97,12 +107,24 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   (worktree.make, [ship](../ship/README.md)), minutes for a cold `npm ci`, so main's prompt and its
   usage tell main to give the call a ten-minute timeout (600000 ms) rather than Bash's two-minute
   default, which would report a failure for a worker that then starts anyway.
-- Given 4 of main's workers running, blocked on a question or paused on their own
-  background work, when main runs `pane start "<task>"` or `board ship <id>`, or
-  the review sweep starts a review, then it answers `queued q7, 1st: 4 running,
-  the cap is 4` at once, claims no pane and makes no worktree; when one of the 4
-  is done, released or gone, q7 starts, its pane and worktree picked then, and
-  the main that queued it is told `q7 started: …` (workers-decision-11).
+- Given 4 of main's workers in a project running, blocked on a question or
+  paused on their own background work, when main runs `pane start "<task>"` or
+  `board ship <id>`, or the review sweep starts a review, then it answers
+  `queued q7, 1st: q7 waits for a slot: 4 running in api, the cap per project
+  is 4` at once, claims no pane and makes no worktree; when one of the 4 is done,
+  released or gone, q7 starts, its pane and worktree picked then, and the main
+  that queued it is told `q7 started: …` (workers-decision-11). An entry for
+  another project behind q7 starts meanwhile, unless 8 run in all: then the
+  answer is `8 running, the total cap is 8` and nothing starts.
+- Given a worker whose only background work is `pr wait` or `pr land` waiting on
+  CI, when its turn ends, then its slot is free and a queued start may take it;
+  when CI is done, the command asks for the slot back before it prints its
+  verdict, ahead of every queued entry, and waits there while both caps are
+  full. A worker running tests beside the wait, or running `pr wait` in the
+  foreground, keeps its slot, and `pr wait` or `pr land` run by main never asks
+  the pool anything. A `pr wait` killed before CI is done, by any signal, frees
+  nothing from then on: the worker's other background work holds the slot again
+  (workers-decision-11).
 - Given fewer than 4 running and nothing queued, when main runs `pane start`,
   then it claims a pane and answers as `pane run` does; `pane run <id>` at the
   cap is refused, saying `pane start` queues it.
@@ -123,6 +145,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   than refusing itself as already queued.
 - Given main ran `board move <id> Ship` from Todo and the ship is queued as q7, when main runs
   `pane unqueue q7`, then it answers `withdrew q7; card … back in Todo` and the card is in Todo.
+  D on q7 in main's workers popup does the same.
 - Given a card dragged on the board from Todo into Ship and the ship queued, when main withdraws
   it, then the card is back in Todo, the same as a move made with the command.
 - Given a weekly cap set and the 7-day usage at or over it, when a slot frees,
@@ -143,12 +166,29 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   pane, queued behind its turn if it is busy, and the Claude screen draws it as a status line; a
   card's agent tells its project's main the same way, and a Claude opened by hand tells nobody until
   a main sends it work (workers-decision-1).
+- Given a terminal worker, when its Claude stops on a question (its OSC 7501
+  status says blocked), then the pane is marked blocked as for a permission
+  prompt, which marks the pane and tells main nothing, and its next working
+  status takes the mark off, even after an idle. A failed turn (error) is not
+  marked: it reads running until the stall sweep tells main. Running and done
+  stay the hooks': the status says nothing of a pause's background work, the
+  prompt's source or the last message.
 - Given a worker waiting on its own background work, when its turn ends with a
   background task in flight or a wakeup scheduled, then main is told nothing,
   and `pane list` says `paused, waiting on 2 background tasks` and the workers
   popup `waiting on 2 background tasks`; its next stop decides again, and a
   pause that lasts 30 minutes is told to main once, unless main read a report
   from it since it last handed it work, or its work is in.
+- Given main's worker at work, hung on a test that never ends, when no hook of
+  its has run for `workers.stallMinutes` (20), then `pane list` and
+  `pane status` say `stalled, silent 20 minutes` in place of `running`, the
+  workers popup the same on its row (redrawn every minute, its count saying
+  `1 stalled`), and its main is told once, within a minute, naming it and its pane, which the Claude
+  screen draws as a status line. It keeps its pane
+  and its slot; the next prompt or tool it finishes makes it `running` again,
+  takes back the notice if main has not read it yet, and a later stall is told
+  again. A turn you typed into it is not told, and a worker resumed after a
+  restart is never stalled until a hook of its runs (workers-decision-13).
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks`
   or `session_crons`, when its turn ends, then main is told only once it has
   stayed out of `running` for three minutes, as before them
@@ -369,8 +409,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   you interrupt, or a session that ends, counts as over for the review sweep
   without telling main, unless it ended with an error while at work (a refused
   or failed start among them), when main is told it stopped; a question it asks
-  marks the pane blocked until answered, and arriving in the screen clears the
-  pane's bell.
+  (only on a Claude Code before 2.1.319, workers-decision-12) marks the pane
+  blocked until answered, and arriving in the screen clears the pane's bell.
 - Given a worker on a Claude screen, when a ship, the review sweep, the command
   screen or a project close picks or checks a pane, then that pane reads as
   running an agent, and the drawer and main's /resume refuse its conversation as
@@ -383,8 +423,17 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   text goes in as its next prompt rather than into the hidden shell;
   `pane release` closes the pane and ends the session.
 - Given a worker on a Claude screen, when it runs a command, then it is decided
-  as a terminal worker's: allow rules first, a call auto mode cannot decide asks
-  in its box, a call it blocks is refused (workers-decision-5).
+  as a terminal worker's: allow rules first, then auto mode, and a call it
+  blocks is refused (workers-decision-5).
+- Given a worker, on a screen or in a terminal, when a call would wait on a
+  permission prompt, then it is denied at once, the worker is told and its turn
+  goes on, so the refusal is in its report rather than the pane sitting on a
+  prompt holding a slot; main's own calls still ask (workers-decision-12).
+- Given a worker with a question for you, when it asks, then the question is
+  denied the same way and the worker reports it to main (workers-decision-12).
+- Given a worker paused an hour on CI with a long conversation, when it wakes,
+  then it has its whole conversation, never an idle compaction's summary; main
+  keeps Claude Code's default (workers-decision-12).
 - Given a machine whose `~/.claude/settings.json` names no rule for the app's
   commands, when main or a worker runs `node "$DASHBOARD_COMMAND" pane …`,
   `session …` or `node "$DASHBOARD_BOARD" …`, then it runs without a question:

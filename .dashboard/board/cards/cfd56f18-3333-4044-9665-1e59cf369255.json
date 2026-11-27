@@ -5,14 +5,31 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T14:56:18.200Z",
-  "updatedAt": "2026-11-27T11:40:02.108Z",
+  "updatedAt": "2026-11-27T12:31:40.340Z",
   "branch": "workers-popup-shows-the-pane-queue-with-a-w",
+  "pullRequest": 414,
   "comments": [
     {
       "at": "2026-11-27T11:40:02.108Z",
       "body": "Overlaps #411 (card 99b304cb, Split main.ts along its seams, in Review): it rewrites main.ts's sessionRequests({...}) block into sessionRequestPorts(...) in src/main/workers/session-request-ports.ts, including the poolPorts(...) line this card must change to tell the renderer of a queue change; both also edit docs/workers/README.md. main.ts sits at exactly 600 code lines on main, so this card's IPC doors (workers:queue, workers:unqueue) go in a new module either way. Plan: pool exposes its entries; session-requests answers queued rows per dispatcher slot; workers popup lists them under the running workers with their position; a new 'workers' scope row (claude-workers-withdraw, D) withdraws through pane.unqueue; settings screen gets a workers.cap row. No code written yet."
+    },
+    {
+      "at": "2026-11-27T11:53:33.193Z",
+      "body": "Pull request #414 opened: Workers popup shows the pane queue, with a withdraw key https://github.com/naeemba/dashboard/pull/414"
+    },
+    {
+      "at": "2026-11-27T12:23:08.499Z",
+      "body": "Review loop finished: floor-addressed after 1 round. 3 low findings, all fixed (4888efc8, d0bf2a4a, eaab4c2e): raising workers.cap drains the pool at once; the popup heading names Enter or the withdraw key only when a row allows it; the withdraw-target check moved to worker-roster.ts with a test. The final check accepted all 3 and nothing is left open. Not ready to merge: since the loop's conflict check, the pull request has come to conflict with main (pr wait: 'conflicts with main', git could not name the files), so CI was not waited on. Merge origin/main into the branch, resolve, push, then wait for CI."
+    },
+    {
+      "at": "2026-11-27T12:30:19.055Z",
+      "body": "Merged origin/main (#411, #412) into the branch as 69befeed: no conflicts. pnpm check: typecheck and lint pass; one test failed only because node_modules was stale after #412's SDK bump, and passes after pnpm install. CI passed on 69befeed. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-27T12:31:40.310Z",
+      "body": "Pull request #414 merged: Workers popup shows the pane queue, with a withdraw key https://github.com/naeemba/dashboard/pull/414"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Done",
+  "order": 339
 }

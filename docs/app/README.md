@@ -179,15 +179,19 @@ when one is written as a range, and a new exact hold below adds its name there.
 - `typescript` is an alias to `@typescript/typescript6`, so typescript-eslint
   keeps the 6.0 API while `@typescript/native` (7.x) runs `tsc`. The alias goes
   when typescript-eslint supports TypeScript 7.
+  typescript-eslint's optional `@typescript/native` 7.1 peer is for its
+  experimental tsgo backend, unused here; its unmet-peer warning is expected
+  until `@typescript/native` reaches 7.1.
 - `@types/node` follows the Node major that Electron ships (Node 24 for
   Electron 45), so code cannot type-check against a Node API the app's runtime
   lacks.
 - The `undici@6` and `undici@7` overrides go when node-gyp and @electron/get
   ship the patched releases themselves.
-- The `minimatch@10` override to 11 goes when its consumers (eslint,
-  @eslint/config-array, typescript-estree, glob, @electron/asar) move to 11.
-  Version 11 removed `makeRe`, `AST` and `Minimatch#matchOne`; before any bump
-  of those consumers, check that none of them calls one.
+- The `minimatch@10` override to 11 goes when @electron/asar moves to 11, both
+  directly and through the glob 13 it depends on; eslint, @eslint/config-array
+  and typescript-estree already ask for 11. Version 11 removed `makeRe`, `AST`
+  and `Minimatch#matchOne`; before any bump of @electron/asar or glob, check
+  that neither calls one.
 
 ## Content-Security-Policy
 

@@ -610,21 +610,44 @@ so it is not tried again.
 ## workers-decision-11: The app holds main's workers to a cap, through one queue
 
 **Every start of new work, `pane start`, a ship and a review, goes through pane.start, which starts
-it when fewer than `workers.cap` (4) of main's workers hold a slot and queues it otherwise**
+it when fewer than `workers.cap` (4) of main's workers hold a slot in its project and fewer than
+`workers.totalCap` (8) in all, and queues it otherwise**
 (`src/main/workers/pane-pool.ts`, `src/main/actions/pane/queue.ts`). Before it, the 4 lived only in
 what the user told main, and main was the only thing counting: on 2026-11-09 eight workers ran
 tests at once, earlyoom killed the screen host, and panes came back with two sessions each. The
 review sweep's own starts could push past a main that counted perfectly.
 
 - **A slot is held by a worker running, blocked on a question, or paused on its own background
-  work** (`holdsSlot`). Blocked carries on the moment it is answered, and the Stop hook reports only
-  counts, so a pause on CI cannot be told from one on a test run: freeing it would make five
-  working when the wake-up comes. Done frees it, so does a pause whose work is in, and a Claude
-  opened by hand or main itself never holds one. The cost: a review loop waiting 15 minutes on CI
-  keeps a queued card waiting 15 minutes, and a question asked at night holds its slot until
-  morning.
-- **One cap for the whole app**, since everything it guards is machine- or account-wide: memory,
-  the one-heavy-run lock (workflow-decision-14), the 7-day usage.
+  work** (`holdsSlot`). Blocked carries on the moment it is answered. Done frees it, so does a pause
+  whose work is in, and a Claude opened by hand or main itself never holds one. The cost: a
+  question asked at night holds its slot until morning.
+- **A pause whose only background work is waiting on CI gives its slot back** (2026-11-27). The Stop
+  hook reports only counts, so the hook alone cannot tell a CI wait from a test run; the wait is its
+  own command, so `pr wait` and `pr land` say so: pane.ci-wait before they wait on the checks,
+  pane.ci-resume once they are done (`../actions/pane/ci-wait.ts`). A paused worker with no more
+  background tasks than CI waits frees its slot. Before it, a review loop waiting 15 minutes on CI
+  kept a queued card waiting 15 minutes. pane.ci-resume answers when the slot is back: at once while
+  the worker holds one anyway, else when both caps have room, ahead of every queued entry, so a
+  worker CI wakes never takes the count over a cap. Kept: a test run or build beside the wait (more
+  background tasks than waits), and `pr wait` in the foreground, a turn still running, which agents
+  are told not to do. A scheduled wake-up is no running work, so it does not keep the slot; one that
+  fires before CI is done runs over the cap until its turn ends. Main is no pool member: run by
+  main, or outside a pane, the command asks nothing, and the actions answer a pane that is no main's
+  worker at once. A wait lost to an app restart is forgotten, and the pane holds its slot. A wait
+  is the process id of the `pr wait` or `pr land` that asked, and frees the slot only while that
+  process runs (`liveWaits`, read at every count the drain makes): a `pr wait` killed before its
+  resume, by any signal, SIGKILL included, is over at once, so a test run started in the same turn
+  holds the slot. Before it, the count was lowered only by the next Stop's background count, and a
+  wait killed beside a new test run left the slot free for that whole run. A SIGTERM handler alone
+  was not taken: SIGKILL runs no handler. Each Stop still lowers the count to the background it
+  reports, for a dead wait's process id taken up by another process.
+- **A cap per project, and a total across them** (2026-11-27): 4 a project, so one busy project
+  never queues another's card behind its own, and 8 in all, since memory, the one-heavy-run lock
+  (workflow-decision-14) and the 7-day usage are machine- or account-wide: the 8-worker night above
+  is why the total stays. A worker counts against the project of the page it is on; one working in
+  another repository is on that project's own page. An entry whose project is at its cap waits as
+  one for a closed project does, letting later entries for other projects go ahead; the total
+  holds every entry.
 - **First in, first out**, with `--first` for the head and `pane unqueue` to withdraw; reordering is
   unqueue and queue again. `--after <card>` holds an entry until that card is Done or Cancelled,
   letting later ones go ahead, for a card main knows would conflict with an open pull request: the
@@ -655,3 +678,58 @@ review sweep's own starts could push past a main that counted perfectly.
 - **Under the cap a start answers what its start answers**, `pane run`'s line for a run and the
   ship's for a ship, as the board screen's status bar needs; queued, it answers at once.
 
+## workers-decision-12: A worker is denied a permission prompt rather than waiting on one
+
+**Every worker the app starts, on a screen or in a terminal, carries
+`permissions.denyInsteadOfPrompting: true` in its settings; main does not** (`appSessionSettings`
+in `src/main/workers/dispatch.ts`, whose `kind` says which, passed in the screen's `settings` and a
+terminal worker's `--settings`). Claude Code 2.1.319 added the setting: a call that would prompt is
+denied at once, the model is told, and the turn carries on. Before, a worker that hit a prompt sat
+blocked, holding a pool slot (workers-decision-11), until someone noticed the banner.
+
+- **Workers only.** Main is where you are, and a session you start yourself gets none of the app's
+  settings. A follow-up you type into a worker is denied the same way: the setting is the session's,
+  not the turn's.
+- **Allow rules, auto mode and PermissionRequest hooks still decide first**; the setting only turns
+  what would have been a prompt into a refusal, so workers-decision-9's allow rules are untouched.
+- **A worker's questions are denied too, on purpose**: a worker stopped on a question holds a pool
+  slot until someone looks at its pane, so it reports its open questions to main instead.
+- **A screen worker's `canUseTool` is not asked either**, per the setting's own description in
+  Claude Code: read from user settings, `--settings` and managed settings, never project or local
+  ones, which is why it goes in the app's flag settings.
+- **The blocked mark stays**: the `permission_prompt` Notification hook and the screen's ask still
+  mark a pane blocked under a Claude Code older than 2.1.319, which does not know the key.
+- **A screen runs the CLI the Agent SDK bundles**, not the installed one, so the SDK pin moved from
+  0.3.316 (Claude Code 2.1.316, which keeps the key and never reads it) to 0.3.332.
+  `package-pins.test.ts` fails if a later pin bundles a Claude Code older than 2.1.319.
+- **A worker carries `idleCompaction: false` too; main does not** (2026-11-27). Claude Code
+  compacts a conversation over 200K tokens left idle about an hour, so a worker paused on CI or a
+  review loop came back with a summary of its own task in place of the detail.
+
+## workers-decision-13: A worker silent past a setting is shown stalled, never stopped
+
+**Main's worker at work whose hooks have said nothing for `workers.stallMinutes` (20) is shown
+`stalled` in `pane list`, `pane status`, the workers popup and the status line count, and its
+main is told once** (`src/main/workers/stall.ts`). Before it, a worker hung on a test that never
+ends sat in Doing holding a pool slot (workers-decision-11) with nothing to say so.
+
+- **A sign of life is any hook**: a prompt going in, a tool finishing, a stop or a question. Pane
+  output is not one: Claude Code's spinner redraws its timer every second whatever the worker is
+  stuck on, and a worker screen has no pane output at all. The cost: a worker thinking 20 minutes
+  without running a tool is called stalled, which one look at its pane settles.
+- **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
+  minute notice (workers-decision-1): their silence is waiting, not a hang.
+- **The workers popup is redrawn each minute while one is stalled**, and once on the minute after
+  the last stall ends: a stall begins with no hook to mark the pane, and a raised
+  `workers.stallMinutes` ends one with none either.
+- **Shown and told, never acted on.** It keeps its pane and its slot and is never released: a long
+  build looks the same as a hang from the hooks, and killing one loses work. The user or main
+  decides.
+- **A worker no hook has spoken for since the launch is never stalled.** One resumed after a
+  restart gets no prompt, so no hook runs and it reads as at work (workers-decision-1); starting
+  its clock at the first look only told main of every resumed worker at once twenty minutes later.
+  A worker screen whose turn carried on through the restart starts its clock at its next tool. The
+  cost: one hung across a restart is never called stalled.
+- **A notice still waiting for main is taken back** when the worker's next hook comes in, or it is
+  let go of, as its stop notice is: main never reads that a worker that is working again may be
+  stuck.

@@ -1,0 +1,31 @@
+{
+  "id": "adbd94a0-b3d0-49f3-86b3-692324d82202",
+  "title": "Update every dependency: patches first, then each minor and major with its changelog",
+  "notes": "User's ask, 2026-11-27. Order:\n1. All patch updates in one commit; pnpm check green.\n2. Then each minor and each major one package at a time (or one tight family, e.g. @xterm/*): read its changelog/release notes between our version and the new one, apply what the app needs (renamed APIs, new defaults, deprecations we use, config changes), run pnpm check, one commit per package naming what changed and why.\nRespect the existing pins: package-pins.test.ts and anything it names stays pinned unless its reason no longer holds, which you say in the commit. Electron majors: also read the breaking-changes doc and check the native-module path (node-pty) still rebuilds (pnpm install, make). If a major needs work beyond a few files, stop on that package, leave it out, and list it in the PR body with what it would take. pnpm install --frozen-lockfile must pass on the result. The PR body: a table of every package, from, to, and what changed in the app. The installed app needs a rebuild afterwards; do not touch the running app.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T12:03:16.763Z",
+  "updatedAt": "2026-11-27T13:03:44.682Z",
+  "branch": "update-every-dependency-patches-first-then",
+  "pullRequest": 416,
+  "comments": [
+    {
+      "at": "2026-11-27T12:04:13.276Z",
+      "body": "Overlap: PR #412 (card 8b028c7a, Worker panes deny permission prompts) bumps @anthropic-ai/claude-agent-sdk 0.3.316 -> 0.3.332 and adds a test to package-pins.test.ts. Both touch package.json, pnpm-lock.yaml, package-pins.test.ts. Every lockfile change here conflicts with it. Waiting on main: go on (and leave claude-agent-sdk to #412) or wait for #412 to merge."
+    },
+    {
+      "at": "2026-11-27T12:43:34.260Z",
+      "body": "Pull request #416 opened: Update every dependency: patches, then each minor with its notes https://github.com/naeemba/dashboard/pull/416"
+    },
+    {
+      "at": "2026-11-27T13:02:46.682Z",
+      "body": "Review loop: converged, ready to merge. 1 round, 2 doc findings fixed (1a826884: coverage-v8 version in workflow-decision-13; 67b23693: typescript-eslint @typescript/native peer note in app README). Nothing open, no conflicts, CI green on the head commit. Step 1 printed: was ready."
+    },
+    {
+      "at": "2026-11-27T13:03:44.657Z",
+      "body": "Pull request #416 merged: Update every dependency: patches, then each minor with its notes https://github.com/naeemba/dashboard/pull/416"
+    }
+  ],
+  "column": "Done",
+  "order": 341
+}

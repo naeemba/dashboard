@@ -7,7 +7,7 @@ import { cacheWarmth, type CacheUse } from '../usage/cache-warmth';
 // workers popup lists them. Main builds the list from what `pane list` already reads
 // (session-requests.ts); the decisions about it are here so both ends agree.
 
-export type WorkerStatus = 'working' | 'paused' | 'blocked' | 'done' | 'idle';
+export type WorkerStatus = 'working' | 'stalled' | 'paused' | 'blocked' | 'done' | 'idle';
 
 // What a worker's Stop hook said its session still waits on: background tasks in flight (shells,
 // subagents, monitors, workflows) and wakeups scheduled (CronCreate, ScheduleWakeup, /loop). Claude
@@ -41,12 +41,13 @@ export type DispatchedWorker = {
   // The first words of the prompt it was given.
   about: string;
   status: WorkerStatus;
-  // What a paused worker waits on, as waitingText says it.
-  waiting?: string;
+  // What the row says in place of the status: what a paused worker waits on, as waitingText says it,
+  // or how long a stalled one has been silent, as `pane list` says it (stall.ts).
+  detail?: string;
 };
 
 // The order the count and the popup give the states in: what still runs first, what is finished last.
-const ORDER: readonly WorkerStatus[] = ['working', 'paused', 'blocked', 'done', 'idle'];
+const ORDER: readonly WorkerStatus[] = ['working', 'stalled', 'paused', 'blocked', 'done', 'idle'];
 
 const ABOUT_WORDS = 8;
 
@@ -57,7 +58,8 @@ export function workerAbout(prompt: string): string {
 
 // What a worker is doing now. Its agent gone, it is idle whatever its hooks last said: the pane is a
 // shell again. Running, a pause if its Stop hook said it waits on something, else its hooks' last
-// word; none yet is the agent at work.
+// word; none yet is the agent at work. Stalled is that worker silent too long, which main reads off
+// its stall clock (workers-decision-13).
 export function workerStatus(agentRunning: boolean, said: WorkerState | undefined, paused = false): WorkerStatus {
   if (!agentRunning) return 'idle';
   if (paused) return 'paused';
@@ -65,14 +67,29 @@ export function workerStatus(agentRunning: boolean, said: WorkerState | undefine
 }
 
 // The status line's button: `3 workers: 2 working, 1 done`, the states in ORDER and only those with a
-// worker in them. Empty when there are none, and the button is not drawn.
-export function workerCount(workers: readonly DispatchedWorker[]): string {
-  if (workers.length === 0) return '';
+// worker in them, then `· 2 queued` for the starts waiting in the pane pool. Empty when there are
+// neither, and the button is not drawn.
+export function workerCount(workers: readonly DispatchedWorker[], queued = 0): string {
   const counts = ORDER.flatMap((status) => {
     const count = workers.filter((worker) => worker.status === status).length;
     return count === 0 ? [] : [`${count} ${status}`];
   });
-  return `${counted(workers.length, 'worker')}: ${counts.join(', ')}`;
+  return [
+    workers.length === 0 ? '' : `${counted(workers.length, 'worker')}: ${counts.join(', ')}`,
+    queued === 0 ? '' : `${queued} queued`,
+  ].filter(Boolean).join(' · ');
+}
+
+// The popup's heading: the count, then only the keys its rows answer, Enter for a worker and the
+// withdraw key (`withdrawKey`, null when unbound) for a queued start.
+export function workersHeading(workers: readonly DispatchedWorker[], queued: number, withdrawKey: string | null): string {
+  const count = workerCount(workers, queued);
+  if (!count) return 'No worker is open';
+  return [
+    count,
+    workers.length === 0 ? '' : 'Enter goes to one',
+    queued === 0 || withdrawKey === null ? '' : `${withdrawKey} withdraws a queued one`,
+  ].filter(Boolean).join(' · ');
 }
 
 // The popup's rows: the states in ORDER, each in the order main gave them. Choosing one answers with
@@ -83,8 +100,31 @@ export function workerRows(workers: readonly DispatchedWorker[], caches: Readonl
     const cache = caches[worker.id];
     return {
       name: `${worker.project} · ${paneLabel(paneFromId(worker.id).index)}`,
-      detail: [worker.waiting ?? worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
+      detail: [worker.detail ?? worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
       choice: worker.id,
     };
   });
+}
+
+// A start waiting in the pane pool's queue (workers-decision-11), listed under its main's workers.
+// `place` is where it stands in the whole queue, `2nd`: the cap is the app's, so other mains' entries
+// ahead of it count. `about` is what `pane queue` says it starts.
+export type QueuedWorker = { id: string; dispatcher: number; project: string; place: string; about: string; after: string | null };
+
+// The popup's queued rows, in the order main gave them, which is the order they start. Keyed by the
+// entry's id, which the withdraw key hands to pane.unqueue; they have no pane for Enter to go to.
+export function queuedRows(queued: readonly QueuedWorker[]): { key: string; name: string; detail: string }[] {
+  return queued.map((entry) => ({
+    key: entry.id,
+    name: `${entry.project} · ${entry.id}`,
+    detail: [`${entry.place} in line`, entry.after === null ? '' : `after ${entry.after}`, entry.about].filter(Boolean).join(' · '),
+  }));
+}
+
+// What the withdraw key takes on the popup's highlighted row: the queued start it is, or why not.
+export function withdrawTarget(queued: readonly QueuedWorker[], rowKey: string | undefined): { id: string } | { refused: string } {
+  const entry = queued.find((each) => each.id === rowKey);
+  return entry === undefined
+    ? { refused: 'Only a queued start is withdrawn; a running worker is released with pane release.' }
+    : { id: entry.id };
 }

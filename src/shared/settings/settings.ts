@@ -2,6 +2,7 @@ import { ACTIONS, actionByName, defaultBinding, scopesOverlap, type ActionEntry 
 import { formatBinding, parseBinding } from '../keys/binding';
 import { isRecord, stringOrEmpty } from '../app/is-record';
 import { THEME } from '../app/theme';
+import { parseProxy, type BrowserProxy } from '../browser/proxy';
 
 // Everything the settings file holds. `keys` always has an entry for every action after parsing, so
 // nothing downstream has to tell "unbound" apart from "not written down yet" — null is the first,
@@ -42,11 +43,14 @@ export type Settings = {
   // settings screen or with `budget --cap` and `budget --pace`.
   budget: { limit: BudgetLimit; weeklyCap: number | null; dailyShare: number | null };
   // idleMinutes: how long an agent's browser tab goes unused before its agent is asked whether it may
-  // close it (docs/browser), null never asking. Written in the file by hand only.
-  browser: { idleMinutes: number | null };
-  // cap: how many of main's workers run at once across the app, null for no cap ("none" in the file).
-  // A start past it waits in the pane pool's queue (docs/workers).
-  workers: { cap: number | null };
+  // close it (docs/browser), null never asking. proxy: the hosts the project browser sends through a
+  // proxy, everything else direct (proxy.ts), null for none. Both written in the file by hand only.
+  browser: { idleMinutes: number | null; proxy: BrowserProxy | null };
+  // cap: how many of main's workers run at once in one project, totalCap across every project, each
+  // null for no cap ("none" in the file). A start past either waits in the pane pool's queue
+  // (docs/workers). stallMinutes: how long one at work goes with no sign of life before it is shown
+  // stalled and main is told (stall.ts), by hand only.
+  workers: { cap: number | null; totalCap: number | null; stallMinutes: number };
 };
 
 // The on/off settings: each a boolean in a section of the file, named as [section, field], read by
@@ -94,6 +98,8 @@ export function isFontSize(value: string): boolean {
 }
 
 export const DEFAULT_WORKER_CAP = 4;
+export const DEFAULT_TOTAL_WORKER_CAP = 8;
+export const DEFAULT_STALL_MINUTES = 20;
 
 // A whole number of workers, at least 1, or null for "none": no cap. Null reads as none too, since that
 // is how a save from the screen writes it back. Undefined for anything else, which reads as the default.
@@ -171,8 +177,8 @@ export function defaultSettings(isMac: boolean): Settings {
     updates: { check: true },
     errors: { notify: true },
     budget: { limit: 'cap', weeklyCap: null, dailyShare: null },
-    browser: { idleMinutes: 30 },
-    workers: { cap: DEFAULT_WORKER_CAP },
+    browser: { idleMinutes: 30, proxy: null },
+    workers: { cap: DEFAULT_WORKER_CAP, totalCap: DEFAULT_TOTAL_WORKER_CAP, stallMinutes: DEFAULT_STALL_MINUTES },
   };
 }
 
@@ -231,8 +237,10 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedHost = asRecord(raw.host);
   const storedRemote = asRecord(raw.remote);
   const storedBudget = asRecord(raw.budget);
-  const idleMinutes = asRecord(raw.browser).idleMinutes;
+  const { idleMinutes, proxy } = asRecord(raw.browser);
   const storedCap = workerCap(asRecord(raw.workers).cap);
+  const storedTotalCap = workerCap(asRecord(raw.workers).totalCap);
+  const stallMinutes = asRecord(raw.workers).stallMinutes;
   // A number only: the file never holds a percentage as text.
   const percentage = (stored: unknown): number | null => (typeof stored === 'number' ? budgetPercentage(stored) : null);
   // A toggle the file holds as a boolean, or the shipped one.
@@ -283,8 +291,13 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     },
     browser: {
       idleMinutes: idleMinutes === null || (typeof idleMinutes === 'number' && idleMinutes > 0) ? idleMinutes : defaults.browser.idleMinutes,
+      proxy: parseProxy(proxy),
     },
-    workers: { cap: storedCap === undefined ? defaults.workers.cap : storedCap },
+    workers: {
+      cap: storedCap === undefined ? defaults.workers.cap : storedCap,
+      totalCap: storedTotalCap === undefined ? defaults.workers.totalCap : storedTotalCap,
+      stallMinutes: typeof stallMinutes === 'number' && stallMinutes > 0 ? stallMinutes : defaults.workers.stallMinutes,
+    },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 
@@ -349,10 +362,16 @@ export function resetKeys(settings: Settings, isMac: boolean): Settings {
 
 // Every preference back to what this build ships. The host token and the remembered host stay: they are
 // pairings with another machine, not preferences, and wiping the token would lock out the screen that
-// holds the old one with no explanation.
+// holds the old one with no explanation. browser.proxy stays too: it is written by hand only and a save
+// puts the file's block back, so resetting it here would turn the proxy off until the watch read it back.
 export function resetAll(settings: Settings, isMac: boolean): Settings {
   const defaults = defaultSettings(isMac);
-  return { ...defaults, host: { ...defaults.host, token: settings.host.token }, remote: settings.remote };
+  return {
+    ...defaults,
+    host: { ...defaults.host, token: settings.host.token },
+    remote: settings.remote,
+    browser: { ...defaults.browser, proxy: settings.browser.proxy },
+  };
 }
 
 // The chosen lines of one object: what is left of it once every entry equal to what this build ships is

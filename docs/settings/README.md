@@ -55,6 +55,13 @@ it over (docs/errors).
 never) is how long a main's browser tab goes unused before that main is asked
 whether it may close it (docs/browser).
 
+`browser.proxy` (default none, written in the file by hand only) is the proxy
+server and the hosts the project browser sends through it, everything else
+direct (docs/browser). It is used as soon as the file is saved. A save from the
+app writes back the file's own block as typed, so one that does not read (a typo
+in the server) is kept for you to fix, not dropped. Reset everything to
+defaults leaves it as it is.
+
 The Budget rows say what `dashboard budget` holds the 7-day usage to. The limit
 row (`budget.limit`, default the weekly cap) walks the weekly cap, the daily pace
 and no limit on Enter. The weekly cap (`budget.weeklyCap`, default not set) is
@@ -66,10 +73,15 @@ typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 
-`workers.cap` (default 4) is how many of main's workers run at once across the
-app; a start past it waits in the pane pool's queue (docs/workers,
-workers-decision-11). A whole number, or `"none"` for no cap. It has no row
-yet and is written in settings.json by hand; a change is taken at once.
+`workers.cap` (default 4) is how many of main's workers run at once in one
+project, and `workers.totalCap` (default 8) how many across every project; a
+start past either waits in the pane pool's queue (docs/workers,
+workers-decision-11). Each is a whole number, or `"none"` for no cap; on the
+screen they are the two Workers rows, a number from 1 or empty for no cap. A
+change is taken at once, and a lower cap stops nothing running.
+`workers.stallMinutes` (default 20) is how long one of them at work goes with
+no hook before it is shown stalled and main is told (docs/workers,
+workers-decision-13); any number above 0, written in settings.json by hand.
 
 The window's opacity (`opacity`, default 1) is written in the file by hand only:
 0.7 lets the desktop show through behind the text, from 0.2 up; anything else

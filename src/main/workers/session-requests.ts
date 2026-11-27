@@ -8,10 +8,12 @@ import type { ProjectNamed } from '../projects/project-named';
 import { answered, namesItsTarget, parseSessionCommand, refused, type HookTold, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { Refused, WorkerState } from '../../shared/app/bridge';
-import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
+import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type QueuedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
+import { baseName } from '../../shared/app/base-name';
 import { paneLink } from '../../shared/workers/pane-link';
-import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
+import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
+import { stalledState, stallWatch } from './stall';
 import { isTyped, promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
@@ -22,7 +24,7 @@ import { worktreeWithin } from './run-folder';
 import { letGoAndSay, type Throwaway } from '../actions/worktree/throwaway';
 import { statusText, type PaneStatus } from './status-lines';
 import type { OpenPullRequest } from '../board/merge-request';
-import { holdsSlot, type RunWork } from './pane-pool';
+import { entryAbout, holdsSlot, ordinal, type RunWork } from './pane-pool';
 import { panePool, type PanePoolActions } from '../actions/pane/queue';
 import type { CardStart, PoolPorts } from './pane-pool-ports';
 
@@ -111,6 +113,8 @@ export type SessionPorts = {
   // What the pane pool (actions/pane/queue.ts) is built on beside what is held here: its file, the
   // settings and the boards, and the start of a ship or a review.
   pool: PoolPorts;
+  // settings.workers.stallMinutes, read at each look (stall.ts).
+  stallMinutes(): number;
   // Where a path really is (real-path.ts): git lists a throwaway by it, a pane's folder keeps the
   // spelling its project was opened by.
   realPath(path: string): string;
@@ -144,6 +148,10 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // with pane send), each naming the slot whose main it reports to: one read serves every page's status
   // line and popup.
   workers(): DispatchedWorker[];
+  // Every start waiting in the pane pool, in the order they start, each naming the slot of the main
+  // that queued it, for the same popup; and its withdrawal by that slot's main, as `pane unqueue`.
+  queued(): QueuedWorker[];
+  unqueue(slot: number, id: string): Promise<{ output: string } | Refused>;
   // The pane stopped being that worker's for good: it closed, or something else started in it. Pane
   // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
   // called when only the agent exits: that worker stays listed, idle, until it is released.
@@ -171,6 +179,10 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // A ship's or a review's start, through the pool's `start`, told to the main of the page the `board`
   // command ran in, or the card's project's main for one no command asked for.
   startCard(start: CardStart): Promise<{ output: string } | Refused>;
+  // Main told, once, of each of its workers at work that has gone silent past the setting (stall.ts).
+  // Asked on a timer by main.ts.
+  // Whether any worker is stalled now, listed whether or not main was told.
+  tellStalls(): boolean;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -227,12 +239,16 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   const prompts = promptSources();
   // The panes on a turn the app's question started (app-question.ts), until a prompt of anyone else's.
   const appTurns = new Set<string>();
+  // When each worker's hooks last spoke, for its stall (stall.ts).
+  const stalls = stallWatch(ports.stallMinutes);
   // Every time a worker is let go of: its stop, its last message and whose turn it was on.
   const forgetWorker = (id: string) => {
     appTurns.delete(id);
     notices.forget(id);
+    stalls.forget(id);
     lastMessages.delete(id);
     prompts.forget(id);
+    pool.forget(id);
   };
   const notices = stopNotices({
     midTurn: (id) => midTurn(mainOf(id)),
@@ -266,8 +282,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
     const said = states.get(id);
     if (said?.state === 'done' && mainsWorker(id) && workIn(id)) return `done, work in: pane finish ${id}`;
-    return isPaused(said?.waiting) ? `paused, ${waitingText(said.waiting)}` : said?.state ?? 'running';
+    if (isPaused(said?.waiting)) return `paused, ${waitingText(said.waiting)}`;
+    if (said !== undefined) return said.state;
+    const silent = silentAtWork(id);
+    return silent === null ? 'running' : stalledState(silent);
   }
+
+  // How long main's worker, at work by its hooks' last word, has been silent, once that is a stall. A
+  // Claude nobody handed work runs no hooks of the app's, so it is never one.
+  const silentAtWork = (id: string): number | null => (mainsWorker(id) && states.get(id) === undefined ? stalls.silentFor(id) : null);
 
   const claim = bind(paneClaim, {
     ...ports,
@@ -504,14 +527,27 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered('');
   }
 
-  // The open panes holding one of the pool's slots.
-  const holding = () => openPaneIds().filter((id) => {
+  // Whether the pane holds one of the pool's slots.
+  const holds = (id: string): boolean => {
     const said = states.get(id);
-    return holdsSlot({ mainsWorker: mainsWorker(id), state: said?.state, paused: isPaused(said?.waiting), workIn: workIn(id) });
-  }).length;
+    return holdsSlot({ mainsWorker: mainsWorker(id), state: said?.state, waiting: said?.waiting, workIn: workIn(id), ciWaits: pool.ciWaits(id) });
+  };
+  // The project of the page a main's worker is on, the one its slot counts against. Main is never one.
+  const workerPage = (id: string): string | null => (paneFromId(id).index !== MAIN_INDEX && mainsWorker(id) ? paneProject(id) ?? null : null);
+  // The open panes holding a slot, by the project of the page each is on.
+  const holding = (): Map<string, number> => {
+    const running = new Map<string, number>();
+    for (const id of openPaneIds()) {
+      const page = workerPage(id);
+      if (page !== null && holds(id)) running.set(page, (running.get(page) ?? 0) + 1);
+    }
+    return running;
+  };
   const pool = panePool(ports.pool.saved, {
     ...ports.pool,
     running: holding,
+    worker: workerPage,
+    holds,
     open: (projectPath) => ports.slotOf(projectPath) !== -1,
     begin: (entry) => (entry.work.kind === 'run' ? startRun(entry.dispatcherPath, entry.work) : ports.pool.beginCard(entry, entry.work)),
     tell(dispatcherPath, text) {
@@ -584,12 +620,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];
       const said = states.get(id);
+      const row = { id, dispatcher, project: page.name, name: nameOfPane(id), about };
+      // Only a worker at work is ever silent (silentAtWork), so a stall outranks nothing else.
+      const silent = silentAtWork(id);
+      if (silent !== null) return [{ ...row, status: 'stalled' as const, detail: stalledState(silent) }];
       const waiting = said?.waiting;
       const status = workerStatus(mainsWorker(id), said?.state, isPaused(waiting));
-      return [{
-        id, dispatcher, project: page.name, name: nameOfPane(id),
-        about, status, ...(status === 'paused' && isPaused(waiting) && { waiting: waitingText(waiting) }),
-      }];
+      return [{ ...row, status, ...(status === 'paused' && isPaused(waiting) && { detail: waitingText(waiting) }) }];
     });
   }
 
@@ -607,12 +644,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   function notify(id: string, state: WorkerState, waiting?: StopWaiting, told: HookTold = {}): SessionReply {
     const { slot, index } = paneFromId(id);
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
+    stalls.sign(id);
     if (onAppTurn(id, state, told)) return answered('');
     if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
     if (state === 'running') {
       prompts.prompted(id, told.promptSource, told.handed === true);
       states.delete(id);
     } else states.set(id, { state, waiting });
+    if (state === 'done') pool.settle(id, waiting?.background ?? 0);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
     if (state === 'done' && !isPaused(waiting)) ports.turnEnded(id);
@@ -644,8 +683,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'queue': return sessionReply(await pool.queue.call({}));
         case 'unqueue': return sessionReply(await pool.unqueue.call({ id: command.id, dispatcherPath: projectPath }));
         case 'run': {
-          // The cap holds for a pane main already holds as well; pane start queues past it.
-          const full = pool.full();
+          // The cap holds for a pane main already holds as well; pane start queues past it. The pane
+          // counts against its page's project, which a claim --project makes another than main's.
+          const full = pool.full(paneProject(command.id) ?? projectPath ?? '');
           if (full !== null) return refused(full);
           // --in is typed relative to where the command ran, main's own folder most often.
           const folder = command.folder === null ? null : path.resolve(request.directory, command.folder);
@@ -657,6 +697,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'status': return await status(slot, projectPath ?? '');
         case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name, command.from);
         case 'conflicted': return await conflicted(slot, projectPath ?? '', command.branch, command.pullRequest, command.from);
+        case 'ci-wait': return sessionReply(await pool.ciWait.call({ id: command.id, pid: command.pid }));
+        case 'ci-resume': return sessionReply(await pool.ciResume.call({ id: command.id, pid: command.pid }));
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
@@ -667,12 +709,36 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
   }, {
     workers,
+    queued: () => pool.entries().map((entry, at) => ({
+      id: entry.id, dispatcher: ports.slotOf(entry.dispatcherPath), project: baseName(entry.projectPath),
+      place: ordinal(at + 1), about: entryAbout(entry), after: entry.after,
+    })),
+    unqueue(slot: number, id: string) {
+      const dispatcherPath = ports.projectPath(slot);
+      return dispatcherPath === undefined ? Promise.resolve({ refused: 'that page is not open' }) : pool.unqueue.call({ id, dispatcherPath });
+    },
     notify,
     mainOf,
     pool,
     startCard({ askedFrom, ...start }: CardStart) {
       const asker = askedFrom === null ? undefined : ports.projectPath(ports.slotOf(askedFrom));
       return pool.start.call({ ...start, dispatcherPath: asker ?? start.projectPath });
+    },
+    // Not for a turn you typed into the worker yourself, which you are watching (prompt-source.ts).
+    tellStalls() {
+      let any = false;
+      for (const id of openPaneIds()) {
+        const silent = silentAtWork(id);
+        if (silent !== null) any = true;
+        if (silent === null || prompts.fromUser(id)) continue;
+        const slot = mainOf(id);
+        // Taken back if the worker speaks again before main reads it, as its stop notice is.
+        stalls.tell(id, () => {
+          const messageId = ports.tell(slot, stallNotice(nameOfPane(id), id, silent));
+          return () => ports.withdraw(slot, messageId);
+        });
+      }
+      return any;
     },
     async dropped(id: string) {
       pool.drain();

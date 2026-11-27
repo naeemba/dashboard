@@ -23,7 +23,7 @@ import type { TaskResult } from '../manager/tasks';
 import type { UsageSnapshot } from '../usage/usage';
 import type { MemorySnapshot } from '../processes/scope-memory';
 import type { FileLink } from '../panes/links';
-import type { DispatchedWorker } from '../workers/worker-roster';
+import type { DispatchedWorker, QueuedWorker } from '../workers/worker-roster';
 import type { DocEntry, DocReply, DrawerReply, ResumeReply, SessionList } from '../drawer/drawer';
 import type { LastShown, ShownRecord } from './whats-new';
 import type { UpdateState } from './update';
@@ -217,6 +217,10 @@ export type DashboardBridge = {
   closePane(slot: number, index: number): Promise<void>;
   // A worker's hooks saying it is waiting on a permission or has finished its turn.
   onPaneMark(listener: (id: string, state: WorkerState) => void): void;
+  // The pane pool's queue changed: an entry queued, started, dropped or withdrawn.
+  onWorkerQueueChange(listener: () => void): void;
+  // Main's minute sweep: a worker may have stalled, or a stalled one gone a minute more, with no hook.
+  onWorkersChange(listener: () => void): void;
   // A finished worker `pane landed` closed (session-requests.ts), or the kept shells pane.reap ended or
   // kept back: said as a passing notice main has already logged.
   onPaneReleased(listener: (text: string) => void): void;
@@ -370,6 +374,10 @@ export type DashboardBridge = {
   chatSideQuestion(slot: number, question: string): Promise<string | null>;
   // Every open worker a main ran, each naming the slot that ran it, for the status lines and the popup.
   workers(): Promise<DispatchedWorker[]>;
+  // The pane pool's queue, each entry naming the slot that queued it, and its withdrawal by that slot's
+  // main, as `pane unqueue`; a refusal is the action's.
+  workerQueue(): Promise<QueuedWorker[]>;
+  unqueueWorker(slot: number, id: string): Promise<{ output: string } | Refused>;
   // A PDF the conversation names, read by main for the viewer, or why it was not.
   readPdf(slot: number, file: string): Promise<PdfRead>;
   // Escape pressed while the PDF viewer has the keyboard, which only main hears (app-window.ts).

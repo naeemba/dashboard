@@ -1,6 +1,7 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { canConnect } from '../app/can-connect';
 import { readText } from '../app/missing-file';
+import { processAlive } from '../app/process-alive';
 
 // What a screen host that died leaves running: its sessions. The Agent SDK starts each worker's Claude
 // in the host's process group (the host starts detached, so the group is its pid), and nothing tells
@@ -30,23 +31,13 @@ type DeadHostPorts = {
 
 export function endDeadHost(ports: DeadHostPorts): void {
   const pid = ports.recorded();
-  if (pid === null || alive(ports, pid)) return;
+  if (pid === null || processAlive(pid, ports.kill)) return;
   try {
     ports.kill(-pid, 'SIGKILL');
   } catch {
     // ESRCH: nothing of it was left.
   }
   ports.forget();
-}
-
-function alive(ports: DeadHostPorts, pid: number): boolean {
-  try {
-    ports.kill(pid, 0);
-    return true;
-  } catch (error: unknown) {
-    // EPERM is a process there that is not ours to signal.
-    return (error as NodeJS.ErrnoException).code === 'EPERM';
-  }
 }
 
 // Beside the socket, so a second Dashboard on its own user data has a host and a file of its own.

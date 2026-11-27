@@ -56,6 +56,22 @@ describe('writeSettings', () => {
     expect(statSync(path).mode & 0o777).toBe(0o600);
   });
 
+  it('keeps the file\'s own browser.proxy as typed, even one that does not parse', () => {
+    const path = file();
+    const proxy = { server: 'sock5://127.0.0.1:1080', hosts: ['*.instacoins.travel', 'test-*.internal'] };
+    writeFileSync(path, JSON.stringify({ browser: { proxy } }));
+    writeSettings(path, { ...defaultSettings(true), font: { name: 'Menlo', size: 14 } }, true);
+    expect(JSON.parse(readFileSync(path, 'utf8')).browser.proxy).toEqual(proxy);
+  });
+
+  it('writes no browser.proxy the file does not hold', () => {
+    const path = file();
+    writeFileSync(path, '{}');
+    const proxy = { server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] };
+    writeSettings(path, { ...defaultSettings(true), browser: { idleMinutes: 30, proxy } }, true);
+    expect(JSON.parse(readFileSync(path, 'utf8')).browser?.proxy).toBeUndefined();
+  });
+
   it('swallows a write it cannot do, the way the session file does', () => {
     expect(() => writeSettings('/', defaultSettings(true), true)).not.toThrow();
   });

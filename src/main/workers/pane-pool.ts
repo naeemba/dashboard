@@ -3,7 +3,7 @@ import { relativeAge } from '../../shared/app/age';
 import { baseName } from '../../shared/app/base-name';
 import { isColumnNamed, selectionOf, type Board } from '../../shared/board/board';
 import { columnEntry } from '../../shared/board/column-entry';
-import { workerAbout } from '../../shared/workers/worker-roster';
+import { isPaused, workerAbout, type StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
 import { isPaneKindOrNull } from '../../shared/panes/pane-kind';
 import type { Settings } from '../../shared/settings/settings';
@@ -69,20 +69,37 @@ export type SlotLook = {
   mainsWorker: boolean;
   // What its hooks last said, undefined until they say anything.
   state: WorkerState | undefined;
-  // Done, with background tasks or wakeups still pending.
-  paused: boolean;
+  // What its last Stop hook said it waits on, undefined until one says.
+  waiting: StopWaiting | undefined;
   // Its card is finished or `pane landed` kept it: only `pane finish` is left for it.
   workIn: boolean;
+  // How many `pr wait` and `pr land` runs of its own are waiting on CI now (pane.ci-wait).
+  ciWaits: number;
 };
 
 // Running, blocked on a question and paused on its own background work each hold a slot: the first is
-// working, the other two carry on by themselves (an answer, a CI wake-up), and the hook cannot tell a
-// CI wait from a test run. Done frees it, and so does a pause whose work is in. A Claude opened by
-// hand and main itself are no main's worker.
+// working, the other two carry on by themselves (an answer, a wake-up). Done frees it, and so does a
+// pause whose work is in, or one whose only background work is waiting on CI: `pr wait` and `pr land`
+// say when they are, and ask for the slot back before they return (pane.ci-resume). A scheduled
+// wake-up is no running work. A Claude opened by hand and main itself are no main's worker.
+// ponytail: a wake-up that fires while its slot is given back runs over the cap until its turn ends;
+// count wake-ups as holding if that shows.
 export function holdsSlot(look: SlotLook): boolean {
   if (!look.mainsWorker) return false;
   if (look.state !== 'done') return true;
-  return look.paused && !look.workIn;
+  if (!isPaused(look.waiting) || look.workIn) return false;
+  return look.ciWaits === 0 || look.waiting.background > look.ciWaits;
+}
+
+// A CI wait is the `pr wait` or `pr land` process that asked for it (pane.ci-wait), by process id,
+// and lasts only while that process does: one killed by any signal, SIGKILL included, never asks for
+// its slot back, so a wait whose process is gone is over, read at every count the drain makes, and
+// its worker's other background work holds the slot again, over the cap if the pool gave the slot
+// away meanwhile, since a dead process cannot wait for room.
+// ponytail: a pid reused by another process reads as the wait still live; the next Stop's background
+// count (settle) lowers it.
+export function liveWaits(pids: readonly number[], alive: (pid: number) => boolean): number[] {
+  return pids.filter((pid) => alive(pid));
 }
 
 // No limit configured never holds the queue: limit none, or a cap with no weekly cap set, which is what
@@ -127,29 +144,67 @@ function cardGone(board: Board, cardId: string, returnTo: ReturnTo | null): stri
   return null;
 }
 
-// Why nothing more may start, the cap reached, or null. `running` counts the slots held and the starts
-// under way.
-export function capReached(running: number, cap: number | null): string | null {
-  return cap !== null && running >= cap ? `${running} running, the cap is ${cap}` : null;
+// The caps from settings: workers.cap for each project, workers.totalCap across them, null for none.
+export type Caps = { project: number | null; total: number | null };
+
+// The slots held in each project, keyed by its path: a pane by the page it is on, a start under way by
+// its entry's project.
+export type Running = ReadonlyMap<string, number>;
+
+// Why nothing more may start anywhere, the total cap reached, or null.
+export function totalReached(running: Running, caps: Caps): string | null {
+  const total = [...running.values()].reduce((sum, count) => sum + count, 0);
+  return caps.total !== null && total >= caps.total ? `${total} running, the total cap is ${caps.total}` : null;
+}
+
+// Why nothing more may start in this project by its own cap, or null.
+function projectReached(running: Running, caps: Caps, projectPath: string): string | null {
+  const here = running.get(projectPath) ?? 0;
+  return caps.project !== null && here >= caps.project ? `${here} running in ${baseName(projectPath)}, the cap per project is ${caps.project}` : null;
+}
+
+// Why nothing more may start in this project, either cap reached, or null.
+export function capReached(running: Running, caps: Caps, projectPath: string): string | null {
+  return totalReached(running, caps) ?? projectReached(running, caps, projectPath);
 }
 
 export type NextStart = { start: QueueEntry } | { drop: QueueEntry; why: string } | { held: string | null };
 
 // The entry to start next, first in first out, or one to drop, or why the queue is held, null for an
-// empty queue. The budget is read last, and only when something would start.
+// empty queue. The total cap holds every entry; a project at its own cap waits as a closed one does,
+// letting later entries for other projects go ahead. The budget is read last, and only when something
+// would start.
 export function nextToStart(
-  entries: readonly QueueEntry[], running: number, cap: number | null, budget: () => string | null, readinessOf: (entry: QueueEntry) => Readiness,
+  entries: readonly QueueEntry[], running: Running, caps: Caps, budget: () => string | null, readinessOf: (entry: QueueEntry) => Readiness,
 ): NextStart {
   if (entries.length === 0) return { held: null };
   const read = entries.map((entry) => ({ entry, ...readinessOf(entry) }));
   const dropped = read.find(({ state }) => state === 'drop');
   if (dropped !== undefined) return { drop: dropped.entry, why: dropped.why };
-  const full = capReached(running, cap);
+  const full = totalReached(running, caps);
   if (full !== null) return { held: full };
-  const first = read.find(({ state }) => state === 'ready');
-  if (first === undefined) return { held: `${read[0].entry.id} ${read[0].why}` };
+  const first = read.find(({ state, entry }) => state === 'ready' && projectReached(running, caps, entry.projectPath) === null);
+  if (first === undefined) {
+    const [{ entry, state, why }] = read;
+    return { held: `${entry.id} ${state === 'ready' ? `waits for a slot: ${projectReached(running, caps, entry.projectPath) ?? ''}` : why}` };
+  }
   const over = budget();
   return over === null ? { start: first.entry } : { held: over };
+}
+
+// A worker asking for its slot back once CI is done (pane.ci-resume), as the drain reads it: the
+// project of the page it is on, null once it is no main's worker, and whether it holds a slot anyway.
+export type Resumer = { projectPath: string | null; holds: boolean };
+
+// The first resumer that may go on now, ahead of every queued entry, or -1. One that is no longer a
+// worker, or holds a slot already (running again, or other background work), takes none; any other
+// needs room under both caps.
+// Each resumer is looked up only when it is reached.
+export function nextResume<T>(resumers: readonly T[], look: (resumer: T) => Resumer, running: Running, caps: Caps): number {
+  return resumers.findIndex((resumer) => {
+    const { projectPath, holds } = look(resumer);
+    return projectPath === null || holds || capReached(running, caps, projectPath) === null;
+  });
 }
 
 // The column a withdrawn entry's card goes back to, or why it stays. Only a card still where the move
@@ -186,8 +241,8 @@ export function ordinal(position: number): string {
   return `${position}${['th', 'st', 'nd', 'rd'][position % 10] ?? 'th'}`;
 }
 
-// What the entry is, as `pane queue` lists it.
-function entryAbout(entry: QueueEntry): string {
+// What the entry is, as `pane queue` and the workers popup list it.
+export function entryAbout(entry: QueueEntry): string {
   if (entry.work.kind === 'ship') return `ship ${entry.cardId} "${entry.work.title}"`;
   if (entry.work.kind === 'review') return `review ${entry.cardId}`;
   return `run ${workerAbout(entry.work.prompt)}`;
