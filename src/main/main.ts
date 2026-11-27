@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { existingProjects, projectFromPath, readRecentPaths, RECENTS_FILE, rememberRecentPath, replacesProject } from './app/projects';
 import { baseName } from '../shared/app/base-name';
+import { proxyMoved } from '../shared/browser/proxy';
 import { holdProjectName, readProjectNames } from './workers/project-names';
 import { runProgram } from './app/git';
 import { branchPullRequest } from './board/merge-request';
@@ -28,7 +29,7 @@ import { projectActions, registerProjectChannels } from './actions/project/proje
 import { actionRequests, isRefused } from './actions/action';
 import { updateActions } from './actions/update/update-actions';
 import { sessionRequests } from './workers/session-requests';
-import { STALL_SWEEP_MS } from './workers/stall';
+import { STALL_SWEEP_MS, stallRedraws } from './workers/stall';
 import { poolPorts } from './workers/pane-pool-ports';
 import { projectRequests } from './projects/project-requests';
 import { MANAGER_FOLDER, projectInSlot } from './manager/manager-terminals';
@@ -153,12 +154,14 @@ const settingsDoors = settingsActions(table, {
   file: settingsFile, isMac, current: () => settings,
   writeFile: (next) => writeSettings(settingsFile, next, isMac),
   pickShell: shellFor,
-  // A raised cap starts what waits at once; compared first, since the launch's own write runs before
-  // workerAnswers exists and never changes the cap.
+  // A raised cap starts what waits at once, and a new proxy is every project browser's at once; compared
+  // first, since the launch's own write runs before workerAnswers and browser exist and changes neither.
   keep(next, shell) {
     const capChanged = next.workers.cap !== settings.workers.cap;
+    const proxyChanged = proxyMoved(settings.browser.proxy, next.browser.proxy);
     settings = next; shellCommand = shell;
     if (capChanged) workerAnswers.pool.drain();
+    if (proxyChanged) browser.useProxy(next.browser.proxy);
   },
   tell: (next, shell) => liveWindow()?.webContents.send('settings:change', { settings: next, shellCommand: shell }),
 });
@@ -213,7 +216,7 @@ const terminalCommands = new Map<string, PaneCommand>();
 const promptPane = panePrompt((id) => shells.get(id), (id, text) => workerScreens.send(id, text));
 // Each project's browser tabs, beside the window: browser-actions.ts. slotOf is an arrow because
 // slotOfProject is made further down, with the other pane readings.
-const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: (projectPath) => slotOfProject(projectPath) }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
+const browser = browserActions(table, { window: liveWindow, keys: () => settings.keys, proxy: () => settings.browser.proxy }, { hasCommand: (id) => terminalCommands.has(id), projectPath: (slot) => projectIn(slot)?.path, slotOf: (projectPath) => slotOfProject(projectPath) }, { tellMain: (slot, text) => { chats.tell(slot, text); }, tellWorker: promptPane, mainOf: (pane) => workerAnswers.mainOf(pane), idleMinutes: () => settings.browser.idleMinutes });
 // Every pane's shell, pane-shells.ts's to spawn and listen to.
 const panes = paneShells({
   host: shellHost, commands: terminalCommands, screens: paneScreens, environment: paneEnvironment,
@@ -683,7 +686,11 @@ const workerAnswers = sessionRequests(sessionRequestPorts({
   hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool, () => sendToRenderer('workers:queue-change')),
   stallMinutes: () => settings.workers.stallMinutes,
 }));
-setInterval(() => workerAnswers.tellStalls(), STALL_SWEEP_MS).unref();
+// The stall sweep, which also redraws the workers popup when stallRedraws says (stall.ts).
+const redraws = stallRedraws();
+setInterval(() => {
+  if (redraws(workerAnswers.tellStalls())) sendToRenderer('workers:change');
+}, STALL_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 table.handle('workers:queue', () => workerAnswers.queued());

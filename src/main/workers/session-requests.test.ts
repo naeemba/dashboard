@@ -295,12 +295,12 @@ describe('sessionRequests', () => {
     expect(told).toEqual([]);
     expect((await answer({ directory: '/work/api', args: ['list'] })).output.split('\n')[1].split('\t')[2])
       .toBe('paused, waiting on 2 background tasks');
-    expect(answer.workers()[0]).toMatchObject({ status: 'paused', waiting: 'waiting on 2 background tasks' });
+    expect(answer.workers()[0]).toMatchObject({ status: 'paused', detail: 'waiting on 2 background tasks' });
     // A pause nothing wakes is told as one once it passes the ceiling.
     vi.advanceTimersByTime(PAUSE_CEILING_MS);
     expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`]);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
-    expect(answer.workers()[0]).toEqual(expect.not.objectContaining({ waiting: expect.anything() }));
+    expect(answer.workers()[0]).toEqual(expect.not.objectContaining({ detail: expect.anything() }));
     vi.advanceTimersByTime(REPORT_SETTLE_MS);
     expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`, `2 ${doneReport('api-terminal-2', '2:1')}`]);
   });

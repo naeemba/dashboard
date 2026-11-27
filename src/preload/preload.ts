@@ -43,6 +43,7 @@ const bridge: DashboardBridge = {
   closePane: (slot, index) => ipcRenderer.invoke('pane:close', slot, index),
   onPaneMark: (listener) => ipcRenderer.on('pane:mark', (_event, id, state) => listener(id, state)),
   onWorkerQueueChange: (listener) => ipcRenderer.on('workers:queue-change', () => listener()),
+  onWorkersChange: (listener) => ipcRenderer.on('workers:change', () => listener()),
   onPaneReleased: (listener) => ipcRenderer.on('pane:released', (_event, text) => listener(text)),
   onReviewLoopNotice: (listener) => ipcRenderer.on('review-loop:notice', (_event, text) => listener(text)),
   onData: (listener) => ipcRenderer.on('pty:data', (_event, id, data) => listener(id, data)),

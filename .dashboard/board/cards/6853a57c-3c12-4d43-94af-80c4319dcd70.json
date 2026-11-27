@@ -5,15 +5,23 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T12:25:14.751Z",
-  "updatedAt": "2026-11-27T12:45:07.858Z",
+  "updatedAt": "2026-11-27T13:13:35.640Z",
   "branch": "project-browser-send-listed-sites-through-a",
   "pullRequest": 417,
   "comments": [
     {
       "at": "2026-11-27T12:45:07.834Z",
       "body": "Pull request #417 opened: Send the hosts browser.proxy lists through a proxy, every other site direct https://github.com/naeemba/dashboard/pull/417"
+    },
+    {
+      "at": "2026-11-27T13:12:15.897Z",
+      "body": "Review loop converged in 3 rounds, CI green on the head commit: ready to merge. Fixed: a hand-written browser.proxy that did not parse is kept across app saves; proxyMoved (apply only on change) is tested; views read the proxy live from main's settings; Reset everything to defaults keeps browser.proxy. Nothing open. Design and scope unchanged."
+    },
+    {
+      "at": "2026-11-27T13:13:35.618Z",
+      "body": "Pull request #417 merged: Send the hosts browser.proxy lists through a proxy, every other site direct https://github.com/naeemba/dashboard/pull/417"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 342
 }

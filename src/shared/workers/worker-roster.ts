@@ -7,7 +7,7 @@ import { cacheWarmth, type CacheUse } from '../usage/cache-warmth';
 // workers popup lists them. Main builds the list from what `pane list` already reads
 // (session-requests.ts); the decisions about it are here so both ends agree.
 
-export type WorkerStatus = 'working' | 'paused' | 'blocked' | 'done' | 'idle';
+export type WorkerStatus = 'working' | 'stalled' | 'paused' | 'blocked' | 'done' | 'idle';
 
 // What a worker's Stop hook said its session still waits on: background tasks in flight (shells,
 // subagents, monitors, workflows) and wakeups scheduled (CronCreate, ScheduleWakeup, /loop). Claude
@@ -41,12 +41,13 @@ export type DispatchedWorker = {
   // The first words of the prompt it was given.
   about: string;
   status: WorkerStatus;
-  // What a paused worker waits on, as waitingText says it.
-  waiting?: string;
+  // What the row says in place of the status: what a paused worker waits on, as waitingText says it,
+  // or how long a stalled one has been silent, as `pane list` says it (stall.ts).
+  detail?: string;
 };
 
 // The order the count and the popup give the states in: what still runs first, what is finished last.
-const ORDER: readonly WorkerStatus[] = ['working', 'paused', 'blocked', 'done', 'idle'];
+const ORDER: readonly WorkerStatus[] = ['working', 'stalled', 'paused', 'blocked', 'done', 'idle'];
 
 const ABOUT_WORDS = 8;
 
@@ -57,7 +58,8 @@ export function workerAbout(prompt: string): string {
 
 // What a worker is doing now. Its agent gone, it is idle whatever its hooks last said: the pane is a
 // shell again. Running, a pause if its Stop hook said it waits on something, else its hooks' last
-// word; none yet is the agent at work.
+// word; none yet is the agent at work. Stalled is that worker silent too long, which main reads off
+// its stall clock (workers-decision-13).
 export function workerStatus(agentRunning: boolean, said: WorkerState | undefined, paused = false): WorkerStatus {
   if (!agentRunning) return 'idle';
   if (paused) return 'paused';
@@ -98,7 +100,7 @@ export function workerRows(workers: readonly DispatchedWorker[], caches: Readonl
     const cache = caches[worker.id];
     return {
       name: `${worker.project} · ${paneLabel(paneFromId(worker.id).index)}`,
-      detail: [worker.waiting ?? worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
+      detail: [worker.detail ?? worker.status, cache && cacheWarmth(cache, now).text, worker.about].filter(Boolean).join(' · '),
       choice: worker.id,
     };
   });

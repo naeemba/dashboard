@@ -147,3 +147,20 @@ would land as its next prompt with the work unreported.
 Only the tab on screen counts as looked at, not each project's active tab: an
 agent's first tab in a project you never opened a tab in becomes its active one,
 and counting that would have kept it from ever being asked.
+
+## browser-decision-11: Listed hosts go through a proxy, by a PAC script
+
+Work sites answer only through a VPN run as a local proxy, and the rest of the
+web should not. Electron's `proxyRules` send every URL to the proxy and
+`proxyBypassRules` only exempt hosts from it, so the default is the proxy. A PAC
+script made from the host list is the one way to list what goes through it. It
+is given as a percent-encoded `data:` URL: Electron 45 ignores a base64 one, and
+a `file://` one, and sends everything direct without a word.
+
+Hosts read as ZeroOmega's host wildcards do, `*.x` matching `x` too, so a rule
+copied from it means the same. The PAC answer has no `DIRECT` after the proxy:
+a work site sent direct when the VPN is down would leak, and would not resolve.
+One setting serves every project's browser; nothing has needed a project of its
+own. A change is applied live, and each session's connections are closed after
+it, since a pooled socket would otherwise keep the old route; a save that leaves
+the proxy as it was applies nothing, so it fails no load.

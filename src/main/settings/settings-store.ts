@@ -43,11 +43,28 @@ function writePrivately(file: string, text: string): void {
   chmodSync(file, 0o600);
 }
 
+// browser.proxy is written by hand only, so a save puts back the file's own block as it was typed, not
+// what parseSettings made of it: one with a typo in its server reads as null, the default, and the save
+// would otherwise drop it, host list and all. A file that is not there or not JSON has no block to keep.
+function withFileProxy(written: unknown, file: string): unknown {
+  let stored: unknown;
+  try {
+    stored = JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return written;
+  }
+  if (!isRecord(written) || !isRecord(stored)) return written;
+  const browser = { ...(isRecord(written.browser) ? written.browser : {}) };
+  delete browser.proxy;
+  if (isRecord(stored.browser) && 'proxy' in stored.browser) browser.proxy = stored.browser.proxy;
+  return { ...written, browser };
+}
+
 export function writeSettings(file: string, settings: Settings, isMac: boolean): void {
   try {
     // The directory may not exist yet the first time anything is written.
     mkdirSync(path.dirname(file), { recursive: true });
-    writePrivately(file, serialize(withoutShipped(settings, isMac)));
+    writePrivately(file, serialize(withFileProxy(withoutShipped(settings, isMac), file)));
   } catch {
     // The change is live in this run; it just will not survive a restart.
   }
