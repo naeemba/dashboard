@@ -152,7 +152,13 @@ const settingsDoors = settingsActions(table, {
   file: settingsFile, isMac, current: () => settings,
   writeFile: (next) => writeSettings(settingsFile, next, isMac),
   pickShell: shellFor,
-  keep(next, shell) { settings = next; shellCommand = shell; },
+  // A raised cap starts what waits at once; compared first, since the launch's own write runs before
+  // workerAnswers exists and never changes the cap.
+  keep(next, shell) {
+    const capChanged = next.workers.cap !== settings.workers.cap;
+    settings = next; shellCommand = shell;
+    if (capChanged) workerAnswers.pool.drain();
+  },
   tell: (next, shell) => liveWindow()?.webContents.send('settings:change', { settings: next, shellCommand: shell }),
 });
 keepHostToken(settings, (made) => { void settingsDoors.write.call({ settings: made }); });
