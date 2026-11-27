@@ -24,7 +24,7 @@ export function withBudgetPercentage(settings: Settings, field: 'weeklyCap' | 'd
 // which the screen refuses.
 export function withWorkerCap(settings: Settings, text: string): Settings | null {
   const cap = text === '' ? null : workerCap(Number(text));
-  return cap === undefined ? null : { ...settings, workers: { cap } };
+  return cap === undefined ? null : { ...settings, workers: { ...settings.workers, cap } };
 }
 
 const LIMIT_NAMES: Record<BudgetLimit, string> = { cap: 'the weekly cap', pace: 'the daily pace', none: 'no limit' };

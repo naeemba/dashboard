@@ -48,9 +48,9 @@ describe('settingsRows', () => {
     const label = 'Main\'s workers running at once, across the app';
     expect(settingsRows(parseSettings({}, false))).toContainEqual({ kind: 'worker-cap', label, value: '4' });
     expect(settingsRows(parseSettings({ workers: { cap: 'none' } }, false))).toContainEqual({ kind: 'worker-cap', label, value: '' });
-    const settings = parseSettings({}, false);
-    expect(withWorkerCap(settings, '2')?.workers).toEqual({ cap: 2 });
-    expect(withWorkerCap(settings, '')?.workers).toEqual({ cap: null });
+    const settings = parseSettings({ workers: { stallMinutes: 5 } }, false);
+    expect(withWorkerCap(settings, '2')?.workers).toEqual({ cap: 2, stallMinutes: 5 });
+    expect(withWorkerCap(settings, '')?.workers).toEqual({ cap: null, stallMinutes: 5 });
     expect(['0', '2.5', 'lots'].map((text) => withWorkerCap(settings, text))).toEqual([null, null, null]);
   });
 

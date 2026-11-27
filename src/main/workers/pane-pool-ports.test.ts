@@ -26,7 +26,7 @@ describe('poolPorts', () => {
     expect(told).toBe(1);
     expect(ports.cap()).toBe(4);
     expect(ports.budget()).toBeNull();
-    settings = { ...settings, workers: { cap: null } };
+    settings = { ...settings, workers: { ...settings.workers, cap: null } };
     expect(ports.cap()).toBeNull();
   });
 

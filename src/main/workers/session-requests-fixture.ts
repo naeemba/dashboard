@@ -101,6 +101,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       move: async () => ({ refused: 'no card moves here' }),
       gone: () => undefined,
     },
+    stallMinutes: () => 20,
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
