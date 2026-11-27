@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeGitHub } from '../testing/fake-github';
 import { isNetworkError, RETRY_WAITS_MS } from './gh-answer';
-import { conflictedFiles, conflictLine, HAND_OFFS, landPullRequest, NEW_HEAD_POLL_MS, NEW_HEAD_WAIT_MS, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, conflictLine, HAND_OFFS, pushCleanMerge, landPullRequest, NEW_HEAD_POLL_MS, NEW_HEAD_WAIT_MS, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 
 const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' };
 const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
@@ -12,6 +12,12 @@ const lostAnswer = 'Post https://api.github.com/graphql: unexpected EOF';
 const lostEveryTry = () => Array.from({ length: RETRY_WAITS_MS.length + 1 }, () => ({ ok: false, output: lostAnswer }));
 const MERGE = 'pr merge 12 --merge --match-head-commit abc123';
 const merges = (github: { asked: string[] }) => github.asked.filter((each) => each === MERGE).length;
+const conflicts = { base: 'main', sha: 'abc123', branch: 'fix-it' };
+// A git that answers in turn and records the words it was asked.
+const gitAnswering = (...answers: { ok: boolean; output: string }[]) => {
+  const asked: string[] = [];
+  return { asked, git: async (_folder: string, words: string[]) => { asked.push(words.join(' ')); return answers.shift() ?? { ok: false, output: 'asked too often' }; } };
+};
 
 describe('parsePullRequestCommand', () => {
   // --project is taken out before, by boardTarget, as for `board`.
@@ -239,13 +245,13 @@ describe('landPullRequest handing off a conflict', () => {
   const pushed = { ok: true, output: 'OPEN def456 main MERGEABLE https://github.com/acme/api/pull/12 fix-it false' };
   const handOffs = (taken: boolean) => {
     const asked: string[] = [];
-    return { asked, handOff: async (branch: string, target: string) => { asked.push(`${branch} ${target}`); return taken; } };
+    return { asked, handOff: async ({ branch }: { branch: string }, target: string) => { asked.push(`${branch} ${target}`); return taken; } };
   };
 
   it('hands the conflict to the branch\'s agent, waits for its push and lands that', async () => {
     const github = fakeGitHub({ 'pr view': [branchConflicting, branchConflicting, pushed, pushed], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
     const { asked, handOff } = handOffs(true);
-    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: true, output: 'merged 12 at def456' });
+    expect(await landPullRequest(github.ports, '12', { agent: handOff })).toMatchObject({ ok: true, output: 'merged 12 at def456' });
     expect(asked).toEqual(['fix-it 12']);
     expect(github.asked).toContain('pr merge 12 --merge --match-head-commit def456');
   });
@@ -254,26 +260,26 @@ describe('landPullRequest handing off a conflict', () => {
   it('starts over once the pull request is no longer open', async () => {
     const closed = { ok: true, output: 'CLOSED abc123 main UNKNOWN https://github.com/acme/api/pull/12 fix-it false' };
     const github = fakeGitHub({ 'pr view': [branchConflicting, closed, closed] });
-    expect(await landPullRequest(github.ports, '12', handOffs(true).handOff)).toEqual({ ok: false, output: 'pull request 12 is closed, not open' });
+    expect(await landPullRequest(github.ports, '12', { agent: handOffs(true).handOff })).toEqual({ ok: false, output: 'pull request 12 is closed, not open' });
   });
 
   it('hands nothing off for a pull request gh named no branch for', async () => {
     const { asked, handOff } = handOffs(true);
-    expect(await landPullRequest(fakeGitHub({ 'pr view': [conflicting] }).ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { branch: '' } });
+    expect(await landPullRequest(fakeGitHub({ 'pr view': [conflicting] }).ports, '12', { agent: handOff })).toMatchObject({ ok: false, conflicts: { branch: '' } });
     expect(asked).toEqual([]);
   });
 
   it('stops at the conflict when no agent took it', async () => {
     const github = fakeGitHub({ 'pr view': [branchConflicting] });
     const { handOff } = handOffs(false);
-    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { branch: 'fix-it', sha: 'abc123' } });
+    expect(await landPullRequest(github.ports, '12', { agent: handOff })).toMatchObject({ ok: false, conflicts: { branch: 'fix-it', sha: 'abc123' } });
     expect(github.waited).toEqual([]);
   });
 
   it('stops at the conflict when no push comes within the budget', async () => {
     const github = fakeGitHub({ 'pr view': Array.from({ length: 100 }, () => branchConflicting) });
     const { handOff } = handOffs(true);
-    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: 'abc123' } });
+    expect(await landPullRequest(github.ports, '12', { agent: handOff })).toMatchObject({ ok: false, conflicts: { sha: 'abc123' } });
     expect(github.waited).toHaveLength(NEW_HEAD_WAIT_MS / NEW_HEAD_POLL_MS);
   });
 
@@ -283,7 +289,7 @@ describe('landPullRequest handing off a conflict', () => {
     const minutes = NEW_HEAD_WAIT_MS / NEW_HEAD_POLL_MS;
     const github = fakeGitHub({ 'pr view': [branchConflicting, ...Array.from({ length: minutes - 11 }, () => branchConflicting), again, again, ...Array.from({ length: 100 }, () => again)] });
     const { asked, handOff } = handOffs(true);
-    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: 'def456' } });
+    expect(await landPullRequest(github.ports, '12', { agent: handOff })).toMatchObject({ ok: false, conflicts: { sha: 'def456' } });
     expect(asked).toHaveLength(2);
     expect(github.waited).toHaveLength(minutes);
   });
@@ -294,7 +300,7 @@ describe('landPullRequest handing off a conflict', () => {
     const minutes = NEW_HEAD_WAIT_MS / NEW_HEAD_POLL_MS;
     const github = fakeGitHub({ 'pr view': [branchConflicting, ...Array.from({ length: minutes - 1 }, () => branchConflicting), again, again, again] });
     const { asked, handOff } = handOffs(true);
-    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: 'def456' } });
+    expect(await landPullRequest(github.ports, '12', { agent: handOff })).toMatchObject({ ok: false, conflicts: { sha: 'def456' } });
     expect(asked).toHaveLength(1);
     expect(github.waited).toHaveLength(minutes);
   });
@@ -304,7 +310,7 @@ describe('landPullRequest handing off a conflict', () => {
     const heads = Array.from({ length: HAND_OFFS + 1 }, (_, round) => `OPEN sha${round} main CONFLICTING https://github.com/acme/api/pull/12 fix-it false`);
     const github = fakeGitHub({ 'pr view': heads.flatMap((head, round) => [{ ok: true, output: head }, ...(round < HAND_OFFS ? [{ ok: true, output: heads[round + 1] }] : [])]) });
     const { asked, handOff } = handOffs(true);
-    expect(await landPullRequest(github.ports, '12', handOff)).toMatchObject({ ok: false, conflicts: { sha: `sha${HAND_OFFS}` } });
+    expect(await landPullRequest(github.ports, '12', { agent: handOff })).toMatchObject({ ok: false, conflicts: { sha: `sha${HAND_OFFS}` } });
     expect(asked).toHaveLength(HAND_OFFS);
   });
 });
@@ -318,18 +324,19 @@ describe('conflictLine', () => {
   // A fetch that failed, or a git before merge-tree --write-tree: still a conflict, said without the files.
   it('says so when git could not name them', () => {
     expect(conflictLine('origin', 'main', { ok: false, output: 'fatal: couldn\'t find remote ref main' })).toContain('conflicts with main: git could not name the files (fatal');
-    expect(conflictLine('origin', 'main', { ok: true, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec' })).toContain('git could not name the files');
+  });
+
+  // GitHub ignores .gitattributes' merge=union, so it can call conflicting what git merges cleanly.
+  it('says plainly when git merges it cleanly', () => {
+    expect(conflictLine('origin', 'main', { ok: true, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec' })).toBe('GitHub says it conflicts with main, but git merges it cleanly — merge origin/main into the branch, push, and run it again');
   });
 });
 
 describe('conflictedFiles', () => {
-  const conflicts = { base: 'main', sha: 'abc123', branch: 'fix-it' };
   const tree = { ok: false, output: 'd42f6e61ad4e0d57aafb840bff3a24b687535dec\nsrc/a.ts\n' };
 
   it('fetches from the project\'s remote, then merges the fetched base with the head', async () => {
-    const asked: string[] = [];
-    const answers = [{ ok: true, output: '' }, tree];
-    const git = async (_folder: string, words: string[]) => { asked.push(words.join(' ')); return answers.shift() ?? { ok: false, output: 'asked too often' }; };
+    const { asked, git } = gitAnswering({ ok: true, output: '' }, tree);
     expect(await conflictedFiles(git, '/project', 'github', conflicts)).toBe('conflicts with main: src/a.ts — merge github/main into the branch, resolve, push, and run it again');
     expect(asked).toEqual(['fetch github main abc123', 'merge-tree --write-tree --name-only --no-messages github/main abc123']);
   });
@@ -344,6 +351,64 @@ describe('conflictedFiles', () => {
   it('says a git that throws as the line without the files', async () => {
     const git = async () => { throw Object.assign(new Error('spawn git ENOENT'), { code: 'ENOENT' }); };
     expect(await conflictedFiles(git, '/project', 'origin', conflicts)).toContain('git could not name the files (spawn git ENOENT)');
+  });
+});
+
+describe('pushCleanMerge', () => {
+  const treeId = 'd42f6e61ad4e0d57aafb840bff3a24b687535dec';
+
+  it('commits the clean tree onto the head with the base as second parent and pushes it to the branch', async () => {
+    const { asked, git } = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: true, output: 'fed987\n' }, { ok: true, output: '' });
+    expect(await pushCleanMerge(git, '/project', 'origin', conflicts)).toEqual({ handed: true, line: 'merged origin/main into fix-it cleanly at fed987 and pushed it; pull fix-it before pushing to it again' });
+    expect(asked.slice(2)).toEqual([`commit-tree ${treeId} -p abc123 -p origin/main -m Merge origin/main into fix-it`, '-c core.hooksPath=/dev/null push origin fed987:refs/heads/fix-it']);
+  });
+
+  it('leaves a real conflict alone', async () => {
+    const { asked, git } = gitAnswering({ ok: true, output: '' }, { ok: false, output: `${treeId}\nsrc/a.ts` });
+    expect(await pushCleanMerge(git, '/project', 'origin', conflicts)).toEqual({ handed: false, line: '' });
+    expect(asked).toHaveLength(2);
+  });
+
+  // Somebody pushed to the branch since the head was read: the push is not a fast-forward.
+  it('says a refused push, and hands nothing', async () => {
+    const { git } = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: true, output: 'fed987' }, { ok: false, output: '! [rejected] (fetch first)' });
+    expect(await pushCleanMerge(git, '/project', 'origin', conflicts)).toEqual({ handed: false, line: 'git merges origin/main into fix-it cleanly, but the push failed: ! [rejected] (fetch first)' });
+    const silent = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: true, output: 'fed987' }, { ok: false, output: '' });
+    expect(await pushCleanMerge(silent.git, '/project', 'origin', conflicts)).toMatchObject({ line: expect.stringContaining('the push failed: no answer') });
+  });
+
+  it('says a failed commit without pushing', async () => {
+    const { asked, git } = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: false, output: 'Please tell me who you are.' });
+    expect(await pushCleanMerge(git, '/project', 'origin', conflicts)).toMatchObject({ handed: false, line: expect.stringContaining('committing the merge failed: Please tell me who you are.') });
+    expect(asked).toHaveLength(3);
+  });
+});
+
+describe('resolving a conflict', () => {
+  const branchConflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12 fix-it false' };
+  const pushed = { ok: true, output: 'OPEN def456 main MERGEABLE https://github.com/acme/api/pull/12 fix-it false' };
+  const resolver = (taken: boolean) => {
+    const asked: string[] = [];
+    return { asked, handOff: async ({ sha }: { sha: string }) => { asked.push(sha); return taken; } };
+  };
+
+  it('waits on the head a clean merge pushed', async () => {
+    const github = fakeGitHub({ 'pr view': [branchConflicting, pushed, pushed], 'pr checks': [{ ok: true, output: '' }] });
+    expect(await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).toEqual({ ok: true, output: 'checks passed on def456' });
+  });
+
+  it('lands a clean merge without asking the agent', async () => {
+    const github = fakeGitHub({ 'pr view': [branchConflicting, pushed, pushed], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
+    const agent = resolver(true);
+    expect(await landPullRequest(github.ports, '12', { cleanMerge: resolver(true).handOff, agent: agent.handOff })).toMatchObject({ ok: true, output: 'merged 12 at def456' });
+    expect(agent.asked).toEqual([]);
+  });
+
+  it('hands the agent a conflict git could not merge cleanly', async () => {
+    const github = fakeGitHub({ 'pr view': [branchConflicting, pushed, pushed], 'pr checks': [{ ok: true, output: '' }], 'pr merge': [{ ok: true, output: '' }] });
+    const agent = resolver(true);
+    expect(await landPullRequest(github.ports, '12', { cleanMerge: resolver(false).handOff, agent: agent.handOff })).toMatchObject({ ok: true });
+    expect(agent.asked).toEqual(['abc123']);
   });
 });
 
