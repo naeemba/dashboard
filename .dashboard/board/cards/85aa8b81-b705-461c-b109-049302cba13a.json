@@ -1,0 +1,11 @@
+{
+  "id": "85aa8b81-b705-461c-b109-049302cba13a",
+  "title": "board-files test times out on the Windows CI job",
+  "notes": "PR #421's windows job (a PR not touching board files) failed src/main/board/board-files.test.ts 'names a board.json that does not parse on a read without salvage' at 6.4 s, over vitest's 5 s limit, same pattern as finished-work.test.ts (d976a3c6, #404): likely git or process spawns that are slow on the Windows runner. Find what the test spends its time on from the run log and make it fast; raise the timeout only for that test if that is the honest fix, saying why.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-27T13:38:29.808Z",
+  "updatedAt": "2026-11-27T13:38:29.808Z",
+  "column": "Backlog",
+  "order": 8
+}

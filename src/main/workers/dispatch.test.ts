@@ -113,6 +113,12 @@ describe('appSessionSettings', () => {
     expect(appSessionSettings(USER_DATA, 'worker').permissions.denyInsteadOfPrompting).toBe(true);
     expect(appSessionSettings(USER_DATA, 'main').permissions).not.toHaveProperty('denyInsteadOfPrompting');
   });
+
+  // A worker paused on CI must not come back compacted; main keeps Claude Code's default.
+  it('turns idle compaction off for a worker only', () => {
+    expect(appSessionSettings(USER_DATA, 'worker')).toHaveProperty('idleCompaction', false);
+    expect(appSessionSettings(USER_DATA, 'main')).not.toHaveProperty('idleCompaction');
+  });
 });
 
 describe('workerSettings', () => {
