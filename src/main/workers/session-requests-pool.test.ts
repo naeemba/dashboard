@@ -117,13 +117,13 @@ describe('a CI wait', () => {
     const { ask, answer, started } = capped(1);
     await ask(['start', 'first task']);
     await ask(['start', 'second task']);
-    expect(await ask(['ci', '2:1', 'wait'])).toEqual({ ok: true, output: '' });
+    expect(await ask(['ci', '2:1', 'wait', '41'])).toEqual({ ok: true, output: '' });
     // Its turn ends with the wait in the background: the slot goes to the queued start.
     answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
     await settled();
     expect(started).toMatchObject([{ id: '2:1' }, { id: '2:2', prompt: 'second task' }]);
     let back = false;
-    void ask(['ci', '2:1', 'resume']).then(() => { back = true; });
+    void ask(['ci', '2:1', 'resume', '41']).then(() => { back = true; });
     await settled();
     expect(back).toBe(false);
     answer.notify('2:2', 'done', NOTHING_WAITING);
@@ -131,12 +131,12 @@ describe('a CI wait', () => {
     expect(back).toBe(true);
   });
 
-  // A `pr wait` killed before its resume: the next Stop's background count drops it, so the
-  // worker's own background work holds the slot again.
+  // A wait whose process id another process took up reads as live: the next Stop's background count
+  // drops it, so the worker's own background work holds the slot again.
   it('stops counting a wait the Stop hook no longer sees in the background', async () => {
     const { ask, answer, started } = capped(1);
     await ask(['start', 'first task']);
-    await ask(['ci', '2:1', 'wait']);
+    await ask(['ci', '2:1', 'wait', '41']);
     answer.notify('2:1', 'done', NOTHING_WAITING);
     answer.notify('2:1', 'running');
     await ask(['start', 'second task']);
@@ -150,8 +150,8 @@ describe('a CI wait', () => {
   it('lowers the count to the background a Stop reports, not to none', async () => {
     const { ask, answer } = capped(1);
     await ask(['start', 'first task']);
-    await ask(['ci', '2:1', 'wait']);
-    await ask(['ci', '2:1', 'wait']);
+    await ask(['ci', '2:1', 'wait', '41']);
+    await ask(['ci', '2:1', 'wait', '42']);
     answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
     expect(answer.pool.ciWaits('2:1')).toBe(1);
   });
@@ -159,7 +159,7 @@ describe('a CI wait', () => {
   // workers-decision-11: main's own `pr wait` and `pr land` never wait on the pool, however full.
   it('changes nothing for main and never holds its resume', async () => {
     const { ask } = capped(0);
-    expect(await ask(['ci', '2:0', 'wait'])).toEqual({ ok: true, output: '' });
-    expect(await ask(['ci', '2:0', 'resume'])).toEqual({ ok: true, output: '' });
+    expect(await ask(['ci', '2:0', 'wait', '41'])).toEqual({ ok: true, output: '' });
+    expect(await ask(['ci', '2:0', 'resume', '41'])).toEqual({ ok: true, output: '' });
   });
 });

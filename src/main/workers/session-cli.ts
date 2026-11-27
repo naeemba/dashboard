@@ -8,6 +8,7 @@ import { isRecord } from '../../shared/app/is-record';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { asksForReport, LAST_MESSAGE_KEPT, tail } from '../../shared/workers/done-report';
 import { isAppQuestion } from './app-question';
+import { isProcessId } from '../actions/pane/pane-input';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -38,8 +39,9 @@ export type SessionCommand =
   // /pr-conflicts, never the pane `from` names, which is the land itself.
   | { kind: 'conflicted'; branch: string; pullRequest: string; from: string | null }
   // What `pr wait` and `pr land` ask, in the pane they run in, before they wait on the checks and once
-  // they are done (workers-decision-11): its slot given back, then asked for again.
-  | { kind: 'ci-wait' | 'ci-resume'; id: string }
+  // they are done (workers-decision-11): its slot given back, then asked for again. `pid` is the
+  // asking run's, the wait lasting only while it runs.
+  | { kind: 'ci-wait' | 'ci-resume'; id: string; pid: number }
   // `waiting` is what a Stop hook said its session waits on, when it said so; `told` the rest a hook's
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold };
@@ -77,7 +79,7 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane status
   pane landed --branch <branch> | --card <card id> [--from <id>]
   pane conflicted <branch> <pull request> [--from <id>]
-  pane ci <id> wait|resume
+  pane ci <id> wait|resume <pid>
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
 start starts a worker now when fewer than the cap run in its project (settings workers.cap, 4) and
@@ -90,10 +92,10 @@ what is queued, in order, and why it is held; unqueue withdraws one. A worker ru
 question or paused on its own background work holds its place; done frees it.
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
-in it with the prompt as its argument, refused at the cap: --card runs it in the worktree the card was shipped into,
---worktree in a throwaway one removed when its pane goes, unless it holds work not on a remote
-(run answers once the project's packages are installed there, which can take minutes: give it a
-ten-minute timeout, 600000 ms),
+in it with the prompt as its argument, refused at the cap: --card runs it in the worktree the card
+was shipped into, --worktree in a throwaway one removed when its pane goes, unless it holds work not
+on a remote (run answers once the project's packages are installed there, which can take minutes:
+give it a ten-minute timeout, 600000 ms),
 --in in a folder that is already there, inside the project or a worktree of its repository (one on
 a branch you keep yourself), which nothing makes or removes, and none of them in the project itself.
 The worker is a Claude screen; --terminal runs Claude Code in the
@@ -361,8 +363,11 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     case 'ci': {
       const id = paneId(rest[0], 'ci');
       if (typeof id !== 'string') return id;
-      if (rest.length !== 2 || (rest[1] !== 'wait' && rest[1] !== 'resume')) return refuse('pane ci takes a pane id, then wait or resume');
-      return { ok: true, command: { kind: rest[1] === 'wait' ? 'ci-wait' : 'ci-resume', id } };
+      const pid = Number(rest[2]);
+      if (rest.length !== 3 || (rest[1] !== 'wait' && rest[1] !== 'resume') || !isProcessId(pid)) {
+        return refuse('pane ci takes a pane id, then wait or resume, then the process id of the run waiting');
+      }
+      return { ok: true, command: { kind: rest[1] === 'wait' ? 'ci-wait' : 'ci-resume', id, pid } };
     }
     case 'landed': {
       const [flag, name = '', ...more] = rest;
@@ -402,10 +407,10 @@ export function landedWords(by: 'branch' | 'card', name: string, from: string | 
   return ['landed', `--${by}`, name, ...fromWords(from)];
 }
 
-// The words `pr wait` and `pr land` ask pane.ci-wait or pane.ci-resume in, from the pane they run in,
-// or null outside one: a plain terminal holds no slot.
-export function ciWords(phase: 'wait' | 'resume', from: string | undefined): string[] | null {
-  return from === undefined || !PANE_ID.test(from) ? null : ['ci', from, phase];
+// The words `pr wait` and `pr land` ask pane.ci-wait or pane.ci-resume in, from the pane they run in
+// and with their own process id, or null outside a pane: a plain terminal holds no slot.
+export function ciWords(phase: 'wait' | 'resume', from: string | undefined, pid: number): string[] | null {
+  return from === undefined || !PANE_ID.test(from) ? null : ['ci', from, phase, String(pid)];
 }
 
 // The words `pr land` asks `pane conflicted` in, as landedWords.

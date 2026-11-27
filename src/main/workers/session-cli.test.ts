@@ -228,14 +228,16 @@ describe('outsidePaneRefusal', () => {
 describe('a CI wait from pr wait and pr land', () => {
   // Main's chat has no pane of its own, and a plain terminal none at all: neither asks the pool.
   it('asks from the pane it ran in, and nothing outside one', () => {
-    expect(ciWords('wait', '2:1')).toEqual(['ci', '2:1', 'wait']);
-    expect(ciWords('resume', undefined)).toBeNull();
-    expect(ciWords('resume', 'nonsense')).toBeNull();
+    expect(ciWords('wait', '2:1', 41)).toEqual(['ci', '2:1', 'wait', '41']);
+    expect(ciWords('resume', undefined, 41)).toBeNull();
+    expect(ciWords('resume', 'nonsense', 41)).toBeNull();
   });
 
   it('reads the words back as the pane\'s', () => {
-    expect(parseSessionCommand(['ci', '2:1', 'wait'])).toEqual({ ok: true, command: { kind: 'ci-wait', id: '2:1' } });
-    expect(parseSessionCommand(['ci', '2:1', 'resume'])).toEqual({ ok: true, command: { kind: 'ci-resume', id: '2:1' } });
+    expect(parseSessionCommand(['ci', '2:1', 'wait', '41'])).toEqual({ ok: true, command: { kind: 'ci-wait', id: '2:1', pid: 41 } });
+    expect(parseSessionCommand(['ci', '2:1', 'resume', '41'])).toEqual({ ok: true, command: { kind: 'ci-resume', id: '2:1', pid: 41 } });
+    expect(parseSessionCommand(['ci', '2:1', 'wait'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['ci', '2:1', 'wait', '0'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['ci', '2:1'])).toMatchObject({ ok: false });
     expect(parseSessionCommand(['ci'])).toMatchObject({ ok: false });
   });

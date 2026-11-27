@@ -163,9 +163,9 @@ export async function askConflicted(branch: string, pullRequest: string, directo
 // outside a pane, never the app started, and whatever the app answers, an older app's refusal or none
 // at all, the wait goes on as it would without it.
 export async function askCiSlot(phase: 'wait' | 'resume', directory: string): Promise<void> {
-  const words = ciWords(phase, process.env.DASHBOARD_PANE);
+  const words = ciWords(phase, process.env.DASHBOARD_PANE, process.pid);
   if (words === null) return;
-  await askFromLand({ kind: phase === 'wait' ? 'ci-wait' : 'ci-resume', id: words[1] }, words, directory);
+  await askFromLand({ kind: phase === 'wait' ? 'ci-wait' : 'ci-resume', id: words[1], pid: process.pid }, words, directory);
 }
 
 // The app asked on behalf of a command whose own work is done without it: null outside a pane, a

@@ -1,7 +1,7 @@
 import type { Refused } from '../../../shared/app/bridge';
 import type { Board } from '../../../shared/board/board';
 import { failureText } from '../../../shared/errors/failure';
-import { capReached, columnsBack, nextResume, nextToStart, ordinal, placed, queuedWork, queueRefusal, queueText, readiness, withdrawnColumn, type Caps, type NextStart, type QueueEntry, type Running } from '../../workers/pane-pool';
+import { capReached, columnsBack, liveWaits, nextResume, nextToStart, ordinal, placed, queuedWork, queueRefusal, queueText, readiness, withdrawnColumn, type Caps, type NextStart, type QueueEntry, type Running } from '../../workers/pane-pool';
 import type { SavedQueue } from '../../workers/pane-queue-store';
 import { action, bind, isRefused, type BoundAction } from '../action';
 import { paneCiResume, paneCiWait } from './ci-wait';
@@ -20,11 +20,12 @@ export type PanePool = SavedQueue & {
   starting: Map<string, QueueEntry>;
   // False until the panes a restart brings back are back and counted.
   ready: boolean;
-  // Each worker's `pr wait` and `pr land` runs waiting on CI now (pane.ci-wait), by pane id.
-  ciWaits: Map<string, number>;
+  // Each worker's `pr wait` and `pr land` runs waiting on CI now (pane.ci-wait), by pane id: the
+  // process id of each, counted only while that process runs (liveWaits).
+  ciWaits: Map<string, number[]>;
   // The workers whose CI is done, waiting for their slot back, served ahead of every entry
   // (pane.ci-resume). Never saved: the run waiting on the answer does not outlive the app.
-  resuming: { id: string; resolve(): void }[];
+  resuming: { id: string; pid: number; resolve(): void }[];
 };
 
 export type PaneQueuePorts = {
@@ -39,6 +40,8 @@ export type PaneQueuePorts = {
   worker(id: string): string | null;
   // Whether the pane holds a slot now (holdsSlot).
   holds(id: string): boolean;
+  // Whether a CI wait's process still runs (processAlive).
+  alive(pid: number): boolean;
   // Why the budget holds the queue, or null (budgetHold).
   budget(): string | null;
   open(projectPath: string): boolean;
@@ -141,12 +144,16 @@ function resumeOne(ports: PaneQueuePorts): boolean {
   if (resuming.length === 0) return false;
   const at = nextResume(resuming, ({ id }) => ({ projectPath: ports.worker(id), holds: ports.holds(id) }), taken(ports), ports.cap());
   if (at === -1) return false;
-  const [{ id, resolve }] = resuming.splice(at, 1);
-  const left = (ciWaits.get(id) ?? 1) - 1;
-  if (left > 0) ciWaits.set(id, left);
-  else ciWaits.delete(id);
+  const [{ id, pid, resolve }] = resuming.splice(at, 1);
+  keepWaits(ports, id, liveWaits(ciWaits.get(id) ?? [], ports.alive).filter((each) => each !== pid));
   resolve();
   return true;
+}
+
+// A worker's CI waits set to these, none left forgetting it.
+function keepWaits(ports: PaneQueuePorts, id: string, pids: number[]): void {
+  if (pids.length > 0) ports.pool.ciWaits.set(id, pids);
+  else ports.pool.ciWaits.delete(id);
 }
 
 // Queued, then drained: a start with a free slot and nothing ahead of it starts at once, and answers
@@ -224,7 +231,7 @@ export type PanePoolActions = {
   ciResume: BoundAction;
   ciWaits(id: string): number;
   // A Stop hook's count of background tasks: a session has no more live CI waits than that, so a
-  // `pr wait` killed before its resume stops counting here.
+  // wait whose process id was reused by another process stops counting here.
   settle(id: string, background: number): void;
   // A pane run again or let go of: no CI wait it had is its new work's.
   forget(id: string): void;
@@ -245,12 +252,10 @@ export function panePool(saved: SavedQueue, main: Omit<PaneQueuePorts, 'pool'>):
     drain,
     ciWait: bind(paneCiWait, ports),
     ciResume: bind(paneCiResume, ports),
-    ciWaits: (id) => ports.pool.ciWaits.get(id) ?? 0,
+    ciWaits: (id) => liveWaits(ports.pool.ciWaits.get(id) ?? [], ports.alive).length,
     settle: (id, background) => {
       const waits = ports.pool.ciWaits.get(id);
-      if (waits === undefined || waits <= background) return;
-      if (background > 0) ports.pool.ciWaits.set(id, background);
-      else ports.pool.ciWaits.delete(id);
+      if (waits !== undefined) keepWaits(ports, id, liveWaits(waits, ports.alive).slice(0, background));
     },
     forget: (id) => { ports.pool.ciWaits.delete(id); },
     full: (projectPath) => {

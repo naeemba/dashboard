@@ -100,6 +100,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       beginCard: async () => ({ refused: 'no card starts here' }),
       move: async () => ({ refused: 'no card moves here' }),
       gone: () => undefined,
+      alive: () => true,
     },
     stallMinutes: () => 20,
     ...overrides,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyBoard, moveCardById, type Board } from '../../shared/board/board';
 import type { Settings } from '../../shared/settings/settings';
-import { budgetHold, capReached, holdsSlot, nextResume, withdrawnColumn, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type QueueEntry, type Readiness, type Resumer } from './pane-pool';
+import { budgetHold, capReached, holdsSlot, liveWaits, nextResume, withdrawnColumn, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type QueueEntry, type Readiness, type Resumer } from './pane-pool';
 
 const entry = (id: string, over: Partial<QueueEntry> = {}): QueueEntry => ({
   id, dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, returnTo: null, queuedAt: '2026-11-26T12:00:00.000Z',
@@ -211,5 +211,12 @@ describe('withdrawnColumn', () => {
     const fromReview = { ...shipped, returnTo: { from: 'Review', into: 'Ship' } };
     expect(withdrawnColumn(fromReview, board({ a: SHIP }))).toEqual({ stays: 'card a stays in Ship: back in Review would start it again' });
     expect(withdrawnColumn({ ...shipped, returnTo: { from: 'Doing', into: 'Review' } }, board({ a: REVIEW }))).toEqual({ back: 'Doing' });
+  });
+});
+
+describe('a CI wait lasting only while its process runs', () => {
+  it('counts only the waits whose process still runs', () => {
+    expect(liveWaits([41, 42, 43], (pid) => pid !== 42)).toEqual([41, 43]);
+    expect(liveWaits([41], () => false)).toEqual([]);
   });
 });

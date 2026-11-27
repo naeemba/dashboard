@@ -25,6 +25,7 @@ function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueu
     cap: total(2),
     worker: () => null,
     holds: () => false,
+    alive: () => true,
     budget: () => null,
     open: () => true,
     board: () => board,

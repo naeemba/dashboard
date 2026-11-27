@@ -697,8 +697,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'status': return await status(slot, projectPath ?? '');
         case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name, command.from);
         case 'conflicted': return await conflicted(slot, projectPath ?? '', command.branch, command.pullRequest, command.from);
-        case 'ci-wait': return sessionReply(await pool.ciWait.call({ id: command.id }));
-        case 'ci-resume': return sessionReply(await pool.ciResume.call({ id: command.id }));
+        case 'ci-wait': return sessionReply(await pool.ciWait.call({ id: command.id, pid: command.pid }));
+        case 'ci-resume': return sessionReply(await pool.ciResume.call({ id: command.id, pid: command.pid }));
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);

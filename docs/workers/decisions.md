@@ -633,10 +633,14 @@ review sweep's own starts could push past a main that counted perfectly.
   are told not to do. A scheduled wake-up is no running work, so it does not keep the slot; one that
   fires before CI is done runs over the cap until its turn ends. Main is no pool member: run by
   main, or outside a pane, the command asks nothing, and the actions answer a pane that is no main's
-  worker at once. A wait lost to an app restart is forgotten, and the pane holds its slot. A `pr
-  wait` killed before its resume never says so; a session has no more live waits than background
-  tasks, so each Stop lowers the count to the background it reports, and a later test run holds the
-  slot again.
+  worker at once. A wait lost to an app restart is forgotten, and the pane holds its slot. A wait
+  is the process id of the `pr wait` or `pr land` that asked, and frees the slot only while that
+  process runs (`liveWaits`, read at every count the drain makes): a `pr wait` killed before its
+  resume, by any signal, SIGKILL included, is over at once, so a test run started in the same turn
+  holds the slot. Before it, the count was lowered only by the next Stop's background count, and a
+  wait killed beside a new test run left the slot free for that whole run. A SIGTERM handler alone
+  was not taken: SIGKILL runs no handler. Each Stop still lowers the count to the background it
+  reports, for a dead wait's process id taken up by another process.
 - **A cap per project, and a total across them** (2026-11-27): 4 a project, so one busy project
   never queues another's card behind its own, and 8 in all, since memory, the one-heavy-run lock
   (workflow-decision-14) and the 7-day usage are machine- or account-wide: the 8-worker night above

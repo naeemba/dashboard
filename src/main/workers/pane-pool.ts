@@ -91,6 +91,17 @@ export function holdsSlot(look: SlotLook): boolean {
   return look.ciWaits === 0 || look.waiting.background > look.ciWaits;
 }
 
+// A CI wait is the `pr wait` or `pr land` process that asked for it (pane.ci-wait), by process id,
+// and lasts only while that process does: one killed by any signal, SIGKILL included, never asks for
+// its slot back, so a wait whose process is gone is over, read at every count the drain makes, and
+// its worker's other background work holds the slot again, over the cap if the pool gave the slot
+// away meanwhile, since a dead process cannot wait for room.
+// ponytail: a pid reused by another process reads as the wait still live; the next Stop's background
+// count (settle) lowers it.
+export function liveWaits(pids: readonly number[], alive: (pid: number) => boolean): number[] {
+  return pids.filter((pid) => alive(pid));
+}
+
 // No limit configured never holds the queue: limit none, or a cap with no weekly cap set, which is what
 // a fresh install has. Otherwise anything but under the limit holds it, a stale reading included.
 export function budgetHold(budget: Settings['budget'], verdict: () => BudgetVerdict): string | null {

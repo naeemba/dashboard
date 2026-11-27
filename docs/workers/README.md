@@ -79,8 +79,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   each minute by `../main.ts` (workers-decision-13)
 - The screen host a worker screen's session runs in, so it outlives the app:
   `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`,
-  `screen-host-protocol.ts`, `dead-host.ts`, `../chat/input-queue.ts`
-  (workers-decision-6)
+  `screen-host-protocol.ts`, `dead-host.ts` (with `../app/process-alive.ts`),
+  `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios
 
@@ -122,7 +122,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   verdict, ahead of every queued entry, and waits there while both caps are
   full. A worker running tests beside the wait, or running `pr wait` in the
   foreground, keeps its slot, and `pr wait` or `pr land` run by main never asks
-  the pool anything (workers-decision-11).
+  the pool anything. A `pr wait` killed before CI is done, by any signal, frees
+  nothing from then on: the worker's other background work holds the slot again
+  (workers-decision-11).
 - Given fewer than 4 running and nothing queued, when main runs `pane start`,
   then it claims a pane and answers as `pane run` does; `pane run <id>` at the
   cap is refused, saying `pane start` queues it.
