@@ -112,7 +112,7 @@ export function readiness(entry: QueueEntry, open: (path: string) => boolean, bo
   const opensItself = entry.work.kind === 'run' && entry.work.project !== null;
   if (!open(entry.projectPath) && !opensItself) return { state: 'wait', why: `${baseName(entry.projectPath)} is not open` };
   if (!open(entry.dispatcherPath)) return { state: 'wait', why: `${baseName(entry.dispatcherPath)} is not open` };
-  if (entry.work.kind !== 'run' && board === null) return { state: 'wait', why: `the board of ${baseName(entry.projectPath)} cannot be read` };
+  if (entry.work.kind !== 'run' && entry.cardId !== null && board === null) return { state: 'wait', why: `the board of ${baseName(entry.projectPath)} cannot be read` };
   if (entry.after !== null && finishedColumnOf(board, entry.after) === null) return { state: 'wait', why: `waits on card ${entry.after}` };
   return { state: 'ready', why: '' };
 }

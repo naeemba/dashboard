@@ -73,6 +73,8 @@ describe('readiness', () => {
   it('holds a ship or a review on a board it cannot read, never dropping it', () => {
     const ship = entry('q1', { cardId: 'a', work: { kind: 'ship', title: 'A' } });
     expect(readiness(ship, open, () => null)).toEqual({ state: 'wait', why: 'the board of api cannot be read' });
+    // No card means no board was read: it goes on to begin, which refuses it.
+    expect(readiness(entry('q1', { work: { kind: 'ship', title: 'A' } }), open, () => null)).toEqual(ready);
   });
 
   it('does not wait on a closed project the start opens itself', () => {
