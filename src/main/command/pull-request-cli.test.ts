@@ -184,6 +184,27 @@ describe('landPullRequest', () => {
 describe('waitOnPullRequest', () => {
   const draft = { ok: true, output: `${open.output} true` };
 
+  // workers-decision-11: the pane pool's slot is given back around the wait on the checks alone.
+  it('gives the slot back for the wait on the checks, and asks for it again however the wait ends', async () => {
+    const said: string[] = [];
+    const github = fakeGitHub({ 'pr view': [open, open], 'pr checks': [{ ok: true, output: 'all green' }, { ok: false, output: 'test failed' }] });
+    const slot = {
+      giveBack: async () => { said.push(`give back after ${github.asked.length} asked`); },
+      reclaim: async () => { said.push(`reclaim after ${github.asked.length} asked`); },
+    };
+    await waitOnPullRequest({ ...github.ports, slot }, '12');
+    await waitOnPullRequest({ ...github.ports, slot }, '12');
+    expect(said).toEqual(['give back after 1 asked', 'reclaim after 2 asked', 'give back after 3 asked', 'reclaim after 4 asked']);
+  });
+
+  it('asks nothing of the pool for a pull request it never waits on', async () => {
+    const said: string[] = [];
+    const github = fakeGitHub({ 'pr view': [{ ok: true, output: 'MERGED abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' }] });
+    const slot = { giveBack: async () => { said.push('give back'); }, reclaim: async () => { said.push('reclaim'); } };
+    expect(await waitOnPullRequest({ ...github.ports, slot }, '12')).toMatchObject({ ok: false });
+    expect(said).toEqual([]);
+  });
+
   it('waits on the head commit\'s checks and merges nothing', async () => {
     const github = fakeGitHub({ 'pr view': [open], 'pr checks': [{ ok: true, output: 'all green' }] });
     expect(await waitOnPullRequest(github.ports, '12')).toEqual({ ok: true, output: 'checks passed on abc123' });

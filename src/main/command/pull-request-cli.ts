@@ -108,7 +108,23 @@ function recentCheckCount(url: string): string[] | undefined {
 // detail comes first and its verdict last, so the last line is always the one to read.
 type Checked = { ok: true; sha: string; base: string; branch: string; noChecks: boolean } | LandAnswer;
 
-async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked> {
+// What `pr wait` and `pr land` tell the pane pool around their wait on the checks (workers-decision-11):
+// the slot given back while the checks run, and asked for again once they are done, which may wait
+// for room. Both nothing outside a main's worker pane.
+export type CiSlot = { giveBack(): Promise<void>; reclaim(): Promise<void> };
+export type CheckPorts = GitHubPorts & { slot?: CiSlot };
+
+// The wait on the checks, with the slot given back for as long as it lasts, however it ends.
+async function slotGivenBack<T>(ports: CheckPorts, wait: () => Promise<T>): Promise<T> {
+  await ports.slot?.giveBack();
+  try {
+    return await wait();
+  } finally {
+    await ports.slot?.reclaim();
+  }
+}
+
+async function checksPassed(ports: CheckPorts, target: string): Promise<Checked> {
   const head = await patiently(ports, stateAndHead(target));
   if (isNetworkError(head)) return lost(head, `reading ${target}`);
   if (!head.ok) return head;
@@ -117,12 +133,13 @@ async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked
   // CI does not run on a pull request that conflicts: waiting on it would end in "no checks reported".
   if (conflicting(head)) return conflictAnswer(target, base, sha, branch);
   const watch = () => patiently(ports, ['pr', 'checks', target, '--watch']);
-  let checks = await watch();
-  // Right after a push CI may not have started: ask once more a minute on.
-  if (reportsNoChecks(checks)) {
+  const checks = await slotGivenBack(ports, async () => {
+    const first = await watch();
+    // Right after a push CI may not have started: ask once more a minute on.
+    if (!reportsNoChecks(first)) return first;
     await ports.wait(NO_CHECKS_WAIT_MS);
-    checks = await watch();
-  }
+    return watch();
+  });
   const noChecks = reportsNoChecks(checks);
   if (isNetworkError(checks)) return lost(checks, `waiting on the checks of ${target}`);
   if (!checks.ok && !noChecks) return { ok: false, output: `${checks.output}\n\na check failed on ${sha}; ${target} is not merged` };
@@ -142,7 +159,7 @@ async function checksPassed(ports: GitHubPorts, target: string): Promise<Checked
   return { ok: true, sha, base, branch, noChecks };
 }
 
-export async function waitOnPullRequest(ports: GitHubPorts, target: string): Promise<LandAnswer> {
+export async function waitOnPullRequest(ports: CheckPorts, target: string): Promise<LandAnswer> {
   const checked = await checksPassed(ports, target);
   if (!('sha' in checked)) return checked;
   return { ok: true, output: checked.noChecks ? `no checks to wait on at ${checked.sha}, a repository with no CI` : `checks passed on ${checked.sha}` };
@@ -154,7 +171,7 @@ export type HandOff = (branch: string, target: string) => Promise<boolean>;
 // A conflict handed to the branch's agent is waited out: once its merge is pushed (a new head, or the
 // pull request no longer open) the land starts over. No agent, NEW_HEAD_WAIT_MS spent waiting, or
 // HAND_OFFS spent, and the conflict is the answer, as without a hand-off.
-export async function landPullRequest(ports: GitHubPorts, target: string, handOff?: HandOff): Promise<LandAnswer> {
+export async function landPullRequest(ports: CheckPorts, target: string, handOff?: HandOff): Promise<LandAnswer> {
   const budget = { left: NEW_HEAD_WAIT_MS };
   for (let handedOff = 0; ; handedOff += 1) {
     const answer = await landOnce(ports, target);
@@ -176,7 +193,7 @@ async function newHead(ports: GitHubPorts, target: string, sha: string, budget: 
   return false;
 }
 
-async function landOnce(ports: GitHubPorts, target: string): Promise<LandAnswer> {
+async function landOnce(ports: CheckPorts, target: string): Promise<LandAnswer> {
   const checked = await checksPassed(ports, target);
   if (!('sha' in checked)) return checked;
   const { sha, base, branch, noChecks } = checked;

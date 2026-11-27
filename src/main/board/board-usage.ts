@@ -26,7 +26,7 @@ into Ship ships the card to an agent in a worktree, and one into Review starts i
 and review start them without a move; review is how to start a loop with the review.autoLoop setting
 off. Each answers only once the project's packages are installed in the card's worktree, which can
 take minutes: give those Bash calls a ten-minute timeout (600000 ms). With the worker cap full
-(settings workers.cap, 4 running) each is queued instead, answering \`queued <queue id>, <position>\`
+(settings workers.cap, 4 in a project, or workers.totalCap, 8 in all) each is queued instead, answering \`queued <queue id>, <position>\`
 at once, and the project's main is told when it starts. ship --first puts it at the head of the
 queue; --after holds it, letting later ones go ahead, until that card is Done or Cancelled. On a
 worktree's board a move is only a move. Everything else edits the board's files alone.

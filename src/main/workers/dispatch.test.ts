@@ -90,7 +90,7 @@ describe('mainPrompt verbs', () => {
   it('dispatches with pane start, never claim then run', () => {
     const prompt = mainPrompt('/work/api');
     expect(prompt).toContain('  start [--project <name|aka>]');
-    expect(prompt).toContain('queues a start past it, answering `queued <queue id>, <position>`');
+    expect(prompt).toContain('answering `queued <queue id>, <position>`; a worker waiting only on');
     expect(prompt).toContain('  unqueue <queue id>');
     expect(prompt).not.toContain('  claim [');
     expect(prompt).not.toContain('  run <id>');
