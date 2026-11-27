@@ -408,6 +408,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   prompt holding a slot; main's own calls still ask (workers-decision-12).
 - Given a worker with a question for you, when it asks, then the question is
   denied the same way and the worker reports it to main (workers-decision-12).
+- Given a worker paused an hour on CI with a long conversation, when it wakes,
+  then it has its whole conversation, never an idle compaction's summary; main
+  keeps Claude Code's default (workers-decision-12).
 - Given a machine whose `~/.claude/settings.json` names no rule for the app's
   commands, when main or a worker runs `node "$DASHBOARD_COMMAND" pane …`,
   `session …` or `node "$DASHBOARD_BOARD" …`, then it runs without a question:
