@@ -1,7 +1,7 @@
 import { failureText } from '../../shared/errors/failure';
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { matchesBinding } from '../../shared/keys/binding';
-import { queuedRows, workerCount, workerRows, type DispatchedWorker, type QueuedWorker } from '../../shared/workers/worker-roster';
+import { queuedRows, workerCount, workerRows, withdrawTarget, type DispatchedWorker, type QueuedWorker } from '../../shared/workers/worker-roster';
 import { anchoredPopup } from '../app/anchored-popup';
 import { piece } from './chat-foot-view';
 import type { UsageSnapshot } from '../../shared/usage/usage';
@@ -111,13 +111,14 @@ export async function showWorkers(popup: WorkersPopup): Promise<boolean> {
     },
     rowKey(event, row) {
       if (!matchesBinding(event, popup.withdrawKey())) return false;
-      if (row === undefined || !queuedOf(slot).some((each) => each.id === row)) {
-        popup.onNotice('Only a queued start is withdrawn; a running worker is released with pane release.');
+      const target = withdrawTarget(queuedOf(slot), row);
+      if ('refused' in target) {
+        popup.onNotice(target.refused);
         return true;
       }
-      bridge.unqueueWorker(slot, row).then(
+      bridge.unqueueWorker(slot, target.id).then(
         (answer) => popup.onNotice('refused' in answer ? answer.refused : answer.output),
-        (error: unknown) => popup.onNotice(`${row} not withdrawn: ${failureText(error)}`),
+        (error: unknown) => popup.onNotice(`${target.id} not withdrawn: ${failureText(error)}`),
       );
       return true;
     },

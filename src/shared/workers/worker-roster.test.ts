@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { queuedRows, waitingText, workerAbout, workerCount, workerRows, workerStatus, type DispatchedWorker, type WorkerStatus } from './worker-roster';
+import { queuedRows, waitingText, workerAbout, workerCount, workerRows, workerStatus, withdrawTarget, type DispatchedWorker, type WorkerStatus } from './worker-roster';
 import { paneLink, splitAtPaneLinks } from './pane-link';
 
 const worker = (id: string, status: WorkerStatus): DispatchedWorker => ({ id, dispatcher: 2, project: 'api', name: `api-${id}`, about: 'go', status });
@@ -63,5 +63,13 @@ describe('pane links', () => {
       { key: 'q3', name: 'api · q3', detail: '2nd in line · run fix the login' },
       { key: 'q5', name: 'crm · q5', detail: '4th in line · after b · review a' },
     ]);
+  });
+
+  it('withdraws only a queued row, and says why for any other', () => {
+    const queued = [{ id: 'q3', dispatcher: 2, project: 'api', place: '1st', about: 'run a', after: null }];
+    const refused = { refused: 'Only a queued start is withdrawn; a running worker is released with pane release.' };
+    expect(withdrawTarget(queued, queuedRows(queued)[0]?.key)).toEqual({ id: 'q3' });
+    expect(withdrawTarget(queued, '2:1')).toEqual(refused);
+    expect(withdrawTarget(queued, undefined)).toEqual(refused);
   });
 });

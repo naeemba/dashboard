@@ -106,3 +106,11 @@ export function queuedRows(queued: readonly QueuedWorker[]): { key: string; name
     detail: [`${entry.place} in line`, entry.after === null ? '' : `after ${entry.after}`, entry.about].filter(Boolean).join(' · '),
   }));
 }
+
+// What the withdraw key takes on the popup's highlighted row: the queued start it is, or why not.
+export function withdrawTarget(queued: readonly QueuedWorker[], rowKey: string | undefined): { id: string } | { refused: string } {
+  const entry = queued.find((each) => each.id === rowKey);
+  return entry === undefined
+    ? { refused: 'Only a queued start is withdrawn; a running worker is released with pane release.' }
+    : { id: entry.id };
+}
