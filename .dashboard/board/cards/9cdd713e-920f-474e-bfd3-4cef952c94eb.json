@@ -1,0 +1,11 @@
+{
+  "id": "9cdd713e-920f-474e-bfd3-4cef952c94eb",
+  "title": "Workers popup marks a stalled worker",
+  "notes": "Follow-up to 40fe0e2e (workers-decision-13): pane list/status already say 'stalled, silent N minutes'. Add 'stalled' to WorkerStatus in worker-roster.ts and show it in the workers popup row. Start after #414 (popup queue) and the stalled-worker PR both merge.",
+  "priority": "low",
+  "parent": null,
+  "createdAt": "2026-11-27T12:04:49.878Z",
+  "updatedAt": "2026-11-27T12:04:49.878Z",
+  "column": "Backlog",
+  "order": 10
+}

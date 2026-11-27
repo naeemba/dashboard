@@ -150,10 +150,11 @@ the conversation on any state past `queued`, since one folded into the running t
 itself clears the screen but keeps the grey prompts, since the process holding them goes on; a reset
 from the screen (a new conversation, `/resume`, a rewind) stops the session and drops them.
 
-Neither the message type nor the method is in the pinned SDK's types (0.3.316); both were checked
-against it by sending two prompts into a running turn and cancelling the second: it was reported
-`cancelled` and never ran, the first ran after the turn. A screen that opens while a prompt waits
-does not see it: the queue lives in the session, and `chat:read` only reads the transcript.
+Neither the message type nor the method is in the pinned SDK's types (0.3.316, still true of
+0.3.332); both were checked against it by sending two prompts into a running turn and cancelling
+the second: it was reported `cancelled` and never ran, the first ran after the turn. A screen that
+opens while a prompt waits does not see it: the queue lives in the session, and `chat:read` only
+reads the transcript.
 
 ## chat-decision-8: /btw is the session's own side question, through a call the SDK does not declare
 

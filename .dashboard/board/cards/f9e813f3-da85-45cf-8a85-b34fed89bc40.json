@@ -5,13 +5,17 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T11:52:19.591Z",
-  "updatedAt": "2026-11-27T11:51:07.547Z",
+  "updatedAt": "2026-11-27T12:10:01.521Z",
   "branch": "count-a-pane-whose-shell-failed-to-spawn-as",
   "pullRequest": 413,
   "comments": [
     {
       "at": "2026-11-27T11:51:07.513Z",
       "body": "Pull request #413 opened: End a pane whose shell failed to spawn, so its worker is released https://github.com/naeemba/dashboard/pull/413"
+    },
+    {
+      "at": "2026-11-27T12:10:01.520Z",
+      "body": "Review loop converged in 2 rounds, ready to merge. Round 1: 2 threads, both fixed in b1380c49, which narrows the fix: only an agent pane whose shell failed to spawn calls main.ended. Ending a screen's plain shell, which spawns after main claims the worker, dropped the worker before its done report arrived. Round 2 re-review: nothing open. CI passed on the head commit. Step 1 printed 'was ready'."
     }
   ],
   "column": "Review",
