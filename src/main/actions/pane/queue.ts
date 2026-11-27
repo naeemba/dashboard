@@ -32,6 +32,9 @@ export type PaneQueuePorts = {
   budget(): string | null;
   open(projectPath: string): boolean;
   board(projectPath: string): Board | null;
+  // The board the drain reads, null also while a card file does not parse (mid-write in a board
+  // sync), so the card it skips is not taken as deleted and its entry dropped.
+  drainBoard(projectPath: string): Board | null;
   // The start itself: the run's claim and run, the ship, the review. A refusal is the start's.
   begin(entry: QueueEntry): Promise<{ output: string } | Refused>;
   // card.move, for a withdrawn card going back to the column it came from.
@@ -65,7 +68,7 @@ function next(ports: PaneQueuePorts): NextStart {
   if (!ports.pool.ready) return { held: 'the panes a restart brings back are not all back yet' };
   const boards = new Map<string, Board | null>();
   const boardOf = (projectPath: string): Board | null => {
-    if (!boards.has(projectPath)) boards.set(projectPath, ports.board(projectPath));
+    if (!boards.has(projectPath)) boards.set(projectPath, ports.drainBoard(projectPath));
     return boards.get(projectPath) ?? null;
   };
   return nextToStart(

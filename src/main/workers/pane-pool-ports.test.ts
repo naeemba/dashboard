@@ -1,7 +1,8 @@
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { temporaryFolder } from '../testing/temporary-folder';
+import { boardFolderPath } from '../board/board-store';
 import { defaultSettings } from '../../shared/settings/settings';
 import type { QueueEntry } from './pane-pool';
 import { poolPorts } from './pane-pool-ports';
@@ -25,6 +26,17 @@ describe('poolPorts', () => {
     expect(ports.budget()).toBeNull();
     settings = { ...settings, workers: { cap: null } };
     expect(ports.cap()).toBeNull();
+  });
+
+  // The board skips a card file that does not parse, and the drain would then drop that card's start.
+  it('reads no board for the drain while a card file does not parse, and the board for the rest', () => {
+    const project = temporaryFolder('dashboard-board-');
+    const cardsFolder = path.join(boardFolderPath(project), 'cards');
+    mkdirSync(cardsFolder, { recursive: true });
+    writeFileSync(path.join(cardsFolder, 'a.json'), '{ half saved');
+    const ports = poolPorts(temporaryFolder('dashboard-queue-'), () => defaultSettings(false), cards);
+    expect(ports.board(project)).not.toBeNull();
+    expect(ports.drainBoard(project)).toBeNull();
   });
 
   // A full disk loses the queue at the next restart, never the start that was saving it.

@@ -8,7 +8,7 @@ import { panePool, type PaneQueuePorts } from './queue';
 // One open project, api, with `running` workers holding slots under a cap of 2. A start settles when
 // the test says: `finish(id)` resolves the start of that queue id.
 function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueue = { next: 1, entries: [] }) {
-  const counts = { running: 0 };
+  const counts = { running: 0, unreadable: false };
   const told: string[] = [];
   const moves: string[] = [];
   const gone: string[] = [];
@@ -23,10 +23,16 @@ function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueu
     budget: () => null,
     open: () => true,
     board: () => board,
+    drainBoard: () => (counts.unreadable ? null : board),
     begin: (entry: QueueEntry) => new Promise((resolve) => { begun.push(entry.id); pending.set(entry.id, resolve); }),
     tell: (dispatcherPath, text) => { told.push(`${dispatcherPath}: ${text}`); },
     now: () => Date.parse('2026-11-26T12:00:00.000Z'),
-    move: async (_projectPath, cardId, column) => { moves.push(`${cardId} ${column}`); return { output: '' }; },
+    // card.move refuses while any card file does not parse, as move.ts does.
+    move: async (_projectPath, cardId, column) => {
+      if (counts.unreadable) return { refused: 'board files do not parse, nothing was written' };
+      moves.push(`${cardId} ${column}`);
+      return { output: '' };
+    },
     gone: (entry) => { gone.push(entry.id); },
     ...over,
   });
@@ -127,6 +133,31 @@ describe('pane.start', () => {
     expect(told).toEqual(['/work/api: q1 dropped: card a is Done']);
     expect(begun).toEqual([]);
     expect(gone).toEqual(['q1']);
+  });
+
+  // A board sync mid-write: the drain cannot read the card, so the ship waits for it, never dropped.
+  it('holds a ship while its card file does not parse, and starts it once it does', async () => {
+    const { actions, start, begun, gone, counts, board } = pool();
+    actions.ready();
+    counts.unreadable = true;
+    board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
+    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
+    expect(begun).toEqual([]);
+    expect(gone).toEqual([]);
+    counts.unreadable = false;
+    actions.drain();
+    expect(begun).toEqual(['q1']);
+  });
+
+  // A withdrawal keeps its own read of the board, so its main hears why the card stays where it is.
+  it('says why a card stays when withdrawn while a card file does not parse', async () => {
+    const { actions, start, counts, moves, board } = pool();
+    actions.ready();
+    counts.unreadable = true;
+    board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
+    await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'review' } });
+    await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ output: 'withdrew q1; card a stays: board files do not parse, nothing was written' });
+    expect(moves).toEqual([]);
   });
 
   it('refuses what it cannot read', async () => {

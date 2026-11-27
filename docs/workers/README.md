@@ -110,6 +110,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   looked at, then the entry is dropped and its main told `q7 dropped: card … is
   Done` (`is not on the board`, `left Ship`). Given `board ship B --after A`,
   then B waits, letting later entries go ahead, until A is Done or Cancelled.
+  Given a card file that does not parse (caught mid-write in a board sync),
+  then the queued ship or review waits, `the board of api cannot be read`,
+  never dropped; a withdrawal and the refusal of a start still read the board.
 - Given the manager runs `board ship <id> --project crm` and the ship is queued,
   when it starts, then the manager is told `q7 started: …`, and the manager's
   `pane unqueue q7` withdraws it. Given api's main queued `pane start --project
