@@ -373,13 +373,15 @@ describe('isPort', () => {
 });
 
 describe('resetAll', () => {
-  it('keeps the token and the remote, and resets the port and the bind to loopback', () => {
+  it('keeps the token, the remote and the proxy, and resets the port and the bind to loopback', () => {
     const settings = parseSettings({
       host: { port: 7777, token: 'abc', bind: '0.0.0.0' }, remote: { address: '10.0.0.2:7777', token: 'xyz' }, weatherPlace: 'Oslo',
+      browser: { proxy: { server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] } },
     }, true);
     const reset = resetAll(settings, true);
     expect(reset.host).toEqual({ port: null, token: 'abc', bind: '127.0.0.1' });
     expect(reset.remote).toEqual(settings.remote);
+    expect(reset.browser.proxy).toEqual(settings.browser.proxy);
     expect(reset.weatherPlace).toBe(defaultSettings(true).weatherPlace);
   });
 

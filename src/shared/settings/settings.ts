@@ -358,10 +358,16 @@ export function resetKeys(settings: Settings, isMac: boolean): Settings {
 
 // Every preference back to what this build ships. The host token and the remembered host stay: they are
 // pairings with another machine, not preferences, and wiping the token would lock out the screen that
-// holds the old one with no explanation.
+// holds the old one with no explanation. browser.proxy stays too: it is written by hand only and a save
+// puts the file's block back, so resetting it here would turn the proxy off until the watch read it back.
 export function resetAll(settings: Settings, isMac: boolean): Settings {
   const defaults = defaultSettings(isMac);
-  return { ...defaults, host: { ...defaults.host, token: settings.host.token }, remote: settings.remote };
+  return {
+    ...defaults,
+    host: { ...defaults.host, token: settings.host.token },
+    remote: settings.remote,
+    browser: { ...defaults.browser, proxy: settings.browser.proxy },
+  };
 }
 
 // The chosen lines of one object: what is left of it once every entry equal to what this build ships is
