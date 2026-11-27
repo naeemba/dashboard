@@ -5,8 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-27T13:38:29.808Z",
-  "updatedAt": "2026-11-27T13:58:49.096Z",
+  "updatedAt": "2026-11-27T14:04:33.954Z",
   "branch": "board-files-test-times-out-on-the-windows-c",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 422,
+  "comments": [
+    {
+      "at": "2026-11-27T14:04:33.933Z",
+      "body": "Pull request #422 opened: Write an empty board in the board-files test of a broken board.json https://github.com/naeemba/dashboard/pull/422"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }
