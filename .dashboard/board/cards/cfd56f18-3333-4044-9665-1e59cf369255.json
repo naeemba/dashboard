@@ -5,8 +5,14 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T14:56:18.200Z",
-  "updatedAt": "2026-11-27T11:35:37.917Z",
+  "updatedAt": "2026-11-27T11:40:02.108Z",
   "branch": "workers-popup-shows-the-pane-queue-with-a-w",
+  "comments": [
+    {
+      "at": "2026-11-27T11:40:02.108Z",
+      "body": "Overlaps #411 (card 99b304cb, Split main.ts along its seams, in Review): it rewrites main.ts's sessionRequests({...}) block into sessionRequestPorts(...) in src/main/workers/session-request-ports.ts, including the poolPorts(...) line this card must change to tell the renderer of a queue change; both also edit docs/workers/README.md. main.ts sits at exactly 600 code lines on main, so this card's IPC doors (workers:queue, workers:unqueue) go in a new module either way. Plan: pool exposes its entries; session-requests answers queued rows per dispatcher slot; workers popup lists them under the running workers with their position; a new 'workers' scope row (claude-workers-withdraw, D) withdraws through pane.unqueue; settings screen gets a workers.cap row. No code written yet."
+    }
+  ],
   "column": "Doing",
   "order": 0
 }
