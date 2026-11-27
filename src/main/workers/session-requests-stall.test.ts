@@ -77,6 +77,15 @@ describe('a worker gone silent', () => {
     expect(withdrawn).toEqual([`2 ${told.length - 1}`]);
   });
 
+  it('takes the notice back when main lets go of the worker before reading it', async () => {
+    const { answer, told, withdrawn } = await silentWorker();
+    minutes(20);
+    answer.tellStalls();
+    const stallId = told.length - 1;
+    await answer({ directory: '/work/api', args: ['release', '2:1'] });
+    expect(withdrawn).toContain(`2 ${stallId}`);
+  });
+
   it('is never a worker resumed after a restart that no hook has spoken for', async () => {
     const fake = project();
     const answer = sessionRequests(fake.ports);
