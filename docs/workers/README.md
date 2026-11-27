@@ -369,8 +369,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   you interrupt, or a session that ends, counts as over for the review sweep
   without telling main, unless it ended with an error while at work (a refused
   or failed start among them), when main is told it stopped; a question it asks
-  marks the pane blocked until answered, and arriving in the screen clears the
-  pane's bell.
+  (only on a Claude Code before 2.1.319, workers-decision-12) marks the pane
+  blocked until answered, and arriving in the screen clears the pane's bell.
 - Given a worker on a Claude screen, when a ship, the review sweep, the command
   screen or a project close picks or checks a pane, then that pane reads as
   running an agent, and the drawer and main's /resume refuse its conversation as
@@ -383,8 +383,12 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   text goes in as its next prompt rather than into the hidden shell;
   `pane release` closes the pane and ends the session.
 - Given a worker on a Claude screen, when it runs a command, then it is decided
-  as a terminal worker's: allow rules first, a call auto mode cannot decide asks
-  in its box, a call it blocks is refused (workers-decision-5).
+  as a terminal worker's: allow rules first, then auto mode, and a call it
+  blocks is refused (workers-decision-5).
+- Given a worker, on a screen or in a terminal, when a call would wait on a
+  permission prompt, then it is denied at once, the worker is told and its turn
+  goes on, so the refusal is in its report rather than the pane sitting on a
+  prompt holding a slot; main's own calls still ask (workers-decision-12).
 - Given a machine whose `~/.claude/settings.json` names no rule for the app's
   commands, when main or a worker runs `node "$DASHBOARD_COMMAND" pane …`,
   `session …` or `node "$DASHBOARD_BOARD" …`, then it runs without a question:

@@ -655,3 +655,23 @@ review sweep's own starts could push past a main that counted perfectly.
 - **Under the cap a start answers what its start answers**, `pane run`'s line for a run and the
   ship's for a ship, as the board screen's status bar needs; queued, it answers at once.
 
+## workers-decision-12: A worker is denied a permission prompt rather than waiting on one
+
+**Every worker the app starts, on a screen or in a terminal, carries
+`permissions.denyInsteadOfPrompting: true` in its settings; main does not** (`appSessionSettings`
+in `src/main/workers/dispatch.ts`, whose `kind` says which, passed in the screen's `settings` and a
+terminal worker's `--settings`). Claude Code 2.1.319 added the setting: a call that would prompt is
+denied at once, the model is told, and the turn carries on. Before, a worker that hit a prompt sat
+blocked, holding a pool slot (workers-decision-11), until someone noticed the banner.
+
+- **Workers only.** Main is where you are, and a session you start yourself gets none of the app's
+  settings. A follow-up you type into a worker is denied the same way: the setting is the session's,
+  not the turn's.
+- **Allow rules, auto mode and PermissionRequest hooks still decide first**; the setting only turns
+  what would have been a prompt into a refusal, so workers-decision-9's allow rules are untouched.
+- **A screen worker's `canUseTool` and Claude's questions are not asked either**, per the setting's
+  own description in Claude Code: read from user settings, `--settings` and managed settings, never
+  project or local ones, which is why it goes in the app's flag settings.
+- **The blocked mark stays**: the `permission_prompt` Notification hook and the screen's ask still
+  mark a pane blocked under a Claude Code older than 2.1.319, which does not know the key.
+
