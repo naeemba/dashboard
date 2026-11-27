@@ -6,6 +6,7 @@ import { EDITOR_INDEX, terminalId, workersOfSlot } from '../../shared/panes/term
 import type { WorkingPanes } from '../../shared/panes/working-panes';
 import { realPath } from '../app/real-path';
 import { projectInSlot } from '../manager/manager-terminals';
+import type { screenWorkers } from '../workers/screen-workers';
 
 // What main reads off its open projects and their panes: which page a project is on, the workers it has
 // open, what each one runs, and whether an agent is in one and still working. Out of main.ts, which had
@@ -20,7 +21,7 @@ export type SlotPaneSources = {
   foregroundOf(id: string): string | undefined;
   startedWith: ReadonlyMap<string, string>;
   // The Claude screens, read late: they are made after these readers, and only asked once both exist.
-  workerScreens(): { has(id: string): boolean; working(id: string): boolean | undefined; ids(): string[] };
+  workerScreens(): Pick<ReturnType<typeof screenWorkers>, 'has' | 'working' | 'ids'>;
   agentsAtWork: Pick<WorkingPanes, 'works'>;
 };
 

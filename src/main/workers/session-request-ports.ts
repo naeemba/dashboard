@@ -4,6 +4,7 @@ import { MANAGER_SLOT } from '../../shared/manager/manager';
 import { paneIsBusy, programIn, type PaneCommand } from '../../shared/panes/pane-reading';
 import { paneFromId } from '../../shared/panes/terminals';
 import type { CardActions } from '../actions/card/card-actions';
+import type { browserActions } from '../actions/browser/browser-actions';
 import type { PaneActions } from '../actions/pane/pane-actions';
 import type { worktreeActions } from '../actions/worktree/worktree-actions';
 import { runProgram } from '../app/git';
@@ -39,7 +40,7 @@ export type SessionRequestMain = {
   reviews: Pick<CardActions['reviews'], 'forget'>;
   giveCardPane(entry: WorktreeEntry, index: number): WorktreeEntry;
   sendToRenderer(channel: string, ...payload: unknown[]): void;
-  browser: { turnEnded(id: string): void };
+  browser: Pick<ReturnType<typeof browserActions>, 'turnEnded'>;
   chats: Pick<ReturnType<typeof registerChatSessions>, 'tell' | 'withdraw'>;
   worktree: Pick<ReturnType<typeof worktreeActions>, 'makeThrowaway' | 'throwawayPorts'>;
   hasKeyboard: SessionPorts['hasKeyboard'];
