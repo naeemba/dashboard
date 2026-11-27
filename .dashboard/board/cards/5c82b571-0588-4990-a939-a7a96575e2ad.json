@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T14:57:30.723Z",
-  "updatedAt": "2026-11-27T14:57:30.726Z",
-  "column": "Backlog",
+  "updatedAt": "2026-11-27T14:57:41.127Z",
+  "branch": "bring-the-readme-and-its-screenshots-up-to",
+  "column": "Doing",
   "order": 0
 }
