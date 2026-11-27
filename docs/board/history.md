@@ -51,3 +51,6 @@ One line per merged change: date and why.
 - 2026-11-26 — The drag's grab, column listeners and drop moved out of `board-view.ts` into
   `card-dragging.ts`: the view sat at 599 of 600 code lines, so the next board change would have had
   to split it first
+- 2026-11-27 — The board-files test of a board.json that does not parse beside a good folder writes
+  an empty board, one flushed file, instead of five cards: six flushed writes took it past vitest's
+  5 s on a busy Windows CI runner

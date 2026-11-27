@@ -187,7 +187,9 @@ describe('the folder', () => {
 
   it('names a board.json that does not parse on a read without salvage, and a look still finds no board', () => {
     const path = project();
-    writeBoard(path, startingBoard());
+    // A good folder beside the broken board.json, written as columns.json alone: each card file is one
+    // more flushed write, and six of them took this test past 5s on a busy Windows runner.
+    writeBoard(path, emptyBoard());
     writeFileSync(join(path, BOARD_FILE_PATH), '{ not json');
     for (let read = 0; read < 2; read += 1) {
       expect(readBoard(path, false).brokenFiles).toEqual([join(path, BOARD_FILE_PATH)]);
