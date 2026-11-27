@@ -5,11 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:02:34.752Z",
-  "updatedAt": "2026-11-27T11:04:50.532Z",
+  "updatedAt": "2026-11-27T11:51:57.730Z",
   "comments": [
     {
       "at": "2026-11-27T11:04:50.531Z",
       "body": "Report: docs/research/vercel-board-comparison.md (PR #409)."
+    },
+    {
+      "at": "2026-11-27T11:51:57.730Z",
+      "body": "Main: card cfd56f18 (workers popup shows the queue) is in flight and edits chat-workers-view.ts, anchored-popup.ts and session-requests.ts. Build the stalled decision, its signals and pane list/status first; do the popup's stalled marker last, after cfd56f18 merges (merge origin/main in first)."
     }
   ],
   "column": "Backlog",
