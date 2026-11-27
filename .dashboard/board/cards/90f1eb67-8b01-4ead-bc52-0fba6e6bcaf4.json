@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T11:58:30.358Z",
-  "updatedAt": "2026-11-27T13:53:41.000Z",
+  "updatedAt": "2026-11-27T13:54:34.621Z",
   "branch": "pane-pool-a-cap-per-project-plus-a-total-an",
   "pullRequest": 419,
   "comments": [
@@ -24,8 +24,12 @@
     {
       "at": "2026-11-27T13:53:41.000Z",
       "body": "Converged, ready to merge: CI passed on b21f20fe. Done on main's instructions: merged origin/main, keeping both sides in main.ts and settings.ts; then main moved twice more and merged clean each time. Fixed the blocked ci-wait.ts:20 thread in e77c8e50: each CI wait records the process id of the pr wait or pr land that asked, and the pool counts only waits whose process still runs (liveWaits in pane-pool.ts, with tests). A pr wait killed by any signal, SIGKILL included, stops freeing the slot. workers-decision-11 and the workers README are corrected. The process check is now one shared processAlive (src/main/app/process-alive.ts), also used by dead-host.ts. The pid check is one isProcessId. The settle lower-to-non-zero test was already in 0104bc0d, and settle stays as the backstop for a reused pid. The long usage line is rewrapped. pane ci now takes the pid: pane ci <id> wait|resume <pid>."
+    },
+    {
+      "at": "2026-11-27T13:54:34.591Z",
+      "body": "Pull request #419 merged: Pane pool: a cap per project plus a total, and a CI wait gives its slot back https://github.com/naeemba/dashboard/pull/419"
     }
   ],
-  "column": "Review",
-  "order": 5
+  "column": "Done",
+  "order": 346
 }
