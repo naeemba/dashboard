@@ -146,6 +146,16 @@ describe('a CI wait', () => {
     expect(started).toHaveLength(1);
   });
 
+  // Two waits, one killed: a Stop seeing one background task keeps the live wait.
+  it('lowers the count to the background a Stop reports, not to none', async () => {
+    const { ask, answer } = capped(1);
+    await ask(['start', 'first task']);
+    await ask(['ci', '2:1', 'wait']);
+    await ask(['ci', '2:1', 'wait']);
+    answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
+    expect(answer.pool.ciWaits('2:1')).toBe(1);
+  });
+
   // workers-decision-11: main's own `pr wait` and `pr land` never wait on the pool, however full.
   it('changes nothing for main and never holds its resume', async () => {
     const { ask } = capped(0);
