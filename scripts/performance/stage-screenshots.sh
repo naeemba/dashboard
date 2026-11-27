@@ -1,13 +1,18 @@
 #!/bin/sh
-# Make the demo folder the README's screenshots are taken from: a HOME of its own with three made-up
+# Stage and run the demo the README's screenshots are taken from: a HOME of its own with three made-up
 # projects (acme-shop, weather-api, docs-site), each a small git repository with a seeded board and
 # notes, projects.yaml naming them, the demo's session.json restoring all three, and a worker cap of 2
-# so a third start queues. launch-demo.sh starts it. Your Claude login is copied into its HOME, the one
-# thing read from yours, so its main and workers can answer short prompts; delete the folder after.
-# usage: stage-screenshots.sh <demo folder>
+# so a third start queues. Then launch-demo.sh runs it in the foreground until the demo quits.
+#
+# It copies your Claude login (~/.claude/.credentials.json, the one thing read from your HOME) into
+# the demo's HOME, so its main and workers can answer short prompts, and it removes it again: the
+# whole demo folder is deleted when this script exits, on Ctrl+C, and on SIGTERM. Only a SIGKILL of
+# this script itself leaves the folder, and the login in it, behind.
+# usage: stage-screenshots.sh [new demo folder]   (default: a fresh private folder from mktemp -d)
 set -eu
-mkdir -p "$1"
-demo=$(cd "$1" && pwd)
+if [ -n "${1:-}" ]; then mkdir -m 700 "$1"; demo=$(cd "$1" && pwd); else demo=$(mktemp -d); fi
+trap 'rm -rf "$demo"' EXIT
+trap 'exit 130' INT TERM
 repo=$(cd "$(dirname "$0")/../.." && pwd)
 home="$demo/home"
 projects="acme-shop weather-api docs-site"
@@ -90,4 +95,5 @@ for project in $projects; do
   pages="$pages${pages:+,}{\"path\":\"$home/projects/$project\",\"mode\":\"terminals\",\"focused\":0,\"names\":[],\"claude\":[]}"
 done
 echo "{\"pages\":[$pages],\"activeIndex\":0}" > "$demo/userdata/session.json"
-echo "staged $demo"
+echo "staged $demo; running the demo, which this folder goes with when it quits"
+"$repo/scripts/performance/launch-demo.sh" "$demo"

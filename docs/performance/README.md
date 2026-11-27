@@ -33,8 +33,8 @@ Folder: `scripts/performance/`.
   `calculations.test.mjs` in `pnpm test`.
 - `build-log-stream.sh`: a pane's fake build log at a given number of lines a
   second.
-- `stage-screenshots.sh`: the demo folder the top README's screenshots are
-  taken from, below.
+- `stage-screenshots.sh`: stages and runs the demo the top README's
+  screenshots are taken from, below.
 
 ## Never the installed app
 
@@ -101,14 +101,17 @@ To see the usage sweep inside the app, copy some large `.jsonl` files into
 
 ### The README's screenshots
 
-`stage-screenshots.sh $D` stages three made-up projects (acme-shop,
-weather-api, docs-site) with seeded boards and notes, the demo's `session.json`
-restoring all three, and a worker cap of 2, so a third start queues. It
-copies your Claude login into the demo's HOME, so the demo's main and workers
-answer for real; delete `$D` afterwards. Build first, start weston as above, and
-run `launch-demo.sh $D`. Give acme-shop's main a short read-only task that starts
-three workers, then take each picture with DevTools `Page.captureScreenshot`
-on port 9433, pressing keys with `keys()` from `demo-instance.mjs`.
+Build first and start weston as above. `stage-screenshots.sh` then stages
+three made-up projects (acme-shop, weather-api, docs-site) with seeded boards
+and notes, the demo's `session.json` restoring all three, and a worker cap of
+2, so a third start queues, in a new private folder (`mktemp -d`, or a new
+folder named as its argument, made mode 700). It runs the demo in the
+foreground. It copies your Claude login into the demo's HOME, so the demo's
+main and workers answer for real, and deletes the whole folder, login
+included, when it exits, on Ctrl+C or SIGTERM. Give acme-shop's main a short
+read-only task that starts three workers, then take each picture with DevTools
+`Page.captureScreenshot` on port 9433, pressing keys with `keys()` from
+`demo-instance.mjs`. `killDemo` from the same file ends the demo.
 
 ## How to read the numbers
 
