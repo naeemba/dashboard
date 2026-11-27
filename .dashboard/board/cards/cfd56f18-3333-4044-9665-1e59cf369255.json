@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T14:56:18.200Z",
-  "updatedAt": "2026-11-27T12:23:08.499Z",
+  "updatedAt": "2026-11-27T12:30:19.055Z",
   "branch": "workers-popup-shows-the-pane-queue-with-a-w",
   "pullRequest": 414,
   "comments": [
@@ -20,6 +20,10 @@
     {
       "at": "2026-11-27T12:23:08.499Z",
       "body": "Review loop finished: floor-addressed after 1 round. 3 low findings, all fixed (4888efc8, d0bf2a4a, eaab4c2e): raising workers.cap drains the pool at once; the popup heading names Enter or the withdraw key only when a row allows it; the withdraw-target check moved to worker-roster.ts with a test. The final check accepted all 3 and nothing is left open. Not ready to merge: since the loop's conflict check, the pull request has come to conflict with main (pr wait: 'conflicts with main', git could not name the files), so CI was not waited on. Merge origin/main into the branch, resolve, push, then wait for CI."
+    },
+    {
+      "at": "2026-11-27T12:30:19.055Z",
+      "body": "Merged origin/main (#411, #412) into the branch as 69befeed: no conflicts. pnpm check: typecheck and lint pass; one test failed only because node_modules was stale after #412's SDK bump, and passes after pnpm install. CI passed on 69befeed. Converged, ready to merge."
     }
   ],
   "column": "Review",
