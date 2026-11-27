@@ -157,7 +157,7 @@ const settingsDoors = settingsActions(table, {
   // A raised cap starts what waits at once, and a new proxy is every project browser's at once; compared
   // first, since the launch's own write runs before workerAnswers and browser exist and changes neither.
   keep(next, shell) {
-    const capChanged = next.workers.cap !== settings.workers.cap;
+    const capChanged = next.workers.cap !== settings.workers.cap || next.workers.totalCap !== settings.workers.totalCap;
     const proxyChanged = proxyMoved(settings.browser.proxy, next.browser.proxy);
     settings = next; shellCommand = shell;
     if (capChanged) workerAnswers.pool.drain();

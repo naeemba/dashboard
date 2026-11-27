@@ -8,6 +8,7 @@ import { isRecord } from '../../shared/app/is-record';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { asksForReport, LAST_MESSAGE_KEPT, tail } from '../../shared/workers/done-report';
 import { isAppQuestion } from './app-question';
+import { isProcessId } from '../actions/pane/pane-input';
 
 export type SessionCommand =
   | { kind: 'claim'; project: string | null }
@@ -37,6 +38,10 @@ export type SessionCommand =
   // What `pr land` asks when the pull request conflicts with its base: the agent on that branch sent
   // /pr-conflicts, never the pane `from` names, which is the land itself.
   | { kind: 'conflicted'; branch: string; pullRequest: string; from: string | null }
+  // What `pr wait` and `pr land` ask, in the pane they run in, before they wait on the checks and once
+  // they are done (workers-decision-11): its slot given back, then asked for again. `pid` is the
+  // asking run's, the wait lasting only while it runs.
+  | { kind: 'ci-wait' | 'ci-resume'; id: string; pid: number }
   // `waiting` is what a Stop hook said its session waits on, when it said so; `told` the rest a hook's
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold };
@@ -74,22 +79,23 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane status
   pane landed --branch <branch> | --card <card id> [--from <id>]
   pane conflicted <branch> <pull request> [--from <id>]
+  pane ci <id> wait|resume <pid>
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
-start starts a worker now when fewer than the cap (settings workers.cap, 4) are running and nothing
-is queued, answering as run does, or queues it and answers \`queued <queue id>, <position>\`; its main
-is told when a queued one starts. Its pane is claimed, as claim --project would, when it starts, and
-its other words are run's. --first puts it at the head of the queue; --after holds it, letting later
-ones go ahead, until that card is Done or Cancelled. The queue also holds while the 7-day usage is at
-or over the budget limit. queue lists what is queued, in order, and why it is held; unqueue
-withdraws one. A worker running, blocked on a question or paused on its own background work holds
-its place; done frees it.
+start starts a worker now when fewer than the cap run in its project (settings workers.cap, 4) and
+across the app (workers.totalCap, 8) and nothing is queued, answering as run does, or queues it and
+answers \`queued <queue id>, <position>\`; its main is told when a queued one starts. Its pane is
+claimed, as claim --project would, when it starts, and its other words are run's. --first puts it at
+the head of the queue; --after holds it, letting later ones go ahead, until that card is Done or
+Cancelled. The queue also holds while the 7-day usage is at or over the budget limit. queue lists
+what is queued, in order, and why it is held; unqueue withdraws one. A worker running, blocked on a
+question or paused on its own background work holds its place; done frees it.
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
-in it with the prompt as its argument, refused at the cap: --card runs it in the worktree the card was shipped into,
---worktree in a throwaway one removed when its pane goes, unless it holds work not on a remote
-(run answers once the project's packages are installed there, which can take minutes: give it a
-ten-minute timeout, 600000 ms),
+in it with the prompt as its argument, refused at the cap: --card runs it in the worktree the card
+was shipped into, --worktree in a throwaway one removed when its pane goes, unless it holds work not
+on a remote (run answers once the project's packages are installed there, which can take minutes:
+give it a ten-minute timeout, 600000 ms),
 --in in a folder that is already there, inside the project or a worktree of its repository (one on
 a branch you keep yourself), which nothing makes or removes, and none of them in the project itself.
 The worker is a Claude screen; --terminal runs Claude Code in the
@@ -108,6 +114,9 @@ something keeps (the keyboard, a question, mid-turn, typed into by you, or no ma
 conflicted is what pr land runs when the pull request conflicts with its base: it sends
 /pr-conflicts <pull request> to the first agent on that branch, never the pane --from names, and
 prints \`sent /pr-conflicts <pull request> to <id>\`, or nothing when no agent is on it.
+ci is what pr wait and pr land run around their wait on the checks: with wait, a worker waiting
+only on CI gives its slot back; with resume, it answers once the slot is back, at the head of the
+queue. In a pane that is no main's worker they change nothing and answer at once.
 notify is what a worker's hooks call: --stop-input reads Claude
 Code's Stop hook input for how many background tasks and wakeups the session still waits on and its
 last message, --prompt-input the prompt hook's for who put the prompt in. list --all lists the panes
@@ -351,6 +360,15 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       const id = paneId(rest[0], verb);
       return typeof id === 'string' ? { ok: true, command: { kind: verb, id } } : id;
     }
+    case 'ci': {
+      const id = paneId(rest[0], 'ci');
+      if (typeof id !== 'string') return id;
+      const pid = Number(rest[2]);
+      if (rest.length !== 3 || (rest[1] !== 'wait' && rest[1] !== 'resume') || !isProcessId(pid)) {
+        return refuse('pane ci takes a pane id, then wait or resume, then the process id of the run waiting');
+      }
+      return { ok: true, command: { kind: rest[1] === 'wait' ? 'ci-wait' : 'ci-resume', id, pid } };
+    }
     case 'landed': {
       const [flag, name = '', ...more] = rest;
       const from = fromFlag(more);
@@ -387,6 +405,12 @@ const fromWords = (from: string | undefined): string[] => (from === undefined ? 
 // The words `pr land` and a board move ask `pane landed` in, from the pane they ran in when there is one.
 export function landedWords(by: 'branch' | 'card', name: string, from: string | undefined): string[] {
   return ['landed', `--${by}`, name, ...fromWords(from)];
+}
+
+// The words `pr wait` and `pr land` ask pane.ci-wait or pane.ci-resume in, from the pane they run in
+// and with their own process id, or null outside a pane: a plain terminal holds no slot.
+export function ciWords(phase: 'wait' | 'resume', from: string | undefined, pid: number): string[] | null {
+  return from === undefined || !PANE_ID.test(from) ? null : ['ci', from, phase, String(pid)];
 }
 
 // The words `pr land` asks `pane conflicted` in, as landedWords.

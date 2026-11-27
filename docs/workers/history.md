@@ -106,6 +106,10 @@ One line per merged change: date and why.
 - 2026-11-27 — Workers are started with permissions.denyInsteadOfPrompting, so a call that would
   wait on a prompt is refused and shows in the report instead of holding a pool slot
   (workers-decision-12)
+- 2026-11-27 — The pane pool caps main's workers per project (`workers.cap`, 4) and in all
+  (`workers.totalCap`, 8), and a worker waiting only on CI gives its slot back until `pr wait` or
+  `pr land` asks for it again: one busy project no longer queued another's cards, and a review
+  loop's CI wait held a queued card for its whole length (workers-decision-11)
 - 2026-11-27 — A terminal worker blocked on a question is marked from its OSC 7501 status: no hook
   fires for it, so it read as running until it stalled. A failed turn is left to the stall sweep,
   since blocked would take it out of the sweep and tell main nothing

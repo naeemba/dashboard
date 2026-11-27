@@ -55,13 +55,15 @@ describe('parseSettings', () => {
       .toEqual({ server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] });
   });
 
-  it('caps the workers at 4 unless the file names a whole number or none', () => {
-    expect(parseSettings({}, false).workers.cap).toBe(4);
-    expect(parseSettings({ workers: { cap: 6 } }, false).workers.cap).toBe(6);
-    expect(parseSettings({ workers: { cap: 'none' } }, false).workers.cap).toBeNull();
+  it('caps the workers at 4 a project and 8 in all unless the file names a whole number or none', () => {
+    expect(parseSettings({}, false).workers).toMatchObject({ cap: 4, totalCap: 8 });
+    expect(parseSettings({ workers: { cap: 6, totalCap: 10 } }, false).workers).toMatchObject({ cap: 6, totalCap: 10 });
+    expect(parseSettings({ workers: { cap: 'none', totalCap: 'none' } }, false).workers).toMatchObject({ cap: null, totalCap: null });
     // How a save from the screen writes none back.
-    expect(parseSettings({ workers: { cap: null } }, false).workers.cap).toBeNull();
-    for (const rubbish of [0, -1, 2.5, '6']) expect(parseSettings({ workers: { cap: rubbish } }, false).workers.cap).toBe(4);
+    expect(parseSettings({ workers: { cap: null, totalCap: null } }, false).workers).toMatchObject({ cap: null, totalCap: null });
+    for (const rubbish of [0, -1, 2.5, '6']) {
+      expect(parseSettings({ workers: { cap: rubbish, totalCap: rubbish } }, false).workers).toMatchObject({ cap: 4, totalCap: 8 });
+    }
   });
 
   it('calls a silent worker stalled after 20 minutes unless the file names a number above 0', () => {

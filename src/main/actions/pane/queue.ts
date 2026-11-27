@@ -1,9 +1,10 @@
 import type { Refused } from '../../../shared/app/bridge';
 import type { Board } from '../../../shared/board/board';
 import { failureText } from '../../../shared/errors/failure';
-import { capReached, columnsBack, nextToStart, ordinal, placed, queuedWork, queueRefusal, queueText, readiness, withdrawnColumn, type NextStart, type QueueEntry } from '../../workers/pane-pool';
+import { capReached, columnsBack, liveWaits, nextResume, nextToStart, ordinal, placed, queuedWork, queueRefusal, queueText, readiness, withdrawnColumn, type Caps, type NextStart, type QueueEntry, type Running } from '../../workers/pane-pool';
 import type { SavedQueue } from '../../workers/pane-queue-store';
 import { action, bind, isRefused, type BoundAction } from '../action';
+import { paneCiResume, paneCiWait } from './ci-wait';
 import { isFilledText, isFilledTextOrNull } from './pane-input';
 
 // The app-held pane pool (workers-decision-11): every start of new work, from `pane start`, a ship
@@ -19,15 +20,28 @@ export type PanePool = SavedQueue & {
   starting: Map<string, QueueEntry>;
   // False until the panes a restart brings back are back and counted.
   ready: boolean;
+  // Each worker's `pr wait` and `pr land` runs waiting on CI now (pane.ci-wait), by pane id: the
+  // process id of each, counted only while that process runs (liveWaits).
+  ciWaits: Map<string, number[]>;
+  // The workers whose CI is done, waiting for their slot back, served ahead of every entry
+  // (pane.ci-resume). Never saved: the run waiting on the answer does not outlive the app.
+  resuming: { id: string; pid: number; resolve(): void }[];
 };
 
 export type PaneQueuePorts = {
   pool: PanePool;
   save(saved: SavedQueue): void;
-  // The panes holding a slot now (holdsSlot).
-  running(): number;
-  // settings.workers.cap, read at each drain.
-  cap(): number | null;
+  // The panes holding a slot now (holdsSlot), counted by the project of the page each is on.
+  running(): Running;
+  // settings.workers.cap and totalCap, read at each drain.
+  cap(): Caps;
+  // The project of the page a main's worker is on, null for a pane that is no main's worker: main
+  // itself, a Claude opened by hand, a pane gone.
+  worker(id: string): string | null;
+  // Whether the pane holds a slot now (holdsSlot).
+  holds(id: string): boolean;
+  // Whether a CI wait's process still runs (processAlive).
+  alive(pid: number): boolean;
   // Why the budget holds the queue, or null (budgetHold).
   budget(): string | null;
   open(projectPath: string): boolean;
@@ -58,7 +72,12 @@ function startInput(raw: Record<string, unknown>): PaneStartInput | Refused {
   return { dispatcherPath, projectPath, cardId, after, first, work: read, returnTo: back };
 }
 
-const taken = (ports: PaneQueuePorts) => ports.running() + ports.pool.starting.size;
+// The slots held: the panes', and each start under way's in its entry's project.
+function taken(ports: PaneQueuePorts): Running {
+  const running = new Map(ports.running());
+  for (const { projectPath } of ports.pool.starting.values()) running.set(projectPath, (running.get(projectPath) ?? 0) + 1);
+  return running;
+}
 const save = (ports: PaneQueuePorts) => ports.save({ next: ports.pool.next, entries: ports.pool.entries });
 
 // What would start next, as it stands. An empty queue asks nothing: a drain runs on every hook's
@@ -98,6 +117,7 @@ export type Drained = { own?: Promise<{ output: string } | Refused>; held: strin
 export function drainQueue(ports: PaneQueuePorts, answering: string | null = null, changed = false): Drained {
   let own: Drained['own'];
   for (;;) {
+    if (resumeOne(ports)) continue;
     const step = next(ports);
     if ('held' in step) {
       if (changed) save(ports);
@@ -116,6 +136,24 @@ export function drainQueue(ports: PaneQueuePorts, answering: string | null = nul
       if (quiet) own = started;
     }
   }
+}
+
+// The first worker whose slot may come back given it back, its CI wait over, or false for none.
+function resumeOne(ports: PaneQueuePorts): boolean {
+  const { resuming, ciWaits } = ports.pool;
+  if (resuming.length === 0) return false;
+  const at = nextResume(resuming, ({ id }) => ({ projectPath: ports.worker(id), holds: ports.holds(id) }), taken(ports), ports.cap());
+  if (at === -1) return false;
+  const [{ id, pid, resolve }] = resuming.splice(at, 1);
+  keepWaits(ports, id, liveWaits(ciWaits.get(id) ?? [], ports.alive).filter((each) => each !== pid));
+  resolve();
+  return true;
+}
+
+// A worker's CI waits set to these, none left forgetting it.
+function keepWaits(ports: PaneQueuePorts, id: string, pids: number[]): void {
+  if (pids.length > 0) ports.pool.ciWaits.set(id, pids);
+  else ports.pool.ciWaits.delete(id);
 }
 
 // Queued, then drained: a start with a free slot and nothing ahead of it starts at once, and answers
@@ -185,16 +223,26 @@ export type PanePoolActions = {
   // What waits, in the order it starts, for the workers popup.
   entries(): readonly QueueEntry[];
   drain(): void;
-  // Why a start that never queues (`pane run` into a pane main holds) is refused now, or null.
-  full(): string | null;
+  // Why a start that never queues (`pane run` into a pane main holds, on that project's page) is
+  // refused now, or null.
+  full(projectPath: string): string | null;
+  // A worker's CI wait begun and over (ci-wait.ts), and how many it has now, for holdsSlot.
+  ciWait: BoundAction;
+  ciResume: BoundAction;
+  ciWaits(id: string): number;
+  // A Stop hook's count of background tasks: a session has no more live CI waits than that, so a
+  // wait whose process id was reused by another process stops counting here.
+  settle(id: string, background: number): void;
+  // A pane run again or let go of: no CI wait it had is its new work's.
+  forget(id: string): void;
   // The panes a restart brings back are back: the queue may start what they leave room for, and is
   // looked at on a timer from now on.
   ready(): void;
 };
 
-// Main's wiring for the pool: the saved queue read once, the three actions bound on it.
+// Main's wiring for the pool: the saved queue read once, its actions bound on it.
 export function panePool(saved: SavedQueue, main: Omit<PaneQueuePorts, 'pool'>): PanePoolActions {
-  const ports: PaneQueuePorts = { ...main, pool: { ...saved, starting: new Map(), ready: false } };
+  const ports: PaneQueuePorts = { ...main, pool: { ...saved, starting: new Map(), ready: false, ciWaits: new Map(), resuming: [] } };
   const drain = () => { drainQueue(ports); };
   return {
     start: bind(paneStart, ports),
@@ -202,8 +250,16 @@ export function panePool(saved: SavedQueue, main: Omit<PaneQueuePorts, 'pool'>):
     unqueue: bind(paneUnqueue, ports),
     entries: () => ports.pool.entries,
     drain,
-    full: () => {
-      const full = capReached(taken(ports), ports.cap());
+    ciWait: bind(paneCiWait, ports),
+    ciResume: bind(paneCiResume, ports),
+    ciWaits: (id) => liveWaits(ports.pool.ciWaits.get(id) ?? [], ports.alive).length,
+    settle: (id, background) => {
+      const waits = ports.pool.ciWaits.get(id);
+      if (waits !== undefined) keepWaits(ports, id, liveWaits(waits, ports.alive).slice(0, background));
+    },
+    forget: (id) => { ports.pool.ciWaits.delete(id); },
+    full: (projectPath) => {
+      const full = capReached(taken(ports), ports.cap(), projectPath);
       return full === null ? null : `${full}: pane start queues the work until a worker frees`;
     },
     ready() {

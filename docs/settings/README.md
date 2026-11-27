@@ -73,11 +73,12 @@ typed into either row also makes its row the limit; emptying a row does not.
 `dashboard budget --cap` and `--pace` set the same lines
 ([command](../command/README.md), command-decision-6, command-decision-10).
 
-`workers.cap` (default 4) is how many of main's workers run at once across the
-app; a start past it waits in the pane pool's queue (docs/workers,
-workers-decision-11). A whole number, or `"none"` for no cap; on the screen it
-is the Workers row, a number from 1 or empty for no cap. A change is taken at
-once, and a lower cap stops nothing running.
+`workers.cap` (default 4) is how many of main's workers run at once in one
+project, and `workers.totalCap` (default 8) how many across every project; a
+start past either waits in the pane pool's queue (docs/workers,
+workers-decision-11). Each is a whole number, or `"none"` for no cap; on the
+screen they are the two Workers rows, a number from 1 or empty for no cap. A
+change is taken at once, and a lower cap stops nothing running.
 `workers.stallMinutes` (default 20) is how long one of them at work goes with
 no hook before it is shown stalled and main is told (docs/workers,
 workers-decision-13); any number above 0, written in settings.json by hand.

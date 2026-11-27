@@ -6,6 +6,7 @@ import { readText } from '../app/missing-file';
 import { peekBoard } from '../board/board-store';
 import { budgetVerdict } from '../command/budget-cli';
 import { WEEKLY_USAGE_FILE } from '../usage/weekly-usage-file';
+import { processAlive } from '../app/process-alive';
 import { budgetHold, type CardWork, type QueueEntry } from './pane-pool';
 import { PANE_QUEUE_FILE, readQueue, writeQueue, type SavedQueue } from './pane-queue-store';
 
@@ -13,7 +14,7 @@ import { PANE_QUEUE_FILE, readQueue, writeQueue, type SavedQueue } from './pane-
 // boards, and the start of a ship or a review, which card-actions.ts holds. The rest is the session
 // command's (session-requests.ts).
 
-export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board' | 'drainBoard' | 'now' | 'move' | 'gone'> & {
+export type PoolPorts = Pick<PaneQueuePorts, 'save' | 'cap' | 'budget' | 'board' | 'drainBoard' | 'now' | 'move' | 'gone' | 'alive'> & {
   saved: SavedQueue;
   beginCard(entry: QueueEntry, work: CardWork): Promise<{ output: string } | Refused>;
 };
@@ -40,7 +41,7 @@ export function poolPorts(userData: string, settings: () => Settings, cards: Car
       }
       changed();
     },
-    cap: () => settings().workers.cap,
+    cap: () => ({ project: settings().workers.cap, total: settings().workers.totalCap }),
     budget: () => budgetHold(settings().budget, () => budgetVerdict(() => readText(WEEKLY_USAGE_FILE), settings().budget, Date.now())),
     // Off the disk, not the move log's last read: a `board move` into Ship is written plainly and read
     // back by the watcher later, and the drain right after it would see the card where it was before.
@@ -49,5 +50,6 @@ export function poolPorts(userData: string, settings: () => Settings, cards: Car
     drainBoard: (projectPath) => peekBoard(projectPath, true),
     ...cards,
     now: Date.now,
+    alive: processAlive,
   };
 }

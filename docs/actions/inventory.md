@@ -27,6 +27,7 @@ now.
 | come back as a screen | pane.restore, `actions/pane/restore.ts` | restart | no |
 | adopt a kept shell | pane.restore | restart | no |
 | start, queue, unqueue | pane.start, pane.queue, pane.unqueue, `actions/pane/queue.ts`, bound in `session-requests.ts` | CLI `pane start`, `queue`, `unqueue`; card.ship and card.review (`card-actions.ts`); a queued start through pane.claim and `pane run`'s run, or the ship and the review | no |
+| give back and reclaim a slot on CI | pane.ci-wait, pane.ci-resume, `actions/pane/ci-wait.ts`, bound in `queue.ts` | CLI `pane ci`, asked by `pr wait` and `pr land` (`command/pull-request-program.ts`) | no |
 | claim | pane.claim, `actions/pane/claim.ts`, bound in `session-requests.ts`; opens through pane.open | CLI `pane claim` | no; `--project` opens through project.open |
 | open (add) | pane.open, `actions/pane/open.ts` | IPC `pane:add` (`workers/worker-channels.ts`), the drawer, pane.claim | no |
 | send | pane.send, `actions/pane/send.ts` | CLI `pane send` | no |

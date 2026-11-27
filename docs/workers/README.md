@@ -60,12 +60,16 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `pane-actions.ts`, the default `pane-kind.ts`, the kind's type in
   `src/shared/panes/pane-kind.ts` (workers-decision-8,
   [actions](../actions/README.md))
-- The pane pool, which holds main's workers to `workers.cap` (4) and queues a
-  start past it: the decisions in `pane-pool.ts`, the queue's file
+- The pane pool, which holds main's workers to `workers.cap` (4) in a project
+  and `workers.totalCap` (8) in all and queues a start past either: the
+  decisions in `pane-pool.ts`, the queue's file
   `pane-queue-store.ts` (`pane-queue.json` in the app's user data), what main
   builds it on (settings, budget, boards) `pane-pool-ports.ts`, the
   pane.start, pane.queue and pane.unqueue actions and the drain in
-  `../actions/pane/queue.ts`, built and drained by `session-requests.ts`
+  `../actions/pane/queue.ts`, the CI wait's pane.ci-wait and pane.ci-resume in
+  `../actions/pane/ci-wait.ts` (asked by `pr wait` and `pr land` around their
+  wait on the checks, `../command/pull-request-cli.ts`), built and drained by
+  `session-requests.ts`
   (`pane start`, tested in `session-requests-pool.test.ts`); a ship and a review
   start through it from `../actions/card/card-actions.ts`
   (workers-decision-11)
@@ -75,8 +79,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   each minute by `../main.ts` (workers-decision-13)
 - The screen host a worker screen's session runs in, so it outlives the app:
   `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`,
-  `screen-host-protocol.ts`, `dead-host.ts`, `../chat/input-queue.ts`
-  (workers-decision-6)
+  `screen-host-protocol.ts`, `dead-host.ts` (with `../app/process-alive.ts`),
+  `../chat/input-queue.ts` (workers-decision-6)
 
 ## Scenarios
 
@@ -103,12 +107,24 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   (worktree.make, [ship](../ship/README.md)), minutes for a cold `npm ci`, so main's prompt and its
   usage tell main to give the call a ten-minute timeout (600000 ms) rather than Bash's two-minute
   default, which would report a failure for a worker that then starts anyway.
-- Given 4 of main's workers running, blocked on a question or paused on their own
-  background work, when main runs `pane start "<task>"` or `board ship <id>`, or
-  the review sweep starts a review, then it answers `queued q7, 1st: 4 running,
-  the cap is 4` at once, claims no pane and makes no worktree; when one of the 4
-  is done, released or gone, q7 starts, its pane and worktree picked then, and
-  the main that queued it is told `q7 started: …` (workers-decision-11).
+- Given 4 of main's workers in a project running, blocked on a question or
+  paused on their own background work, when main runs `pane start "<task>"` or
+  `board ship <id>`, or the review sweep starts a review, then it answers
+  `queued q7, 1st: q7 waits for a slot: 4 running in api, the cap per project
+  is 4` at once, claims no pane and makes no worktree; when one of the 4 is done,
+  released or gone, q7 starts, its pane and worktree picked then, and the main
+  that queued it is told `q7 started: …` (workers-decision-11). An entry for
+  another project behind q7 starts meanwhile, unless 8 run in all: then the
+  answer is `8 running, the total cap is 8` and nothing starts.
+- Given a worker whose only background work is `pr wait` or `pr land` waiting on
+  CI, when its turn ends, then its slot is free and a queued start may take it;
+  when CI is done, the command asks for the slot back before it prints its
+  verdict, ahead of every queued entry, and waits there while both caps are
+  full. A worker running tests beside the wait, or running `pr wait` in the
+  foreground, keeps its slot, and `pr wait` or `pr land` run by main never asks
+  the pool anything. A `pr wait` killed before CI is done, by any signal, frees
+  nothing from then on: the worker's other background work holds the slot again
+  (workers-decision-11).
 - Given fewer than 4 running and nothing queued, when main runs `pane start`,
   then it claims a pane and answers as `pane run` does; `pane run <id>` at the
   cap is refused, saying `pane start` queues it.

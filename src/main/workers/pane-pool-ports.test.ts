@@ -24,10 +24,10 @@ describe('poolPorts', () => {
     ports.save({ next: 2, entries: [ship] });
     expect(readQueue(path.join(folder, 'pane-queue.json'))).toEqual({ next: 2, entries: [ship] });
     expect(told).toBe(1);
-    expect(ports.cap()).toBe(4);
+    expect(ports.cap()).toEqual({ project: 4, total: 8 });
     expect(ports.budget()).toBeNull();
-    settings = { ...settings, workers: { ...settings.workers, cap: null } };
-    expect(ports.cap()).toBeNull();
+    settings = { ...settings, workers: { ...settings.workers, cap: null, totalCap: 6 } };
+    expect(ports.cap()).toEqual({ project: null, total: 6 });
   });
 
   // The board skips a card file that does not parse, and the drain would then drop that card's start.

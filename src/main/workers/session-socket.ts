@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { failureText } from '../../shared/errors/failure';
-import { conflictedLine, conflictedWords, landedLine, landedWords, outsidePaneRefusal, retriesInOlderWords, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
+import { ciWords, conflictedLine, conflictedWords, landedLine, landedWords, outsidePaneRefusal, retriesInOlderWords, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { canConnect } from '../app/can-connect';
 import { appUserDataFolder, clearSocketPointer, readSocketPointer } from '../command/app-address';
 import { mayStartApp, reachApp } from '../command/reach-app';
@@ -157,6 +157,15 @@ export async function askConflicted(branch: string, pullRequest: string, directo
   const reply = await askFromLand({ kind: 'conflicted', branch, pullRequest, from: null }, conflictedWords(branch, pullRequest, process.env.DASHBOARD_PANE), directory);
   if (reply === null) return { handed: false, line: '' };
   return conflictedLine(reply);
+}
+
+// What `pr wait` and `pr land` ask around their wait on the checks (workers-decision-11): nothing
+// outside a pane, never the app started, and whatever the app answers, an older app's refusal or none
+// at all, the wait goes on as it would without it.
+export async function askCiSlot(phase: 'wait' | 'resume', directory: string): Promise<void> {
+  const words = ciWords(phase, process.env.DASHBOARD_PANE, process.pid);
+  if (words === null) return;
+  await askFromLand({ kind: phase === 'wait' ? 'ci-wait' : 'ci-resume', id: words[1], pid: process.pid }, words, directory);
 }
 
 // The app asked on behalf of a command whose own work is done without it: null outside a pane, a

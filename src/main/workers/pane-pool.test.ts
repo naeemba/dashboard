@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyBoard, moveCardById, type Board } from '../../shared/board/board';
 import type { Settings } from '../../shared/settings/settings';
-import { budgetHold, holdsSlot, withdrawnColumn, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type QueueEntry, type Readiness } from './pane-pool';
+import { budgetHold, capReached, holdsSlot, liveWaits, nextResume, withdrawnColumn, nextToStart, ordinal, placed, queueRefusal, queueText, readiness, type QueueEntry, type Readiness, type Resumer } from './pane-pool';
 
 const entry = (id: string, over: Partial<QueueEntry> = {}): QueueEntry => ({
   id, dispatcherPath: '/work/api', projectPath: '/work/api', cardId: null, after: null, returnTo: null, queuedAt: '2026-11-26T12:00:00.000Z',
@@ -25,19 +25,49 @@ const CANCELLED = 6;
 const ready: Readiness = { state: 'ready', why: '' };
 
 describe('holdsSlot', () => {
-  const look = { mainsWorker: true, state: undefined, paused: false, workIn: false };
+  const look = { mainsWorker: true, state: undefined, waiting: undefined, workIn: false, ciWaits: 0 };
+  const paused = { background: 1, scheduled: 0 };
 
   it('holds one for a worker running, blocked or paused on its own background work', () => {
     expect(holdsSlot(look)).toBe(true);
     expect(holdsSlot({ ...look, state: 'running' })).toBe(true);
     expect(holdsSlot({ ...look, state: 'blocked' })).toBe(true);
-    expect(holdsSlot({ ...look, state: 'done', paused: true })).toBe(true);
+    expect(holdsSlot({ ...look, state: 'done', waiting: paused })).toBe(true);
   });
 
   it('frees it once done, or paused with its work in, and never holds one for what is no main\'s worker', () => {
     expect(holdsSlot({ ...look, state: 'done' })).toBe(false);
-    expect(holdsSlot({ ...look, state: 'done', paused: true, workIn: true })).toBe(false);
+    expect(holdsSlot({ ...look, state: 'done', waiting: paused, workIn: true })).toBe(false);
     expect(holdsSlot({ ...look, mainsWorker: false })).toBe(false);
+  });
+
+  // workers-decision-11: a CI wait gives its slot back, a test run beside it keeps it.
+  it('frees it while a pause\'s only background work is waiting on CI, and never for one running', () => {
+    expect(holdsSlot({ ...look, state: 'done', waiting: paused, ciWaits: 1 })).toBe(false);
+    expect(holdsSlot({ ...look, state: 'done', waiting: { background: 1, scheduled: 1 }, ciWaits: 1 })).toBe(false);
+    expect(holdsSlot({ ...look, state: 'done', waiting: { background: 2, scheduled: 0 }, ciWaits: 1 })).toBe(true);
+    expect(holdsSlot({ ...look, state: 'running', ciWaits: 1 })).toBe(true);
+  });
+});
+
+describe('capReached and nextResume', () => {
+  const caps = { project: 2, total: 3 };
+  const running = new Map([['/work/api', 2], ['/work/crm', 1]]);
+
+  it('says which cap is reached, the total first, none with no caps', () => {
+    expect(capReached(new Map([['/work/api', 2]]), caps, '/work/api')).toBe('2 running in api, the cap per project is 2');
+    expect(capReached(new Map([['/work/api', 2]]), caps, '/work/crm')).toBeNull();
+    expect(capReached(running, caps, '/work/crm')).toBe('3 running, the total cap is 3');
+    expect(capReached(running, { project: null, total: null }, '/work/api')).toBeNull();
+  });
+
+  it('lets on the first resumer with room, one holding a slot anyway, or one no longer a worker', () => {
+    const roomy = new Map([['/work/api', 2]]);
+    const same = (resumer: Resumer) => resumer;
+    expect(nextResume([{ projectPath: '/work/api', holds: false }, { projectPath: '/work/crm', holds: false }], same, roomy, caps)).toBe(1);
+    expect(nextResume([{ projectPath: '/work/api', holds: true }], same, running, caps)).toBe(0);
+    expect(nextResume([{ projectPath: null, holds: false }], same, running, caps)).toBe(0);
+    expect(nextResume([{ projectPath: '/work/crm', holds: false }], same, running, caps)).toBe(-1);
   });
 });
 
@@ -103,24 +133,32 @@ describe('readiness', () => {
 
 describe('nextToStart', () => {
   const free = () => null;
+  const caps = (project: number | null, total: number | null = null) => ({ project, total });
+  const api = (count: number) => new Map([['/work/api', count]]);
 
   it('starts the first ready entry, skipping one that waits', () => {
     const waits = (each: QueueEntry): Readiness => (each.id === 'q1' ? { state: 'wait', why: 'waits on card b' } : ready);
-    expect(nextToStart([entry('q1'), entry('q2')], 3, 4, free, waits)).toEqual({ start: entry('q2') });
-    expect(nextToStart([entry('q1'), entry('q2')], 3, 4, free, () => ready)).toEqual({ start: entry('q1') });
-    expect(nextToStart([entry('q1')], 3, 4, free, waits)).toEqual({ held: 'q1 waits on card b' });
+    expect(nextToStart([entry('q1'), entry('q2')], api(3), caps(4), free, waits)).toEqual({ start: entry('q2') });
+    expect(nextToStart([entry('q1'), entry('q2')], api(3), caps(4), free, () => ready)).toEqual({ start: entry('q1') });
+    expect(nextToStart([entry('q1')], api(3), caps(4), free, waits)).toEqual({ held: 'q1 waits on card b' });
   });
 
-  it('holds at the cap, with no cap never, and on the budget', () => {
-    expect(nextToStart([entry('q1')], 4, 4, free, () => ready)).toEqual({ held: '4 running, the cap is 4' });
-    expect(nextToStart([entry('q1')], 9, null, free, () => ready)).toEqual({ start: entry('q1') });
-    expect(nextToStart([entry('q1')], 0, 4, () => '81% used', () => ready)).toEqual({ held: '81% used' });
+  it('holds at the total cap, with no cap never, and on the budget', () => {
+    expect(nextToStart([entry('q1')], api(4), caps(null, 4), free, () => ready)).toEqual({ held: '4 running, the total cap is 4' });
+    expect(nextToStart([entry('q1')], api(9), caps(null), free, () => ready)).toEqual({ start: entry('q1') });
+    expect(nextToStart([entry('q1')], api(0), caps(4), () => '81% used', () => ready)).toEqual({ held: '81% used' });
+  });
+
+  it('lets another project\'s entry past one whose project is at its cap', () => {
+    const crm = entry('q2', { projectPath: '/work/crm' });
+    expect(nextToStart([entry('q1'), crm], api(4), caps(4, 8), free, () => ready)).toEqual({ start: crm });
+    expect(nextToStart([entry('q1')], api(4), caps(4, 8), free, () => ready)).toEqual({ held: 'q1 waits for a slot: 4 running in api, the cap per project is 4' });
   });
 
   it('drops a finished entry whatever the slots, and has nothing to do for an empty queue', () => {
     const finished = (each: QueueEntry): Readiness => (each.id === 'q2' ? { state: 'drop', why: 'card a is Done' } : ready);
-    expect(nextToStart([entry('q1'), entry('q2')], 4, 4, free, finished)).toEqual({ drop: entry('q2'), why: 'card a is Done' });
-    expect(nextToStart([], 0, 4, free, () => ready)).toEqual({ held: null });
+    expect(nextToStart([entry('q1'), entry('q2')], api(4), caps(4, 4), free, finished)).toEqual({ drop: entry('q2'), why: 'card a is Done' });
+    expect(nextToStart([], api(0), caps(4), free, () => ready)).toEqual({ held: null });
   });
 });
 
@@ -173,5 +211,12 @@ describe('withdrawnColumn', () => {
     const fromReview = { ...shipped, returnTo: { from: 'Review', into: 'Ship' } };
     expect(withdrawnColumn(fromReview, board({ a: SHIP }))).toEqual({ stays: 'card a stays in Ship: back in Review would start it again' });
     expect(withdrawnColumn({ ...shipped, returnTo: { from: 'Doing', into: 'Review' } }, board({ a: REVIEW }))).toEqual({ back: 'Doing' });
+  });
+});
+
+describe('a CI wait lasting only while its process runs', () => {
+  it('counts only the waits whose process still runs', () => {
+    expect(liveWaits([41, 42, 43], (pid) => pid !== 42)).toEqual([41, 43]);
+    expect(liveWaits([41], () => false)).toEqual([]);
   });
 });

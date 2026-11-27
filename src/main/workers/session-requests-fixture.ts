@@ -92,7 +92,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     pool: {
       saved: { next: 1, entries: [] },
       save: () => undefined,
-      cap: () => 4,
+      cap: () => ({ project: 4, total: 8 }),
       budget: () => null,
       board: () => null,
       drainBoard: () => null,
@@ -100,6 +100,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       beginCard: async () => ({ refused: 'no card starts here' }),
       move: async () => ({ refused: 'no card moves here' }),
       gone: () => undefined,
+      alive: () => true,
     },
     stallMinutes: () => 20,
     ...overrides,

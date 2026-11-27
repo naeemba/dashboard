@@ -10,7 +10,7 @@ import { failureLine } from './failure-line';
 import type { ProgramAnswer } from './gh-answer';
 import { conflictedFiles, landPullRequest, parsePullRequestCommand, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 import { writePullRequest } from './pull-request-write-cli';
-import { askConflicted, askLanded } from '../workers/session-socket';
+import { askCiSlot, askConflicted, askLanded } from '../workers/session-socket';
 
 // gh or git in the folder, its exit read rather than thrown: a failed check is an answer, not a
 // failure. One that could not start (none installed) has no exit code, and still throws. gh runs as
@@ -48,9 +48,11 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
       if (line !== '') process.stdout.write(`${line}\n`);
       return handed;
     };
+    // A worker waiting only on CI gives its slot back meanwhile; main's own run changes nothing.
+    const slot = { giveBack: () => askCiSlot('wait', project.project), reclaim: () => askCiSlot('resume', project.project) };
     const answer = parsed.verb === 'land'
-      ? await landPullRequest({ gh, wait: delay }, parsed.target, handOff)
-      : await waitOnPullRequest({ gh, wait: delay }, parsed.target);
+      ? await landPullRequest({ gh, wait: delay, slot }, parsed.target, handOff)
+      : await waitOnPullRequest({ gh, wait: delay, slot }, parsed.target);
     // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
     const { conflicts } = answer;
     const verdict = conflicts === undefined
