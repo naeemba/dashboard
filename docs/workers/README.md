@@ -166,6 +166,13 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   pane, queued behind its turn if it is busy, and the Claude screen draws it as a status line; a
   card's agent tells its project's main the same way, and a Claude opened by hand tells nobody until
   a main sends it work (workers-decision-1).
+- Given a terminal worker, when its Claude stops on a question (its OSC 7501
+  status says blocked), then the pane is marked blocked as for a permission
+  prompt, which marks the pane and tells main nothing, and its next working
+  status takes the mark off, even after an idle. A failed turn (error) is not
+  marked: it reads running until the stall sweep tells main. Running and done
+  stay the hooks': the status says nothing of a pause's background work, the
+  prompt's source or the last message.
 - Given a worker waiting on its own background work, when its turn ends with a
   background task in flight or a wakeup scheduled, then main is told nothing,
   and `pane list` says `paused, waiting on 2 background tasks` and the workers

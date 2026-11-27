@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:54:24.916Z",
-  "updatedAt": "2026-11-27T13:38:12.040Z",
+  "updatedAt": "2026-11-27T13:45:36.048Z",
   "branch": "track-terminal-mode-workers-through-claude",
   "pullRequest": 421,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-27T13:38:12.040Z",
       "body": "Review loop converged in 2 rounds, 2 findings fixed (d6b5cb76), none rejected, no conflicts. CI on bc25084d: checks + CodeQL pass, windows fails on src/main/board/board-files.test.ts 'names a board.json that does not parse on a read without salvage' (6.4s, looks like a timeout; this PR does not touch board files). Still open: that windows failure, rerun or look before merging. Otherwise ready to merge."
+    },
+    {
+      "at": "2026-11-27T13:45:36.018Z",
+      "body": "Pull request #421 merged: Read Claude Code's OSC 7501 program status off each pane's pty https://github.com/naeemba/dashboard/pull/421"
     }
   ],
-  "column": "Review",
-  "order": 7
+  "column": "Done",
+  "order": 345
 }

@@ -5,11 +5,13 @@ import { paneKey } from './pane-host-protocol';
 import { screenCopyWhile, type PaneScreenCopy } from './pane-screen-copy';
 import type { PaneHost } from './pane-host-client';
 import { foregroundName, type PaneShell } from './pane-shell';
+import { programStatusReader } from './program-status';
 import { runsAnAgent, type PaneCommand } from '../../shared/panes/pane-reading';
 import { projectName } from '../workers/project-names';
 import type { ScopedCommand, ScopeRequest } from '../processes/scope';
 import type { Screens } from '../../shared/remote-host/screens';
 import { withPaneId } from '../command/pane-environment';
+import type { WorkerState } from '../../shared/app/bridge';
 
 // Every pane's shell as main holds it, the editor's included: spawned through the pane host or taken
 // back from it after a restart, and listened to the one way every way.
@@ -32,6 +34,9 @@ export function paneShells(main: {
   keepsScreens(): boolean;
   // A pane's own shell ended: what main logs and releases for it.
   ended(id: string, exitCode: number): void;
+  // What a Claude in the pane said of itself that its hooks do not: program-status.ts. Any pane's, so
+  // a claude started by hand in a plain shell is marked too.
+  workerState(id: string, state: WorkerState): void;
 }) {
   const shells = new Map<string, PaneShell>();
   const screenCopies = new Map<string, PaneScreenCopy>();
@@ -110,8 +115,12 @@ export function paneShells(main: {
     // reading there marks the shell as past its scope runner (pane-shell.ts's foregroundName) even when
     // nothing asks for one before you start a systemd-run of your own. Nothing polls an in-process pane.
     let pastTheRunner = false;
+    const status = programStatusReader((answer) => shell.write(answer), (state) => main.workerState(id, state));
     shell.onData((data) => {
       if (!pastTheRunner) pastTheRunner = foregroundName(shell) !== undefined;
+      // Answered before the output reaches the pane, so the answer beats the pane's own reply to the
+      // query Claude sends after its probe, which Claude reads as no.
+      status.read(data);
       copy.push(data);
       main.send('pty:data', id, data);
     });
