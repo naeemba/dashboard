@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:20.667Z",
-  "updatedAt": "2026-11-27T21:54:54.809Z",
+  "updatedAt": "2026-11-27T23:32:26.301Z",
   "branch": "the-command-keeps-working-against-the-runni",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 426,
+  "comments": [
+    {
+      "at": "2026-11-27T23:32:26.268Z",
+      "body": "Pull request #426 opened: Panes keep running the app's own commands after a rebuild https://github.com/naeemba/dashboard/pull/426"
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }
