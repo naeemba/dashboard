@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:20.667Z",
-  "updatedAt": "2026-11-27T21:54:20.667Z",
-  "column": "Backlog",
-  "order": 3
+  "updatedAt": "2026-11-27T21:54:54.809Z",
+  "branch": "the-command-keeps-working-against-the-runni",
+  "column": "Doing",
+  "order": 2
 }
