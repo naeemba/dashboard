@@ -165,8 +165,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   from it since it last handed it work, or its work is in.
 - Given main's worker at work, hung on a test that never ends, when no hook of
   its has run for `workers.stallMinutes` (20), then `pane list` and
-  `pane status` say `stalled, silent 20 minutes` in place of `running`, and its
-  main is told once, within a minute, naming it and its pane, which the Claude
+  `pane status` say `stalled, silent 20 minutes` in place of `running`, the
+  workers popup the same on its row (redrawn every minute, its count saying
+  `1 stalled`), and its main is told once, within a minute, naming it and its pane, which the Claude
   screen draws as a status line. It keeps its pane
   and its slot; the next prompt or tool it finishes makes it `running` again,
   takes back the notice if main has not read it yet, and a later stall is told

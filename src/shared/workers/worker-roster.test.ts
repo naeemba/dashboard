@@ -34,10 +34,17 @@ describe('worker roster', () => {
     expect(workerStatus(false, 'done', true)).toBe('idle');
   });
 
+  it('lists a stalled worker after working and before a pause, saying how long it has been silent', () => {
+    const stalled = { ...worker('2:1', 'stalled'), detail: 'stalled, silent 25 minutes' };
+    expect(workerRows([worker('2:2', 'paused'), stalled, worker('2:3', 'working')], {}, 0).map((row) => row.detail))
+      .toEqual(['working · go', 'stalled, silent 25 minutes · go', 'paused · go']);
+    expect(workerCount([stalled, worker('2:3', 'working')])).toBe('2 workers: 1 working, 1 stalled');
+  });
+
   it('says what a paused worker waits on, in place of its state', () => {
     expect(waitingText({ background: 2, scheduled: 0 })).toBe('waiting on 2 background tasks');
     expect(waitingText({ background: 1, scheduled: 1 })).toBe('waiting on 1 background task and 1 wakeup');
-    const paused = { ...worker('2:1', 'paused'), waiting: waitingText({ background: 0, scheduled: 2 }) };
+    const paused = { ...worker('2:1', 'paused'), detail: waitingText({ background: 0, scheduled: 2 }) };
     expect(workerRows([worker('2:2', 'done'), paused], {}, 0).map((row) => row.detail)).toEqual(['waiting on 2 wakeups · go', 'done · go']);
   });
 

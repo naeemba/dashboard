@@ -12,7 +12,9 @@ import type { UsageSnapshot } from '../../shared/usage/usage';
 
 // A worker's hooks mark its pane, a claim, a run, a release or a pane closing changes the open list,
 // and a terminal worker's agent exiting ends its pane's shell, which main says after it has stopped
-// counting the agent; the queue says when it changes: those four events are every change there is.
+// counting the agent; the queue says when it changes; and main's stall sweep says each minute while one
+// is stalled and once after, since a stall begins with no hook, and a raised `workers.stallMinutes`
+// ends one with none either: those five events are every change there is.
 // One read per change serves every page: each watcher picks out its own slot's.
 const watchers = new Set<() => void>();
 let roster: DispatchedWorker[] = [];
@@ -50,6 +52,7 @@ function watch(bridge: DashboardBridge, changed: () => void): () => void {
     // A page opening or closing also changes which slot an entry's main is on.
     bridge.onProjectsChange(() => { read(bridge); readQueue(bridge); });
     bridge.onWorkerQueueChange(() => readQueue(bridge));
+    bridge.onWorkersChange(() => read(bridge));
     // Only a listed worker's pane: a plain shell or nvim ending changes nothing here.
     bridge.onExit((id) => { if (roster.some((worker) => worker.id === id)) read(bridge); });
     const takeCaches = (usage: UsageSnapshot) => {

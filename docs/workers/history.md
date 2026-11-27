@@ -109,3 +109,6 @@ One line per merged change: date and why.
 - 2026-11-27 — A terminal worker blocked on a question is marked from its OSC 7501 status: no hook
   fires for it, so it read as running until it stalled. A failed turn is left to the stall sweep,
   since blocked would take it out of the sweep and tell main nothing
+- 2026-11-27 — The workers popup and status line count mark a stalled worker, redrawn every minute:
+  only `pane list` and `pane status` said it, so the popup called a hung worker `working`
+  (workers-decision-13)
