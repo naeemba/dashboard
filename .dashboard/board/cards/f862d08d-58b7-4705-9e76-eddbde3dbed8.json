@@ -1,0 +1,11 @@
+{
+  "id": "f862d08d-58b7-4705-9e76-eddbde3dbed8",
+  "title": "The command keeps working against the running app after a rebuild",
+  "notes": "Retro 2026-11-28: 'this command is vX and the running Dashboard is vY — restart the app' appeared 16 times; the last land of a session could not release its pane until the app restarted. DASHBOARD_COMMAND and DASHBOARD_BOARD point into the installed build, which a rebuild replaces under the running app. Wanted: sessions the running app starts keep running the command files of that app's own version (for instance the app copies its command entry files to a per-version folder at launch and points the env vars there), so a rebuild changes nothing until the restart. Keep the version-mismatch refusal for whatever still mismatches. Design first: read how the env vars are set and the version check, and record the decision.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-27T21:54:20.667Z",
+  "updatedAt": "2026-11-27T21:54:20.667Z",
+  "column": "Backlog",
+  "order": 3
+}
