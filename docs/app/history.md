@@ -40,3 +40,7 @@ One line per merged change: date and why.
 - 2026-11-27 — `main.ts` split from 600 code lines, its ceiling, to 494: the pane readings went to
   `slot-panes.ts` and the session command's ports to `session-request-ports.ts`, so the next port
   wired into main has room; no behaviour changed
+- 2026-11-27 — every direct dependency on its newest patch, then each minor taken one at a time
+  after reading its notes (electron 45.5, vite 8.4, vitest 5.1, eslint 10.15, typescript-eslint
+  8.74, marked 18.3, ws 8.23, lucide 1.82); `@types/node` 26 stays out under the Node 24 hold,
+  and only @electron/asar still holds the minimatch override
