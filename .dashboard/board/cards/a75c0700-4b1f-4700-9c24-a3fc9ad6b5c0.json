@@ -5,8 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T16:50:47.524Z",
-  "updatedAt": "2026-11-27T11:16:43.280Z",
+  "updatedAt": "2026-11-27T11:24:26.812Z",
   "branch": "pane-queue-keeps-an-entry-whose-card-file-b",
-  "column": "Doing",
-  "order": 1
+  "pullRequest": 410,
+  "comments": [
+    {
+      "at": "2026-11-27T11:24:26.783Z",
+      "body": "Pull request #410 opened: Hold a queued ship while its card file does not parse https://github.com/naeemba/dashboard/pull/410"
+    }
+  ],
+  "column": "Review",
+  "order": 0
 }
