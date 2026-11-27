@@ -3,8 +3,9 @@
 # settings, projects.yaml and ~/.claude), its own user data, on the headless Wayland socket wl-perf that
 # README.md's weston line starts, with DevTools on 9433 (renderer) and 9434 (main). Every CLAUDE_*,
 # DASHBOARD_* and ANTHROPIC_* variable of the shell it is run from is dropped, so its panes cannot reach
-# that session and its Agent SDK sessions have no credentials to call a model with.
-# usage: launch-demo.sh <demo folder made by stage-demo.sh>
+# that session, and its Agent SDK sessions call no model unless the staged HOME holds a login
+# (stage-screenshots.sh copies yours in; stage-demo.sh does not).
+# usage: launch-demo.sh <demo folder made by stage-demo.sh or stage-screenshots.sh>
 set -eu
 demo=$(cd "$1" && pwd)
 repo=$(cd "$(dirname "$0")/../.." && pwd)
