@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T11:58:30.358Z",
-  "updatedAt": "2026-11-27T13:32:45.162Z",
+  "updatedAt": "2026-11-27T13:53:41.000Z",
   "branch": "pane-pool-a-cap-per-project-plus-a-total-an",
   "pullRequest": 419,
   "comments": [
@@ -20,6 +20,10 @@
     {
       "at": "2026-11-27T13:32:45.161Z",
       "body": "Review loop on #419 finished floor-addressed after 2 rounds. Round 1 fixed 3 threads (262e0d78, 4afee10c). Round 2 fixed 3 threads (d13721ba, 0104bc0d, b1f9cf72); the final check rejected d13721ba and it was reverted in 9baeb74a. Not ready to merge: the PR now conflicts with main on src/main/main.ts and src/shared/settings/settings.ts (main moved during the loop), so CI did not run on the head commit. Still open: [low] ci-wait.ts:20, a pr wait killed in the same turn that starts a background test frees the slot for that whole test run (blocked on a person: state the ceiling correctly in holdsSlot and workers-decision-11, or reclaim on SIGTERM in pull-request-program.ts); [low] queue.ts:252, settle's lower-to-non-zero branch untested; [nit] session-cli.ts:84, a 151-char usage line. The PR is marked ready again."
+    },
+    {
+      "at": "2026-11-27T13:53:41.000Z",
+      "body": "Converged, ready to merge: CI passed on b21f20fe. Done on main's instructions: merged origin/main, keeping both sides in main.ts and settings.ts; then main moved twice more and merged clean each time. Fixed the blocked ci-wait.ts:20 thread in e77c8e50: each CI wait records the process id of the pr wait or pr land that asked, and the pool counts only waits whose process still runs (liveWaits in pane-pool.ts, with tests). A pr wait killed by any signal, SIGKILL included, stops freeing the slot. workers-decision-11 and the workers README are corrected. The process check is now one shared processAlive (src/main/app/process-alive.ts), also used by dead-host.ts. The pid check is one isProcessId. The settle lower-to-non-zero test was already in 0104bc0d, and settle stays as the backstop for a reused pid. The long usage line is rewrapped. pane ci now takes the pid: pane ci <id> wait|resume <pid>."
     }
   ],
   "column": "Review",
