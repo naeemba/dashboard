@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:02:34.752Z",
-  "updatedAt": "2026-11-27T12:41:45.793Z",
+  "updatedAt": "2026-11-27T12:42:08.303Z",
   "branch": "flag-a-worker-pane-that-has-gone-silent-as",
   "pullRequest": 415,
   "comments": [
@@ -28,8 +28,12 @@
     {
       "at": "2026-11-27T12:41:45.793Z",
       "body": "Merged origin/main (#414) into #415 as ff30416e: docs/settings/README.md and main.ts resolved keeping both sides (main.ts ~503 code lines). Fixed a merge bug the typecheck caught: the new Workers cap row (withWorkerCap) dropped workers.stallMinutes; it now keeps the other worker settings, with the test extended. pnpm check green; CI passed on ff30416e. Converged, ready to merge."
+    },
+    {
+      "at": "2026-11-27T12:42:08.259Z",
+      "body": "Pull request #415 merged: Show a worker silent past a setting as stalled, and tell main once https://github.com/naeemba/dashboard/pull/415"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 340
 }
