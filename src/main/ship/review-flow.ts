@@ -29,8 +29,8 @@ export type ReviewPorts = {
   // Whether an agent is still working in this pane. Not whether one is running: the pane is `exec
   // claude`, and Claude Code sits at its prompt when the card is done rather than exiting, so "a
   // process is there" would be true until somebody closed the pane by hand and no review would ever
-  // start by itself. Working is read off the pane's screen, which only the renderer can see; main.ts
-  // says how the answer gets there.
+  // start by itself. Working is read off the pane's screen, which only the renderer can see;
+  // slot-panes.ts says how the answer gets there.
   agentWorksIn: (slot: number, pane: number | null) => boolean;
   // Whether any pane still has a shell standing in this folder — opened there, moved there with `cd`,
   // or running a program there that it started from somewhere else.
