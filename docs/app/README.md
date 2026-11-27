@@ -179,6 +179,9 @@ when one is written as a range, and a new exact hold below adds its name there.
 - `typescript` is an alias to `@typescript/typescript6`, so typescript-eslint
   keeps the 6.0 API while `@typescript/native` (7.x) runs `tsc`. The alias goes
   when typescript-eslint supports TypeScript 7.
+  typescript-eslint's optional `@typescript/native` 7.1 peer is for its
+  experimental tsgo backend, unused here; its unmet-peer warning is expected
+  until `@typescript/native` reaches 7.1.
 - `@types/node` follows the Node major that Electron ships (Node 24 for
   Electron 45), so code cannot type-check against a Node API the app's runtime
   lacks.
