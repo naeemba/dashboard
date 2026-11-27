@@ -110,6 +110,8 @@ One line per merged change: date and why.
   (`workers.totalCap`, 8), and a worker waiting only on CI gives its slot back until `pr wait` or
   `pr land` asks for it again: one busy project no longer queued another's cards, and a review
   loop's CI wait held a queued card for its whole length (workers-decision-11)
+- 2026-11-27 — Workers are started with idleCompaction false, so a worker paused on CI or a review
+  loop is not compacted while it waits (workers-decision-12)
 - 2026-11-27 — The workers popup and status line count mark a stalled worker, redrawn every minute:
   only `pane list` and `pane status` said it, so the popup called a hung worker `working`
   (workers-decision-13)
