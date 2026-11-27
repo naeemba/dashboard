@@ -17,33 +17,46 @@ describe('stallWatch', () => {
     return { clock, stalls: stallWatch(() => 20, () => clock.now) };
   };
 
-  it('starts a worker no hook has spoken for at the first look', () => {
+  // Each tell, and each notice taken back, in order.
+  const teller = () => {
+    const said: string[] = [];
+    return { said, tell: () => { said.push('told'); return () => { said.push('withdrawn'); }; } };
+  };
+
+  it('never calls a worker no hook has spoken for stalled', () => {
     const { clock, stalls } = watch();
     clock.now = 100 * MINUTE;
     expect(stalls.silentFor('2:1')).toBeNull();
-    clock.now = 120 * MINUTE;
-    expect(stalls.silentFor('2:1')).toBe(20);
+    clock.now = 200 * MINUTE;
+    expect(stalls.silentFor('2:1')).toBeNull();
   });
 
-  it('tells a stall once, and again only after a sign of life', () => {
+  it('tells a stall once, takes it back at a sign of life, and tells the next one again', () => {
     const { clock, stalls } = watch();
+    const { said, tell } = teller();
     stalls.sign('2:1');
     clock.now = 21 * MINUTE;
-    expect(stalls.tellNow('2:1')).toBe(true);
+    expect(stalls.silentFor('2:1')).toBe(21);
+    stalls.tell('2:1', tell);
     clock.now = 40 * MINUTE;
-    expect(stalls.tellNow('2:1')).toBe(false);
+    stalls.tell('2:1', tell);
+    expect(said).toEqual(['told']);
     stalls.sign('2:1');
+    expect(said).toEqual(['told', 'withdrawn']);
     expect(stalls.silentFor('2:1')).toBeNull();
     clock.now = 60 * MINUTE;
-    expect(stalls.tellNow('2:1')).toBe(true);
+    stalls.tell('2:1', tell);
+    expect(said).toEqual(['told', 'withdrawn', 'told']);
   });
 
-  it('forgets a worker let go of, so the next one at its number starts afresh', () => {
+  it('forgets a worker let go of, taking its notice back, so the next one at its number starts afresh', () => {
     const { clock, stalls } = watch();
+    const { said, tell } = teller();
     stalls.sign('2:1');
     clock.now = 30 * MINUTE;
-    expect(stalls.tellNow('2:1')).toBe(true);
+    stalls.tell('2:1', tell);
     stalls.forget('2:1');
+    expect(said).toEqual(['told', 'withdrawn']);
     expect(stalls.silentFor('2:1')).toBeNull();
   });
 });

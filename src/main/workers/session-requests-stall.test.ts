@@ -56,12 +56,38 @@ describe('a worker gone silent', () => {
     expect(told).toEqual([]);
   });
 
-  it('is never a worker blocked, done or paused, whose silence is waiting', async () => {
+  it.each([
+    ['blocked', undefined, '2:1\tterminal 2\tblocked'],
+    ['done', undefined, '2:1\tterminal 2\tdone'],
+    ['done', { background: 1, scheduled: 0 }, '2:1\tterminal 2\tpaused, '],
+  ] as const)('is never a worker %s (waiting %o), whose silence is waiting', async (state, waiting, listed) => {
     const { answer, told, list } = await silentWorker();
-    answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
+    answer.notify('2:1', state, waiting);
     minutes(25);
     answer.tellStalls();
-    expect(await list()).toContain('paused');
+    expect(await list()).toContain(listed);
     expect(told.filter((each) => each.includes('no sign of life'))).toEqual([]);
+  });
+
+  it('takes the notice back when the worker speaks again before main reads it', async () => {
+    const { answer, told, withdrawn } = await silentWorker();
+    minutes(20);
+    answer.tellStalls();
+    answer.notify('2:1', 'running');
+    expect(withdrawn).toEqual([`2 ${told.length - 1}`]);
+  });
+
+  it('is never a worker resumed after a restart that no hook has spoken for', async () => {
+    const fake = project();
+    const answer = sessionRequests(fake.ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    // Resumed with no prompt: main's worker, and no hook has run for it.
+    fake.agents.add('2:1');
+    fake.workers.set('2:1', '/work/api');
+    answer.tellStalls();
+    minutes(21);
+    answer.tellStalls();
+    expect(fake.told.filter((each) => each.includes('no sign of life'))).toEqual([]);
+    expect((await answer({ directory: '/work/api', args: ['list'] })).output).toContain('2:1\tterminal 2\trunning');
   });
 });

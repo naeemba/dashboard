@@ -695,8 +695,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     tellStalls() {
       for (const id of openPaneIds()) {
         const silent = silentAtWork(id);
-        if (silent === null || prompts.fromUser(id) || !stalls.tellNow(id)) continue;
-        ports.tell(mainOf(id), stallNotice(nameOfPane(id), id, silent));
+        if (silent === null || prompts.fromUser(id)) continue;
+        const slot = mainOf(id);
+        // Taken back if the worker speaks again before main reads it, as its stop notice is.
+        stalls.tell(id, () => {
+          const messageId = ports.tell(slot, stallNotice(nameOfPane(id), id, silent));
+          return () => ports.withdraw(slot, messageId);
+        });
       }
     },
     async dropped(id: string) {

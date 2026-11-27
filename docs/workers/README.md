@@ -159,8 +159,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   main is told once, within a minute, naming it and its pane, which the Claude
   screen draws as a status line. It keeps its pane
   and its slot; the next prompt or tool it finishes makes it `running` again,
-  and a later stall is told again. A turn you typed into it is not told
-  (workers-decision-13).
+  takes back the notice if main has not read it yet, and a later stall is told
+  again. A turn you typed into it is not told, and a worker resumed after a
+  restart is never stalled until a hook of its runs (workers-decision-13).
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks`
   or `session_crons`, when its turn ends, then main is told only once it has
   stayed out of `running` for three minutes, as before them

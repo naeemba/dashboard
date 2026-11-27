@@ -671,5 +671,11 @@ holding a pool slot (workers-decision-11) with nothing to say so.
 - **Shown and told, never acted on.** It keeps its pane and its slot and is never released: a long
   build looks the same as a hang from the hooks, and killing one loses work. The user or main
   decides.
-- **A worker no hook has spoken for since the launch** (one resumed after a restart) starts its
-  clock at the app's first look, so a restart never makes every worker stalled at once.
+- **A worker no hook has spoken for since the launch is never stalled.** One resumed after a
+  restart gets no prompt, so no hook runs and it reads as at work (workers-decision-1); starting
+  its clock at the first look only told main of every resumed worker at once twenty minutes later.
+  A worker screen whose turn carried on through the restart starts its clock at its next tool. The
+  cost: one hung across a restart is never called stalled.
+- **A notice still waiting for main is taken back** when the worker's next hook comes in, or it is
+  let go of, as its stop notice is: main never reads that a worker that is working again may be
+  stuck.

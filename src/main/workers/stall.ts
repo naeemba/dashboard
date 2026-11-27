@@ -5,6 +5,8 @@
 // keeps its pane and its slot, and the user or main decides what becomes of it.
 
 const MINUTE_MS = 60_000;
+// How often main's workers are looked at for a stall: a stall is told within a minute of it.
+export const STALL_SWEEP_MS = MINUTE_MS;
 
 // The whole minutes since the last sign, once they reach the setting; null before.
 export function silentMinutes(lastSign: number, now: number, stallMinutes: number): number | null {
@@ -13,39 +15,41 @@ export function silentMinutes(lastSign: number, now: number, stallMinutes: numbe
 }
 
 export type StallWatch = {
-  // A hook heard from the worker: its clock starts again, and a stall after this one is told again.
+  // A hook heard from the worker: its clock starts again, a notice of its stall still waiting for main
+  // is taken back, and a stall after this one is told again.
   sign(id: string): void;
-  // How long the worker has been silent, when that is a stall. The first look at a worker no hook has
-  // spoken for since the launch (one resumed after a restart) starts its clock there.
+  // How long the worker has been silent, when that is a stall. A worker no hook has spoken for since
+  // the launch (one resumed after a restart) has no clock, so it is never one.
   silentFor(id: string): number | null;
-  // Whether main is yet to be told of the worker's stall, asked once silentFor says it is one: true
-  // once per stall.
-  tellNow(id: string): boolean;
+  // Tells main of the worker's stall, asked once silentFor says it is one: once per stall. `send`
+  // answers with what takes the notice back.
+  tell(id: string, send: () => () => void): void;
   forget(id: string): void;
 };
 
 export function stallWatch(stallMinutes: () => number, now: () => number = Date.now): StallWatch {
   const signs = new Map<string, number>();
-  const told = new Set<string>();
-  const silentFor = (id: string): number | null => {
-    const last = signs.get(id) ?? now();
-    signs.set(id, last);
-    return silentMinutes(last, now(), stallMinutes());
+  // The stalls told, each with what takes its notice back.
+  const told = new Map<string, () => void>();
+  const takeBack = (id: string) => {
+    told.get(id)?.();
+    told.delete(id);
   };
   return {
     sign(id) {
       signs.set(id, now());
-      told.delete(id);
+      takeBack(id);
     },
-    silentFor,
-    tellNow(id) {
-      if (told.has(id)) return false;
-      told.add(id);
-      return true;
+    silentFor(id) {
+      const last = signs.get(id);
+      return last === undefined ? null : silentMinutes(last, now(), stallMinutes());
+    },
+    tell(id, send) {
+      if (!told.has(id)) told.set(id, send());
     },
     forget(id) {
       signs.delete(id);
-      told.delete(id);
+      takeBack(id);
     },
   };
 }
