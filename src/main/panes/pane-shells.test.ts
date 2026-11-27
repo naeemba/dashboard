@@ -24,6 +24,7 @@ const AGENT = terminalId(0, 2);
 // Every scope asked for is granted as `<kind>-<id>.scope`, wrapping the command in `scoped`.
 function shells(holds = true) {
   let hostSpawned = 0;
+  const told: string[] = [];
   const requests: SpawnRequest[] = [];
   const host = { spawn: (request: SpawnRequest) => { hostSpawned += 1; requests.push(request); return fakeShell(true); }, holds: () => holds } as unknown as PaneHost;
   const made = paneShells({
@@ -35,8 +36,9 @@ function shells(holds = true) {
     screens: screens(), environment: {}, temporary: '/nonexistent', userData: '/nonexistent-user-data', shellCommand: () => '/bin/zsh',
     scoped: (request: ScopeRequest) => ({ file: 'scoped', args: [request.file, ...request.args], unit: `${request.kind}-${request.id}.scope` }),
     projectPath: () => '/home/me/dashboard', send: () => undefined, keepsScreens: () => false, ended: () => undefined,
+    workerState: (id, state) => { told.push(`${id} ${state}`); },
   });
-  return { ...made, hostSpawned: () => hostSpawned, requests };
+  return { ...made, hostSpawned: () => hostSpawned, requests, told };
 }
 
 describe('paneShells', () => {
@@ -78,6 +80,18 @@ describe('paneShells', () => {
     shell.process = 'systemd-run';
     // foregroundName, not foregroundOf: that one answers nothing on win32 by design.
     expect(foregroundName(shell)).toBe('systemd-run');
+  });
+
+  // program-status.ts says why the probe is answered and what a status tells.
+  it('answers the OSC 7501 probe into the pty and tells main what the status says', () => {
+    const made = shells();
+    const listeners: ((data: string) => void)[] = [];
+    const written: string[] = [];
+    const shell = { ...fakeShell(), write: (data: string) => { written.push(data); }, onData: (listener: (data: string) => void) => listeners.push(listener) };
+    made.listenTo(AGENT, shell, '/bin/zsh', undefined);
+    listeners.forEach((listener) => { listener('\x1b]7501;?\x07'); listener('\x1b]7501;state=blocked:app=claude-code:kind=question\x07'); });
+    expect(written).toEqual(['\x1b]7501;?\x07']);
+    expect(made.told).toEqual([`${AGENT} blocked`]);
   });
 
   it('passes a pane host\'s reading through as it is, runner or not', () => {

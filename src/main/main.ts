@@ -227,6 +227,7 @@ const panes = paneShells({
     logStore.log(paneExitEntry(projectIn(slot)?.path, index, exitCode, agentRunsIn(slot, index)));
     releaseAgentPane(id);
   },
+  workerState: (id, state) => { workerAnswers.notify(id, state); },
 });
 const { shells, screenCopies } = panes;
 
