@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T13:57:28.395Z",
-  "updatedAt": "2026-11-27T11:16:11.959Z",
+  "updatedAt": "2026-11-27T11:16:36.354Z",
   "branch": "ship-flow-tests-build-their-git-repository",
   "comments": [
     {
@@ -13,6 +13,6 @@
       "body": "Checked the windows job's timings before writing anything: across the last 10 successful CI runs on main, every ship-flow.test.ts test took 596-1506 ms (slowest 1506 ms, run 45987230844), under a third of vitest's 5 s limit. That is far under, so per the card's own condition no change was made and the card should be cancelled. Reopen it if a windows run shows one of these tests past ~3.5 s."
     }
   ],
-  "column": "Doing",
-  "order": 1
+  "column": "Cancelled",
+  "order": 32
 }
