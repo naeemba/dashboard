@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T12:03:16.763Z",
-  "updatedAt": "2026-11-27T12:03:16.763Z",
-  "column": "Backlog",
-  "order": 10
+  "updatedAt": "2026-11-27T12:03:25.202Z",
+  "branch": "update-every-dependency-patches-first-then",
+  "column": "Doing",
+  "order": 3
 }
