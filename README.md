@@ -1,19 +1,50 @@
 # dashboard
 
-Keyboard-first terminal dashboard. Each project gets a page, shown several ways: its main Claude
-session, drawn as the Claude screen, beside a list of worker panes it dispatches tasks into, a
-full-window nvim, a kanban board, or a page of notes.
+Keyboard-first terminal dashboard for running Claude Code across several projects. Each project is a
+page: its main Claude session on the left, the workers that session dispatches on the right, and a
+kanban board, a notes page, an nvim and a web browser one key away. The first tab, the manager, is
+every project at once. [docs/](docs/README.md) has a folder per feature with the detail.
 
-The main session dispatches with `node "$DASHBOARD_COMMAND" pane` (`claim`, `run`, `list`,
-`release`); a worker's hooks report back with `notify`. Ctrl+H on the terminals screen says the
-rest.
-
-![The terminals view: the main Claude session on the left, three workers on the
+![The terminals view: acme-shop's main session on the left, three workers on the
 right](docs/screenshots/terminals.png)
+
+## What it does
+
+- **The Claude screen.** A project's main session is Claude Code drawn as a page rather than a
+  terminal: tables as tables, highlighted code, diffs, images, slash commands and rewind. It runs
+  with the project's own CLAUDE.md, settings, skills, hooks and MCP servers.
+  [Chat](docs/chat/README.md)
+- **Workers.** Main hands tasks to workers with `node "$DASHBOARD_COMMAND" pane start "<task>"`,
+  each in a pane of its own, and hears back when one is done. A pool holds them to 4 running in a
+  project and 8 in all (`workers.cap`, `workers.totalCap`); a start past either is queued and
+  starts when a slot frees. Alt+W on the Claude screen lists main's workers and its queue, Enter
+  goes to one, D withdraws a queued start. [Workers](docs/workers/README.md)
+- **The board.** Backlog, Todo, Ship, Doing, Review, Done and Cancelled, one file per card under
+  `.dashboard/board/`. Moving a card into Ship makes a branch and a worktree and starts an agent on
+  it; its pull request moves the card from then on, and a review runs `/pr-loop` on it. With merging
+  on, `dashboard pr land` merges it once CI is green. Agents edit the board only through the `board`
+  command. [Board](docs/board/README.md), [Ship](docs/ship/README.md)
+- **Notes.** A page of free text and a page of handwriting per project, kept beside the board.
+  [Notes](docs/notes/README.md)
+- **The browser.** A web browser per project with its own sign-ins, so a site signed in once stays
+  signed in for that project. Agents drive the same tabs with `dashboard browser` (open, read,
+  screenshot, click, type), and `browser.proxy` in the settings sends the sites it lists through a
+  proxy. [Browser](docs/browser/README.md)
+- **The manager.** What needs you across every project, longest waiting first, a board of every open
+  project, a command run across projects, its own board, notes and terminals, the log.
+  [Manager](docs/manager/README.md)
+- **Usage.** Tokens per project and per pane, from Claude Code's own logs: this five-hour window,
+  this week and all time. [Usage](docs/usage/README.md)
+- **Settings and updates.** Ctrl+, edits every key, the theme, the font and the shell; the window's
+  opacity is set in the file. A newer release is named on the status bar and installed with
+  Ctrl+Shift+G. [Settings](docs/settings/README.md), [Updates](docs/updates/README.md)
 
 | Board | Notes |
 |---|---|
 | ![A project's kanban board](docs/screenshots/board.png) | ![A project's notes page](docs/screenshots/notes.png) |
+
+![The workers popup: two workers running and a third start queued behind the cap of
+2](docs/screenshots/workers.png)
 
 ![The manager: token use, what needs you, every open project and the latest board
 activity](docs/screenshots/manager.png)
@@ -102,6 +133,7 @@ Mod is Cmd on macOS, Ctrl on Linux and Windows.
 | Nvim mode | Ctrl+N |
 | Board mode | Ctrl+B |
 | Notes mode | Ctrl+Shift+N |
+| Browser mode | Ctrl+Shift+B |
 | Open the project list | Ctrl+S |
 | Settings | Ctrl+, |
 | Jump to project N | Ctrl+1..9 |
@@ -127,6 +159,9 @@ than whatever character the keyboard reports for it, so Option+H is Option+H on 
 means no key at all. Delete the file and everything — keys, theme, font, shell — goes back to how it
 shipped.
 
+`"opacity": 0.7` in the file lets the desktop show through behind the text, from 0.2 up; it takes
+effect at the next launch, and on Linux it needs a compositor.
+
 ## Second screen
 
 One Dashboard can show another's session. On the machine that holds the work, open the settings
@@ -145,70 +180,40 @@ setting.
 
 ## Modes
 
-Each project remembers its own mode, so Ctrl+2 lands on project 2 in whatever view you left it in.
-The project keys work from all four; nothing else does — Mod+1..5 and Option+HJKL only mean
-something when the terminals are on screen.
+Each project remembers its own mode, so Ctrl+2 lands on project 2 in whatever view you left it in:
+terminals, nvim, board, notes or browser. The project keys work from all five; Mod+1..5 and
+Option+HJKL only mean something when the terminals are on screen.
 
 The key naming the mode you are already in is passed through to whatever is running there, so Ctrl+N
 still completes a word inside nvim and Ctrl+T still transposes characters in a shell. You leave a
-mode by naming a different one.
+mode by naming a different one. Nvim starts the first time you press Ctrl+N for that project, not at
+launch.
 
-Nvim starts the first time you press Ctrl+N for that project, not at launch. Quit it and the pane
-says `[exited 0] press Enter to restart`, like any shell that has exited.
-
-The board lives in `.dashboard/board.json` inside the project, alongside a `README.md` and a
-`CLAUDE.md` describing the format. The folder is created the first time you open the board.
-Committing it is your call — nothing touches `.gitignore`.
-
-The columns are `Todo`, `Ship`, `Doing`, `Review`, `Done`. Inside the board: arrows move the
-selection, Shift with an arrow moves the card itself, `/` searches; Ctrl+H lists the rest. A card
-carries a title, a description, and one of four priorities — `urgent`, `high`, `medium`, `low` —
-shown as a coloured stripe down its left edge and named in the status bar. `p` walks through the
-four, `s` sorts the column you are on with the urgent cards at the top. Every change is written
-straight to disk; there is no save key.
-
-The notes are one page of free text per project, kept in `.dashboard/notes.md` beside the board, for
-what is not a card. There is no save key there either: what you type is written a moment after you
-stop, wherever you are by then, and arriving writes anything still waiting before it reads. Arriving
-is also the only time the file is read, so an edit made in a pane shows up the next time you come
-here — while you are on the screen, your box is what gets written. Nothing renders the markdown —
-the name is there so the file is worth opening in an editor.
-
-Ctrl+Shift+N rather than Ctrl+N, which is nvim's. xterm makes a control character for Ctrl with a
-letter and refuses the moment another modifier is held, so Ctrl+Shift with a letter never reached a
-pane as bytes anyway and this costs the shells nothing.
+The board is a folder in the project, `.dashboard/board/`, one file per card, with a `README.md` and
+a `CLAUDE.md` describing the format; the notes sit beside it in `.dashboard/notes.md`. Committing
+them is your call — nothing touches `.gitignore`. Every change is written straight to disk; there is
+no save key. A card file that no longer parses is set aside as `<id>.json.broken` and the status bar
+says so.
 
 Every pane the app opens carries `DASHBOARD_BOARD`, the path to a command that edits the board of
-the project you are in. It goes through the same code the app does.
-`node "$DASHBOARD_COMMAND" board <command>` is the same program as `node "$DASHBOARD_BOARD"`.
+the project you are in through the same code the app does. `node "$DASHBOARD_COMMAND" board
+<command>` is the same program.
 
     node "$DASHBOARD_BOARD" list
-    node "$DASHBOARD_BOARD" show 0f6a2c5e-...
+    node "$DASHBOARD_BOARD" show 0f6a2c5e
     node "$DASHBOARD_BOARD" add "Fix the resize race" --priority high --notes "what goes wrong"
-    node "$DASHBOARD_BOARD" move 0f6a2c5e-... Review
-    node "$DASHBOARD_BOARD" set 0f6a2c5e-... --branch fix-resize-race --pull-request 14
-    node "$DASHBOARD_BOARD" comment 0f6a2c5e-... "what was found"
+    node "$DASHBOARD_BOARD" ship 0f6a2c5e
+    node "$DASHBOARD_BOARD" comment 0f6a2c5e "what was found"
 
-`list` prints the column, priority and id of every card; the others take that id. Run it with no
-arguments for the whole usage. It is the only way an agent changes the board: a hook refuses its
-hand edit of the files. A shipped card's column follows its pull request and the app moves it, so an
-agent working one moves nothing (docs/board).
-
-While a card is being edited, the input owns the keyboard: Ctrl+T, Ctrl+2, and every other global
-shortcut are dead until the edit ends. A title ends on Enter or Escape. A description ends on Escape
-only — Enter there is a newline, since a description is written as lines.
-
-The board is re-read whenever you enter it, and again while you are looking at it when something
-else writes the file: the app watches `board.json` and redraws without moving your selection. If the
-board file is broken — truncated by a crash, broken by a hand-edit, or carrying a merge conflict
-marker — it is renamed to `board.json.broken` before showing an empty board, and the status bar says
-so. Your old cards are in the renamed file.
+Run it with no arguments for the whole usage. It is the only way an agent changes the board: a hook
+refuses a hand edit of the files. A shipped card's column follows its pull request and the app moves
+it. [Board](docs/board/README.md) has the rest.
 
 ## Known limitations
 
-The project list is keyboard-only by design: type to filter, Up and Down move, Enter opens, Escape
-closes. Its last row, "Open a new project…", is a row like any other, so the folder dialog is
-reachable without the mouse — it is the only way in, there is no separate shortcut for it.
+In the project list, type to filter, Up and Down move, Enter opens, Escape closes. Its last row,
+"Open a new project…", is a row like any other, so the folder dialog is reachable without the
+mouse — it is the only way in, there is no separate shortcut for it.
 
 Ctrl+O returns to the project you were on before this one, so two projects toggle back and forth.
 Ctrl+Shift+1..9 reorders the projects: the one on screen takes that position and the rest shift
