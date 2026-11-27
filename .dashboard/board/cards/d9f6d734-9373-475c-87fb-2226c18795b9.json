@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T13:57:28.395Z",
-  "updatedAt": "2026-11-26T13:57:28.395Z",
-  "column": "Backlog",
-  "order": 53
+  "updatedAt": "2026-11-27T11:12:24.936Z",
+  "branch": "ship-flow-tests-build-their-git-repository",
+  "column": "Doing",
+  "order": 1
 }
