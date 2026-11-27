@@ -679,6 +679,9 @@ blocked, holding a pool slot (workers-decision-11), until someone noticed the ba
 - **A screen runs the CLI the Agent SDK bundles**, not the installed one, so the SDK pin moved from
   0.3.316 (Claude Code 2.1.316, which keeps the key and never reads it) to 0.3.332.
   `package-pins.test.ts` fails if a later pin bundles a Claude Code older than 2.1.319.
+- **A worker carries `idleCompaction: false` too; main does not** (2026-11-27). Claude Code
+  compacts a conversation over 200K tokens left idle about an hour, so a worker paused on CI or a
+  review loop came back with a summary of its own task in place of the detail.
 
 ## workers-decision-13: A worker silent past a setting is shown stalled, never stopped
 

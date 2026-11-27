@@ -69,10 +69,13 @@ const appCommandPermissions = (userData: string) => ({
 // cannot drift apart. A worker, terminal or screen, is denied a call that would wait on a permission
 // prompt rather than sit on it holding a pool slot: the model is told and its turn goes on, so the
 // refusal is in its report (workers-decision-12). Main is asked, as a session you typed into is.
+// A worker is never compacted while idle either: one paused on CI comes back with its whole
+// conversation, where main keeps Claude Code's default.
 // Claude Code reads the setting from --settings, which is what the SDK passes these as, and on a
 // screen it skips canUseTool too.
 export const appSessionSettings = (userData: string, kind: 'main' | 'worker') => ({
   hooks: BOARD_GUARD_HOOKS,
+  ...(kind === 'worker' && { idleCompaction: false }),
   permissions: { ...appCommandPermissions(userData), ...(kind === 'worker' && { denyInsteadOfPrompting: true }) },
 });
 
