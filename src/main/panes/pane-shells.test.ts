@@ -22,7 +22,7 @@ const WORKER = terminalId(0, 1);
 const AGENT = terminalId(0, 2);
 
 // Every scope asked for is granted as `<kind>-<id>.scope`, wrapping the command in `scoped`.
-function shells(holds = true, spawnFails = false) {
+function shells({ holds = true, spawnFails = false } = {}) {
   let hostSpawned = 0;
   const requests: SpawnRequest[] = [];
   const ended: [string, number][] = [];
@@ -48,11 +48,18 @@ function shells(holds = true, spawnFails = false) {
 }
 
 describe('paneShells', () => {
-  // A stale shell command: the worker's pane is released, not counted as working under exit 127.
-  it('ends a pane whose shell failed to spawn, exit 127', () => {
-    const made = shells(true, true);
+  // A stale shell command: the agent's pane is released, not counted as working under exit 127.
+  it('ends an agent pane whose shell failed to spawn, exit 127', () => {
+    const made = shells({ spawnFails: true });
+    made.spawn(AGENT);
+    expect(made.ended).toEqual([[AGENT, 127]]);
+  });
+
+  // A screen's plain shell is spawned after main claims the worker: ending it would let the worker go.
+  it('does not end a plain pane whose shell failed to spawn', () => {
+    const made = shells({ spawnFails: true });
     made.spawn(WORKER);
-    expect(made.ended).toEqual([[WORKER, 127]]);
+    expect(made.ended).toEqual([]);
   });
 
   // The next launch reaches a kept nvim only under a name it can work out again: the project's.
@@ -68,7 +75,7 @@ describe('paneShells', () => {
   // A second Dashboard on the same user data is turned away by the host, and must not take the
   // first one's editor socket.
   it('names the editor\'s socket for this process when the host does not hold its shells', () => {
-    expect(shells(false).editorSocketOf(0)).toBe(editorSocket('/nonexistent', 0));
+    expect(shells({ holds: false }).editorSocketOf(0)).toBe(editorSocket('/nonexistent', 0));
   });
 
   it('scopes an agent pane as an agent and a plain one as a shell, named after the project and pane', () => {

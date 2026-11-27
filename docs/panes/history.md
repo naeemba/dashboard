@@ -36,5 +36,5 @@ One line per merged change: date and why.
   selected
 - 2026-11-26 — A worker keeps 5000 lines of scrollback, half of the editor's: full worker buffers
   were the largest part of the window's heap
-- 2026-11-27 — A pane whose shell fails to spawn (a stale shell command) ends like a dead shell,
-  so its worker is released instead of counted as working under exit 127
+- 2026-11-27 — An agent pane whose shell fails to spawn (a stale shell command) ends like a dead
+  shell, so its worker is released instead of counted as working under exit 127
