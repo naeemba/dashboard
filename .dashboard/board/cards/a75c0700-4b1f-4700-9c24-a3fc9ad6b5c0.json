@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T16:50:47.524Z",
-  "updatedAt": "2026-11-27T11:34:56.540Z",
+  "updatedAt": "2026-11-27T11:36:34.142Z",
   "branch": "pane-queue-keeps-an-entry-whose-card-file-b",
   "pullRequest": 410,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-27T11:34:56.540Z",
       "body": "Review loop: converged, ready to merge. 1 round, 2 low findings fixed (7645bce1, 8cd6118a): withdraw test now uses a move that refuses while a card file is broken, as the real one does; the parse-failure wait now applies only to entries with a card, so a cardless ship still gets its 'no card was queued' refusal. Nothing rejected or open, no conflicts, CI green on the head commit. The PR description's 'a withdrawal still puts the card back' does not hold while a card file is broken."
+    },
+    {
+      "at": "2026-11-27T11:36:34.085Z",
+      "body": "Pull request #410 merged: Hold a queued ship while its card file does not parse https://github.com/naeemba/dashboard/pull/410"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 336
 }
