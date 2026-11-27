@@ -1,0 +1,11 @@
+{
+  "id": "5c82b571-0588-4990-a939-a7a96575e2ad",
+  "title": "Bring the README and its screenshots up to date",
+  "notes": "User's ask, 2026-11-27. README.md is stale: it still describes dispatch as node \"$DASHBOARD_SESSION\" claim/run/list/release, and its four screenshots in docs/screenshots/ (terminals, board, notes, manager) date from 7a132abf, 2026-10-31.\n\nREADME: describe the app as it is now, reading docs/README.md's index and each feature README by grep: the Claude screen main and workers, pane start and the pool (cap per project and total, queue, workers popup), board ship and review loops with pr land, the project browser (its own sign-ins, the browser command, the per-site proxy), notes, manager, usage, settings, window opacity, updates. Keep it short and point to docs/ for detail; never invent a feature, check each against the code or docs.\n\nScreenshots: retake them from a demo setup, never the user's running app or real projects (made-up projects, a seeded board, notes and a conversation, a few workers), as 7a132abf did; scripts/performance/demo-instance.mjs starts a separate demo instance, use or extend it. Never quit, kill or restart the running Dashboard. Replace the four, and add the workers popup with a queue if it shows something new. Keep PNG sizes reasonable. Check each picture by looking at it before committing.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T14:57:30.723Z",
+  "updatedAt": "2026-11-27T14:57:30.726Z",
+  "column": "Backlog",
+  "order": 0
+}
