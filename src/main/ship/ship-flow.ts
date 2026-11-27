@@ -16,7 +16,7 @@ export type ShipPorts = {
   recordWorktree(entry: WorktreeEntry): WorktreeEntry;
   // worktree.make's card kind: a new branch off <remote>/<base>, in the folder every worktree goes in.
   makeWorktree(request: ShipWorktreeRequest): Promise<ShipWorktree>;
-  // A free worker for the card's agent, or a new one; main.ts says how it picks.
+  // A free worker for the card's agent, or a new one; slot-panes.ts says how it picks.
   attachPane(entry: WorktreeEntry, slot: number, prompt: string): Promise<ShipResult>;
   // Whether a card shipped in the project bumps its version: its projects.yaml entry, off by default.
   bumpsVersion(projectPath: string): boolean;

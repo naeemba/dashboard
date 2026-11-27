@@ -37,3 +37,6 @@ One line per merged change: date and why.
   the `.env` read moved with it into `launch-environment.ts`
 - 2026-11-26 — `package-pins.test.ts` fails when a held dependency loses its exact version: a bump
   had turned electron, the SDK and marked back into caret ranges with CI green
+- 2026-11-27 — `main.ts` split from 600 code lines, its ceiling, to 494: the pane readings went to
+  `slot-panes.ts` and the session command's ports to `session-request-ports.ts`, so the next port
+  wired into main has room; no behaviour changed
