@@ -33,6 +33,8 @@ Folder: `scripts/performance/`.
   `calculations.test.mjs` in `pnpm test`.
 - `build-log-stream.sh`: a pane's fake build log at a given number of lines a
   second.
+- `stage-screenshots.sh`: the demo folder the top README's screenshots are
+  taken from, below.
 
 ## Never the installed app
 
@@ -96,6 +98,17 @@ repository root.
 
 To see the usage sweep inside the app, copy some large `.jsonl` files into
 `$D/home/.claude/projects/<any folder>/` before `lag`.
+
+### The README's screenshots
+
+`stage-screenshots.sh $D` stages three made-up projects (acme-shop,
+weather-api, docs-site) with seeded boards and notes, the demo's `session.json`
+restoring all three, and a worker cap of 2, so a third start queues. It
+copies your Claude login into the demo's HOME, so the demo's main and workers
+answer for real; delete `$D` afterwards. Build first, start weston as above, and
+run `launch-demo.sh $D`. Give acme-shop's main a short read-only task that starts
+three workers, then take each picture with DevTools `Page.captureScreenshot`
+on port 9433, pressing keys with `keys()` from `demo-instance.mjs`.
 
 ## How to read the numbers
 
