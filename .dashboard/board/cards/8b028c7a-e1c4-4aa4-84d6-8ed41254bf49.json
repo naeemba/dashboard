@@ -5,7 +5,13 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:02:28.904Z",
-  "updatedAt": "2026-11-27T11:02:28.905Z",
+  "updatedAt": "2026-11-27T11:04:44.549Z",
+  "comments": [
+    {
+      "at": "2026-11-27T11:04:44.549Z",
+      "body": "Report: docs/research/claude-releases-2026-09-27-to-11-27.md (PR #409)."
+    }
+  ],
   "column": "Backlog",
   "order": 57
 }
