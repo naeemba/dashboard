@@ -1,0 +1,11 @@
+{
+  "id": "40fe0e2e-68f5-4025-8813-b90435c38efa",
+  "title": "Flag a worker pane that has gone silent as stalled",
+  "notes": "From the Vercel Board comparison (Vercel's 5-minute claim lease). Today a hung worker, for example one stuck on a test that never ends, sits in Doing and holds a pane-pool slot forever. Do: a heartbeat from what the app already sees (hook events, pty output, turn state); a worker running with no sign of life for N minutes (a setting, default 20) is shown as stalled in pane list/status and the workers popup, and main gets one notice. It keeps its slot and is never killed or released automatically; the user or main decides. Decision module (stalled or not, from the last signs) with a test; workers docs updated.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-27T11:02:34.752Z",
+  "updatedAt": "2026-11-27T11:02:34.752Z",
+  "column": "Backlog",
+  "order": 58
+}
