@@ -54,5 +54,17 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
   };
 }
 
+// Whether this sweep redraws the workers popup: while a worker is stalled, since a stall begins, and
+// its minutes move on, with no hook to mark it; and once on the sweep after the last one ends, which a
+// hook usually marks first but a raised `workers.stallMinutes` does not.
+export function stallRedraws(): (stalled: boolean) => boolean {
+  let stalledLastSweep = false;
+  return (stalled) => {
+    const redraw = stalled || stalledLastSweep;
+    stalledLastSweep = stalled;
+    return redraw;
+  };
+}
+
 // What `pane list` and `pane status` say of the worker in place of `running`.
 export const stalledState = (minutes: number) => `stalled, silent ${minutes} minutes`;

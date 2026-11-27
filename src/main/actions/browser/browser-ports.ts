@@ -1,5 +1,6 @@
 import type { BrowserPlacement, BrowserState, BrowserStep, ViewportSize } from '../../../shared/browser/browser';
 import type { Refused } from '../../../shared/app/bridge';
+import type { BrowserProxy } from '../../../shared/browser/proxy';
 import type { KeyEvent } from '../../browser/page-keys';
 
 // What the browser actions do to the views, handed to them by browser-views.ts, the one module that
@@ -45,4 +46,7 @@ export type BrowserPorts = {
   // The script run in the page once `waitFor` matches, if one is given: the line saying where its
   // answer was saved, or why it was not.
   runScript(id: number, script: string, waitFor: string | null): Promise<string | Refused>;
+  // A new proxy for every project's browser to send its listed hosts through: each session given its
+  // PAC script, with its open connections closed so none is reused past the change.
+  useProxy(proxy: BrowserProxy | null): Promise<void>;
 };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { silentMinutes, stallWatch } from './stall';
+import { silentMinutes, stallRedraws, stallWatch } from './stall';
 
 const MINUTE = 60_000;
 
@@ -58,5 +58,12 @@ describe('stallWatch', () => {
     stalls.forget('2:1');
     expect(said).toEqual(['told', 'withdrawn']);
     expect(stalls.silentFor('2:1')).toBeNull();
+  });
+});
+
+describe('stallRedraws', () => {
+  it('redraws while a worker is stalled and once on the sweep after the last stall ends', () => {
+    const redraws = stallRedraws();
+    expect([false, true, true, false, false].map(redraws)).toEqual([false, true, true, true, false]);
   });
 });

@@ -55,6 +55,13 @@ it over (docs/errors).
 never) is how long a main's browser tab goes unused before that main is asked
 whether it may close it (docs/browser).
 
+`browser.proxy` (default none, written in the file by hand only) is the proxy
+server and the hosts the project browser sends through it, everything else
+direct (docs/browser). It is used as soon as the file is saved. A save from the
+app writes back the file's own block as typed, so one that does not read (a typo
+in the server) is kept for you to fix, not dropped. Reset everything to
+defaults leaves it as it is.
+
 The Budget rows say what `dashboard budget` holds the 7-day usage to. The limit
 row (`budget.limit`, default the weekly cap) walks the weekly cap, the daily pace
 and no limit on Enter. The weekly cap (`budget.weeklyCap`, default not set) is

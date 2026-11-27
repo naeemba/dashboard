@@ -181,7 +181,8 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   startCard(start: CardStart): Promise<{ output: string } | Refused>;
   // Main told, once, of each of its workers at work that has gone silent past the setting (stall.ts).
   // Asked on a timer by main.ts.
-  tellStalls(): void;
+  // Whether any worker is stalled now, listed whether or not main was told.
+  tellStalls(): boolean;
 };
 
 export function sessionRequests(ports: SessionPorts): SessionAnswers {
@@ -619,12 +620,13 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const page = slots.get(slot);
       if (page === undefined || !page.open.includes(index)) return [];
       const said = states.get(id);
+      const row = { id, dispatcher, project: page.name, name: nameOfPane(id), about };
+      // Only a worker at work is ever silent (silentAtWork), so a stall outranks nothing else.
+      const silent = silentAtWork(id);
+      if (silent !== null) return [{ ...row, status: 'stalled' as const, detail: stalledState(silent) }];
       const waiting = said?.waiting;
       const status = workerStatus(mainsWorker(id), said?.state, isPaused(waiting));
-      return [{
-        id, dispatcher, project: page.name, name: nameOfPane(id),
-        about, status, ...(status === 'paused' && isPaused(waiting) && { waiting: waitingText(waiting) }),
-      }];
+      return [{ ...row, status, ...(status === 'paused' && isPaused(waiting) && { detail: waitingText(waiting) }) }];
     });
   }
 
@@ -724,8 +726,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     },
     // Not for a turn you typed into the worker yourself, which you are watching (prompt-source.ts).
     tellStalls() {
+      let any = false;
       for (const id of openPaneIds()) {
         const silent = silentAtWork(id);
+        if (silent !== null) any = true;
         if (silent === null || prompts.fromUser(id)) continue;
         const slot = mainOf(id);
         // Taken back if the worker speaks again before main reads it, as its stop notice is.
@@ -734,6 +738,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
           return () => ports.withdraw(slot, messageId);
         });
       }
+      return any;
     },
     async dropped(id: string) {
       pool.drain();

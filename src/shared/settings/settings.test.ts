@@ -43,10 +43,16 @@ describe('parseSettings', () => {
   });
 
   it('asks about an agent\'s tab after 30 idle minutes, the minutes the file names, or never for null', () => {
-    expect(parseSettings({}, false).browser).toEqual({ idleMinutes: 30 });
-    expect(parseSettings({ browser: { idleMinutes: 90 } }, false).browser).toEqual({ idleMinutes: 90 });
-    expect(parseSettings({ browser: { idleMinutes: null } }, false).browser).toEqual({ idleMinutes: null });
-    for (const rubbish of [0, -5, '30']) expect(parseSettings({ browser: { idleMinutes: rubbish } }, false).browser).toEqual({ idleMinutes: 30 });
+    expect(parseSettings({}, false).browser.idleMinutes).toBe(30);
+    expect(parseSettings({ browser: { idleMinutes: 90 } }, false).browser.idleMinutes).toBe(90);
+    expect(parseSettings({ browser: { idleMinutes: null } }, false).browser.idleMinutes).toBeNull();
+    for (const rubbish of [0, -5, '30']) expect(parseSettings({ browser: { idleMinutes: rubbish } }, false).browser.idleMinutes).toBe(30);
+  });
+
+  it('proxies nothing unless the file names a server and its hosts', () => {
+    expect(parseSettings({}, false).browser.proxy).toBeNull();
+    expect(parseSettings({ browser: { proxy: { server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] } } }, false).browser.proxy)
+      .toEqual({ server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] });
   });
 
   it('caps the workers at 4 a project and 8 in all unless the file names a whole number or none', () => {
@@ -369,13 +375,15 @@ describe('isPort', () => {
 });
 
 describe('resetAll', () => {
-  it('keeps the token and the remote, and resets the port and the bind to loopback', () => {
+  it('keeps the token, the remote and the proxy, and resets the port and the bind to loopback', () => {
     const settings = parseSettings({
       host: { port: 7777, token: 'abc', bind: '0.0.0.0' }, remote: { address: '10.0.0.2:7777', token: 'xyz' }, weatherPlace: 'Oslo',
+      browser: { proxy: { server: 'socks5://127.0.0.1:1080', hosts: ['*.instacoins.travel'] } },
     }, true);
     const reset = resetAll(settings, true);
     expect(reset.host).toEqual({ port: null, token: 'abc', bind: '127.0.0.1' });
     expect(reset.remote).toEqual(settings.remote);
+    expect(reset.browser.proxy).toEqual(settings.browser.proxy);
     expect(reset.weatherPlace).toBe(defaultSettings(true).weatherPlace);
   });
 

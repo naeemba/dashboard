@@ -5,7 +5,23 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-27T11:54:30.473Z",
-  "updatedAt": "2026-11-27T11:54:30.473Z",
-  "column": "Backlog",
-  "order": 9
+  "updatedAt": "2026-11-27T13:28:49.272Z",
+  "branch": "decide-idle-compaction-for-worker-sessions",
+  "pullRequest": 420,
+  "comments": [
+    {
+      "at": "2026-11-27T13:04:30.847Z",
+      "body": "Overlap: PR #419 (Pane pool cap per project) also edits src/main/workers/dispatch.ts, dispatch.test.ts, docs/workers/decisions.md and history.md. Different hunks: #419 changes mainPrompt's pane-start usage and workers-decision-11; this card changes appSessionSettings (line ~76), adds a test in the appSessionSettings describe, and a bullet under workers-decision-12. Likely only a history.md append conflict."
+    },
+    {
+      "at": "2026-11-27T13:09:33.669Z",
+      "body": "Pull request #420 opened: Turn idle compaction off for worker sessions https://github.com/naeemba/dashboard/pull/420"
+    },
+    {
+      "at": "2026-11-27T13:28:49.271Z",
+      "body": "Review loop: 1 round, floor-addressed; CI green on head c1a2c2a5. Converged, ready to merge, with one open choice: the reviewer asked for idle compaction to be its own decision (workers-decision-14); that fix (3ba995cc) was reverted for citing Claude Code 2.1.290 instead of 2.1.299, so the branch keeps the card's one bullet under workers-decision-12. Accepted fix 483f99fe: dispatch.ts comment reorder, chat-sessions.ts comment names idle compaction. Step 1 printed 'was ready'; PR marked ready again."
+    }
+  ],
+  "column": "Review",
+  "order": 6
 }
