@@ -5,8 +5,11 @@ import type { QueueEntry } from '../../workers/pane-pool';
 import type { SavedQueue } from '../../workers/pane-queue-store';
 import { panePool, type PaneQueuePorts } from './queue';
 
-// One open project, api, with `running` workers holding slots under a cap of 2. A start settles when
-// the test says: `finish(id)` resolves the start of that queue id.
+// A total cap of `total`, no cap per project.
+const total = (cap: number) => () => ({ project: null, total: cap });
+
+// One open project, api, with `running` workers holding slots under a total cap of 2. A start settles
+// when the test says: `finish(id)` resolves the start of that queue id.
 function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueue = { next: 1, entries: [] }) {
   const counts = { running: 0, unreadable: false };
   const told: string[] = [];
@@ -18,8 +21,10 @@ function pool(over: Partial<Omit<PaneQueuePorts, 'pool'>> = {}, saved: SavedQueu
   const board: Board = { columns: emptyBoard().columns.map((column, at) => (at === 0 ? { ...column, cards: [{ id: 'a', title: 'A', notes: '', priority: 'medium' as const, parent: null }] } : column)) };
   const actions = panePool(saved, {
     save: (each) => { saves.push(structuredClone(each)); },
-    running: () => counts.running,
-    cap: () => 2,
+    running: () => new Map([['/work/api', counts.running]]),
+    cap: total(2),
+    worker: () => null,
+    holds: () => false,
     budget: () => null,
     open: () => true,
     board: () => board,
@@ -89,7 +94,7 @@ describe('pane.start', () => {
     actions.ready();
     void start();
     void start();
-    await expect(start({ first: false })).resolves.toEqual({ output: 'queued q3, 1st: 2 running, the cap is 2' });
+    await expect(start({ first: false })).resolves.toEqual({ output: 'queued q3, 1st: 2 running, the total cap is 2' });
     expect(begun).toEqual(['q1', 'q2']);
     expect(saves.at(-1)?.entries.map((each) => each.id)).toEqual(['q3']);
     // q1's agent is in its pane now, still holding the slot its start held.
@@ -105,16 +110,16 @@ describe('pane.start', () => {
   });
 
   it('puts --first at the head of the queue', async () => {
-    const { actions, start } = pool({ cap: () => 0 });
+    const { actions, start } = pool({ cap: total(0) });
     actions.ready();
     await start();
-    await expect(start({ first: true })).resolves.toEqual({ output: 'queued q2, 1st: 0 running, the cap is 0' });
+    await expect(start({ first: true })).resolves.toEqual({ output: 'queued q2, 1st: 0 running, the total cap is 0' });
     const listed = await actions.queue.call({});
-    expect('output' in listed && listed.output.split('\n').map((line) => line.split('\t')[0])).toEqual(['q2', 'q1', 'held: 0 running, the cap is 0']);
+    expect('output' in listed && listed.output.split('\n').map((line) => line.split('\t')[0])).toEqual(['q2', 'q1', 'held: 0 running, the total cap is 0']);
   });
 
   it('tells a queued start\'s main when it did not start, and refuses a card queued twice', async () => {
-    const { actions, start, finish, told } = pool({ cap: () => 1 });
+    const { actions, start, finish, told } = pool({ cap: total(1) });
     actions.ready();
     void start();
     await start({ cardId: 'a', work: { kind: 'ship', title: 'A' } });
@@ -125,7 +130,7 @@ describe('pane.start', () => {
   });
 
   it('drops a card finished while it waited, and tells its main', async () => {
-    const { actions, start, told, board, begun, gone } = pool({ cap: () => 0 });
+    const { actions, start, told, board, begun, gone } = pool({ cap: total(0) });
     actions.ready();
     await start({ cardId: 'a', work: { kind: 'ship', title: 'A' } });
     board.columns[5].cards.push(board.columns[0].cards.splice(0, 1)[0]);
@@ -173,7 +178,7 @@ describe('pane.start', () => {
 
 describe('the pool\'s other doors', () => {
   it('puts a withdrawn card back in the column its move took it from, through card.move', async () => {
-    const { actions, start, moves, board, gone } = pool({ cap: () => 0 });
+    const { actions, start, moves, board, gone } = pool({ cap: total(0) });
     actions.ready();
     board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
     await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
@@ -183,7 +188,7 @@ describe('the pool\'s other doors', () => {
   });
 
   it('says so when the move back is refused, and leaves a card the move did not queue alone', async () => {
-    const { actions, start, moves, board } = pool({ cap: () => 0, move: async () => ({ refused: 'board files do not parse' }) });
+    const { actions, start, moves, board } = pool({ cap: total(0), move: async () => ({ refused: 'board files do not parse' }) });
     actions.ready();
     board.columns[2].cards.push(board.columns[0].cards.splice(0, 1)[0]);
     await start({ cardId: 'a', returnTo: { from: 'Todo', into: 'Ship' }, work: { kind: 'ship', title: 'A' } });
@@ -200,12 +205,23 @@ describe('the pool\'s other doors', () => {
     await expect(actions.unqueue.call({ id: 'q1', dispatcherPath: '/work/api' })).resolves.toEqual({ refused: 'q1 is already starting' });
   });
 
-  it('says why a start that never queues is refused at the cap', async () => {
-    const { actions, start } = pool({ cap: () => 1 });
+  it('holds a project at its own cap while another project\'s entry goes ahead, under the total', async () => {
+    const { actions, start, counts, begun } = pool({ cap: () => ({ project: 1, total: 3 }) });
     actions.ready();
-    expect(actions.full()).toBeNull();
+    counts.running = 1;
+    await expect(start()).resolves.toEqual({ output: 'queued q1, 1st: q1 waits for a slot: 1 running in api, the cap per project is 1' });
+    void start({ projectPath: '/work/crm' });
+    expect(begun).toEqual(['q2']);
+    expect(actions.full('/work/api')).toBe('1 running in api, the cap per project is 1: pane start queues the work until a worker frees');
+    expect(actions.full('/work/crm')).toBe('1 running in crm, the cap per project is 1: pane start queues the work until a worker frees');
+  });
+
+  it('says why a start that never queues is refused at the cap', async () => {
+    const { actions, start } = pool({ cap: total(1) });
+    actions.ready();
+    expect(actions.full('/work/api')).toBeNull();
     void start();
-    expect(actions.full()).toBe('1 running, the cap is 1: pane start queues the work until a worker frees');
+    expect(actions.full('/work/api')).toBe('1 running, the total cap is 1: pane start queues the work until a worker frees');
   });
 
   it('withdraws an entry for the main that queued it only, and lists an empty queue', async () => {

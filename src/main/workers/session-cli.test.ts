@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conflictedLine, conflictedWords, hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
+import { ciWords, conflictedLine, conflictedWords, hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -222,6 +222,22 @@ describe('outsidePaneRefusal', () => {
 
   it('refuses landed, which no main outside a pane asks', () => {
     expect(outsidePaneRefusal({ kind: 'landed', by: 'branch', name: 'fix-it', from: null })).not.toBeNull();
+  });
+});
+
+describe('a CI wait from pr wait and pr land', () => {
+  // Main's chat has no pane of its own, and a plain terminal none at all: neither asks the pool.
+  it('asks from the pane it ran in, and nothing outside one', () => {
+    expect(ciWords('wait', '2:1')).toEqual(['ci', '2:1', 'wait']);
+    expect(ciWords('resume', undefined)).toBeNull();
+    expect(ciWords('resume', 'nonsense')).toBeNull();
+  });
+
+  it('reads the words back as the pane\'s', () => {
+    expect(parseSessionCommand(['ci', '2:1', 'wait'])).toEqual({ ok: true, command: { kind: 'ci-wait', id: '2:1' } });
+    expect(parseSessionCommand(['ci', '2:1', 'resume'])).toEqual({ ok: true, command: { kind: 'ci-resume', id: '2:1' } });
+    expect(parseSessionCommand(['ci', '2:1'])).toMatchObject({ ok: false });
+    expect(parseSessionCommand(['ci'])).toMatchObject({ ok: false });
   });
 });
 

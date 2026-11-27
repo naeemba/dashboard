@@ -37,6 +37,9 @@ export type SessionCommand =
   // What `pr land` asks when the pull request conflicts with its base: the agent on that branch sent
   // /pr-conflicts, never the pane `from` names, which is the land itself.
   | { kind: 'conflicted'; branch: string; pullRequest: string; from: string | null }
+  // What `pr wait` and `pr land` ask, in the pane they run in, before they wait on the checks and once
+  // they are done (workers-decision-11): its slot given back, then asked for again.
+  | { kind: 'ci-wait' | 'ci-resume'; id: string }
   // `waiting` is what a Stop hook said its session waits on, when it said so; `told` the rest a hook's
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold };
@@ -74,6 +77,7 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane status
   pane landed --branch <branch> | --card <card id> [--from <id>]
   pane conflicted <branch> <pull request> [--from <id>]
+  pane ci <id> wait|resume
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
 start starts a worker now when fewer than the cap (settings workers.cap, 4) are running and nothing
@@ -108,6 +112,9 @@ something keeps (the keyboard, a question, mid-turn, typed into by you, or no ma
 conflicted is what pr land runs when the pull request conflicts with its base: it sends
 /pr-conflicts <pull request> to the first agent on that branch, never the pane --from names, and
 prints \`sent /pr-conflicts <pull request> to <id>\`, or nothing when no agent is on it.
+ci is what pr wait and pr land run around their wait on the checks: with wait, a worker waiting
+only on CI gives its slot back; with resume, it answers once the slot is back, at the head of the
+queue. In a pane that is no main's worker they change nothing and answer at once.
 notify is what a worker's hooks call: --stop-input reads Claude
 Code's Stop hook input for how many background tasks and wakeups the session still waits on and its
 last message, --prompt-input the prompt hook's for who put the prompt in. list --all lists the panes
@@ -351,6 +358,12 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       const id = paneId(rest[0], verb);
       return typeof id === 'string' ? { ok: true, command: { kind: verb, id } } : id;
     }
+    case 'ci': {
+      const id = paneId(rest[0], 'ci');
+      if (typeof id !== 'string') return id;
+      if (rest.length !== 2 || (rest[1] !== 'wait' && rest[1] !== 'resume')) return refuse('pane ci takes a pane id, then wait or resume');
+      return { ok: true, command: { kind: rest[1] === 'wait' ? 'ci-wait' : 'ci-resume', id } };
+    }
     case 'landed': {
       const [flag, name = '', ...more] = rest;
       const from = fromFlag(more);
@@ -387,6 +400,12 @@ const fromWords = (from: string | undefined): string[] => (from === undefined ? 
 // The words `pr land` and a board move ask `pane landed` in, from the pane they ran in when there is one.
 export function landedWords(by: 'branch' | 'card', name: string, from: string | undefined): string[] {
   return ['landed', `--${by}`, name, ...fromWords(from)];
+}
+
+// The words `pr wait` and `pr land` ask pane.ci-wait or pane.ci-resume in, from the pane they run in,
+// or null outside one: a plain terminal holds no slot.
+export function ciWords(phase: 'wait' | 'resume', from: string | undefined): string[] | null {
+  return from === undefined || !PANE_ID.test(from) ? null : ['ci', from, phase];
 }
 
 // The words `pr land` asks `pane conflicted` in, as landedWords.

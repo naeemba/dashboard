@@ -12,7 +12,7 @@ const settled = () => new Promise((resolve) => setImmediate(resolve));
 
 function capped(cap: number) {
   const fake = project();
-  fake.ports.pool = { ...fake.ports.pool, cap: () => cap };
+  fake.ports.pool = { ...fake.ports.pool, cap: () => ({ project: null, total: cap }) };
   const answer = sessionRequests(fake.ports);
   answer.pool.ready();
   const ask = (args: string[]) => answer({ directory: '/work/api', args });
@@ -29,8 +29,8 @@ describe('pane start', () => {
   it('queues past the cap, refuses run there, and starts the queued one when a worker is done', async () => {
     const { ask, answer, started, told } = capped(1);
     await ask(['start', 'first task']);
-    expect(await ask(['start', 'second task'])).toEqual({ ok: true, output: 'queued q2, 1st: 1 running, the cap is 1' });
-    expect(await ask(['run', '2:1', 'more'])).toEqual({ ok: false, output: '1 running, the cap is 1: pane start queues the work until a worker frees' });
+    expect(await ask(['start', 'second task'])).toEqual({ ok: true, output: 'queued q2, 1st: 1 running, the total cap is 1' });
+    expect(await ask(['run', '2:1', 'more'])).toEqual({ ok: false, output: '1 running, the total cap is 1: pane start queues the work until a worker frees' });
     expect((await ask(['queue'])).output).toMatch(/^q2\t1st\tapi\trun second task\t/);
     // Blocked on a question, it still holds its slot.
     answer.notify('2:1', 'blocked');
@@ -86,9 +86,36 @@ describe('a ship or a review the board command starts', () => {
   it('belongs to the main of the page the command ran in, else to the card\'s project\'s', async () => {
     const { answer, ask } = capped(0);
     const ship = { projectPath: '/work/crm', cardId: 'c', after: null, first: false, returnTo: null, work: { kind: 'ship', title: 'C' } } as const;
-    expect(await answer.startCard({ ...ship, askedFrom: '/work/api/packages' })).toEqual({ output: 'queued q1, 1st: 0 running, the cap is 0' });
-    expect(await answer.startCard({ ...ship, cardId: 'd', askedFrom: null })).toEqual({ output: 'queued q2, 2nd: 0 running, the cap is 0' });
+    expect(await answer.startCard({ ...ship, askedFrom: '/work/api/packages' })).toEqual({ output: 'queued q1, 1st: 0 running, the total cap is 0' });
+    expect(await answer.startCard({ ...ship, cardId: 'd', askedFrom: null })).toEqual({ output: 'queued q2, 2nd: 0 running, the total cap is 0' });
     expect(await ask(['unqueue', 'q1'])).toEqual({ ok: true, output: 'withdrew q1' });
     expect(await ask(['unqueue', 'q2'])).toEqual({ ok: false, output: 'q2 was queued by another project\'s main' });
+  });
+});
+
+describe('a CI wait', () => {
+  it('gives a paused worker\'s slot back, and takes it back ahead of the queue once CI is done', async () => {
+    const { ask, answer, started } = capped(1);
+    await ask(['start', 'first task']);
+    await ask(['start', 'second task']);
+    expect(await ask(['ci', '2:1', 'wait'])).toEqual({ ok: true, output: '' });
+    // Its turn ends with the wait in the background: the slot goes to the queued start.
+    answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
+    await settled();
+    expect(started).toMatchObject([{ id: '2:1' }, { id: '2:2', prompt: 'second task' }]);
+    let back = false;
+    void ask(['ci', '2:1', 'resume']).then(() => { back = true; });
+    await settled();
+    expect(back).toBe(false);
+    answer.notify('2:2', 'done', NOTHING_WAITING);
+    await settled();
+    expect(back).toBe(true);
+  });
+
+  // workers-decision-11: main's own `pr wait` and `pr land` never wait on the pool, however full.
+  it('changes nothing for main and never holds its resume', async () => {
+    const { ask } = capped(0);
+    expect(await ask(['ci', '2:0', 'wait'])).toEqual({ ok: true, output: '' });
+    expect(await ask(['ci', '2:0', 'resume'])).toEqual({ ok: true, output: '' });
   });
 });

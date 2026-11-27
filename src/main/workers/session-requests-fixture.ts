@@ -92,7 +92,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     pool: {
       saved: { next: 1, entries: [] },
       save: () => undefined,
-      cap: () => 4,
+      cap: () => ({ project: 4, total: 8 }),
       budget: () => null,
       board: () => null,
       drainBoard: () => null,

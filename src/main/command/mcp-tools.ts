@@ -144,6 +144,7 @@ export const COMMAND_ONLY: Record<string, string> = {
   'pane notify': 'a hook a worker\'s settings call',
   'pane landed': 'what pr land and a board move into Done or Cancelled run themselves',
   'pane conflicted': 'what pr land runs itself when a pull request conflicts',
+  'pane ci': 'what pr wait and pr land run themselves around their wait on CI',
   'project init': 'written once, on a machine with no projects.yaml',
   'project remove': 'rare, and asked for by a person',
   'pr land': LAND_IN_BASH,

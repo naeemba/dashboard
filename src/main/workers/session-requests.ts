@@ -238,6 +238,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     notices.forget(id);
     lastMessages.delete(id);
     prompts.forget(id);
+    pool.forget(id);
   };
   const notices = stopNotices({
     midTurn: (id) => midTurn(mainOf(id)),
@@ -509,14 +510,27 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered('');
   }
 
-  // The open panes holding one of the pool's slots.
-  const holding = () => openPaneIds().filter((id) => {
+  // Whether the pane holds one of the pool's slots.
+  const holds = (id: string): boolean => {
     const said = states.get(id);
-    return holdsSlot({ mainsWorker: mainsWorker(id), state: said?.state, paused: isPaused(said?.waiting), workIn: workIn(id) });
-  }).length;
+    return holdsSlot({ mainsWorker: mainsWorker(id), state: said?.state, waiting: said?.waiting, workIn: workIn(id), ciWaits: pool.ciWaits(id) });
+  };
+  // The project of the page a main's worker is on, the one its slot counts against. Main is never one.
+  const workerPage = (id: string): string | null => (paneFromId(id).index !== MAIN_INDEX && mainsWorker(id) ? paneProject(id) ?? null : null);
+  // The open panes holding a slot, by the project of the page each is on.
+  const holding = (): Map<string, number> => {
+    const running = new Map<string, number>();
+    for (const id of openPaneIds()) {
+      const page = workerPage(id);
+      if (page !== null && holds(id)) running.set(page, (running.get(page) ?? 0) + 1);
+    }
+    return running;
+  };
   const pool = panePool(ports.pool.saved, {
     ...ports.pool,
     running: holding,
+    worker: workerPage,
+    holds,
     open: (projectPath) => ports.slotOf(projectPath) !== -1,
     begin: (entry) => (entry.work.kind === 'run' ? startRun(entry.dispatcherPath, entry.work) : ports.pool.beginCard(entry, entry.work)),
     tell(dispatcherPath, text) {
@@ -650,7 +664,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'unqueue': return sessionReply(await pool.unqueue.call({ id: command.id, dispatcherPath: projectPath }));
         case 'run': {
           // The cap holds for a pane main already holds as well; pane start queues past it.
-          const full = pool.full();
+          const full = pool.full(projectPath ?? '');
           if (full !== null) return refused(full);
           // --in is typed relative to where the command ran, main's own folder most often.
           const folder = command.folder === null ? null : path.resolve(request.directory, command.folder);
@@ -662,6 +676,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'status': return await status(slot, projectPath ?? '');
         case 'landed': return await landed(slot, projectPath ?? '', command.by, command.name, command.from);
         case 'conflicted': return await conflicted(slot, projectPath ?? '', command.branch, command.pullRequest, command.from);
+        case 'ci-wait': return sessionReply(await pool.ciWait.call({ id: command.id }));
+        case 'ci-resume': return sessionReply(await pool.ciResume.call({ id: command.id }));
       }
     } catch (error: unknown) {
       return refused(`session ${command.kind} failed: ${failureText(error)}`);
