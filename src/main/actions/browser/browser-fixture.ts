@@ -37,6 +37,9 @@ export function fakePorts(
     isFile: async (file) => files.includes(file),
     tellMain: (slot, text) => { done.push(`tell ${slot} ${text.split('\n')[0]}`); },
     mainOf: () => 5,
+    useProxy: async (next) => {
+      done.push(`proxy ${next === null ? 'direct' : next.server}`);
+    },
     act: async (tab, act) => { done.push(`${act.kind} ${tab} ${JSON.stringify({ ...act, kind: undefined })}`); },
   };
 }
