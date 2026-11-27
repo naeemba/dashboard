@@ -43,7 +43,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   asked by `pr land`
 - Resume: `pane-sessions.ts`, `claude-resume.ts`, `resume-ledger.ts`
 - What each main dispatched, as its status line and workers popup read it:
-  `worker-roster.ts`, `pane-link.ts`
+  `worker-roster.ts`, `pane-link.ts`; the pane pool's queue in the same popup,
+  `queued` and `unqueue` in `session-requests.ts`, drawn by
+  `src/renderer/chat/chat-workers-view.ts` (workers-decision-11)
 - The app's index of every Claude it started: `session-index.ts`,
   `session-index-store.ts` (listed by the [drawer](../drawer/README.md))
 - A worker's Claude screen, the `pane run` default off Windows:
@@ -127,6 +129,7 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   than refusing itself as already queued.
 - Given main ran `board move <id> Ship` from Todo and the ship is queued as q7, when main runs
   `pane unqueue q7`, then it answers `withdrew q7; card … back in Todo` and the card is in Todo.
+  D on q7 in main's workers popup does the same.
 - Given a card dragged on the board from Todo into Ship and the ship queued, when main withdraws
   it, then the card is back in Todo, the same as a move made with the command.
 - Given a weekly cap set and the 7-day usage at or over it, when a slot frees,

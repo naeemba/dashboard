@@ -104,6 +104,8 @@ describe('helpSections', () => {
           // against — they belong to `UNBOUND_SHORTCUTS`, and 'leaves a screen its own unbound keys'
           // below checks those instead.
           if (UNBOUND_SHORTCUTS[mode]?.some((row) => row.keys === shortcut.keys)) continue;
+          // The workers popup's own keys, which it matches itself while it holds the keyboard.
+          if (ACTIONS.some((entry) => entry.scope === 'workers' && entry.description === shortcut.action)) continue;
           // A collapsed family names its first and last key; both ends must work.
           for (const text of shortcut.keys.split('…')) {
             const stroke = parseBinding(text);

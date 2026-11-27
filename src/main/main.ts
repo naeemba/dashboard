@@ -153,7 +153,13 @@ const settingsDoors = settingsActions(table, {
   file: settingsFile, isMac, current: () => settings,
   writeFile: (next) => writeSettings(settingsFile, next, isMac),
   pickShell: shellFor,
-  keep(next, shell) { settings = next; shellCommand = shell; },
+  // A raised cap starts what waits at once; compared first, since the launch's own write runs before
+  // workerAnswers exists and never changes the cap.
+  keep(next, shell) {
+    const capChanged = next.workers.cap !== settings.workers.cap;
+    settings = next; shellCommand = shell;
+    if (capChanged) workerAnswers.pool.drain();
+  },
   tell: (next, shell) => liveWindow()?.webContents.send('settings:change', { settings: next, shellCommand: shell }),
 });
 keepHostToken(settings, (made) => { void settingsDoors.write.call({ settings: made }); });
@@ -674,12 +680,14 @@ registerProjectChannels(table, project, {
 const workerAnswers = sessionRequests(sessionRequestPorts({
   projects, readings: slotReadings, commands: terminalCommands, mainsWorkers, workerScreens,
   openProject: project.openForClaim, pane, worktrees, reviews, giveCardPane, sendToRenderer, browser, chats, worktree,
-  hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
+  hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool, () => sendToRenderer('workers:queue-change')),
   stallMinutes: () => settings.workers.stallMinutes,
 }));
 setInterval(() => workerAnswers.tellStalls(), STALL_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
+table.handle('workers:queue', () => workerAnswers.queued());
+table.handle('workers:unqueue', (_screen, slot: number, id: string) => workerAnswers.unqueue(slot, id));
 const answerSession = browser.requests(projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));
 // Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
 // kept would get a fresh shell over one it already has. They wait on the scope check too (panesReady),

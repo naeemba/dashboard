@@ -52,10 +52,10 @@ export const BLURBS: Record<Mode | ActionGroup, string> = {
     + 'how it exited and the last line it printed; the other key types it into a free shell in each, '
     + 'where it prints as it goes. The last line is a guess, and the command and its results '
     + 'are gone on restart.',
-  claude: 'Claude Code as a page: tables, code, diffs, tool calls the unfold key opens; the link key '
-    + 'follows links. A slash lists commands, @ files; the agents and workflow keys open them, the '
-    + 'attachments key walks attached images, Delete removes one. The foot shows usage and cache '
-    + 'warmth, the context key lists it; a click changes model, mode or effort.',
+  claude: 'Claude Code as a page: tables, code, diffs, tool calls the unfold key opens. A slash lists '
+    + 'commands, @ files; the agents and workflow keys open them. The workers key lists workers, then '
+    + 'queued starts the withdraw key takes out. The foot shows usage and cache warmth, the context '
+    + 'key lists it; a click changes model, mode or effort.',
   sections: 'The manager is five screens under one strip of names; two of these keys walk it from any '
     + 'of them, since the arrows belong to the board and the notes. The refresh key reads the four '
     + 'cards above the strip now rather than at the next half hour.',

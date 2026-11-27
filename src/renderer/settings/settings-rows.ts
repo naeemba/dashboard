@@ -1,5 +1,5 @@
 import { ACTIONS, type ActionGroup } from '../../shared/keys/actions';
-import { BUDGET_LIMITS, isOn, TOGGLES, type BudgetLimit, type Settings, type ToggleName } from '../../shared/settings/settings';
+import { BUDGET_LIMITS, isOn, TOGGLES, workerCap, type BudgetLimit, type Settings, type ToggleName } from '../../shared/settings/settings';
 
 // The settings with one toggle turned over. The section is spread so a field beside the toggle survives.
 export function toggled(settings: Settings, name: ToggleName): Settings {
@@ -18,6 +18,13 @@ export function nextBudgetLimit(settings: Settings): Settings {
 export function withBudgetPercentage(settings: Settings, field: 'weeklyCap' | 'dailyShare', value: number | null): Settings {
   const limit = value === null ? settings.budget.limit : field === 'weeklyCap' ? 'cap' : 'pace';
   return { ...settings, budget: { ...settings.budget, [field]: value, limit } };
+}
+
+// The workers row typed into: a whole number from 1, or empty for no cap. Null for anything else,
+// which the screen refuses.
+export function withWorkerCap(settings: Settings, text: string): Settings | null {
+  const cap = text === '' ? null : workerCap(Number(text));
+  return cap === undefined ? null : { ...settings, workers: { ...settings.workers, cap } };
 }
 
 const LIMIT_NAMES: Record<BudgetLimit, string> = { cap: 'the weekly cap', pace: 'the daily pace', none: 'no limit' };
@@ -42,6 +49,8 @@ export type SettingsRow =
   // The weekly cap and the daily pace: a percentage, or empty for what `empty` names.
   | { kind: 'budget-percentage'; field: 'weeklyCap' | 'dailyShare'; noun: string; empty: string; label: string; value: string }
   | { kind: 'toggle'; name: ToggleName; label: string; value: string }
+  // workers.cap: a whole number, or empty for no cap.
+  | { kind: 'worker-cap'; label: string; value: string }
   | { kind: 'reset-keys'; label: string }
   | { kind: 'reset-all'; label: string };
 
@@ -110,6 +119,8 @@ export function settingsRows(settings: Settings): SettingsRow[] {
     kind: 'budget-percentage', field: 'dailyShare', noun: 'daily share', empty: 'a seventh of the week',
     label: 'Daily pace, % a day since the weekly reset', value: String(dailyShare ?? ''),
   });
+  rows.push({ kind: 'heading', label: 'Workers' });
+  rows.push({ kind: 'worker-cap', label: 'Main\'s workers running at once, across the app', value: String(settings.workers.cap ?? '') });
   rows.push({ kind: 'heading', label: 'Updates' });
   rows.push(toggleRow(settings, 'updates', 'Check for a newer release on launch and every six hours'));
   rows.push({ kind: 'heading', label: 'Errors' });

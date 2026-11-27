@@ -65,14 +65,29 @@ export function workerStatus(agentRunning: boolean, said: WorkerState | undefine
 }
 
 // The status line's button: `3 workers: 2 working, 1 done`, the states in ORDER and only those with a
-// worker in them. Empty when there are none, and the button is not drawn.
-export function workerCount(workers: readonly DispatchedWorker[]): string {
-  if (workers.length === 0) return '';
+// worker in them, then `· 2 queued` for the starts waiting in the pane pool. Empty when there are
+// neither, and the button is not drawn.
+export function workerCount(workers: readonly DispatchedWorker[], queued = 0): string {
   const counts = ORDER.flatMap((status) => {
     const count = workers.filter((worker) => worker.status === status).length;
     return count === 0 ? [] : [`${count} ${status}`];
   });
-  return `${counted(workers.length, 'worker')}: ${counts.join(', ')}`;
+  return [
+    workers.length === 0 ? '' : `${counted(workers.length, 'worker')}: ${counts.join(', ')}`,
+    queued === 0 ? '' : `${queued} queued`,
+  ].filter(Boolean).join(' · ');
+}
+
+// The popup's heading: the count, then only the keys its rows answer, Enter for a worker and the
+// withdraw key (`withdrawKey`, null when unbound) for a queued start.
+export function workersHeading(workers: readonly DispatchedWorker[], queued: number, withdrawKey: string | null): string {
+  const count = workerCount(workers, queued);
+  if (!count) return 'No worker is open';
+  return [
+    count,
+    workers.length === 0 ? '' : 'Enter goes to one',
+    queued === 0 || withdrawKey === null ? '' : `${withdrawKey} withdraws a queued one`,
+  ].filter(Boolean).join(' · ');
 }
 
 // The popup's rows: the states in ORDER, each in the order main gave them. Choosing one answers with
@@ -87,4 +102,27 @@ export function workerRows(workers: readonly DispatchedWorker[], caches: Readonl
       choice: worker.id,
     };
   });
+}
+
+// A start waiting in the pane pool's queue (workers-decision-11), listed under its main's workers.
+// `place` is where it stands in the whole queue, `2nd`: the cap is the app's, so other mains' entries
+// ahead of it count. `about` is what `pane queue` says it starts.
+export type QueuedWorker = { id: string; dispatcher: number; project: string; place: string; about: string; after: string | null };
+
+// The popup's queued rows, in the order main gave them, which is the order they start. Keyed by the
+// entry's id, which the withdraw key hands to pane.unqueue; they have no pane for Enter to go to.
+export function queuedRows(queued: readonly QueuedWorker[]): { key: string; name: string; detail: string }[] {
+  return queued.map((entry) => ({
+    key: entry.id,
+    name: `${entry.project} · ${entry.id}`,
+    detail: [`${entry.place} in line`, entry.after === null ? '' : `after ${entry.after}`, entry.about].filter(Boolean).join(' · '),
+  }));
+}
+
+// What the withdraw key takes on the popup's highlighted row: the queued start it is, or why not.
+export function withdrawTarget(queued: readonly QueuedWorker[], rowKey: string | undefined): { id: string } | { refused: string } {
+  const entry = queued.find((each) => each.id === rowKey);
+  return entry === undefined
+    ? { refused: 'Only a queued start is withdrawn; a running worker is released with pane release.' }
+    : { id: entry.id };
 }

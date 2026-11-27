@@ -68,11 +68,12 @@ typed into either row also makes its row the limit; emptying a row does not.
 
 `workers.cap` (default 4) is how many of main's workers run at once across the
 app; a start past it waits in the pane pool's queue (docs/workers,
-workers-decision-11). A whole number, or `"none"` for no cap. It has no row
-yet and is written in settings.json by hand; a change is taken at once.
+workers-decision-11). A whole number, or `"none"` for no cap; on the screen it
+is the Workers row, a number from 1 or empty for no cap. A change is taken at
+once, and a lower cap stops nothing running.
 `workers.stallMinutes` (default 20) is how long one of them at work goes with
 no hook before it is shown stalled and main is told (docs/workers,
-workers-decision-13); any number above 0, by hand the same way.
+workers-decision-13); any number above 0, written in settings.json by hand.
 
 The window's opacity (`opacity`, default 1) is written in the file by hand only:
 0.7 lets the desktop show through behind the text, from 0.2 up; anything else
