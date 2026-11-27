@@ -155,7 +155,7 @@ const settingsDoors = settingsActions(table, {
   // A raised cap starts what waits at once; compared first, since the launch's own write runs before
   // workerAnswers exists and never changes the cap.
   keep(next, shell) {
-    const capChanged = next.workers.cap !== settings.workers.cap;
+    const capChanged = next.workers.cap !== settings.workers.cap || next.workers.totalCap !== settings.workers.totalCap;
     settings = next; shellCommand = shell;
     if (capChanged) workerAnswers.pool.drain();
   },

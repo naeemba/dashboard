@@ -40,7 +40,7 @@ export function poolPorts(userData: string, settings: () => Settings, cards: Car
       }
       changed();
     },
-    cap: () => settings().workers.cap,
+    cap: () => ({ project: settings().workers.cap, total: settings().workers.totalCap }),
     budget: () => budgetHold(settings().budget, () => budgetVerdict(() => readText(WEEKLY_USAGE_FILE), settings().budget, Date.now())),
     // Off the disk, not the move log's last read: a `board move` into Ship is written plainly and read
     // back by the watcher later, and the drain right after it would see the card where it was before.

@@ -49,13 +49,15 @@ describe('parseSettings', () => {
     for (const rubbish of [0, -5, '30']) expect(parseSettings({ browser: { idleMinutes: rubbish } }, false).browser).toEqual({ idleMinutes: 30 });
   });
 
-  it('caps the workers at 4 unless the file names a whole number or none', () => {
-    expect(parseSettings({}, false).workers).toEqual({ cap: 4 });
-    expect(parseSettings({ workers: { cap: 6 } }, false).workers).toEqual({ cap: 6 });
-    expect(parseSettings({ workers: { cap: 'none' } }, false).workers).toEqual({ cap: null });
+  it('caps the workers at 4 a project and 8 in all unless the file names a whole number or none', () => {
+    expect(parseSettings({}, false).workers).toEqual({ cap: 4, totalCap: 8 });
+    expect(parseSettings({ workers: { cap: 6, totalCap: 10 } }, false).workers).toEqual({ cap: 6, totalCap: 10 });
+    expect(parseSettings({ workers: { cap: 'none', totalCap: 'none' } }, false).workers).toEqual({ cap: null, totalCap: null });
     // How a save from the screen writes none back.
-    expect(parseSettings({ workers: { cap: null } }, false).workers).toEqual({ cap: null });
-    for (const rubbish of [0, -1, 2.5, '6']) expect(parseSettings({ workers: { cap: rubbish } }, false).workers).toEqual({ cap: 4 });
+    expect(parseSettings({ workers: { cap: null, totalCap: null } }, false).workers).toEqual({ cap: null, totalCap: null });
+    for (const rubbish of [0, -1, 2.5, '6']) {
+      expect(parseSettings({ workers: { cap: rubbish, totalCap: rubbish } }, false).workers).toEqual({ cap: 4, totalCap: 8 });
+    }
   });
 
   it('checks for updates unless the file turns it off', () => {

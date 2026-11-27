@@ -44,9 +44,10 @@ export type Settings = {
   // idleMinutes: how long an agent's browser tab goes unused before its agent is asked whether it may
   // close it (docs/browser), null never asking. Written in the file by hand only.
   browser: { idleMinutes: number | null };
-  // cap: how many of main's workers run at once across the app, null for no cap ("none" in the file).
-  // A start past it waits in the pane pool's queue (docs/workers).
-  workers: { cap: number | null };
+  // cap: how many of main's workers run at once in one project, totalCap across every project, each
+  // null for no cap ("none" in the file). A start past either waits in the pane pool's queue
+  // (docs/workers).
+  workers: { cap: number | null; totalCap: number | null };
 };
 
 // The on/off settings: each a boolean in a section of the file, named as [section, field], read by
@@ -94,6 +95,7 @@ export function isFontSize(value: string): boolean {
 }
 
 export const DEFAULT_WORKER_CAP = 4;
+export const DEFAULT_TOTAL_WORKER_CAP = 8;
 
 // A whole number of workers, at least 1, or null for "none": no cap. Null reads as none too, since that
 // is how a save from the screen writes it back. Undefined for anything else, which reads as the default.
@@ -172,7 +174,7 @@ export function defaultSettings(isMac: boolean): Settings {
     errors: { notify: true },
     budget: { limit: 'cap', weeklyCap: null, dailyShare: null },
     browser: { idleMinutes: 30 },
-    workers: { cap: DEFAULT_WORKER_CAP },
+    workers: { cap: DEFAULT_WORKER_CAP, totalCap: DEFAULT_TOTAL_WORKER_CAP },
   };
 }
 
@@ -233,6 +235,7 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
   const storedBudget = asRecord(raw.budget);
   const idleMinutes = asRecord(raw.browser).idleMinutes;
   const storedCap = workerCap(asRecord(raw.workers).cap);
+  const storedTotalCap = workerCap(asRecord(raw.workers).totalCap);
   // A number only: the file never holds a percentage as text.
   const percentage = (stored: unknown): number | null => (typeof stored === 'number' ? budgetPercentage(stored) : null);
   // A toggle the file holds as a boolean, or the shipped one.
@@ -284,7 +287,10 @@ export function parseSettings(stored: unknown, isMac: boolean): Settings {
     browser: {
       idleMinutes: idleMinutes === null || (typeof idleMinutes === 'number' && idleMinutes > 0) ? idleMinutes : defaults.browser.idleMinutes,
     },
-    workers: { cap: storedCap === undefined ? defaults.workers.cap : storedCap },
+    workers: {
+      cap: storedCap === undefined ? defaults.workers.cap : storedCap,
+      totalCap: storedTotalCap === undefined ? defaults.workers.totalCap : storedTotalCap,
+    },
   }, new Set(bindings.filter(({ written }) => written).map(({ entry }) => entry.name)));
 }
 

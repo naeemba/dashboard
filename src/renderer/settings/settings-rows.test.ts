@@ -44,14 +44,15 @@ describe('settingsRows', () => {
     expect(settingsRows(parseSettings({ budget: { weeklyCap: 74 } }, false))).toContainEqual({ ...row, value: '74' });
   });
 
-  it('lists the workers cap, empty for none, and takes a whole number from 1 or empty', () => {
-    const label = 'Main\'s workers running at once, across the app';
-    expect(settingsRows(parseSettings({}, false))).toContainEqual({ kind: 'worker-cap', label, value: '4' });
-    expect(settingsRows(parseSettings({ workers: { cap: 'none' } }, false))).toContainEqual({ kind: 'worker-cap', label, value: '' });
+  it('lists the cap per project and the total, empty for none, and takes a whole number from 1 or empty', () => {
+    const project = { kind: 'worker-cap', field: 'cap', label: 'Main\'s workers running at once, in one project' };
+    const total = { kind: 'worker-cap', field: 'totalCap', label: 'Main\'s workers running at once, across the app' };
+    expect(settingsRows(parseSettings({}, false))).toEqual(expect.arrayContaining([{ ...project, value: '4' }, { ...total, value: '8' }]));
+    expect(settingsRows(parseSettings({ workers: { totalCap: 'none' } }, false))).toContainEqual({ ...total, value: '' });
     const settings = parseSettings({}, false);
-    expect(withWorkerCap(settings, '2')?.workers).toEqual({ cap: 2 });
-    expect(withWorkerCap(settings, '')?.workers).toEqual({ cap: null });
-    expect(['0', '2.5', 'lots'].map((text) => withWorkerCap(settings, text))).toEqual([null, null, null]);
+    expect(withWorkerCap(settings, 'cap', '2')?.workers).toEqual({ cap: 2, totalCap: 8 });
+    expect(withWorkerCap(settings, 'totalCap', '')?.workers).toEqual({ cap: 4, totalCap: null });
+    expect(['0', '2.5', 'lots'].map((text) => withWorkerCap(settings, 'cap', text))).toEqual([null, null, null]);
   });
 
   it('names the limit that applies, and Enter walks the cap, the pace and none in turn', () => {

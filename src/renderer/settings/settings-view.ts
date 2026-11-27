@@ -192,7 +192,7 @@ export function openSettings(
           else commit(withBudgetPercentage(settings, row.field, text === '' ? null : Number(text)));
         } else if (row.kind === 'worker-cap') {
           // A lower cap stops nothing running: starts wait until fewer run (workers-decision-11).
-          const next = withWorkerCap(settings, text);
+          const next = withWorkerCap(settings, row.field, text);
           if (next === null) say(`"${text}" is not a number of workers: a whole number from 1, or empty for no cap.`);
           else commit(next);
         } else {
