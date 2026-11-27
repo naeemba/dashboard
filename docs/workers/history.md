@@ -106,3 +106,5 @@ One line per merged change: date and why.
 - 2026-11-27 — Workers are started with permissions.denyInsteadOfPrompting, so a call that would
   wait on a prompt is refused and shows in the report instead of holding a pool slot
   (workers-decision-12)
+- 2026-11-27 — A terminal worker blocked on a question or a failed turn is told from its OSC 7501
+  status: no hook fires for either, so it read as running until it stalled
