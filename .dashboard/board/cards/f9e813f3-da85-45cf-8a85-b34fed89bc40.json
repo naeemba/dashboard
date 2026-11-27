@@ -5,8 +5,15 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-26T11:52:19.591Z",
-  "updatedAt": "2026-11-27T11:48:50.317Z",
+  "updatedAt": "2026-11-27T11:51:07.547Z",
   "branch": "count-a-pane-whose-shell-failed-to-spawn-as",
-  "column": "Doing",
+  "pullRequest": 413,
+  "comments": [
+    {
+      "at": "2026-11-27T11:51:07.513Z",
+      "body": "Pull request #413 opened: End a pane whose shell failed to spawn, so its worker is released https://github.com/naeemba/dashboard/pull/413"
+    }
+  ],
+  "column": "Review",
   "order": 1
 }
