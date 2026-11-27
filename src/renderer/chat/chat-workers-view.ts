@@ -1,7 +1,7 @@
 import { failureText } from '../../shared/errors/failure';
 import type { DashboardBridge } from '../../shared/app/bridge';
 import { matchesBinding } from '../../shared/keys/binding';
-import { queuedRows, workerCount, workerRows, withdrawTarget, type DispatchedWorker, type QueuedWorker } from '../../shared/workers/worker-roster';
+import { queuedRows, workerCount, workerRows, workersHeading, withdrawTarget, type DispatchedWorker, type QueuedWorker } from '../../shared/workers/worker-roster';
 import { anchoredPopup } from '../app/anchored-popup';
 import { piece } from './chat-foot-view';
 import type { UsageSnapshot } from '../../shared/usage/usage';
@@ -93,10 +93,7 @@ export async function showWorkers(popup: WorkersPopup): Promise<boolean> {
   const cells = (row: { name: string; detail: string }) => [piece('search-name', row.name), piece('search-detail', row.detail)];
   const id = await anchoredPopup({
     name: 'chat-workers', anchor: popup.anchor,
-    heading: () => {
-      const count = workerCount(ofSlot(slot), queuedOf(slot).length);
-      return count ? `${count} · Enter goes to one` : 'No worker is open';
-    },
+    heading: () => workersHeading(ofSlot(slot), queuedOf(slot).length, popup.withdrawKey()),
     sections: () => {
       const queued = queuedOf(slot);
       return [{

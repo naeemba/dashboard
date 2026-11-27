@@ -78,6 +78,18 @@ export function workerCount(workers: readonly DispatchedWorker[], queued = 0): s
   ].filter(Boolean).join(' · ');
 }
 
+// The popup's heading: the count, then only the keys its rows answer, Enter for a worker and the
+// withdraw key (`withdrawKey`, null when unbound) for a queued start.
+export function workersHeading(workers: readonly DispatchedWorker[], queued: number, withdrawKey: string | null): string {
+  const count = workerCount(workers, queued);
+  if (!count) return 'No worker is open';
+  return [
+    count,
+    workers.length === 0 ? '' : 'Enter goes to one',
+    queued === 0 || withdrawKey === null ? '' : `${withdrawKey} withdraws a queued one`,
+  ].filter(Boolean).join(' · ');
+}
+
 // The popup's rows: the states in ORDER, each in the order main gave them. Choosing one answers with
 // its pane id. A worker whose session has used the prompt cache says whether it is still warm, from
 // `caches` (the usage sweep's).

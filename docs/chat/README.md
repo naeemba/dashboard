@@ -368,7 +368,9 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
 - Given main's `pane start` is queued as q7 behind two others, when the workers
   popup opens, then under the workers a Queued section lists `api · q7`, `3rd in
   line · run …`; D on it answers `withdrew q7` on the status bar and the row goes.
-  D on a running worker's row withdraws nothing and says so.
+  D on a running worker's row withdraws nothing and says so. The heading names
+  only the keys its rows answer: Enter with a worker listed, D with a start
+  queued.
 - Given a turn has been measured, when you click the context meter, press Alt+U
   or send `/context`, then a popup opens just above the meter, lined up with its
   right edge, listing each part of the window (system prompt, tools, memory
