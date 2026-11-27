@@ -5,7 +5,7 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-27T13:38:29.808Z",
-  "updatedAt": "2026-11-27T14:14:33.891Z",
+  "updatedAt": "2026-11-27T14:15:33.905Z",
   "branch": "board-files-test-times-out-on-the-windows-c",
   "pullRequest": 422,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-27T14:14:33.891Z",
       "body": "Review loop: floor-addressed after 2 rounds, CI green on the head commit, ready to merge. Step 1 printed 'was ready'. Round 1 commit e40b300e: 60 s timeout on the whole describe('the folder') block, matching the other blocks (cause named as a disk stall, not the writes), on top of the emptyFolderBoard starts. Still open, low: the PR title and description still say the timeout was left alone; retitle them to describe the block timeout."
+    },
+    {
+      "at": "2026-11-27T14:15:33.875Z",
+      "body": "Pull request #422 merged: Give the folder board-files tests the 60 s timeout the other blocks have https://github.com/naeemba/dashboard/pull/422"
     }
   ],
-  "column": "Review",
-  "order": 2
+  "column": "Done",
+  "order": 348
 }
