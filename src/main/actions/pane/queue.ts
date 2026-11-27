@@ -223,6 +223,9 @@ export type PanePoolActions = {
   ciWait: BoundAction;
   ciResume: BoundAction;
   ciWaits(id: string): number;
+  // A Stop hook's count of background tasks: a session has no more live CI waits than that, so a
+  // `pr wait` killed before its resume stops counting here.
+  settle(id: string, background: number): void;
   // A pane run again or let go of: no CI wait it had is its new work's.
   forget(id: string): void;
   // The panes a restart brings back are back: the queue may start what they leave room for, and is
@@ -243,6 +246,12 @@ export function panePool(saved: SavedQueue, main: Omit<PaneQueuePorts, 'pool'>):
     ciWait: bind(paneCiWait, ports),
     ciResume: bind(paneCiResume, ports),
     ciWaits: (id) => ports.pool.ciWaits.get(id) ?? 0,
+    settle: (id, background) => {
+      const waits = ports.pool.ciWaits.get(id);
+      if (waits === undefined || waits <= background) return;
+      if (background > 0) ports.pool.ciWaits.set(id, background);
+      else ports.pool.ciWaits.delete(id);
+    },
     forget: (id) => { ports.pool.ciWaits.delete(id); },
     full: (projectPath) => {
       const full = capReached(taken(ports), ports.cap(), projectPath);

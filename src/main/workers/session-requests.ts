@@ -649,6 +649,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       prompts.prompted(id, told.promptSource, told.handed === true);
       states.delete(id);
     } else states.set(id, { state, waiting });
+    if (state === 'done') pool.settle(id, waiting?.background ?? 0);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
     if (state === 'done' && !isPaused(waiting)) ports.turnEnded(id);
@@ -680,8 +681,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
         case 'queue': return sessionReply(await pool.queue.call({}));
         case 'unqueue': return sessionReply(await pool.unqueue.call({ id: command.id, dispatcherPath: projectPath }));
         case 'run': {
-          // The cap holds for a pane main already holds as well; pane start queues past it.
-          const full = pool.full(projectPath ?? '');
+          // The cap holds for a pane main already holds as well; pane start queues past it. The pane
+          // counts against its page's project, which a claim --project makes another than main's.
+          const full = pool.full(paneProject(command.id) ?? projectPath ?? '');
           if (full !== null) return refused(full);
           // --in is typed relative to where the command ran, main's own folder most often.
           const folder = command.folder === null ? null : path.resolve(request.directory, command.folder);

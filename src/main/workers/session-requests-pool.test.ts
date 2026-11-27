@@ -50,6 +50,25 @@ describe('pane start', () => {
     expect(started).toHaveLength(1);
   });
 
+  // A pane main claimed --project crm counts against crm, the page it is on, as start counts it.
+  it('refuses run into a pane on another project\'s page at that project\'s cap', async () => {
+    const paths = new Map([[2, '/work/api'], [3, '/work/crm']]);
+    const fake = project({
+      slotOf: (directory) => [...paths].find(([, folder]) => directory.startsWith(folder))?.[0] ?? -1,
+      projectPath: (slot) => paths.get(slot),
+      openSlots: () => [{ slot: 2, name: 'api' }, { slot: 3, name: 'crm' }],
+      findProject: (word) => (word === 'crm' ? { ok: true, name: 'crm', path: '/work/crm' } : { ok: false, message: `no project is called ${word}` }),
+      openProject: async () => 3,
+    });
+    fake.ports.pool = { ...fake.ports.pool, cap: () => ({ project: 1, total: 8 }) };
+    const answer = sessionRequests(fake.ports);
+    answer.pool.ready();
+    const ask = (args: string[]) => answer({ directory: '/work/api', args });
+    await ask(['start', '--project', 'crm', 'first task']);
+    const claimed = (await ask(['claim', '--project', 'crm'])).output;
+    expect(await ask(['run', claimed, 'more'])).toMatchObject({ ok: false, output: expect.stringContaining('pane start queues the work') });
+  });
+
   it('releases the pane it claimed for a run that is refused', async () => {
     const { ask, closed } = capped(1);
     expect(await ask(['start', '--card', 'card-9', 'work it'])).toEqual({ ok: false, output: 'card card-9 has no worktree — moving it to Ship makes one' });
@@ -110,6 +129,21 @@ describe('a CI wait', () => {
     answer.notify('2:2', 'done', NOTHING_WAITING);
     await settled();
     expect(back).toBe(true);
+  });
+
+  // A `pr wait` killed before its resume: the next Stop's background count drops it, so the
+  // worker's own background work holds the slot again.
+  it('stops counting a wait the Stop hook no longer sees in the background', async () => {
+    const { ask, answer, started } = capped(1);
+    await ask(['start', 'first task']);
+    await ask(['ci', '2:1', 'wait']);
+    answer.notify('2:1', 'done', NOTHING_WAITING);
+    answer.notify('2:1', 'running');
+    await ask(['start', 'second task']);
+    answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
+    await settled();
+    expect(answer.pool.ciWaits('2:1')).toBe(0);
+    expect(started).toHaveLength(1);
   });
 
   // workers-decision-11: main's own `pr wait` and `pr land` never wait on the pool, however full.
