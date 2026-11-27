@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T12:25:14.751Z",
-  "updatedAt": "2026-11-27T12:25:14.751Z",
-  "column": "Backlog",
-  "order": 11
+  "updatedAt": "2026-11-27T12:25:22.827Z",
+  "branch": "project-browser-send-listed-sites-through-a",
+  "column": "Doing",
+  "order": 4
 }
