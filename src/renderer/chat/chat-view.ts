@@ -22,7 +22,6 @@ import { createMeasures } from './chat-context-view';
 import { followWorkers, showWorkers } from './chat-workers-view';
 import { createCacheClock } from './chat-cache-clock';
 import { screenClick } from './chat-screen-click';
-import { workerCount } from '../../shared/workers/worker-roster';
 import { workingLine, type ChatMeasure, type FootState } from '../../shared/chat/chat-status';
 import {
   afterReset, applyEvent, EMPTY_TRANSCRIPT, preferencesOf, turnTokens, withEarlier, working, type ChatEvent, type ImageType, type Transcript,
@@ -62,6 +61,8 @@ export type ChatViewOptions = {
   showEditor(): void;
   // A pane link or a workers popup row: lands on that pane's page and focuses it, or says it is closed.
   goToPane(id: string): void;
+  // The workers popup's withdraw key as the settings have it, which the popup matches itself.
+  withdrawKey(): string | null;
 };
 
 export type ChatView = {
@@ -199,16 +200,17 @@ export function createChatView(options: ChatViewOptions): ChatView {
     foot.replaceChildren(...footSides(shown, MODE_LABELS[mode], effortShown.label, effortShown.ultrathink, state, measured, cache, transcript.version, workers, measures.button));
   }
   let workers = '';
-  followWorkers(bridge, slot, (list) => {
-    workers = workerCount(list);
+  followWorkers(bridge, slot, (count) => {
+    workers = count;
     drawFoot();
   });
   // The count is drawn only while there is a worker, and the popup opens above it, so with none the
   // key says so instead.
   const openWorkers = (): void => {
     const count = foot.querySelector<HTMLElement>(`.${FOOT_WORKERS}`);
-    if (!count) return options.onNotice('No worker of this session is open.');
-    void showWorkers(bridge, slot, count, options.goToPane).then((landed) => { if (!landed) focus(); });
+    if (!count) return options.onNotice('No worker of this session is open or queued.');
+    void showWorkers({ bridge, slot, anchor: count, withdrawKey: options.withdrawKey, goToPane: options.goToPane, onNotice: options.onNotice })
+      .then((landed) => { if (!landed) focus(); });
   };
   const showContext = (): void => void measures.show(() => foot.querySelector<HTMLElement>(`.${FOOT_CONTEXT}`), () => transcript, select).then(focus);
   foot.addEventListener('click', (event) => {

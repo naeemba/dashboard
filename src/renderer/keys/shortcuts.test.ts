@@ -197,6 +197,12 @@ describe('every shipped default reaches its own action', () => {
           altKey: stroke.alt,
           shiftKey: stroke.shift,
         });
+        // The workers popup matches its own keys; the window's lookup never hears them, so a bare D
+        // still types into the Claude screen's prompt.
+        if (entry.scope === 'workers') {
+          expect(mapShortcut(pressed, keys, 'terminals', false, true), entry.name).not.toEqual(entry.action);
+          continue;
+        }
         // manager-page is not a mode: it is every section of the manager. Driven from its first section,
         // with the flag the renderer passes when the page you are on is the manager.
         // claude is the main session's screen inside the terminals view, heard while it has the keyboard.

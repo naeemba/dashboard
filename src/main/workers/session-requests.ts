@@ -8,7 +8,8 @@ import type { ProjectNamed } from '../projects/project-named';
 import { answered, namesItsTarget, parseSessionCommand, refused, type HookTold, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { Refused, WorkerState } from '../../shared/app/bridge';
-import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
+import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type QueuedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
+import { baseName } from '../../shared/app/base-name';
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
@@ -22,7 +23,7 @@ import { worktreeWithin } from './run-folder';
 import { letGoAndSay, type Throwaway } from '../actions/worktree/throwaway';
 import { statusText, type PaneStatus } from './status-lines';
 import type { OpenPullRequest } from '../board/merge-request';
-import { holdsSlot, type RunWork } from './pane-pool';
+import { entryAbout, holdsSlot, ordinal, type RunWork } from './pane-pool';
 import { panePool, type PanePoolActions } from '../actions/pane/queue';
 import type { CardStart, PoolPorts } from './pane-pool-ports';
 
@@ -144,6 +145,10 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   // with pane send), each naming the slot whose main it reports to: one read serves every page's status
   // line and popup.
   workers(): DispatchedWorker[];
+  // Every start waiting in the pane pool, in the order they start, each naming the slot of the main
+  // that queued it, for the same popup; and its withdrawal by that slot's main, as `pane unqueue`.
+  queued(): QueuedWorker[];
+  unqueue(slot: number, id: string): Promise<{ output: string } | Refused>;
   // The pane stopped being that worker's for good: it closed, or something else started in it. Pane
   // numbers are reused, so without this the next pane at the number is listed as main's worker. Not
   // called when only the agent exits: that worker stays listed, idle, until it is released.
@@ -667,6 +672,14 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     }
   }, {
     workers,
+    queued: () => pool.entries().map((entry, at) => ({
+      id: entry.id, dispatcher: ports.slotOf(entry.dispatcherPath), project: baseName(entry.projectPath),
+      place: ordinal(at + 1), about: entryAbout(entry), after: entry.after,
+    })),
+    unqueue(slot: number, id: string) {
+      const dispatcherPath = ports.projectPath(slot);
+      return dispatcherPath === undefined ? Promise.resolve({ refused: 'that page is not open' }) : pool.unqueue.call({ id, dispatcherPath });
+    },
     notify,
     mainOf,
     pool,

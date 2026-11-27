@@ -69,6 +69,16 @@ describe('pane start', () => {
     expect(await ask(['unqueue', 'q1'])).toEqual({ ok: true, output: 'withdrew q1' });
     expect(await ask(['queue'])).toEqual({ ok: true, output: 'nothing queued' });
   });
+
+  // The workers popup's read of the queue and its withdraw key.
+  it('lists the queue for the popup by the slot that queued it, and withdraws for that slot only', async () => {
+    const { ask, answer } = capped(0);
+    await ask(['start', 'task']);
+    expect(answer.queued()).toEqual([{ id: 'q1', dispatcher: 2, project: 'api', place: '1st', about: 'run task', after: null }]);
+    expect(await answer.unqueue(9, 'q1')).toEqual({ refused: 'that page is not open' });
+    expect(await answer.unqueue(2, 'q1')).toEqual({ output: 'withdrew q1' });
+    expect(answer.queued()).toEqual([]);
+  });
 });
 
 describe('a ship or a review the board command starts', () => {

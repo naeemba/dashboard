@@ -27,7 +27,8 @@ export type CardStart = Omit<PaneStartInput, 'dispatcherPath'> & { askedFrom: st
 // sweep told of a review that will not start.
 export type CardPool = Pick<PoolPorts, 'beginCard' | 'move' | 'gone'>;
 
-export function poolPorts(userData: string, settings: () => Settings, cards: CardPool): PoolPorts {
+// `changed` is told after every save, for the workers popup to read the queue again.
+export function poolPorts(userData: string, settings: () => Settings, cards: CardPool, changed: () => void): PoolPorts {
   const file = path.join(userData, PANE_QUEUE_FILE);
   return {
     saved: readQueue(file),
@@ -37,6 +38,7 @@ export function poolPorts(userData: string, settings: () => Settings, cards: Car
       } catch {
         // The queue is live in this run; it just will not survive a restart.
       }
+      changed();
     },
     cap: () => settings().workers.cap,
     budget: () => budgetHold(settings().budget, () => budgetVerdict(() => readText(WEEKLY_USAGE_FILE), settings().budget, Date.now())),

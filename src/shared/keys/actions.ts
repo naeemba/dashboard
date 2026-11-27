@@ -80,7 +80,7 @@ export type InkCommand = 'pen' | 'eraser' | 'color' | 'width' | 'undo' | 'clear'
 
 // What the Claude screen's own keys ask of it. One action kind for all of them, answered by the chat
 // view, so the renderer passes them on without a case each.
-export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'agents' | 'workflow' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'context' | 'refresh-usage' | 'attachments';
+export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'copy' | 'link' | 'interrupt' | 'model' | 'permission-mode' | 'new' | 'suggestion' | 'task-select' | 'task-stop' | 'task-background' | 'agents' | 'workflow' | 'history' | 'editor' | 'stash' | 'fast' | 'workers' | 'workers-withdraw' | 'context' | 'refresh-usage' | 'attachments';
 
 // Which screens hear the key. `global` is heard everywhere, including while a shell has the keyboard.
 // `terminals`, `board`, `manager`, `command` and `log` are each heard only on their own screen, so the
@@ -95,8 +95,12 @@ export type ChatCommand = 'select-up' | 'select-down' | 'unfold' | 'image' | 'co
 // `notes` is a mode, heard on the notes screen of a project and of the manager alike. `ink` is not: it
 // is the handwriting page of that screen, heard only while that page is the one showing, which only the
 // renderer knows — the same way it alone knows whether the Claude screen holds the keyboard.
+//
+// `workers` is the Claude screen's workers popup. The window's lookup never hears it, as no mode is
+// called that: the popup owns the keyboard while it is up and matches its own row itself, so its key
+// may be a bare letter a prompt would otherwise type.
 export type ActionScope =
-  'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'notes' | 'claude' | 'manager-page' | 'ink' | 'browser';
+  'global' | 'terminals' | 'board' | 'manager' | 'command' | 'log' | 'notes' | 'claude' | 'manager-page' | 'ink' | 'browser' | 'workers';
 
 // Whether two actions can be heard at the same moment, which is the whole of what "these two want the
 // same key" means. Exported because two places ask it and they must not each hold their own idea of
@@ -743,6 +747,11 @@ export const ACTIONS: readonly ActionEntry[] = [
   {
     name: 'claude-workers', description: 'List the workers this session dispatched; Enter goes to one',
     group: 'claude', scope: 'claude', action: { kind: 'chat', command: 'workers' }, mac: 'Alt+W', other: 'Alt+W',
+  },
+  // D, as the worktrees dialog removes a row. Heard only in that popup (the `workers` scope).
+  {
+    name: 'claude-workers-withdraw', description: 'In the workers popup, withdraw the queued start highlighted, as pane unqueue does',
+    group: 'claude', scope: 'workers', action: { kind: 'chat', command: 'workers-withdraw' }, mac: 'D', other: 'D',
   },
   // Alt+U, for usage: what fills the context window, as /context shows it.
   {

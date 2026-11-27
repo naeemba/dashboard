@@ -566,6 +566,7 @@ export function createPageBuilder(options: PageOptions): PageBuilder {
       onNotice: (message) => options.onNotice(`chat:${key}`, message),
       onWaiting: options.onChanged,
       showEditor: () => options.showEditor(page),
+      withdrawKey: () => options.settings().keys['claude-workers-withdraw'] ?? null,
       goToPane(id) {
         if (panesById.has(id)) options.goToPane(id);
         else options.onNotice(`chat:${key}`, `Pane ${id} is not open.`);
