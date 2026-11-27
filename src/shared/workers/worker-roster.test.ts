@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { waitingText, workerAbout, workerCount, workerRows, workerStatus, type DispatchedWorker, type WorkerStatus } from './worker-roster';
+import { queuedRows, waitingText, workerAbout, workerCount, workerRows, workerStatus, type DispatchedWorker, type WorkerStatus } from './worker-roster';
 import { paneLink, splitAtPaneLinks } from './pane-link';
 
 const worker = (id: string, status: WorkerStatus): DispatchedWorker => ({ id, dispatcher: 2, project: 'api', name: `api-${id}`, about: 'go', status });
@@ -9,6 +9,8 @@ describe('worker roster', () => {
     expect(workerCount([])).toBe('');
     expect(workerCount([worker('2:1', 'done')])).toBe('1 worker: 1 done');
     expect(workerCount([worker('2:1', 'done'), worker('2:2', 'working'), worker('2:3', 'working')])).toBe('3 workers: 2 working, 1 done');
+    expect(workerCount([worker('2:1', 'done')], 2)).toBe('1 worker: 1 done · 2 queued');
+    expect(workerCount([], 1)).toBe('1 queued');
   });
 
   it('lists rows by state, keeping the order they came in within each', () => {
@@ -50,5 +52,16 @@ describe('pane links', () => {
     const text = `started api-terminal-2 in 2:1 ${paneLink('2:1')}, then ${paneLink('-2:3')}.`;
     expect(splitAtPaneLinks(text)).toEqual(['started api-terminal-2 in 2:1 ', '2:1', ', then ', '-2:3', '.']);
     expect(splitAtPaneLinks('meet at 2:1')).toEqual(['meet at 2:1']);
+  });
+
+  it('lists queued starts by their place in the whole queue, naming an --after card', () => {
+    const queued = [
+      { id: 'q3', dispatcher: 2, project: 'api', place: '2nd', about: 'run fix the login', after: null },
+      { id: 'q5', dispatcher: 2, project: 'crm', place: '4th', about: 'review a', after: 'b' },
+    ];
+    expect(queuedRows(queued)).toEqual([
+      { key: 'q3', name: 'api · q3', detail: '2nd in line · run fix the login' },
+      { key: 'q5', name: 'crm · q5', detail: '4th in line · after b · review a' },
+    ]);
   });
 });

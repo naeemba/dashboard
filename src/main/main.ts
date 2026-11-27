@@ -673,10 +673,12 @@ registerProjectChannels(table, project, {
 const workerAnswers = sessionRequests(sessionRequestPorts({
   projects, readings: slotReadings, commands: terminalCommands, mainsWorkers, workerScreens,
   openProject: project.openForClaim, pane, worktrees, reviews, giveCardPane, sendToRenderer, browser, chats, worktree,
-  hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool),
+  hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool, () => sendToRenderer('workers:queue-change')),
 }));
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
+table.handle('workers:queue', () => workerAnswers.queued());
+table.handle('workers:unqueue', (_screen, slot: number, id: string) => workerAnswers.unqueue(slot, id));
 const answerSession = browser.requests(projectRequests({ slotOf: slotOfProject, ...project }, actionRequests(cardActionList, workerAnswers)));
 // Every answer waits for the pane host: a pane the command opens or runs in before it has said what it
 // kept would get a fresh shell over one it already has. They wait on the scope check too (panesReady),

@@ -182,6 +182,8 @@ export type PanePoolActions = {
   start: BoundAction;
   queue: BoundAction;
   unqueue: BoundAction;
+  // What waits, in the order it starts, for the workers popup.
+  entries(): readonly QueueEntry[];
   drain(): void;
   // Why a start that never queues (`pane run` into a pane main holds) is refused now, or null.
   full(): string | null;
@@ -198,6 +200,7 @@ export function panePool(saved: SavedQueue, main: Omit<PaneQueuePorts, 'pool'>):
     start: bind(paneStart, ports),
     queue: bind(paneQueue, ports),
     unqueue: bind(paneUnqueue, ports),
+    entries: () => ports.pool.entries,
     drain,
     full: () => {
       const full = capReached(taken(ports), ports.cap());

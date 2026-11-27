@@ -186,8 +186,8 @@ export function ordinal(position: number): string {
   return `${position}${['th', 'st', 'nd', 'rd'][position % 10] ?? 'th'}`;
 }
 
-// What the entry is, as `pane queue` lists it.
-function entryAbout(entry: QueueEntry): string {
+// What the entry is, as `pane queue` and the workers popup list it.
+export function entryAbout(entry: QueueEntry): string {
   if (entry.work.kind === 'ship') return `ship ${entry.cardId} "${entry.work.title}"`;
   if (entry.work.kind === 'review') return `review ${entry.cardId}`;
   return `run ${workerAbout(entry.work.prompt)}`;
