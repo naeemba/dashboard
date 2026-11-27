@@ -5,8 +5,15 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T14:18:57.082Z",
-  "updatedAt": "2026-11-27T14:32:31.574Z",
+  "updatedAt": "2026-11-27T14:33:35.588Z",
   "branch": "finished-work-tests-60s-timeout",
-  "column": "Backlog",
+  "pullRequest": 423,
+  "comments": [
+    {
+      "at": "2026-11-27T14:33:35.449Z",
+      "body": "Pull request #423 opened: Give the stale-origin finished-work tests a 60 s timeout https://github.com/naeemba/dashboard/pull/423"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
