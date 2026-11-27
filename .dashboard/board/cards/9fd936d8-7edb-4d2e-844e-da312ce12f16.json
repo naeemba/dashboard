@@ -4,13 +4,14 @@
   "notes": "Four price/weather cards lead the page above what wants you. Move to the foot line or a section. Opinion. (docs/review/2026-11-01.md U4)",
   "priority": "low",
   "parent": null,
-  "updatedAt": "2026-11-27T13:58:38.607Z",
+  "updatedAt": "2026-11-27T13:58:45.356Z",
+  "branch": "move-the-market-cards-off-the-top-of-the-ma",
   "comments": [
     {
       "at": "2026-11-27T13:58:38.607Z",
       "body": "Main's call (user left placement open): move the four market/weather cards from the top of the manager page to a section at its foot, below the boards, kept keyboard-reachable as rows the arrow keys walk (conventions-rule-1). No other change to what they show. Update help.ts's manager blurb and docs/manager or docs/markets if they say where the cards sit."
     }
   ],
-  "column": "Backlog",
-  "order": 7
+  "column": "Doing",
+  "order": 0
 }
