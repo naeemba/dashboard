@@ -23,11 +23,17 @@ describe('a worker gone silent', () => {
     const { answer, list } = await silentWorker();
     minutes(19);
     expect(await list()).toContain('2:1\tterminal 2\trunning');
+    // What says the sweep redraws the workers popup.
+    expect(answer.tellStalls()).toBe(false);
     minutes(6);
+    expect(answer.tellStalls()).toBe(true);
     expect(await list()).toContain('2:1\tterminal 2\tstalled, silent 25 minutes');
     expect((await answer({ directory: '/work/api', args: ['status'] })).output).toContain('stalled, silent 25 minutes');
+    expect(answer.workers()[0]).toMatchObject({ status: 'stalled', detail: 'stalled, silent 25 minutes' });
     answer.notify('2:1', 'running');
     expect(await list()).toContain('2:1\tterminal 2\trunning');
+    expect(answer.workers()[0]).toMatchObject({ status: 'working' });
+    expect(answer.workers()[0]).not.toHaveProperty('detail');
   });
 
   it('tells main once per stall, and keeps the pane', async () => {

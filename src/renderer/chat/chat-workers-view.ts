@@ -50,6 +50,7 @@ function watch(bridge: DashboardBridge, changed: () => void): () => void {
     // A page opening or closing also changes which slot an entry's main is on.
     bridge.onProjectsChange(() => { read(bridge); readQueue(bridge); });
     bridge.onWorkerQueueChange(() => readQueue(bridge));
+    bridge.onWorkersChange(() => read(bridge));
     // Only a listed worker's pane: a plain shell or nvim ending changes nothing here.
     bridge.onExit((id) => { if (roster.some((worker) => worker.id === id)) read(bridge); });
     const takeCaches = (usage: UsageSnapshot) => {

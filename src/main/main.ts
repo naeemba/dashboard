@@ -683,7 +683,11 @@ const workerAnswers = sessionRequests(sessionRequestPorts({
   hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool, () => sendToRenderer('workers:queue-change')),
   stallMinutes: () => settings.workers.stallMinutes,
 }));
-setInterval(() => workerAnswers.tellStalls(), STALL_SWEEP_MS).unref();
+// While a worker is stalled the sweep's minute also redraws the workers popup: a stall begins, and its
+// minutes move on, with no hook to mark it. Its end is a hook, which marks the pane.
+setInterval(() => {
+  if (workerAnswers.tellStalls()) sendToRenderer('workers:change');
+}, STALL_SWEEP_MS).unref();
 // The workers each main ran, for its status line and workers popup (worker-roster.ts).
 table.handle('workers:read', () => workerAnswers.workers());
 table.handle('workers:queue', () => workerAnswers.queued());
