@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T11:02:28.904Z",
-  "updatedAt": "2026-11-27T11:44:51.011Z",
+  "updatedAt": "2026-11-27T12:14:41.065Z",
   "branch": "worker-panes-deny-permission-prompts-instea",
   "pullRequest": 412,
   "comments": [
@@ -24,6 +24,10 @@
     {
       "at": "2026-11-27T11:44:51.011Z",
       "body": "User decision: accept that denyInsteadOfPrompting also denies a worker's questions to the user. A worker carries on and reports its open questions to main, which brings them to the user. Reason: a worker stopped on a question holds a pool slot until someone looks at its pane."
+    },
+    {
+      "at": "2026-11-27T12:14:41.064Z",
+      "body": "Review loop: 2 rounds, floor-addressed. R1 bumped the Agent SDK to 0.3.332 (0.3.316 bundled Claude Code 2.1.316, which ignores denyInsteadOfPrompting on screen workers) with a pin test; R2 updated docs naming the old pin. Per the user's decision, workers-decision-12 and the workers README now say questions are denied too, and a worker reports them to main (e52e8d7a). CI green on e52e8d7a. Converged, ready to merge."
     }
   ],
   "column": "Review",
