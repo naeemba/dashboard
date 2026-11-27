@@ -5,7 +5,8 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-26T14:56:18.200Z",
-  "updatedAt": "2026-11-26T14:56:18.200Z",
-  "column": "Backlog",
-  "order": 54
+  "updatedAt": "2026-11-27T11:35:37.917Z",
+  "branch": "workers-popup-shows-the-pane-queue-with-a-w",
+  "column": "Doing",
+  "order": 0
 }
