@@ -1,0 +1,11 @@
+{
+  "id": "20f109fe-925b-4847-8cd5-0e1df4880314",
+  "title": "pr wait and pr land stop reporting conflicts git merges cleanly",
+  "notes": "In 5 recent sessions (retro 2026-11-28) pr wait answered 'conflicts with main: git could not name the files (<tree id>)' although git merge-tree exited 0: a clean merge. The cause: .gitattributes merges docs/**/history.md with merge=union, which local git honours and GitHub's mergeability does not, so GitHub says CONFLICTING. Each one cost a merge, a full check, a push and a CI run, twice a /pr-conflicts turn. conflictLine / conflictedFiles in src/main/command/pull-request-cli.ts (~line 253) print 'could not name the files' on a clean merge-tree. Wanted: when merge-tree merges clean, say so plainly and resolve it without an agent turn (merge the base into the branch and push from a temporary worktree, then wait on the new head), falling back to /pr-conflicts only on a real conflict. Update pull-request-cli.test.ts (~line 321), which locks in the old wording, and the pr docs.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-27T21:54:03.861Z",
+  "updatedAt": "2026-11-27T21:54:03.862Z",
+  "column": "Backlog",
+  "order": 0
+}
