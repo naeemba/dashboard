@@ -1,0 +1,11 @@
+{
+  "id": "314ecc8a-54b3-4aa1-8bbb-e0f37c4e72a3",
+  "title": "Work-card skill numbers new doc ids instead of writing -next",
+  "notes": "Retro 2026-11-28: the work-card skill (generated from src/main/skills/work-card-skill.ts) tells a worker to write a new id as <feature>-decision-next and number it last, but this repo's commit-time markdown check refuses any -next id: s24 had 6 refused commits, main warned another worker by hand. Numbering also races open pull requests (one took workers-decision-12 while another guessed it; another guessed browser-decision-13 for 11). Wanted: the skill tells the worker to take the next free number from origin/main and the ids the open pull requests add (gh pr diff), before the first commit, and to re-check after merging main; drop the -next instruction. Check adopt-docs-skill.ts for the same -next wording (skills-decision-2: the pattern spreads to every project).",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-27T21:54:15.059Z",
+  "updatedAt": "2026-11-27T21:54:15.059Z",
+  "column": "Backlog",
+  "order": 2
+}
