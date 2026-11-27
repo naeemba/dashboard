@@ -1,0 +1,11 @@
+{
+  "id": "3a1ee233-161d-476a-abe0-536355c66b68",
+  "title": "Worker stop notices carry the worker's state, and worker reports stay short",
+  "notes": "Retro 2026-11-28: in the last main session 556 worker messages took about 789 KB, about 30% of the transcript, across 9 compactions. Every stop notice ('has finished its turn', 'stopped without sending you a report') ends with 'pane list shows where every worker stands', and main then ran pane list 146 times, usually with gh pr list. Wanted: (1) the notice itself carries that worker's pane list row and its pull request's number and state, so main need not ask; (2) the final report the work-card skill (src/main/skills/work-card-skill.ts) asks a worker for is a short template (outcome, pull request, ids taken, caveats, anything needing the user's decision), with the detail on the pull request. Find the notice text under src/main/workers/.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-27T21:54:09.637Z",
+  "updatedAt": "2026-11-27T21:54:09.637Z",
+  "column": "Backlog",
+  "order": 1
+}
