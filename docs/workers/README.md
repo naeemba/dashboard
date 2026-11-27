@@ -389,6 +389,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   permission prompt, then it is denied at once, the worker is told and its turn
   goes on, so the refusal is in its report rather than the pane sitting on a
   prompt holding a slot; main's own calls still ask (workers-decision-12).
+- Given a worker with a question for you, when it asks, then the question is
+  denied the same way and the worker reports it to main (workers-decision-12).
 - Given a machine whose `~/.claude/settings.json` names no rule for the app's
   commands, when main or a worker runs `node "$DASHBOARD_COMMAND" pane …`,
   `session …` or `node "$DASHBOARD_BOARD" …`, then it runs without a question:

@@ -669,9 +669,11 @@ blocked, holding a pool slot (workers-decision-11), until someone noticed the ba
   not the turn's.
 - **Allow rules, auto mode and PermissionRequest hooks still decide first**; the setting only turns
   what would have been a prompt into a refusal, so workers-decision-9's allow rules are untouched.
-- **A screen worker's `canUseTool` and Claude's questions are not asked either**, per the setting's
-  own description in Claude Code: read from user settings, `--settings` and managed settings, never
-  project or local ones, which is why it goes in the app's flag settings.
+- **A worker's questions are denied too, on purpose**: a worker stopped on a question holds a pool
+  slot until someone looks at its pane, so it reports its open questions to main instead.
+- **A screen worker's `canUseTool` is not asked either**, per the setting's own description in
+  Claude Code: read from user settings, `--settings` and managed settings, never project or local
+  ones, which is why it goes in the app's flag settings.
 - **The blocked mark stays**: the `permission_prompt` Notification hook and the screen's ask still
   mark a pane blocked under a Claude Code older than 2.1.319, which does not know the key.
 - **A screen runs the CLI the Agent SDK bundles**, not the installed one, so the SDK pin moved from
