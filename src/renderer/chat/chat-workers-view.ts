@@ -13,8 +13,8 @@ import type { UsageSnapshot } from '../../shared/usage/usage';
 // A worker's hooks mark its pane, a claim, a run, a release or a pane closing changes the open list,
 // and a terminal worker's agent exiting ends its pane's shell, which main says after it has stopped
 // counting the agent; the queue says when it changes; and main's stall sweep says each minute while one
-// is stalled and once after, since a stall begins and ends with no hook: those five events are every
-// change there is.
+// is stalled and once after, since a stall begins with no hook, and a raised `workers.stallMinutes`
+// ends one with none either: those five events are every change there is.
 // One read per change serves every page: each watcher picks out its own slot's.
 const watchers = new Set<() => void>();
 let roster: DispatchedWorker[] = [];
