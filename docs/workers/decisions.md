@@ -636,8 +636,7 @@ review sweep's own starts could push past a main that counted perfectly.
   worker at once. A wait lost to an app restart is forgotten, and the pane holds its slot. A `pr
   wait` killed before its resume never says so; a session has no more live waits than background
   tasks, so each Stop lowers the count to the background it reports, and a later test run holds the
-  slot again once a Stop has come between. One killed in the turn that starts a test run leaves that
-  run over the cap until the turn's Stop lowers the count.
+  slot again.
 - **A cap per project, and a total across them** (2026-11-27): 4 a project, so one busy project
   never queues another's card behind its own, and 8 in all, since memory, the one-heavy-run lock
   (workflow-decision-14) and the 7-day usage are machine- or account-wide: the 8-worker night above

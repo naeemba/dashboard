@@ -84,8 +84,6 @@ export type SlotLook = {
 // wake-up is no running work. A Claude opened by hand and main itself are no main's worker.
 // ponytail: a wake-up that fires while its slot is given back runs over the cap until its turn ends;
 // count wake-ups as holding if that shows.
-// ponytail: a `pr wait` killed in the turn that starts other background work leaves one run over the
-// cap until the next Stop lowers the count; reclaim on SIGTERM in pull-request-program.ts if that shows.
 export function holdsSlot(look: SlotLook): boolean {
   if (!look.mainsWorker) return false;
   if (look.state !== 'done') return true;
