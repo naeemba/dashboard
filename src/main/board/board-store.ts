@@ -353,10 +353,12 @@ export function readBoard(projectPath: string, salvage = true): BoardRead {
 // A card file that will not parse is skipped by a look, not counted, and left where it is. A board.json
 // that will not parse is null even beside a folder: a save from the screen is based on this look, and
 // one based on the folder alone would remove that file, the only copy of the cards it holds.
-export function peekBoard(projectPath: string): Board | null {
+// `whole` makes any file that will not parse null too, for a reader that takes a card it cannot find
+// as deleted: the pane queue's drain drops a queued start whose card is not on the board.
+export function peekBoard(projectPath: string, whole = false): Board | null {
   try {
     const { board, brokenFiles } = readStoredBoard(projectPath, false);
-    if (board === null || brokenFiles.includes(boardPath(projectPath))) return null;
+    if (board === null || brokenFiles.includes(boardPath(projectPath)) || (whole && brokenFiles.length > 0)) return null;
     return withManagerColumns(projectPath, board);
   } catch {
     return null;

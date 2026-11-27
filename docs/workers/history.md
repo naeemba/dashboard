@@ -96,3 +96,5 @@ One line per merged change: date and why.
   retried by hand starts through the pane pool like every other start (workers-decision-11)
 - 2026-11-26 — A card moved on the board screen goes back when withdrawn too: the screen names
   the column it came from on card:move (workers-decision-11)
+- 2026-11-27 — A queued ship or review waits while a card file does not parse, instead of being
+  dropped as not on the board: only the drain reads the board that strictly (workers-decision-11)

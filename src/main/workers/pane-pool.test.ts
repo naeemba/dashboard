@@ -70,6 +70,11 @@ describe('readiness', () => {
     expect(readiness(entry('q1', { cardId: 'a' }), open, () => board())).toEqual(ready);
   });
 
+  it('holds a ship or a review on a board it cannot read, never dropping it', () => {
+    const ship = entry('q1', { cardId: 'a', work: { kind: 'ship', title: 'A' } });
+    expect(readiness(ship, open, () => null)).toEqual({ state: 'wait', why: 'the board of api cannot be read' });
+  });
+
   it('does not wait on a closed project the start opens itself', () => {
     const elsewhere = entry('q1', { projectPath: '/work/crm', work: { kind: 'run', project: 'crm', prompt: 'p', card: null, worktree: false, folder: null, as: null } });
     expect(readiness(elsewhere, (path) => path === '/work/api', () => null)).toEqual(ready);
