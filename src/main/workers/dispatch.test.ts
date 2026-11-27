@@ -107,6 +107,14 @@ describe('mainPrompt verbs', () => {
 
 const USER_DATA = '/tmp/dash-copy';
 
+describe('appSessionSettings', () => {
+  // A worker screen is denied the prompt as a terminal worker is; main, where you are, still asks.
+  it('denies prompts to a worker only', () => {
+    expect(appSessionSettings(USER_DATA, 'worker').permissions.denyInsteadOfPrompting).toBe(true);
+    expect(appSessionSettings(USER_DATA, 'main').permissions).not.toHaveProperty('denyInsteadOfPrompting');
+  });
+});
+
 describe('workerSettings', () => {
   // Stop reports done whatever the worker remembered to say; the permission prompt reports blocked.
   it('hooks the end of the turn and the permission prompt to the session command', () => {
@@ -138,7 +146,7 @@ describe('workerSettings', () => {
 
   // A terminal worker carries everything a screen does, so a key added to the shared settings reaches both.
   it('carries every app session setting', () => {
-    expect(JSON.parse(workerSettings('2:3', USER_DATA))).toMatchObject(appSessionSettings(USER_DATA));
+    expect(JSON.parse(workerSettings('2:3', USER_DATA))).toMatchObject(appSessionSettings(USER_DATA, 'worker'));
   });
 
   // Every other space in it is inside a string, and Windows PowerShell wraps a word for claude only when

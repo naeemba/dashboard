@@ -98,3 +98,6 @@ One line per merged change: date and why.
   the column it came from on card:move (workers-decision-11)
 - 2026-11-27 — A queued ship or review waits while a card file does not parse, instead of being
   dropped as not on the board: only the drain reads the board that strictly (workers-decision-11)
+- 2026-11-27 — Workers are started with permissions.denyInsteadOfPrompting, so a call that would
+  wait on a prompt is refused and shows in the report instead of holding a pool slot
+  (workers-decision-12)
