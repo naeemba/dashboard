@@ -47,8 +47,10 @@ describe('unfinishedWork', () => {
 // answers. `synced` writes the card on origin's main the way the board's sync does, from another clone.
 // The repository is built once and copied for each test: a git process costs a Windows runner a few
 // hundred ms, and building it in every test took one of them past vitest's 5 s. Each clone names its
-// origin by a relative path, so a copy fetches from and pushes to its own copy of origin.
-describe('unfinishedWork, with the board a stale copy of origin\'s', () => {
+// origin by a relative path, so a copy fetches from and pushes to its own copy of origin. A runner
+// whose disk stalls still takes a test past 5 s now and then (5005 ms on main, 2026-11-27), so the block
+// has the 60 s the board-files blocks have.
+describe('unfinishedWork, with the board a stale copy of origin\'s', { timeout: 60_000 }, () => {
   useGitTestEnvironment();
   const gitOnly: typeof runProgram = (program, programArguments, cwd, options) =>
     program === 'git' ? runProgram(program, programArguments, cwd, options) : Promise.reject(new Error(`${program} failed`));
