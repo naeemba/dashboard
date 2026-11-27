@@ -71,7 +71,7 @@ const appCommandPermissions = (userData: string) => ({
 // refusal is in its report (workers-decision-12). Main is asked, as a session you typed into is.
 // Claude Code reads that setting from --settings, which is what the SDK passes these as, and on a
 // screen it skips canUseTool too. A worker is never compacted while idle either (idleCompaction):
-// one paused on CI comes back with its whole conversation; main keeps the default (workers-decision-14).
+// one paused on CI comes back with its whole conversation, where main keeps Claude Code's default.
 export const appSessionSettings = (userData: string, kind: 'main' | 'worker') => ({
   hooks: BOARD_GUARD_HOOKS,
   ...(kind === 'worker' && { idleCompaction: false }),
