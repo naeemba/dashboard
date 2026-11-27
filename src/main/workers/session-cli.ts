@@ -81,13 +81,13 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
 
 start starts a worker now when fewer than the cap run in its project (settings workers.cap, 4) and
-across the app (workers.totalCap, 8) and nothing is queued, answering as run does, or queues it and answers \`queued <queue id>, <position>\`; its main
-is told when a queued one starts. Its pane is claimed, as claim --project would, when it starts, and
-its other words are run's. --first puts it at the head of the queue; --after holds it, letting later
-ones go ahead, until that card is Done or Cancelled. The queue also holds while the 7-day usage is at
-or over the budget limit. queue lists what is queued, in order, and why it is held; unqueue
-withdraws one. A worker running, blocked on a question or paused on its own background work holds
-its place; done frees it.
+across the app (workers.totalCap, 8) and nothing is queued, answering as run does, or queues it and
+answers \`queued <queue id>, <position>\`; its main is told when a queued one starts. Its pane is
+claimed, as claim --project would, when it starts, and its other words are run's. --first puts it at
+the head of the queue; --after holds it, letting later ones go ahead, until that card is Done or
+Cancelled. The queue also holds while the 7-day usage is at or over the budget limit. queue lists
+what is queued, in order, and why it is held; unqueue withdraws one. A worker running, blocked on a
+question or paused on its own background work holds its place; done frees it.
 claim opens a worker pane and prints its id: --project opens it on the page of the project
 ~/.dashboard/projects.yaml calls that, opening the project first if it is closed. run starts Claude
 in it with the prompt as its argument, refused at the cap: --card runs it in the worktree the card was shipped into,
