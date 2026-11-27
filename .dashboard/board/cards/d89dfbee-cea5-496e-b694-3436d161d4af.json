@@ -5,14 +5,19 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-27T11:54:30.473Z",
-  "updatedAt": "2026-11-27T13:04:30.847Z",
+  "updatedAt": "2026-11-27T13:09:33.699Z",
   "branch": "decide-idle-compaction-for-worker-sessions",
+  "pullRequest": 420,
   "comments": [
     {
       "at": "2026-11-27T13:04:30.847Z",
       "body": "Overlap: PR #419 (Pane pool cap per project) also edits src/main/workers/dispatch.ts, dispatch.test.ts, docs/workers/decisions.md and history.md. Different hunks: #419 changes mainPrompt's pane-start usage and workers-decision-11; this card changes appSessionSettings (line ~76), adds a test in the appSessionSettings describe, and a bullet under workers-decision-12. Likely only a history.md append conflict."
+    },
+    {
+      "at": "2026-11-27T13:09:33.669Z",
+      "body": "Pull request #420 opened: Turn idle compaction off for worker sessions https://github.com/naeemba/dashboard/pull/420"
     }
   ],
-  "column": "Doing",
-  "order": 3
+  "column": "Review",
+  "order": 6
 }
