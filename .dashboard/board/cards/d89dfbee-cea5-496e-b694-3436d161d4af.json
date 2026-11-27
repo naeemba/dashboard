@@ -5,7 +5,8 @@
   "priority": "low",
   "parent": null,
   "createdAt": "2026-11-27T11:54:30.473Z",
-  "updatedAt": "2026-11-27T11:54:30.473Z",
-  "column": "Backlog",
-  "order": 9
+  "updatedAt": "2026-11-27T13:03:27.588Z",
+  "branch": "decide-idle-compaction-for-worker-sessions",
+  "column": "Doing",
+  "order": 3
 }
