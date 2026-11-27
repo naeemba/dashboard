@@ -34,6 +34,9 @@ export function anchoredPopup<Choice>(options: {
   escape?: Choice;
   // The key of the row it opens on; the first row when it is not there.
   start?: string;
+  // A key of the popup's own beyond the arrows, Enter and Escape, asked of the highlighted row's key
+  // first: true for one it took, which the popup then keeps from going any further.
+  rowKey?: (event: KeyboardEvent, row: string | undefined) => boolean;
 }): Promise<Choice | undefined> {
   let sections: PopupSection<Choice>[] = [];
   let highlighted = 0;
@@ -111,6 +114,7 @@ export function anchoredPopup<Choice>(options: {
 
     answerKeys(dialog, (key) => (key === 'Enter' ? take() : finish(options.escape)));
     dialog.addEventListener('keydown', (event) => {
+      if (options.rowKey?.(event, rows()[highlighted]?.key)) return event.preventDefault();
       if (isModified(event)) return;
       switch (event.key) {
         case 'ArrowDown': event.preventDefault(); return move(1);

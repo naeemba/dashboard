@@ -149,7 +149,11 @@ While the session has workers open the foot counts them by how they stand,
 working, paused (waiting on its own background work), blocked, done or idle; a
 click on the count or the workers key opens a list of them just above it, the
 manager's across every project, that keeps up while it is open: the arrows walk it, Enter lands
-on the pane and Escape closes it. Above the working line, a strip lists the
+on the pane and Escape closes it. Under them it lists the starts this main queued in the pane
+pool, in the order they start, each with its place in the whole queue; the withdraw key (D) takes
+the highlighted one out, as `pane unqueue` does, and the status bar says what that answered. The
+count says `· 2 queued` beside the workers, and shows with only queued starts too.
+Above the working line, a strip lists the
 agents, workflows and background commands Claude has running, each under the one
 that started it, with its tool calls, tokens, time and last tool so far; a task
 leaves the strip when it ends. It lists only what started while the screen was
@@ -361,6 +365,10 @@ Folders: `src/main/chat/`, `src/shared/chat/`, `src/renderer/chat/`.
   click on it or Alt+W opens a list of them just above it (the manager's across
   every project) that updates while open, an agent exiting included; the arrows
   walk it, Enter lands on the pane and Escape closes it.
+- Given main's `pane start` is queued as q7 behind two others, when the workers
+  popup opens, then under the workers a Queued section lists `api · q7`, `3rd in
+  line · run …`; D on it answers `withdrew q7` on the status bar and the row goes.
+  D on a running worker's row withdraws nothing and says so.
 - Given a turn has been measured, when you click the context meter, press Alt+U
   or send `/context`, then a popup opens just above the meter, lined up with its
   right edge, listing each part of the window (system prompt, tools, memory
