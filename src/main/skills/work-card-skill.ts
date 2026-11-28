@@ -13,7 +13,8 @@
 // the remote it is on, which is not always origin (chosenRemote in app/default-branch.ts). The fifth,
 // `$4`, is settings.review.autoLoop: whether the app starts a review, which waits on CI, once the
 // pull request opens. Off, nothing does, so the agent waits on CI itself.
-import { LONGEST_BACKGROUND_RUN, LONG_RUNS } from '../ship/review';
+import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+import { LONG_RUNS } from './background-runs';
 
 export const BUMP_VERSION = 'bump-version';
 export const KEEP_VERSION = 'keep-version';
@@ -179,9 +180,9 @@ conflict after review, and one of them is thrown away.
   It starts once your turn ends, so first leave nothing to hold it:
   \`git status --short\` prints nothing, or it waits for a commit of those changes.
   Then send main (when your prompt names one) your report now, with its
-  number, and end your turn: main confirms it started. Do not wait on its CI yourself: a wait left
-  running here is killed when that review starts, with the report promised
-  after it.
+  number, and end your turn: main confirms it started. Do not wait on its
+  CI yourself: a wait left running here is killed when that review starts,
+  with the report promised after it.
 
   \`${NO_REVIEW_LOOP}\`, or anything else, means nothing starts a review, so
   nothing else watches CI: wait on it with \`node "$DASHBOARD_COMMAND" pr wait
