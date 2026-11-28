@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { replaceFileIfChanged } from '../app/replace-file';
+import { markCommonJs, replaceFileIfChanged } from '../app/replace-file';
 import { failureText } from '../../shared/errors/failure';
 
 // What every pane's shell is handed so an agent in it can reach this app: the command files and the
@@ -35,8 +35,7 @@ export function keptCommands(buildFolder: string, folder: string, warn: (line: s
   const built = paneCommands(buildFolder);
   const kept = paneCommands(folder);
   try {
-    // Node reads a .js as ESM under a package.json saying "type": "module" anywhere above it.
-    replaceFileIfChanged(path.join(folder, 'package.json'), '{"type":"commonjs"}\n');
+    markCommonJs(folder);
     for (const name of Object.keys(kept) as (keyof PaneCommands)[]) replaceFileIfChanged(kept[name], readFileSync(built[name], 'utf8'));
     return kept;
   } catch (error: unknown) {
