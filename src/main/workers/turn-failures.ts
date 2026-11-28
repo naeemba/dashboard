@@ -26,7 +26,8 @@ export type TurnFailurePorts = {
   // its own clock, which `now` reads.
   after?(ms: number, run: () => void): () => void;
   now?(): number;
-  // Sends the pane RESUME_TEXT: a worker as `pane send` would, main into its queue.
+  // Sends the pane RESUME_TEXT: main into its queue, a main's worker on main's turn as `pane send`
+  // would, and a screen opened by hand or a turn you typed the bare text.
   resume(id: string): void;
   log(id: string, message: string): void;
   // The tries are spent: the pane's main is told. True when the pane stays given up: a failure inside

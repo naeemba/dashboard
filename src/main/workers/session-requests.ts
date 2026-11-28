@@ -14,7 +14,7 @@ import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import { gaveUpText, RESUME_TEXT, turnFailures } from './turn-failures';
-import { livePane } from '../browser/browser-requests';
+import { livePane } from '../panes/live-pane';
 import { stalledState, stallWatch } from './stall';
 import { isTyped, promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
@@ -259,26 +259,31 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     pool.forget(id);
     failures.forget(id);
   };
+  // Whether the worker is on main's turn: main's, and not on a turn you typed (prompt-source.ts).
+  const onMainsTurn = (id: string) => mainsWorker(id) && !prompts.fromUser(id);
   const notices = stopNotices({
     midTurn: (id) => midTurn(mainOf(id)),
     // Not for a turn you typed into the worker yourself (prompt-source.ts), nor a pause of one that
     // already reported or whose work is in: what it waits on is moot.
     notice(id, paused) {
-      if (!mainsWorker(id) || prompts.fromUser(id)) return;
+      if (!onMainsTurn(id)) return;
       if (paused && (reportsRead.has(id) || workIn(id))) return;
       return tellRow(id, (row) => doneReport(nameOfPane(id), id, row, paused, lastMessages.get(id)));
     },
   });
   // A turn ended on an API error, sent `continue` again. Main gets it in its own queue. A main's worker
   // on main's turn gets it through pane.send, with the line asking for its report; any other pane, a
-  // screen opened by hand or a turn you typed, gets the bare text, which hands it to no main. Main
-  // stays given up after its notice, which is itself one more turn (turn-failures.ts).
+  // screen opened by hand or a turn you typed, gets the bare text, which hands it to no main. A pane on
+  // the app's own question gets nothing: either prompt would end the app turn, and its answer would
+  // stand as the worker's report; the tabs it left go to you when it is let go of. Main stays given up
+  // after its notice, which is itself one more turn (turn-failures.ts).
   const failures = turnFailures({
     log: ports.log,
     resume(id) {
       const { slot, index } = paneFromId(id);
       if (index === MAIN_INDEX) return void ports.tell(slot, RESUME_TEXT);
-      if (!mainsWorker(id) || prompts.fromUser(id)) return ports.prompt(id, RESUME_TEXT);
+      if (appTurns.has(id)) return ports.log(id, `\`${RESUME_TEXT}\` not sent: on the app's own question`);
+      if (!onMainsTurn(id)) return ports.prompt(id, RESUME_TEXT);
       ports.send(id, RESUME_TEXT, ports.projectPath(mainOf(id)) ?? '').then(
         (sent) => { if (isRefused(sent)) ports.log(id, `\`${RESUME_TEXT}\` not sent: ${sent.refused}`); },
         (error: unknown) => ports.log(id, `\`${RESUME_TEXT}\` not sent: ${failureText(error)}`),

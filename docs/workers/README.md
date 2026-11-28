@@ -85,8 +85,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - A turn that ends on an API error, sent `continue` again: the StopFailure hook
   in `dispatch.ts`'s `appSessionSettings`, the `failed` verb in
   `session-cli.ts`, the schedule in `turn-failures.ts`, wired in
-  `session-requests.ts` (tested in `session-requests-turn-failed.test.ts`)
-  (workers-decision-14)
+  `session-requests.ts` (tested in `session-requests-turn-failed.test.ts`),
+  a kept shell's id mapped by `../panes/live-pane.ts`, which the browser door
+  shares (workers-decision-14)
 
 ## Scenarios
 
@@ -509,9 +510,12 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   then the app sends it `continue` after 1, 2, 5 and 10 minutes, a main's
   worker on main's turn as `pane send` would, main into its queue and any other
   pane the bare text, logging each try; one more failure tells the pane's main
-  the app gave up, and main stays given up for 30 minutes. A prompt in between
-  calls the wait off, and an auth, billing or request error is logged, never
-  resumed (workers-decision-14).
+  the app gave up, and main stays given up until a failure comes more than 30
+  minutes after the last. A prompt in between calls the wait off, and an auth,
+  billing or request error is logged, never resumed (workers-decision-14).
+- Given a worker on the app's own question about the tabs it holds, when that
+  turn ends on a dropped connection, then the app logs it and sends nothing:
+  the worker's report stays the one from its turn before (workers-decision-14).
 - Given a Claude screen opened by hand, or a turn you typed into a main's
   worker, when its turn ends on a dropped connection, then the app's
   `continue` carries no report line and hands the pane to no main

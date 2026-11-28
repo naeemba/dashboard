@@ -86,6 +86,17 @@ describe('a turn that ends on an API error', () => {
     expect(typed).toEqual([]);
   });
 
+  it('sends nothing to a worker on the app\'s own question, whose report stays its own', async () => {
+    const { answer, failed, prompted, typed } = await worker();
+    answer.notify('2:1', 'done', undefined, { lastMessage: 'Tests pass.' });
+    answer.notify('2:1', 'running', undefined, { promptSource: 'sdk', appAsks: true });
+    await failed('2:1');
+    minutes(1);
+    expect(prompted).toEqual([]);
+    expect(typed).toEqual([]);
+    expect((await answer({ directory: '/work/api', args: ['report', '2:1'] })).output).toContain('Tests pass.');
+  });
+
   it('resumes the pane a kept shell\'s old id names in this run', async () => {
     const { answer, typed } = await worker();
     await answer(failure('5:1'));

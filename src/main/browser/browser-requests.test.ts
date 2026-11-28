@@ -3,7 +3,7 @@ import { MANAGER_BROWSER_PATH, MANAGER_SLOT } from '../../shared/manager/manager
 import type { BoundAction } from '../actions/action';
 import { answered } from '../workers/session-cli';
 import { BROWSER_REQUEST } from './browser-cli';
-import { browserProject, browserRequests, livePane, paneIsOpen, type BrowserRequestPorts } from './browser-requests';
+import { browserProject, browserRequests, paneIsOpen, type BrowserRequestPorts } from './browser-requests';
 
 // Each action and read as a record of what it was called with.
 function fakeDoor() {
@@ -125,16 +125,6 @@ describe('browserProject', () => {
     expect(browserProject(ports, `${MANAGER_SLOT}:3`, null)).toBe(MANAGER_BROWSER_PATH);
     expect(browserProject(ports, `${MANAGER_SLOT}:0`, '/work/web')).toBe('/work/web');
     expect(browserProject(ports, '2:1', '/work/gone')).toEqual({ refused: '/work/gone is not open in the app; `dashboard project open` it first' });
-  });
-});
-
-describe('livePane', () => {
-  const ports = { slotOf: (folder: string) => (folder === '/work/web' ? 0 : -1) };
-
-  it('keeps the manager\'s pane, and refuses what is no pane id', () => {
-    expect(livePane(ports, `${MANAGER_SLOT}:1`, '/home/me')).toBe(`${MANAGER_SLOT}:1`);
-    expect(livePane(ports, 'nobody', '/work/web')).toEqual({ refused: 'pane nobody is not open in this app' });
-    expect(livePane(ports, '1:1', '/work/web')).toBe('0:1');
   });
 });
 
