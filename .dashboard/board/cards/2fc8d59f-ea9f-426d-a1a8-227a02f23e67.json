@@ -5,7 +5,8 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:30:12.555Z",
-  "updatedAt": "2026-11-28T09:30:12.555Z",
-  "column": "Backlog",
-  "order": 5
+  "updatedAt": "2026-11-28T09:30:52.523Z",
+  "branch": "a-worker-or-main-turn-that-ends-on-an-api-e",
+  "column": "Doing",
+  "order": 0
 }
