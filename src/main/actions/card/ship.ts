@@ -1,7 +1,7 @@
 import { cardAt, type Board } from '../../../shared/board/board';
 import type { Refused } from '../../../shared/app/bridge';
 import { notOpenRefusal } from '../../ship/ship';
-import { findCard, wholeId } from '../../board/board-cli';
+import { findCard } from '../../board/board-cli';
 import { action, isRefused } from '../action';
 import { isFilledTextOrNull } from '../pane/pane-input';
 import { columnsBack, type ReturnTo } from '../../workers/pane-pool';
@@ -39,10 +39,8 @@ export const cardShip = action<CardShipPorts, CardShipInput, { output: string }>
     const board = ports.read(input.projectPath);
     const at = findCard(board, input.id);
     if ('message' in at) return { refused: at.message };
-    const after = input.after === null ? null : wholeId(board, input.after);
-    if (after !== null && typeof after !== 'string') return { refused: after.message };
     const card = cardAt(board, at)!;
     if (ports.slotOf(input.projectPath) === -1) return { refused: notOpenRefusal(card.title) };
-    return ports.ship({ ...input, id: card.id, after, title: card.title });
+    return ports.ship({ ...input, id: card.id, title: card.title });
   },
 });

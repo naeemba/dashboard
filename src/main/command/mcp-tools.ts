@@ -72,7 +72,7 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
     flag('worktree', 'run in a throwaway worktree', 'boolean'), flag('in', 'run in this existing folder'),
     flag('terminal', 'Claude Code in the pane\'s terminal rather than a screen', 'boolean'),
     flag('screen', 'a Claude screen, where the terminal is the default', 'boolean'),
-    flag('first', 'at the head of the queue', 'boolean'), flag('after', 'held until this card (whole id) is Done or Cancelled')]),
+    flag('first', 'at the head of the queue', 'boolean'), flag('after', 'held until this card is Done or Cancelled')]),
   tool('pane queue', 'What is queued for a worker slot, in order, and why the queue is held', []),
   tool('pane unqueue', 'Withdraw a queued start', [word('id', 'queue id, as pane_start or pane_queue prints it')]),
   tool('pane claim', 'Open a worker pane; prints its id', [flag('project', 'open it on that project\'s page, opening the project')]),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Refused } from '../../../shared/app/bridge';
-import { emptyBoard, type Board } from '../../../shared/board/board';
+import { addCard, emptyBoard, type Board } from '../../../shared/board/board';
 import type { QueueEntry } from '../../workers/pane-pool';
 import type { SavedQueue } from '../../workers/pane-queue-store';
 import { panePool, type PaneQueuePorts } from './queue';
@@ -70,6 +70,16 @@ describe('pane.start', () => {
     await expect(made.start({ cardId: 'a', work: { kind: 'review' } })).resolves.toEqual({ output: 'review started' });
     expect(begun).toEqual(['q1', 'q2']);
     expect(made.told).toEqual([]);
+  });
+
+  // `pane start --after 3a1ee233` was told there was no card to wait on.
+  it('makes a short --after whole against the project\'s board, refusing one two cards start', async () => {
+    const cards = [['card', 'Card'], ['cart', 'Cart'], ['zeta', 'Zeta']] as const;
+    const board = cards.reduce((each, [id, title]) => addCard(each, { column: 0, card: 0 }, id, title).board, emptyBoard());
+    const { actions, start } = pool({ board: () => board });
+    actions.ready();
+    await expect(start({ after: 'ze' })).resolves.toEqual({ output: 'queued q1, 1st: q1 waits on card zeta' });
+    await expect(start({ after: 'car' })).resolves.toMatchObject({ refused: expect.stringContaining('more than one') });
   });
 
   it('queues everything until the restored panes are counted', async () => {

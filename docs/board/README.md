@@ -212,16 +212,16 @@ says in a last line how many cards that hid; `--all` lists them, `--column <name
 Wherever a verb takes an id, any start of one that a single card's id begins with stands for it,
 such as its first eight characters; a start two cards share is refused, naming both, and a ship, a
 review or a move the app answers is sent the whole id. The app makes a start whole again against the
-project's board (`wholeId` in `board-cli.ts`), for the card's id and a ship's `--after` alike, since
-the folder's board can lag it and an MCP tool's call reaches it the same way. The usage and the
-seeded file both say no git pull, commit or push is needed around a board command: it syncs the
-board itself, below. The .dashboard/CLAUDE.md the app seeds into each project says what the folder
-holds, that the board is changed through the command, `node "$DASHBOARD_BOARD"` to print what it
-takes, that `list` leaves out Done and Cancelled, and that no git pull, commit or push is needed.
-Its first line carries a version, and it is written whenever the board is read and the file is
-missing or older than the app's (no version line counts as older), so a project seeded with an older
-text that spelled out the card format gets the new one. A file of the app's version or a later one
-is left alone, edited or not, and a checkout the sync brings up keeps an edit to it. Where git
+project's board (`wholeId` in `board-cli.ts`), for the card's id and, in `pane.start`, any
+`--after`, since the folder's board can lag it and an MCP tool's call reaches it the same way. The
+usage and the seeded file both say no git pull, commit or push is needed around a board command: it
+syncs the board itself, below. The .dashboard/CLAUDE.md the app seeds into each project says what
+the folder holds, that the board is changed through the command, `node "$DASHBOARD_BOARD"` to print
+what it takes, that `list` leaves out Done and Cancelled, and that no git pull, commit or push is
+needed. Its first line carries a version, and it is written whenever the board is read and the file
+is missing or older than the app's (no version line counts as older), so a project seeded with an
+older text that spelled out the card format gets the new one. A file of the app's version or a later
+one is left alone, edited or not, and a checkout the sync brings up keeps an edit to it. Where git
 tracks the file, the rewrite is committed to the remote's default branch by the sync below, as a
 card write is. Only a checkout on that default branch, a folder outside git, or a repository with no
 remote default branch has an older file rewritten; a feature branch's worktree keeps its copy until
