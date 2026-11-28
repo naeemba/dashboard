@@ -1,0 +1,11 @@
+{
+  "id": "dd82e1fb-656e-4e5d-b317-3c042ada870a",
+  "title": "The review start never takes the worktree of a worker paused on its own checks",
+  "notes": "Night retro 2026-11-28, new-crm: four times (03:10, 04:22, 06:44, 08:12 UTC; the 'terminal N exited (code 1)' lines in the app log) the app's review start swapped out a worker that had ended its turn waiting on its own background gates: killed 12 s after starting backoffice gates, while reading gate output, 2 s after gates finished, and once with 6 fix commits not yet pushed. Each replacement re-ran pr-loop (42, 10, 11, 13 min). Cause: agentWorksIn (src/main/panes/slot-panes.ts:95) reads only the pane's screen (workerScreens().working / agentsAtWork) and ignores the paused state pane list shows ('paused, waiting on 1 background task', isPaused in src/shared/workers/worker-roster.ts). Wanted: a worker paused on its own background work counts as working for the review sweep (and any other caller of agentWorksIn that takes a worktree or pane away), up to the existing pause ceiling (PAUSE_CEILING_MS in src/shared/workers/done-report.ts) so a dead pause does not block forever. Test the decision. Lands after #431 (card caacc908), which also edits review-flow.ts.",
+  "priority": "urgent",
+  "parent": null,
+  "createdAt": "2026-11-28T09:30:06.800Z",
+  "updatedAt": "2026-11-28T09:30:06.800Z",
+  "column": "Backlog",
+  "order": 4
+}
