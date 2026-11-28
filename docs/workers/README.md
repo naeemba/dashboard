@@ -203,7 +203,8 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given main's worker a minute into `pnpm test` when the machine sleeps, when
   it wakes 40 minutes later, then the worker is not stalled: the stall check
   ran more than two minutes after the last one, so the time between is not
-  counted, and a silence counts awake minutes only (workers-decision-13).
+  counted, and a silence counts awake minutes only; `pane list` read on waking,
+  before the next check, counts the same (workers-decision-13).
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks`
   or `session_crons`, when its turn ends, then main is told only once it has
   stayed out of `running` for three minutes, as before them

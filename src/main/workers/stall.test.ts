@@ -77,32 +77,39 @@ describe('stallWatch', () => {
     expect(stalls.silentFor('2:1')).toBeNull();
   });
 
+  // The clock moved on to `minute` as an awake machine moves it: a read after a longer gap is a wake.
+  const awake = (watched: Watch) => (minute: number) => { sweeper(watched, [], [])(minute); };
+
   it('waits out the pause ceiling for a worker inside a tool call, and names the call', () => {
-    const { clock, stalls } = watch();
+    const watched = watch();
+    const { stalls } = watched;
+    const at = awake(watched);
     stalls.sign('2:1', { toolStarted: { id: 'call-1', name: 'Bash', about: 'pnpm check' } });
-    clock.now = 29 * MINUTE;
+    at(29);
     expect(stalls.silentFor('2:1')).toBeNull();
-    clock.now = 31 * MINUTE;
+    at(31);
     expect(stalls.silentFor('2:1')).toEqual({ minutes: 31, tool: { name: 'Bash', about: 'pnpm check', minutes: 31 } });
   });
 
   it('keeps each call run side by side until its own end, naming the oldest, and drops them all when a turn ends', () => {
-    const { clock, stalls } = watch();
+    const watched = watch();
+    const { stalls } = watched;
+    const at = awake(watched);
     const test = { toolStarted: { id: 'call-1', name: 'Bash', about: 'pnpm test' } };
     stalls.sign('2:1', test);
-    clock.now = 24 * MINUTE;
+    at(24);
     stalls.sign('2:1', { toolStarted: { id: 'call-2', name: 'Bash', about: 'pnpm typecheck' } });
     stalls.sign('2:1', { toolEnded: 'call-2' });
-    clock.now = 50 * MINUTE;
+    at(50);
     expect(stalls.silentFor('2:1')).toBeNull();
-    clock.now = 55 * MINUTE;
+    at(55);
     expect(stalls.silentFor('2:1')).toEqual({ minutes: 31, tool: { name: 'Bash', about: 'pnpm test', minutes: 55 } });
     stalls.sign('2:1', { toolEnded: 'call-1' });
-    clock.now = 80 * MINUTE;
+    at(80);
     expect(stalls.silentFor('2:1')).toEqual({ minutes: 25 });
     stalls.sign('2:1', test);
     stalls.sign('2:1');
-    clock.now = 105 * MINUTE;
+    at(105);
     expect(stalls.silentFor('2:1')).toEqual({ minutes: 25 });
   });
 
@@ -120,11 +127,22 @@ describe('stallWatch', () => {
     expect(sweep(45, { asleep: true })).toBe(false);
     expect(stalls.silentFor('2:3')).toBeNull();
     sweep(59);
-    expect(said).toEqual(['2:1 20']);
+    expect(said).toEqual(['2:1 21']);
     sweep(65);
     sweep(70);
-    expect(said).toEqual(['2:1 20', '2:3 20', '2:2 31 Bash']);
-    expect(stalls.silentFor('2:2')).toEqual({ minutes: 31, tool: { name: 'Bash', about: 'pnpm test', minutes: 31 } });
+    expect(said).toEqual(['2:1 21', '2:3 21', '2:2 32 Bash']);
+    expect(stalls.silentFor('2:2')).toEqual({ minutes: 32, tool: { name: 'Bash', about: 'pnpm test', minutes: 32 } });
+  });
+
+  it('counts only the awake minutes for a read after waking, before any sweep', () => {
+    const watched = watch();
+    const { clock, stalls } = watched;
+    stalls.sign('2:1', { toolStarted: { id: 'call-1', name: 'Bash', about: 'pnpm test' } });
+    awake(watched)(2);
+    clock.now = 44 * MINUTE;
+    expect(stalls.silentFor('2:1')).toBeNull();
+    awake(watched)(75);
+    expect(stalls.silentFor('2:1')).toEqual({ minutes: 34, tool: { name: 'Bash', about: 'pnpm test', minutes: 34 } });
   });
 
   it('tells every stall on sweeps a minute apart, however many workers are silent at once', () => {

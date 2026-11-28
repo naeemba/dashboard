@@ -14,9 +14,9 @@ export const STALL_SWEEP_MS = MINUTE_MS;
 // which looks the same as a test that never ends: it is stalled only past the pause ceiling, as a
 // pause is told, and its notice names the call.
 const TOOL_CEILING_MINUTES = PAUSE_CEILING_MS / MINUTE_MS;
-// A sweep this long after the one before it is the machine come back: setInterval does not fire while it
-// sleeps or while the main process is blocked, so the time between is the machine's silence, not the
-// workers', and is not counted.
+// A look at the clocks (a sweep, a read, a hook) this long after the one before it is the machine come
+// back: setInterval does not fire while it sleeps or while the main process is blocked, so the time
+// between is the machine's silence, not the workers', and is not counted.
 const AWAY_MS = 2 * STALL_SWEEP_MS;
 
 const wholeMinutes = (ms: number) => Math.floor(ms / MINUTE_MS);
@@ -48,10 +48,10 @@ export type StallWatch = {
   // How long the worker has been silent, when that is a stall. A worker no hook has spoken for since
   // the launch (one resumed after a restart) has no clock, so it is never one.
   silentFor(id: string): Stall | null;
-  // Tells main of each stall once. A sweep that comes long after the one before it first moves every
-  // clock on by the time the machine was away, so a silence counts awake minutes only: a machine asleep
-  // or frozen woke to one warning per pane, delivered at once. Answers whether any worker is stalled
-  // now, told or not.
+  // Tells main of each stall once. Answers whether any worker is stalled now, told or not. Each of
+  // these first moves every clock on by the time the machine was away, whichever comes first after it
+  // wakes, so a silence counts awake minutes only: a machine asleep or frozen woke to one warning per
+  // pane, delivered at once, and `pane list` read before the next sweep showed the sleep as silence.
   sweep(ports: StallSweepPorts): boolean;
   forget(id: string): void;
 };
@@ -65,13 +65,23 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
   const calls = new Map<string, Map<string, RunningCall>>();
   // The stalls told, each with what takes its notice back.
   const told = new Map<string, () => void>();
-  let lastSweep = now();
+  let lastLook = now();
+  const catchUp = () => {
+    const gap = now() - lastLook;
+    lastLook = now();
+    if (gap <= AWAY_MS) return;
+    // A hook heard after the machine came back, before this look, is not moved past now.
+    const later = (time: number) => Math.min(time + gap - STALL_SWEEP_MS, now());
+    for (const [id, time] of signs) signs.set(id, later(time));
+    for (const running of calls.values()) for (const call of running.values()) call.since = later(call.since);
+  };
   const takeBack = (id: string) => {
     told.get(id)?.();
     told.delete(id);
   };
 
   function silentFor(id: string): Stall | null {
+    catchUp();
     const last = signs.get(id);
     if (last === undefined) return null;
     const call = calls.get(id)?.values().next().value;
@@ -82,6 +92,7 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
 
   return {
     sign(id, { toolStarted, toolEnded } = {}) {
+      catchUp();
       signs.set(id, now());
       takeBack(id);
       const running = calls.get(id) ?? new Map<string, RunningCall>();
@@ -91,14 +102,7 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
     },
     silentFor,
     sweep(ports) {
-      const away = now() - lastSweep > AWAY_MS ? now() - lastSweep - STALL_SWEEP_MS : 0;
-      lastSweep = now();
-      // A hook heard after the machine came back, before this sweep, is not moved past now.
-      const later = (time: number) => Math.min(time + away, now());
-      if (away > 0) {
-        for (const [id, time] of signs) signs.set(id, later(time));
-        for (const running of calls.values()) for (const call of running.values()) call.since = later(call.since);
-      }
+      catchUp();
       const stalled = ports.panes().flatMap((id) => {
         const stall = ports.silentAtWork(id);
         return stall === null ? [] : [{ id, stall }];

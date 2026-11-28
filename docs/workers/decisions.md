@@ -738,7 +738,9 @@ ends sat in Doing holding a pool slot (workers-decision-11) with nothing to say 
   warning per pane, four delivered at once. Telling each main once that the machine was away, and
   each stall a sweep later, still told a worker a minute into its test that it had been running 43
   minutes. Counting silent workers instead called two workers hung on their tests a sleeping
-  machine.
+  machine. The shift is made by whatever looks at the clocks first after waking, a sweep, a read
+  or a hook: made by the sweep alone, `pane list` and the workers popup in the minute before it
+  showed a worker a minute into `pnpm test` as silent 44 minutes.
 - **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
   minute notice (workers-decision-1): their silence is waiting, not a hang.
 - **The workers popup is redrawn each minute while one is stalled**, and once on the minute after
