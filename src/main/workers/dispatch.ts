@@ -157,8 +157,9 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' When a worker\'s report says its review loop changed what the card asked for, or its design,'
       + ' ask me before landing it rather than relaying the change.'
       + ' A review starts only after the worker\'s turn ends, so the worker cannot confirm it: a few'
-      + ' minutes after its report, check from a wake-up or a background check for a pane on the card in'
-      + ` \`list\` or \`queue\`, or the \`${STARTED}\` comment on a GitHub pull request. If neither shows,`
+      + ' minutes after its report, check from a wake-up or a background check for a pane on the card other'
+      + ' than the worker that reported in `status`, which names each pane\'s card, or the card in `queue`,'
+      + ` or a \`${STARTED}\` comment on a GitHub pull request posted after the report. If none shows,`
       + ' read the card\'s comments for what holds it, and `board review <id>` once that is dealt with.',
     '',
     'The queue also holds while the 7-day usage is at or over the limit I set once, and `pane queue` says'

@@ -281,7 +281,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   to land it, then main asks the user first instead of relaying the change.
 - Given a worker reports a pull request a review will start on, when a few
   minutes have passed, then main confirms the review started (a pane on the
-  card in `pane list` or `pane queue`, or the `Review loop started.` comment),
+  card other than the worker that reported, in `pane status`, which names each
+  pane's card; the card in `pane queue`; or a `Review loop started.` comment
+  posted after the report),
   and otherwise reads the card's comments for what holds it and runs
   `board review <id>`: the worker cannot see the start, which waits for its
   turn to end.
