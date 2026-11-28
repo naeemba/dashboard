@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-28T02:36:14.719Z",
-  "updatedAt": "2026-11-28T11:00:22.959Z",
+  "updatedAt": "2026-11-28T11:12:57.657Z",
   "branch": "stall-warning-ignores-a-worker-waiting-on-i",
-  "column": "Doing",
+  "pullRequest": 436,
+  "comments": [
+    {
+      "at": "2026-11-28T11:12:57.636Z",
+      "body": "Pull request #436 opened: Name the tool call a stalled worker is in, and tell a silent machine once https://github.com/naeemba/dashboard/pull/436"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
