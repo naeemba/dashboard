@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:20.667Z",
-  "updatedAt": "2026-11-28T02:50:22.561Z",
+  "updatedAt": "2026-11-28T02:51:31.243Z",
   "branch": "the-command-keeps-working-against-the-runni",
   "pullRequest": 426,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-28T02:50:22.561Z",
       "body": "Review loop: converged, ready to merge. 1 round, floor-addressed: 2 nits fixed (shared commonjs package.json helper; workers-decision-4 reworded to match command-decision-12) in c89821f4, f21eabea; final check accepted both. No conflicts, nothing open, CI green on the head commit."
+    },
+    {
+      "at": "2026-11-28T02:51:31.212Z",
+      "body": "Pull request #426 merged: Panes keep running the app's own commands after a rebuild https://github.com/naeemba/dashboard/pull/426"
     }
   ],
-  "column": "Review",
-  "order": 1
+  "column": "Done",
+  "order": 352
 }
