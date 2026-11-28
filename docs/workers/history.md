@@ -122,3 +122,6 @@ One line per merged change: date and why.
   runner's disk stall took one of its tests to 5005 ms on main, failing the release
 - 2026-11-28 — A worker's stop, pause and stall notices carry its `pane status` line, card and pull
   request: main ran `pane list` 146 times in one session after notices that told it to
+- 2026-11-28 — Main confirms a review started a few minutes after a worker's report, since the
+  worker cannot see it: three pull requests sat unreviewed for five hours behind reports saying
+  the review loop would pick them up

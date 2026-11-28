@@ -14,6 +14,7 @@
 // `$4`, is settings.review.autoLoop: whether the app starts a review, which waits on CI, once the
 // pull request opens. Off, nothing does, so the agent waits on CI itself.
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+import { LONG_RUNS } from './background-runs';
 
 export const BUMP_VERSION = 'bump-version';
 export const KEEP_VERSION = 'keep-version';
@@ -159,6 +160,7 @@ conflict after review, and one of them is thrown away.
   test files on their own, then the project's type-check and lint once, not
   the whole check again. A file left on that line with neither is the
   review's first round of work.
+- ${LONG_RUNS}
 - Commit in small pieces with messages that say what changed and why.
 - When the card adds a docs id, run the id command above a last time right
   before pushing: an id of yours that another pull request has taken since
@@ -174,10 +176,13 @@ conflict after review, and one of them is thrown away.
   GitLab, \`glab mr create --target-branch $2 --title "<title>" --description
   "<body>" --push=false --yes\`, which the board records the same way.
 - Once the pull request is open, the review: $4.
-  \`${REVIEW_LOOP}\` means the app starts a review on it, which waits on CI:
-  send main (when your prompt names one) your report now, with its number,
-  and end your turn. Do not wait on its CI yourself: a wait left running here
-  is killed when that review starts, with the report promised after it.
+  \`${REVIEW_LOOP}\` means the app starts a review on it, which waits on CI.
+  It starts once your turn ends, so first leave nothing to hold it:
+  \`git status --short\` prints nothing, or it waits for a commit of those changes.
+  Then send main (when your prompt names one) your report now, with its
+  number, and end your turn: main confirms it started. Do not wait on its
+  CI yourself: a wait left running here is killed when that review starts,
+  with the report promised after it.
 
   \`${NO_REVIEW_LOOP}\`, or anything else, means nothing starts a review, so
   nothing else watches CI: wait on it with \`node "$DASHBOARD_COMMAND" pr wait

@@ -1,7 +1,7 @@
 import { addComment, CANCELLED_COLUMN, cardAt, isColumnNamed, moveCardById, reviewColumnIndex, selectionOf, type Board } from '../../shared/board/board';
 import { posixQuoted } from '../../shared/panes/shell';
 import type { Forge } from '../app/forge';
-import { FINISHED } from './review-finished';
+import { FINISHED, STARTED } from './review-finished';
 
 // Every decision the review makes that is not git's or Electron's: where a finished card goes, what is
 // said on it when it cannot be reviewed, and what the pane that reviews it is asked to do. The steps
@@ -189,7 +189,7 @@ type ForgeSteps = { start: string[]; close: string[]; wait: string[]; land: stri
 // rest is two fixed calls here, the set-up beside the Workflow call and the close chained into the wait.
 // The `Review loop finished:` heading is what review-finished.ts reads.
 function pullRequestSteps(pullRequest: number, sayOnCard: string, workflow: string): ForgeSteps {
-  const loopStarted = 'Review loop started. Fix commits land here while it runs; CI waits until it finishes.';
+  const loopStarted = `${STARTED} Fix commits land here while it runs; CI waits until it finishes.`;
   return {
     start: [
       '   - Mark the pull request while the loop runs, so CI waits for the loop rather than running on every fix push:',

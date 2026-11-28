@@ -4,6 +4,7 @@
 // tool still browsed in Claude in Chrome, whose two skills named theirs (browser-decision-8).
 import { DEFAULT_READ_TOKENS } from '../browser/page-reader';
 import { BROWSER_SIGN_IN, CHROME_STAYS, DASHBOARD_TOOLS, MCP_SERVER_NAME } from '../command/mcp-tools';
+import { LONG_RUNS } from './background-runs';
 
 // Every browser tool's full name, for the one ToolSearch call that loads them.
 const BROWSER_TOOLS = DASHBOARD_TOOLS.filter((each) => each.name.startsWith('browser_'))
@@ -73,6 +74,10 @@ time:
    it. Close it if you are done with it, or leave it and it stays; nothing
    closes it for you. A worker answers with the close alone and ends that turn
    without a report: main already has the one it gave.
+
+## A dev server or a long check
+
+${LONG_RUNS}
 
 ## A page that asks you to sign in
 
