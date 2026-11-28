@@ -122,3 +122,7 @@ One line per merged change: date and why.
   runner's disk stall took one of its tests to 5005 ms on main, failing the release
 - 2026-11-28 — A worker's stop, pause and stall notices carry its `pane status` line, card and pull
   request: main ran `pane list` 146 times in one session after notices that told it to
+- 2026-11-28 — A turn that ends on a transient API error is sent `continue` after 1, 2, 5 and 10
+  minutes from its StopFailure hook, and main told when the tries run out: three sessions sat
+  idle on a dropped connection for about 50 session-minutes until the user typed it
+  (workers-decision-14)

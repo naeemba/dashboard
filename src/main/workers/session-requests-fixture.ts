@@ -92,6 +92,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     openPullRequests: () => Promise.resolve([]),
     released: (id, reason, output) => { released.push(`${id} ${reason}: ${output}`); },
     threwAway: (id, said, projectPath) => { released.push(`${id} dropped: ${said} (${projectPath})`); },
+    log: () => undefined,
     realPath: (folder) => folder,
     pool: {
       saved: { next: 1, entries: [] },

@@ -13,6 +13,7 @@ import { baseName } from '../../shared/app/base-name';
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
+import { gaveUpText, RESUME_TEXT, turnFailures } from './turn-failures';
 import { stalledState, stallWatch } from './stall';
 import { isTyped, promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
@@ -111,6 +112,8 @@ export type SessionPorts = {
   released(id: string, reason: string, output: string): void;
   // What became of the throwaway of a pane that went without a release: logged under its project.
   threwAway(id: string, said: string, projectPath: string): void;
+  // A line in the log about the pane, under its project: each try turn-failures.ts makes.
+  log(id: string, message: string): void;
   // What the pane pool (actions/pane/queue.ts) is built on beside what is held here: its file, the
   // settings and the boards, and the start of a ship or a review.
   pool: PoolPorts;
@@ -250,6 +253,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     lastMessages.delete(id);
     prompts.forget(id);
     pool.forget(id);
+    failures.forget(id);
   };
   const notices = stopNotices({
     midTurn: (id) => midTurn(mainOf(id)),
@@ -259,6 +263,23 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       if (!mainsWorker(id) || prompts.fromUser(id)) return;
       if (paused && (reportsRead.has(id) || workIn(id))) return;
       return tellRow(id, (row) => doneReport(nameOfPane(id), id, row, paused, lastMessages.get(id)));
+    },
+  });
+  // A turn ended on an API error, sent `continue` again: a worker as main's `pane send` would, so its
+  // prompt hook marks it at work, and main into its own queue.
+  const failures = turnFailures({
+    log: ports.log,
+    resume(id) {
+      const { slot, index } = paneFromId(id);
+      if (index === MAIN_INDEX) return void ports.tell(slot, RESUME_TEXT);
+      ports.send(id, RESUME_TEXT, ports.projectPath(mainOf(id)) ?? '').then(
+        (sent) => { if (isRefused(sent)) ports.log(id, `\`${RESUME_TEXT}\` not sent: ${sent.refused}`); },
+        (error: unknown) => ports.log(id, `\`${RESUME_TEXT}\` not sent: ${failureText(error)}`),
+      );
+    },
+    gaveUp(id, apiError, tries) {
+      const name = paneFromId(id).index === MAIN_INDEX ? 'main' : nameOfPane(id);
+      ports.tell(mainOf(id), gaveUpText(name, id, apiError, tries));
     },
   });
   // A notice to the worker's main carrying its `pane status` line (row-notice.ts), and how to take it back.
@@ -653,6 +674,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const { slot, index } = paneFromId(id);
     if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
     stalls.sign(id);
+    if (state === 'running') failures.working(id);
     if (onAppTurn(id, state, told)) return answered('');
     if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
     if (state === 'running') {
@@ -667,11 +689,20 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     return answered('');
   }
 
+  // A StopFailure hook's, from any session the app starts, main's included.
+  function turnFailed(id: string, error: string): SessionReply {
+    const { slot, index } = paneFromId(id);
+    if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
+    failures.failed(id, error);
+    return answered('');
+  }
+
   return Object.assign(async (request: SessionRequest): Promise<SessionReply> => {
     const parsed = parseSessionCommand(request.args);
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
     if (command.kind === 'notify') return notify(command.id, command.state, command.waiting, command.told);
+    if (command.kind === 'turn-failed') return turnFailed(command.id, command.error);
     const folderSlot = ports.slotOf(request.directory);
     const slot = askingSlot(command, folderSlot);
     // From outside every project only words that name their target are answered: a claim --project
@@ -776,6 +807,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     },
     mainTurn(slot: number, running: boolean) {
       if (running) {
+        failures.working(terminalId(slot, MAIN_INDEX));
         if (busyMains.has(slot)) return;
         const turn = { overCeiling: false, stop: () => clearTimeout(timer) };
         const timer = setTimeout(() => { turn.overCeiling = true; notices.turnOver(); }, PAUSE_CEILING_MS);

@@ -115,6 +115,7 @@ export function sessionRequestPorts(main: SessionRequestMain): SessionPorts {
       main.sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
     },
     threwAway: (id, said, projectPath) => main.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
+    log: (id, message) => main.log({ level: 'warn', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `pane ${id} ${message}` }),
     realPath,
     pool: main.pool,
     stallMinutes: main.stallMinutes,

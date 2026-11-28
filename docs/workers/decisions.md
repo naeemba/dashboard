@@ -736,3 +736,33 @@ ends sat in Doing holding a pool slot (workers-decision-11) with nothing to say 
 - **A notice still waiting for main is taken back** when the worker's next hook comes in, or it is
   let go of, as its stop notice is: main never reads that a worker that is working again may be
   stuck.
+
+## workers-decision-14: A turn that ends on an API error is resumed by the app, from its StopFailure hook
+
+**A worker's or a main's turn that ends on an API error a wait can outlive is sent `continue`
+after 1, 2, 5 and 10 minutes, and its main is told when the fifth failure comes**
+(`src/main/workers/turn-failures.ts`). Before it, on 2026-11-28 three sessions ended on a dropped
+connection within 17 minutes and sat idle until the user typed `continue`, about 50
+session-minutes, one pull request sitting with green CI.
+
+- **The signal is Claude Code's StopFailure hook**, which runs in place of Stop when a turn ends on
+  an API error and names its type. It is one command hook in `appSessionSettings`, the settings
+  every session the app starts carries, so a terminal worker, a worker screen (hosted or not) and
+  main's screen are all heard through one door, `session turn-failed "$DASHBOARD_PANE"`. Reading
+  main's stream for the error was the other choice: it covers main only, and a terminal worker has
+  no stream.
+- **Only `server_error` and `overloaded` are resumed.** Claude Code calls a dropped connection, a
+  stalled stream, a timeout and an API at capacity `server_error`. An auth, billing, request,
+  model or rate limit error fails the same way after any wait, so it is logged and left.
+- **Tries count by time, not by a turn that went well.** A failure within 30 minutes of the one
+  before it is the next try; one later is a first. A successful turn end would be the better sign,
+  but main's turn end and its StopFailure reach the app by different paths in no promised order,
+  and a reset that came second would retry for ever. The cost: a resumed turn that works 20
+  minutes and then fails counts as a try, and its main hears sooner.
+- **A prompt in between calls the wait off**: a worker's prompt or tool hook, or main beginning a
+  turn, means somebody else resumed it.
+- **A worker is sent it as `pane send` would**, typed into a terminal or handed to a screen, and
+  main gets it queued as a worker's report is. Giving up is told to the pane's main; for main itself
+  that tell is one more prompt, which the API answering again picks up.
+- A Claude opened by hand in a terminal pane carries none of the app's settings, and is not
+  resumed.

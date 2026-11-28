@@ -82,6 +82,11 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `screen-host-server.ts`, `screen-host-entry.ts`, `screen-host-client.ts`,
   `screen-host-protocol.ts`, `dead-host.ts` (with `../app/process-alive.ts`),
   `../chat/input-queue.ts` (workers-decision-6)
+- A turn that ends on an API error, sent `continue` again: the StopFailure hook
+  in `dispatch.ts`'s `appSessionSettings`, the `turn-failed` verb in
+  `session-cli.ts`, the schedule in `turn-failures.ts`, wired in
+  `session-requests.ts` (tested in `session-requests-turn-failed.test.ts`)
+  (workers-decision-14)
 
 ## Scenarios
 
@@ -499,6 +504,13 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
 - Given a pane already running a worker screen, when pane.dispatch starts
   another screen there, then the first one's session is stopped before the new
   one starts.
+- Given a worker or a main whose turn ends on a dropped connection, a timeout
+  or an API at capacity, when its StopFailure hook runs `session turn-failed`,
+  then the app sends it `continue` after 1, 2, 5 and 10 minutes, a worker as
+  `pane send` would and main into its queue, logging each try; one more failure
+  tells the pane's main the app gave up. A prompt in between calls the wait off,
+  and an auth, billing or request error is logged, never resumed
+  (workers-decision-14).
 
 ## Open questions
 
