@@ -74,7 +74,7 @@ describe('slotPanes', () => {
   it('has an agent paused on its own background work still working, and no pane without an agent', () => {
     const panes = slotPanes(sources({
       workerScreens: () => ({ has: (id) => id === terminalId(0, 1), working: () => false, ids: () => [terminalId(0, 1)] }),
-      pausedAtWork: () => true,
+      pausedAtWork: (id) => id === terminalId(0, 1),
     }));
     expect(panes.agentWorksIn(0, 1)).toBe(true);
     expect(panes.agentWorksIn(0, 3)).toBe(false);
