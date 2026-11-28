@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project, rowOf } from './session-requests-fixture';
-import { isDoneReport, machineSilenceNotice, stallNotice } from '../../shared/workers/done-report';
+import { isDoneReport, stallNotice } from '../../shared/workers/done-report';
 
 // stall.test.ts holds the clock; this is what a stall does to `pane list`, `pane status` and main.
 beforeEach(() => { vi.useFakeTimers(); });
@@ -139,23 +139,17 @@ describe('a worker gone silent', () => {
     expect(await list()).toContain('stalled, silent 30 minutes, Bash running 30 minutes');
   });
 
-  it('tells main once that the machine was away in place of each stall, and each stall on the next sweep', async () => {
-    const { answer, told, withdrawn } = await silentWorker();
-    await answer({ directory: '/work/api', args: ['claim'] });
-    await answer({ directory: '/work/api', args: ['run', '2:2', 'run the build'] });
-    answer.notify('2:2', 'running', undefined, { handed: true });
+  it('does not count the minutes the machine was asleep', async () => {
+    const { answer, told, list } = await silentWorker();
     minutes(5, answer.tellStalls);
-    const since = Date.now();
-    const before = told.length;
     // Asleep for 30 minutes: the sweep's interval does not fire.
     vi.advanceTimersByTime(30 * 60_000);
-    answer.tellStalls();
-    expect(told.slice(before)).toEqual([`2 ${machineSilenceNotice(since)}`]);
-    expect(isDoneReport(machineSilenceNotice(since))).toBe(true);
-    answer.notify('2:1', 'running');
-    expect(withdrawn).toContain(`2 ${before}`);
+    // Six minutes silent: the five before and the sweep's own one.
+    expect(answer.tellStalls()).toBe(false);
+    minutes(13, answer.tellStalls);
+    expect(await list()).toContain('2:1\tterminal 2\trunning');
     minutes(1, answer.tellStalls);
-    expect(told.at(-1)).toContain('api-terminal-3 in pane 2:2');
-    expect(told.filter((each) => each.includes('in pane 2:1'))).toEqual([]);
+    expect(told.filter((each) => each.includes('no sign of life'))).toHaveLength(1);
+    expect(await list()).toContain('stalled, silent 20 minutes');
   });
 });

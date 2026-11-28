@@ -15,7 +15,8 @@ export const STALL_SWEEP_MS = MINUTE_MS;
 // pause is told, and its notice names the call.
 const TOOL_CEILING_MINUTES = PAUSE_CEILING_MS / MINUTE_MS;
 // A sweep this long after the one before it is the machine come back: setInterval does not fire while it
-// sleeps or while the main process is blocked, so the workers' silence is its, not theirs.
+// sleeps or while the main process is blocked, so the time between is the machine's silence, not the
+// workers', and is not counted.
 const AWAY_MS = 2 * STALL_SWEEP_MS;
 
 const wholeMinutes = (ms: number) => Math.floor(ms / MINUTE_MS);
@@ -36,10 +37,8 @@ export type StallSweepPorts = {
   silentAtWork(id: string): Stall | null;
   // A turn you typed into the worker yourself, which you are watching: listed stalled, never told.
   fromUser(id: string): boolean;
-  mainOf(id: string): number;
-  // Each answers with what takes its notice back.
+  // Answers with what takes its notice back.
   tellPane(id: string, stall: Stall): () => void;
-  tellMachine(slot: number, since: number): () => void;
 };
 
 export type StallWatch = {
@@ -49,10 +48,10 @@ export type StallWatch = {
   // How long the worker has been silent, when that is a stall. A worker no hook has spoken for since
   // the launch (one resumed after a restart) has no clock, so it is never one.
   silentFor(id: string): Stall | null;
-  // Tells main of each stall once. On a sweep that comes long after the one before it, each main with a
-  // stalled worker hears once that the machine was away instead, and the stalls wait for the next
-  // sweep: a machine asleep or frozen woke to one warning per pane, delivered at once.
-  // Answers whether any worker is stalled now, told or not.
+  // Tells main of each stall once. A sweep that comes long after the one before it first moves every
+  // clock on by the time the machine was away, so a silence counts awake minutes only: a machine asleep
+  // or frozen woke to one warning per pane, delivered at once. Answers whether any worker is stalled
+  // now, told or not.
   sweep(ports: StallSweepPorts): boolean;
   forget(id: string): void;
 };
@@ -64,9 +63,8 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
   // The tool calls each worker is in, by id, each with when it started, oldest first; a call refused
   // before it ran is kept only until the next hook that is not a tool's.
   const calls = new Map<string, Map<string, RunningCall>>();
-  // The stalls told, each with what takes its notice back; and the mains told the machine was away.
+  // The stalls told, each with what takes its notice back.
   const told = new Map<string, () => void>();
-  const machineTold = new Map<number, () => void>();
   let lastSweep = now();
   const takeBack = (id: string) => {
     told.get(id)?.();
@@ -86,8 +84,6 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
     sign(id, { toolStarted, toolEnded } = {}) {
       signs.set(id, now());
       takeBack(id);
-      for (const withdraw of machineTold.values()) withdraw();
-      machineTold.clear();
       const running = calls.get(id) ?? new Map<string, RunningCall>();
       if (toolStarted !== undefined) calls.set(id, running.set(toolStarted.id, { ...toolStarted, since: now() }));
       else if (toolEnded !== undefined) running.delete(toolEnded);
@@ -95,18 +91,20 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
     },
     silentFor,
     sweep(ports) {
+      const away = now() - lastSweep > AWAY_MS ? now() - lastSweep - STALL_SWEEP_MS : 0;
+      lastSweep = now();
+      // A hook heard after the machine came back, before this sweep, is not moved past now.
+      const later = (time: number) => Math.min(time + away, now());
+      if (away > 0) {
+        for (const [id, time] of signs) signs.set(id, later(time));
+        for (const running of calls.values()) for (const call of running.values()) call.since = later(call.since);
+      }
       const stalled = ports.panes().flatMap((id) => {
         const stall = ports.silentAtWork(id);
         return stall === null ? [] : [{ id, stall }];
       });
-      const awaySince = now() - lastSweep > AWAY_MS ? lastSweep : null;
-      lastSweep = now();
       for (const { id, stall } of stalled) {
-        if (ports.fromUser(id)) continue;
-        const slot = ports.mainOf(id);
-        if (awaySince !== null) {
-          if (!machineTold.has(slot)) machineTold.set(slot, ports.tellMachine(slot, awaySince));
-        } else if (!told.has(id)) told.set(id, ports.tellPane(id, stall));
+        if (!ports.fromUser(id) && !told.has(id)) told.set(id, ports.tellPane(id, stall));
       }
       return stalled.length > 0;
     },

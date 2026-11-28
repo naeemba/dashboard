@@ -1,4 +1,3 @@
-import { clockTime } from '../chat/chat-status';
 import { PANE_ADDRESS, paneLink } from './pane-link';
 
 // What the app tells main about a worker it dispatched that stopped and stayed stopped without
@@ -30,12 +29,6 @@ export function stallNotice(name: string, id: string, minutes: number, row: stri
   return `${name} in pane ${id} (${paneLink(id)}) has shown no sign of life for ${minutes} minutes: ${what} ${ROW}${row}.`;
 }
 
-// What each main is told, once, in place of its workers' stalls, on the app's first stall check after
-// the machine was away (stall.ts): asleep or frozen, not every worker stuck at once.
-export function machineSilenceNotice(since: number): string {
-  return `${MACHINE_SILENT} ${clockTime(since) ?? ''}. ${MACHINE_WAIT}`;
-}
-
 // How much of a worker's last message the app keeps for `pane report`, and how much a notice carries:
 // the end of a message is where a worker says what it did.
 export const LAST_MESSAGE_KEPT = 4000;
@@ -65,9 +58,6 @@ const STALLED = 'no prompt has gone in and no tool has finished. It may be stuck
   + 'for one. It keeps its pane: look at it, send it word or release it.';
 const TOOL_STALLED = 'It may be stuck or only slow, a long check for one. It keeps its pane: look at it before you '
   + 'release it, since a release ends that run.';
-const MACHINE_SILENT = 'The app\'s stall check has not run since';
-const MACHINE_WAIT = 'The machine may have been asleep or frozen, so its workers\' silence is not theirs yet. Each '
-  + 'worker still silent at the next check, a minute from now, is told then.';
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // The last wording is the one main was sent at every turn end before the grace period, and the
@@ -79,7 +69,6 @@ const DONE_REPORT = new RegExp(`^\\S+ in pane -?\\d+:\\d+ \\(${PANE_ADDRESS.sour
   + `was closed by the app, [^,]+\\. ${escape(IF_REPORTED)}|`
   + `has finished its turn\\. ${escape(IF_REPORTED)})`
   + ` (?:\`pane list\` shows where every worker stands\\.(?: ${escape(LAST_SAID)}.*)?|${escape(ROW)}.*)$`);
-const MACHINE_SILENCE = new RegExp(`^${escape(MACHINE_SILENT)} \\d{1,2}:\\d\\d[ap]m\\. ${escape(MACHINE_WAIT)}$`);
 
 // The line every prompt main hands a worker ends with (workerPrompt in dispatch.ts), and so what a
 // worker's prompt hook reads to tell main's prompt from one you typed (prompt-source.ts). It is
@@ -97,5 +86,5 @@ export function asksForReport(prompt: string): boolean {
 // Whether a prompt is one doneReport wrote, or the close notice of a build before workers-decision-1
 // dropped its timer, live or read back from a saved conversation.
 export function isDoneReport(text: string): boolean {
-  return DONE_REPORT.test(text) || MACHINE_SILENCE.test(text);
+  return DONE_REPORT.test(text);
 }

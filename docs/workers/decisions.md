@@ -731,12 +731,14 @@ ends sat in Doing holding a pool slot (workers-decision-11) with nothing to say 
   the calls that can run that long (Bash, agents, MCP tools and a few more): each one is a node
   start the call waits on.
 - **A sweep more than two minutes after the one before it is the machine, not the workers**: the
-  minute's interval does not fire while the machine sleeps or the main process is blocked. On that
-  sweep each main with a stalled worker is told once that the stall check has not run since the last
-  sweep, taken back at any worker's hook, and the stalls are told on the next sweep, for the workers
-  still silent. A machine asleep or frozen woke to one warning per pane, four delivered at once.
-  Counting silent workers instead called two workers hung on their tests, with main idle waiting on
-  their reports, a sleeping machine.
+  minute's interval does not fire while the machine sleeps or the main process is blocked. That
+  sweep moves every worker's last hook and every running call's start on by the gap, so a silence
+  counts awake minutes only: a worker hung before the sleep is told once it has been silent for the
+  setting's minutes awake, and one mid-step is not told. A machine asleep or frozen woke to one
+  warning per pane, four delivered at once. Telling each main once that the machine was away, and
+  each stall a sweep later, still told a worker a minute into its test that it had been running 43
+  minutes. Counting silent workers instead called two workers hung on their tests a sleeping
+  machine.
 - **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
   minute notice (workers-decision-1): their silence is waiting, not a hang.
 - **The workers popup is redrawn each minute while one is stalled**, and once on the minute after

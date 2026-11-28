@@ -25,19 +25,17 @@ describe('stallWatch', () => {
     expect(stalls.silentFor('2:1')).toBeNull();
   });
 
-  // A sweep over the panes given, telling each stall and each machine silence into `said`, once the
-  // clock has been moved on to `minute` a sweep a minute, as the app's interval does while awake.
+  // A sweep over the panes given, telling each stall into `said`, once the clock has been moved on to
+  // `minute` a sweep a minute, as the app's interval does while awake, or at once when asleep.
   type Watch = ReturnType<typeof watch>;
-  const sweeper = ({ clock, stalls }: Watch, panes: string[], said: string[], fromUser: (id: string) => boolean = () => false) => (minute: number) => {
+  const sweeper = ({ clock, stalls }: Watch, panes: string[], said: string[], fromUser: (id: string) => boolean = () => false) => (minute: number, { asleep = false } = {}) => {
     const ports = (shown: string[]): StallSweepPorts => ({
       panes: () => shown,
       silentAtWork: (id) => stalls.silentFor(id),
       fromUser,
-      mainOf: () => 2,
       tellPane: (id, stall) => { said.push(`${id} ${stall.minutes}${stall.tool ? ` ${stall.tool.name}` : ''}`); return () => { said.push(`${id} withdrawn`); }; },
-      tellMachine: (slot, since) => { said.push(`machine ${slot} ${since / MINUTE}`); return () => { said.push('machine withdrawn'); }; },
     });
-    for (; clock.now < (minute - 1) * MINUTE; clock.now += MINUTE) stalls.sweep(ports([]));
+    for (; !asleep && clock.now < (minute - 1) * MINUTE; clock.now += MINUTE) stalls.sweep(ports([]));
     clock.now = minute * MINUTE;
     return stalls.sweep(ports(panes));
   };
@@ -108,26 +106,25 @@ describe('stallWatch', () => {
     expect(stalls.silentFor('2:1')).toEqual({ minutes: 25 });
   });
 
-  it('tells each main once that the machine was away, on the first sweep after a gap, holding the stalls to the next', () => {
+  it('counts only the minutes the machine was awake, after a gap between sweeps', () => {
     const watched = watch();
     const { clock, stalls } = watched;
     const said: string[] = [];
-    const sweep = sweeper(watched, ['2:1', '2:2'], said);
+    const sweep = sweeper(watched, ['2:1', '2:2', '2:3'], said);
     stalls.sign('2:1');
-    stalls.sign('2:2');
+    stalls.sign('2:2', { toolStarted: { id: 'call-1', name: 'Bash', about: 'pnpm test' } });
     sweep(5);
-    // Asleep from minute 5 to 40: no sweep ran.
-    clock.now = 40 * MINUTE;
-    expect(stalls.sweep({
-      panes: () => ['2:1', '2:2'], silentAtWork: (id) => stalls.silentFor(id), fromUser: () => false, mainOf: () => 2,
-      tellPane: (id) => { said.push(id); return () => {}; },
-      tellMachine: (slot, since) => { said.push(`machine ${slot} ${since / MINUTE}`); return () => { said.push('machine withdrawn'); }; },
-    })).toBe(true);
-    expect(said).toEqual(['machine 2 5']);
-    stalls.sign('2:1');
-    expect(said).toEqual(['machine 2 5', 'machine withdrawn']);
-    sweep(41);
-    expect(said).toEqual(['machine 2 5', 'machine withdrawn', '2:2 41']);
+    // Asleep from minute 5 to 44, and 2:3's hook heard on waking, before the sweep.
+    clock.now = 44 * MINUTE;
+    stalls.sign('2:3');
+    expect(sweep(45, { asleep: true })).toBe(false);
+    expect(stalls.silentFor('2:3')).toBeNull();
+    sweep(59);
+    expect(said).toEqual(['2:1 20']);
+    sweep(65);
+    sweep(70);
+    expect(said).toEqual(['2:1 20', '2:3 20', '2:2 31 Bash']);
+    expect(stalls.silentFor('2:2')).toEqual({ minutes: 31, tool: { name: 'Bash', about: 'pnpm test', minutes: 31 } });
   });
 
   it('tells every stall on sweeps a minute apart, however many workers are silent at once', () => {

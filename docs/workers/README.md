@@ -200,11 +200,10 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   its has run for 30 minutes, then it is stalled as above, `pane list` adds
   `Bash running 31 minutes`, and main's notice says
   `Bash has been running 31 minutes: <its description>` (workers-decision-13).
-- Given main's workers silent past the setting, when the stall check runs
-  more than two minutes after the last one, the machine asleep or frozen, then
-  each main is told once `The app's stall check has not run since 2:05pm`, in
-  place of each stall, taken back at any worker's hook; the stalls of the
-  workers still silent are told on the next check (workers-decision-13).
+- Given main's worker a minute into `pnpm test` when the machine sleeps, when
+  it wakes 40 minutes later, then the worker is not stalled: the stall check
+  ran more than two minutes after the last one, so the time between is not
+  counted, and a silence counts awake minutes only (workers-decision-13).
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks`
   or `session_crons`, when its turn ends, then main is told only once it has
   stayed out of `running` for three minutes, as before them

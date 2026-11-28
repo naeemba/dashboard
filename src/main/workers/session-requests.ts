@@ -11,7 +11,7 @@ import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, pausedAtWork, type DispatchedWorker, type QueuedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { baseName } from '../../shared/app/base-name';
 import { paneLink } from '../../shared/workers/pane-link';
-import { doneReport, LAST_MESSAGE_KEPT, machineSilenceNotice, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
+import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import { gaveUpText, RESUME_TEXT, turnFailures } from './turn-failures';
 import { livePane } from '../panes/live-pane';
@@ -794,12 +794,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     },
     // A stall is taken back if the worker speaks again before main reads it, as its stop notice is.
     tellStalls: () => stalls.sweep({
-      panes: openPaneIds, silentAtWork, fromUser: prompts.fromUser, mainOf,
+      panes: openPaneIds, silentAtWork, fromUser: prompts.fromUser,
       tellPane: (id, { minutes, tool }) => tellRow(id, (row) => stallNotice(nameOfPane(id), id, minutes, row, tool)),
-      tellMachine(slot, since) {
-        const messageId = ports.tell(slot, machineSilenceNotice(since));
-        return () => ports.withdraw(slot, messageId);
-      },
     }),
     async dropped(id: string) {
       pool.drain();
