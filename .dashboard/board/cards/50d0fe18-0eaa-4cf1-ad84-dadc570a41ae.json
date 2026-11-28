@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-28T09:30:29.999Z",
-  "updatedAt": "2026-11-28T09:42:30.819Z",
+  "updatedAt": "2026-11-28T10:08:31.141Z",
   "branch": "work-card-and-browser-skills-confirm-the-re",
   "pullRequest": 432,
   "comments": [
     {
       "at": "2026-11-28T09:42:30.787Z",
       "body": "Pull request #432 opened: Main confirms a card's review started, and long commands get the longest background timeout https://github.com/naeemba/dashboard/pull/432"
+    },
+    {
+      "at": "2026-11-28T10:08:31.141Z",
+      "body": "Review loop: floor-addressed after 2 rounds, CI green on the head commit, no conflicts. Converged, ready to merge. Commits 3aab9611, 9d936ae8, 304bbf90, e1ebb67a. Last pass: main also takes 'already being reviewed' from board review as proof a review started, since the review often reuses the reporter's pane number, and the mainPrompt pane table gained a status row."
     }
   ],
   "column": "Review",
