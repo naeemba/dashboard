@@ -23,6 +23,8 @@ export function project(overrides: Partial<SessionPorts> = {}) {
   // The told messages taken back, by their place in `told`.
   const withdrawn: string[] = [];
   const typed: string[] = [];
+  // What went into a pane bare, handing it to no main.
+  const prompted: string[] = [];
   const released: string[] = [];
   // The panes with the keyboard, and each card a pane's worktree is for that is finished.
   const keyboard = new Set<string>();
@@ -64,6 +66,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
       if (handed) workers.set(id, dispatcherPath);
       return { output: `typed into ${id}`, handed };
     },
+    prompt: (id, text) => { prompted.push(`${id} ${text}`); },
     tell: (slot, text) => String(told.push(`${slot} ${text}`) - 1),
     withdraw: (slot, messageId) => { withdrawn.push(`${slot} ${messageId}`); },
     cardWorktree: (_projectPath, cardId) => ({
@@ -92,6 +95,7 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     openPullRequests: () => Promise.resolve([]),
     released: (id, reason, output) => { released.push(`${id} ${reason}: ${output}`); },
     threwAway: (id, said, projectPath) => { released.push(`${id} dropped: ${said} (${projectPath})`); },
+    log: () => undefined,
     realPath: (folder) => folder,
     pool: {
       saved: { next: 1, entries: [] },
@@ -110,5 +114,5 @@ export function project(overrides: Partial<SessionPorts> = {}) {
     ...overrides,
   };
   const ask = (commandArguments: string[], directory = '/work/api') => sessionRequests(ports)({ directory, args: commandArguments });
-  return { ports, ask, open, agents, workers, started, closed, marked, turnsEnded, removed, told, withdrawn, typed, released, keyboard, finishedCards };
+  return { ports, ask, open, agents, workers, started, closed, marked, turnsEnded, removed, told, withdrawn, typed, prompted, released, keyboard, finishedCards };
 }

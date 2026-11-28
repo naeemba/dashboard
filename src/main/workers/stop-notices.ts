@@ -54,7 +54,7 @@ export type StopNotices = {
   turnOver(): void;
 };
 
-function after(ms: number, run: () => void): () => void {
+export function after(ms: number, run: () => void): () => void {
   const timer = setTimeout(run, ms);
   return () => clearTimeout(timer);
 }

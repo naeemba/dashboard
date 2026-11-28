@@ -40,6 +40,7 @@ export type SessionRequestMain = {
   reviews: Pick<CardActions['reviews'], 'forget'>;
   giveCardPane(entry: WorktreeEntry, index: number): WorktreeEntry;
   sendToRenderer(channel: string, ...payload: unknown[]): void;
+  prompt: SessionPorts['prompt'];
   browser: Pick<ReturnType<typeof browserActions>, 'turnEnded'>;
   chats: Pick<ReturnType<typeof registerChatSessions>, 'tell' | 'withdraw'>;
   worktree: Pick<ReturnType<typeof worktreeActions>, 'makeThrowaway' | 'throwawayPorts'>;
@@ -87,6 +88,7 @@ export function sessionRequestPorts(main: SessionRequestMain): SessionPorts {
       return pane.dispatch.call({ id, projectPath: projectIn(slot)?.path ?? directory, directory, prompt, resume: null, cardId, dispatcherPath, as });
     },
     close: (id) => pane.close.call({ id }),
+    prompt: main.prompt,
     send: (id, text, dispatcherPath) => pane.send.call({ id, text, dispatcherPath }),
     mark: (id, state) => main.sendToRenderer('pane:mark', id, state), turnEnded: (id) => main.browser.turnEnded(id),
     tell: main.chats.tell,
@@ -115,6 +117,7 @@ export function sessionRequestPorts(main: SessionRequestMain): SessionPorts {
       main.sendToRenderer('pane:released', `Closed pane ${id}: ${reason}`);
     },
     threwAway: (id, said, projectPath) => main.log({ level: 'info', kind: 'worktree', project: projectPath, message: `pane ${id} closed: ${said}` }),
+    log: (id, message) => main.log({ level: 'warn', kind: 'pane', project: projectIn(paneFromId(id).slot)?.path, message: `pane ${id} ${message}` }),
     realPath,
     pool: main.pool,
     stallMinutes: main.stallMinutes,

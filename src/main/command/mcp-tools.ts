@@ -142,6 +142,7 @@ const WAIT_IN_BASH = 'run `node "$DASHBOARD_COMMAND" pr wait <n>` in Bash in the
 export const COMMAND_ONLY: Record<string, string> = {
   'board guard': 'a hook, reading its input on stdin',
   'pane notify': 'a hook a worker\'s settings call',
+  'pane failed': 'a hook every session the app starts calls',
   'pane landed': 'what pr land and a board move into Done or Cancelled run themselves',
   'pane conflicted': 'what pr land runs itself when a pull request conflicts',
   'pane ci': 'what pr wait and pr land run themselves around their wait on CI',

@@ -154,6 +154,8 @@ describe('stopInputArguments', () => {
     expect(readsHookInput(['notify', '2:3', 'running', '--prompt-input'])).toBe(true);
     expect(readsHookInput(['notify', '2:3', 'running', '--stop-input'])).toBe(false);
     expect(readsHookInput(['notify', '2:3', 'done'])).toBe(false);
+    expect(readsHookInput(['failed', '2:3', '--project', '/work/api', '--failure-input'])).toBe(true);
+    expect(readsHookInput(['failed', '2:3', '--failure-input'])).toBe(false);
   });
 
   it('counts what the session still waits on, and sends its last message', () => {
@@ -186,6 +188,16 @@ describe('stopInputArguments', () => {
     expect(parseSessionCommand(sent).ok).toBe(true);
     expect(hookArguments(['notify', '2:3', 'done', '--stop-input'], undefined)).toEqual(['notify', '2:3', 'done']);
     expect(hookArguments(['list', '--all'], undefined)).toEqual(['list', '--all']);
+    // A StopFailure hook's: the error type, `unknown` when its input names none.
+    const head = ['failed', '2:3', '--project', '/work/api'];
+    const failure = [...head, '--failure-input'];
+    expect(hookArguments(failure, JSON.stringify({ hook_event_name: 'StopFailure', error: 'server_error' }))).toEqual([...head, '--error', 'server_error']);
+    expect(hookArguments(failure, undefined)).toEqual([...head, '--error', 'unknown']);
+    expect(hookArguments(failure, 'not json')).toEqual([...head, '--error', 'unknown']);
+    expect(parseSessionCommand([...head, '--error', 'overloaded'])).toEqual({ ok: true, command: { kind: 'failed', id: '2:3', project: '/work/api', error: 'overloaded' } });
+    expect(parseSessionCommand(['failed', '2:3', '--error', 'overloaded']).ok).toBe(false);
+    expect(parseSessionCommand(['failed', '2:3', '--project', '', '--error', 'overloaded']).ok).toBe(false);
+    expect(parseSessionCommand(['failed', 'nine', '--project', '/work/api', '--error', 'overloaded']).ok).toBe(false);
   });
 
   // An app from before the last message is still sent the counts, which turn the pane.

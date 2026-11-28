@@ -2,9 +2,10 @@ import type { Refused } from '../../shared/app/bridge';
 import { isRecord } from '../../shared/app/is-record';
 import { failureText } from '../../shared/errors/failure';
 import { MANAGER_BROWSER_PATH, MANAGER_SLOT } from '../../shared/manager/manager';
-import { MAIN_INDEX, paneFromId, terminalId } from '../../shared/panes/terminals';
+import { MAIN_INDEX, paneFromId } from '../../shared/panes/terminals';
+import { livePane, notOpen } from '../panes/live-pane';
 import { isRefused, sessionReply, type BoundAction } from '../actions/action';
-import { answered, PANE_ID, refused, type SessionReply, type SessionRequest } from '../workers/session-cli';
+import { answered, refused, type SessionReply, type SessionRequest } from '../workers/session-cli';
 import type { BrowserReads } from './browser-page';
 import { BROWSER_REQUEST, type BrowserRequest } from './browser-cli';
 
@@ -26,20 +27,6 @@ export type BrowserRequestPorts = {
 };
 
 const UNREADABLE = 'the browser request was not one the app could read';
-const notOpen = (pane: string): Refused => ({ refused: `pane ${pane} is not open in this app` });
-
-// The pane the request is for, as this run numbers it: its place in the project it was opened in. A
-// shell the pane host kept through a restart still sends the id it was spawned with, which names
-// another project's pane once a project closed before the restart has moved the ones after it. The
-// manager's page never moves.
-export function livePane(ports: Pick<BrowserRequestPorts, 'slotOf'>, sent: string, paneProject: string): string | Refused {
-  if (!PANE_ID.test(sent)) return notOpen(sent);
-  const { slot, index } = paneFromId(sent);
-  if (slot === MANAGER_SLOT) return sent;
-  const live = ports.slotOf(paneProject);
-  return live === -1 ? { refused: `pane ${sent} is of ${paneProject}, which is not open in this app` } : terminalId(live, index);
-}
-
 // Whether the pane is open in this app: a terminal pane, or the main screen of an open page. A tab held
 // by any other id would be held by nobody who could let go.
 export function paneIsOpen(ports: Pick<BrowserRequestPorts, 'hasCommand' | 'projectPath'>, pane: string): boolean {

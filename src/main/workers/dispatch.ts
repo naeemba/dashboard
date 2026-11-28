@@ -65,6 +65,8 @@ const appCommandPermissions = (userData: string) => ({
   ],
 });
 
+const TURN_FAILED_HOOK = { type: 'command' as const, command: 'node "$DASHBOARD_SESSION" failed "$DASHBOARD_PANE" --project "$DASHBOARD_PANE_PROJECT" --failure-input' };
+
 // What every session the app starts carries in its settings, whatever else its own adds: the board
 // guard (board-guard.ts) and the app's commands allowed. One object, so a screen and a terminal worker
 // cannot drift apart. A worker, terminal or screen, is denied a call that would wait on a permission
@@ -73,8 +75,12 @@ const appCommandPermissions = (userData: string) => ({
 // Claude Code reads that setting from --settings, which is what the SDK passes these as, and on a
 // screen it skips canUseTool too. A worker is never compacted while idle either (idleCompaction):
 // one paused on CI comes back with its whole conversation, where main keeps Claude Code's default.
+// A turn that ends on an API error runs StopFailure in place of Stop, and the app sends a session
+// whose error a wait can outlive `continue` again (turn-failures.ts): the pane is the one the session
+// runs in, which a terminal's, a screen's and main's environment each name, with its project, since a
+// shell kept through a restart keeps an id that may name another project's pane by then (livePane).
 export const appSessionSettings = (userData: string, kind: 'main' | 'worker') => ({
-  hooks: BOARD_GUARD_HOOKS,
+  hooks: { ...BOARD_GUARD_HOOKS, StopFailure: [{ hooks: [TURN_FAILED_HOOK] }] },
   ...(kind === 'worker' && { idleCompaction: false }),
   permissions: { ...appCommandPermissions(userData), ...(kind === 'worker' && { denyInsteadOfPrompting: true }) },
 });
