@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyBoard, type Board } from '../../../shared/board/board';
+import { addCard, emptyBoard, type Board } from '../../../shared/board/board';
 import { channels } from '../../app/channels';
 import { writeBoard } from '../../board/board-store';
 import { temporaryFolder } from '../../testing/temporary-folder';
@@ -15,9 +15,7 @@ function boardWithCard(): Board {
 }
 
 function boardWithTwoCards(): Board {
-  const board = boardWithCard();
-  board.columns[0].cards.push({ id: 'cart', title: 'Cart', notes: '', priority: 'medium', parent: null });
-  return board;
+  return addCard(boardWithCard(), { column: 0, card: 0 }, 'cart', 'Cart').board;
 }
 
 function ship(over: Partial<CardShipPorts> = {}) {
@@ -49,8 +47,8 @@ describe('card.ship', () => {
     const { call, asked } = ship();
     await call({ projectPath: '/work/api', id: 'ca', after: 'car', source: 'command' });
     expect(asked).toMatchObject([{ id: 'card', after: 'card' }]);
-    for (const asked of [{ id: 'ca' }, { id: 'card', after: 'ca' }]) {
-      await expect(ship({ read: boardWithTwoCards }).call({ projectPath: '/work/api', ...asked })).resolves.toMatchObject({ refused: expect.stringContaining('more than one') });
+    for (const words of [{ id: 'ca' }, { id: 'card', after: 'ca' }]) {
+      await expect(ship({ read: boardWithTwoCards }).call({ projectPath: '/work/api', ...words })).resolves.toMatchObject({ refused: expect.stringContaining('more than one') });
     }
   });
 

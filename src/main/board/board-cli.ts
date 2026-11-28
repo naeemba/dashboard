@@ -124,7 +124,7 @@ function ambiguousId(board: Board, id: string, matches: readonly Selection[]): s
   return `${id} starts more than one card's id:\n${named.join('\n')}`;
 }
 
-function findCard(board: Board, id: string): Selection | { message: string } {
+export function findCard(board: Board, id: string): Selection | { message: string } {
   const matches = cardsNamed(board, id);
   if (matches.length === 1) return matches[0];
   return { message: matches.length === 0 ? `no card with id ${id}` : ambiguousId(board, id, matches) };
