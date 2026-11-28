@@ -71,3 +71,6 @@ One line per merged change: date and why.
   worktree whose board edits never reached origin's default branch and names the files and the way
   out on the card: the swap forced past a card file a script wrote there, or one from an older
   worktree (ship-decision-7)
+- 2026-11-28 — The review's swap carries untracked files across instead of waiting on them, names
+  the dirty files on the card, and tells the project's main after five idle minutes: three pull
+  requests sat unreviewed a night behind an AGENTS.md Next.js wrote (ship-decision-8)

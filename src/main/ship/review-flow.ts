@@ -9,6 +9,7 @@ import type { CardFollowAnswer } from '../actions/card/follow';
 import { entryForCard } from './worktree-store';
 import { notOpenRefusal } from './ship';
 import type { Forge } from '../app/forge';
+import { dirtyWaitNotice, dirtyWaits, namedFiles } from './dirty-wait';
 
 // The second half of a ship, in the order it happens. An agent that has put a pull request number on
 // its card is finished, so the card lands in Review, the worktree the work was written in is thrown
@@ -40,6 +41,13 @@ export type ReviewPorts = {
   shellLivesIn: (worktreePath: string) => Promise<boolean>;
   // Never forced: what an agent left uncommitted exists nowhere else.
   removeWorktree: (worktreePath: string) => Promise<WorktreeRemoval>;
+  // The worktree's untracked files moved out beside it when they are all that is in the way, and the
+  // way to put them back (untracked-carry.ts), so the swap carries them across.
+  setAsideUntracked: (worktreePath: string) => Promise<{ files: string[]; restore: () => Promise<void> }>;
+  // A line to the project's main, as a turn of its own: the review waiting on a dirty worktree that
+  // nobody is about to commit (dirty-wait.ts). Nothing when the project is not open.
+  tellMain: (projectPath: string, text: string) => void;
+  now: () => number;
   // Check the branch out again at the same path. No new branch and no base: the branch is already
   // there with the pull request on it, and everything the agent pushed is on it already.
   addWorktree: (entry: WorktreeEntry) => Promise<unknown>;
@@ -141,17 +149,20 @@ function editProjectBoard(ports: ReviewPorts, projectPath: string, edit: (board:
 }
 
 // How a swap ended. `message` is what to say on the card, empty when there is nothing to say, and
-// `again` is whether the next tick should try this card once more.
+// `dirty` the uncommitted files it stopped on, which is whether the next tick should try this card
+// once more.
 //
 // Those are two questions rather than one because a dirty worktree answers them differently from
 // every other refusal: it is not a review that failed, it is a review that is early.
-type Swap = { message: string; again: boolean };
+type Swap = { message: string; dirty: readonly string[] };
 
-// What a refused removal says on the card: the branch when git refused on uncommitted files, the
-// removal's own words otherwise. `then` and `otherwise` are what happens next in each case, which is
-// all that differs between the two callers.
+// What a refused removal says on the card: the branch and its files when git refused on uncommitted
+// files, the removal's own words otherwise. `then` and `otherwise` are what happens next in each case,
+// which is all that differs between the two callers.
 function refusal(entry: WorktreeEntry, removed: WorktreeRemoval, then: string, otherwise: string): string {
-  return removed.dirty.length > 0 ? `uncommitted changes in ${entry.branch}, ${then}` : `${removed.message}; ${otherwise}`;
+  return removed.dirty.length > 0
+    ? `uncommitted changes in ${entry.branch} (${namedFiles(removed.dirty)}), ${then}`
+    : `${removed.message}; ${otherwise}`;
 }
 
 async function swapWorktree(
@@ -163,8 +174,15 @@ async function swapWorktree(
   // Not forced. What is uncommitted in a worktree exists nowhere else, and an agent that left
   // something behind is exactly the case worth stopping for — the card still lands in Review, and the
   // line on it names the branch to go and look at.
-  const removed = await ports.removeWorktree(entry.worktreePath);
+  // Untracked files alone do not stop it: they are moved out, and back in once the branch is checked
+  // out again (ship-decision-8). A removal refused for anything else puts them back where they were.
+  const carried = await ports.setAsideUntracked(entry.worktreePath);
+  const removed = await ports.removeWorktree(entry.worktreePath).catch(async (error: unknown) => {
+    await carried.restore();
+    throw error;
+  });
   if (!removed.ok) {
+    await carried.restore();
     // Not tried again: a lock or a board edit origin lacks does not pass by itself, so the line on the
     // card says how the review starts once it is dealt with.
     //
@@ -186,20 +204,21 @@ async function swapWorktree(
     // thing to do is ask git whether the worktree is dirty before the mark rather than after, not to
     // go back to writing the card off.
     //
-    // No file count in it. This is the one line the sweep writes again on every tick, and reviewRefused
-    // only recognises a repeat by matching the whole sentence — so a count would make `2 uncommitted
-    // files` and `3 uncommitted files` two different lines and stack both on the card as the agent
-    // saves. The branch is named; the files are a `git status` away.
+    // The files are named. This is the one line the sweep writes again on every tick, and reviewRefused
+    // only recognises a repeat by matching the whole sentence, so a new line lands each time the set
+    // of files changes. The swap is only tried while the worker is idle, when it rarely does, and a
+    // line naming nothing sent somebody to `git status` in five worktrees to find one AGENTS.md.
     const message = refusal(entry, removed, 'waiting for the commit', `board review ${entry.cardId} starts the review once that is dealt with`);
-    return { message, again: removed.dirty.length > 0 };
+    return { message, dirty: removed.dirty };
   }
   await ports.addWorktree(entry);
+  await carried.restore();
   const started = await ports.startReview(
     { ...entry, pane: null, reviewing: true },
     slot,
     reviewPrompt(entry.cardId, pullRequest, entry.projectPath, ports.landsPullRequest(entry.projectPath), await ports.forgeOf(entry.projectPath), ports.workflow),
   );
-  return { message: started.ok ? '' : started.message, again: false };
+  return { message: started.ok ? '' : started.message, dirty: [] };
 }
 
 // The worktree of a card whose pull request merged, removed and the branch kept. Not forced: anything
@@ -246,6 +265,8 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
   // marked that when its review starts, and that card's worktree is the one to remove once it reaches
   // Done: one set for both kept every reviewed card's folder on disk until the app restarted.
   const settled = new Set<string>();
+  // How long each card's review has stood on a dirty worktree with its worker idle.
+  const waits = dirtyWaits();
 
   // One card, start to finish. Every guard in it runs before the first await, and so does the mark,
   // so the whole list can be walked at once, and a run can start while the last one is still out,
@@ -262,7 +283,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // taking the folder away here kills the shell before `git push` runs and the fix never reaches the
     // pull request the review is about to merge. Nothing is marked, so the sweep picks the card up
     // the moment the agent stops working.
-    if (ports.agentWorksIn(slot, entry.pane)) return;
+    if (ports.agentWorksIn(slot, entry.pane)) {
+      waits.clear(entry.cardId);
+      return;
+    }
     const board = boardOf(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     if (pullRequest === null) return;
@@ -379,7 +403,10 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // the mark left on: no review for the rest of the run (#300, #313).
     const early = (refused: string): Refused => { reviewed.delete(id); return { refused }; };
     if (slot === -1) return early(notOpenRefusal(entry.title));
-    if (ports.agentWorksIn(slot, entry.pane)) return early(`the agent on "${entry.title}" is still working`);
+    if (ports.agentWorksIn(slot, entry.pane)) {
+      waits.clear(id);
+      return early(`the agent on "${entry.title}" is still working`);
+    }
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     // Just after the pull request opens the card is still in Doing until the pull request sweep's next
@@ -422,14 +449,19 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
         .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
         .catch((error: unknown) => ({
           message: `review failed: ${failureText(error)}`,
-          again: false,
+          dirty: [] as readonly string[],
         }));
       // The mark comes back off for a card that was only early. Everything else keeps it: a locked
       // repository, a pane that went, a git step that threw — none of those pass by themselves, and
       // the card carries the line saying so until somebody acts on it.
-      if (swap.again) {
+      if (swap.dirty.length > 0) {
         reviewed.delete(id);
         if (!bySweep) byHand.add(id);
+        if (waits.waited(id, ports.now())) {
+          ports.tellMain(entry.projectPath, dirtyWaitNotice({ cardId: id, title: entry.title, pullRequest, worktreePath: entry.worktreePath, files: swap.dirty }));
+        }
+      } else {
+        waits.clear(id);
       }
       if (swap.message === '') return { output: `review started for "${entry.title}", pull request #${pullRequest}` };
       // On the card as well as in the answer. A review the sweep started has nobody waiting on the
@@ -462,6 +494,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     settled.delete(cardId);
     byHand.delete(cardId);
     arriving.delete(cardId);
+    waits.clear(cardId);
   }
 
   return { run, forget, review, unqueued: (cardId) => { arriving.delete(cardId); } };

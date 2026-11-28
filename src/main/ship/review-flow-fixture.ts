@@ -60,10 +60,10 @@ export function flight(pullRequest: number | null): { entry: WorktreeEntry; proj
   };
 }
 
-export type Recorded = { removed: string[]; added: string[]; started: { slot: number; prompt: string }[] };
+export type Recorded = { removed: string[]; added: string[]; started: { slot: number; prompt: string }[]; told: string[] };
 
 export function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { ports: ReviewPorts; log: Recorded } {
-  const log: Recorded = { removed: [], added: [], started: [] };
+  const log: Recorded = { removed: [], added: [], started: [], told: [] };
   return {
     log,
     ports: {
@@ -75,6 +75,9 @@ export function ports(entry: WorktreeEntry, over: Partial<ReviewPorts> = {}): { 
         log.removed.push(worktreePath);
         return { ok: true, message: '', dirty: [] };
       },
+      setAsideUntracked: async () => ({ files: [], restore: async () => undefined }),
+      tellMain: (_projectPath, text) => { log.told.push(text); },
+      now: () => 0,
       addWorktree: async (added) => { log.added.push(added.branch); },
       startReview: async (started, slot, prompt) => {
         log.started.push({ slot, prompt });
