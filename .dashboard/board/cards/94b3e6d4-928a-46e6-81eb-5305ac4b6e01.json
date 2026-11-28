@@ -2,10 +2,10 @@
   "id": "94b3e6d4-928a-46e6-81eb-5305ac4b6e01",
   "title": "Stall warning ignores a worker waiting on its own background work, and lost background notices",
   "notes": "Rescoped by the night retro 2026-11-28 (the 'lost background notices' premise was wrong: all 11 background waits woke on their own; the sessions were frozen machine-wide). Wanted, in src/main/workers/stall.ts and its notices: (1) a worker paused on its own background work (a review loop run as a background workflow, a long check) is not called stalled, up to PAUSE_CEILING_MS; (2) a warning names the tool call still in flight when there is one ('Bash has been running 31 min: <description>'), so main can tell stuck from slow: kamandsystem's main released a working pane at 23:05 on a bare 'no sign of life' and the replacement redid its work; (3) when every session (workers and mains) goes silent at once, one notice says 'nothing on the machine has answered since HH:MM' instead of one warning per pane, and the per-pane warnings are held until something answers again (four were delivered at once at 02:35:48).",
-  "priority": "medium",
+  "priority": "high",
   "parent": null,
   "createdAt": "2026-11-28T02:36:14.719Z",
-  "updatedAt": "2026-11-28T09:30:24.036Z",
+  "updatedAt": "2026-11-28T09:30:44.893Z",
   "column": "Backlog",
   "order": 3
 }
