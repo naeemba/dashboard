@@ -5,7 +5,7 @@
   "priority": "medium",
   "parent": null,
   "createdAt": "2026-11-27T21:54:26.377Z",
-  "updatedAt": "2026-11-28T02:36:42.856Z",
+  "updatedAt": "2026-11-28T02:51:12.341Z",
   "branch": "board-review-with-a-short-card-id-gives-the",
   "pullRequest": 429,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-28T02:36:42.818Z",
       "body": "Pull request #429 opened: A short card id is made whole by the app's card actions, --after included https://github.com/naeemba/dashboard/pull/429"
+    },
+    {
+      "at": "2026-11-28T02:51:12.341Z",
+      "body": "Review loop: converged, ready to merge. 1 round (floor-addressed). 4 low/nit threads fixed in bd6c7b05 01de2d39 56638cc8 48c38b8a, all accepted by the final check. pane start --after now takes a short id too, stale whole-id texts fixed, tests tightened and review.test.ts added. No conflicts. CI passed on the head commit."
     }
   ],
   "column": "Review",

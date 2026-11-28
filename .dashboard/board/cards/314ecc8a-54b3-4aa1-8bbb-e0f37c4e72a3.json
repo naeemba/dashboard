@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:15.059Z",
-  "updatedAt": "2026-11-28T02:47:54.736Z",
+  "updatedAt": "2026-11-28T02:51:10.424Z",
   "branch": "work-card-skill-numbers-new-doc-ids-instead",
-  "column": "Doing",
-  "order": 0
+  "pullRequest": 430,
+  "comments": [
+    {
+      "at": "2026-11-28T02:51:10.393Z",
+      "body": "Pull request #430 opened: Work-card numbers a new docs id before its commit, not as -next https://github.com/naeemba/dashboard/pull/430"
+    }
+  ],
+  "column": "Review",
+  "order": 4
 }
