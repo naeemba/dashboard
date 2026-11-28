@@ -17,6 +17,7 @@ import { reviewFinished } from '../../ship/review-finished';
 import { reviewSweep, type ReviewPorts, type ReviewSweep } from '../../ship/review-flow';
 import { CLAUDE_FOLDER, loopWorkflow, reviewLoopMissing } from '../../ship/review-loop-install';
 import { entryForCard } from '../../ship/worktree-store';
+import { setAsideUntracked } from '../../ship/untracked-carry';
 import { followedBranch, type PullRequest } from '../../board/pull-request-column';
 import { pullRequestSweep, type PullRequestSweep } from '../../board/pull-request-sweep';
 import { shipFlow, type ShipPorts } from '../../ship/ship-flow';
@@ -33,7 +34,7 @@ import { cardStart } from './start';
 // What only main.ts holds, handed over once. Main-process wiring (workflow-rule-2's exemption): every
 // decision is in the actions, ship-flow.ts and review-flow.ts.
 export type CardActionsMain = Omit<ShipPorts, 'forgetReview' | 'bumpsVersion'>
-  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished' | 'forgeOf' | 'loopMissing' | 'workflow' | 'follow' | 'retry'> & {
+  & Omit<ReviewPorts, 'worktrees' | 'queue' | 'writeBoard' | 'arrived' | 'landsPullRequest' | 'reviewFinished' | 'forgeOf' | 'loopMissing' | 'workflow' | 'follow' | 'retry' | 'setAsideUntracked' | 'now'> & {
     table: Channels;
     boardLog: BoardChanges;
     // Every board write here goes to origin behind it (board-sync-queue.ts).
@@ -87,6 +88,8 @@ export function cardActions(main: CardActionsMain): CardActions {
     reviewFinished: (projectPath, pullRequest) => reviewFinished(runProgram, projectPath, pullRequest, 20_000),
     forgeOf: (projectPath) => projectForge(projectPath, runProgram),
     loopMissing: () => reviewLoopMissing(CLAUDE_FOLDER),
+    setAsideUntracked,
+    now: Date.now,
     workflow: loopWorkflow(CLAUDE_FOLDER),
     follow: (projectPath, id) => follow.call({ projectPath, id }),
     retry: (id) => {

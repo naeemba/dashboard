@@ -135,7 +135,7 @@ describe('reviewSweep clearing a finished worktree', () => {
     expect(log.removed).toEqual([entry.worktreePath]);
     const card = readBoard(projectPath).board.columns[5].cards[0];
     expect(card.comments?.map((comment) => comment.body)).toEqual([
-      'Worktree kept: uncommitted changes in ship-it, remove it from the worktree list',
+      'Worktree kept: uncommitted changes in ship-it (draft.md), remove it from the worktree list',
     ]);
   });
 

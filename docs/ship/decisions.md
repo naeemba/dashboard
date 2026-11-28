@@ -137,3 +137,24 @@ since 2026-11-17, so these are card files a script or tool wrote past it, or one
 worktree. A locked worktree, or one a
 process stands in, is still kept. `ship.ts`, `board-on-origin.ts`, `finished-work.ts`,
 `leftover-worktrees.ts`, `remove.ts`. (2026-11-26)
+
+## ship-decision-8: The review's swap carries untracked files across, and main hears of a long wait
+
+**A review swap whose worktree holds only untracked files moves them into a folder beside it, takes
+the worktree away, checks the branch out again and moves them back (`untracked-carry.ts`); a changed
+tracked file still stops it, and a start stopped on one that long with its worker idle is told to
+the project's main after `DIRTY_WAIT_MS` (5 minutes), once per spell of waiting, naming the
+folder and the files (`dirty-wait.ts`).** On the night of 2026-11-28 three pull requests of one
+project sat unreviewed for five hours: Next.js 16 writes an untracked AGENTS.md on every dev
+server or build, git would not give the worktree up, the sweep retried every tick, and the card's
+line, naming only the branch, reached nobody. Carried rather than deleted or ignored: an untracked
+file can just as well be a new file the agent forgot to add, and moved across it is still there for
+the review to find. Carried rather than only reported: no person or agent has anything to do about a
+file a tool regenerates. The board's files stay the removal's question (ship-decision-7). The card's
+line names the files now, up to five and a count, so a new line lands when the set changes, not on
+each tick. The status is read with `-z`, so a non-ASCII name reaches `rename` as written, and a
+move that throws part way puts back what it moved, each on its own; one that will not go back stays
+in `<worktree>.untracked-*`, named in the error. The cost: a checkout that throws after the removal
+leaves the files there too. A spell ends when the review starts
+or fails for another reason, or when the agent is seen working again. `review-flow.ts`,
+`untracked-carry.ts`, `dirty-wait.ts`. (2026-11-28)

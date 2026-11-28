@@ -6,6 +6,7 @@ import { CANCELLED_COLUMN, REVIEW_COLUMN, columnNamed, emptyBoard, moveCardById,
 import { reviewSweep, type ReviewSweep } from './review-flow';
 import { intoReview } from './review';
 import { CARD, MOVED, boardWithCard, columnOfCard, commentsOnCard, flight, inDone, ports, reviewRan, sweepWith } from './review-flow-fixture';
+import { DIRTY_WAIT_MS } from './dirty-wait';
 
 describe('reviewSweep', () => {
   it('moves the card into Review and swaps the worktree for one that reviews it', async () => {
@@ -258,7 +259,7 @@ describe('reviewSweep', () => {
     expect(columnOfCard(projectPath)).toBe('Review');
     expect(log.added).toEqual([]);
     expect(commentsOnCard(projectPath))
-      .toEqual(['No review worktree: uncommitted changes in ship-it, waiting for the commit']);
+      .toEqual(['No review worktree: uncommitted changes in ship-it (src/a.ts, src/b.ts), waiting for the commit']);
   });
 
   // The bug this was written for. `/work-card` opens the pull request and keeps going, and a tick
@@ -286,21 +287,93 @@ describe('reviewSweep', () => {
   // from mid-change would otherwise bury its own card under a copy of the same sentence every five
   // seconds.
   //
-  // The agent keeps saving while it sits there, so the file list grows between ticks. The line is only
-  // one line if nothing in it counts them — reviewRefused matches the whole sentence, so a count would
-  // make each tick a new one and stack them all.
-  it('says a dirty worktree once however many times it retries', async () => {
+  // The line names the files, so it is written again only when the set of them changes.
+  it('says a dirty worktree once while its files stay the same, and again when they change', async () => {
     const { entry, projectPath } = flight(12);
-    const dirtying = [['src/a.ts'], ['src/a.ts', 'src/b.ts'], ['src/a.ts', 'src/b.ts', 'src/c.ts']];
+    const dirtying = [['src/a.ts'], ['src/a.ts'], ['src/a.ts', 'src/b.ts']];
     const { ports: made } = ports(entry, {
-      removeWorktree: async () => ({ ok: false, message: '', dirty: dirtying.shift() ?? ['src/a.ts'] }),
+      removeWorktree: async () => ({ ok: false, message: '', dirty: dirtying.shift() ?? ['src/a.ts', 'src/b.ts'] }),
     });
     const sweep = sweepWith(made);
     await sweep.run();
     await sweep.run();
     await sweep.run();
-    expect(commentsOnCard(projectPath))
-      .toEqual(['No review worktree: uncommitted changes in ship-it, waiting for the commit']);
+    await sweep.run();
+    expect(commentsOnCard(projectPath)).toEqual([
+      'No review worktree: uncommitted changes in ship-it (src/a.ts), waiting for the commit',
+      'No review worktree: uncommitted changes in ship-it (src/a.ts, src/b.ts), waiting for the commit',
+    ]);
+  });
+
+  // The night of 2026-11-28: five hours of a review retried in silence. Main hears of it once the wait
+  // passes DIRTY_WAIT_MS, once, and again only after a spell that ended.
+  it('tells the project\'s main once when a dirty worktree has held the review for minutes', async () => {
+    const { entry } = flight(12);
+    let now = 0;
+    let working = false;
+    const { ports: made, log } = ports(entry, {
+      removeWorktree: async () => ({ ok: false, message: '', dirty: ['src/a.ts'] }),
+      now: () => now,
+      agentWorksIn: () => working,
+    });
+    const sweep = sweepWith(made);
+    await sweep.run();
+    now = DIRTY_WAIT_MS - 1;
+    await sweep.run();
+    expect(log.told).toEqual([]);
+    now = DIRTY_WAIT_MS;
+    await sweep.run();
+    await sweep.run();
+    expect(log.told).toHaveLength(1);
+    expect(log.told[0]).toContain(`uncommitted changes in ${entry.worktreePath}, and its worker is idle: src/a.ts.`);
+    working = true;
+    await sweep.run();
+    working = false;
+    await sweep.run();
+    now += DIRTY_WAIT_MS;
+    await sweep.run();
+    expect(log.told).toHaveLength(2);
+  });
+
+  // An AGENTS.md a build wrote is all that is in the way: it is set aside before the removal and put
+  // back after the checkout, and the review starts.
+  it('carries untracked files across the swap', async () => {
+    const { entry } = flight(12);
+    const order: string[] = [];
+    const { ports: made, log } = ports(entry, {
+      setAsideUntracked: async () => {
+        order.push('aside');
+        return { files: ['AGENTS.md'], restore: async () => { order.push('restore'); } };
+      },
+      removeWorktree: async () => { order.push('remove'); return { ok: true, message: '', dirty: [] }; },
+      addWorktree: async () => { order.push('add'); },
+    });
+    await sweepWith(made).run();
+    expect(order).toEqual(['aside', 'remove', 'add', 'restore']);
+    expect(log.started).toHaveLength(1);
+  });
+
+  it('puts untracked files back when the removal is refused', async () => {
+    const { entry } = flight(12);
+    const order: string[] = [];
+    const { ports: made } = ports(entry, {
+      setAsideUntracked: async () => ({ files: ['AGENTS.md'], restore: async () => { order.push('restore'); } }),
+      removeWorktree: async () => { order.push('remove'); return { ok: false, message: '', dirty: ['src/a.ts'] }; },
+    });
+    await sweepWith(made).run();
+    expect(order).toEqual(['remove', 'restore']);
+  });
+
+  it('puts untracked files back when the removal throws', async () => {
+    const { entry, projectPath } = flight(12);
+    let restored = false;
+    const { ports: made } = ports(entry, {
+      setAsideUntracked: async () => ({ files: ['AGENTS.md'], restore: async () => { restored = true; } }),
+      removeWorktree: async () => { throw new Error('git died'); },
+    });
+    await sweepWith(made).run();
+    expect(restored).toBe(true);
+    expect(commentsOnCard(projectPath)).toEqual(['No review worktree: review failed: git died']);
   });
 
   // The refusal leaves the record exactly as it was, so only the mark stops the next tick spawning git
@@ -392,7 +465,7 @@ describe('reviewSweep', () => {
     // card.review's pane.start, which starts it at once with a slot free.
     const retried: string[] = [];
     const sweep: ReviewSweep = reviewSweep({ ...made, retry: (id) => { retried.push(id); return sweep.review(id); } });
-    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it (.dashboard/board.json), waiting for the commit' });
     committed = true;
     await sweep.run();
     expect(retried).toEqual([CARD]);
@@ -440,7 +513,7 @@ describe('reviewSweep', () => {
       arrived: async () => (loopOn ? { output: 'queued q1, 1st', ran: 'review', started: 'queued q1, 1st' } : MOVED),
     });
     await sweep.run();
-    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it (.dashboard/board.json), waiting for the commit' });
     loopOn = false;
     committed = true;
     await sweep.run();
@@ -462,7 +535,7 @@ describe('reviewSweep', () => {
     const sweep = reviewSweep({ ...made, arrived: async () => ({ output: 'queued q1, 1st', ran: 'review', started: 'queued q1, 1st' }) });
     await sweep.run();
     sweep.unqueued(CARD);
-    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it, waiting for the commit' });
+    await expect(sweep.review(CARD)).resolves.toEqual({ refused: 'uncommitted changes in ship-it (.dashboard/board.json), waiting for the commit' });
     committed = true;
     await sweep.run();
     expect(retried).toEqual([CARD]);
