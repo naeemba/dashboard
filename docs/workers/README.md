@@ -200,11 +200,11 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   its has run for 30 minutes, then it is stalled as above, `pane list` adds
   `Bash running 31 minutes`, and main's notice says
   `Bash has been running 31 minutes: <its description>` (workers-decision-13).
-- Given two or more of main's workers silent past the setting, when nothing
-  else on the machine has answered for as long, no hook, no main's turn and no
-  command, then each main is told once `Nothing on the machine has answered
-  since 2:05pm`, in place of each stall, taken back when anything answers; the
-  stalls of the workers still silent are told after (workers-decision-13).
+- Given main's workers silent past the setting, when the stall check runs
+  more than two minutes after the last one, the machine asleep or frozen, then
+  each main is told once `The app's stall check has not run since 2:05pm`, in
+  place of each stall, taken back at any worker's hook; the stalls of the
+  workers still silent are told on the next check (workers-decision-13).
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks`
   or `session_crons`, when its turn ends, then main is told only once it has
   stayed out of `running` for three minutes, as before them

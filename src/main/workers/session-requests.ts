@@ -723,7 +723,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }
 
   return Object.assign(async (request: SessionRequest): Promise<SessionReply> => {
-    stalls.answered();
     const parsed = parseSessionCommand(request.args);
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
@@ -833,7 +832,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       reportsRead.add(id);
     },
     mainTurn(slot: number, running: boolean) {
-      stalls.answered();
       if (running) {
         failures.working(terminalId(slot, MAIN_INDEX));
         if (busyMains.has(slot)) return;

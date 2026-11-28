@@ -723,18 +723,20 @@ ends sat in Doing holding a pool slot (workers-decision-11) with nothing to say 
 - **A worker inside a tool call waits out the pause ceiling (30 minutes)**, and its notice names
   the call: `Bash has been running 31 minutes: pnpm check`. A long check, or a review loop waiting
   on its own work, looks the same as a test that never ends, and a main released a working pane on
-  a bare `no sign of life` (2026-11-28), whose replacement did the work again. The call kept is the
-  last one PreToolUse started, until its own PostToolUse or PostToolUseFailure, or any hook but a
-  tool's: of two calls run side by side the one ending first leaves the other unnamed, and a call
-  refused before it ran is kept until the next hook. A terminal worker's PreToolUse runs only for
+  a bare `no sign of life` (2026-11-28), whose replacement did the work again. Every call
+  PreToolUse starts is kept until its own PostToolUse or PostToolUseFailure, or any hook but a
+  tool's, and the notice names the oldest still running: of two calls run side by side, the one
+  ending first leaves the other its name and its ceiling. A call refused before it ran is kept until
+  the next hook that is not a tool's. A terminal worker's PreToolUse runs only for
   the calls that can run that long (Bash, agents, MCP tools and a few more): each one is a node
   start the call waits on.
-- **Two or more workers silent with nothing else answering either is the machine, not the
-  workers**: no hook, no main's turn starting or ending and no command for the setting's minutes.
-  Each main is told once that nothing on the machine has answered since then, taken back when
-  anything answers, and the stalls are told on the sweep after that, for the workers still silent.
-  A machine asleep or frozen woke to one warning per pane, four delivered at once. One worker
-  silent alone is still its own notice.
+- **A sweep more than two minutes after the one before it is the machine, not the workers**: the
+  minute's interval does not fire while the machine sleeps or the main process is blocked. On that
+  sweep each main with a stalled worker is told once that the stall check has not run since the last
+  sweep, taken back at any worker's hook, and the stalls are told on the next sweep, for the workers
+  still silent. A machine asleep or frozen woke to one warning per pane, four delivered at once.
+  Counting silent workers instead called two workers hung on their tests, with main idle waiting on
+  their reports, a sleeping machine.
 - **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
   minute notice (workers-decision-1): their silence is waiting, not a hang.
 - **The workers popup is redrawn each minute while one is stalled**, and once on the minute after

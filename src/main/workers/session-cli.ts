@@ -246,7 +246,7 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
   const scheduled = flags.get('--scheduled');
   const counts = background !== undefined || scheduled !== undefined;
   if (words.length % 2 !== 0 || (counts && (state !== 'done' || !COUNT.test(background ?? '') || !COUNT.test(scheduled ?? '')))) {
-    return refuse(`${NOTIFY_WORDS_REFUSED}, except --prompt-input after running and --stop-input after done`);
+    return refuse(`${NOTIFY_WORDS_REFUSED}, except ${INPUT_FLAGS.map((each) => each.split(' ').reverse().join(' after ')).join(', ')}`);
   }
   const told: HookTold = {};
   const lastMessage = flags.get(LAST_MESSAGE_FLAG);
