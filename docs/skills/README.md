@@ -65,7 +65,7 @@ requests and the files) and waits for main to answer go on or stop in its pane; 
 on. In a project with `docs/<feature>/` it updates docs by grep, writes the card's `history.md`
 line in the card's commit, with no pull request number, and numbers a new docs id before the
 commit that adds it, from the ids on `<remote>/<base branch>` and in the open pull requests' diffs,
-then checks it again after merging the base branch (skills-decision-3).
+then checks it again right before pushing (skills-decision-3).
 The checks are the ones `CLAUDE.md` names, else the project's test, type-check and lint scripts;
 a `check` script that runs them all and prints a summary is run once, its log read for a failure.
 Each changed file `pnpm check`'s coverage line lists gets a test for what it leaves unrun, or a

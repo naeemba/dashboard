@@ -71,9 +71,9 @@ for a string, a config value or a log line.
 
 Before you write any code, list what else is in flight, in one call:
 
-    node "$DASHBOARD_BOARD" list --column Doing; node "$DASHBOARD_BOARD" list --column Review; gh pr list --json number,title,headRefName
+    node "$DASHBOARD_BOARD" list --column Doing; node "$DASHBOARD_BOARD" list --column Review; gh pr list --limit 200 --json number,title,headRefName
 
-(on GitLab, \`glab mr list\` in place of \`gh pr list\`.) For a card or pull
+(on GitLab, \`glab mr list -P 100\` in place of \`gh pr list\`.) For a card or pull
 request whose title looks near this card, read its files: \`gh pr view <n>
 --json files\` for a pull request (\`glab mr diff <n>\` on GitLab); for a card, its branch
 from the brackets in \`list\`, \`git diff --stat $3/$2...<branch>\`. If
@@ -111,8 +111,10 @@ conflict after review, and one of them is thrown away.
     next number free on \`$3/$2\` and in every open pull request, which other
     workers are numbering at the same time:
 
-        git fetch $3 && { git grep -hE '^## <feature>-(decision|rule)-[0-9]+' $3/$2 -- docs; for n in $(gh pr list --json number -q '.[].number'); do gh pr diff $n; done | grep -E '^\\+## <feature>-(decision|rule)-[0-9]+'; }
+        git fetch $3 && { git grep -hE '^## <feature>-(decision|rule)-[0-9]+' $3/$2 -- docs; for n in $(gh pr list --limit 200 --json number -q '.[].number'); do gh pr diff $n; done | grep -E '^\\+## <feature>-(decision|rule)-[0-9]+'; }
 
+    On GitLab the loop is
+    \`for n in $(glab mr list -P 100 -F json --jq '.[].iid'); do glab mr diff $n; done\`.
     Name the ids you took in your report to main.
 - Build what the card asks for, following the project's own rules.
 - The version: $1.
@@ -138,9 +140,7 @@ conflict after review, and one of them is thrown away.
 - When the work is done and before the checks, when the card adds a docs id
   or bumps the version: run \`git fetch $3 && git merge $3/$2\` once
   (the local \`$2\` here is as old as the worktree; resolve a conflict the way
-  \`/pr-conflicts\` does and commit the merge). Then run the id command above
-  again: an id of yours that another pull request has taken since moves to
-  the next one free, in a commit of its own. Bump from the version there.
+  \`/pr-conflicts\` does and commit the merge). Bump from the version there.
   Other cards run in their own worktrees at the same time, and two that
   both took the next one say \`-decision-9\`, or \`1.5.0\`. If the pull
   request later conflicts on one, merge \`$3/$2\` again the same way and
@@ -160,6 +160,11 @@ conflict after review, and one of them is thrown away.
   the whole check again. A file left on that line with neither is the
   review's first round of work.
 - Commit in small pieces with messages that say what changed and why.
+- When the card adds a docs id, run the id command above a last time right
+  before pushing: an id of yours that another pull request has taken since
+  moves to the next one free, in a commit of its own, which only the
+  markdown check needs to see. Run any earlier, and a pull request opened
+  while the checks run takes the same id unseen.
 - Push the branch to \`$3\` and open the pull request with \`node
   "$DASHBOARD_COMMAND" pr create\` and \`gh pr create\`'s flags, never \`gh pr
   create\` itself: it rides out a GitHub 5xx and prints the branch's pull
