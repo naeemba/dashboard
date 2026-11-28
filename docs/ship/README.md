@@ -135,6 +135,10 @@ Whether its loop already finished is read off the merge request's notes through 
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it
   stopped for its background agents), then nothing is marked and a later tick starts the review,
   after its pane closes too (#300, #313; `review-flow.test.ts`).
+- Given a card's agent ended its turn paused on its own background work (`pane list` says `paused,
+  waiting on 1 background task`), when the sweep ticks, then its worktree is not taken until the
+  pause ends or has lasted the 30-minute pause ceiling (`slot-panes.test.ts`,
+  `worker-roster.test.ts`, `session-requests-stall.test.ts`).
 - Given merging is off and a card waits in Review after its loop posted `Review loop finished:` on
   the pull request, when the app restarts, then no second review starts unless the pull request
   carries a commit dated after that comment (its committer date, not when it was pushed)

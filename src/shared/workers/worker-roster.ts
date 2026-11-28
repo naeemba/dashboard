@@ -2,6 +2,7 @@ import type { WorkerState } from '../app/bridge';
 import type { SearchRow } from '../app/fuzzy';
 import { paneFromId, paneLabel } from '../panes/terminals';
 import { cacheWarmth, type CacheUse } from '../usage/cache-warmth';
+import { PAUSE_CEILING_MS } from './done-report';
 
 // The workers a main session dispatched, as the Claude screen's status line counts them and its
 // workers popup lists them. Main builds the list from what `pane list` already reads
@@ -18,6 +19,15 @@ export type StopWaiting = { background: number; scheduled: number };
 // say is not a pause.
 export function isPaused(waiting: StopWaiting | undefined): waiting is StopWaiting {
   return waiting !== undefined && (waiting.background > 0 || waiting.scheduled > 0);
+}
+
+// A pause that began at `since` still counts as the worker at work: its turn ended to be woken by
+// its own checks, so its pane and worktree are not free. Only up to the pause ceiling, past which
+// main is told anyway (stop-notices.ts), so a pause nothing wakes does not hold them forever. It
+// answers apart from holdsSlot (pane-pool.ts) on purpose: a pause only on `pr wait` gives its slot
+// back but keeps its worktree, where the wait runs (ship-decision-9).
+export function pausedAtWork(waiting: StopWaiting | undefined, since: number, now: number): boolean {
+  return isPaused(waiting) && now - since < PAUSE_CEILING_MS;
 }
 
 const counted = (count: number, one: string): string => `${count} ${one}${count === 1 ? '' : 's'}`;

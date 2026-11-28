@@ -75,6 +75,15 @@ describe('a worker gone silent', () => {
     expect(told.filter((each) => each.includes('no sign of life'))).toEqual([]);
   });
 
+  it('has a worker paused on its own background work at work, and one done or unknown not', async () => {
+    const { answer } = await silentWorker();
+    answer.notify('2:1', 'done', { background: 1, scheduled: 0 });
+    expect(answer.pausedAtWork('2:1', Date.now())).toBe(true);
+    answer.notify('2:1', 'done');
+    expect(answer.pausedAtWork('2:1', Date.now())).toBe(false);
+    expect(answer.pausedAtWork('2:2', Date.now())).toBe(false);
+  });
+
   it('takes the notice back when the worker speaks again before main reads it', async () => {
     const { answer, told, withdrawn } = await silentWorker();
     minutes(20);
