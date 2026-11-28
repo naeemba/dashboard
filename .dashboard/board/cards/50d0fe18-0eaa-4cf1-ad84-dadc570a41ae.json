@@ -5,8 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-28T09:30:29.999Z",
-  "updatedAt": "2026-11-28T09:31:55.416Z",
+  "updatedAt": "2026-11-28T09:42:30.819Z",
   "branch": "work-card-and-browser-skills-confirm-the-re",
-  "column": "Doing",
-  "order": 2
+  "pullRequest": 432,
+  "comments": [
+    {
+      "at": "2026-11-28T09:42:30.787Z",
+      "body": "Pull request #432 opened: Main confirms a card's review started, and long commands get the longest background timeout https://github.com/naeemba/dashboard/pull/432"
+    }
+  ],
+  "column": "Review",
+  "order": 1
 }
