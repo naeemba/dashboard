@@ -26,6 +26,6 @@ placeholder and numbered it after merging `origin/<base branch>` (2026-11-24). T
 commit check refuses a `-next` id, so one session had six commits refused, and the merge still
 missed the open pull requests: one took `workers-decision-12` while another guessed it. Now it
 numbers the id before the commit that adds it, from the ids on `origin/<base branch>` and those the
-open pull requests' diffs add (`glab mr` on GitLab, 200 at most), checks again right before
-pushing, after the checks have run, so one opened meanwhile is seen, and names it in its report;
-a later conflict on the id is the same step again. (2026-11-28)
+open pull requests' diffs add (200 at most, 100 on GitLab with `glab mr`), checks again right
+before pushing, after the checks have run, so one opened meanwhile is seen, and names it in its
+report; a later conflict on the id is the same step again. (2026-11-28)
