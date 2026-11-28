@@ -186,13 +186,25 @@ export const landPullRequest = (ports: CheckPorts, target: string, resolvers: Re
 // HAND_OFFS spent, and the conflict is the answer, as without a hand-off.
 async function resolvingConflicts(ports: CheckPorts, target: string, attempt: () => Promise<LandAnswer>, { cleanMerge, agent }: Resolvers): Promise<LandAnswer> {
   const budget = { left: NEW_HEAD_WAIT_MS };
+  let pushedMerge: Conflicts | undefined;
   for (let handedOff = 0; ; handedOff += 1) {
     const answer = await attempt();
     const { conflicts } = answer;
-    if (conflicts === undefined || handedOff === HAND_OFFS || conflicts.branch === '' || budget.left <= 0) return answer;
-    const handed = (await cleanMerge?.(conflicts, target)) === true || (await agent?.(conflicts, target)) === true;
-    if (!handed || !(await newHead(ports, target, conflicts.sha, budget))) return answer;
+    if (conflicts === undefined || handedOff === HAND_OFFS || conflicts.branch === '' || budget.left <= 0) return pullFirst(answer, pushedMerge);
+    const merged = (await cleanMerge?.(conflicts, target)) === true;
+    if (merged) pushedMerge = conflicts;
+    const handed = merged || (await agent?.(conflicts, target)) === true;
+    if (!handed || !(await newHead(ports, target, conflicts.sha, budget))) return pullFirst(answer, pushedMerge);
   }
+}
+
+// The verdict is the only line its session reads, so a clean merge pushed to the branch is said in it:
+// the session's own checkout is behind, and its next push is refused until it pulls. A land that
+// merged needs no more pushes to the branch.
+function pullFirst(answer: LandAnswer, pushedMerge: Conflicts | undefined): LandAnswer {
+  if (pushedMerge === undefined || (answer.ok && answer.base !== undefined)) return answer;
+  const { base, branch } = pushedMerge;
+  return { ...answer, output: `${answer.output}; a merge of ${base} was pushed to ${branch}, so pull ${branch} before pushing to it again` };
 }
 
 // Polls for the head to move, drawing each minute from the land's one budget.
@@ -265,7 +277,7 @@ const cleanTree = (mergeTree: ProgramAnswer) => mergeTree.ok && TREE_ID.test(mer
 // GitHub calls a pull request CONFLICTING that git merges cleanly when .gitattributes merges a file
 // its own way (docs/**/history.md is merge=union, which GitHub ignores). That merge needs no agent:
 // the clean tree is committed onto the head with the base as second parent (commit-tree, no checkout
-// touched) and pushed to the branch, refused if anybody pushed to it since. handed is false and the
+// touched) and pushed to the branch, refused unless the branch is still at the head merged. handed is false and the
 // line empty on a real conflict, which goes to the agent or the verdict as before.
 export async function pushCleanMerge(git: GitPort, folder: string, remote: string, conflicts: Conflicts): Promise<{ handed: boolean; line: string }> {
   const { base, sha, branch } = conflicts;
@@ -275,8 +287,10 @@ export async function pushCleanMerge(git: GitPort, folder: string, remote: strin
   const commit = await caught(git(folder, ['commit-tree', tree, '-p', sha, '-p', `${remote}/${base}`, '-m', `Merge ${remote}/${base} into ${branch}`]));
   if (!commit.ok) return failed('committing the merge', commit);
   const merge = commit.output.trim();
-  // NO_HOOKS: a pre-push test run is minutes for a merge the branch's CI checks anyway.
-  const pushed = await caught(git(folder, [...NO_HOOKS, 'push', remote, `${merge}:refs/heads/${branch}`]));
+  // NO_HOOKS: a pre-push test run is minutes for a merge the branch's CI checks anyway. The lease
+  // refuses a branch the remote has anywhere but the merged head: one pushed to since, or a fork's
+  // branch name the project's remote lacks or has as another branch (its main).
+  const pushed = await caught(git(folder, [...NO_HOOKS, 'push', `--force-with-lease=refs/heads/${branch}:${sha}`, remote, `${merge}:refs/heads/${branch}`]));
   if (!pushed.ok) return failed('the push', pushed);
   return { handed: true, line: `merged ${remote}/${base} into ${branch} cleanly at ${merge} and pushed it; pull ${branch} before pushing to it again` };
 }

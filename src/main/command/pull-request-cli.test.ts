@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fakeGitHub } from '../testing/fake-github';
 import { isNetworkError, RETRY_WAITS_MS } from './gh-answer';
-import { conflictedFiles, conflictLine, HAND_OFFS, pushCleanMerge, landPullRequest, NEW_HEAD_POLL_MS, NEW_HEAD_WAIT_MS, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, conflictLine, HAND_OFFS, landPullRequest, NEW_HEAD_POLL_MS, NEW_HEAD_WAIT_MS, NO_CHECKS_WAIT_MS, parsePullRequestCommand, PULL_REQUEST_USAGE, pushCleanMerge, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 
 const open = { ok: true, output: 'OPEN abc123 main MERGEABLE https://github.com/acme/api/pull/12 fix-it' };
 const conflicting = { ok: true, output: 'OPEN abc123 main CONFLICTING https://github.com/acme/api/pull/12' };
@@ -360,7 +360,7 @@ describe('pushCleanMerge', () => {
   it('commits the clean tree onto the head with the base as second parent and pushes it to the branch', async () => {
     const { asked, git } = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: true, output: 'fed987\n' }, { ok: true, output: '' });
     expect(await pushCleanMerge(git, '/project', 'origin', conflicts)).toEqual({ handed: true, line: 'merged origin/main into fix-it cleanly at fed987 and pushed it; pull fix-it before pushing to it again' });
-    expect(asked.slice(2)).toEqual([`commit-tree ${treeId} -p abc123 -p origin/main -m Merge origin/main into fix-it`, '-c core.hooksPath=/dev/null push origin fed987:refs/heads/fix-it']);
+    expect(asked.slice(2)).toEqual([`commit-tree ${treeId} -p abc123 -p origin/main -m Merge origin/main into fix-it`, '-c core.hooksPath=/dev/null push --force-with-lease=refs/heads/fix-it:abc123 origin fed987:refs/heads/fix-it']);
   });
 
   it('leaves a real conflict alone', async () => {
@@ -369,10 +369,11 @@ describe('pushCleanMerge', () => {
     expect(asked).toHaveLength(2);
   });
 
-  // Somebody pushed to the branch since the head was read: the push is not a fast-forward.
+  // Somebody pushed to the branch since the head was read, or a fork's branch the project's remote has
+  // elsewhere or not at all: the lease is refused.
   it('says a refused push, and hands nothing', async () => {
-    const { git } = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: true, output: 'fed987' }, { ok: false, output: '! [rejected] (fetch first)' });
-    expect(await pushCleanMerge(git, '/project', 'origin', conflicts)).toEqual({ handed: false, line: 'git merges origin/main into fix-it cleanly, but the push failed: ! [rejected] (fetch first)' });
+    const { git } = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: true, output: 'fed987' }, { ok: false, output: '! [rejected] fix-it (stale info)' });
+    expect(await pushCleanMerge(git, '/project', 'origin', conflicts)).toEqual({ handed: false, line: 'git merges origin/main into fix-it cleanly, but the push failed: ! [rejected] fix-it (stale info)' });
     const silent = gitAnswering({ ok: true, output: '' }, { ok: true, output: treeId }, { ok: true, output: 'fed987' }, { ok: false, output: '' });
     expect(await pushCleanMerge(silent.git, '/project', 'origin', conflicts)).toMatchObject({ line: expect.stringContaining('the push failed: no answer') });
   });
@@ -394,7 +395,13 @@ describe('resolving a conflict', () => {
 
   it('waits on the head a clean merge pushed', async () => {
     const github = fakeGitHub({ 'pr view': [branchConflicting, pushed, pushed], 'pr checks': [{ ok: true, output: '' }] });
-    expect(await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).toEqual({ ok: true, output: 'checks passed on def456' });
+    expect(await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).toEqual({ ok: true, output: 'checks passed on def456; a merge of main was pushed to fix-it, so pull fix-it before pushing to it again' });
+  });
+
+  // The verdict is the only line read: a failed check after the merge still says to pull first.
+  it('says to pull in a failed verdict after a clean merge', async () => {
+    const github = fakeGitHub({ 'pr view': [branchConflicting, pushed, pushed], 'pr checks': [{ ok: false, output: 'test\tfail' }] });
+    expect((await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).output).toMatch(/a check failed on def456.*; a merge of main was pushed to fix-it, so pull fix-it/s);
   });
 
   it('lands a clean merge without asking the agent', async () => {
