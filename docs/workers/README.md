@@ -196,6 +196,15 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   takes back the notice if main has not read it yet, and a later stall is told
   again. A turn you typed into it is not told, and a worker resumed after a
   restart is never stalled until a hook of its runs (workers-decision-13).
+- Given main's worker inside a tool call, a check or a wait, when no hook of
+  its has run for 30 minutes, then it is stalled as above, `pane list` adds
+  `Bash running 31 minutes`, and main's notice says
+  `Bash has been running 31 minutes: <its description>` (workers-decision-13).
+- Given main's worker a minute into `pnpm test` when the machine sleeps, when
+  it wakes 40 minutes later, then the worker is not stalled: the stall check
+  ran more than two minutes after the last one, so the time between is not
+  counted, and a silence counts awake minutes only; `pane list` read on waking,
+  before the next check, counts the same (workers-decision-13).
 - Given a worker whose Claude Code's Stop hook input has no `background_tasks`
   or `session_crons`, when its turn ends, then main is told only once it has
   stayed out of `running` for three minutes, as before them

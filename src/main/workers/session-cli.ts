@@ -6,7 +6,7 @@ import type { WorkerState } from '../../shared/app/bridge';
 import type { StopWaiting } from '../../shared/workers/worker-roster';
 import { isRecord } from '../../shared/app/is-record';
 import type { PaneKind } from '../../shared/panes/pane-kind';
-import { asksForReport, LAST_MESSAGE_KEPT, tail } from '../../shared/workers/done-report';
+import { asksForReport, LAST_MESSAGE_KEPT, oneLine, tail } from '../../shared/workers/done-report';
 import { isAppQuestion } from './app-question';
 import { isProcessId } from '../actions/pane/pane-input';
 
@@ -56,7 +56,13 @@ export type RunWords = { prompt: string; card: string | null; worktree: boolean;
 // prompt in (UserPromptSubmit's `source`) and whether the prompt is one main handed the worker, ending
 // with the line asking for a report (both read by prompt-source.ts), and whether it is the app's own
 // question (app-question.ts). Each is left out by a Claude Code too old to send it.
-export type HookTold = { lastMessage?: string; promptSource?: string; handed?: boolean; appAsks?: boolean };
+export type HookTold = {
+  lastMessage?: string; promptSource?: string; handed?: boolean; appAsks?: boolean;
+  // A tool hook's call (stall.ts): the one PreToolUse says starts, or the id PostToolUse says ended.
+  toolStarted?: ToolCall; toolEnded?: string;
+};
+// Claude Code's tool_use_id, its tool_name, and what its tool_input says the call does.
+export type ToolCall = { id: string; name: string; about: string };
 
 // What goes over the socket and what comes back. The folder is where the command was run, which is how
 // main tells which project is asking; a worker's hook runs in its worktree and is found the same way.
@@ -215,7 +221,11 @@ const LAST_MESSAGE_FLAG = '--last-message';
 const PROMPT_SOURCE_FLAG = '--prompt-source';
 const HANDED_FLAG = '--handed';
 const APP_ASKS_FLAG = '--app-asks';
-const GROWN_FLAGS = [LAST_MESSAGE_FLAG, PROMPT_SOURCE_FLAG, HANDED_FLAG, APP_ASKS_FLAG];
+const TOOL_STARTED_FLAG = '--tool-started';
+const TOOL_NAME_FLAG = '--tool';
+const TOOL_ABOUT_FLAG = '--tool-about';
+const TOOL_ENDED_FLAG = '--tool-ended';
+const GROWN_FLAGS = [LAST_MESSAGE_FLAG, PROMPT_SOURCE_FLAG, HANDED_FLAG, APP_ASKS_FLAG, TOOL_STARTED_FLAG, TOOL_NAME_FLAG, TOOL_ABOUT_FLAG, TOOL_ENDED_FLAG];
 
 // Whether a refused notify is sent again in an older app's words (session-socket.ts): only when the
 // app refused it for its words, not for the pane or for being unreachable, and only when the older
@@ -236,7 +246,7 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
   const scheduled = flags.get('--scheduled');
   const counts = background !== undefined || scheduled !== undefined;
   if (words.length % 2 !== 0 || (counts && (state !== 'done' || !COUNT.test(background ?? '') || !COUNT.test(scheduled ?? '')))) {
-    return refuse(`${NOTIFY_WORDS_REFUSED}, except --prompt-input after running and --stop-input after done`);
+    return refuse(`${NOTIFY_WORDS_REFUSED}, except ${INPUT_FLAGS.map((each) => each.split(' ').reverse().join(' after ')).join(', ')}`);
   }
   const told: HookTold = {};
   const lastMessage = flags.get(LAST_MESSAGE_FLAG);
@@ -245,6 +255,11 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
   if (promptSource !== undefined && state === 'running') told.promptSource = promptSource;
   if (flags.get(HANDED_FLAG) === 'yes' && state === 'running') told.handed = true;
   if (flags.get(APP_ASKS_FLAG) === 'yes' && state === 'running') told.appAsks = true;
+  const call = flags.get(TOOL_STARTED_FLAG);
+  const tool = flags.get(TOOL_NAME_FLAG);
+  if (call !== undefined && tool !== undefined && state === 'running') told.toolStarted = { id: call, name: tool, about: flags.get(TOOL_ABOUT_FLAG) ?? '' };
+  const ended = flags.get(TOOL_ENDED_FLAG);
+  if (ended !== undefined && state === 'running') told.toolEnded = ended;
   const command: SessionCommand = { kind: 'notify', id, state };
   if (counts) command.waiting = { background: Number(background), scheduled: Number(scheduled) };
   if (Object.keys(told).length > 0) command.told = told;
@@ -254,7 +269,8 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
 // The flag a hook asking the command to read its input on stdin spells after each state:
 // session-program.ts reads it before parsing, and the app is sent what it said, never the flag or the
 // input.
-const INPUT_FLAG = new Map([['done', '--stop-input'], ['running', '--prompt-input']]);
+const TOOL_INPUT_FLAG = '--tool-input';
+const INPUT_FLAGS = ['done --stop-input', 'running --prompt-input', `running ${TOOL_INPUT_FLAG}`];
 
 // A StopFailure hook's, after `failed <id> --project <folder>`.
 const FAILURE_INPUT_FLAG = '--failure-input';
@@ -264,7 +280,7 @@ const ERROR_FLAG = '--error';
 export function readsHookInput(commandArguments: readonly string[]): boolean {
   if (commandArguments[0] === 'failed') return commandArguments.length === 5 && commandArguments[4] === FAILURE_INPUT_FLAG;
   return commandArguments.length === 4 && commandArguments[0] === 'notify'
-    && INPUT_FLAG.get(commandArguments[2]) === commandArguments[3];
+    && INPUT_FLAGS.includes(`${commandArguments[2]} ${commandArguments[3]}`);
 }
 
 function parsedInput(input: string): unknown {
@@ -304,6 +320,22 @@ export function promptInputArguments(input: string): string[] {
   ];
 }
 
+// A tool hook's input: the arguments the app is sent in place of --tool-input. PreToolUse's names the
+// call starting, PostToolUse's and PostToolUseFailure's the call that ended.
+export function toolInputArguments(input: string): string[] {
+  const { toolStarted, toolEnded } = hookTold(parsedInput(input));
+  if (toolStarted !== undefined) return [TOOL_STARTED_FLAG, toolStarted.id, TOOL_NAME_FLAG, toolStarted.name, TOOL_ABOUT_FLAG, toolStarted.about];
+  return toolEnded === undefined ? [] : [TOOL_ENDED_FLAG, toolEnded];
+}
+
+// What a tool call's input says it does, on one line and short: a Bash call's or an agent's
+// description, else a command.
+const TOOL_ABOUT_KEPT = 200;
+function toolAbout(input: unknown): string {
+  const about = isRecord(input) ? [input.description, input.command].find((each) => typeof each === 'string' && each.trim() !== '') : undefined;
+  return typeof about === 'string' ? oneLine(about).slice(0, TOOL_ABOUT_KEPT) : '';
+}
+
 // What a Stop hook's input says its session still waits on, or undefined when it lacks either list.
 // A Claude screen's hooks are handed the input as an object (screen-workers.ts).
 export function stopWaiting(input: unknown): StopWaiting | undefined {
@@ -313,12 +345,16 @@ export function stopWaiting(input: unknown): StopWaiting | undefined {
   return { background: background.length, scheduled: scheduled.length };
 }
 
-// What a Stop or prompt hook's input says beside the counts. Claude Code calls them
-// `last_assistant_message`, `source` and `prompt`.
+// What a Stop, prompt or tool hook's input says beside the counts. Claude Code calls them
+// `last_assistant_message`, `source`, `prompt`, and `hook_event_name`, `tool_use_id`, `tool_name` and
+// `tool_input`.
 export function hookTold(input: unknown): HookTold {
   if (!isRecord(input)) return {};
-  const { last_assistant_message: lastMessage, source: promptSource, prompt } = input;
+  const { last_assistant_message: lastMessage, source: promptSource, prompt, hook_event_name: event, tool_use_id: call, tool_name: tool } = input;
+  const isCall = typeof call === 'string' && call !== '';
   return {
+    ...(isCall && event === 'PreToolUse' && typeof tool === 'string' && { toolStarted: { id: call, name: tool, about: toolAbout(input.tool_input) } }),
+    ...(isCall && event !== 'PreToolUse' && { toolEnded: call }),
     ...(typeof lastMessage === 'string' && lastMessage !== '' && { lastMessage }),
     ...(typeof promptSource === 'string' && { promptSource }),
     ...(typeof prompt === 'string' && asksForReport(prompt) && { handed: true }),
@@ -332,7 +368,8 @@ export function hookArguments(given: readonly string[], input: string | undefine
   if (!readsHookInput(given)) return [...given];
   if (given[0] === 'failed') return [...given.slice(0, 4), ERROR_FLAG, failureError(input)];
   if (input === undefined) return given.slice(0, 3);
-  return [...given.slice(0, 3), ...(given[2] === 'done' ? stopInputArguments(input) : promptInputArguments(input))];
+  if (given[2] === 'done') return [...given.slice(0, 3), ...stopInputArguments(input)];
+  return [...given.slice(0, 3), ...(given[3] === TOOL_INPUT_FLAG ? toolInputArguments(input) : promptInputArguments(input))];
 }
 
 // The words an app from before the last message, the prompt source and the handoff takes for the same notify. A

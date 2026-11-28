@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ciWords, conflictedLine, conflictedWords, hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments } from './session-cli';
+import { ciWords, conflictedLine, conflictedWords, hookArguments, landedLine, landedWords, olderNotifyArguments, outsidePaneRefusal, parseSessionCommand, promptInputArguments, readsHookInput, retriesInOlderWords, stopInputArguments, toolInputArguments } from './session-cli';
 
 describe('parseSessionCommand', () => {
   it('reads the two commands that take nothing', () => {
@@ -174,6 +174,34 @@ describe('stopInputArguments', () => {
     expect(parseSessionCommand(sent)).toEqual({
       ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { promptSource: 'sdk', appAsks: true } },
     });
+  });
+
+  it('sends the call a tool hook starts or ends, and a notify the parser takes', () => {
+    const started = JSON.stringify({
+      hook_event_name: 'PreToolUse', tool_use_id: 'toolu_1', tool_name: 'Bash',
+      tool_input: { command: 'pnpm check', description: '  Run the\n checks  ' },
+    });
+    expect(readsHookInput(['notify', '2:3', 'running', '--tool-input'])).toBe(true);
+    const sent = hookArguments(['notify', '2:3', 'running', '--tool-input'], started);
+    expect(sent).toEqual(['notify', '2:3', 'running', '--tool-started', 'toolu_1', '--tool', 'Bash', '--tool-about', 'Run the checks']);
+    expect(parseSessionCommand(sent)).toEqual({
+      ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { toolStarted: { id: 'toolu_1', name: 'Bash', about: 'Run the checks' } } },
+    });
+    // A call with no description says its command; one with neither says nothing.
+    expect(toolInputArguments(JSON.stringify({ hook_event_name: 'PreToolUse', tool_use_id: 'toolu_2', tool_name: 'Bash', tool_input: { command: 'sleep 9' } })))
+      .toEqual(['--tool-started', 'toolu_2', '--tool', 'Bash', '--tool-about', 'sleep 9']);
+    expect(toolInputArguments(JSON.stringify({ hook_event_name: 'PreToolUse', tool_use_id: 'toolu_3', tool_name: 'Read', tool_input: { file_path: '/a' } })))
+      .toEqual(['--tool-started', 'toolu_3', '--tool', 'Read', '--tool-about', '']);
+    const ended = ['notify', '2:3', 'running', ...toolInputArguments(JSON.stringify({ hook_event_name: 'PostToolUseFailure', tool_use_id: 'toolu_1', tool_name: 'Bash' }))];
+    expect(parseSessionCommand(ended)).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'running', told: { toolEnded: 'toolu_1' } } });
+    expect(toolInputArguments('not json')).toEqual([]);
+    expect(toolInputArguments(JSON.stringify({ hook_event_name: 'PreToolUse', tool_use_id: 'toolu_4', tool_name: 'Bash', tool_input: 'odd' })))
+      .toEqual(['--tool-started', 'toolu_4', '--tool', 'Bash', '--tool-about', '']);
+    // Words naming a call with no tool, or a call on any state but running, are read past.
+    expect(parseSessionCommand(['notify', '2:3', 'running', '--tool-started', 'toolu_1'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'running' } });
+    expect(parseSessionCommand(['notify', '2:3', 'blocked', '--tool-ended', 'toolu_1'])).toEqual({ ok: true, command: { kind: 'notify', id: '2:3', state: 'blocked' } });
+    // An app from before the tool flags is sent the bare running.
+    expect(olderNotifyArguments(sent)).toEqual(['notify', '2:3', 'running']);
   });
 
   it('sends nothing for input from an older Claude Code, or none that parses', () => {

@@ -6,7 +6,13 @@ import { isDoneReport, stallNotice } from '../../shared/workers/done-report';
 // stall.test.ts holds the clock; this is what a stall does to `pane list`, `pane status` and main.
 beforeEach(() => { vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); });
-const minutes = (count: number) => vi.advanceTimersByTime(count * 60_000);
+// The minutes pass with the app's stall sweep running each one, as it does while the machine is awake.
+const minutes = (count: number, sweep: () => unknown) => {
+  for (let minute = 0; minute < count; minute += 1) {
+    vi.advanceTimersByTime(60_000);
+    sweep();
+  }
+};
 
 async function silentWorker() {
   const fake = project();
@@ -21,11 +27,11 @@ async function silentWorker() {
 describe('a worker gone silent', () => {
   it('is listed stalled once no hook has spoken for the setting\'s minutes, and running again after one does', async () => {
     const { answer, list } = await silentWorker();
-    minutes(19);
+    minutes(19, answer.tellStalls);
     expect(await list()).toContain('2:1\tterminal 2\trunning');
     // What says the sweep redraws the workers popup.
     expect(answer.tellStalls()).toBe(false);
-    minutes(6);
+    minutes(6, answer.tellStalls);
     expect(answer.tellStalls()).toBe(true);
     expect(await list()).toContain('2:1\tterminal 2\tstalled, silent 25 minutes');
     expect((await answer({ directory: '/work/api', args: ['status'] })).output).toContain('stalled, silent 25 minutes');
@@ -38,7 +44,7 @@ describe('a worker gone silent', () => {
 
   it('tells main once per stall, and keeps the pane', async () => {
     const { answer, told, closed } = await silentWorker();
-    minutes(20);
+    minutes(20, answer.tellStalls);
     answer.tellStalls();
     answer.tellStalls();
     expect(told).toEqual([`2 ${stallNotice('api-terminal-2', '2:1', 20, rowOf('2:1', 'stalled, silent 20 minutes'))}`]);
@@ -46,7 +52,7 @@ describe('a worker gone silent', () => {
     // Drawn as a status line, not a prompt you typed.
     expect(isDoneReport(stallNotice('api-terminal-2', '2:1', 20, rowOf('2:1', 'stalled, silent 20 minutes')))).toBe(true);
     answer.notify('2:1', 'running');
-    minutes(21);
+    minutes(21, answer.tellStalls);
     answer.tellStalls();
     expect(told).toHaveLength(2);
   });
@@ -56,7 +62,7 @@ describe('a worker gone silent', () => {
     // The first typed prompt is the one main started it on; the next is yours (prompt-source.ts).
     answer.notify('2:1', 'running', undefined, { promptSource: 'user' });
     answer.notify('2:1', 'running', undefined, { promptSource: 'user' });
-    minutes(20);
+    minutes(20, answer.tellStalls);
     answer.tellStalls();
     expect(await list()).toContain('stalled, silent 20 minutes');
     expect(told).toEqual([]);
@@ -69,7 +75,7 @@ describe('a worker gone silent', () => {
   ] as const)('is never a worker %s (waiting %o), whose silence is waiting', async (state, waiting, listed) => {
     const { answer, told, list } = await silentWorker();
     answer.notify('2:1', state, waiting);
-    minutes(25);
+    minutes(25, answer.tellStalls);
     answer.tellStalls();
     expect(await list()).toContain(listed);
     expect(told.filter((each) => each.includes('no sign of life'))).toEqual([]);
@@ -86,7 +92,7 @@ describe('a worker gone silent', () => {
 
   it('takes the notice back when the worker speaks again before main reads it', async () => {
     const { answer, told, withdrawn } = await silentWorker();
-    minutes(20);
+    minutes(20, answer.tellStalls);
     answer.tellStalls();
     answer.notify('2:1', 'running');
     expect(withdrawn).toEqual([`2 ${told.length - 1}`]);
@@ -94,7 +100,7 @@ describe('a worker gone silent', () => {
 
   it('takes the notice back when main lets go of the worker before reading it', async () => {
     const { answer, told, withdrawn } = await silentWorker();
-    minutes(20);
+    minutes(20, answer.tellStalls);
     answer.tellStalls();
     const stallId = told.length - 1;
     await answer({ directory: '/work/api', args: ['release', '2:1'] });
@@ -109,9 +115,41 @@ describe('a worker gone silent', () => {
     fake.agents.add('2:1');
     fake.workers.set('2:1', '/work/api');
     answer.tellStalls();
-    minutes(21);
+    minutes(21, answer.tellStalls);
     answer.tellStalls();
     expect(fake.told.filter((each) => each.includes('no sign of life'))).toEqual([]);
     expect((await answer({ directory: '/work/api', args: ['list'] })).output).toContain('2:1\tterminal 2\trunning');
+  });
+
+  it('waits out the pause ceiling inside a tool call, and names the call to main', async () => {
+    const { answer, told, list } = await silentWorker();
+    answer.notify('2:1', 'running', undefined, { toolStarted: { id: 'toolu_1', name: 'Bash', about: 'pnpm check' } });
+    minutes(25, answer.tellStalls);
+    answer.tellStalls();
+    expect(told.filter((each) => each.includes('no sign of life'))).toEqual([]);
+    minutes(5, answer.tellStalls);
+    const tool = { name: 'Bash', about: 'pnpm check', minutes: 30 };
+    const notice = stallNotice('api-terminal-2', '2:1', 30, rowOf('2:1', 'stalled, silent 30 minutes, Bash running 30 minutes'), tool);
+    expect(told.at(-1)).toBe(`2 ${notice}`);
+    expect(notice).toContain('Bash has been running 30 minutes: pnpm check.');
+    expect(isDoneReport(notice)).toBe(true);
+    const unsaid = stallNotice('api-terminal-2', '2:1', 30, 'row', { ...tool, about: '' });
+    expect(unsaid).toContain('Bash has been running 30 minutes. It may be stuck');
+    expect(isDoneReport(unsaid)).toBe(true);
+    expect(await list()).toContain('stalled, silent 30 minutes, Bash running 30 minutes');
+  });
+
+  it('does not count the minutes the machine was asleep', async () => {
+    const { answer, told, list } = await silentWorker();
+    minutes(5, answer.tellStalls);
+    // Asleep for 30 minutes: the sweep's interval does not fire.
+    vi.advanceTimersByTime(30 * 60_000);
+    // Six minutes silent: the five before and the sweep's own one.
+    expect(answer.tellStalls()).toBe(false);
+    minutes(13, answer.tellStalls);
+    expect(await list()).toContain('2:1\tterminal 2\trunning');
+    minutes(1, answer.tellStalls);
+    expect(told.filter((each) => each.includes('no sign of life'))).toHaveLength(1);
+    expect(await list()).toContain('stalled, silent 20 minutes');
   });
 });

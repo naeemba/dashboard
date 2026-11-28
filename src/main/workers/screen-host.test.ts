@@ -178,7 +178,7 @@ screenHostSuite('the screen host', () => {
     expect(sdk.sessions).toHaveLength(1);
   });
 
-  it('holds what a turn ended with while the app was away: a result clears busy, a hook keeps only its name but Stop', async () => {
+  it('holds what a turn ended with while the app was away: a result clears busy, a hook keeps only its name and call but Stop', async () => {
     const sdk = fakeSdk();
     const socketPath = await host(sdk.start);
     await screenHost({ socket: socketPath, launch: () => undefined }).query(KEY, appSession([]));
@@ -188,6 +188,9 @@ screenHostSuite('the screen host', () => {
     accepted[0].destroy();
     await settle();
     await session.options.hooks?.PostToolUse?.[0].hooks[0]({ hook_event_name: 'PostToolUse', tool_response: 'long' } as never, undefined, { signal });
+    await session.options.hooks?.PostToolUse?.[0].hooks[0]({
+      hook_event_name: 'PostToolUse', tool_use_id: 'toolu_1', tool_name: 'Bash', tool_input: { command: 'pnpm check' }, tool_response: 'long',
+    } as never, undefined, { signal });
     session.stream.push({ type: 'result', subtype: 'error_during_execution' });
     await hook(session.options, 'Stop', { hook_event_name: 'Stop', last_assistant_message: 'done' });
     await settle();
@@ -198,7 +201,10 @@ screenHostSuite('the screen host', () => {
     const heard: string[] = [];
     const after = (await second.query(KEY, appSession(heard)))?.query;
     await settle();
-    expect(heard).toEqual(['hook {"hook_event_name":"PostToolUse"}', 'hook {"hook_event_name":"Stop","last_assistant_message":"done"}']);
+    expect(heard).toEqual([
+      'hook {"hook_event_name":"PostToolUse"}', 'hook {"hook_event_name":"PostToolUse","tool_use_id":"toolu_1","tool_name":"Bash"}',
+      'hook {"hook_event_name":"Stop","last_assistant_message":"done"}',
+    ]);
     expect((await after?.[Symbol.asyncIterator]().next())?.value).toEqual({ type: 'result', subtype: 'error_during_execution' });
   });
 

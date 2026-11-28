@@ -202,22 +202,29 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
 // worker's denyInsteadOfPrompting (appSessionSettings) still sends it. A prompt submitted, or a tool that
 // has run (so any permission was granted), is the worker back at work, which takes either mark off.
 // The prompt hook's input says who put the prompt in, which tells main's turns from yours
-// (prompt-source.ts).
-// None of them reads the pane's screen. PreToolUse is the board guard (board-guard.ts).
+// (prompt-source.ts). A tool's start and its end, failed or not, say which call it is in, which a
+// stall names (stall.ts). None of them reads the pane's screen. PreToolUse is also the board guard
+// (board-guard.ts).
+// The calls that can run long enough to stall in, the only ones whose start is worth a process: a
+// Read or a Grep would wait on a node start before every call for nothing.
+const LONG_TOOLS = 'Bash|Task|Agent|TaskOutput|Monitor|WebFetch|mcp__.*';
 export function workerSettings(id: string, userData: string): string {
   const notify = (state: string) => ({ type: 'command', command: `node "$DASHBOARD_SESSION" notify ${id} ${state}` });
   // The space after the brace is outside every string, which is what makes Windows PowerShell wrap the
   // word in quotes on its way to claude; every other space here is inside one, and without it the JSON
   // reached claude cut at each of them (windowsPowerShellWraps). JSON does not mind the space.
   const shared = appSessionSettings(userData, 'worker');
+  const toolHook = { hooks: [notify('running --tool-input')] };
   return '{ ' + JSON.stringify({
     ...shared,
     hooks: {
       Stop: [{ hooks: [notify('done --stop-input')] }],
       Notification: [{ matcher: 'permission_prompt', hooks: [notify('blocked')] }],
       UserPromptSubmit: [{ hooks: [notify('running --prompt-input')] }],
-      PostToolUse: [{ hooks: [notify('running')] }],
+      PostToolUse: [toolHook],
+      PostToolUseFailure: [toolHook],
       ...shared.hooks,
+      PreToolUse: [...shared.hooks.PreToolUse, { matcher: LONG_TOOLS, ...toolHook }],
     },
   }).slice(1);
 }

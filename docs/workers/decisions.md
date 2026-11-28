@@ -716,10 +716,31 @@ blocked, holding a pool slot (workers-decision-11), until someone noticed the ba
 main is told once** (`src/main/workers/stall.ts`). Before it, a worker hung on a test that never
 ends sat in Doing holding a pool slot (workers-decision-11) with nothing to say so.
 
-- **A sign of life is any hook**: a prompt going in, a tool finishing, a stop or a question. Pane
-  output is not one: Claude Code's spinner redraws its timer every second whatever the worker is
-  stuck on, and a worker screen has no pane output at all. The cost: a worker thinking 20 minutes
-  without running a tool is called stalled, which one look at its pane settles.
+- **A sign of life is any hook**: a prompt going in, a tool starting or finishing, a stop or a
+  question. Pane output is not one: Claude Code's spinner redraws its timer every second whatever
+  the worker is stuck on, and a worker screen has no pane output at all. The cost: a worker
+  thinking 20 minutes without running a tool is called stalled, which one look at its pane settles.
+- **A worker inside a tool call waits out the pause ceiling (30 minutes)**, and its notice names
+  the call: `Bash has been running 31 minutes: pnpm check`. A long check, or a review loop waiting
+  on its own work, looks the same as a test that never ends, and a main released a working pane on
+  a bare `no sign of life` (2026-11-28), whose replacement did the work again. Every call
+  PreToolUse starts is kept until its own PostToolUse or PostToolUseFailure, or any hook but a
+  tool's, and the notice names the oldest still running: of two calls run side by side, the one
+  ending first leaves the other its name and its ceiling. A call refused before it ran is kept until
+  the next hook that is not a tool's. A terminal worker's PreToolUse runs only for
+  the calls that can run that long (Bash, agents, MCP tools and a few more): each one is a node
+  start the call waits on.
+- **A sweep more than two minutes after the one before it is the machine, not the workers**: the
+  minute's interval does not fire while the machine sleeps or the main process is blocked. That
+  sweep moves every worker's last hook and every running call's start on by the gap, so a silence
+  counts awake minutes only: a worker hung before the sleep is told once it has been silent for the
+  setting's minutes awake, and one mid-step is not told. A machine asleep or frozen woke to one
+  warning per pane, four delivered at once. Telling each main once that the machine was away, and
+  each stall a sweep later, still told a worker a minute into its test that it had been running 43
+  minutes. Counting silent workers instead called two workers hung on their tests a sleeping
+  machine. The shift is made by whatever looks at the clocks first after waking, a sweep, a read
+  or a hook: made by the sweep alone, `pane list` and the workers popup in the minute before it
+  showed a worker a minute into `pnpm test` as silent 44 minutes.
 - **Only a worker at work**. Blocked waits on you, done is finished, and paused has its own 30
   minute notice (workers-decision-1): their silence is waiting, not a hang.
 - **The workers popup is redrawn each minute while one is stalled**, and once on the minute after

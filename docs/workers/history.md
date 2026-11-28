@@ -129,3 +129,7 @@ One line per merged change: date and why.
 - 2026-11-28 — Main confirms a review started a few minutes after a worker's report, since the
   worker cannot see it: three pull requests sat unreviewed for five hours behind reports saying
   the review loop would pick them up
+- 2026-11-28 — A worker inside a tool call is stalled only past the 30 minute pause ceiling and
+  its notice names the call, and a silence counts only the minutes the machine was awake:
+  a main released a working pane on a bare `no sign of life`, and a frozen machine woke to four
+  stall warnings at once (workers-decision-13)

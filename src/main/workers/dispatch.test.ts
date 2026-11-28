@@ -134,7 +134,16 @@ describe('workerSettings', () => {
   it('reports running when a prompt is submitted or a tool has run', () => {
     const settings = JSON.parse(workerSettings('2:3', USER_DATA));
     expect(settings.hooks.UserPromptSubmit[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running --prompt-input');
-    expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running');
+    expect(settings.hooks.PostToolUse[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running --tool-input');
+  });
+
+  // Which call the worker is in, for its stall (stall.ts), beside the board guard.
+  it('reports each tool call starting and ending, failed or not', () => {
+    const settings = JSON.parse(workerSettings('2:3', USER_DATA));
+    expect(settings.hooks.PostToolUseFailure[0].hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running --tool-input');
+    expect(settings.hooks.PreToolUse.at(-1).hooks[0].command).toBe('node "$DASHBOARD_SESSION" notify 2:3 running --tool-input');
+    expect(settings.hooks.PreToolUse.at(-1).matcher).toContain('Bash');
+    expect(settings.hooks.PreToolUse.length).toBeGreaterThan(1);
   });
 
   // A fresh machine has no rule for them in ~/.claude/settings.json.
@@ -150,9 +159,12 @@ describe('workerSettings', () => {
     expect(JSON.parse(workerSettings('2:3', USER_DATA)).permissions.allow).toContain('Read(//tmp/dash-copy/browser-files/**)');
   });
 
-  // A terminal worker carries everything a screen does, so a key added to the shared settings reaches both.
+  // A terminal worker carries everything a screen does, so a key added to the shared settings reaches both:
+  // its PreToolUse hooks are the shared ones and then its own.
   it('carries every app session setting', () => {
-    expect(JSON.parse(workerSettings('2:3', USER_DATA))).toMatchObject(appSessionSettings(USER_DATA, 'worker'));
+    const settings = JSON.parse(workerSettings('2:3', USER_DATA));
+    const shared = { ...settings, hooks: { ...settings.hooks, PreToolUse: settings.hooks.PreToolUse.slice(0, -1) } };
+    expect(shared).toMatchObject(appSessionSettings(USER_DATA, 'worker'));
   });
 
   // Every other space in it is inside a string, and Windows PowerShell wraps a word for claude only when
