@@ -5,7 +5,8 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-28T02:36:14.719Z",
-  "updatedAt": "2026-11-28T09:30:44.893Z",
-  "column": "Backlog",
-  "order": 3
+  "updatedAt": "2026-11-28T11:00:22.959Z",
+  "branch": "stall-warning-ignores-a-worker-waiting-on-i",
+  "column": "Doing",
+  "order": 0
 }
