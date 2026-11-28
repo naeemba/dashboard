@@ -1,6 +1,7 @@
-import { cardById, type Board } from '../../../shared/board/board';
+import { cardAt, type Board } from '../../../shared/board/board';
 import type { Refused } from '../../../shared/app/bridge';
 import { notOpenRefusal } from '../../ship/ship';
+import { findCard } from '../../board/board-cli';
 import { action, isRefused } from '../action';
 import { isFilledTextOrNull } from '../pane/pane-input';
 import { columnsBack, type ReturnTo } from '../../workers/pane-pool';
@@ -35,9 +36,11 @@ export const cardShip = action<CardShipPorts, CardShipInput, { output: string }>
     return { ...card, first, after, returnTo, askedFrom: askedFromInput(raw) };
   },
   async run(ports, input) {
-    const card = cardById(ports.read(input.projectPath), input.id);
-    if (card === undefined) return { refused: `no card with id ${input.id}` };
+    const board = ports.read(input.projectPath);
+    const at = findCard(board, input.id);
+    if ('message' in at) return { refused: at.message };
+    const card = cardAt(board, at)!;
     if (ports.slotOf(input.projectPath) === -1) return { refused: notOpenRefusal(card.title) };
-    return ports.ship({ ...input, title: card.title });
+    return ports.ship({ ...input, id: card.id, title: card.title });
   },
 });

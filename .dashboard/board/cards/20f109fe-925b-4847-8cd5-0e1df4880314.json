@@ -5,7 +5,15 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:03.861Z",
-  "updatedAt": "2026-11-27T21:54:03.862Z",
-  "column": "Backlog",
-  "order": 0
+  "updatedAt": "2026-11-27T23:41:45.105Z",
+  "branch": "pr-wait-and-pr-land-stop-reporting-conflict",
+  "pullRequest": 428,
+  "comments": [
+    {
+      "at": "2026-11-27T23:41:45.071Z",
+      "body": "Pull request #428 opened: pr wait and pr land merge and push a conflict git merges cleanly https://github.com/naeemba/dashboard/pull/428"
+    }
+  ],
+  "column": "Review",
+  "order": 2
 }

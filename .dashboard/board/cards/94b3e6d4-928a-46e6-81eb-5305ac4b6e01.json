@@ -1,0 +1,11 @@
+{
+  "id": "94b3e6d4-928a-46e6-81eb-5305ac4b6e01",
+  "title": "Stall warning ignores a worker waiting on its own background work, and lost background notices",
+  "notes": "Night of 2026-11-28: every worker was flagged 'no sign of life for 20 minutes' while its review loop ran as a background workflow (pane list said running, report said 'the loop is running in the background'): a false alarm each time, four at once. Separately, four workers sat for an hour 'waiting' on background checks and a push that had already finished (check.log written, no process left); the harness notice never reached them, under load ~90 on 16 cores. Wanted: the stall rule (stall.ts, workers-decision-13) treats a worker with live background work as waiting, not stalled; and a stall whose background work is gone says so, e.g. 'its background task ended N minutes ago and it has not resumed', so main can nudge it. Not shipped: for the user to decide in the morning.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-28T02:36:14.719Z",
+  "updatedAt": "2026-11-28T02:36:14.719Z",
+  "column": "Backlog",
+  "order": 3
+}

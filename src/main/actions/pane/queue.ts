@@ -1,6 +1,7 @@
 import type { Refused } from '../../../shared/app/bridge';
 import type { Board } from '../../../shared/board/board';
 import { failureText } from '../../../shared/errors/failure';
+import { wholeId } from '../../board/board-cli';
 import { capReached, columnsBack, liveWaits, nextResume, nextToStart, ordinal, placed, queuedWork, queueRefusal, queueText, readiness, withdrawnColumn, type Caps, type NextStart, type QueueEntry, type Running } from '../../workers/pane-pool';
 import type { SavedQueue } from '../../workers/pane-queue-store';
 import { action, bind, isRefused, type BoundAction } from '../action';
@@ -162,9 +163,13 @@ export const paneStart = action<PaneQueuePorts, PaneStartInput, { output: string
   words: [],
   input: startInput,
   async run(ports, { first, ...input }) {
-    const entry: QueueEntry = { id: `q${ports.pool.next}`, ...input, queuedAt: new Date(ports.now()).toISOString() };
+    // A short --after, from `pane start` or a ship, is the card it starts: queueRefusal matches whole ids.
+    const board = ports.board(input.projectPath);
+    const after = input.after === null || board === null ? input.after : wholeId(board, input.after);
+    if (after !== null && typeof after !== 'string') return { refused: after.message };
+    const entry: QueueEntry = { id: `q${ports.pool.next}`, ...input, after, queuedAt: new Date(ports.now()).toISOString() };
     if (nestedReview(ports, entry)) return ports.begin(entry);
-    const refusal = queueRefusal([...ports.pool.entries, ...ports.pool.starting.values()], entry, ports.board(entry.projectPath));
+    const refusal = queueRefusal([...ports.pool.entries, ...ports.pool.starting.values()], entry, board);
     if (refusal !== null) return { refused: refusal };
     ports.pool.next += 1;
     ports.pool.entries = placed(ports.pool.entries, entry, first);

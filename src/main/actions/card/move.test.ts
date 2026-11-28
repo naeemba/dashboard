@@ -76,6 +76,15 @@ describe('card.move', () => {
     expect(seen.ran).toEqual(['published', 'review', 'published', 'review']);
   });
 
+  it('asks the review it starts about the whole id a short one named', async () => {
+    const asked: string[] = [];
+    const { ports } = fakePorts({ review: async (input) => { asked.push(input.id); return { output: '' }; } });
+    const input = cardMove.input({ projectPath: PROJECT, id: 'ca', column: 'Review', source: 'command' });
+    if ('refused' in input) throw new Error(input.refused);
+    await expect(cardMove.run(ports, input)).resolves.toMatchObject({ ran: 'review' });
+    expect(asked).toEqual(['card']);
+  });
+
   // Shift+Right twice quickly from Doing: the screen's save of Done lands before its ask about Review.
   it('never moves a card the screen asks about back from the column it has moved on to', async () => {
     const { ports, seen } = fakePorts();

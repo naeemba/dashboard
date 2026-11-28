@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { markCommonJs, replaceFileIfChanged } from '../app/replace-file';
+import { failureText } from '../../shared/errors/failure';
 
 // What every pane's shell is handed so an agent in it can reach this app: the command files and the
 // socket. Built once in main.ts; every pane gets the same object, and the values that are each pane's
@@ -21,6 +24,24 @@ export function paneCommands(buildFolder: string): PaneCommands {
     // worker hooks call them by name (command-decision-1).
     dashboard: path.join(buildFolder, 'dashboard-cli-entry.js'),
   };
+}
+
+// The command files a pane runs, copied out of the build into `folder` (userData's `commands`) at
+// launch, so a rebuild, which replaces the build under the running app, leaves them this app's until
+// it restarts, and the restart rewrites them in the same place, where a shell the pane host kept
+// through it still points (command-decision-12). A copy that fails leaves the panes on the build's
+// own files, which a rebuild can still swap; `warn` is told why.
+export function keptCommands(buildFolder: string, folder: string, warn: (line: string) => void): PaneCommands {
+  const built = paneCommands(buildFolder);
+  const kept = paneCommands(folder);
+  try {
+    markCommonJs(folder);
+    for (const name of Object.keys(kept) as (keyof PaneCommands)[]) replaceFileIfChanged(kept[name], readFileSync(built[name], 'utf8'));
+    return kept;
+  } catch (error: unknown) {
+    warn(`commands not copied to ${folder}, so a rebuild reaches the panes before a restart: ${failureText(error)}`);
+    return built;
+  }
 }
 
 // One pane's environment: the shared one, its own id, which the browser command acts for, and the

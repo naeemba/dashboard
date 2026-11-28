@@ -36,7 +36,7 @@ import { MANAGER_FOLDER, projectInSlot } from './manager/manager-terminals';
 import { listOpenedProject } from './projects/projects-write';
 import { MANAGER_SLOT } from '../shared/manager/manager';
 import { announceSocket } from './command/app-address';
-import { environmentForPanes, paneCommands } from './command/pane-environment';
+import { environmentForPanes, keptCommands } from './command/pane-environment';
 import { closeSessionSocket, listenForSessions, sessionSocketPath } from './workers/session-socket';
 import { worktreeActions } from './actions/worktree/worktree-actions';
 import { folderDialogRefusal, keepsScreenCopies, screens, windowHears } from '../shared/remote-host/screens';
@@ -179,7 +179,7 @@ const paneScreens = screens();
 // The command files and the socket every pane is handed: pane-environment.ts. session-socket.ts says
 // why the socket is this run's own.
 const buildFolder = unpacked(path.join(app.getAppPath(), '.vite', 'build'));
-const commands = paneCommands(buildFolder);
+const commands = keptCommands(buildFolder, path.join(app.getPath('userData'), 'commands'), (message) => logStore.log({ level: 'warn', kind: 'app', message }));
 const sessionSocket = sessionSocketPath(process.platform, app.getPath('temp'), process.pid);
 const paneEnvironment = environmentForPanes(process.env, commands, sessionSocket, app.getPath('userData'), app.isPackaged ? process.execPath : null);
 // Where every pane's shell runs, so it outlives this process: pane-host-client.ts and panes-decision-1.

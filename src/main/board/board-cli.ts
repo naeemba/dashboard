@@ -124,24 +124,31 @@ function ambiguousId(board: Board, id: string, matches: readonly Selection[]): s
   return `${id} starts more than one card's id:\n${named.join('\n')}`;
 }
 
-function findCard(board: Board, id: string): Selection | { message: string } {
+export function findCard(board: Board, id: string): Selection | { message: string } {
   const matches = cardsNamed(board, id);
   if (matches.length === 1) return matches[0];
   return { message: matches.length === 0 ? `no card with id ${id}` : ambiguousId(board, id, matches) };
 }
 
-// A ship, a review and a move asked of the app carry the card's whole id, which is all the app
-// matches: a prefix is made whole here, against the board this folder holds. One that names no card
-// here goes as it was typed, for the app to answer, since its board can hold a card this one has not
-// seen yet.
+// A ship, a review and a move asked of the app carry the card's whole id: the app makes a prefix
+// whole too, but a newer command can reach an older running app that does not. A prefix is made
+// whole here, against the board this folder holds. One that names no card here goes as it was typed,
+// for the app to answer, since its board can hold a card this one has not seen yet.
 export function withWholeId(board: Board | null, commandArguments: readonly string[]): { commandArguments: readonly string[] } | { message: string } {
   const [verb, id, ...rest] = commandArguments;
   if (board === null || id === undefined) return { commandArguments };
+  const whole = wholeId(board, id);
+  return typeof whole === 'string' ? { commandArguments: [verb, whole, ...rest] } : whole;
+}
+
+// The whole id of the card a prefix names on this board, the id as typed when it names none (the
+// caller's own lookup then refuses it in its own words), or a refusal naming every card it starts.
+// The app's card actions run it on the project's board, so a short id from any door is the card
+// before a refusal is chosen: a review of `6ad9d4f4` was told the card had no worktree.
+export function wholeId(board: Board, id: string): string | { message: string } {
   const matches = cardsNamed(board, id);
   if (matches.length > 1) return { message: ambiguousId(board, id, matches) };
-  if (matches.length === 0) return { commandArguments };
-  const [at] = matches;
-  return { commandArguments: [verb, cardAt(board, at)!.id, ...rest] };
+  return matches.length === 0 ? id : cardAt(board, matches[0])!.id;
 }
 
 // The whole id of the card a move put into Done or Cancelled, whose worker the app is then asked to

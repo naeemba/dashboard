@@ -39,3 +39,6 @@ One line per merged change: date and why.
 - 2026-11-28 — `pr wait` and `pr land` merge and push a conflict git merges cleanly themselves:
   GitHub ignores `merge=union` on `history.md`, and in 5 sessions a clean merge-tree was reported as
   `git could not name the files`, each costing a merge, a full check, a push and a CI run by hand
+- 2026-11-28 — A pane's commands are a copy in userData, so a rebuild no longer reaches the panes
+  of the running app before its restart: 16 "restart the app" refusals in a day
+  (command-decision-12)

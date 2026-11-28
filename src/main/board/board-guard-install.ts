@@ -2,7 +2,7 @@ import { lstatSync, readFileSync, readlinkSync, realpathSync, statSync } from 'n
 import { readText } from '../app/missing-file';
 import { isRecord } from '../../shared/app/is-record';
 import path from 'node:path';
-import { replaceFile, replaceFileIfChanged } from '../app/replace-file';
+import { markCommonJs, replaceFile, replaceFileIfChanged } from '../app/replace-file';
 import { failureLine } from '../command/failure-line';
 import { GUARD_COMMAND, GUARD_ENTRY } from './board-guard';
 
@@ -49,9 +49,7 @@ export function installBoardGuard(home: string, builtBoard: string): string | nu
   try {
     const folder = path.join(home, '.claude', 'dashboard');
     replaceFileIfChanged(path.join(folder, 'board.js'), readFileSync(builtBoard, 'utf8'));
-    // Node reads a .js as ESM under a package.json saying "type": "module", and one in ~ would make
-    // the CommonJS program fail (create-task-install.ts installs the same).
-    replaceFileIfChanged(path.join(folder, 'package.json'), '{"type":"commonjs"}\n');
+    markCommonJs(folder);
     const linked = path.join(home, '.claude', 'settings.json');
     // Through the link: a settings.json linked into a dotfiles repo stays a link, and the entry lands
     // in the file it points at.

@@ -54,3 +54,6 @@ One line per merged change: date and why.
 - 2026-11-27 — The board-files tests of the folder got the 60 s timeout the file's other two blocks
   have: a Windows CI runner's disk stalled for seconds and took whichever test was running past
   vitest's 5 s. The three that write their own files start from an empty folder board as well
+- 2026-11-28 — A short card id is made whole by the app's card actions as well as the command:
+  `board review 6ad9d4f4` was told the card had no worktree when it had no pull request yet, and
+  `board ship <id> --after 3a1ee233` found no card to wait on, where the whole ids worked

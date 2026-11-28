@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { projectOfFolder, sessionRequests, type WorkerStart } from './session-requests';
-import { project } from './session-requests-fixture';
+import { project, rowOf } from './session-requests-fixture';
 import { doneReport, PAUSE_CEILING_MS } from '../../shared/workers/done-report';
 import { REPORT_SETTLE_MS, STOP_GRACE_MS } from './stop-notices';
 
@@ -171,7 +171,7 @@ describe('sessionRequests', () => {
     const answer = sessionRequests(ports);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`]);
   });
 
   it('tells main when a worker it started is done, and not when anything else in a pane is', async () => {
@@ -184,7 +184,7 @@ describe('sessionRequests', () => {
     expect(told).toEqual([]);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`]);
     // A Claude opened by hand in the other pane runs the same hooks only if somebody gave it them; its
     // done is still nobody's report to main.
     agents.add('2:2');
@@ -232,7 +232,7 @@ describe('sessionRequests', () => {
     expect(told).toEqual([]);
     answer.heard(2, 'api-terminal-2');
     answer.mainTurn(2, false);
-    expect(told).toEqual([`2 ${doneReport('api-terminal-3', '2:2')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-3', '2:2', rowOf('2:2'))}`]);
   });
 
   // `idle` waits on main's background work too, which may never end. One clock, the turn's: a notice
@@ -251,10 +251,10 @@ describe('sessionRequests', () => {
     answer.mainTurn(2, true);
     expect(told).toEqual([]);
     vi.advanceTimersByTime(REPORT_SETTLE_MS);
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`]);
     await answer({ directory: '/anywhere', args: ['notify', '2:2', 'done', '--background', '0', '--scheduled', '0'] });
     vi.advanceTimersByTime(REPORT_SETTLE_MS);
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1')}`, `2 ${doneReport('api-terminal-3', '2:2')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`, `2 ${doneReport('api-terminal-3', '2:2', rowOf('2:2'))}`]);
   });
 
   // Main hears a report only when the turn that read it ends, and that turn merges and releases.
@@ -298,11 +298,11 @@ describe('sessionRequests', () => {
     expect(answer.workers()[0]).toMatchObject({ status: 'paused', detail: 'waiting on 2 background tasks' });
     // A pause nothing wakes is told as one once it passes the ceiling.
     vi.advanceTimersByTime(PAUSE_CEILING_MS);
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1', 'paused, waiting on 2 background tasks'), true)}`]);
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done', '--background', '0', '--scheduled', '0'] });
     expect(answer.workers()[0]).toEqual(expect.not.objectContaining({ detail: expect.anything() }));
     vi.advanceTimersByTime(REPORT_SETTLE_MS);
-    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', true)}`, `2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1', 'paused, waiting on 2 background tasks'), true)}`, `2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`]);
   });
 
   // A follow-up typed into a finished worker, or a permission answered, puts it back to work.
@@ -479,7 +479,7 @@ describe('sessionRequests across projects', () => {
     await ask(['run', '2:1', 'fix the tests']);
     await ask(['notify', '2:1', 'done'], '/anywhere');
     stayStopped();
-    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`]);
   });
 
   // A restart forgets who ran it; the dispatcher main saved with the pane in session.json says.
@@ -489,7 +489,7 @@ describe('sessionRequests across projects', () => {
     working.set('2:1', '/work/desk');
     await answer({ directory: '/anywhere', args: ['notify', '2:1', 'done'] });
     stayStopped();
-    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`]);
     expect(await answer({ directory: '/work/desk', args: ['release', '2:1'] })).toEqual({ ok: true, output: 'released 2:1' });
   });
 
@@ -520,7 +520,7 @@ describe('sessionRequests across projects', () => {
     answer.heard(2, 'api-terminal-2');
     await ask(['notify', '2:1', 'done'], '/anywhere');
     stayStopped();
-    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1')}`]);
+    expect(told).toEqual([`-2 ${doneReport('api-terminal-2', '2:1', rowOf('2:1'))}`]);
   });
 
   it('lists a worker claimed on another page under the main that ran it', async () => {
