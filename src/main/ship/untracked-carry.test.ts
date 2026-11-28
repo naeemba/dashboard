@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { carriedFiles, moveAll, setAsideUntracked } from './untracked-carry';
+import { carriedFiles, moveAll, moveBack, setAsideUntracked } from './untracked-carry';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
 
@@ -61,13 +61,28 @@ describe('setAsideUntracked', () => {
     expect(readdirSync(dirname(worktree))).toEqual(['card']);
   });
 
-  it('moves back what it moved when a later rename throws', async () => {
+  it('stops at a rename that throws, naming what it moved', async () => {
     const from = temporaryFolder('dashboard-carry-');
     const to = temporaryFolder('dashboard-carry-');
     writeFileSync(join(from, 'AGENTS.md'), 'rules');
-    await expect(moveAll(['AGENTS.md', 'missing.md'], from, to)).rejects.toThrow('ENOENT');
-    expect(readFileSync(join(from, 'AGENTS.md'), 'utf8')).toBe('rules');
-    expect(existsSync(join(to, 'AGENTS.md'))).toBe(false);
+    const moved: string[] = [];
+    await expect(moveAll(['AGENTS.md', 'missing.md'], from, to, moved)).rejects.toThrow('ENOENT');
+    expect(moved).toEqual(['AGENTS.md']);
+    expect(readFileSync(join(to, 'AGENTS.md'), 'utf8')).toBe('rules');
+  });
+
+  it('moves back the rest when one move back throws, leaving that one where it was', async () => {
+    const aside = temporaryFolder('dashboard-carry-');
+    const worktree = temporaryFolder('dashboard-carry-');
+    writeFileSync(join(aside, 'AGENTS.md'), 'rules');
+    mkdirSync(join(aside, 'coverage'));
+    // A tool recreated `coverage/` meanwhile, so the folder cannot go back onto it.
+    mkdirSync(join(worktree, 'coverage'));
+    writeFileSync(join(worktree, 'coverage', 'new.json'), '{}');
+
+    expect(await moveBack(['AGENTS.md', 'coverage'], aside, worktree)).toEqual(['coverage']);
+    expect(readFileSync(join(worktree, 'AGENTS.md'), 'utf8')).toBe('rules');
+    expect(existsSync(join(aside, 'coverage'))).toBe(true);
   });
 
   it('moves the untracked files out beside the worktree and back in', async () => {

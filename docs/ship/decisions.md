@@ -153,7 +153,8 @@ the review to find. Carried rather than only reported: no person or agent has an
 file a tool regenerates. The board's files stay the removal's question (ship-decision-7). The card's
 line names the files now, up to five and a count, so a new line lands when the set changes, not on
 each tick. The status is read with `-z`, so a non-ASCII name reaches `rename` as written, and a
-move that throws part way puts back what it moved. The cost: a checkout that throws after the
-removal leaves the files in `<worktree>.untracked-*` beside it. A spell ends when the review starts
+move that throws part way puts back what it moved, each on its own; one that will not go back stays
+in `<worktree>.untracked-*`, named in the error. The cost: a checkout that throws after the removal
+leaves the files there too. A spell ends when the review starts
 or fails for another reason, or when the agent is seen working again. `review-flow.ts`,
 `untracked-carry.ts`, `dirty-wait.ts`. (2026-11-28)

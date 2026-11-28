@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { WORK_STATUS, isBoardPath } from './ship';
 import { git } from '../app/git';
+import { failureText } from '../../shared/errors/failure';
 
 // The review's swap carries a worktree's untracked files across rather than stopping on them
 // (ship-decision-8). A finished worker's worktree that holds nothing but untracked files is almost
@@ -45,9 +46,13 @@ export async function setAsideUntracked(worktreePath: string): Promise<{ files: 
   const aside = await mkdtemp(join(dirname(worktreePath), `${basename(worktreePath)}.untracked-`));
   // `git status` names an untracked folder with a slash on the end, and the folder moves whole.
   const paths = files.map((file) => file.replace(/\/$/, ''));
+  const moved: string[] = [];
   try {
-    await moveAll(paths, worktreePath, aside);
+    await moveAll(paths, worktreePath, aside, moved);
   } catch (error) {
+    // Only an empty `aside` is removed: a file that would not go back stays there, named in the error.
+    const left = await moveBack(moved, aside, worktreePath);
+    if (left.length > 0) throw new Error(`${failureText(error)}; ${left.join(', ')} kept in ${aside}`, { cause: error });
     await rm(aside, { recursive: true, force: true });
     throw error;
   }
@@ -60,18 +65,26 @@ export async function setAsideUntracked(worktreePath: string): Promise<{ files: 
   };
 }
 
-// All of them or none: a rename that throws part way moves back what was already moved, so a failure
-// leaves `from` as it was rather than files stranded where nothing points.
-export async function moveAll(paths: readonly string[], from: string, to: string): Promise<void> {
-  const moved: string[] = [];
-  try {
-    for (const path of paths) {
-      await mkdir(dirname(join(to, path)), { recursive: true });
-      await rename(join(from, path), join(to, path));
-      moved.push(path);
-    }
-  } catch (error) {
-    for (const path of moved.reverse()) await rename(join(to, path), join(from, path));
-    throw error;
+// Each path moved from `from` to `to` in order. A rename that throws stops it, `moved` holding the
+// paths already across; the way back is `moveBack`, so `restore` leaves what it put back where it is.
+export async function moveAll(paths: readonly string[], from: string, to: string, moved: string[] = []): Promise<void> {
+  for (const path of paths) {
+    await mkdir(dirname(join(to, path)), { recursive: true });
+    await rename(join(from, path), join(to, path));
+    moved.push(path);
   }
+}
+
+// Each path moved back from `from` to `to` on its own, so one that throws does not strand the rest;
+// answers the paths left in `from`.
+export async function moveBack(paths: readonly string[], from: string, to: string): Promise<string[]> {
+  const left: string[] = [];
+  for (const path of [...paths].reverse()) {
+    try {
+      await rename(join(from, path), join(to, path));
+    } catch {
+      left.push(path);
+    }
+  }
+  return left;
 }
