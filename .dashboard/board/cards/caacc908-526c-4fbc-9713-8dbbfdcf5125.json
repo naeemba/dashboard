@@ -1,0 +1,11 @@
+{
+  "id": "caacc908-526c-4fbc-9713-8dbbfdcf5125",
+  "title": "A review blocked on a dirty worktree waits forever and tells nobody",
+  "notes": "Night of 2026-11-28, kamandsystem: PRs #61, #62, #63 opened 03:39-03:55 UTC, the app moved each card to Review, and the review start refused: 'No review worktree: uncommitted changes in <branch>, waiting for the commit' (review-flow.ts ~154, swapWorktree's dirty check). The only dirty file in each worktree was an untracked AGENTS.md that Next.js 16 writes when the dev server or build runs (<!-- BEGIN:nextjs-agent-rules -->). The worker had finished, so no commit ever came; the sweep retried every tick, silently, for five hours. The project's main was told nothing and believed the loops were running; the user found three PRs unreviewed in the morning. All five kamandsystem worktrees hold that untracked AGENTS.md. Wanted: (1) a review start that has waited on a dirty worktree for a few minutes while the worker is idle tells the project's main, naming the files (the card comment alone reaches nobody); (2) the refusal names the dirty files; (3) decide whether untracked files the worker did not create (a generated AGENTS.md) block the swap at all, or the swap carries them across. Record the decision in docs/ship or docs/workers.",
+  "priority": "urgent",
+  "parent": null,
+  "createdAt": "2026-11-28T09:09:32.286Z",
+  "updatedAt": "2026-11-28T09:09:32.287Z",
+  "column": "Backlog",
+  "order": 4
+}
