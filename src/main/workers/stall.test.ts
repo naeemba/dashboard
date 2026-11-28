@@ -121,7 +121,7 @@ describe('stallWatch', () => {
     stalls.sign('2:1');
     stalls.sign('2:2', { toolStarted: { id: 'call-1', name: 'Bash', about: 'pnpm test' } });
     sweep(5);
-    // Asleep from minute 5 to 44, and 2:3's hook heard on waking, before the sweep.
+    // Asleep from minute 5 to 44; 2:3's hook on waking is the look that moves the clocks on.
     clock.now = 44 * MINUTE;
     stalls.sign('2:3');
     expect(sweep(45, { asleep: true })).toBe(false);

@@ -70,8 +70,8 @@ export function stallWatch(stallMinutes: () => number, now: () => number = Date.
     const gap = now() - lastLook;
     lastLook = now();
     if (gap <= AWAY_MS) return;
-    // A hook heard after the machine came back, before this look, is not moved past now.
-    const later = (time: number) => Math.min(time + gap - STALL_SWEEP_MS, now());
+    // Every clock was set at or before the last look, a hook's included, since a hook is a look.
+    const later = (time: number) => time + gap - STALL_SWEEP_MS;
     for (const [id, time] of signs) signs.set(id, later(time));
     for (const running of calls.values()) for (const call of running.values()) call.since = later(call.since);
   };
