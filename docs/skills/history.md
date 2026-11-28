@@ -34,3 +34,6 @@ One line per merged change: date and why.
   `a pull request already exists`
 - 2026-11-28 — `/work-card` gives the report to main a five-line template, the detail on the pull
   request: worker messages were about 30% of one main session's transcript
+- 2026-11-28 — `/work-card` numbers a new docs id before its commit, from the base branch and the
+  open pull requests' diffs, instead of writing `-next` and numbering it last: the commit check
+  refused six commits in one session, and two open pull requests took the same id
