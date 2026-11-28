@@ -5,8 +5,14 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-28T09:30:18.276Z",
-  "updatedAt": "2026-11-28T09:30:57.173Z",
+  "updatedAt": "2026-11-28T09:55:40.912Z",
   "branch": "hung-model-requests-time-out-and-retry-inst",
+  "comments": [
+    {
+      "at": "2026-11-28T09:55:40.912Z",
+      "body": "Stopped, no pull request: setting API_TIMEOUT_MS would not have saved that night. Tested with Claude Code 2.1.332, the CLI that ran that night and the one bundled in the SDK, against a local fake API (ANTHROPIC_BASE_URL):\n- Mid-stream stall with API_TIMEOUT_MS=5000: held for 100s and never cut. API_TIMEOUT_MS does not cover a stalled stream.\n- No answer at all with API_TIMEOUT_MS=5000: cut at 5s and retried 7 times in 70s. It only covers the wait for headers.\n- Mid-stream stall with the defaults: the CLI's own stream watchdog (CLAUDE_ENABLE_STREAM_WATCHDOG, on by default, CLAUDE_STREAM_IDLE_TIMEOUT_MS has a 5 min floor) cut it at 300s and retried without streaming. That retry was cut again at 300s and retried.\n- No answer at all with the defaults: cut at 361s and retried.\nSo the CLI already cuts both kinds of hang within about 6 min and retries. The night's hang was different: dashboard main's transcript (43c16374) shows its request at 00:23:09 and then nothing until the answer at 02:35:48. There was no api_error retry record anywhere in ~/.claude/projects across the window, so none of those timers ever fired. The journal shows the machine awake, but lanternd had \"no route to host\" all night and enp44s0 went down at 00:11 local. Whatever blocked the requests sat below the CLI's timers (my guess, unverified: a connect or DNS lookup through the VPN that the abort never reaches). A shorter API_TIMEOUT_MS only shortens the headers wait. It also bounds the non-streaming fallback, which has to carry a whole long answer, so a low value would cut long answers.\nWhat would help: a watchdog in the app, not in the CLI's environment. When a session's turn has sent its request and nothing comes back for N minutes (say 15), interrupt that turn and resume it, the same way card 2fc8d59f resumes a turn that ended on an API error. That belongs with 2fc8d59f, or with the stall-warning card, not as an environment variable."
+    }
+  ],
   "column": "Doing",
   "order": 1
 }
