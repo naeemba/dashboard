@@ -13,7 +13,7 @@
 // the remote it is on, which is not always origin (chosenRemote in app/default-branch.ts). The fifth,
 // `$4`, is settings.review.autoLoop: whether the app starts a review, which waits on CI, once the
 // pull request opens. Off, nothing does, so the agent waits on CI itself.
-import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+import { LONGEST_BACKGROUND_RUN, LONG_RUNS } from '../ship/review';
 
 export const BUMP_VERSION = 'bump-version';
 export const KEEP_VERSION = 'keep-version';
@@ -159,11 +159,7 @@ conflict after review, and one of them is thrown away.
   test files on their own, then the project's type-check and lint once, not
   the whole check again. A file left on that line with neither is the
   review's first round of work.
-- A dev server, or a check that can run past two minutes, goes in the
-  background with a timeout given (${LONGEST_BACKGROUND_RUN}): left to the
-  default, one is killed at 30 minutes, dev servers and checks alike. After a
-  notice that one stopped at its time limit, read its output file before
-  running it again: what it printed may already be the answer.
+- ${LONG_RUNS}
 - Commit in small pieces with messages that say what changed and why.
 - When the card adds a docs id, run the id command above a last time right
   before pushing: an id of yours that another pull request has taken since
@@ -180,11 +176,10 @@ conflict after review, and one of them is thrown away.
   "<body>" --push=false --yes\`, which the board records the same way.
 - Once the pull request is open, the review: $4.
   \`${REVIEW_LOOP}\` means the app starts a review on it, which waits on CI.
-  It starts only once your turn ends, so you cannot watch it start; what
-  you can do is leave nothing to hold it: \`git status --short\`
-  prints nothing, or the review waits for that commit. Then send main (when
-  your prompt names one) your report now, with its number, and end your turn:
-  main confirms the review started. Do not wait on its CI yourself: a wait left
+  It starts once your turn ends, so first leave nothing to hold it:
+  \`git status --short\` prints nothing, or it waits for a commit of those changes.
+  Then send main (when your prompt names one) your report now, with its
+  number, and end your turn: main confirms it started. Do not wait on its CI yourself: a wait left
   running here is killed when that review starts, with the report promised
   after it.
 

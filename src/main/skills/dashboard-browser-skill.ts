@@ -4,7 +4,7 @@
 // tool still browsed in Claude in Chrome, whose two skills named theirs (browser-decision-8).
 import { DEFAULT_READ_TOKENS } from '../browser/page-reader';
 import { BROWSER_SIGN_IN, CHROME_STAYS, DASHBOARD_TOOLS, MCP_SERVER_NAME } from '../command/mcp-tools';
-import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+import { LONG_RUNS } from '../ship/review';
 
 // Every browser tool's full name, for the one ToolSearch call that loads them.
 const BROWSER_TOOLS = DASHBOARD_TOOLS.filter((each) => each.name.startsWith('browser_'))
@@ -75,12 +75,9 @@ time:
    closes it for you. A worker answers with the close alone and ends that turn
    without a report: main already has the one it gave.
 
-## A dev server for the page
+## A dev server or a long check
 
-Start it in the background with a timeout given (${LONGEST_BACKGROUND_RUN}):
-left to the default, it is killed at 30 minutes, mid-check. After a notice
-that it stopped at its time limit, read its output file before starting it
-again.
+${LONG_RUNS}
 
 ## A page that asks you to sign in
 

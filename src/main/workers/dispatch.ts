@@ -7,6 +7,7 @@ import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+import { STARTED } from '../ship/review-finished';
 import { browserFileReadRule } from '../browser/browser-page';
 import { allowedToolRules } from '../command/mcp-tools';
 
@@ -155,11 +156,10 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.'
       + ' When a worker\'s report says its review loop changed what the card asked for, or its design,'
       + ' ask me before landing it rather than relaying the change.'
-      + ' A worker that reports a pull request a review will start on cannot see it start, since it'
-      + ' starts once that worker\'s turn ends: a few minutes after the report, confirm it from a wake-up or'
-      + ' a background check, by a pane on the card in `list` or `queue`, or the `Review loop started.`'
-      + ' comment on the pull request. Neither there, read the card\'s comments for what holds it, and'
-      + ' `board review <id>` once that is dealt with; never end your turn on a review nothing checked.',
+      + ' A review starts only after the worker\'s turn ends, so the worker cannot confirm it: a few'
+      + ' minutes after its report, check from a wake-up or a background check for a pane on the card in'
+      + ` \`list\` or \`queue\`, or the \`${STARTED}\` comment on a GitHub pull request. If neither shows,`
+      + ' read the card\'s comments for what holds it, and `board review <id>` once that is dealt with.',
     '',
     'The queue also holds while the 7-day usage is at or over the limit I set once, and `pane queue` says'
       + ' so; never ask me for the limit again: `budget --cap <n>` and `budget --pace even` set it.',

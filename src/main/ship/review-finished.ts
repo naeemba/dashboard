@@ -21,6 +21,8 @@ function reviewViewArguments(pullRequest: number): string[] {
 }
 
 export const FINISHED = 'Review loop finished:';
+// The pull request comment a GitHub review posts as it starts, which main looks for to confirm one did.
+export const STARTED = 'Review loop started.';
 
 type View = { comments?: { body?: unknown; createdAt?: unknown }[]; commits?: { committedDate?: unknown }[] };
 
