@@ -748,7 +748,9 @@ session-minutes, one pull request sitting with green CI.
 - **The signal is Claude Code's StopFailure hook**, which runs in place of Stop when a turn ends on
   an API error and names its type. It is one command hook in `appSessionSettings`, the settings
   every session the app starts carries, so a terminal worker, a worker screen (hosted or not) and
-  main's screen are all heard through one door, `session failed "$DASHBOARD_PANE"`. Reading
+  main's screen are all heard through one door, `session failed "$DASHBOARD_PANE" --project
+  "$DASHBOARD_PANE_PROJECT"`: the project maps an id a shell kept through a restart to the pane
+  as this run numbers it, as the browser door does (`livePane`). Reading
   main's stream for the error was the other choice: it covers main only, and a terminal worker has
   no stream.
 - **Only `server_error` and `overloaded` are resumed.** Claude Code calls a dropped connection, a
@@ -761,8 +763,12 @@ session-minutes, one pull request sitting with green CI.
   minutes and then fails counts as a try, and its main hears sooner.
 - **A prompt in between calls the wait off**: a worker's prompt or tool hook, or main beginning a
   turn, means somebody else resumed it.
-- **A worker is sent it as `pane send` would**, typed into a terminal or handed to a screen, and
-  main gets it queued as a worker's report is. Giving up is told to the pane's main; for main itself
-  that tell is one more prompt, which the API answering again picks up.
+- **A main's worker on main's turn is sent it as `pane send` would**, typed into a terminal or
+  handed to a screen, and main gets it queued as a worker's report is. Any other pane, a screen
+  opened by hand or a worker on a turn you typed, gets the bare text: through `pane send` it would
+  become main's worker, and its stops main's.
+- **Giving up is told to the pane's main.** For main itself that tell is one more prompt, so main
+  stays given up: a failure within 30 minutes of the last is logged and not resumed, or the notice's
+  own failure would start the four tries over for as long as the outage lasts.
 - A Claude opened by hand in a terminal pane carries none of the app's settings, and is not
   resumed.

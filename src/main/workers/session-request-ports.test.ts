@@ -46,6 +46,7 @@ function fakeMain() {
     reviews: { forget: (cardId) => { forgotten.push(cardId); } },
     giveCardPane: (...args) => { given.push(args); return args[0]; },
     sendToRenderer: (...args) => { sent.push(args); },
+    prompt: () => undefined,
     browser: { turnEnded: () => undefined },
     chats: { tell: () => 'm1', withdraw: async () => { throw new Error('already sent'); } },
     worktree: { makeThrowaway: async () => ({ output: '', worktreePath: '/tmp/w', branch: 'w' }), throwawayPorts: {} as SessionRequestMain['worktree']['throwawayPorts'] },

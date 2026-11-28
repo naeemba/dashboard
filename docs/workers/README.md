@@ -506,10 +506,19 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   one starts.
 - Given a worker or a main whose turn ends on a dropped connection, a timeout
   or an API at capacity, when its StopFailure hook runs `session failed`,
-  then the app sends it `continue` after 1, 2, 5 and 10 minutes, a worker as
-  `pane send` would and main into its queue, logging each try; one more failure
-  tells the pane's main the app gave up. A prompt in between calls the wait off,
-  and an auth, billing or request error is logged, never resumed
+  then the app sends it `continue` after 1, 2, 5 and 10 minutes, a main's
+  worker on main's turn as `pane send` would, main into its queue and any other
+  pane the bare text, logging each try; one more failure tells the pane's main
+  the app gave up, and main stays given up for 30 minutes. A prompt in between
+  calls the wait off, and an auth, billing or request error is logged, never
+  resumed (workers-decision-14).
+- Given a Claude screen opened by hand, or a turn you typed into a main's
+  worker, when its turn ends on a dropped connection, then the app's
+  `continue` carries no report line and hands the pane to no main
+  (workers-decision-14).
+- Given a shell kept through a restart that moved its project's page, when its
+  StopFailure hook sends the id it was spawned with, then the app resumes the
+  pane that id is now, read off the project the hook also names
   (workers-decision-14).
 
 ## Open questions

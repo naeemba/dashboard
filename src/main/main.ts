@@ -683,7 +683,7 @@ registerProjectChannels(table, project, {
 // project-requests.ts tells them from the session command's and hands them to the project actions.
 const workerAnswers = sessionRequests(sessionRequestPorts({
   projects, readings: slotReadings, commands: terminalCommands, mainsWorkers, workerScreens,
-  openProject: project.openForClaim, pane, worktrees, reviews, giveCardPane, sendToRenderer, browser, chats, worktree,
+  openProject: project.openForClaim, pane, worktrees, reviews, giveCardPane, sendToRenderer, prompt: promptPane, browser, chats, worktree,
   hasKeyboard: claudeSessions.hasKeyboard, boardLog, log: (draft) => logStore.log(draft), pool: poolPorts(app.getPath('userData'), () => settings, cardPool, () => sendToRenderer('workers:queue-change')),
   stallMinutes: () => settings.workers.stallMinutes,
 }));

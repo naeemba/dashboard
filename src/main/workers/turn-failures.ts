@@ -29,8 +29,10 @@ export type TurnFailurePorts = {
   // Sends the pane RESUME_TEXT: a worker as `pane send` would, main into its queue.
   resume(id: string): void;
   log(id: string, message: string): void;
-  // The tries are spent: the pane's main is told.
-  gaveUp(id: string, apiError: string, tries: number): void;
+  // The tries are spent: the pane's main is told. True when the pane stays given up: a failure inside
+  // the window after it is only logged, not a fresh first try. Main's own notice is one more turn, and
+  // counted fresh it would start the tries over for as long as the outage lasts.
+  gaveUp(id: string, apiError: string, tries: number): boolean;
 };
 
 export type TurnFailures = {
@@ -47,8 +49,9 @@ const minutes = (ms: number): string => `${ms / 60000} min`;
 export function turnFailures(ports: TurnFailurePorts, delays = RESUME_DELAYS_MS, freshAfterMs = FRESH_AFTER_MS): TurnFailures {
   const wait = ports.after ?? after;
   const now = ports.now ?? Date.now;
-  // Per pane, the tries spent on the outage it is in and when its last failure came.
-  const outages = new Map<string, { tries: number; at: number }>();
+  // Per pane, the tries spent on the outage it is in, when its last failure came, and whether the app
+  // gave up on it for good.
+  const outages = new Map<string, { tries: number; at: number; givenUp: boolean }>();
   const pending = new Map<string, () => void>();
 
   function callOff(id: string): void {
@@ -64,13 +67,19 @@ export function turnFailures(ports: TurnFailurePorts, delays = RESUME_DELAYS_MS,
         return ports.log(id, `turn ended on an API error (${apiError}), not resumed: waiting would not fix it`);
       }
       const last = outages.get(id);
-      const tries = last !== undefined && now() - last.at <= freshAfterMs ? last.tries : 0;
-      if (tries >= delays.length) {
-        outages.delete(id);
-        ports.log(id, `turn ended on an API error (${apiError}) after ${tries} tries: given up, its main told`);
-        return ports.gaveUp(id, apiError, tries);
+      const current = last !== undefined && now() - last.at <= freshAfterMs ? last : undefined;
+      if (current?.givenUp) {
+        outages.set(id, { ...current, at: now() });
+        return ports.log(id, `turn ended on an API error (${apiError}) again: given up already, not resumed`);
       }
-      outages.set(id, { tries: tries + 1, at: now() });
+      const tries = current?.tries ?? 0;
+      if (tries >= delays.length) {
+        ports.log(id, `turn ended on an API error (${apiError}) after ${tries} tries: given up, its main told`);
+        if (ports.gaveUp(id, apiError, tries)) outages.set(id, { tries, at: now(), givenUp: true });
+        else outages.delete(id);
+        return;
+      }
+      outages.set(id, { tries: tries + 1, at: now(), givenUp: false });
       const ms = delays[tries];
       ports.log(id, `turn ended on an API error (${apiError}): \`${RESUME_TEXT}\` in ${minutes(ms)}, try ${tries + 1} of ${delays.length}`);
       pending.set(id, wait(ms, () => {

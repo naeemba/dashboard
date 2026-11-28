@@ -46,7 +46,9 @@ export type SessionCommand =
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold }
   // What a StopFailure hook calls: the pane's turn ended on an API error of that type (turn-failures.ts).
-  | { kind: 'failed'; id: string; error: string };
+  // `project` is the folder of the project the session's pane was spawned in, which maps an id kept
+  // through a restart to the pane as this run numbers it.
+  | { kind: 'failed'; id: string; project: string; error: string };
 
 export type RunWords = { prompt: string; card: string | null; worktree: boolean; folder: string | null; as: PaneKind | null };
 
@@ -83,7 +85,7 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane conflicted <branch> <pull request> [--from <id>]
   pane ci <id> wait|resume <pid>
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
-  pane failed <id> --failure-input
+  pane failed <id> --project <folder> --failure-input
 
 start starts a worker now when fewer than the cap run in its project (settings workers.cap, 4) and
 across the app (workers.totalCap, 8) and nothing is queued, answering as run does, or queues it and
@@ -254,12 +256,13 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
 // input.
 const INPUT_FLAG = new Map([['done', '--stop-input'], ['running', '--prompt-input']]);
 
-// A StopFailure hook's, after `failed <id>`.
+// A StopFailure hook's, after `failed <id> --project <folder>`.
 const FAILURE_INPUT_FLAG = '--failure-input';
+const PROJECT_FLAG = '--project';
 const ERROR_FLAG = '--error';
 
 export function readsHookInput(commandArguments: readonly string[]): boolean {
-  if (commandArguments[0] === 'failed') return commandArguments.length === 3 && commandArguments[2] === FAILURE_INPUT_FLAG;
+  if (commandArguments[0] === 'failed') return commandArguments.length === 5 && commandArguments[4] === FAILURE_INPUT_FLAG;
   return commandArguments.length === 4 && commandArguments[0] === 'notify'
     && INPUT_FLAG.get(commandArguments[2]) === commandArguments[3];
 }
@@ -327,7 +330,7 @@ export function hookTold(input: unknown): HookTold {
 // asked for that: `input` is undefined when there was none to read, a terminal, which sends nothing.
 export function hookArguments(given: readonly string[], input: string | undefined): string[] {
   if (!readsHookInput(given)) return [...given];
-  if (given[0] === 'failed') return [...given.slice(0, 2), ERROR_FLAG, failureError(input)];
+  if (given[0] === 'failed') return [...given.slice(0, 4), ERROR_FLAG, failureError(input)];
   if (input === undefined) return given.slice(0, 3);
   return [...given.slice(0, 3), ...(given[2] === 'done' ? stopInputArguments(input) : promptInputArguments(input))];
 }
@@ -414,8 +417,11 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
     case 'failed': {
       const id = paneId(rest[0], 'failed');
       if (typeof id !== 'string') return id;
-      if (rest.length !== 3 || rest[1] !== ERROR_FLAG || rest[2] === '') return refuse(`pane failed takes ${ERROR_FLAG} <type> after its id`);
-      return { ok: true, command: { kind: 'failed', id, error: rest[2] } };
+      const [, projectFlag, project, errorFlag, error] = rest;
+      if (rest.length !== 5 || projectFlag !== PROJECT_FLAG || !project || errorFlag !== ERROR_FLAG || !error) {
+        return refuse(`pane failed takes ${PROJECT_FLAG} <folder> ${ERROR_FLAG} <type> after its id`);
+      }
+      return { ok: true, command: { kind: 'failed', id, project, error } };
     }
     default: return refuse(verb === undefined ? SESSION_USAGE : `no such command: ${verb}\n\n${SESSION_USAGE}`);
   }
