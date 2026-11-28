@@ -42,8 +42,8 @@ async function run(words: readonly string[]): Promise<number> {
   // A ship, a review and a move into Ship or Review are the app's to do, so the screen, the command
   // and the sweep all mean the same thing by one; docs/actions/README.md says why. The app is started
   // when none answers. asksApp says which; on a worktree's board a move is only a move.
-  // A prefix of a card's id is made whole first, against this folder's board, since the app takes a
-  // whole id only.
+  // A prefix of a card's id is made whole first, against this folder's board: the app makes it whole
+  // as well, but an older running app does not.
   if (asksApp(commandArguments, !isLinkedWorktree(project))) {
     const whole = withWholeId(peekBoard(project), commandArguments);
     if ('message' in whole) return answer({ ok: false, message: whole.message });

@@ -61,7 +61,7 @@ export const DASHBOARD_TOOLS: readonly DashboardTool[] = [
   tool('board move', 'Move a card; into Ship ships it, into Review starts its review, Cancelled for one not to be done', [
     CARD, word('column', 'column name'), PROJECT]),
   tool('board ship', 'Ship a card to an agent in its own worktree, or queue it while the worker cap is full; a ship answers once packages are installed, minutes', [
-    CARD, flag('first', 'at the head of the queue', 'boolean'), flag('after', 'held until this card (whole id) is Done or Cancelled'), PROJECT]),
+    CARD, flag('first', 'at the head of the queue', 'boolean'), flag('after', 'held until this card is Done or Cancelled'), PROJECT]),
   tool('board review', 'Start a card\'s review loop', [CARD, PROJECT]),
   tool('board set', 'Change a card\'s fields; an empty branch or pull-request clears it', [
     CARD, flag('branch', 'branch'), flag('pull-request', 'pull request number'), PRIORITY, NOTES, PROJECT]),

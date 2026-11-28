@@ -130,10 +130,10 @@ export function findCard(board: Board, id: string): Selection | { message: strin
   return { message: matches.length === 0 ? `no card with id ${id}` : ambiguousId(board, id, matches) };
 }
 
-// A ship, a review and a move asked of the app carry the card's whole id, which is all the app
-// matches: a prefix is made whole here, against the board this folder holds. One that names no card
-// here goes as it was typed, for the app to answer, since its board can hold a card this one has not
-// seen yet.
+// A ship, a review and a move asked of the app carry the card's whole id: the app makes a prefix
+// whole too, but a newer command can reach an older running app that does not. A prefix is made
+// whole here, against the board this folder holds. One that names no card here goes as it was typed,
+// for the app to answer, since its board can hold a card this one has not seen yet.
 export function withWholeId(board: Board | null, commandArguments: readonly string[]): { commandArguments: readonly string[] } | { message: string } {
   const [verb, id, ...rest] = commandArguments;
   if (board === null || id === undefined) return { commandArguments };
