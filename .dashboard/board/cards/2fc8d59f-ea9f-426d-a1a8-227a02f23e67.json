@@ -5,14 +5,19 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:30:12.555Z",
-  "updatedAt": "2026-11-28T09:56:29.319Z",
+  "updatedAt": "2026-11-28T09:57:27.020Z",
   "branch": "a-worker-or-main-turn-that-ends-on-an-api-e",
+  "pullRequest": 433,
   "comments": [
     {
       "at": "2026-11-28T09:56:29.319Z",
       "body": "Near card 17f24de6 (Hung model requests time out and retry, branch hung-model-requests-time-out-and-retry-inst, no commits yet): same area, API failures, but different files. That card sets API_TIMEOUT_MS in src/main/command/pane-environment.ts and main's SDK env. This one adds a StopFailure hook in appSessionSettings (src/main/workers/dispatch.ts), a 'pane failed' verb (session-cli.ts), src/main/workers/turn-failures.ts and wiring in session-requests.ts. They fit together: a timed-out request whose retries run out ends the turn on server_error, and this card resumes it."
+    },
+    {
+      "at": "2026-11-28T09:57:26.974Z",
+      "body": "Pull request #433 opened: Resume a turn that ends on a transient API error https://github.com/naeemba/dashboard/pull/433"
     }
   ],
-  "column": "Doing",
-  "order": 0
+  "column": "Review",
+  "order": 2
 }
