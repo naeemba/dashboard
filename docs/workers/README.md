@@ -285,8 +285,9 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   pane's card; the card in `pane queue`; or a `Review loop started.` comment
   posted after the report),
   and otherwise reads the card's comments for what holds it and runs
-  `board review <id>`: the worker cannot see the start, which waits for its
-  turn to end.
+  `board review <id>`, whose answer `already being reviewed` also confirms the
+  start (the review often takes the reporter's own pane number): the worker
+  cannot see the start, which waits for its turn to end.
 - Given a worker main handed work in a worktree on branch `fix-it`, when
   main's `pr land 12` merges that branch, then the app releases the pane through
   pane.release, the status bar says `Closed pane 2:3: fix-it merged`, and a

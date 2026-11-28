@@ -160,7 +160,8 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' minutes after its report, check from a wake-up or a background check for a pane on the card other'
       + ' than the worker that reported in `status`, which names each pane\'s card, or the card in `queue`,'
       + ` or a \`${STARTED}\` comment on a GitHub pull request posted after the report. If none shows,`
-      + ' read the card\'s comments for what holds it, and `board review <id>` once that is dealt with.',
+      + ' read the card\'s comments for what holds it, and `board review <id>` once that is dealt with;'
+      + ' its answer `already being reviewed` means the review did start, often in the reporter\'s own pane.',
     '',
     'The queue also holds while the 7-day usage is at or over the limit I set once, and `pane queue` says'
       + ' so; never ask me for the limit again: `budget --cap <n>` and `budget --pace even` set it.',
