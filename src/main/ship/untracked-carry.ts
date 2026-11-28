@@ -15,7 +15,7 @@ import { git } from '../app/git';
 // back on every tick for nothing. The board's files are the removal's own question (ship-decision-7).
 // -z because these paths go to `rename`: the plain format C-quotes a name like `café.md` into
 // `"caf\303\251.md"`, a file that does not exist. Under -z a rename or copy is `XY new\0old\0`.
-export const CARRY_STATUS: readonly string[] = [...WORK_STATUS, '-z'];
+const CARRY_STATUS: readonly string[] = [...WORK_STATUS, '-z'];
 
 export function carriedFiles(status: string): string[] {
   const entries = status.split('\0');
