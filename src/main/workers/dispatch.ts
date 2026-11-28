@@ -129,6 +129,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '                         every pane, and whether its worker is running, blocked or done;',
     '                         --all across every open project, --reports with the end of each',
     '                         worker\'s last message',
+    '  status                 each pane with its card, branch, pull request and CI',
     '  report <id>            a worker\'s line from list and the last message it ended a turn with',
     '  release <id>           close a worker\'s pane now',
     '  finish <id>            release a worker once its card is Done or its branch merged',
