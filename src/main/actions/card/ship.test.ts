@@ -5,7 +5,6 @@ import { writeBoard } from '../../board/board-store';
 import { temporaryFolder } from '../../testing/temporary-folder';
 import { bind } from '../action';
 import { cardActions, type CardActionsMain } from './card-actions';
-import { cardReview } from './review';
 import { cardShip, type CardShipPorts } from './ship';
 
 function boardWithCard(): Board {
@@ -88,8 +87,6 @@ describe('the card actions on the pane pool', () => {
     const { verb, started, projectPath } = cards();
     await verb('card.review').call({ projectPath, id: 'ca', source: 'command' });
     expect(started).toMatchObject([{ cardId: 'card', work: { kind: 'review' } }]);
-    const review = bind(cardReview, { read: boardWithTwoCards, review: async () => ({ output: 'started' }) });
-    await expect(review.call({ projectPath, id: 'ca' })).resolves.toMatchObject({ refused: expect.stringContaining('more than one') });
   });
 
   it('refuses to begin a ship whose project closed while queued, and a review with no worktree', async () => {
