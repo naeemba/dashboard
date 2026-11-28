@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:15.059Z",
-  "updatedAt": "2026-11-28T03:18:16.670Z",
+  "updatedAt": "2026-11-28T03:19:51.629Z",
   "branch": "work-card-skill-numbers-new-doc-ids-instead",
   "pullRequest": 430,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-28T03:18:16.670Z",
       "body": "Review loop: converged, ready to merge. 2 rounds (floor-addressed). Round 1 fixed 3 review threads (aa5e3e8d). Round 2 fixed 1 nit (642de86d): the decisions.md:29 note on the number of pull requests read gave 200 for both forges, and GitLab is 100. The final check accepted it. No conflicts, nothing blocked on a person, CI green on the head commit. Step 1 printed 'was ready', so the pull request is marked ready again."
+    },
+    {
+      "at": "2026-11-28T03:19:51.597Z",
+      "body": "Pull request #430 merged: Work-card numbers a new docs id before its commit, not as -next https://github.com/naeemba/dashboard/pull/430"
     }
   ],
-  "column": "Review",
-  "order": 4
+  "column": "Done",
+  "order": 354
 }
