@@ -127,7 +127,9 @@ Folders: `src/main/panes/`, `src/shared/panes/`, `src/renderer/panes/`.
   `slot-panes.ts` (main's reading of each project's panes: its slot, its open workers, which has an
   agent and which is still working)
 - Shell and process: `shell.ts`, `process-tree.ts`, `shell-directory.ts`,
-  `shell-directory-lookup.ts`, `working-panes.ts`, `free-pane.ts`, `waiting.ts`
+  `shell-directory-lookup.ts`, `working-panes.ts`, `free-pane.ts`, `waiting.ts`,
+  `live-pane.ts` (a kept shell's pane id as this run numbers it, read by the browser and session
+  doors)
 - Pane host: `pane-host-protocol.ts` (with the older versions' sockets,
   `olderHostSockets`), `host-socket.ts` (shared with the screen host,
   workers-decision-6), `pane-host-server.ts`, `pane-host-entry.ts`,

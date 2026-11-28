@@ -767,6 +767,9 @@ session-minutes, one pull request sitting with green CI.
   handed to a screen, and main gets it queued as a worker's report is. Any other pane, a screen
   opened by hand or a worker on a turn you typed, gets the bare text: through `pane send` it would
   become main's worker, and its stops main's.
+- **A pane on the app's own question gets nothing**, and the failure counts as no try: either
+  prompt would end the app's turn, and its answer would stand as the worker's report. The cost:
+  the tabs it had not closed yet go to you when it is let go of.
 - **Giving up is told to the pane's main.** For main itself that tell is one more prompt, so main
   stays given up: a failure within 30 minutes of the last is logged and not resumed, or the notice's
   own failure would start the four tries over for as long as the outage lasts.
