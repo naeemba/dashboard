@@ -1,0 +1,11 @@
+{
+  "id": "1f52e198-0ee7-4cb2-8f80-f7e314f58e3e",
+  "title": "App watchdog: interrupt and resume a turn whose model request has had no answer for 15 minutes",
+  "notes": "From card 17f24de6's finding: API_TIMEOUT_MS only bounds the headers wait, and the CLI's own watchdogs (300s stall, 361s no answer) already retry; the night's 00:23-02:35 hang sat below them (no retry recorded anywhere, VPN had no route to host). Wanted: when a session the app runs (worker pane or main) has sent a request and nothing came back for ~15 min, the app interrupts the turn and resumes it, reusing the resume path from card 2fc8d59f. See the comment on 17f24de6 for the test results.",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-28T09:56:38.671Z",
+  "updatedAt": "2026-11-28T09:56:38.671Z",
+  "column": "Backlog",
+  "order": 4
+}
