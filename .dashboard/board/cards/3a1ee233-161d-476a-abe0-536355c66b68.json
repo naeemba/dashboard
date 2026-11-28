@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:09.637Z",
-  "updatedAt": "2026-11-28T02:47:05.251Z",
+  "updatedAt": "2026-11-28T02:47:50.671Z",
   "branch": "worker-stop-notices-carry-the-worker-s-stat",
   "pullRequest": 427,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-28T02:47:05.251Z",
       "body": "Review loop: converged, ready to merge. 1 round, floor-addressed at low. One low finding fixed in fe1552a9: a test that a saved old-wording stop notice still draws as a notice (DONE_REPORT's LAST_SAID group). Final check accepted it, no conflicts with main, CI green on the head commit. Nothing open."
+    },
+    {
+      "at": "2026-11-28T02:47:50.649Z",
+      "body": "Pull request #427 merged: Worker notices carry the worker's state; worker reports stay short https://github.com/naeemba/dashboard/pull/427"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 351
 }
