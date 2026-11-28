@@ -126,3 +126,6 @@ One line per merged change: date and why.
   minutes from its StopFailure hook, and main told when the tries run out: three sessions sat
   idle on a dropped connection for about 50 session-minutes until the user typed it
   (workers-decision-14)
+- 2026-11-28 — Main confirms a review started a few minutes after a worker's report, since the
+  worker cannot see it: three pull requests sat unreviewed for five hours behind reports saying
+  the review loop would pick them up

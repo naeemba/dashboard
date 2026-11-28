@@ -124,10 +124,21 @@ Whether its loop already finished is read off the merge request's notes through 
   review runs `/mr-loop` on it and waits and merges through glab, never `pr wait`, `pr land` or gh
   (`review.test.ts`, `review-finished.test.ts`).
 - Given an agent set a pull request number, when the review cannot take the worktree yet for its
-  uncommitted work changes, then it tries again instead of giving up.
+  uncommitted work changes, then it tries again instead of giving up, and the card's line names the
+  files (`review-flow.test.ts`).
+- Given a finished worktree whose only changes are untracked files (an AGENTS.md a build wrote),
+  when the review starts, then they are moved out, the branch checked out again and they are put
+  back, and the review runs (ship-decision-8, `untracked-carry.test.ts`, `review-flow.test.ts`).
+- Given a review start stopped on a changed tracked file with its worker idle, when five minutes
+  pass, then the project's main is told once, naming the folder and the files (ship-decision-8,
+  `dirty-wait.test.ts`, `review-flow.test.ts`).
 - Given the sweep saw a card's agent stopped, when the review start finds it back at work (it
   stopped for its background agents), then nothing is marked and a later tick starts the review,
   after its pane closes too (#300, #313; `review-flow.test.ts`).
+- Given a card's agent ended its turn paused on its own background work (`pane list` says `paused,
+  waiting on 1 background task`), when the sweep ticks, then its worktree is not taken until the
+  pause ends or has lasted the 30-minute pause ceiling (`slot-panes.test.ts`,
+  `worker-roster.test.ts`, `session-requests-stall.test.ts`).
 - Given merging is off and a card waits in Review after its loop posted `Review loop finished:` on
   the pull request, when the app restarts, then no second review starts unless the pull request
   carries a commit dated after that comment (its committer date, not when it was pushed)

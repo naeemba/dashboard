@@ -37,3 +37,7 @@ One line per merged change: date and why.
 - 2026-11-28 — `/work-card` numbers a new docs id before its commit, from the base branch and the
   open pull requests' diffs, instead of writing `-next` and numbering it last: the commit check
   refused six commits in one session, and two open pull requests took the same id
+- 2026-11-28 — `/work-card` says the worker cannot see its review start and leaves nothing to
+  hold it, and gives dev servers and long checks the longest background timeout; `dashboard-browser`
+  says the same of a dev server: three pull requests sat unreviewed for five hours, and a dev
+  server and checks died at the 30-minute default

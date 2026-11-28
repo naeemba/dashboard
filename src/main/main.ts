@@ -253,7 +253,7 @@ table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, 
 // slot-panes.ts.
 const slotReadings = slotPanes({
   projects, commands: terminalCommands, shells, foregroundOf: panes.foregroundOf, startedWith: panes.startedWith,
-  workerScreens: () => workerScreens, agentsAtWork,
+  workerScreens: () => workerScreens, agentsAtWork, pausedAtWork: (id, now) => workerAnswers.pausedAtWork(id, now),
 });
 const { slotOfProject, openPanes, paneUsesIn, freePaneIn, agentIn, agentRunsIn, agentWorksIn, openProjects } = slotReadings;
 
@@ -627,7 +627,7 @@ const { reviews, pullRequests, start: cardStart, actions: cardActionList, pool: 
   removeWorktree: worktree.removeForReview,
   addWorktree: worktree.makeAgain,
   startReview: (entry, slot, prompt) => attachPane(worktrees.record(entry), slot, prompt),
-  loopChecked: () => checkReviewLoop(sayReviewLoop),
+  loopChecked: () => checkReviewLoop(sayReviewLoop), tellMain: (projectPath, text) => { const slot = slotOfProject(projectPath); if (slot !== -1) chats.tell(slot, text); },
   queue: shipInProject,
   boardLog,
   boardSync,

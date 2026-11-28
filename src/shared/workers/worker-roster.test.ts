@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { queuedRows, waitingText, workerAbout, workerCount, workerRows, workerStatus, workersHeading, withdrawTarget, type DispatchedWorker, type WorkerStatus } from './worker-roster';
+import { pausedAtWork, queuedRows, waitingText, workerAbout, workerCount, workerRows, workerStatus, workersHeading, withdrawTarget, type DispatchedWorker, type WorkerStatus } from './worker-roster';
 import { paneLink, splitAtPaneLinks } from './pane-link';
+import { PAUSE_CEILING_MS } from './done-report';
 
 const worker = (id: string, status: WorkerStatus): DispatchedWorker => ({ id, dispatcher: 2, project: 'api', name: `api-${id}`, about: 'go', status });
 
 describe('worker roster', () => {
+  it('counts a pause on its own work as at work until the pause ceiling, and nothing else', () => {
+    const waiting = { background: 1, scheduled: 0 };
+    expect(pausedAtWork(waiting, 1000, 1000 + PAUSE_CEILING_MS - 1)).toBe(true);
+    expect(pausedAtWork(waiting, 1000, 1000 + PAUSE_CEILING_MS)).toBe(false);
+    expect(pausedAtWork({ background: 0, scheduled: 0 }, 1000, 1000)).toBe(false);
+    expect(pausedAtWork(undefined, 1000, 1000)).toBe(false);
+  });
+
   it('counts workers by state, what still runs first, leaving out states nobody is in', () => {
     expect(workerCount([])).toBe('');
     expect(workerCount([worker('2:1', 'done')])).toBe('1 worker: 1 done');

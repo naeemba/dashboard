@@ -137,3 +137,37 @@ since 2026-11-17, so these are card files a script or tool wrote past it, or one
 worktree. A locked worktree, or one a
 process stands in, is still kept. `ship.ts`, `board-on-origin.ts`, `finished-work.ts`,
 `leftover-worktrees.ts`, `remove.ts`. (2026-11-26)
+
+## ship-decision-8: The review's swap carries untracked files across, and main hears of a long wait
+
+**A review swap whose worktree holds only untracked files moves them into a folder beside it, takes
+the worktree away, checks the branch out again and moves them back (`untracked-carry.ts`); a changed
+tracked file still stops it, and a start stopped on one that long with its worker idle is told to
+the project's main after `DIRTY_WAIT_MS` (5 minutes), once per spell of waiting, naming the
+folder and the files (`dirty-wait.ts`).** On the night of 2026-11-28 three pull requests of one
+project sat unreviewed for five hours: Next.js 16 writes an untracked AGENTS.md on every dev
+server or build, git would not give the worktree up, the sweep retried every tick, and the card's
+line, naming only the branch, reached nobody. Carried rather than deleted or ignored: an untracked
+file can just as well be a new file the agent forgot to add, and moved across it is still there for
+the review to find. Carried rather than only reported: no person or agent has anything to do about a
+file a tool regenerates. The board's files stay the removal's question (ship-decision-7). The card's
+line names the files now, up to five and a count, so a new line lands when the set changes, not on
+each tick. The status is read with `-z`, so a non-ASCII name reaches `rename` as written, and a
+move that throws part way puts back what it moved, each on its own; one that will not go back stays
+in `<worktree>.untracked-*`, named in the error. The cost: a checkout that throws after the removal
+leaves the files there too. A spell ends when the review starts
+or fails for another reason, or when the agent is seen working again. `review-flow.ts`,
+`untracked-carry.ts`, `dirty-wait.ts`. (2026-11-28)
+
+## ship-decision-9: A pause holds its worktree up to the ceiling, even with its slot given back
+
+**The review sweep counts a worker paused on its own background work as still at work until the
+pause has lasted `PAUSE_CEILING_MS` (`pausedAtWork` in `worker-roster.ts`), whatever that work
+is.** This answers differently from `holdsSlot` (`pane-pool.ts`) on purpose: a worker paused only
+on `pr wait` gives its slot back (workers decisions, "A pause whose only background work is
+waiting on CI gives its slot back"), so a queued card need not wait out its CI, but it still
+holds its worktree, because the `pr wait` runs in that folder and the worker picks up there
+when CI answers. Merging the two predicates, or having this one read `ciWaits`, brings back the
+night of 2026-11-28: four times the sweep swapped out a worker mid-gates, once with six fix commits
+not yet pushed. Past the ceiling main is told anyway (`stop-notices.ts`), so a pause nothing wakes
+does not hold the worktree forever. `worker-roster.ts`, `slot-panes.ts`. (2026-11-28)

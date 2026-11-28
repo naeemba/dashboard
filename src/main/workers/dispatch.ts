@@ -7,6 +7,7 @@ import { defaultPaneKind } from './pane-kind';
 import { BOARD_GUARD_HOOKS } from '../board/board-guard';
 import { reportAsk } from '../../shared/workers/done-report';
 import { LONGEST_BACKGROUND_RUN } from '../ship/review';
+import { STARTED } from '../ship/review-finished';
 import { browserFileReadRule } from '../browser/browser-page';
 import { allowedToolRules } from '../command/mcp-tools';
 
@@ -134,6 +135,7 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
     '                         every pane, and whether its worker is running, blocked or done;',
     '                         --all across every open project, --reports with the end of each',
     '                         worker\'s last message',
+    '  status                 each pane with its card, branch, pull request and CI',
     '  report <id>            a worker\'s line from list and the last message it ended a turn with',
     '  release <id>           close a worker\'s pane now',
     '  finish <id>            release a worker once its card is Done or its branch merged',
@@ -160,7 +162,13 @@ export function mainPrompt(projectPath: string, platform: string = process.platf
       + ' To wait for anything else,'
       + ' run it in the background or schedule a wake-up, never a `sleep` loop to stay awake.'
       + ' When a worker\'s report says its review loop changed what the card asked for, or its design,'
-      + ' ask me before landing it rather than relaying the change.',
+      + ' ask me before landing it rather than relaying the change.'
+      + ' A review starts only after the worker\'s turn ends, so the worker cannot confirm it: a few'
+      + ' minutes after its report, check from a wake-up or a background check for a pane on the card other'
+      + ' than the worker that reported in `status`, which names each pane\'s card, or the card in `queue`,'
+      + ` or a \`${STARTED}\` comment on a GitHub pull request posted after the report. If none shows,`
+      + ' read the card\'s comments for what holds it, and `board review <id>` once that is dealt with;'
+      + ' its answer `already being reviewed` means the review did start, often in the reporter\'s own pane.',
     '',
     'The queue also holds while the 7-day usage is at or over the limit I set once, and `pane queue` says'
       + ' so; never ask me for the limit again: `budget --cap <n>` and `budget --pace even` set it.',

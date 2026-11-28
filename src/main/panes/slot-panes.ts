@@ -23,6 +23,8 @@ export type SlotPaneSources = {
   // The Claude screens, read late: they are made after these readers, and only asked once both exist.
   workerScreens(): Pick<ReturnType<typeof screenWorkers>, 'has' | 'working' | 'ids'>;
   agentsAtWork: Pick<WorkingPanes, 'works'>;
+  // worker-roster.ts's pausedAtWork, read late: the session answers are made after these readers.
+  pausedAtWork(id: string, now: number): boolean;
 };
 
 export function slotPanes(sources: SlotPaneSources) {
@@ -91,11 +93,13 @@ export function slotPanes(sources: SlotPaneSources) {
   // looking at says why. The sweep runs on a five-second timer with nobody to tell, so an answer that
   // only goes false when you close the pane by hand would mean no review ever starts by itself — the
   // card sits in Ship reading `shipped · fix-login · terminal 3` all day with nothing on screen saying
-  // the app is waiting on you.
+  // the app is waiting on you. A worker paused on its own checks has ended its turn but not its work:
+  // taking its worktree then killed it mid-gates, once with fix commits not yet pushed.
   function agentWorksIn(slot: number, pane: number | null): boolean {
     if (pane === null || !agentRunsIn(slot, pane)) return false;
     const id = terminalId(slot, pane);
-    return sources.workerScreens().working(id) ?? sources.agentsAtWork.works(id, Date.now());
+    const now = Date.now();
+    return (sources.workerScreens().working(id) ?? sources.agentsAtWork.works(id, now)) || sources.pausedAtWork(id, now);
   }
 
   // The list every screen draws its tabs from, with the terminals each one has open, so a screen arriving

@@ -1,0 +1,11 @@
+{
+  "id": "016c5b38-48c1-4ac6-9b7d-81842d214963",
+  "title": "Worker notify hooks send the spawn-time pane id, which a restart may have moved to another project's pane",
+  "notes": "[medium] [out-of-scope] workerSettings in src/main/workers/dispatch.ts writes `notify ${id}` into a worker's --settings when it is spawned. A shell kept through a restart that moved its project then sends another project's pane id. Close project A, restart, and B's kept worker's stop marks C's pane 2:1 done and tells C's main, while B's pane never turns green and B's main never hears. Fix: pass --project \"$DASHBOARD_PANE_PROJECT\" and map the id with livePane, as `failed` does since #433, while still accepting the older argument shape (olderNotifyArguments). Issue: https://github.com/naeemba/dashboard/issues/435 Review: https://github.com/naeemba/dashboard/pull/433#discussion_r4726516779",
+  "priority": "medium",
+  "parent": null,
+  "createdAt": "2026-11-28T10:35:58.728Z",
+  "updatedAt": "2026-11-28T10:35:58.728Z",
+  "column": "Backlog",
+  "order": 5
+}
