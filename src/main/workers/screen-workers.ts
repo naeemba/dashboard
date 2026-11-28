@@ -123,7 +123,9 @@ export function screenWorkers(ports: ScreenPorts) {
         return {};
       }] }],
       UserPromptSubmit: reporting('running'),
+      PreToolUse: reporting('running'),
       PostToolUse: reporting('running'),
+      PostToolUseFailure: reporting('running'),
     };
   }
 

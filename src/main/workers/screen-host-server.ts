@@ -64,13 +64,15 @@ export function screenHostServer(start: StartSession, idle: () => void) {
     });
   }
 
-  // A hook held for an app that is away keeps only its name, Stop's input excepted: the app reads
-  // nothing else of any other, and a PostToolUse's carries the tool's whole output.
+  // A hook held for an app that is away keeps only its name and a tool hook's call, Stop's input
+  // excepted: the app reads nothing else of any other but what the call does, and a PostToolUse's
+  // carries the tool's whole output.
   function hooksFor(key: string, hosted: Hosted, events: string[]): Options['hooks'] {
     const told = (event: string): HookCallbackMatcher[] => [{ hooks: [async (input) => {
       if (event === 'UserPromptSubmit') hosted.busy = true;
       const away = send === null || !hosted.attached;
-      tell(hosted, { type: 'hook', key, event, input: away && event !== 'Stop' ? { hook_event_name: event } : input }, true);
+      const call = 'tool_use_id' in input && { tool_use_id: input.tool_use_id, tool_name: input.tool_name };
+      tell(hosted, { type: 'hook', key, event, input: away && event !== 'Stop' ? { hook_event_name: event, ...call } : input }, true);
       return {};
     }] }];
     // UserPromptSubmit is always heard here, since it is what says a turn began.

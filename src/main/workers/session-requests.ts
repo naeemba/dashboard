@@ -11,11 +11,11 @@ import type { Refused, WorkerState } from '../../shared/app/bridge';
 import { waitingText, workerAbout, workerStatus, isPaused, pausedAtWork, type DispatchedWorker, type QueuedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { baseName } from '../../shared/app/base-name';
 import { paneLink } from '../../shared/workers/pane-link';
-import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
+import { doneReport, LAST_MESSAGE_KEPT, machineSilenceNotice, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
 import { stopNotices } from './stop-notices';
 import { gaveUpText, RESUME_TEXT, turnFailures } from './turn-failures';
 import { livePane } from '../panes/live-pane';
-import { stalledState, stallWatch } from './stall';
+import { stalledState, stallWatch, type Stall } from './stall';
 import { isTyped, promptSources } from './prompt-source';
 import type { PaneKind } from '../../shared/panes/pane-kind';
 import { bind, isRefused, sessionReply } from '../actions/action';
@@ -333,7 +333,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // How long main's worker, at work by its hooks' last word, has been silent, once that is a stall. A
   // Claude nobody handed work runs no hooks of the app's, so it is never one.
-  const silentAtWork = (id: string): number | null => (mainsWorker(id) && states.get(id) === undefined ? stalls.silentFor(id) : null);
+  const silentAtWork = (id: string): Stall | null => (mainsWorker(id) && states.get(id) === undefined ? stalls.silentFor(id) : null);
 
   const claim = bind(paneClaim, {
     ...ports,
@@ -693,7 +693,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   function notify(id: string, state: WorkerState, waiting?: StopWaiting, told: HookTold = {}): SessionReply {
     const closed = notOpen(id);
     if (closed) return closed;
-    stalls.sign(id);
+    stalls.sign(id, told);
     if (state === 'running') failures.working(id);
     if (onAppTurn(id, state, told)) return answered('');
     if (told.lastMessage !== undefined) lastMessages.set(id, tail(told.lastMessage, LAST_MESSAGE_KEPT));
@@ -723,6 +723,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }
 
   return Object.assign(async (request: SessionRequest): Promise<SessionReply> => {
+    stalls.answered();
     const parsed = parseSessionCommand(request.args);
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
@@ -792,18 +793,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       const asker = askedFrom === null ? undefined : ports.projectPath(ports.slotOf(askedFrom));
       return pool.start.call({ ...start, dispatcherPath: asker ?? start.projectPath });
     },
-    // Not for a turn you typed into the worker yourself, which you are watching (prompt-source.ts).
-    tellStalls() {
-      let any = false;
-      for (const id of openPaneIds()) {
-        const silent = silentAtWork(id);
-        if (silent !== null) any = true;
-        if (silent === null || prompts.fromUser(id)) continue;
-        // Taken back if the worker speaks again before main reads it, as its stop notice is.
-        stalls.tell(id, () => tellRow(id, (row) => stallNotice(nameOfPane(id), id, silent, row)));
-      }
-      return any;
-    },
+    // A stall is taken back if the worker speaks again before main reads it, as its stop notice is.
+    tellStalls: () => stalls.sweep({
+      panes: openPaneIds, silentAtWork, fromUser: prompts.fromUser, mainOf,
+      tellPane: (id, { minutes, tool }) => tellRow(id, (row) => stallNotice(nameOfPane(id), id, minutes, row, tool)),
+      tellMachine(slot, since) {
+        const messageId = ports.tell(slot, machineSilenceNotice(since));
+        return () => ports.withdraw(slot, messageId);
+      },
+    }),
     async dropped(id: string) {
       pool.drain();
       const throwaway = throwaways.get(id);
@@ -835,6 +833,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       reportsRead.add(id);
     },
     mainTurn(slot: number, running: boolean) {
+      stalls.answered();
       if (running) {
         failures.working(terminalId(slot, MAIN_INDEX));
         if (busyMains.has(slot)) return;

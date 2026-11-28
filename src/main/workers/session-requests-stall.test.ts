@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionRequests } from './session-requests';
 import { project, rowOf } from './session-requests-fixture';
-import { isDoneReport, stallNotice } from '../../shared/workers/done-report';
+import { isDoneReport, machineSilenceNotice, stallNotice } from '../../shared/workers/done-report';
 
 // stall.test.ts holds the clock; this is what a stall does to `pane list`, `pane status` and main.
 beforeEach(() => { vi.useFakeTimers(); });
@@ -113,5 +113,43 @@ describe('a worker gone silent', () => {
     answer.tellStalls();
     expect(fake.told.filter((each) => each.includes('no sign of life'))).toEqual([]);
     expect((await answer({ directory: '/work/api', args: ['list'] })).output).toContain('2:1\tterminal 2\trunning');
+  });
+
+  it('waits out the pause ceiling inside a tool call, and names the call to main', async () => {
+    const { answer, told, list } = await silentWorker();
+    answer.notify('2:1', 'running', undefined, { toolStarted: { id: 'toolu_1', name: 'Bash', about: 'pnpm check' } });
+    minutes(25);
+    answer.tellStalls();
+    expect(told.filter((each) => each.includes('no sign of life'))).toEqual([]);
+    minutes(6);
+    answer.tellStalls();
+    const tool = { name: 'Bash', about: 'pnpm check', minutes: 31 };
+    const notice = stallNotice('api-terminal-2', '2:1', 31, rowOf('2:1', 'stalled, silent 31 minutes, Bash running 31 minutes'), tool);
+    expect(told.at(-1)).toBe(`2 ${notice}`);
+    expect(notice).toContain('Bash has been running 31 minutes: pnpm check.');
+    expect(isDoneReport(notice)).toBe(true);
+    const unsaid = stallNotice('api-terminal-2', '2:1', 31, 'row', { ...tool, about: '' });
+    expect(unsaid).toContain('Bash has been running 31 minutes. It may be stuck');
+    expect(isDoneReport(unsaid)).toBe(true);
+    expect(await list()).toContain('stalled, silent 31 minutes, Bash running 31 minutes');
+  });
+
+  it('tells main once that nothing on the machine answers, and each stall once something does', async () => {
+    const { answer, told, withdrawn } = await silentWorker();
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['run', '2:2', 'run the build'] });
+    answer.notify('2:2', 'running', undefined, { handed: true });
+    const since = Date.now();
+    const before = told.length;
+    minutes(21);
+    answer.tellStalls();
+    answer.tellStalls();
+    expect(told.slice(before)).toEqual([`2 ${machineSilenceNotice(since)}`]);
+    expect(isDoneReport(machineSilenceNotice(since))).toBe(true);
+    answer.notify('2:1', 'running');
+    expect(withdrawn).toContain(`2 ${before}`);
+    answer.tellStalls();
+    expect(told.at(-1)).toContain('api-terminal-3 in pane 2:2');
+    expect(told.filter((each) => each.includes('in pane 2:1'))).toEqual([]);
   });
 });
