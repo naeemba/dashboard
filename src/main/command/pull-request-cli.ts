@@ -75,8 +75,9 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
 // One that conflicts says its base and head, for the files it conflicts on (conflictLine).
 // A landed one says its head branch too, whose worker pane the app is asked to release (releaseLanded).
 // Its head branch is the one whose worker is handed the conflict (HandOff).
+// One whose branch got a clean merge pushed says to pull it, after whichever verdict is printed (pullFirst).
 export type Conflicts = { base: string; sha: string; branch: string };
-export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: Conflicts };
+export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: Conflicts; pull?: string };
 
 // gh's words for a pull request whose CI has not started, or that runs none.
 const NO_CHECKS = 'no checks reported';
@@ -200,11 +201,12 @@ async function resolvingConflicts(ports: CheckPorts, target: string, attempt: ()
 
 // The verdict is the only line its session reads, so a clean merge pushed to the branch is said in it:
 // the session's own checkout is behind, and its next push is refused until it pulls. A land that
-// merged needs no more pushes to the branch.
+// merged needs no more pushes to the branch. It is a field, not part of the output, since a conflict's
+// verdict is the files it conflicts on, printed in place of the output.
 function pullFirst(answer: LandAnswer, pushedMerge: Conflicts | undefined): LandAnswer {
   if (pushedMerge === undefined || (answer.ok && answer.base !== undefined)) return answer;
   const { base, branch } = pushedMerge;
-  return { ...answer, output: `${answer.output}; a merge of ${base} was pushed to ${branch}, so pull ${branch} before pushing to it again` };
+  return { ...answer, pull: `a merge of ${base} was pushed to ${branch}, so pull ${branch} before pushing to it again` };
 }
 
 // Polls for the head to move, drawing each minute from the land's one budget.

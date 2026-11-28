@@ -60,9 +60,10 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
       : await waitOnPullRequest({ gh, wait: delay, slot }, parsed.target, cleanMerge);
     // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
     const { conflicts } = answer;
-    const verdict = conflicts === undefined
+    const found = conflicts === undefined
       ? answer.output
       : await remote().then((name) => conflictedFiles(git, project.project, name, conflicts));
+    const verdict = answer.pull === undefined ? found : `${found}; ${answer.pull}`;
     const { base } = answer;
     // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
     const forwarded = answer.ok && base !== undefined

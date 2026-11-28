@@ -52,9 +52,10 @@ tree is committed onto the head with the base as second parent (`git commit-tree
 touched), pushed to the branch with a lease on the head it merged, so git refuses a branch anybody
 pushed to since or a fork's branch the project's remote lacks, and the new head waited on as after
 a hand-off, printing `merged origin/main into fix-it cleanly at <sha> and pushed it`. The verdict
-after it ends `a merge of main was pushed to fix-it, so pull fix-it before pushing to it again`,
-since it is the only line the session reads. A clean merge that could not be pushed ends `GitHub
-says it conflicts with main, but git merges it cleanly — …`, never `git could not name the files`.
+after it, a conflict's files too, ends `a merge of main was pushed to fix-it, so pull fix-it before
+pushing to it again`, since it is the only line the session reads. A clean merge that could not be
+pushed ends `GitHub says it conflicts with main, but git merges it cleanly — …`, never `git could
+not name the files`.
 `pr wait <n>` is the same wait, retries and conflict check without the merge, ending `checks
 passed on <sha>`; both refuse a draft no checks start on, since a repository's CI may skip one, and
 wait on a draft whose checks run, as this repository's do; a worker waiting on

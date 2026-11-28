@@ -395,13 +395,22 @@ describe('resolving a conflict', () => {
 
   it('waits on the head a clean merge pushed', async () => {
     const github = fakeGitHub({ 'pr view': [branchConflicting, pushed, pushed], 'pr checks': [{ ok: true, output: '' }] });
-    expect(await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).toEqual({ ok: true, output: 'checks passed on def456; a merge of main was pushed to fix-it, so pull fix-it before pushing to it again' });
+    expect(await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).toEqual({ ok: true, output: 'checks passed on def456', pull: 'a merge of main was pushed to fix-it, so pull fix-it before pushing to it again' });
   });
 
   // The verdict is the only line read: a failed check after the merge still says to pull first.
   it('says to pull in a failed verdict after a clean merge', async () => {
     const github = fakeGitHub({ 'pr view': [branchConflicting, pushed, pushed], 'pr checks': [{ ok: false, output: 'test\tfail' }] });
-    expect((await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).output).toMatch(/a check failed on def456.*; a merge of main was pushed to fix-it, so pull fix-it/s);
+    expect(await waitOnPullRequest(github.ports, '12', resolver(true).handOff)).toMatchObject({ output: expect.stringContaining('a check failed on def456'), pull: expect.stringContaining('so pull fix-it') });
+  });
+
+  // A real conflict after the clean merge prints its files as the verdict, which still says to pull first.
+  it('says to pull in a conflict verdict after a clean merge', async () => {
+    const again = { ok: true, output: 'OPEN def456 main CONFLICTING https://github.com/acme/api/pull/12 fix-it false' };
+    const github = fakeGitHub({ 'pr view': [branchConflicting, again, again] });
+    let merges = 0;
+    const once = async () => (merges += 1) === 1;
+    expect(await waitOnPullRequest(github.ports, '12', once)).toMatchObject({ conflicts: { sha: 'def456' }, pull: expect.stringContaining('so pull fix-it') });
   });
 
   it('lands a clean merge without asking the agent', async () => {
