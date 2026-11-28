@@ -5,13 +5,17 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:09:32.286Z",
-  "updatedAt": "2026-11-28T09:24:25.524Z",
+  "updatedAt": "2026-11-28T09:54:02.876Z",
   "branch": "a-review-blocked-on-a-dirty-worktree-waits",
   "pullRequest": 431,
   "comments": [
     {
       "at": "2026-11-28T09:24:25.503Z",
       "body": "Pull request #431 opened: A review swap carries untracked files across and tells main of a long dirty wait https://github.com/naeemba/dashboard/pull/431"
+    },
+    {
+      "at": "2026-11-28T09:54:02.876Z",
+      "body": "Review loop on #431: converged, ready to merge. 2 rounds, ending floor-addressed (floor low). Round 1 fixed 2 findings (19bc80a3); round 2 fixed 2 floor findings in untracked-carry.ts (ec95e9f3: rollback no longer deletes the aside folder after a failed move back, plus a test; 97eb9028: CARRY_STATUS unexported). Final check accepted both; nothing rejected, nothing blocked on a person, no conflict with main. CI passed on the head commit."
     }
   ],
   "column": "Review",
