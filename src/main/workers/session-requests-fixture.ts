@@ -1,7 +1,11 @@
 import path from 'node:path';
 import { sessionRequests, type SessionPorts, type WorkerStart } from './session-requests';
+import { paneFromId, paneLabel } from '../../shared/panes/terminals';
 
 // The session command's fake app for session-requests.test.ts and session-landed.test.ts.
+
+// The `pane status` line a notice of the worker in `id` carries, in the state it was told in.
+export const rowOf = (id: string, state = 'done') => `${id}\t${paneLabel(paneFromId(id).index)}\t${state}\t/work/api`;
 
 // One project, api, in slot 2, with main open and nothing else until a test opens a worker.
 export function project(overrides: Partial<SessionPorts> = {}) {

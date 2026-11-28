@@ -28,9 +28,10 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   `../actions/worktree/throwaway.ts` and `sweep.ts`
 - What the command and the app agree on before an answer, the build stamp and
   the acceptance timeout: `app-handshake.ts`
-- When main hears a worker stopped: `stop-notices.ts`, `done-report.ts`, and
-  whose turn it was, `prompt-source.ts`, and the app's own question about a
-  worker's tabs, whose turn counts as none of them, `app-question.ts`
+- When main hears a worker stopped: `stop-notices.ts`, `done-report.ts`, the
+  worker's `pane status` line it carries, `row-notice.ts`, and whose turn it
+  was, `prompt-source.ts`, and the app's own question about a worker's tabs,
+  whose turn counts as none of them, `app-question.ts`
 - Work sent into a pane reported to the main that sent it:
   `../actions/pane/send.ts`, `../actions/pane/dispatch.ts` (workers-decision-1)
 - Finished workers closed by main's own commands: `auto-release.ts`,
@@ -200,6 +201,12 @@ Folders: `src/main/workers/`, `src/shared/workers/`.
   pane's line from `pane list` and the message's last 4000 characters, kept
   while the worker works again and dropped when the pane is run again or
   released (workers-decision-1).
+- Given main's worker in a pane, when main is told it stopped, paused or
+  stalled, then the notice carries the worker's `pane status` line without its
+  report: its id, label, state and folder, and for a card's pane the card,
+  branch and open pull request with its CI, asked of the forge before the
+  notice is told, `pr unknown` when the forge cannot answer. Main need not run
+  `pane list` and `gh pr list` after each one (workers-decision-1).
 - Given main's worker in a pane, when you type a prompt into it yourself and its
   turn ends, then main is told nothing of that stop, nor of the turns its own
   background work wakes it for after, until main sends it work with `pane send`

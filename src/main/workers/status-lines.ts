@@ -38,16 +38,7 @@ export function paneCardIn(
 // pull request as unknown rather than as none.
 export function statusText(panes: readonly PaneStatus[], pulls: readonly OpenPullRequest[] | string): string {
   const open = typeof pulls === 'string' ? [] : pulls;
-  const lines = panes.map(({ head, directory, card, report }) => {
-    const fields = [head, directory];
-    if (card !== undefined) {
-      const pull = open.find((each) => each.branch === card.branch)?.pull;
-      const pullField = typeof pulls === 'string' ? 'pr unknown' : pull === undefined ? 'no open pr' : pullText(pull);
-      fields.push(`${card.id.slice(0, 8)} ${card.column ?? 'off the board'} "${card.title}"`, card.branch, pullField);
-    }
-    fields.push(report);
-    return fields.join('\t');
-  });
+  const lines = panes.map((pane) => `${paneRow(pane, pulls)}\t${pane.report}`);
   const held = new Set(panes.flatMap(({ card }) => (card === undefined ? [] : [card.branch])));
   const unheld = open.filter((each) => !held.has(each.branch));
   if (typeof pulls === 'string') lines.push('', `open pull requests unknown: ${pulls}`);
@@ -55,6 +46,18 @@ export function statusText(panes: readonly PaneStatus[], pulls: readonly OpenPul
     lines.push('', 'open pull requests no pane holds:', ...unheld.map(({ branch, pull }) => `${pullText(pull)}\t${branch}\t${pull.title}`));
   }
   return lines.join('\n');
+}
+
+// A pane's line without its report, which a worker's stop notice carries (session-requests.ts) so main
+// need not ask pane list or the forge where the worker stands.
+export function paneRow({ head, directory, card }: Omit<PaneStatus, 'report'>, pulls: readonly OpenPullRequest[] | string): string {
+  const fields = [head, directory];
+  if (card !== undefined) {
+    const pull = (typeof pulls === 'string' ? [] : pulls).find((each) => each.branch === card.branch)?.pull;
+    const pullField = typeof pulls === 'string' ? 'pr unknown' : pull === undefined ? 'no open pr' : pullText(pull);
+    fields.push(`${card.id.slice(0, 8)} ${card.column ?? 'off the board'} "${card.title}"`, card.branch, pullField);
+  }
+  return fields.join('\t');
 }
 
 // The glyph's reading, else passed when every check passed but it waits on a review or cannot merge,

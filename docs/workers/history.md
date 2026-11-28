@@ -120,3 +120,5 @@ One line per merged change: date and why.
   (workers-decision-13)
 - 2026-11-27 — The stale-origin block of finished-work.test.ts has a 60 s timeout: a Windows
   runner's disk stall took one of its tests to 5005 ms on main, failing the release
+- 2026-11-28 — A worker's stop, pause and stall notices carry its `pane status` line, card and pull
+  request: main ran `pane list` 146 times in one session after notices that told it to

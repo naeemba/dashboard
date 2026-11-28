@@ -32,3 +32,5 @@ One line per merged change: date and why.
 - 2026-11-26 — `/work-card` opens the pull request with `pr create` and names `pr ready` and
   `pr comment`, not raw gh: workers retried `gh pr create` by hand after a GitHub 502 and met
   `a pull request already exists`
+- 2026-11-28 — `/work-card` gives the report to main a five-line template, the detail on the pull
+  request: worker messages were about 30% of one main session's transcript

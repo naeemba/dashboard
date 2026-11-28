@@ -5,6 +5,9 @@ import {
 import { doneReport } from '../workers/done-report';
 import { KEPT_CONVERSATIONS } from './chat-agents';
 
+// A worker's `pane status` line, as a notice carries it.
+const ROW = '2:1\tterminal 2\tdone\t/work/api';
+
 const prompted = (said: string): Transcript => applyEvent(EMPTY_TRANSCRIPT, { kind: 'prompt', content: [{ type: 'text', text: said }], id: said });
 
 const fold = (messages: Record<string, unknown>[], start: Transcript = EMPTY_TRANSCRIPT): Transcript =>
@@ -238,14 +241,17 @@ describe('applyMessage', () => {
   });
 
   it('draws the app\'s notice that a worker stopped as a status line, as sent and as read back', () => {
-    const notice = doneReport('api-terminal-2', '2:1');
+    const notice = doneReport('api-terminal-2', '2:1', ROW);
     expect(prompted(notice).entries).toEqual([{ kind: 'notice', text: notice }]);
-    const paused = doneReport('api-terminal-2', '2:1', true);
+    const paused = doneReport('api-terminal-2', '2:1', ROW, true);
     expect(paused).toContain('paused for 30 minutes');
     expect(prompted(paused).entries).toEqual([{ kind: 'notice', text: paused }]);
-    const said = doneReport('api-terminal-2', '2:1', false, `${'x'.repeat(700)}\n\nOpened #12.`);
+    const said = doneReport('api-terminal-2', '2:1', ROW, false, `${'x'.repeat(700)}\n\nOpened #12.`);
     expect(said).toMatch(/Its last message: …x+ Opened #12\.$/);
     expect(prompted(said).entries).toEqual([{ kind: 'notice', text: said }]);
+    const savedSaid = 'api-terminal-2 in pane 2:1 (dashboard://pane/2:1) has stopped without sending you a report.'
+      + ' `pane list` shows where every worker stands. Its last message: Opened #12.';
+    expect(prompted(savedSaid).entries).toEqual([{ kind: 'notice', text: savedSaid }]);
     const closed = 'api-terminal-2 in pane 2:1 (dashboard://pane/2:1) was closed by the app, card done. If it sent you a report, that says what it did;'
       + ' `pane list` shows where every worker stands.';
     expect(prompted(closed).entries).toEqual([{ kind: 'notice', text: closed }]);

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { promptParts, withdrawable } from './chat-queue';
 import { doneReport } from '../../shared/workers/done-report';
 
+// A worker's `pane status` line, as a notice carries it.
+const ROW = '2:1\tterminal 2\tdone\t/work/api';
+
 const queued = [{ id: 'a', content: [{ type: 'text' as const, text: 'first' }] }, { id: 'b', content: [{ type: 'text' as const, text: 'second' }] }];
 
 describe('promptParts', () => {
@@ -19,7 +22,7 @@ describe('withdrawable', () => {
   it('leaves attached images alone', () => expect(withdrawable(queued, '', 1)).toBeNull());
   it('has nothing to take with nothing queued', () => expect(withdrawable([], '', 0)).toBeNull());
   it('skips the app\'s notice that a worker stopped', () => {
-    const notice = { id: 'c', content: [{ type: 'text' as const, text: doneReport('api-terminal-2', '2:1') }] };
+    const notice = { id: 'c', content: [{ type: 'text' as const, text: doneReport('api-terminal-2', '2:1', ROW) }] };
     expect(withdrawable([...queued, notice], '', 0)?.id).toBe('b');
     expect(withdrawable([notice], '', 0)).toBeNull();
   });
