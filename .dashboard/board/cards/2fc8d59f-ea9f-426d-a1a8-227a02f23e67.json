@@ -1,0 +1,11 @@
+{
+  "id": "2fc8d59f-ea9f-426d-a1a8-227a02f23e67",
+  "title": "A worker or main turn that ends on an API error is resumed by the app",
+  "notes": "Night retro 2026-11-28, new-crm: at 08:38, 08:48 and 08:55 UTC turns ended on 'API Error: Connection dropped (ECONNRESET)' (two workers and new-crm's main) and nothing resumed them until the user typed 'try again'/'continue' at 09:03; about 50 session-minutes lost, #1314 sat with green CI. Nothing in src/ handles an API error ending a turn. Wanted: when a pane's or main's turn ends on a transient API error (connection dropped, overloaded, timeout; not a refusal or an auth error), the app sends 'continue' again after a backoff (for instance 1, 2, 5, 10 min), a bounded number of times, logs each try, and tells the project's main if it gives up. Find where turn ends are seen (Stop hooks, src/main/workers/stop-notices.ts, session-requests.ts) and decide where the rule lives; record the decision.",
+  "priority": "urgent",
+  "parent": null,
+  "createdAt": "2026-11-28T09:30:12.555Z",
+  "updatedAt": "2026-11-28T09:30:12.555Z",
+  "column": "Backlog",
+  "order": 5
+}
