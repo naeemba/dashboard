@@ -5,8 +5,15 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:09:32.286Z",
-  "updatedAt": "2026-11-28T09:11:43.774Z",
+  "updatedAt": "2026-11-28T09:24:25.524Z",
   "branch": "a-review-blocked-on-a-dirty-worktree-waits",
-  "column": "Doing",
+  "pullRequest": 431,
+  "comments": [
+    {
+      "at": "2026-11-28T09:24:25.503Z",
+      "body": "Pull request #431 opened: A review swap carries untracked files across and tells main of a long dirty wait https://github.com/naeemba/dashboard/pull/431"
+    }
+  ],
+  "column": "Review",
   "order": 0
 }
