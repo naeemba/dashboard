@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { failureLine } from '../command/failure-line';
-import { replaceFileIfChanged } from '../app/replace-file';
+import { markCommonJs, replaceFileIfChanged } from '../app/replace-file';
 import { skillFile, skillFolder } from '../skills/skill-folder';
 
 // /create-task and the program it runs, which install-skills.ts writes under ~/.claude at every
@@ -88,9 +88,7 @@ export function installCreateTask(home: string, builtScript: string): string | n
     const script = createTaskScript(home);
     replaceFileIfChanged(script, SHEBANG + readFileSync(builtScript, 'utf8'), EXECUTABLE);
     replaceFileIfChanged(skillFile(home, 'create-task'), createTaskSkill(script));
-    // Node reads a .js as ESM when the nearest package.json above it says "type": "module", and one
-    // in ~/.claude or ~ would make the CommonJS program fail with `require is not defined`.
-    replaceFileIfChanged(path.join(createTaskFolder(home), 'package.json'), '{"type":"commonjs"}\n');
+    markCommonJs(createTaskFolder(home));
     return null;
   } catch (error: unknown) {
     return `create-task not installed: ${failureLine(error)}`;

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { chmodSync, closeSync, fchmodSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import path, { dirname } from 'node:path';
 
 // The name a write goes through, beside the file, until the rename. Exported so what watches or commits
 // the folder can leave a write still in flight, or one a crash left behind, alone.
@@ -66,4 +66,11 @@ export function replaceFileIfChanged(filePath: string, text: string, mode?: numb
   }
   if (current !== text) replaceFile(filePath, text, mode);
   else if (mode !== undefined && (statSync(filePath).mode & 0o777) !== mode) chmodSync(filePath, mode);
+}
+
+// Marks `folder` as CommonJS, for a copied bundle that runs under node: node reads a .js as ESM when the
+// nearest package.json above it says "type": "module", and one in ~ or ~/.claude would make the program
+// fail with `require is not defined`.
+export function markCommonJs(folder: string): void {
+  replaceFileIfChanged(path.join(folder, 'package.json'), '{"type":"commonjs"}\n');
 }

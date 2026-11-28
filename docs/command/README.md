@@ -107,6 +107,18 @@ which starts or comes to the front. `dashboard <noun> --help` prints a noun's us
 the noun's own name (`pane claim`, never `session claim`), written for someone who has never seen
 the app: that is how a Claude session learns it.
 
+## Which files a pane runs
+
+The app copies its three command files out of its build into `commands` in its
+userData folder at launch, and points `DASHBOARD_COMMAND`, `DASHBOARD_BOARD`
+and `DASHBOARD_SESSION` there. A rebuild replaces the build under the running
+app and leaves that folder alone, so every pane keeps running the app's own
+build until the restart, which copies the new build over it. A copy that fails
+is a warning in the app's log, and the panes run the build's own files. The
+`dashboard` launcher in a terminal still runs the installed build, which a
+rebuild changes; the app refuses it with "restart the app" as before
+(command-decision-12, workers-decision-4).
+
 ## When it starts the app
 
 `pane ...`, `board ship` and `review`, a `board move` into Ship or Review, and
