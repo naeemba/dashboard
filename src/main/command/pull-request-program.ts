@@ -8,7 +8,7 @@ import { projectRemote } from '../app/base-branch';
 import { fastForwardCheckout } from './fast-forward-checkout';
 import { failureLine } from './failure-line';
 import type { ProgramAnswer } from './gh-answer';
-import { conflictedFiles, landPullRequest, parsePullRequestCommand, releaseLanded, waitOnPullRequest } from './pull-request-cli';
+import { conflictedFiles, type Conflicts, landPullRequest, parsePullRequestCommand, pushCleanMerge, releaseLanded, waitOnPullRequest } from './pull-request-cli';
 import { writePullRequest } from './pull-request-write-cli';
 import { askCiSlot, askConflicted, askLanded } from '../workers/session-socket';
 
@@ -42,27 +42,33 @@ export async function runPullRequestProgram(commandArguments: readonly string[])
       (written.ok ? process.stdout : process.stderr).write(`${written.output}\n`);
       return written.ok ? 0 : 1;
     }
-    // A land's conflict goes to the agent on its branch, said at once, since the land then waits on it.
-    const handOff = async (branch: string, target: string) => {
-      const { handed, line } = await askConflicted(branch, target, project.project);
+    const git = answering('git');
+    // Asked once, and only by a conflict or a merge.
+    let asked: Promise<string> | undefined;
+    const remote = () => (asked ??= projectRemote(project.project));
+    // What resolves a conflict is said at once, since the wait then goes on for the new head.
+    const said = ({ handed, line }: { handed: boolean; line: string }) => {
       if (line !== '') process.stdout.write(`${line}\n`);
       return handed;
     };
+    const cleanMerge = async (conflicts: Conflicts) => said(await pushCleanMerge(git, project.project, await remote(), conflicts));
+    const agent = async ({ branch }: Conflicts, target: string) => said(await askConflicted(branch, target, project.project));
     // A worker waiting only on CI gives its slot back meanwhile; main's own run changes nothing.
     const slot = { giveBack: () => askCiSlot('wait', project.project), reclaim: () => askCiSlot('resume', project.project) };
     const answer = parsed.verb === 'land'
-      ? await landPullRequest({ gh, wait: delay, slot }, parsed.target, handOff)
-      : await waitOnPullRequest({ gh, wait: delay, slot }, parsed.target);
+      ? await landPullRequest({ gh, wait: delay, slot }, parsed.target, { cleanMerge, agent })
+      : await waitOnPullRequest({ gh, wait: delay, slot }, parsed.target, cleanMerge);
     // The verdict is the last line printed, so the session that ran it reads its end and nothing more.
     const { conflicts } = answer;
-    const verdict = conflicts === undefined
+    const found = conflicts === undefined
       ? answer.output
-      : await projectRemote(project.project).then((remote) => conflictedFiles(answering('git'), project.project, remote, conflicts));
+      : await remote().then((name) => conflictedFiles(git, project.project, name, conflicts));
+    const verdict = answer.pull === undefined ? found : `${found}; ${answer.pull}`;
     const { base } = answer;
     // The merge has gone through: a git that throws (none installed) is a line, never the exit code.
     const forwarded = answer.ok && base !== undefined
-      ? `${await projectRemote(project.project)
-        .then((remote) => fastForwardCheckout(answering('git'), project.project, remote, base))
+      ? `${await remote()
+        .then((name) => fastForwardCheckout(git, project.project, name, base))
         .catch((error: unknown) => `${base} is not fast-forwarded: ${failureLine(error)}`)}\n`
       : '';
     // The worker on the merged branch, released or kept, as the app answers it: never the last line.

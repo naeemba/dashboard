@@ -18,7 +18,8 @@ export type GitOptions = { timeout?: number; environment?: Record<string, string
 
 // The project's hooks are for its code, not for a board commit made beside it: a pre-push `npm test`
 // there is minutes of waiting per card, a post-checkout or post-merge `npm install` a full install.
-// Passed to every git call the create-task program and the board's git sync make that writes.
+// Passed to every git call the create-task program and the board's git sync make that writes, and to
+// the push of a clean merge `pr wait` and `pr land` make (pushCleanMerge).
 export const NO_HOOKS = ['-c', 'core.hooksPath=/dev/null'];
 
 export async function git(gitArguments: string[], cwd: string, options: GitOptions = {}): Promise<string> {

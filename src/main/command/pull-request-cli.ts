@@ -4,6 +4,7 @@
 // so review.autoMerge, which gates only what a review worker does unasked, does not gate it. `pr wait`
 // is the same wait without the merge, so nobody hand-rolls a sleep and gh loop around CI.
 
+import { NO_HOOKS } from '../app/git';
 import { failureLine } from './failure-line';
 import { isWriteVerb, parseWriteCommand, type WriteCommand, WRITE_HELP, WRITE_LINES } from './pull-request-write-cli';
 import { type GitHubPorts, isNetworkError, type ProgramAnswer, retried, RETRY_MINUTES, RETRY_WAITS_MS } from './gh-answer';
@@ -30,10 +31,13 @@ and otherwise passes only in a repository whose recently merged pull requests re
 anywhere else it is refused, since its CI did not start on that commit (a push, or gh pr merge by
 hand, if it never will). A pull request GitHub says conflicts with its base is refused at once,
 naming the files, since CI does not run on it. A merge call that fails is checked against the pull
-request: merged at that commit is merged. A land that finds a conflict first sends /pr-conflicts to
-the agent working its branch (pane conflicted), prints \`sent /pr-conflicts <n> to <pane>\`, waits for
-a new head commit and lands again, at most ${HAND_OFFS} times and ${NEW_HEAD_WAIT_MS / 60_000} minutes of waiting in
-all; with no agent on the branch it stops at the conflict. A network error on any gh call is tried
+request: merged at that commit is merged. A conflict git merges cleanly (GitHub ignores a merge
+driver in .gitattributes) is merged and pushed to the branch by wait and land themselves, printing
+\`merged <remote>/<base> into <branch> cleanly at <sha>\`. A land that finds a real conflict sends
+/pr-conflicts to the agent working its branch (pane conflicted), prints \`sent /pr-conflicts <n> to
+<pane>\`. Either then waits for a new head commit and starts over, at most ${HAND_OFFS} times and
+${NEW_HEAD_WAIT_MS / 60_000} minutes of waiting in all; a real conflict on a wait, or a land with no agent on the
+branch, stops at the conflict. A network error on any gh call is tried
 again for about ${RETRY_MINUTES} minutes, waiting longer each time. The last line is the verdict: \`merged <n> at
 <sha>\`, \`checks passed on <sha>\`, \`conflicts with <base>: <files>\`, or why not. The wait is as
 long as CI takes: run it in the background with the longest timeout allowed; one stopped at that
@@ -71,7 +75,9 @@ export function parsePullRequestCommand(commandArguments: readonly string[]): Pa
 // One that conflicts says its base and head, for the files it conflicts on (conflictLine).
 // A landed one says its head branch too, whose worker pane the app is asked to release (releaseLanded).
 // Its head branch is the one whose worker is handed the conflict (HandOff).
-export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: { base: string; sha: string; branch: string } };
+// One whose branch got a clean merge pushed says to pull it, after whichever verdict is printed (pullFirst).
+export type Conflicts = { base: string; sha: string; branch: string };
+export type LandAnswer = ProgramAnswer & { base?: string; branch?: string; conflicts?: Conflicts; pull?: string };
 
 // gh's words for a pull request whose CI has not started, or that runs none.
 const NO_CHECKS = 'no checks reported';
@@ -159,26 +165,48 @@ async function checksPassed(ports: CheckPorts, target: string): Promise<Checked>
   return { ok: true, sha, base, branch, noChecks };
 }
 
-export async function waitOnPullRequest(ports: CheckPorts, target: string): Promise<LandAnswer> {
+// A wait resolves only a conflict git merges cleanly; a real one is its verdict, for the session that ran it.
+export const waitOnPullRequest = (ports: CheckPorts, target: string, cleanMerge?: HandOff): Promise<LandAnswer> => resolvingConflicts(ports, target, () => waitOnce(ports, target), { cleanMerge });
+
+async function waitOnce(ports: CheckPorts, target: string): Promise<LandAnswer> {
   const checked = await checksPassed(ports, target);
   if (!('sha' in checked)) return checked;
   return { ok: true, output: checked.noChecks ? `no checks to wait on at ${checked.sha}, a repository with no CI` : `checks passed on ${checked.sha}` };
 }
 
-// Who resolves a conflict while the land waits: true when an agent on the branch was sent /pr-conflicts.
-export type HandOff = (branch: string, target: string) => Promise<boolean>;
+// Who resolves a conflict while the wait goes on: true when a merge of the base was pushed for it
+// (pushCleanMerge), or an agent on the branch was sent /pr-conflicts.
+export type HandOff = (conflicts: Conflicts, target: string) => Promise<boolean>;
+type Resolvers = { cleanMerge?: HandOff; agent?: HandOff };
 
-// A conflict handed to the branch's agent is waited out: once its merge is pushed (a new head, or the
-// pull request no longer open) the land starts over. No agent, NEW_HEAD_WAIT_MS spent waiting, or
+// A land tries the clean merge first and hands the agent only a real conflict.
+export const landPullRequest = (ports: CheckPorts, target: string, resolvers: Resolvers = {}): Promise<LandAnswer> => resolvingConflicts(ports, target, () => landOnce(ports, target), resolvers);
+
+// A conflict handed off is waited out: once its merge is pushed (a new head, or the pull request no
+// longer open) the wait or land starts over. Nobody took it, NEW_HEAD_WAIT_MS spent waiting, or
 // HAND_OFFS spent, and the conflict is the answer, as without a hand-off.
-export async function landPullRequest(ports: CheckPorts, target: string, handOff?: HandOff): Promise<LandAnswer> {
+async function resolvingConflicts(ports: CheckPorts, target: string, attempt: () => Promise<LandAnswer>, { cleanMerge, agent }: Resolvers): Promise<LandAnswer> {
   const budget = { left: NEW_HEAD_WAIT_MS };
+  let pushedMerge: Conflicts | undefined;
   for (let handedOff = 0; ; handedOff += 1) {
-    const answer = await landOnce(ports, target);
+    const answer = await attempt();
     const { conflicts } = answer;
-    if (conflicts === undefined || handOff === undefined || handedOff === HAND_OFFS || conflicts.branch === '' || budget.left <= 0) return answer;
-    if (!(await handOff(conflicts.branch, target)) || !(await newHead(ports, target, conflicts.sha, budget))) return answer;
+    if (conflicts === undefined || handedOff === HAND_OFFS || conflicts.branch === '' || budget.left <= 0) return pullFirst(answer, pushedMerge);
+    const merged = (await cleanMerge?.(conflicts, target)) === true;
+    if (merged) pushedMerge = conflicts;
+    const handed = merged || (await agent?.(conflicts, target)) === true;
+    if (!handed || !(await newHead(ports, target, conflicts.sha, budget))) return pullFirst(answer, pushedMerge);
   }
+}
+
+// The verdict is the only line its session reads, so a clean merge pushed to the branch is said in it:
+// the session's own checkout is behind, and its next push is refused until it pulls. A land that
+// merged needs no more pushes to the branch. It is a field, not part of the output, since a conflict's
+// verdict is the files it conflicts on, printed in place of the output.
+function pullFirst(answer: LandAnswer, pushedMerge: Conflicts | undefined): LandAnswer {
+  if (pushedMerge === undefined || (answer.ok && answer.base !== undefined)) return answer;
+  const { base, branch } = pushedMerge;
+  return { ...answer, pull: `a merge of ${base} was pushed to ${branch}, so pull ${branch} before pushing to it again` };
 }
 
 // Polls for the head to move, drawing each minute from the land's one budget.
@@ -233,11 +261,40 @@ export type GitPort = (folder: string, words: string[]) => Promise<ProgramAnswer
 // The files a conflicting pull request conflicts on, merged in git's own memory (merge-tree), so no
 // checkout is touched: the base and the head commit fetched from the project's remote first, then the
 // line conflictLine says. A failed fetch, or a git that throws, is the line without the files.
-export async function conflictedFiles(git: GitPort, folder: string, remote: string, { base, sha }: NonNullable<LandAnswer['conflicts']>): Promise<string> {
-  const tree = await git(folder, ['fetch', remote, base, sha])
-    .then((fetched) => fetched.ok ? git(folder, mergeTreeWords(remote, base, sha)) : fetched)
-    .catch((error: unknown): ProgramAnswer => ({ ok: false, output: failureLine(error) }));
-  return conflictLine(remote, base, tree);
+export async function conflictedFiles(git: GitPort, folder: string, remote: string, conflicts: Conflicts): Promise<string> {
+  return conflictLine(remote, conflicts.base, await mergedTree(git, folder, remote, conflicts));
+}
+
+// A git that throws (none installed) is a failed answer, said in its line.
+const caught = (answer: Promise<ProgramAnswer>) => answer.catch((error: unknown): ProgramAnswer => ({ ok: false, output: failureLine(error) }));
+
+const mergedTree = (git: GitPort, folder: string, remote: string, { base, sha }: Conflicts) => caught(git(folder, ['fetch', remote, base, sha])
+  .then((fetched) => fetched.ok ? git(folder, mergeTreeWords(remote, base, sha)) : fetched));
+
+// The id merge-tree prints first: its tree, a SHA-1 or a SHA-256.
+const TREE_ID = /^[0-9a-f]{40,64}$/;
+// A tree merge-tree wrote with nothing conflicted: exit 0 and the tree's id alone.
+const cleanTree = (mergeTree: ProgramAnswer) => mergeTree.ok && TREE_ID.test(mergeTree.output.trim()) ? mergeTree.output.trim() : undefined;
+
+// GitHub calls a pull request CONFLICTING that git merges cleanly when .gitattributes merges a file
+// its own way (docs/**/history.md is merge=union, which GitHub ignores). That merge needs no agent:
+// the clean tree is committed onto the head with the base as second parent (commit-tree, no checkout
+// touched) and pushed to the branch, refused unless the branch is still at the head merged. handed is false and the
+// line empty on a real conflict, which goes to the agent or the verdict as before.
+export async function pushCleanMerge(git: GitPort, folder: string, remote: string, conflicts: Conflicts): Promise<{ handed: boolean; line: string }> {
+  const { base, sha, branch } = conflicts;
+  const tree = cleanTree(await mergedTree(git, folder, remote, conflicts));
+  if (tree === undefined) return { handed: false, line: '' };
+  const failed = (doing: string, answer: ProgramAnswer) => ({ handed: false, line: `git merges ${remote}/${base} into ${branch} cleanly, but ${doing} failed: ${answer.output.trim() || 'no answer'}` });
+  const commit = await caught(git(folder, ['commit-tree', tree, '-p', sha, '-p', `${remote}/${base}`, '-m', `Merge ${remote}/${base} into ${branch}`]));
+  if (!commit.ok) return failed('committing the merge', commit);
+  const merge = commit.output.trim();
+  // NO_HOOKS: a pre-push test run is minutes for a merge the branch's CI checks anyway. The lease
+  // refuses a branch the remote has anywhere but the merged head: one pushed to since, or a fork's
+  // branch name the project's remote lacks or has as another branch (its main).
+  const pushed = await caught(git(folder, [...NO_HOOKS, 'push', `--force-with-lease=refs/heads/${branch}:${sha}`, remote, `${merge}:refs/heads/${branch}`]));
+  if (!pushed.ok) return failed('the push', pushed);
+  return { handed: true, line: `merged ${remote}/${base} into ${branch} cleanly at ${merge} and pushed it; pull ${branch} before pushing to it again` };
 }
 
 // The words for git to merge the head into the base without touching any checkout: exit 1 and the
@@ -247,8 +304,9 @@ const mergeTreeWords = (remote: string, base: string, sha: string) => ['merge-tr
 // The line main relays to the worker whose branch conflicts: the files, from what merge-tree answered,
 // and what to do about them.
 export function conflictLine(remote: string, base: string, mergeTree: ProgramAnswer): string {
+  if (cleanTree(mergeTree) !== undefined) return `GitHub says it conflicts with ${base}, but git merges it cleanly — merge ${remote}/${base} into the branch, push, and run it again`;
   const [treeId = '', ...files] = mergeTree.output.trim().split('\n');
-  const named = !mergeTree.ok && /^[0-9a-f]{40,64}$/.test(treeId) && files.length > 0
+  const named = !mergeTree.ok && TREE_ID.test(treeId) && files.length > 0
     ? files.join(', ')
     : `git could not name the files (${mergeTree.output.trim() || 'no answer'})`;
   return `conflicts with ${base}: ${named} — merge ${remote}/${base} into the branch, resolve, push, and run it again`;
