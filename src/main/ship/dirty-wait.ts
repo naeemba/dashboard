@@ -17,20 +17,17 @@ export function namedFiles(files: readonly string[]): string {
 // the spell (the review started, failed for another reason, or the agent was seen working again), so a
 // later spell is told again.
 export function dirtyWaits(): { waited: (cardId: string, now: number) => boolean; clear: (cardId: string) => void } {
+  // When each spell began, Infinity once main has been told of it.
   const since = new Map<string, number>();
-  const told = new Set<string>();
   return {
     waited(cardId, now) {
       const began = since.get(cardId) ?? now;
       since.set(cardId, began);
-      if (told.has(cardId) || now - began < DIRTY_WAIT_MS) return false;
-      told.add(cardId);
+      if (now - began < DIRTY_WAIT_MS) return false;
+      since.set(cardId, Infinity);
       return true;
     },
-    clear(cardId) {
-      since.delete(cardId);
-      told.delete(cardId);
-    },
+    clear(cardId) { since.delete(cardId); },
   };
 }
 

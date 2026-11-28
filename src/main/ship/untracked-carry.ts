@@ -1,6 +1,6 @@
 import { mkdtemp, mkdir, rename, rm } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { changedFiles, isBoardPath, WORK_STATUS } from './ship';
+import { WORK_STATUS, workChanges } from './ship';
 import { git } from '../app/git';
 
 // The review's swap carries a worktree's untracked files across rather than stopping on them
@@ -13,11 +13,10 @@ import { git } from '../app/git';
 // changed too, because git refuses the removal on that anyway and the swap would move them out and
 // back on every tick for nothing. The board's files are the removal's own question (ship-decision-7).
 export function carriedFiles(porcelain: string): string[] {
-  const lines = porcelain.split('\n').filter((line) => line.length > 3);
+  const lines = porcelain.split('\n');
   const untracked = (line: string) => line.startsWith('??');
-  const tracked = changedFiles(lines.filter((line) => !untracked(line)).join('\n')).filter((path) => !isBoardPath(path));
-  if (tracked.length > 0) return [];
-  return changedFiles(lines.filter(untracked).join('\n')).filter((path) => !isBoardPath(path));
+  if (workChanges(lines.filter((line) => !untracked(line)).join('\n')).length > 0) return [];
+  return workChanges(lines.filter(untracked).join('\n'));
 }
 
 // The worktree's carried files moved into a folder beside it, and `restore` moving them back into the

@@ -403,10 +403,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
     // the mark left on: no review for the rest of the run (#300, #313).
     const early = (refused: string): Refused => { reviewed.delete(id); return { refused }; };
     if (slot === -1) return early(notOpenRefusal(entry.title));
-    if (ports.agentWorksIn(slot, entry.pane)) {
-      waits.clear(id);
-      return early(`the agent on "${entry.title}" is still working`);
-    }
+    if (ports.agentWorksIn(slot, entry.pane)) return early(`the agent on "${entry.title}" is still working`);
     const board = projectBoard(entry.projectPath);
     const pullRequest = finishedIn(entry, board);
     // Just after the pull request opens the card is still in Doing until the pull request sweep's next
@@ -447,10 +444,7 @@ export function reviewSweep(ports: ReviewPorts): ReviewSweep {
       editProjectBoard(ports, entry.projectPath, (board) => intoReview(board, id));
       const swap = await ports
         .queue(entry.projectPath, () => swapWorktree(ports, entry, pullRequest, slot))
-        .catch((error: unknown) => ({
-          message: `review failed: ${failureText(error)}`,
-          dirty: [] as readonly string[],
-        }));
+        .catch((error: unknown): Swap => ({ message: `review failed: ${failureText(error)}`, dirty: [] }));
       // The mark comes back off for a card that was only early. Everything else keeps it: a locked
       // repository, a pane that went, a git step that threw — none of those pass by themselves, and
       // the card carries the line saying so until somebody acts on it.
