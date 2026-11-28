@@ -5,7 +5,8 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:09:32.286Z",
-  "updatedAt": "2026-11-28T09:09:32.287Z",
-  "column": "Backlog",
-  "order": 4
+  "updatedAt": "2026-11-28T09:11:43.774Z",
+  "branch": "a-review-blocked-on-a-dirty-worktree-waits",
+  "column": "Doing",
+  "order": 0
 }
