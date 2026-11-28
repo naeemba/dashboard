@@ -5,7 +5,7 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:30:12.555Z",
-  "updatedAt": "2026-11-28T09:57:27.020Z",
+  "updatedAt": "2026-11-28T10:57:50.002Z",
   "branch": "a-worker-or-main-turn-that-ends-on-an-api-e",
   "pullRequest": 433,
   "comments": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-11-28T09:57:26.974Z",
       "body": "Pull request #433 opened: Resume a turn that ends on a transient API error https://github.com/naeemba/dashboard/pull/433"
+    },
+    {
+      "at": "2026-11-28T10:57:50.002Z",
+      "body": "Review loop: converged, ready to merge. 3 rounds, floor-addressed at low; 10 findings addressed, 0 rejected; final check accepted all 4 last commits; no conflicts; CI green on the head commit. Last pass moved the app-turn check from resume into turnFailed (an app-turn failure no longer records a try) and added the workers-decision-14 bullet plus live-pane.ts in docs/panes/README.md. The card's ask and design are unchanged."
     }
   ],
   "column": "Review",

@@ -5,7 +5,7 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:30:06.800Z",
-  "updatedAt": "2026-11-28T10:25:13.935Z",
+  "updatedAt": "2026-11-28T10:25:44.902Z",
   "branch": "the-review-start-never-takes-the-worktree-o",
   "pullRequest": 434,
   "comments": [
@@ -20,8 +20,12 @@
     {
       "at": "2026-11-28T10:25:13.935Z",
       "body": "Review loop on #434: converged, ready to merge. 1 round, floor-addressed at low; 2 findings fixed (33de3f24, c8aff46a): a decision entry saying a paused worker holds its worktree up to PAUSE_CEILING_MS even when holdsSlot frees its slot for a CI-only pause, and the slot-panes test stub now checks the pane id. Nothing rejected or left open, no conflicts, CI green on the head commit."
+    },
+    {
+      "at": "2026-11-28T10:25:44.864Z",
+      "body": "Pull request #434 merged: The review sweep never takes the worktree of a worker paused on its own checks https://github.com/naeemba/dashboard/pull/434"
     }
   ],
-  "column": "Review",
-  "order": 3
+  "column": "Done",
+  "order": 358
 }
