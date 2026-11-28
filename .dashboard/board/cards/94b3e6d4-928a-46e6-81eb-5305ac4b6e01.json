@@ -5,7 +5,7 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-28T02:36:14.719Z",
-  "updatedAt": "2026-11-28T12:04:34.355Z",
+  "updatedAt": "2026-11-28T12:05:58.082Z",
   "branch": "stall-warning-ignores-a-worker-waiting-on-i",
   "pullRequest": 436,
   "comments": [
@@ -16,8 +16,12 @@
     {
       "at": "2026-11-28T12:04:34.355Z",
       "body": "Review loop: converged, ready to merge (floor-addressed at low, 4 rounds, 8 findings addressed, 0 rejected; commits 16e825db fc33c7e8 8e1ac014 36b88b02). CI passed on the head commit. One low thread (stall.ts:74, the clamp in later is dead now that sign() catches up first) was handled by the last fix pass, and no re-review followed it. No change to what the card asked for."
+    },
+    {
+      "at": "2026-11-28T12:05:58.050Z",
+      "body": "Pull request #436 merged: Name the tool call a stalled worker is in, and tell a silent machine once https://github.com/naeemba/dashboard/pull/436"
     }
   ],
-  "column": "Review",
-  "order": 0
+  "column": "Done",
+  "order": 360
 }
