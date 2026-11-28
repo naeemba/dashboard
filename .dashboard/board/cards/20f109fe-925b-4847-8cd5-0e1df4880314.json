@@ -5,13 +5,17 @@
   "priority": "high",
   "parent": null,
   "createdAt": "2026-11-27T21:54:03.861Z",
-  "updatedAt": "2026-11-27T23:41:45.105Z",
+  "updatedAt": "2026-11-28T03:20:37.715Z",
   "branch": "pr-wait-and-pr-land-stop-reporting-conflict",
   "pullRequest": 428,
   "comments": [
     {
       "at": "2026-11-27T23:41:45.071Z",
       "body": "Pull request #428 opened: pr wait and pr land merge and push a conflict git merges cleanly https://github.com/naeemba/dashboard/pull/428"
+    },
+    {
+      "at": "2026-11-28T03:20:37.715Z",
+      "body": "Review loop: converged, ready to merge. 2 rounds (floor-addressed, floor low). Round 1 fixed 3 threads (1 commit); round 2 fixed the last low thread: the 'pull <branch> before pushing again' hint was dropped when a conflict verdict followed a pushed clean merge, now its own field plus a test (2 commits). Commits 93f831f5, 411f1cb9, 4904cf6d; final check accepted both. No conflicts with main, nothing blocked on a person, CI green on the head commit. Step 1 printed: was ready."
     }
   ],
   "column": "Review",
