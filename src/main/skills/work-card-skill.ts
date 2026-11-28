@@ -106,9 +106,14 @@ conflict after review, and one of them is thrown away.
   - a \`history.md\` line for the card goes in the card's commit, before the
     pull request is opened: the date and why, with no pull request number. A
     second commit to add the number is a second push and a second CI run.
-  - write a new numbered id as \`<feature>-decision-next\` (or \`-rule-next\`)
-    and give it its number last, below, and name the ids you took in your
-    report to main.
+  - number a new id before the commit that adds it, never as a placeholder
+    like \`-decision-next\`: a project's commit check can refuse one. Take the
+    next number free on \`$3/$2\` and in every open pull request, which other
+    workers are numbering at the same time:
+
+        git fetch $3 && { git grep -hE '^## <feature>-(decision|rule)-[0-9]+' $3/$2 -- docs; for n in $(gh pr list --json number -q '.[].number'); do gh pr diff $n; done | grep -E '^\\+## <feature>-(decision|rule)-[0-9]+'; }
+
+    Name the ids you took in your report to main.
 - Build what the card asks for, following the project's own rules.
 - The version: $1.
   \`${KEEP_VERSION}\`, or anything but \`${BUMP_VERSION}\`, means this project
@@ -133,13 +138,13 @@ conflict after review, and one of them is thrown away.
 - When the work is done and before the checks, when the card adds a docs id
   or bumps the version: run \`git fetch $3 && git merge $3/$2\` once
   (the local \`$2\` here is as old as the worktree; resolve a conflict the way
-  \`/pr-conflicts\` does and commit the merge). Then give each new id the next
-  number free there, and bump from the version there. Other cards run in
-  their own worktrees at the same time, and two that both took the next one
-  early both say \`-decision-9\`, or \`1.5.0\`. If the pull request later
-  conflicts on one, merge \`$3/$2\` again the same way and take the next
-  free one. Then check none is left:
-  \`grep -rnsE '[a-z0-9]-(decision|rule)-next' docs CLAUDE.md\` prints nothing.
+  \`/pr-conflicts\` does and commit the merge). Then run the id command above
+  again: an id of yours that another pull request has taken since moves to
+  the next one free, in a commit of its own. Bump from the version there.
+  Other cards run in their own worktrees at the same time, and two that
+  both took the next one say \`-decision-9\`, or \`1.5.0\`. If the pull
+  request later conflicts on one, merge \`$3/$2\` again the same way and
+  take the next free one.
 - Run the project's checks: the ones its \`CLAUDE.md\` names, else its test,
   type-check and lint scripts. A project with a \`check\` script that runs them
   all and prints a summary (\`pnpm check\`) is checked with that, once: read the

@@ -17,11 +17,14 @@ towards. A change to either, or to the id scheme, changes the skill's text in th
 `CLAUDE.md` carries that rule beside the docs rule, where someone rewording it will see it.
 (2026-11-06, #225)
 
-## skills-decision-3: A worker takes a docs id at merge time, not from a range main reserves
+## skills-decision-3: A worker numbers a docs id before its commit, from main and open pull requests
 
 Parallel pull requests that each took the next docs id when they wrote it collided four times in
 one week. Main reserving a range per card would hold only if main started every card, and a card
-shipped from the board reaches main only when its worker reports. So `/work-card` writes a
-placeholder, merges `origin/<base branch>` once the work is done and before the checks, takes the
-next id free there, and names it in its report; a later conflict on the id is the same step again.
-(2026-11-24)
+shipped from the board reaches main only when its worker reports. So `/work-card` first wrote a
+placeholder and numbered it after merging `origin/<base branch>` (2026-11-24). This repository's
+commit check refuses a `-next` id, so one session had six commits refused, and the merge still
+missed the open pull requests: one took `workers-decision-12` while another guessed it. Now it
+numbers the id before the commit that adds it, from the ids on `origin/<base branch>` and those the
+open pull requests' diffs add, checks again after merging the base branch, and names it in its
+report; a later conflict on the id is the same step again. (2026-11-28)
