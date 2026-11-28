@@ -1,0 +1,11 @@
+{
+  "id": "17f24de6-9f6c-4769-934a-5b6a9894baf6",
+  "title": "Hung model requests time out and retry instead of freezing sessions for hours",
+  "notes": "Night retro 2026-11-28: every Claude session on the machine froze together in six windows (~236 min; the longest 00:23-02:35 UTC). The machine stayed up; requests to the model simply did not answer (dashboard main sent one at 00:23:09, the answer came at 02:35:48). Wanted: sessions the app starts (worker panes, terminal and screen mode, and the project mains through the Agent SDK) get a request timeout so a hung request fails and retries: Claude Code documents API_TIMEOUT_MS. First verify it actually cuts off a stalled streaming request (not only a slow connect), then set it in the pane environment (environmentForPanes in src/main/command/pane-environment.ts) and for main's SDK session, with a value long enough for a long answer. If it does not cover a stalled stream, say so on the card and propose what would.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-28T09:30:18.276Z",
+  "updatedAt": "2026-11-28T09:30:18.276Z",
+  "column": "Backlog",
+  "order": 6
+}
