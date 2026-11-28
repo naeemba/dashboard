@@ -5,7 +5,8 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:30:06.800Z",
-  "updatedAt": "2026-11-28T09:30:06.800Z",
-  "column": "Backlog",
-  "order": 4
+  "updatedAt": "2026-11-28T09:56:06.381Z",
+  "branch": "the-review-start-never-takes-the-worktree-o",
+  "column": "Doing",
+  "order": 2
 }
