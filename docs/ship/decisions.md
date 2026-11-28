@@ -158,3 +158,16 @@ in `<worktree>.untracked-*`, named in the error. The cost: a checkout that throw
 leaves the files there too. A spell ends when the review starts
 or fails for another reason, or when the agent is seen working again. `review-flow.ts`,
 `untracked-carry.ts`, `dirty-wait.ts`. (2026-11-28)
+
+## ship-decision-9: A pause holds its worktree up to the ceiling, even with its slot given back
+
+**The review sweep counts a worker paused on its own background work as still at work until the
+pause has lasted `PAUSE_CEILING_MS` (`pausedAtWork` in `worker-roster.ts`), whatever that work
+is.** This answers differently from `holdsSlot` (`pane-pool.ts`) on purpose: a worker paused only
+on `pr wait` gives its slot back (workers decisions, "A pause whose only background work is
+waiting on CI gives its slot back"), so a queued card need not wait out its CI, but it still
+holds its worktree, because the `pr wait` runs in that folder and the worker picks up there
+when CI answers. Merging the two predicates, or having this one read `ciWaits`, brings back the
+night of 2026-11-28: four times the sweep swapped out a worker mid-gates, once with six fix commits
+not yet pushed. Past the ceiling main is told anyway (`stop-notices.ts`), so a pause nothing wakes
+does not hold the worktree forever. `worker-roster.ts`, `slot-panes.ts`. (2026-11-28)

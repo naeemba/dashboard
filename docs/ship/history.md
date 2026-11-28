@@ -77,3 +77,4 @@ One line per merged change: date and why.
 - 2026-11-28 — The review sweep counts a worker paused on its own background work as still working,
   up to the pause ceiling: four times in a night it swapped out a worker mid-gates, once with six
   fix commits not yet pushed, and each replacement ran the review loop again from the start
+  (ship-decision-9)

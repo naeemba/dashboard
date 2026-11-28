@@ -23,7 +23,9 @@ export function isPaused(waiting: StopWaiting | undefined): waiting is StopWaiti
 
 // A pause that began at `since` still counts as the worker at work: its turn ended to be woken by
 // its own checks, so its pane and worktree are not free. Only up to the pause ceiling, past which
-// main is told anyway (stop-notices.ts), so a pause nothing wakes does not hold them forever.
+// main is told anyway (stop-notices.ts), so a pause nothing wakes does not hold them forever. It
+// answers apart from holdsSlot (pane-pool.ts) on purpose: a pause only on `pr wait` gives its slot
+// back but keeps its worktree, where the wait runs (ship-decision-9).
 export function pausedAtWork(waiting: StopWaiting | undefined, since: number, now: number): boolean {
   return isPaused(waiting) && now - since < PAUSE_CEILING_MS;
 }
