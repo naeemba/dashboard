@@ -118,6 +118,7 @@ export function cardActions(main: CardActionsMain): CardActions {
     ship: ({ projectPath, id, title, first, after, returnTo, askedFrom }) => main.startWork({ askedFrom, projectPath, cardId: id, after, first, returnTo, work: { kind: 'ship', title } }),
   });
   const review = bind(cardReview, {
+    read: (projectPath) => read(projectPath).board,
     review: ({ projectPath, id, returnTo, askedFrom }) => main.startWork({ askedFrom, projectPath, cardId: id, after: null, first: false, returnTo, work: { kind: 'review' } }),
   });
   async function begin({ projectPath, cardId }: QueueEntry, work: CardWork): Promise<{ output: string } | Refused> {

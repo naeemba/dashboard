@@ -1,7 +1,7 @@
 import { columnNamed, selectionOf, type Board } from '../../../shared/board/board';
 import { columnEntry, isMoveSource, type MoveSource } from '../../../shared/board/column-entry';
 import type { CardMoveResult, Refused } from '../../../shared/app/bridge';
-import { brokenFilesRefusal, runBoardCommand } from '../../board/board-cli';
+import { brokenFilesRefusal, runBoardCommand, wholeId } from '../../board/board-cli';
 import { action, isRefused } from '../action';
 import type { ReturnTo } from '../../workers/pane-pool';
 import { askedFromInput, cardInput, type CardInput } from './card-input';
@@ -49,9 +49,12 @@ export const cardMove = action<CardMovePorts, CardMoveInput, CardMoveResult>('ca
     if (from !== undefined && typeof from !== 'string') return { refused: 'a move\'s from must be a column name' };
     return { ...card, column, source, from, askedFrom: askedFromInput(raw) };
   },
-  async run(ports, { projectPath, id, column, source, from, askedFrom }) {
+  async run(ports, { projectPath, id: typed, column, source, from, askedFrom }) {
     const { board, brokenFiles } = ports.read(projectPath);
     if (brokenFiles.length > 0) return { refused: brokenFilesRefusal(brokenFiles) };
+    // Made whole once, so the ship or review the move starts is asked about the card it moved.
+    const id = wholeId(board, typed);
+    if (typeof id !== 'string') return { refused: id.message };
     if (source === 'user' && movedOn(board, id, column)) return { output: `card ${id} has moved on from ${column}`, ran: 'nothing', started: '' };
     const moved = runBoardCommand(board, ['move', id, column]);
     if (!moved.ok) return { refused: moved.message };

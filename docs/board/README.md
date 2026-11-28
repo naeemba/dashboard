@@ -204,27 +204,28 @@ same keys and the same writes — each board keeps its own undo — with two mor
 that say which board the rest of them are aimed at, and Escape to go back to the
 manager's list.
 
-Every pane also carries DASHBOARD_COMMAND, the path to a command whose board
-words list cards and move them from a shell: run
-`node "$DASHBOARD_COMMAND" board` in a project to see what it takes, or DASHBOARD_BOARD, the older
-path to the same program, with no word in front. It is how an agent working a card moves its own.
-`board list` leaves out Done and Cancelled, most of an old board, and says in a last line how many
-cards that hid; `--all` lists them, `--column <name>` one column. Wherever a verb takes an id, any
-start of one that a single card's id begins with stands for it, such as its first eight characters;
-a start two cards share is refused, naming both, and a ship, a review or a move the app answers is
-sent the whole id. The usage and the seeded file both say no git pull, commit or push is needed
-around a board command: it syncs the board itself, below. The .dashboard/CLAUDE.md the app seeds
-into each project says what the folder holds, that the board is changed through the command,
-`node "$DASHBOARD_BOARD"` to print what it takes, that `list` leaves out Done and Cancelled, and
-that no git pull, commit or push is needed. Its first line carries a version, and it is written
-whenever the board is read and the file is missing or older than the app's (no version line counts
-as older), so a project seeded with an older text that spelled out the card format gets the new one.
-A file of the app's version or a later one is left alone, edited or not, and a checkout the sync
-brings up keeps an edit to it. Where git tracks the file, the rewrite is committed to the remote's
-default branch by the sync below, as a card write is. Only a checkout on that default branch, a
-folder outside git, or a repository with no remote default branch has an older file rewritten; a
-feature branch's worktree keeps its copy until it merges main, so that merge has nothing in its way
-(board-decision-8).
+Every pane also carries DASHBOARD_COMMAND, the path to a command whose board words list cards and
+move them from a shell: run `node "$DASHBOARD_COMMAND" board` in a project to see what it takes, or
+DASHBOARD_BOARD, the older path to the same program, with no word in front. It is how an agent
+working a card moves its own. `board list` leaves out Done and Cancelled, most of an old board, and
+says in a last line how many cards that hid; `--all` lists them, `--column <name>` one column.
+Wherever a verb takes an id, any start of one that a single card's id begins with stands for it,
+such as its first eight characters; a start two cards share is refused, naming both, and a ship, a
+review or a move the app answers is sent the whole id. The app makes a start whole again against the
+project's board (`wholeId` in `board-cli.ts`), for the card's id and, in `pane.start`, any
+`--after`, since the folder's board can lag it and an MCP tool's call reaches it the same way. The
+usage and the seeded file both say no git pull, commit or push is needed around a board command: it
+syncs the board itself, below. The .dashboard/CLAUDE.md the app seeds into each project says what
+the folder holds, that the board is changed through the command, `node "$DASHBOARD_BOARD"` to print
+what it takes, that `list` leaves out Done and Cancelled, and that no git pull, commit or push is
+needed. Its first line carries a version, and it is written whenever the board is read and the file
+is missing or older than the app's (no version line counts as older), so a project seeded with an
+older text that spelled out the card format gets the new one. A file of the app's version or a later
+one is left alone, edited or not, and a checkout the sync brings up keeps an edit to it. Where git
+tracks the file, the rewrite is committed to the remote's default branch by the sync below, as a
+card write is. Only a checkout on that default branch, a folder outside git, or a repository with no
+remote default branch has an older file rewritten; a feature branch's worktree keeps its copy until
+it merges main, so that merge has nothing in its way (board-decision-8).
 
 ## Kept in step with git
 
