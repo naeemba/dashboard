@@ -717,11 +717,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     const closed = notOpen(id);
     if (closed) return closed;
     // Not counted as a try: the app's question gets no `continue` (failures, above).
-    if (appTurns.has(id)) {
-      ports.log(id, `\`${RESUME_TEXT}\` not sent: on the app's own question`);
-      return answered('');
-    }
-    failures.failed(id, error);
+    if (appTurns.has(id)) ports.log(id, `\`${RESUME_TEXT}\` not sent: on the app's own question`);
+    else failures.failed(id, error);
     return answered('');
   }
 
