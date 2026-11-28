@@ -75,11 +75,19 @@ type-check and lint once. It opens the pull request with `pr create`, never `gh 
 which a worker retried by hand after a 502 that had opened it (command-decision-11). With
 `review-loop` (settings `review.autoLoop` on) it reports the pull request's number to main once it
 opens and ends its turn, without waiting on CI: the review the app starts waits on CI, and kills a
-wait the worker left running, with any report promised after it. With `no-review-loop` nothing
+wait the worker left running, with any report promised after it. The review starts only once the
+worker's turn ends, so the worker cannot see it start: it leaves `git status --short` empty, which
+would otherwise hold the review, and main confirms the start a few minutes after the report
+(workers README); workers that ended on "the review loop will pick it up" left three pull
+requests unreviewed for five hours. With `no-review-loop` nothing
 starts a review, so it waits on CI itself, with `pr wait` in the background at the longest timeout
 and run again if stopped there, and reports the verdict. The report is a template of at most
 five lines (outcome, pull request, ids taken, caveats, a decision for the user), with the detail on
 the pull request, since main reads one from every worker.
+A dev server or a check that can run past two minutes goes in the background with the longest
+timeout, and a notice that one stopped at its time limit sends the worker to its output file
+before a rerun: left at the 30-minute default, a dev server died mid-session and checks were
+killed. `dashboard-browser` says the same of a dev server for a page.
 The second word is the project's `bumpVersion` in `projects.yaml`
 (projects-decision-1): `keep-version`, the default, tells the agent to leave every version alone;
 `bump-version` tells it to bump last, from `<remote>/<base branch>` (the fourth and third words:
