@@ -5,8 +5,14 @@
   "priority": "urgent",
   "parent": null,
   "createdAt": "2026-11-28T09:30:06.800Z",
-  "updatedAt": "2026-11-28T09:56:06.381Z",
+  "updatedAt": "2026-11-28T09:57:06.633Z",
   "branch": "the-review-start-never-takes-the-worktree-o",
+  "comments": [
+    {
+      "at": "2026-11-28T09:57:06.633Z",
+      "body": "Overlap: card 2fc8d59f (A worker or main turn that ends on an API error is resumed by the app, branch a-worker-or-main-turn-that-ends-on-an-api-e, no PR yet) edits src/main/workers/session-requests.ts, including notify(). This card's plan touches the same file: the states map records when a pause began, and a new answer says whether a pane is paused within PAUSE_CEILING_MS, read by agentWorksIn in src/main/panes/slot-panes.ts (wired in src/main/main.ts). Expected conflict is small (adjacent lines in notify), not the same logic."
+    }
+  ],
   "column": "Doing",
   "order": 2
 }
