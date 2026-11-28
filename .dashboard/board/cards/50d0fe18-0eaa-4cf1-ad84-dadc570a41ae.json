@@ -1,0 +1,11 @@
+{
+  "id": "50d0fe18-0eaa-4cf1-ad84-dadc570a41ae",
+  "title": "Work-card and browser skills: confirm the review started, and give long commands a timeout",
+  "notes": "Night retro 2026-11-28. (1) kamandsystem: workers opened #61-#63 and ended their turns on 'the review loop will pick it up'; main ended its own turn on 'its review loop runs next'; nothing checked, and nothing ran for 5 h. The work-card skill (src/main/skills/work-card-skill.ts, the review-loop ending) should have the worker confirm a review actually started (pane queue / the card's line / a 'review started' comment) within a few minutes and say so in its report, and the dispatch prompt main follows should say main confirms it too. (2) Long checks and dev servers died at the 30-minute background default: a dev server started with run_in_background and no timeout (kamandsystem 22:10, died ~22:40), gates auto-backgrounded and killed (new-crm). The work-card skill and the dashboard-browser skill should say: start a dev server or a long check in the background with an explicit timeout (7200000), and after a 'stopped at its time limit' notice read the output file before re-running. Keep each skill within its word budget; docs in docs/skills.",
+  "priority": "high",
+  "parent": null,
+  "createdAt": "2026-11-28T09:30:29.999Z",
+  "updatedAt": "2026-11-28T09:30:30.000Z",
+  "column": "Backlog",
+  "order": 7
+}
