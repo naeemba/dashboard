@@ -27,6 +27,7 @@ function sources(overrides: Partial<SlotPaneSources> = {}): SlotPaneSources {
     startedWith: new Map([[terminalId(0, 1), 'zsh'], [terminalId(0, 2), 'zsh'], [terminalId(0, 3), 'zsh']]),
     workerScreens: () => ({ has: () => false, working: () => undefined, ids: () => [] }),
     agentsAtWork: { works: () => false },
+    pausedAtWork: () => false,
     ...overrides,
   };
 }
@@ -68,6 +69,15 @@ describe('slotPanes', () => {
     screen.working = false;
     expect(panes.agentWorksIn(0, 1)).toBe(false);
     expect(panes.agentWorksIn(0, null)).toBe(false);
+  });
+
+  it('has an agent paused on its own background work still working, and no pane without an agent', () => {
+    const panes = slotPanes(sources({
+      workerScreens: () => ({ has: (id) => id === terminalId(0, 1), working: () => false, ids: () => [terminalId(0, 1)] }),
+      pausedAtWork: () => true,
+    }));
+    expect(panes.agentWorksIn(0, 1)).toBe(true);
+    expect(panes.agentWorksIn(0, 3)).toBe(false);
   });
 
   it('lists every page with its workers, the screens and which pages have their editor running', () => {

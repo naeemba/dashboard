@@ -253,7 +253,7 @@ table.on('panes:report', (_screen, ids: string[]) => { agentsAtWork.report(ids, 
 // slot-panes.ts.
 const slotReadings = slotPanes({
   projects, commands: terminalCommands, shells, foregroundOf: panes.foregroundOf, startedWith: panes.startedWith,
-  workerScreens: () => workerScreens, agentsAtWork,
+  workerScreens: () => workerScreens, agentsAtWork, pausedAtWork: (id, now) => workerAnswers.pausedAtWork(id, now),
 });
 const { slotOfProject, openPanes, paneUsesIn, freePaneIn, agentIn, agentRunsIn, agentWorksIn, openProjects } = slotReadings;
 

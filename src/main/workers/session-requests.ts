@@ -8,7 +8,7 @@ import type { ProjectNamed } from '../projects/project-named';
 import { answered, namesItsTarget, parseSessionCommand, refused, type HookTold, type SessionCommand, type SessionReply, type SessionRequest } from './session-cli';
 import { MAIN_INDEX, paneFromId, paneLabel, terminalId } from '../../shared/panes/terminals';
 import type { Refused, WorkerState } from '../../shared/app/bridge';
-import { waitingText, workerAbout, workerStatus, isPaused, type DispatchedWorker, type QueuedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
+import { waitingText, workerAbout, workerStatus, isPaused, pausedAtWork, type DispatchedWorker, type QueuedWorker, type StopWaiting } from '../../shared/workers/worker-roster';
 import { baseName } from '../../shared/app/base-name';
 import { paneLink } from '../../shared/workers/pane-link';
 import { doneReport, LAST_MESSAGE_KEPT, oneLineTail, PAUSE_CEILING_MS, stallNotice, tail } from '../../shared/workers/done-report';
@@ -167,6 +167,8 @@ export type SessionAnswers = ((request: SessionRequest) => Promise<SessionReply>
   mainTurn(slot: number, running: boolean): void;
   // What a worker's hooks report, from a `session notify` or a Claude screen's own hooks.
   notify(id: string, state: WorkerState, waiting?: StopWaiting, told?: HookTold): SessionReply;
+  // worker-roster.ts's pausedAtWork for the pane's last stop: the review sweep counts it as working.
+  pausedAtWork(id: string, now: number): boolean;
   // The pane is gone, closed by hand or with its project rather than released: its throwaway is let
   // go of as release would (throwaway.ts).
   dropped(id: string): Promise<void>;
@@ -190,7 +192,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   // What each worker's hooks last said, until it is run again or released. Cleared rather than kept,
   // because a worker run a second time has not finished the second task, with what a done's Stop hook
   // said the session still waits on.
-  const states = new Map<string, { state: WorkerState; waiting?: StopWaiting }>();
+  const states = new Map<string, { state: WorkerState; waiting?: StopWaiting; since: number }>();
   // The throwaway worktree each pane was given, let go of whenever the pane goes (throwaway.ts).
   const throwaways = new Map<string, Throwaway>();
   // The panes a release is closing, whose throwaway the release lets go of, not `dropped`.
@@ -658,7 +660,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (state === 'running') {
       prompts.prompted(id, told.promptSource, told.handed === true);
       states.delete(id);
-    } else states.set(id, { state, waiting });
+    } else states.set(id, { state, waiting, since: Date.now() });
     if (state === 'done') pool.settle(id, waiting?.background ?? 0);
     ports.mark(id, state);
     if (mainsWorker(id)) notices.state(id, state, waiting);
@@ -726,6 +728,10 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       return dispatcherPath === undefined ? Promise.resolve({ refused: 'that page is not open' }) : pool.unqueue.call({ id, dispatcherPath });
     },
     notify,
+    pausedAtWork(id: string, now: number) {
+      const said = states.get(id);
+      return said !== undefined && pausedAtWork(said.waiting, said.since, now);
+    },
     mainOf,
     pool,
     startCard({ askedFrom, ...start }: CardStart) {
