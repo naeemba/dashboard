@@ -1,22 +1,23 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { carriedFiles, setAsideUntracked } from './untracked-carry';
+import { carriedFiles, moveAll, setAsideUntracked } from './untracked-carry';
 import { temporaryFolder } from '../testing/temporary-folder';
 import { git, useGitTestEnvironment } from '../board/create-task-git-fixture';
 
 describe('carriedFiles', () => {
   it('carries untracked files and folders', () => {
-    expect(carriedFiles('?? AGENTS.md\n?? notes/\n')).toEqual(['AGENTS.md', 'notes/']);
+    expect(carriedFiles('?? AGENTS.md\0?? notes/\0')).toEqual(['AGENTS.md', 'notes/']);
   });
 
   it('carries nothing while a tracked file is changed too', () => {
-    expect(carriedFiles(' M src/a.ts\n?? AGENTS.md\n')).toEqual([]);
+    expect(carriedFiles(' M src/a.ts\0?? AGENTS.md\0')).toEqual([]);
   });
 
-  it('leaves the board to the removal, untracked or changed', () => {
-    expect(carriedFiles('?? .dashboard/board/cards/a.json\n?? AGENTS.md\n')).toEqual(['AGENTS.md']);
-    expect(carriedFiles(' M .dashboard/board/cards/a.json\n?? AGENTS.md\n')).toEqual(['AGENTS.md']);
+  it('leaves the board to the removal, untracked, changed or renamed', () => {
+    expect(carriedFiles('?? .dashboard/board/cards/a.json\0?? AGENTS.md\0')).toEqual(['AGENTS.md']);
+    expect(carriedFiles(' M .dashboard/board/cards/a.json\0?? AGENTS.md\0')).toEqual(['AGENTS.md']);
+    expect(carriedFiles('R  .dashboard/board/cards/b.json\0.dashboard/board/cards/a.json\0?? AGENTS.md\0')).toEqual(['AGENTS.md']);
   });
 });
 
@@ -39,6 +40,34 @@ describe('setAsideUntracked', () => {
     expect(carried.files).toEqual([]);
     await carried.restore();
     expect(readdirSync(dirname(worktree))).toEqual(['card']);
+  });
+
+  it('moves nothing for a worktree folder already gone', async () => {
+    const carried = await setAsideUntracked(join(temporaryFolder('dashboard-carry-'), 'gone'));
+    expect(carried.files).toEqual([]);
+  });
+
+  it('carries a non-ASCII name as written', async () => {
+    const worktree = cleanWorktree();
+    writeFileSync(join(worktree, 'AGENTS.md'), 'rules');
+    writeFileSync(join(worktree, 'café.md'), 'menu');
+
+    const carried = await setAsideUntracked(worktree);
+    expect(carried.files).toEqual(['AGENTS.md', 'café.md']);
+    expect(git(worktree, 'status', '--porcelain')).toBe('');
+
+    await carried.restore();
+    expect(readFileSync(join(worktree, 'café.md'), 'utf8')).toBe('menu');
+    expect(readdirSync(dirname(worktree))).toEqual(['card']);
+  });
+
+  it('moves back what it moved when a later rename throws', async () => {
+    const from = temporaryFolder('dashboard-carry-');
+    const to = temporaryFolder('dashboard-carry-');
+    writeFileSync(join(from, 'AGENTS.md'), 'rules');
+    await expect(moveAll(['AGENTS.md', 'missing.md'], from, to)).rejects.toThrow('ENOENT');
+    expect(readFileSync(join(from, 'AGENTS.md'), 'utf8')).toBe('rules');
+    expect(existsSync(join(to, 'AGENTS.md'))).toBe(false);
   });
 
   it('moves the untracked files out beside the worktree and back in', async () => {
