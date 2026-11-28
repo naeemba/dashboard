@@ -282,7 +282,6 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     resume(id) {
       const { slot, index } = paneFromId(id);
       if (index === MAIN_INDEX) return void ports.tell(slot, RESUME_TEXT);
-      if (appTurns.has(id)) return ports.log(id, `\`${RESUME_TEXT}\` not sent: on the app's own question`);
       if (!onMainsTurn(id)) return ports.prompt(id, RESUME_TEXT);
       ports.send(id, RESUME_TEXT, ports.projectPath(mainOf(id)) ?? '').then(
         (sent) => { if (isRefused(sent)) ports.log(id, `\`${RESUME_TEXT}\` not sent: ${sent.refused}`); },
@@ -715,6 +714,11 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (isRefused(id)) return refused(id.refused);
     const closed = notOpen(id);
     if (closed) return closed;
+    // Not counted as a try: the app's question gets no `continue` (failures, above).
+    if (appTurns.has(id)) {
+      ports.log(id, `\`${RESUME_TEXT}\` not sent: on the app's own question`);
+      return answered('');
+    }
     failures.failed(id, error);
     return answered('');
   }

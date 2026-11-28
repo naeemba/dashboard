@@ -95,6 +95,10 @@ describe('a turn that ends on an API error', () => {
     expect(prompted).toEqual([]);
     expect(typed).toEqual([]);
     expect((await answer({ directory: '/work/api', args: ['report', '2:1'] })).output).toContain('Tests pass.');
+    answer.notify('2:1', 'running', undefined, { promptSource: 'sdk', handed: true });
+    await failed('2:1');
+    minutes(1);
+    expect(typed).toEqual(['2:1 continue']);
   });
 
   it('resumes the pane a kept shell\'s old id names in this run', async () => {
