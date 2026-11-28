@@ -46,7 +46,7 @@ export type SessionCommand =
   // input said.
   | { kind: 'notify'; id: string; state: WorkerState; waiting?: StopWaiting; told?: HookTold }
   // What a StopFailure hook calls: the pane's turn ended on an API error of that type (turn-failures.ts).
-  | { kind: 'turn-failed'; id: string; error: string };
+  | { kind: 'failed'; id: string; error: string };
 
 export type RunWords = { prompt: string; card: string | null; worktree: boolean; folder: string | null; as: PaneKind | null };
 
@@ -83,7 +83,7 @@ export const SESSION_USAGE = `pane — the Dashboard panes of the project you ar
   pane conflicted <branch> <pull request> [--from <id>]
   pane ci <id> wait|resume <pid>
   pane notify <id> running|blocked|done [--prompt-input | --stop-input]
-  pane turn-failed <id> --failure-input
+  pane failed <id> --failure-input
 
 start starts a worker now when fewer than the cap run in its project (settings workers.cap, 4) and
 across the app (workers.totalCap, 8) and nothing is queued, answering as run does, or queues it and
@@ -122,7 +122,7 @@ only on CI gives its slot back; with resume, it answers once the slot is back, a
 queue. In a pane that is no main's worker they change nothing and answer at once.
 notify is what a worker's hooks call: --stop-input reads Claude
 Code's Stop hook input for how many background tasks and wakeups the session still waits on and its
-last message, --prompt-input the prompt hook's for who put the prompt in. turn-failed is what the
+last message, --prompt-input the prompt hook's for who put the prompt in. failed is what the
 StopFailure hook of every session the app starts calls: --failure-input reads which API error ended
 the turn, and one a wait can outlive is sent continue again, up to four times. list --all lists the panes
 of every open project and the manager; --reports ends each line with the end of the last message
@@ -254,12 +254,12 @@ function parseNotify(id: string, state: WorkerState, words: readonly string[]): 
 // input.
 const INPUT_FLAG = new Map([['done', '--stop-input'], ['running', '--prompt-input']]);
 
-// A StopFailure hook's, after `turn-failed <id>`.
+// A StopFailure hook's, after `failed <id>`.
 const FAILURE_INPUT_FLAG = '--failure-input';
 const ERROR_FLAG = '--error';
 
 export function readsHookInput(commandArguments: readonly string[]): boolean {
-  if (commandArguments[0] === 'turn-failed') return commandArguments.length === 3 && commandArguments[2] === FAILURE_INPUT_FLAG;
+  if (commandArguments[0] === 'failed') return commandArguments.length === 3 && commandArguments[2] === FAILURE_INPUT_FLAG;
   return commandArguments.length === 4 && commandArguments[0] === 'notify'
     && INPUT_FLAG.get(commandArguments[2]) === commandArguments[3];
 }
@@ -327,7 +327,7 @@ export function hookTold(input: unknown): HookTold {
 // asked for that: `input` is undefined when there was none to read, a terminal, which sends nothing.
 export function hookArguments(given: readonly string[], input: string | undefined): string[] {
   if (!readsHookInput(given)) return [...given];
-  if (given[0] === 'turn-failed') return [...given.slice(0, 2), ERROR_FLAG, failureError(input)];
+  if (given[0] === 'failed') return [...given.slice(0, 2), ERROR_FLAG, failureError(input)];
   if (input === undefined) return given.slice(0, 3);
   return [...given.slice(0, 3), ...(given[2] === 'done' ? stopInputArguments(input) : promptInputArguments(input))];
 }
@@ -411,11 +411,11 @@ export function parseSessionCommand(commandArguments: readonly string[]): Parsed
       }
       return parseNotify(id, state, rest.slice(2));
     }
-    case 'turn-failed': {
-      const id = paneId(rest[0], 'turn-failed');
+    case 'failed': {
+      const id = paneId(rest[0], 'failed');
       if (typeof id !== 'string') return id;
-      if (rest.length !== 3 || rest[1] !== ERROR_FLAG || rest[2] === '') return refuse(`pane turn-failed takes ${ERROR_FLAG} <type> after its id`);
-      return { ok: true, command: { kind: 'turn-failed', id, error: rest[2] } };
+      if (rest.length !== 3 || rest[1] !== ERROR_FLAG || rest[2] === '') return refuse(`pane failed takes ${ERROR_FLAG} <type> after its id`);
+      return { ok: true, command: { kind: 'failed', id, error: rest[2] } };
     }
     default: return refuse(verb === undefined ? SESSION_USAGE : `no such command: ${verb}\n\n${SESSION_USAGE}`);
   }

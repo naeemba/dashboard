@@ -748,7 +748,7 @@ session-minutes, one pull request sitting with green CI.
 - **The signal is Claude Code's StopFailure hook**, which runs in place of Stop when a turn ends on
   an API error and names its type. It is one command hook in `appSessionSettings`, the settings
   every session the app starts carries, so a terminal worker, a worker screen (hosted or not) and
-  main's screen are all heard through one door, `session turn-failed "$DASHBOARD_PANE"`. Reading
+  main's screen are all heard through one door, `session failed "$DASHBOARD_PANE"`. Reading
   main's stream for the error was the other choice: it covers main only, and a terminal worker has
   no stream.
 - **Only `server_error` and `overloaded` are resumed.** Claude Code calls a dropped connection, a

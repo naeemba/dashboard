@@ -13,7 +13,7 @@ async function worker() {
   const answer = sessionRequests(fake.ports);
   await answer({ directory: '/work/api', args: ['claim'] });
   await answer({ directory: '/work/api', args: ['run', '2:1', 'run the tests'] });
-  const failed = (id: string, error = 'server_error') => answer({ directory: '/work/api', args: ['turn-failed', id, '--error', error] });
+  const failed = (id: string, error = 'server_error') => answer({ directory: '/work/api', args: ['failed', id, '--error', error] });
   return { ...fake, answer, failed };
 }
 
@@ -42,6 +42,20 @@ describe('a turn that ends on an API error', () => {
     answer.notify('2:1', 'running', undefined, { promptSource: 'user' });
     minutes(10);
     expect(typed).toEqual([]);
+  });
+
+  it('logs a continue the pane refused or failed to take', async () => {
+    const fake = project();
+    const logged: string[] = [];
+    fake.ports.log = (id, message) => { logged.push(`${id} ${message}`); };
+    const answer = sessionRequests(fake.ports);
+    await answer({ directory: '/work/api', args: ['claim'] });
+    await answer({ directory: '/work/api', args: ['claim'] });
+    fake.ports.send = (id) => (id === '2:1' ? Promise.resolve({ refused: 'gone' }) : Promise.reject(new Error('no pty')));
+    for (const id of ['2:1', '2:2']) await answer({ directory: '/work/api', args: ['failed', id, '--error', 'server_error'] });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(logged).toContain('2:1 `continue` not sent: gone');
+    expect(logged).toContain('2:2 `continue` not sent: no pty');
   });
 
   it('is refused for a pane that is not open', async () => {

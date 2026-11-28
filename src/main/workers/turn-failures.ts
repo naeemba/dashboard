@@ -3,20 +3,20 @@
 // hook says the turn ended so and why, from every session the app starts (appSessionSettings); before
 // it, a dropped connection left the pane idle until somebody typed `continue` by hand.
 
+import { after } from './stop-notices';
+
 // What a StopFailure hook names a failure a wait can outlive. A dropped connection, a stalled stream,
 // a timeout and an API at capacity are all `server_error` to Claude Code; `overloaded` is the 529. An
 // auth, billing, request or rate limit error comes back the same however long the wait.
 const TRANSIENT_ERRORS: ReadonlySet<string> = new Set(['server_error', 'overloaded']);
 
-export const isTransient = (apiError: string): boolean => TRANSIENT_ERRORS.has(apiError);
-
 // The wait before each `continue`, one per try: past the last, the app gives up.
-export const RESUME_DELAYS_MS = [1, 2, 5, 10].map((minutes) => minutes * 60 * 1000);
+const RESUME_DELAYS_MS = [1, 2, 5, 10].map((minutes) => minutes * 60 * 1000);
 
 // A failure this long after the one before it starts the count again: the outage before is over.
 // Longer than the last wait plus a resumed turn failing at once. The cost: a resumed turn that works
 // for 20 minutes and then fails counts as the next try, not a first, and its main is told sooner.
-export const FRESH_AFTER_MS = 30 * 60 * 1000;
+const FRESH_AFTER_MS = 30 * 60 * 1000;
 
 // What the app sends a session whose turn failed: what the user typed by hand.
 export const RESUME_TEXT = 'continue';
@@ -42,11 +42,6 @@ export type TurnFailures = {
   forget(id: string): void;
 };
 
-function after(ms: number, run: () => void): () => void {
-  const timer = setTimeout(run, ms);
-  return () => clearTimeout(timer);
-}
-
 const minutes = (ms: number): string => `${ms / 60000} min`;
 
 export function turnFailures(ports: TurnFailurePorts, delays = RESUME_DELAYS_MS, freshAfterMs = FRESH_AFTER_MS): TurnFailures {
@@ -64,7 +59,7 @@ export function turnFailures(ports: TurnFailurePorts, delays = RESUME_DELAYS_MS,
   return {
     failed(id, apiError) {
       callOff(id);
-      if (!isTransient(apiError)) {
+      if (!TRANSIENT_ERRORS.has(apiError)) {
         outages.delete(id);
         return ports.log(id, `turn ended on an API error (${apiError}), not resumed: waiting would not fix it`);
       }

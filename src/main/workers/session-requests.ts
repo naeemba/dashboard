@@ -265,8 +265,9 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
       return tellRow(id, (row) => doneReport(nameOfPane(id), id, row, paused, lastMessages.get(id)));
     },
   });
-  // A turn ended on an API error, sent `continue` again: a worker as main's `pane send` would, so its
-  // prompt hook marks it at work, and main into its own queue.
+  // A turn ended on an API error, sent `continue` again: a worker through pane.send, not `send` above,
+  // since a pane no run made main's is not made one by this; its prompt hook marks it at work. Main
+  // gets it in its own queue.
   const failures = turnFailures({
     log: ports.log,
     resume(id) {
@@ -670,9 +671,15 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
   }
 
   // The hooks report from wherever their worker stands, so a pane id is all a notify needs.
-  function notify(id: string, state: WorkerState, waiting?: StopWaiting, told: HookTold = {}): SessionReply {
+  // Why a hook about the pane is not heard: it is not open.
+  function notOpen(id: string): SessionReply | null {
     const { slot, index } = paneFromId(id);
-    if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
+    return ports.openPanes(slot).includes(index) ? null : refused(`${id} is not open`);
+  }
+
+  function notify(id: string, state: WorkerState, waiting?: StopWaiting, told: HookTold = {}): SessionReply {
+    const closed = notOpen(id);
+    if (closed) return closed;
     stalls.sign(id);
     if (state === 'running') failures.working(id);
     if (onAppTurn(id, state, told)) return answered('');
@@ -691,8 +698,8 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
 
   // A StopFailure hook's, from any session the app starts, main's included.
   function turnFailed(id: string, error: string): SessionReply {
-    const { slot, index } = paneFromId(id);
-    if (!ports.openPanes(slot).includes(index)) return refused(`${id} is not open`);
+    const closed = notOpen(id);
+    if (closed) return closed;
     failures.failed(id, error);
     return answered('');
   }
@@ -702,7 +709,7 @@ export function sessionRequests(ports: SessionPorts): SessionAnswers {
     if (!parsed.ok) return refused(parsed.message);
     const { command } = parsed;
     if (command.kind === 'notify') return notify(command.id, command.state, command.waiting, command.told);
-    if (command.kind === 'turn-failed') return turnFailed(command.id, command.error);
+    if (command.kind === 'failed') return turnFailed(command.id, command.error);
     const folderSlot = ports.slotOf(request.directory);
     const slot = askingSlot(command, folderSlot);
     // From outside every project only words that name their target are answered: a claim --project

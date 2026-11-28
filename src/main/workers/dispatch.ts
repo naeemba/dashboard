@@ -64,7 +64,7 @@ const appCommandPermissions = (userData: string) => ({
   ],
 });
 
-const TURN_FAILED_HOOK = { type: 'command' as const, command: 'node "$DASHBOARD_SESSION" turn-failed "$DASHBOARD_PANE" --failure-input' };
+const TURN_FAILED_HOOK = { type: 'command' as const, command: 'node "$DASHBOARD_SESSION" failed "$DASHBOARD_PANE" --failure-input' };
 
 // What every session the app starts carries in its settings, whatever else its own adds: the board
 // guard (board-guard.ts) and the app's commands allowed. One object, so a screen and a terminal worker

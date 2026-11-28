@@ -154,8 +154,8 @@ describe('stopInputArguments', () => {
     expect(readsHookInput(['notify', '2:3', 'running', '--prompt-input'])).toBe(true);
     expect(readsHookInput(['notify', '2:3', 'running', '--stop-input'])).toBe(false);
     expect(readsHookInput(['notify', '2:3', 'done'])).toBe(false);
-    expect(readsHookInput(['turn-failed', '2:3', '--failure-input'])).toBe(true);
-    expect(readsHookInput(['turn-failed', '2:3'])).toBe(false);
+    expect(readsHookInput(['failed', '2:3', '--failure-input'])).toBe(true);
+    expect(readsHookInput(['failed', '2:3'])).toBe(false);
   });
 
   it('counts what the session still waits on, and sends its last message', () => {
@@ -189,12 +189,13 @@ describe('stopInputArguments', () => {
     expect(hookArguments(['notify', '2:3', 'done', '--stop-input'], undefined)).toEqual(['notify', '2:3', 'done']);
     expect(hookArguments(['list', '--all'], undefined)).toEqual(['list', '--all']);
     // A StopFailure hook's: the error type, `unknown` when its input names none.
-    const failure = ['turn-failed', '2:3', '--failure-input'];
-    expect(hookArguments(failure, JSON.stringify({ hook_event_name: 'StopFailure', error: 'server_error' }))).toEqual(['turn-failed', '2:3', '--error', 'server_error']);
-    expect(hookArguments(failure, undefined)).toEqual(['turn-failed', '2:3', '--error', 'unknown']);
-    expect(hookArguments(failure, 'not json')).toEqual(['turn-failed', '2:3', '--error', 'unknown']);
-    expect(parseSessionCommand(['turn-failed', '2:3', '--error', 'overloaded'])).toEqual({ ok: true, command: { kind: 'turn-failed', id: '2:3', error: 'overloaded' } });
-    expect(parseSessionCommand(['turn-failed', '2:3']).ok).toBe(false);
+    const failure = ['failed', '2:3', '--failure-input'];
+    expect(hookArguments(failure, JSON.stringify({ hook_event_name: 'StopFailure', error: 'server_error' }))).toEqual(['failed', '2:3', '--error', 'server_error']);
+    expect(hookArguments(failure, undefined)).toEqual(['failed', '2:3', '--error', 'unknown']);
+    expect(hookArguments(failure, 'not json')).toEqual(['failed', '2:3', '--error', 'unknown']);
+    expect(parseSessionCommand(['failed', '2:3', '--error', 'overloaded'])).toEqual({ ok: true, command: { kind: 'failed', id: '2:3', error: 'overloaded' } });
+    expect(parseSessionCommand(['failed', '2:3']).ok).toBe(false);
+    expect(parseSessionCommand(['failed', 'nine', '--error', 'overloaded']).ok).toBe(false);
   });
 
   // An app from before the last message is still sent the counts, which turn the pane.
