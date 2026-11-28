@@ -364,6 +364,18 @@ describe('reviewSweep', () => {
     expect(order).toEqual(['remove', 'restore']);
   });
 
+  it('puts untracked files back when the removal throws', async () => {
+    const { entry, projectPath } = flight(12);
+    let restored = false;
+    const { ports: made } = ports(entry, {
+      setAsideUntracked: async () => ({ files: ['AGENTS.md'], restore: async () => { restored = true; } }),
+      removeWorktree: async () => { throw new Error('git died'); },
+    });
+    await sweepWith(made).run();
+    expect(restored).toBe(true);
+    expect(commentsOnCard(projectPath)).toEqual(['No review worktree: review failed: git died']);
+  });
+
   // The refusal leaves the record exactly as it was, so only the mark stops the next tick spawning git
   // at the same card again. A locked repository is not a condition that passes by itself, which is what
   // separates it from the dirty worktree above.

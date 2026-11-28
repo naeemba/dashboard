@@ -23,13 +23,26 @@ describe('carriedFiles', () => {
 describe('setAsideUntracked', () => {
   useGitTestEnvironment();
 
-  it('moves the untracked files out beside the worktree and back in', async () => {
+  function cleanWorktree(): string {
     const worktree = join(temporaryFolder('dashboard-carry-'), 'card');
     mkdirSync(worktree);
     git(worktree, 'init', '--quiet', '--initial-branch', 'main');
     writeFileSync(join(worktree, 'tracked.ts'), 'x');
     git(worktree, 'add', '-A');
     git(worktree, 'commit', '--quiet', '-m', 'start');
+    return worktree;
+  }
+
+  it('moves nothing out of a clean worktree', async () => {
+    const worktree = cleanWorktree();
+    const carried = await setAsideUntracked(worktree);
+    expect(carried.files).toEqual([]);
+    await carried.restore();
+    expect(readdirSync(dirname(worktree))).toEqual(['card']);
+  });
+
+  it('moves the untracked files out beside the worktree and back in', async () => {
+    const worktree = cleanWorktree();
     writeFileSync(join(worktree, 'AGENTS.md'), 'rules');
     mkdirSync(join(worktree, 'notes'));
     writeFileSync(join(worktree, 'notes', 'a.md'), 'a');
