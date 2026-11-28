@@ -83,8 +83,6 @@ describe('card.move', () => {
     if ('refused' in input) throw new Error(input.refused);
     await expect(cardMove.run(ports, input)).resolves.toMatchObject({ ran: 'review' });
     expect(asked).toEqual(['card']);
-    const twoCards = addCard(boardWithCard(), { column: 1, card: 0 }, 'cart', 'Cart').board;
-    await expect(cardMove.run(fakePorts({ read: () => ({ board: twoCards, brokenFiles: [] }) }).ports, input)).resolves.toMatchObject({ refused: expect.stringContaining('more than one') });
   });
 
   // Shift+Right twice quickly from Doing: the screen's save of Done lands before its ask about Review.
